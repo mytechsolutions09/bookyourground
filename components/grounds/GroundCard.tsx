@@ -1,16 +1,27 @@
-import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
-import { MapPin, Star } from 'lucide-react-native';
+import React, { useMemo } from 'react';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { MapPin, Star, Calendar, Clock } from 'lucide-react-native';
 import { GroundWithImages } from '@/types';
 import { formatCurrency } from '@/utils/helpers';
+import { getGroundBookingScheduleLines } from '@/utils/bookingSlots';
 import Card from '@/components/ui/Card';
 
 interface GroundCardProps {
   ground: GroundWithImages;
   onPress: () => void;
+  /** When true, show booking dates + slot pattern (admin / owner). Default true. */
+  showBookingSchedule?: boolean;
 }
 
-export default function GroundCard({ ground, onPress }: GroundCardProps) {
+export default function GroundCard({
+  ground,
+  onPress,
+  showBookingSchedule = true,
+}: GroundCardProps) {
+  const schedule = useMemo(
+    () => getGroundBookingScheduleLines(ground.pitch_type),
+    [ground.pitch_type],
+  );
   const primaryImage = ground.ground_images?.find(img => img.is_primary)?.image_url ||
     ground.ground_images?.[0]?.image_url ||
     'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
@@ -37,6 +48,22 @@ export default function GroundCard({ ground, onPress }: GroundCardProps) {
               </Text>
             </View>
           )}
+          {showBookingSchedule ? (
+            <View style={styles.scheduleBlock}>
+              <View style={styles.scheduleRow}>
+                <Calendar size={13} color="#6B7280" />
+                <Text style={styles.scheduleText} numberOfLines={2}>
+                  {schedule.datesLine}
+                </Text>
+              </View>
+              <View style={styles.scheduleRow}>
+                <Clock size={13} color="#6B7280" />
+                <Text style={styles.scheduleText} numberOfLines={3}>
+                  {schedule.slotsLine}
+                </Text>
+              </View>
+            </View>
+          ) : null}
           <View style={styles.footer}>
             <Text style={styles.price}>{formatCurrency(ground.base_price_per_hour)}/hr</Text>
             <View style={styles.amenities}>
@@ -91,6 +118,22 @@ const styles = StyleSheet.create({
     color: '#333',
     fontWeight: '600',
   },
+  scheduleBlock: {
+    marginBottom: 10,
+    gap: 6,
+  },
+  scheduleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+  },
+  scheduleText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#4B5563',
+    lineHeight: 16,
+  },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -99,7 +142,7 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#2196F3',
+    color: Platform.OS === 'web' ? '#dc8d3c' : '#2196F3',
   },
   amenities: {
     flexDirection: 'row',

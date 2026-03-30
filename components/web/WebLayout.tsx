@@ -1,7 +1,17 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
 import { router, usePathname } from 'expo-router';
-import { Hop as Home, Calendar, User, Building2, Shield, LogOut } from 'lucide-react-native';
+import {
+  Hop as Home,
+  Calendar,
+  User,
+  Building2,
+  Shield,
+  LogOut,
+  Menu,
+  X,
+  Settings,
+} from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface WebLayoutProps {
@@ -9,12 +19,23 @@ interface WebLayoutProps {
 }
 
 export default function WebLayout({ children }: WebLayoutProps) {
-  const { profile, signOut } = useAuth();
+  const { profile, signOut, user } = useAuth();
   const pathname = usePathname();
+  const { width } = useWindowDimensions();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   if (Platform.OS !== 'web') {
     return <>{children}</>;
   }
+
+  const isCompact = useMemo(() => width < 900, [width]);
+  const isLanding = pathname === '/' || pathname === '';
+  const adminEmail = 'invirtualcoin@gmail.com';
+  const isSuperAdmin =
+    profile?.role === 'super_admin' ||
+    (user?.email?.toLowerCase() ?? '') === adminEmail.toLowerCase();
+  const isAuthenticated = !!profile || isSuperAdmin;
+  const shouldShowSidebar = isAuthenticated ? (!isCompact || menuOpen) : menuOpen;
 
   const handleSignOut = async () => {
     await signOut();
@@ -26,9 +47,12 @@ export default function WebLayout({ children }: WebLayoutProps) {
     return (
       <TouchableOpacity
         style={[styles.navLink, isActive && styles.navLinkActive]}
-        onPress={() => router.push(href as any)}
+        onPress={() => {
+          router.push(href as any);
+          setMenuOpen(false);
+        }}
       >
-        <Icon size={20} color={isActive ? '#2196F3' : '#666'} />
+        <Icon size={20} color={isActive ? '#dc8d3c' : '#666'} />
         <Text style={[styles.navLinkText, isActive && styles.navLinkTextActive]}>{label}</Text>
       </TouchableOpacity>
     );
@@ -36,50 +60,120 @@ export default function WebLayout({ children }: WebLayoutProps) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <TouchableOpacity onPress={() => router.push('/(tabs)')} style={styles.logo}>
-            <Text style={styles.logoText}>Cricket Grounds</Text>
-          </TouchableOpacity>
-          {profile && (
+      {isLanding && (
+        <View style={styles.heroHeader}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity
+              onPress={() => router.push(isAuthenticated ? '/(tabs)' : '/')}
+              style={styles.logo}
+            >
+              <Text style={styles.logoText}>Book my ground</Text>
+            </TouchableOpacity>
+
             <View style={styles.headerRight}>
-              <Text style={styles.userName}>{profile.full_name}</Text>
-              <TouchableOpacity onPress={handleSignOut} style={styles.signOutButton}>
-                <LogOut size={18} color="#666" />
-                <Text style={styles.signOutText}>Sign Out</Text>
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel={menuOpen ? 'Close menu' : 'Open menu'}
+                onPress={() => setMenuOpen((v) => !v)}
+                style={styles.burgerButton}
+              >
+                {menuOpen ? <X size={20} color="#dc8d3c" /> : <Menu size={20} color="#dc8d3c" />}
               </TouchableOpacity>
+
+              {profile && (
+                <>
+                  <Text style={styles.userName}>{profile.full_name}</Text>
+                  <TouchableOpacity onPress={handleSignOut} style={styles.signOutButton}>
+                    <LogOut size={18} color="#dc8d3c" />
+                    <Text style={styles.signOutText}>Sign Out</Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
-          )}
+          </View>
         </View>
-      </View>
+      )}
 
       <View style={styles.body}>
-        {profile && (
-          <View style={styles.sidebar}>
-            <NavLink href="/(tabs)" icon={Home} label="Home" />
-            <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
-            <NavLink href="/(tabs)/profile" icon={User} label="Profile" />
+          {shouldShowSidebar ? (
+          <>
+              {!isAuthenticated && menuOpen && (
+                <TouchableOpacity
+                  style={styles.mobileOverlay}
+                  activeOpacity={1}
+                  onPress={() => setMenuOpen(false)}
+                />
+              )}
 
-            {profile.role === 'ground_owner' && (
-              <>
-                <View style={styles.divider} />
-                <Text style={styles.sidebarTitle}>Ground Owner</Text>
-                <NavLink href="/(owner)/grounds" icon={Building2} label="My Grounds" />
-                <NavLink href="/(owner)/bookings" icon={Calendar} label="Ground Bookings" />
-              </>
-            )}
+              <View
+                style={[
+                  menuOpen ? styles.sidebarMobile : styles.sidebar,
+                  isLanding && styles.sidebarHeaderOffset,
+                ]}
+              >
+                {isAuthenticated ? (
+                  <>
+                    <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
+                    <View style={styles.itemSpacer} />
+                    <NavLink href="/(tabs)/profile" icon={User} label="Profile" />
 
-            {profile.role === 'super_admin' && (
-              <>
-                <View style={styles.divider} />
-                <Text style={styles.sidebarTitle}>Admin</Text>
-                <NavLink href="/(admin)/dashboard" icon={Shield} label="Dashboard" />
-                <NavLink href="/(admin)/approve-grounds" icon={Building2} label="Approve Grounds" />
-                <NavLink href="/(admin)/manage-users" icon={User} label="Manage Users" />
-              </>
-            )}
-          </View>
-        )}
+                    {profile?.role === 'ground_owner' && (
+                      <>
+                        <View style={styles.divider} />
+                        <Text style={styles.sidebarTitle}>Ground Owner</Text>
+                        <NavLink href="/(owner)/grounds" icon={Building2} label="My Grounds" />
+                        <NavLink
+                          href="/(owner)/bookings"
+                          icon={Calendar}
+                          label="Ground Bookings"
+                        />
+                      </>
+                    )}
+
+                    {isSuperAdmin && (
+                      <>
+                        <View style={styles.divider} />
+                        <Text style={styles.sidebarTitle}>Admin</Text>
+                        <NavLink href="/(admin)/dashboard" icon={Shield} label="Dashboard" />
+                        <NavLink
+                          href="/(admin)/grounds"
+                          icon={Building2}
+                          label="Grounds"
+                        />
+                        <NavLink
+                          href="/(admin)/bookings"
+                          icon={Calendar}
+                          label="All Bookings"
+                        />
+                        <NavLink
+                          href="/(admin)/manage-ground-owners"
+                          icon={Building2}
+                          label="Ground Owners"
+                        />
+                        <NavLink
+                          href="/(admin)/settings"
+                          icon={Settings}
+                          label="Settings"
+                        />
+                        <NavLink
+                          href="/(admin)/manage-users"
+                          icon={User}
+                          label="Manage Users"
+                        />
+                      </>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <NavLink href="/" icon={Home} label="Home" />
+                    <View style={styles.divider} />
+                    <NavLink href="/(auth)/login" icon={User} label="Sign In" />
+                    <NavLink href="/(auth)/signup" icon={User} label="Sign Up" />
+                  </>
+                )}
+              </View>
+          </>
+        ) : null}
 
         <View style={styles.main}>
           {children}
@@ -95,16 +189,25 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
   },
   header: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#2b2f4b',
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: 'rgba(255,255,255,0.12)',
     ...Platform.select({
       web: {
         position: 'sticky' as any,
         top: 0,
-        zIndex: 1000,
+        zIndex: 1,
       },
     }),
+  },
+  heroHeader: {
+    position: 'absolute' as any,
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 2000,
+    backgroundColor: 'transparent',
+    borderBottomWidth: 0,
   },
   headerContent: {
     flexDirection: 'row',
@@ -123,7 +226,7 @@ const styles = StyleSheet.create({
   logoText: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#2196F3',
+    color: '#dc8d3c',
   },
   headerRight: {
     flexDirection: 'row',
@@ -133,7 +236,7 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: '#FFFFFF',
   },
   signOutButton: {
     flexDirection: 'row',
@@ -142,11 +245,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 6,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
   signOutText: {
     fontSize: 14,
-    color: '#666',
+    color: '#E5E7EB',
   },
   body: {
     flex: 1,
@@ -154,9 +257,10 @@ const styles = StyleSheet.create({
     maxWidth: 1400,
     marginHorizontal: 'auto',
     width: '100%',
+    position: 'relative',
   },
   sidebar: {
-    width: 250,
+    width: 220,
     backgroundColor: '#FFFFFF',
     borderRightWidth: 1,
     borderRightColor: '#E0E0E0',
@@ -164,11 +268,25 @@ const styles = StyleSheet.create({
     ...Platform.select({
       web: {
         position: 'sticky' as any,
-        top: 65,
-        height: 'calc(100vh - 65px)' as any,
+        top: 0,
+        height: '100vh' as any,
         overflowY: 'auto' as any,
       },
     }),
+  },
+  sidebarMobile: {
+    position: 'absolute' as any,
+    top: 0,
+    right: 0,
+    left: 'auto' as any,
+    width: 220,
+    bottom: 0,
+    backgroundColor: '#FFFFFF',
+    borderRightWidth: 1,
+    borderRightColor: '#E0E0E0',
+    borderLeftWidth: 0,
+    padding: 16,
+    zIndex: 3000,
   },
   navLink: {
     flexDirection: 'row',
@@ -180,7 +298,15 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   navLinkActive: {
-    backgroundColor: '#E3F2FD',
+    backgroundColor: '#2b2f4b',
+  },
+  sidebarHeaderOffset: {
+    // Keep sidebar content below the landing hero header (logo + burger).
+    // Prevents visual overlap when hero header is absolute.
+    paddingTop: 78,
+  },
+  itemSpacer: {
+    height: 14,
   },
   navLinkText: {
     fontSize: 15,
@@ -188,7 +314,15 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   navLinkTextActive: {
-    color: '#2196F3',
+    color: '#dc8d3c',
+  },
+  burgerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   divider: {
     height: 1,
@@ -211,5 +345,14 @@ const styles = StyleSheet.create({
         minHeight: 'calc(100vh - 65px)' as any,
       },
     }),
+  },
+  mobileOverlay: {
+    position: 'absolute' as any,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    zIndex: 2500,
   },
 });

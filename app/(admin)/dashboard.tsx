@@ -1,6 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Platform } from 'react-native';
-import { Users, Building2, Calendar, TrendingUp, ChevronRight } from 'lucide-react-native';
+import {
+  Users,
+  Building2,
+  Calendar,
+  TrendingUp,
+  ChevronRight,
+  Settings,
+} from 'lucide-react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import Card from '@/components/ui/Card';
@@ -76,7 +83,7 @@ export default function AdminDashboardScreen() {
             icon={Users}
             label="Total Users"
             value={stats.totalUsers}
-            color="#2196F3"
+            color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'}
           />
           <StatCard
             icon={Building2}
@@ -106,7 +113,7 @@ export default function AdminDashboardScreen() {
             onPress={() => router.push('/(admin)/manage-users')}
           >
             <View style={styles.actionContent}>
-              <Users size={20} color="#2196F3" />
+              <Users size={20} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
               <Text style={styles.actionText}>Manage Users</Text>
             </View>
             <ChevronRight size={20} color="#666" />
@@ -114,11 +121,33 @@ export default function AdminDashboardScreen() {
 
           <TouchableOpacity
             style={styles.actionItem}
-            onPress={() => router.push('/(admin)/approve-grounds')}
+            onPress={() => router.push('/(admin)/bookings')}
+          >
+            <View style={styles.actionContent}>
+              <Calendar size={20} color="#FF9800" />
+              <Text style={styles.actionText}>Bookings</Text>
+            </View>
+            <ChevronRight size={20} color="#666" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionItem}
+            onPress={() => router.push('/(admin)/grounds')}
           >
             <View style={styles.actionContent}>
               <Building2 size={20} color="#4CAF50" />
-              <Text style={styles.actionText}>Approve Grounds</Text>
+              <Text style={styles.actionText}>Grounds</Text>
+            </View>
+            <ChevronRight size={20} color="#666" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionItem}
+            onPress={() => router.push('/(admin)/settings' as any)}
+          >
+            <View style={styles.actionContent}>
+              <Settings size={20} color="#6B7280" />
+              <Text style={styles.actionText}>Settings</Text>
             </View>
             <ChevronRight size={20} color="#666" />
           </TouchableOpacity>

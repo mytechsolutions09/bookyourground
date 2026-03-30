@@ -1,23 +1,30 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, TouchableOpacity, Platform } from 'react-native';
 import { User, Shield } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { Profile } from '@/types';
 import { UserRole } from '@/types/database';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import WebLayout from '@/components/web/WebLayout';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function ManageUsersScreen() {
+  const { user } = useAuth();
   const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [rolesSummary, setRolesSummary] = useState<string | null>(null);
 
   useEffect(() => {
-    loadUsers();
-  }, []);
+    if (user) loadUsers();
+  }, [user]);
 
   const loadUsers = async () => {
     try {
+      setErrorMessage(null);
+      setRolesSummary(null);
       setLoading(true);
       const { data, error } = await supabase
         .from('profiles')
@@ -25,9 +32,13 @@ export default function ManageUsersScreen() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setUsers(data || []);
+      const rows = (data || []) as Profile[];
+      setUsers(rows);
+      const roles = Array.from(new Set(rows.map((r) => r.role)));
+      setRolesSummary(roles.join(', '));
     } catch (error) {
       console.error('Error loading users:', error);
+      setErrorMessage('Failed to load users. Please check your connection/auth.');
     } finally {
       setLoading(false);
     }
@@ -80,7 +91,7 @@ export default function ManageUsersScreen() {
       case 'super_admin':
         return '#F44336';
       default:
-        return '#2196F3';
+        return Platform.OS === 'web' ? '#dc8d3c' : '#2196F3';
     }
   };
 
@@ -107,6 +118,15 @@ export default function ManageUsersScreen() {
               style={{ flex: 1 }}
             />
           )}
+          {user.role !== 'super_admin' && (
+            <Button
+              title="Set as Super Admin"
+              onPress={() => updateUserRole(user.id, 'super_admin')}
+              variant="outline"
+              size="small"
+              style={{ flex: 1 }}
+            />
+          )}
         </View>
       </Card>
     );
@@ -121,7 +141,7 @@ export default function ManageUsersScreen() {
         <Card style={styles.userCard}>
           <View style={styles.userHeader}>
             <View style={styles.avatarContainer}>
-              <User size={24} color="#2196F3" />
+                <User size={24} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
             </View>
             <View style={styles.userInfo}>
               <Text style={styles.userName}>{item.full_name}</Text>
@@ -150,12 +170,22 @@ export default function ManageUsersScreen() {
     </View>
   );
 
-  return (
+  const content = (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Manage Users</Text>
         <Text style={styles.subtitle}>{users.length} total users</Text>
       </View>
+
+      {errorMessage ? (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{errorMessage}</Text>
+        </View>
+      ) : null}
+
+      {rolesSummary ? (
+        <Text style={styles.rolesSummaryText}>Roles: {rolesSummary}</Text>
+      ) : null}
 
       <FlatList
         data={users}
@@ -173,6 +203,12 @@ export default function ManageUsersScreen() {
       />
     </View>
   );
+
+  if (Platform.OS === 'web') {
+    return <WebLayout>{content}</WebLayout>;
+  }
+
+  return content;
 }
 
 const styles = StyleSheet.create({
@@ -212,7 +248,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#E3F2FD',
+    backgroundColor: Platform.OS === 'web' ? '#2b2f4b' : '#E3F2FD',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -282,5 +318,22 @@ const styles = StyleSheet.create({
   actionsButtons: {
     flexDirection: 'row',
     gap: 12,
+    flexWrap: 'wrap',
+  },
+  errorContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  errorText: {
+    color: '#D32F2F',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  rolesSummaryText: {
+    paddingHorizontal: 16,
+    marginTop: 8,
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '600',
   },
 });

@@ -6,12 +6,12 @@ import { BookingWithDetails } from '@/types';
 import BookingCard from '@/components/bookings/BookingCard';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
+import { router } from 'expo-router';
 
 export default function OwnerBookingsScreen() {
   const { user } = useAuth();
   const [bookings, setBookings] = useState<BookingWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedBooking, setSelectedBooking] = useState<BookingWithDetails | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -57,7 +57,6 @@ export default function OwnerBookingsScreen() {
 
       Alert.alert('Success', `Booking ${status} successfully`);
       loadBookings();
-      setSelectedBooking(null);
     } catch (error: any) {
       Alert.alert('Error', error.message);
     }
@@ -65,6 +64,18 @@ export default function OwnerBookingsScreen() {
 
   const renderBookingActions = (booking: BookingWithDetails) => {
     if (booking.status !== 'pending') return null;
+    const groundApproved = !!booking.ground?.approved;
+
+    if (!groundApproved) {
+      return (
+        <Card style={styles.actionsCard}>
+          <Text style={styles.actionsTitle}>Waiting for admin approval</Text>
+          <Text style={styles.actionsSubtext}>
+            This ground is not approved by the platform yet.
+          </Text>
+        </Card>
+      );
+    }
 
     return (
       <Card style={styles.actionsCard}>
@@ -101,9 +112,9 @@ export default function OwnerBookingsScreen() {
           <View>
             <BookingCard
               booking={item}
-              onPress={() => setSelectedBooking(selectedBooking?.id === item.id ? null : item)}
+              onPress={() => router.push(`/bookings/${item.id}`)}
             />
-            {selectedBooking?.id === item.id && renderBookingActions(item)}
+            {renderBookingActions(item)}
           </View>
         )}
         keyExtractor={item => item.id}
@@ -160,6 +171,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#F57C00',
     marginBottom: 12,
+  },
+  actionsSubtext: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 4,
   },
   actionsButtons: {
     flexDirection: 'row',

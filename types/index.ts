@@ -2,6 +2,8 @@ import { Database } from './database';
 
 export type Profile = Database['public']['Tables']['profiles']['Row'];
 export type Ground = Database['public']['Tables']['grounds']['Row'];
+export type Location = Database['public']['Tables']['locations']['Row'];
+export type GroundType = Database['public']['Tables']['ground_types']['Row'];
 export type GroundImage = Database['public']['Tables']['ground_images']['Row'];
 export type TimeSlot = Database['public']['Tables']['time_slots']['Row'];
 export type Booking = Database['public']['Tables']['bookings']['Row'];

@@ -9,12 +9,15 @@ import { formatCurrency } from '@/utils/helpers';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import WebLayout from '@/components/web/WebLayout';
+import LandingBookingForm from '@/components/landing/LandingBookingForm';
 
 export default function GroundDetailsScreen() {
   const { id } = useLocalSearchParams();
   const { user } = useAuth();
   const [ground, setGround] = useState<GroundWithImages | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const groundId = Array.isArray(id) ? id[0] : id;
 
   useEffect(() => {
     loadGround();
@@ -157,13 +160,19 @@ export default function GroundDetailsScreen() {
           </View>
         </Card>
 
-        <Button
-          title="Book Now"
-          onPress={handleBookNow}
-          fullWidth
-          size="large"
-          style={styles.bookButton}
-        />
+        {Platform.OS === 'web' && groundId && (
+          <LandingBookingForm initialGroundId={String(groundId)} hideGroundPicker />
+        )}
+
+        {Platform.OS !== 'web' && (
+          <Button
+            title="Book Now"
+            onPress={handleBookNow}
+            fullWidth
+            size="large"
+            style={styles.bookButton}
+          />
+        )}
       </View>
     </ScrollView>
   );
@@ -231,13 +240,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   priceCard: {
-    backgroundColor: '#E3F2FD',
+    backgroundColor: Platform.OS === 'web' ? '#2b2f4b' : '#E3F2FD',
     marginBottom: 16,
   },
   price: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#2196F3',
+    color: Platform.OS === 'web' ? '#dc8d3c' : '#2196F3',
     textAlign: 'center',
   },
   section: {

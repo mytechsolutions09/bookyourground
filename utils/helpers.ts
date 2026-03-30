@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 export const formatCurrency = (amount: number): string => {
   return `₹${amount.toFixed(2)}`;
 };
@@ -43,7 +45,7 @@ export const getStatusColor = (status: string): string => {
     case 'pending':
       return '#FFA500';
     case 'confirmed':
-      return '#2196F3';
+      return Platform.OS === 'web' ? '#dc8d3c' : '#2196F3';
     case 'completed':
       return '#4CAF50';
     case 'cancelled':

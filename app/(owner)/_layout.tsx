@@ -1,31 +1,51 @@
 import React, { useEffect } from 'react';
 import { Stack, router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 
 export default function OwnerLayout() {
   const { user, profile, loading } = useAuth();
+  const adminEmail = 'invirtualcoin@gmail.com';
+  const isSuperAdmin =
+    profile?.role === 'super_admin' ||
+    (user?.email?.toLowerCase() ?? '') === adminEmail.toLowerCase();
 
   useEffect(() => {
     if (!loading) {
       if (!user) {
         router.replace('/(auth)/login');
-      } else if (profile && profile.role !== 'ground_owner' && profile.role !== 'super_admin') {
+      } else if (profile) {
+        if (profile.role !== 'ground_owner' && profile.role !== 'super_admin') {
+          router.replace('/(tabs)');
+        }
+      } else if (!isSuperAdmin) {
         router.replace('/(tabs)');
       }
     }
-  }, [user, profile, loading]);
+  }, [user, profile, loading, isSuperAdmin]);
 
-  if (loading || !profile) {
+  if (loading && !user) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2196F3" />
+        <ActivityIndicator size="large" color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
         <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
   }
 
-  if (profile.role !== 'ground_owner' && profile.role !== 'super_admin') {
+  if (!profile) {
+    // If profile is not loaded yet, but we know it's not super admin, deny access.
+    if (!isSuperAdmin) {
+      return (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Access Denied</Text>
+          <Text style={styles.errorSubtext}>You need to be a ground owner to access this area.</Text>
+        </View>
+      );
+    }
+  }
+
+  if (profile && profile.role !== 'ground_owner' && profile.role !== 'super_admin' && !isSuperAdmin) {
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>Access Denied</Text>

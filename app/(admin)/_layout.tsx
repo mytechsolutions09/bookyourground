@@ -1,31 +1,35 @@
 import React, { useEffect } from 'react';
 import { Stack, router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Platform } from 'react-native';
 
 export default function AdminLayout() {
   const { user, profile, loading } = useAuth();
+  const adminEmail = 'invirtualcoin@gmail.com';
+  const isSuperAdmin =
+    profile?.role === 'super_admin' ||
+    (user?.email?.toLowerCase() ?? '') === adminEmail.toLowerCase();
 
   useEffect(() => {
     if (!loading) {
       if (!user) {
         router.replace('/(auth)/login');
-      } else if (profile && profile.role !== 'super_admin') {
+      } else if (!isSuperAdmin) {
         router.replace('/(tabs)');
       }
     }
   }, [user, profile, loading]);
 
-  if (loading || !profile) {
+  if (loading && !user) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#2196F3" />
+        <ActivityIndicator size="large" color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
         <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
   }
 
-  if (profile.role !== 'super_admin') {
+  if (!isSuperAdmin) {
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>Access Denied</Text>
@@ -37,8 +41,12 @@ export default function AdminLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="dashboard" />
-      <Stack.Screen name="approve-grounds" />
+      <Stack.Screen name="grounds" />
+      <Stack.Screen name="bookings" />
+      <Stack.Screen name="manage-ground-owners" />
       <Stack.Screen name="manage-users" />
+      <Stack.Screen name="locations" />
+      <Stack.Screen name="settings" />
     </Stack>
   );
 }

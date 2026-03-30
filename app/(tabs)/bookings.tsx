@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
   },
   filterButtonActive: {
-    backgroundColor: '#2196F3',
+    backgroundColor: Platform.OS === 'web' ? '#2b2f4b' : '#2196F3',
   },
   filterButtonText: {
     fontSize: 14,

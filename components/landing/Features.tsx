@@ -51,7 +51,11 @@ export default function Features() {
             return (
               <View key={index} style={styles.card}>
                 <View style={styles.iconContainer}>
-                  <IconComponent size={24} color="#10B981" strokeWidth={2} />
+                  <IconComponent
+                    size={24}
+                    color={Platform.OS === 'web' ? '#dc8d3c' : '#10B981'}
+                    strokeWidth={2}
+                  />
                 </View>
                 <Text style={styles.cardTitle}>{feature.title}</Text>
                 <Text style={styles.cardDescription}>{feature.description}</Text>
@@ -78,7 +82,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#10B981',
+    color: Platform.OS === 'web' ? '#dc8d3c' : '#10B981',
     textTransform: 'uppercase',
     letterSpacing: 1,
     textAlign: 'center',
@@ -125,7 +129,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 12,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: Platform.OS === 'web' ? 'rgba(220,141,60,0.18)' : '#ECFDF5',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,

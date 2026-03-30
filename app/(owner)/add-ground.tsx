@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
+import { ensureDefaultTimeSlotsForGround } from '@/utils/timeSlotsDb';
 
 export default function AddGroundScreen() {
   const { user } = useAuth();
@@ -37,7 +38,9 @@ export default function AddGroundScreen() {
 
     setLoading(true);
     try {
-      const { error } = await supabase.from('grounds').insert({
+      const { data: created, error } = await supabase
+        .from('grounds')
+        .insert({
         owner_id: user.id,
         name: formData.name,
         description: formData.description || null,
@@ -53,9 +56,17 @@ export default function AddGroundScreen() {
         has_parking: formData.has_parking,
         has_changing_rooms: formData.has_changing_rooms,
         has_pavilion: formData.has_pavilion,
-      });
+        })
+        .select('id')
+        .single();
 
       if (error) throw error;
+
+      await ensureDefaultTimeSlotsForGround({
+        groundId: created.id,
+        pitchType: formData.pitch_type,
+        supabaseClient: supabase,
+      });
 
       Alert.alert('Success', 'Ground added successfully! It will be visible after admin approval.', [
         { text: 'OK', onPress: () => router.back() }

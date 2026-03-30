@@ -1,8 +1,10 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Calendar, Clock, MapPin } from 'lucide-react-native';
+import { Platform } from 'react-native';
 import { BookingWithDetails } from '@/types';
-import { formatCurrency, formatDate, formatTime, getStatusColor, getStatusLabel } from '@/utils/helpers';
+import { formatCurrency, formatDate, getStatusColor, getStatusLabel } from '@/utils/helpers';
+import { formatBookingSlotSummary } from '@/utils/bookingSlots';
 import Card from '@/components/ui/Card';
 
 interface BookingCardProps {
@@ -32,13 +34,17 @@ export default function BookingCard({ booking, onPress, showGroundDetails = true
 
           <View style={styles.detailsRow}>
             <View style={styles.detail}>
-              <Calendar size={16} color="#2196F3" />
+              <Calendar size={16} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
               <Text style={styles.detailText}>{formatDate(booking.booking_date)}</Text>
             </View>
             <View style={styles.detail}>
-              <Clock size={16} color="#2196F3" />
+              <Clock size={16} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
               <Text style={styles.detailText}>
-                {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
+                {formatBookingSlotSummary(
+                  booking.start_time,
+                  booking.end_time,
+                  booking.ground.pitch_type,
+                )}
               </Text>
             </View>
           </View>
@@ -105,7 +111,7 @@ const styles = StyleSheet.create({
   amount: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#2196F3',
+    color: Platform.OS === 'web' ? '#dc8d3c' : '#2196F3',
   },
   statusBadge: {
     paddingHorizontal: 12,

@@ -6,28 +6,35 @@ import GroundCard from '@/components/grounds/GroundCard';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
+import { useLocalSearchParams } from 'expo-router';
 
 export default function ApproveGroundsScreen() {
+  const params = useLocalSearchParams();
+  const ownerIdParam = Array.isArray(params.ownerId) ? params.ownerId[0] : params.ownerId;
+
   const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedGround, setSelectedGround] = useState<GroundWithImages | null>(null);
 
   useEffect(() => {
     loadGrounds();
-  }, []);
+  }, [ownerIdParam]);
 
   const loadGrounds = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      let query = supabase
         .from('grounds')
         .select(`
           *,
           ground_images(*),
           owner:profiles(full_name, phone, business_name)
         `)
-        .eq('approved', false)
-        .order('created_at', { ascending: false });
+        .eq('approved', false);
+
+      if (ownerIdParam) query = query.eq('owner_id', ownerIdParam);
+
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
       setGrounds(data || []);
@@ -113,6 +120,7 @@ export default function ApproveGroundsScreen() {
           <View>
             <GroundCard
               ground={item}
+              showBookingSchedule
               onPress={() => setSelectedGround(selectedGround?.id === item.id ? null : item)}
             />
             {selectedGround?.id === item.id && renderGroundActions(item)}

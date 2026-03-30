@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, TextInput, Platform } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, RefreshControl, TextInput, Platform, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { Search } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
@@ -7,10 +7,64 @@ import { GroundWithImages } from '@/types';
 import GroundCard from '@/components/grounds/GroundCard';
 import WebLayout from '@/components/web/WebLayout';
 
+function FilterDropdown({
+  options,
+  value,
+  onChange,
+}: {
+  options: string[];
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  const display = (v: string) => (v === 'all' ? 'All' : v);
+
+  return (
+    <View style={styles.dropdownOuter}>
+      <Pressable
+        onPress={() => setOpen((v) => !v)}
+        style={[styles.dropdownButton, open && styles.dropdownButtonOpen]}
+      >
+        <Text style={styles.dropdownButtonText}>{display(value)}</Text>
+      </Pressable>
+
+      {open ? (
+        <View style={styles.dropdownMenu}>
+          {options.map((opt) => (
+            <Pressable
+              key={opt}
+              onPress={() => {
+                onChange(opt);
+                setOpen(false);
+              }}
+              style={[
+                styles.dropdownOption,
+                opt === value && styles.dropdownOptionActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.dropdownOptionText,
+                  opt === value && styles.dropdownOptionTextActive,
+                ]}
+              >
+                {display(opt)}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 export default function HomeScreen() {
   const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [locationFilter, setLocationFilter] = useState<string>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
 
   useEffect(() => {
     loadGrounds();
@@ -39,11 +93,31 @@ export default function HomeScreen() {
     }
   };
 
-  const filteredGrounds = grounds.filter(ground =>
-    ground.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    ground.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    ground.state.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const locationOptions = useMemo(() => {
+    const cities = Array.from(new Set(grounds.map((g) => g.city).filter(Boolean)));
+    return ['all', ...cities];
+  }, [grounds]);
+
+  const typeOptions = useMemo(() => {
+    const types = Array.from(
+      new Set(grounds.map((g) => g.pitch_type).filter((t): t is string => !!t)),
+    );
+    return ['all', ...types];
+  }, [grounds]);
+
+  const filteredGrounds = grounds.filter((ground) => {
+    const q = searchQuery.toLowerCase().trim();
+    const matchesSearch =
+      !q ||
+      ground.name.toLowerCase().includes(q) ||
+      ground.city.toLowerCase().includes(q) ||
+      ground.state.toLowerCase().includes(q);
+
+    const matchesLocation = locationFilter === 'all' || ground.city === locationFilter;
+    const matchesType = typeFilter === 'all' || ground.pitch_type === typeFilter;
+
+    return matchesSearch && matchesLocation && matchesType;
+  });
 
   const content = (
     <View style={styles.container}>
@@ -59,6 +133,26 @@ export default function HomeScreen() {
             placeholderTextColor="#999"
           />
         </View>
+
+        <View style={styles.filtersWrap}>
+          <View style={styles.filtersGroup}>
+            <Text style={styles.filtersLabel}>Location</Text>
+            <FilterDropdown
+              options={locationOptions}
+              value={locationFilter}
+              onChange={setLocationFilter}
+            />
+          </View>
+
+          <View style={styles.filtersGroup}>
+            <Text style={styles.filtersLabel}>Type</Text>
+            <FilterDropdown
+              options={typeOptions}
+              value={typeFilter}
+              onChange={setTypeFilter}
+            />
+          </View>
+        </View>
       </View>
 
       <FlatList
@@ -67,6 +161,7 @@ export default function HomeScreen() {
           <GroundCard
             ground={item}
             onPress={() => router.push(`/grounds/${item.id}`)}
+            showBookingSchedule={false}
           />
         )}
         keyExtractor={item => item.id}
@@ -106,6 +201,8 @@ const styles = StyleSheet.create({
     paddingTop: 48,
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
+    overflow: 'visible' as any,
+    zIndex: 50,
   },
   webHeader: {
     paddingTop: 16,
@@ -137,6 +234,94 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: 16,
+    zIndex: 1,
+  },
+  filtersWrap: {
+    marginTop: 12,
+    gap: 10,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  filtersGroup: {},
+  filtersLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#374151',
+    marginBottom: 6,
+  },
+  dropdownOuter: {
+    position: 'relative',
+  },
+  dropdownButton: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    minWidth: 180,
+  },
+  dropdownButtonOpen: {
+    borderColor: '#dc8d3c',
+    backgroundColor: 'rgba(220,141,60,0.08)',
+  },
+  dropdownButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#374151',
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    top: 44,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingVertical: 6,
+    zIndex: 10000,
+    elevation: 50,
+  },
+  dropdownOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  dropdownOptionActive: {
+    backgroundColor: 'rgba(220,141,60,0.12)',
+  },
+  dropdownOptionText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#374151',
+  },
+  dropdownOptionTextActive: {
+    color: '#dc8d3c',
+  },
+  chipsWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  chip: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  chipActive: {
+    borderColor: Platform.OS === 'web' ? '#dc8d3c' : '#2196F3',
+    backgroundColor: Platform.OS === 'web' ? 'rgba(220,141,60,0.12)' : 'rgba(33,150,243,0.12)',
+  },
+  chipText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#374151',
+  },
+  chipTextActive: {
+    color: Platform.OS === 'web' ? '#dc8d3c' : '#2196F3',
   },
   emptyContainer: {
     alignItems: 'center',

@@ -9,6 +9,10 @@ import WebLayout from '@/components/web/WebLayout';
 
 export default function ProfileScreen() {
   const { user, profile, signOut } = useAuth();
+  const adminEmail = 'invirtualcoin@gmail.com';
+  const isSuperAdmin =
+    profile?.role === 'super_admin' ||
+    (user?.email?.toLowerCase() ?? '') === adminEmail.toLowerCase();
 
   const handleSignOut = () => {
     if (Platform.OS === 'web') {
@@ -52,7 +56,7 @@ export default function ProfileScreen() {
         <Card style={styles.profileCard}>
           <View style={styles.avatarContainer}>
             <View style={styles.avatar}>
-              <User size={40} color="#2196F3" />
+              <User size={40} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
             </View>
           </View>
           <Text style={styles.name}>{profile?.full_name}</Text>
@@ -84,7 +88,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         )}
 
-        {profile?.role === 'super_admin' && (
+        {isSuperAdmin && (
           <TouchableOpacity
             style={styles.menuItem}
             onPress={() => router.push('/(admin)/dashboard')}
@@ -163,7 +167,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#E3F2FD',
+    backgroundColor: Platform.OS === 'web' ? '#2b2f4b' : '#E3F2FD',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -174,7 +178,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   roleBadge: {
-    backgroundColor: '#E3F2FD',
+    backgroundColor: Platform.OS === 'web' ? '#2b2f4b' : '#E3F2FD',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
@@ -182,7 +186,7 @@ const styles = StyleSheet.create({
   roleText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#2196F3',
+    color: Platform.OS === 'web' ? '#dc8d3c' : '#2196F3',
   },
   infoCard: {
     marginTop: 16,

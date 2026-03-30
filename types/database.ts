@@ -155,6 +155,67 @@ export interface Database {
           created_at?: string;
         };
       };
+      locations: {
+        Row: {
+          id: string;
+          city: string;
+          state: string;
+          label: string | null;
+          sort_order: number;
+          active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          city: string;
+          state: string;
+          label?: string | null;
+          sort_order?: number;
+          active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          city?: string;
+          state?: string;
+          label?: string | null;
+          sort_order?: number;
+          active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      ground_types: {
+        Row: {
+          id: string;
+          name: string;
+          label: string | null;
+          sort_order: number;
+          active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          label?: string | null;
+          sort_order?: number;
+          active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          label?: string | null;
+          sort_order?: number;
+          active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       time_slots: {
         Row: {
           id: string;

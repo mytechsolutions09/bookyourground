@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
@@ -7,11 +7,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { GroundWithImages } from '@/types';
 import GroundCard from '@/components/grounds/GroundCard';
 import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import TimeSlotsEditor from '@/components/availability/TimeSlotsEditor';
 
 export default function OwnerGroundsScreen() {
   const { user } = useAuth();
   const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedGroundId, setSelectedGroundId] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -58,10 +61,34 @@ export default function OwnerGroundsScreen() {
       <FlatList
         data={grounds}
         renderItem={({ item }) => (
-          <GroundCard
-            ground={item}
-            onPress={() => router.push(`/grounds/${item.id}`)}
-          />
+          <View>
+            <GroundCard
+              ground={item}
+              onPress={() =>
+                setSelectedGroundId((prev) => (prev === item.id ? null : item.id))
+              }
+              showBookingSchedule
+            />
+
+            {selectedGroundId === item.id ? (
+              <Card style={styles.editorCard}>
+                <Text style={styles.editorTitle}>Availability (Days & Slots)</Text>
+                <TimeSlotsEditor
+                  groundId={item.id}
+                  pitchType={item.pitch_type}
+                  canEdit
+                />
+                <Button
+                  title="View ground details"
+                  onPress={() => router.push(`/grounds/${item.id}`)}
+                  variant="outline"
+                  size="small"
+                  fullWidth
+                  style={styles.viewDetailsButton}
+                />
+              </Card>
+            ) : null}
+          </View>
         )}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
@@ -107,12 +134,26 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#2196F3',
+    backgroundColor: Platform.OS === 'web' ? '#dc8d3c' : '#2196F3',
     alignItems: 'center',
     justifyContent: 'center',
   },
   list: {
     padding: 16,
+  },
+  editorCard: {
+    marginBottom: 16,
+    padding: 14,
+    backgroundColor: '#FFF9E6',
+  },
+  editorTitle: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#212121',
+    marginBottom: 10,
+  },
+  viewDetailsButton: {
+    marginTop: 10,
   },
   emptyContainer: {
     alignItems: 'center',

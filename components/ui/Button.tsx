@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle, Platform } from 'react-native';
 
 interface ButtonProps {
   title: string;
@@ -25,6 +25,7 @@ export default function Button({
   textStyle,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
+  const primaryColor = Platform.OS === 'web' ? '#dc8d3c' : '#2196F3';
 
   return (
     <TouchableOpacity
@@ -41,7 +42,7 @@ export default function Button({
       activeOpacity={0.7}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'outline' ? '#2196F3' : '#FFFFFF'} />
+        <ActivityIndicator color={variant === 'outline' ? primaryColor : '#FFFFFF'} />
       ) : (
         <Text style={[styles.text, styles[`${variant}Text`], styles[`${size}Text`], textStyle]}>
           {title}
@@ -59,7 +60,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   primary: {
-    backgroundColor: '#2196F3',
+    backgroundColor: Platform.OS === 'web' ? '#dc8d3c' : '#2196F3',
   },
   secondary: {
     backgroundColor: '#4CAF50',
@@ -67,7 +68,7 @@ const styles = StyleSheet.create({
   outline: {
     backgroundColor: 'transparent',
     borderWidth: 1.5,
-    borderColor: '#2196F3',
+    borderColor: Platform.OS === 'web' ? '#dc8d3c' : '#2196F3',
   },
   danger: {
     backgroundColor: '#F44336',
@@ -100,7 +101,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   outlineText: {
-    color: '#2196F3',
+    color: Platform.OS === 'web' ? '#dc8d3c' : '#2196F3',
   },
   dangerText: {
     color: '#FFFFFF',

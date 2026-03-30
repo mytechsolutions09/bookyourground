@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, Alert, Platform } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { MapPin, Calendar, Clock, User } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { BookingWithDetails } from '@/types';
-import { formatCurrency, formatDate, formatTime, getStatusColor, getStatusLabel } from '@/utils/helpers';
+import { formatCurrency, formatDate, getStatusColor, getStatusLabel } from '@/utils/helpers';
+import { formatBookingSlotSummary } from '@/utils/bookingSlots';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 
@@ -111,23 +112,27 @@ export default function BookingDetailsScreen() {
         <Card style={styles.section}>
           <Text style={styles.sectionTitle}>Booking Information</Text>
           <View style={styles.infoRow}>
-            <Calendar size={18} color="#2196F3" />
+            <Calendar size={18} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Date</Text>
               <Text style={styles.infoValue}>{formatDate(booking.booking_date)}</Text>
             </View>
           </View>
           <View style={styles.infoRow}>
-            <Clock size={18} color="#2196F3" />
+            <Clock size={18} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Time</Text>
               <Text style={styles.infoValue}>
-                {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
+                {formatBookingSlotSummary(
+                  booking.start_time,
+                  booking.end_time,
+                  booking.ground.pitch_type,
+                )}
               </Text>
             </View>
           </View>
           <View style={styles.infoRow}>
-            <Clock size={18} color="#2196F3" />
+            <Clock size={18} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
             <View style={styles.infoContent}>
               <Text style={styles.infoLabel}>Duration</Text>
               <Text style={styles.infoValue}>{booking.total_hours} hours</Text>
@@ -139,7 +144,7 @@ export default function BookingDetailsScreen() {
           <Card style={styles.section}>
             <Text style={styles.sectionTitle}>User Information</Text>
             <View style={styles.infoRow}>
-              <User size={18} color="#2196F3" />
+              <User size={18} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
               <View style={styles.infoContent}>
                 <Text style={styles.infoLabel}>Name</Text>
                 <Text style={styles.infoValue}>{booking.user.full_name}</Text>
@@ -147,7 +152,7 @@ export default function BookingDetailsScreen() {
             </View>
             {booking.user.phone && (
               <View style={styles.infoRow}>
-                <User size={18} color="#2196F3" />
+                <User size={18} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
                 <View style={styles.infoContent}>
                   <Text style={styles.infoLabel}>Phone</Text>
                   <Text style={styles.infoValue}>{booking.user.phone}</Text>
@@ -307,7 +312,7 @@ const styles = StyleSheet.create({
   totalValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#2196F3',
+    color: Platform.OS === 'web' ? '#dc8d3c' : '#2196F3',
   },
   notes: {
     fontSize: 14,
