@@ -13,6 +13,7 @@ import {
   TextInput,
   Switch,
   ScrollView,
+  Modal,
 } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { GroundWithImages } from '@/types';
@@ -22,7 +23,7 @@ import WebLayout from '@/components/web/WebLayout';
 import { useLocalSearchParams } from 'expo-router';
 import Button from '@/components/ui/Button';
 import { useAuth } from '@/contexts/AuthContext';
-import TimeSlotsEditor from '@/components/availability/TimeSlotsEditor';
+import TimeSlotsEditor, { TimeSlotsEditorHandle } from '@/components/availability/TimeSlotsEditor';
 import { ensureDefaultTimeSlotsForGround } from '@/utils/timeSlotsDb';
 import { getGroundBookingScheduleLines } from '@/utils/bookingSlots';
 
@@ -108,8 +109,10 @@ export default function GroundsAdminScreen() {
 
   const [editOpen, setEditOpen] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
+  const [savingAvailability, setSavingAvailability] = useState(false);
 
   const [editForm, setEditForm] = useState<any>(null);
+  const availabilityRef = React.useRef<TimeSlotsEditorHandle | null>(null);
   const [createForm, setCreateForm] = useState<any>({
     name: '',
     description: '',
@@ -316,6 +319,11 @@ export default function GroundsAdminScreen() {
 
       if (error) throw error;
 
+      setSavingAvailability(true);
+      const ok = await availabilityRef.current?.save?.();
+      setSavingAvailability(false);
+      if (ok === false) return;
+
       setEditOpen(false);
       setEditForm(null);
       loadGrounds();
@@ -325,6 +333,7 @@ export default function GroundsAdminScreen() {
       else Alert.alert('Error', e?.message ?? 'Failed to save ground');
     } finally {
       setEditLoading(false);
+      setSavingAvailability(false);
     }
   };
 
@@ -365,6 +374,11 @@ export default function GroundsAdminScreen() {
         onPress: runDelete,
       },
     ]);
+  };
+
+  const closeEditModal = () => {
+    setEditOpen(false);
+    setEditForm(null);
   };
 
   const handleCreateGround = async () => {
@@ -720,16 +734,6 @@ export default function GroundsAdminScreen() {
                     setSelectedGround(selectedGround?.id === item.id ? null : latestGround)
                   }
                 />
-                {isSelected ? (
-                  <Card style={styles.tileEditorCard}>
-                    <Text style={styles.tileEditorTitle}>Editable availability</Text>
-                    <TimeSlotsEditor
-                      groundId={latestGround.id}
-                      pitchType={latestGround.pitch_type}
-                      canEdit
-                    />
-                  </Card>
-                ) : null}
                 {isSelected && !isApproved ? renderGroundActions(latestGround) : null}
               </View>
             );
@@ -795,13 +799,6 @@ export default function GroundsAdminScreen() {
                   <Text style={styles.detailsText}>{schedule.datesLine}</Text>
                   <Text style={styles.detailsText}>{schedule.slotsLine}</Text>
 
-                  <Text style={styles.detailsSectionTitle}>Editable availability (Days & Slots)</Text>
-                  <TimeSlotsEditor
-                    groundId={latestGround.id}
-                    pitchType={latestGround.pitch_type}
-                    canEdit
-                  />
-
                   <View style={styles.detailsGrid}>
                     <View style={styles.detailsGridItem}>
                       <Text style={styles.detailsGridLabel}>Owner</Text>
@@ -861,150 +858,7 @@ export default function GroundsAdminScreen() {
                     />
                   </View>
 
-                  {editOpen && editForm?.id === latestGround.id ? (
-                    <ScrollView style={styles.formWrap}>
-                      <Text style={styles.formTitle}>Edit Ground</Text>
-
-                      <TextInput
-                        style={styles.formInput}
-                        value={String(editForm.name ?? '')}
-                        onChangeText={(t) => setEditForm({ ...editForm, name: t })}
-                        placeholder="Name"
-                      />
-                      <TextInput
-                        style={styles.formInput}
-                        value={String(editForm.description ?? '')}
-                        onChangeText={(t) => setEditForm({ ...editForm, description: t })}
-                        placeholder="Description"
-                      />
-                      <TextInput
-                        style={styles.formInput}
-                        value={String(editForm.address ?? '')}
-                        onChangeText={(t) => setEditForm({ ...editForm, address: t })}
-                        placeholder="Address"
-                      />
-                      <View style={styles.formRow2}>
-                        <TextInput
-                          style={[styles.formInput, styles.formInputHalf]}
-                          value={String(editForm.city ?? '')}
-                          onChangeText={(t) => setEditForm({ ...editForm, city: t })}
-                          placeholder="City"
-                        />
-                        <TextInput
-                          style={[styles.formInput, styles.formInputHalf]}
-                          value={String(editForm.state ?? '')}
-                          onChangeText={(t) => setEditForm({ ...editForm, state: t })}
-                          placeholder="State"
-                        />
-                      </View>
-                      <View style={styles.formRow2}>
-                        <TextInput
-                          style={[styles.formInput, styles.formInputHalf]}
-                          value={String(editForm.pincode ?? '')}
-                          onChangeText={(t) => setEditForm({ ...editForm, pincode: t })}
-                          placeholder="Pincode"
-                        />
-                        <TextInput
-                          style={[styles.formInput, styles.formInputHalf]}
-                          value={String(editForm.base_price_per_hour ?? '')}
-                          onChangeText={(t) => setEditForm({ ...editForm, base_price_per_hour: t })}
-                          placeholder="Price/hr"
-                        />
-                      </View>
-                      <TextInput
-                        style={styles.formInput}
-                        value={String(editForm.pitch_type ?? '')}
-                        onChangeText={(t) => setEditForm({ ...editForm, pitch_type: t })}
-                        placeholder="Type (Cricket Ground / Box Cricket)"
-                      />
-                      <TextInput
-                        style={styles.formInput}
-                        value={String(editForm.ground_size ?? '')}
-                        onChangeText={(t) => setEditForm({ ...editForm, ground_size: t })}
-                        placeholder="Ground size"
-                      />
-                      <TextInput
-                        style={styles.formInput}
-                        value={String(editForm.capacity ?? '')}
-                        onChangeText={(t) => setEditForm({ ...editForm, capacity: t })}
-                        placeholder="Capacity"
-                      />
-
-                      <View style={styles.switchRow}>
-                        <Text style={styles.switchLabel}>Floodlights</Text>
-                        <Switch
-                          value={!!editForm.has_floodlights}
-                          onValueChange={(v) => setEditForm({ ...editForm, has_floodlights: v })}
-                        />
-                      </View>
-                      <View style={styles.switchRow}>
-                        <Text style={styles.switchLabel}>Parking</Text>
-                        <Switch
-                          value={!!editForm.has_parking}
-                          onValueChange={(v) => setEditForm({ ...editForm, has_parking: v })}
-                        />
-                      </View>
-                      <View style={styles.switchRow}>
-                        <Text style={styles.switchLabel}>Changing Rooms</Text>
-                        <Switch
-                          value={!!editForm.has_changing_rooms}
-                          onValueChange={(v) => setEditForm({ ...editForm, has_changing_rooms: v })}
-                        />
-                      </View>
-                      <View style={styles.switchRow}>
-                        <Text style={styles.switchLabel}>Pavilion</Text>
-                        <Switch
-                          value={!!editForm.has_pavilion}
-                          onValueChange={(v) => setEditForm({ ...editForm, has_pavilion: v })}
-                        />
-                      </View>
-
-                      <View style={styles.switchRow}>
-                        <Text style={styles.switchLabel}>Verified</Text>
-                        <Switch
-                          value={!!editForm.verified}
-                          onValueChange={(v) => setEditForm({ ...editForm, verified: v })}
-                        />
-                      </View>
-                      <View style={styles.switchRow}>
-                        <Text style={styles.switchLabel}>Approved</Text>
-                        <Switch
-                          value={!!editForm.approved}
-                          onValueChange={(v) => setEditForm({ ...editForm, approved: v })}
-                        />
-                      </View>
-                      <View style={styles.switchRow}>
-                        <Text style={styles.switchLabel}>Active</Text>
-                        <Switch
-                          value={!!editForm.active}
-                          onValueChange={(v) => setEditForm({ ...editForm, active: v })}
-                        />
-                      </View>
-
-                      <View style={styles.formActions}>
-                        <Button
-                          title={editLoading ? 'Saving...' : 'Save'}
-                          onPress={handleSaveEdit}
-                          loading={editLoading}
-                          fullWidth
-                          size="large"
-                        />
-                      </View>
-
-                      <View style={styles.formActions}>
-                        <Button
-                          title="Cancel Edit"
-                          onPress={() => {
-                            setEditOpen(false);
-                            setEditForm(null);
-                          }}
-                          variant="outline"
-                          fullWidth
-                          size="large"
-                        />
-                      </View>
-                    </ScrollView>
-                  ) : null}
+                  {/* Edit ground is now in a modal (see below). */}
                 </Card>
               ) : null}
             </View>
@@ -1023,6 +877,178 @@ export default function GroundsAdminScreen() {
           </View>
         }
       />
+
+      <Modal
+        transparent
+        visible={editOpen && !!editForm?.id}
+        animationType="fade"
+        onRequestClose={closeEditModal}
+      >
+        <Pressable style={styles.modalOverlay} onPress={closeEditModal} />
+        <View style={styles.modalWrap}>
+          <Card style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Ground</Text>
+              <Button
+                title="Close"
+                onPress={closeEditModal}
+                variant="outline"
+                size="small"
+              />
+            </View>
+
+            <ScrollView style={styles.modalScroll} keyboardShouldPersistTaps="handled">
+              <TextInput
+                style={styles.formInput}
+                value={String(editForm?.name ?? '')}
+                onChangeText={(t) => setEditForm((prev: any) => ({ ...prev, name: t }))}
+                placeholder="Name"
+              />
+              <TextInput
+                style={styles.formInput}
+                value={String(editForm?.description ?? '')}
+                onChangeText={(t) => setEditForm((prev: any) => ({ ...prev, description: t }))}
+                placeholder="Description"
+              />
+              <TextInput
+                style={styles.formInput}
+                value={String(editForm?.address ?? '')}
+                onChangeText={(t) => setEditForm((prev: any) => ({ ...prev, address: t }))}
+                placeholder="Address"
+              />
+              <View style={styles.formRow2}>
+                <TextInput
+                  style={[styles.formInput, styles.formInputHalf]}
+                  value={String(editForm?.city ?? '')}
+                  onChangeText={(t) => setEditForm((prev: any) => ({ ...prev, city: t }))}
+                  placeholder="City"
+                />
+                <TextInput
+                  style={[styles.formInput, styles.formInputHalf]}
+                  value={String(editForm?.state ?? '')}
+                  onChangeText={(t) => setEditForm((prev: any) => ({ ...prev, state: t }))}
+                  placeholder="State"
+                />
+              </View>
+              <View style={styles.formRow2}>
+                <TextInput
+                  style={[styles.formInput, styles.formInputHalf]}
+                  value={String(editForm?.pincode ?? '')}
+                  onChangeText={(t) => setEditForm((prev: any) => ({ ...prev, pincode: t }))}
+                  placeholder="Pincode"
+                />
+                <TextInput
+                  style={[styles.formInput, styles.formInputHalf]}
+                  value={String(editForm?.base_price_per_hour ?? '')}
+                  onChangeText={(t) =>
+                    setEditForm((prev: any) => ({ ...prev, base_price_per_hour: t }))
+                  }
+                  placeholder="Price/hr"
+                  keyboardType="numeric"
+                />
+              </View>
+
+              <TextInput
+                style={styles.formInput}
+                value={String(editForm?.pitch_type ?? '')}
+                onChangeText={(t) => setEditForm((prev: any) => ({ ...prev, pitch_type: t }))}
+                placeholder="Type (Cricket Ground / Box Cricket)"
+              />
+              <TextInput
+                style={styles.formInput}
+                value={String(editForm?.ground_size ?? '')}
+                onChangeText={(t) => setEditForm((prev: any) => ({ ...prev, ground_size: t }))}
+                placeholder="Ground size"
+              />
+              <TextInput
+                style={styles.formInput}
+                value={String(editForm?.capacity ?? '')}
+                onChangeText={(t) => setEditForm((prev: any) => ({ ...prev, capacity: t }))}
+                placeholder="Capacity"
+                keyboardType="numeric"
+              />
+
+              <View style={styles.switchRow}>
+                <Text style={styles.switchLabel}>Floodlights</Text>
+                <Switch
+                  value={!!editForm?.has_floodlights}
+                  onValueChange={(v) =>
+                    setEditForm((prev: any) => ({ ...prev, has_floodlights: v }))
+                  }
+                />
+              </View>
+              <View style={styles.switchRow}>
+                <Text style={styles.switchLabel}>Parking</Text>
+                <Switch
+                  value={!!editForm?.has_parking}
+                  onValueChange={(v) => setEditForm((prev: any) => ({ ...prev, has_parking: v }))}
+                />
+              </View>
+              <View style={styles.switchRow}>
+                <Text style={styles.switchLabel}>Changing Rooms</Text>
+                <Switch
+                  value={!!editForm?.has_changing_rooms}
+                  onValueChange={(v) =>
+                    setEditForm((prev: any) => ({ ...prev, has_changing_rooms: v }))
+                  }
+                />
+              </View>
+              <View style={styles.switchRow}>
+                <Text style={styles.switchLabel}>Pavilion</Text>
+                <Switch
+                  value={!!editForm?.has_pavilion}
+                  onValueChange={(v) =>
+                    setEditForm((prev: any) => ({ ...prev, has_pavilion: v }))
+                  }
+                />
+              </View>
+
+              <View style={styles.switchRow}>
+                <Text style={styles.switchLabel}>Verified</Text>
+                <Switch
+                  value={!!editForm?.verified}
+                  onValueChange={(v) => setEditForm((prev: any) => ({ ...prev, verified: v }))}
+                />
+              </View>
+              <View style={styles.switchRow}>
+                <Text style={styles.switchLabel}>Approved</Text>
+                <Switch
+                  value={!!editForm?.approved}
+                  onValueChange={(v) => setEditForm((prev: any) => ({ ...prev, approved: v }))}
+                />
+              </View>
+              <View style={styles.switchRow}>
+                <Text style={styles.switchLabel}>Active</Text>
+                <Switch
+                  value={!!editForm?.active}
+                  onValueChange={(v) => setEditForm((prev: any) => ({ ...prev, active: v }))}
+                />
+              </View>
+
+              <Text style={styles.detailsSectionTitle}>Editable availability (Days & Slots)</Text>
+              {editForm?.id ? (
+                <TimeSlotsEditor
+                  ref={availabilityRef}
+                  groundId={String(editForm.id)}
+                  pitchType={String(editForm.pitch_type ?? '') || null}
+                  canEdit
+                  showSaveButton={false}
+                />
+              ) : null}
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <Button
+                title={(editLoading || savingAvailability) ? 'Saving...' : 'Save'}
+                onPress={handleSaveEdit}
+                loading={editLoading || savingAvailability}
+                fullWidth
+                size="large"
+              />
+            </View>
+          </Card>
+        </View>
+      </Modal>
     </View>
   );
 
@@ -1245,18 +1271,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     minWidth: 0,
   },
-  tileEditorCard: {
-    marginTop: 10,
-    padding: 12,
-    backgroundColor: '#FFF9E6',
-    borderRadius: 12,
-  },
-  tileEditorTitle: {
-    fontSize: 13,
-    fontWeight: '900',
-    color: '#212121',
-    marginBottom: 10,
-  },
   listRowOuter: {
     marginBottom: 12,
   },
@@ -1435,6 +1449,43 @@ const styles = StyleSheet.create({
   },
   formActions: {
     marginTop: 10,
+  },
+  modalOverlay: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+  },
+  modalWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 16,
+  },
+  modalCard: {
+    maxHeight: '90%',
+    padding: 14,
+    borderRadius: 14,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#212121',
+    flex: 1,
+  },
+  modalScroll: {
+    maxHeight: 560,
+  },
+  modalFooter: {
+    marginTop: 12,
   },
   createFormSection: {
     paddingHorizontal: 16,

@@ -441,12 +441,25 @@ export default function LandingBookingForm({
     };
   }, [selectedGround?.id, bookingDate]);
 
+  /**
+   * Before search picks a ground, do not constrain chips to one ground's `time_slots`
+   * (avoids empty intersection / stale selection). After a ground is chosen from results,
+   * `selectedGroundId` is set and DB-backed availability applies.
+   */
+  const constrainSlotsToDb = useMemo(() => {
+    if (!useLandingSearchFlow) return true;
+    return !!selectedGroundId;
+  }, [useLandingSearchFlow, selectedGroundId]);
+
   const availableTimeSlots = useMemo(
     () => {
-      const base = allowedStartHHMM.size ? timeSlots.filter((s) => allowedStartHHMM.has(s.value)) : timeSlots;
+      const base =
+        constrainSlotsToDb && allowedStartHHMM.size
+          ? timeSlots.filter((s) => allowedStartHHMM.has(s.value))
+          : timeSlots;
       return base.filter((s) => !bookedStartHHMM.has(s.value));
     },
-    [timeSlots, bookedStartHHMM, allowedStartHHMM],
+    [timeSlots, bookedStartHHMM, allowedStartHHMM, constrainSlotsToDb],
   );
 
   useEffect(() => {
@@ -589,8 +602,7 @@ export default function LandingBookingForm({
       !!bookingDate &&
       timeIsValidSlot &&
       availableTimeSlots.length > 0 &&
-      !loadingGrounds &&
-      grounds.length > 0
+      !loadingGrounds
     );
   }, [
     locationKey,
@@ -599,7 +611,6 @@ export default function LandingBookingForm({
     startTime,
     availableTimeSlots,
     loadingGrounds,
-    grounds.length,
   ]);
 
   const groundSelectedFromSearch = useMemo(() => {
@@ -630,60 +641,48 @@ export default function LandingBookingForm({
     setHasSearched(true);
     setSelectedGroundId(null);
     try {
-      const available: GroundWithImages[] = [];
-
-      // Availability is configured per ground/day via `time_slots.is_available`.
-      // During search we prefetch enabled start-times for all candidate grounds.
-      const parsed = parseISODate(bookingDate);
-      const dow = parsed ? (getDayOfWeek(parsed) as any) : null;
       const candidateIds = candidates.map((c) => c.id);
+      const startTimeDb = `${startTime}:00`;
+      const { data, error } = await supabase.rpc('available_ground_ids_for_slot', {
+        p_ground_ids: candidateIds,
+        p_booking_date: bookingDate,
+        p_start_time: startTimeDb,
+      });
 
-      let availabilityMap: Map<string, Set<string>> | null = null;
-      if (dow && candidateIds.length) {
-        const { data: availabilityData, error: availabilityError } = await supabase
-          .from('time_slots')
-          .select('ground_id, start_time')
-          .eq('day_of_week', dow)
-          .in('ground_id', candidateIds)
-          .eq('is_available', true);
-
-        if (!availabilityError) {
-          const map = new Map<string, Set<string>>();
-          (availabilityData ?? []).forEach((row: any) => {
-            const hh = normalizeDbTimeToHHMM(row.start_time);
-            if (!hh) return;
-            const set = map.get(row.ground_id) ?? new Set<string>();
-            set.add(hh);
-            map.set(row.ground_id, set);
-          });
-          availabilityMap = map.size > 0 ? map : null;
-        }
+      if (error) {
+        console.warn('available_ground_ids_for_slot', error);
+        Alert.alert(
+          'Search failed',
+          'Availability check failed. Please try again.',
+        );
       }
 
-      for (const g of candidates) {
-        if (availabilityMap) {
-          const allowedForGround = availabilityMap.get(g.id);
-          if (!allowedForGround?.has(startTime)) continue;
-        }
+      const allowed = new Set<string>();
+      (data as { ground_id: string }[] | null)?.forEach((row) => {
+        if (row?.ground_id) allowed.add(row.ground_id);
+      });
 
-        const { data, error } = await supabase.rpc('booked_start_times_for_ground_day', {
+      // Fallback: if RPC is missing/misconfigured and returns no rows, use the old per-ground check.
+      if (!error && allowed.size > 0) {
+        setSearchResults(candidates.filter((g) => allowed.has(g.id)));
+        return;
+      }
+
+      const fallbackAvailable: GroundWithImages[] = [];
+      for (const g of candidates) {
+        const { data: bookedRows, error: bookedErr } = await supabase.rpc('booked_start_times_for_ground_day', {
           p_ground_id: g.id,
           p_booking_date: bookingDate,
         });
-        if (error) {
-          console.warn('booked_start_times_for_ground_day', error);
-          continue;
-        }
+        if (bookedErr) continue;
         const booked = new Set<string>();
-        (data as { start_time: string }[] | null)?.forEach((row) => {
+        (bookedRows as { start_time: string }[] | null)?.forEach((row) => {
           const hh = normalizeDbTimeToHHMM(row.start_time);
           if (hh) booked.add(hh);
         });
-        if (!booked.has(startTime)) {
-          available.push(g);
-        }
+        if (!booked.has(startTime)) fallbackAvailable.push(g);
       }
-      setSearchResults(available);
+      setSearchResults(fallbackAvailable);
     } finally {
       setSearching(false);
     }

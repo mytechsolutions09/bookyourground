@@ -63,19 +63,12 @@ export default function GroundDetailsScreen() {
 
   const handleBookNow = () => {
     if (!user) {
-      if (Platform.OS === 'web') {
-        alert('Please login to book a ground');
-      } else {
-        Alert.alert('Login Required', 'Please login to book a ground');
-      }
+      if (Platform.OS === 'web') alert('Please login to book a ground');
+      else Alert.alert('Login Required', 'Please login to book a ground');
       router.push('/(auth)/login');
       return;
     }
-    if (Platform.OS === 'web') {
-      alert('Booking functionality will be available soon!');
-    } else {
-      Alert.alert('Coming Soon', 'Booking functionality will be available soon!');
-    }
+    // Booking is handled by `LandingBookingForm` below on all platforms.
   };
 
   const content = (
@@ -160,19 +153,9 @@ export default function GroundDetailsScreen() {
           </View>
         </Card>
 
-        {Platform.OS === 'web' && groundId && (
+        {groundId ? (
           <LandingBookingForm initialGroundId={String(groundId)} hideGroundPicker />
-        )}
-
-        {Platform.OS !== 'web' && (
-          <Button
-            title="Book Now"
-            onPress={handleBookNow}
-            fullWidth
-            size="large"
-            style={styles.bookButton}
-          />
-        )}
+        ) : null}
       </View>
     </ScrollView>
   );

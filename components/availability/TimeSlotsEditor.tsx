@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Switch, ActivityIndicator, Alert } from 'react-native';
+import React, { useEffect, useImperativeHandle, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { TimeSlot, DayOfWeek } from '@/types';
 import Button from '@/components/ui/Button';
@@ -26,12 +26,22 @@ function timeLabelFromHHMM(hhmm: string): string {
   return formatSlotLabelHour(hh);
 }
 
-export default function TimeSlotsEditor(props: {
+export type TimeSlotsEditorHandle = {
+  save: () => Promise<boolean>;
+  hasUnsavedChanges: () => boolean;
+};
+
+function TimeSlotsEditorInner(
+  props: {
   groundId: string;
   pitchType?: string | null;
   canEdit?: boolean;
-}) {
-  const { groundId, pitchType, canEdit = true } = props;
+  /** If false, hide the internal Save button (parent will call ref.save()). */
+  showSaveButton?: boolean;
+},
+  ref: React.ForwardedRef<TimeSlotsEditorHandle>,
+) {
+  const { groundId, pitchType, canEdit = true, showSaveButton = true } = props;
 
   const [loading, setLoading] = useState(true);
   const [slots, setSlots] = useState<TimeSlot[]>([]);
@@ -63,30 +73,6 @@ export default function TimeSlotsEditor(props: {
     }
     return map;
   }, [slots]);
-
-  const dayAvailability = useMemo(() => {
-    const result: Record<DayOfWeek, boolean> = {
-      monday: false,
-      tuesday: false,
-      wednesday: false,
-      thursday: false,
-      friday: false,
-      saturday: false,
-      sunday: false,
-    };
-    for (const d of DAY_ORDER) {
-      const daySlots = slotsByDay[d];
-      if (!daySlots.length) {
-        result[d] = false;
-        continue;
-      }
-      result[d] = daySlots.every((s) => {
-        const v = availabilityById[s.id];
-        return typeof v === 'boolean' ? v : !!s.is_available;
-      });
-    }
-    return result;
-  }, [slotsByDay, availabilityById]);
 
   useEffect(() => {
     let cancelled = false;
@@ -140,11 +126,16 @@ export default function TimeSlotsEditor(props: {
     }
   };
 
+  function isSlotActive(s: TimeSlot): boolean {
+    const v = availabilityById[s.id];
+    return typeof v === 'boolean' ? v : !!s.is_available;
+  }
+
   const changedIds = useMemo(() => Object.keys(dirtyById), [dirtyById]);
 
-  const handleSave = async () => {
-    if (!canEdit) return;
-    if (!changedIds.length) return;
+  const saveInternal = async (): Promise<boolean> => {
+    if (!canEdit) return false;
+    if (!changedIds.length) return true;
 
     try {
       setSaving(true);
@@ -157,9 +148,11 @@ export default function TimeSlotsEditor(props: {
       const { error } = await supabase.from('time_slots').upsert(updates, { onConflict: 'id' });
       if (error) throw error;
       setDirtyById({});
+      return true;
     } catch (e: any) {
       console.error('TimeSlotsEditor: save failed', e);
       Alert.alert('Save failed', e?.message ?? 'Failed to save time slots');
+      return false;
     } finally {
       setSaving(false);
       // Reload to ensure UI matches DB and remove any local drift.
@@ -168,7 +161,7 @@ export default function TimeSlotsEditor(props: {
         .select('id, ground_id, day_of_week, start_time, end_time, custom_price, is_available')
         .eq('ground_id', groundId);
 
-      if (error) return;
+      if (error) return false;
       const rows = (data ?? []) as TimeSlot[];
       setSlots(rows);
 
@@ -178,6 +171,19 @@ export default function TimeSlotsEditor(props: {
       setDirtyById({});
     }
   };
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      save: async () => {
+        // If we are currently saving, wait until it flips (avoid double saves).
+        if (saving) return false;
+        return await saveInternal();
+      },
+      hasUnsavedChanges: () => Object.keys(dirtyById).length > 0,
+    }),
+    [saving, dirtyById, canEdit, changedIds, groundId],
+  );
 
   if (loading) {
     return (
@@ -195,64 +201,74 @@ export default function TimeSlotsEditor(props: {
         <Text style={styles.subtitle}>{canEdit ? '' : '(read-only)'}</Text>
       </View>
 
-      <ScrollView style={styles.scroll} nestedScrollEnabled>
-        {DAY_ORDER.map((d) => {
-          const daySlots = slotsByDay[d];
-          if (!daySlots.length) {
-            return (
-              <View key={d} style={styles.dayBlock}>
-                <View style={styles.dayHeader}>
-                  <Text style={styles.dayLabel}>{dayLabel(d)}</Text>
-                </View>
-                <Text style={styles.emptyText}>No slots configured</Text>
-              </View>
-            );
-          }
-
-          const dayAllAvailable = dayAvailability[d];
+      {DAY_ORDER.map((d) => {
+        const daySlots = slotsByDay[d];
+        if (!daySlots.length) {
           return (
             <View key={d} style={styles.dayBlock}>
               <View style={styles.dayHeader}>
                 <Text style={styles.dayLabel}>{dayLabel(d)}</Text>
-                <Switch
-                  value={dayAllAvailable}
-                  disabled={!canEdit || saving}
-                  onValueChange={(v) => setDayAvailable(d, v)}
-                />
               </View>
-
-              <View style={styles.slotsRow}>
-                {daySlots.map((s) => {
-                  const hhmm = normalizeDbTimeToHHMM(s.start_time) ?? '';
-                  const active = !!availabilityById[s.id];
-                  return (
-                    <Pressable
-                      key={s.id}
-                      disabled={!canEdit || saving}
-                      onPress={() => setSlotAvailable(s.id, !active)}
-                      style={({ pressed }) => [
-                        styles.slotChip,
-                        active && styles.slotChipActive,
-                        pressed && !active && styles.slotChipPressed,
-                      ]}
-                    >
-                      <Text style={[styles.slotChipText, active && styles.slotChipTextActive]} numberOfLines={1}>
-                        {hhmm ? timeLabelFromHHMM(hhmm) : '—'}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
+              <Text style={styles.emptyText}>No slots configured</Text>
             </View>
           );
-        })}
-      </ScrollView>
+        }
 
-      {canEdit ? (
+        return (
+          <View key={d} style={styles.dayBlock}>
+            <View style={styles.dayHeader}>
+              <Text style={styles.dayLabel}>{dayLabel(d)}</Text>
+              <View style={styles.dayBulkActions}>
+                <Pressable
+                  disabled={!canEdit || saving}
+                  onPress={() => setDayAvailable(d, true)}
+                  style={({ pressed }) => [styles.dayBulkBtn, pressed && styles.dayBulkBtnPressed]}
+                >
+                  <Text style={styles.dayBulkBtnText}>All</Text>
+                </Pressable>
+                <Pressable
+                  disabled={!canEdit || saving}
+                  onPress={() => setDayAvailable(d, false)}
+                  style={({ pressed }) => [styles.dayBulkBtn, pressed && styles.dayBulkBtnPressed]}
+                >
+                  <Text style={styles.dayBulkBtnText}>None</Text>
+                </Pressable>
+              </View>
+            </View>
+
+            <View style={styles.slotsRow}>
+              {daySlots.map((s) => {
+                const hhmm = normalizeDbTimeToHHMM(s.start_time) ?? '';
+                const active = isSlotActive(s);
+                return (
+                  <Pressable
+                    key={s.id}
+                    disabled={!canEdit || saving}
+                    onPress={() => setSlotAvailable(s.id, !active)}
+                    style={({ pressed }) => [
+                      styles.slotChip,
+                      active && styles.slotChipActive,
+                      pressed && !active && styles.slotChipPressed,
+                    ]}
+                  >
+                    <Text style={[styles.slotChipText, active && styles.slotChipTextActive]} numberOfLines={1}>
+                      {hhmm ? timeLabelFromHHMM(hhmm) : '—'}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        );
+      })}
+
+      {canEdit && showSaveButton ? (
         <View style={styles.saveRow}>
           <Button
             title={saving ? 'Saving...' : 'Save changes'}
-            onPress={handleSave}
+            onPress={async () => {
+              await saveInternal();
+            }}
             loading={saving}
             disabled={!changedIds.length || saving}
             fullWidth
@@ -264,6 +280,9 @@ export default function TimeSlotsEditor(props: {
     </View>
   );
 }
+
+const TimeSlotsEditor = React.forwardRef(TimeSlotsEditorInner);
+export default TimeSlotsEditor;
 
 const styles = StyleSheet.create({
   wrap: {
@@ -285,9 +304,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#6B7280',
   },
-  scroll: {
-    maxHeight: 320,
-  },
   dayBlock: {
     marginBottom: 12,
     borderWidth: 1,
@@ -301,6 +317,27 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 10,
+  },
+  dayBulkActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dayBulkBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    backgroundColor: '#F9FAFB',
+  },
+  dayBulkBtnPressed: {
+    opacity: 0.85,
+  },
+  dayBulkBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#374151',
   },
   dayLabel: {
     fontSize: 13,
