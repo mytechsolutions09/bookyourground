@@ -1,5 +1,3 @@
-import { formatTime } from '@/utils/helpers';
-
 function parseTimeToMinutes(time: string): number | null {
   const match = /^(\d{2}):(\d{2})$/.exec(time.trim());
   if (!match) return null;
@@ -91,23 +89,4 @@ export function getGroundBookingScheduleLines(pitch: string | null | undefined):
 
 export function bookingStatusBlocksSlot(status: string): boolean {
   return status !== 'cancelled' && status !== 'rejected';
-}
-
-/** Display line for booking cards: prefer named slot start when it matches templates. */
-export function formatBookingSlotSummary(
-  startTime: string,
-  endTime: string,
-  pitchType?: string | null,
-): string {
-  const st = normalizeDbTimeToHHMM(startTime);
-  const et = normalizeDbTimeToHHMM(endTime);
-  if (!st || !et) {
-    return `${formatTime(startTime)} – ${formatTime(endTime)}`;
-  }
-  const templates = getSlotTemplatesForPitch(pitchType);
-  const startNamed = templates.find((t) => t.value === st)?.label;
-  if (startNamed) {
-    return `${startNamed} – ${formatTime(et)}`;
-  }
-  return `${formatTime(st)} – ${formatTime(et)}`;
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,7 +9,8 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+  const { signIn, profile, user } = useAuth();
+  const os = Platform.OS as string;
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -32,9 +33,28 @@ export default function LoginScreen() {
         Alert.alert('Login Failed', error.message);
       }
     } else {
-      router.replace('/(tabs)');
+      // Route by role once profile is loaded.
+      const adminEmail = 'invirtualcoin@gmail.com';
+      const isSuperAdmin =
+        profile?.role === 'super_admin' ||
+        (user?.email?.toLowerCase() ?? '') === adminEmail.toLowerCase() ||
+        email.toLowerCase() === adminEmail.toLowerCase();
+
+      if (isSuperAdmin) router.replace('/(admin)/dashboard');
+      else if (profile?.role === 'ground_owner') router.replace('/(owner)/grounds');
+      else router.replace('/(tabs)/bookings');
     }
   };
+
+  useEffect(() => {
+    if (os !== 'web') return;
+    if (!user) return;
+    if (!profile) return;
+
+    if (profile.role === 'super_admin') router.replace('/(admin)/dashboard');
+    else if (profile.role === 'ground_owner') router.replace('/(owner)/grounds');
+    else router.replace('/(tabs)/bookings');
+  }, [os, user, profile]);
 
   return (
     <KeyboardAvoidingView

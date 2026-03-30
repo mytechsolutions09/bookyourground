@@ -4,7 +4,7 @@ import { Calendar, Clock, MapPin } from 'lucide-react-native';
 import { Platform } from 'react-native';
 import { BookingWithDetails } from '@/types';
 import { formatCurrency, formatDate, getStatusColor, getStatusLabel } from '@/utils/helpers';
-import { formatBookingSlotSummary } from '@/utils/bookingSlots';
+import { formatBookingSlotSummary } from '@/utils/bookingSlotFormat';
 import Card from '@/components/ui/Card';
 
 interface BookingCardProps {

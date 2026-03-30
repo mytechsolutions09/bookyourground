@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { BookingWithDetails } from '@/types';
 import { formatCurrency, formatDate, getStatusColor, getStatusLabel } from '@/utils/helpers';
-import { formatBookingSlotSummary } from '@/utils/bookingSlots';
+import { formatBookingSlotSummary } from '@/utils/bookingSlotFormat';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 

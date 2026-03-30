@@ -4,8 +4,12 @@ import { router } from 'expo-router';
 import { MapPin, Calendar, Shield } from 'lucide-react-native';
 import { WebView } from 'react-native-webview';
 import { Asset } from 'expo-asset';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Hero() {
+  const { user, profile } = useAuth();
+  const isLoggedIn = !!user || !!profile;
+
   // Expo can only bundle local assets inside this repo.
   // Copy your video to: `h:\site\bookyourground\assets\videos\hero.mp4`
   const heroVideoModule = require('../../assets/videos/hero.mp4');
@@ -102,19 +106,39 @@ export default function Hero() {
         </Text>
 
         <View style={styles.buttonGroup}>
-          <Pressable
-            style={styles.primaryButton}
-            onPress={() => router.push('/(auth)/signup')}
-          >
-            <Text style={styles.primaryButtonText}>Get Started</Text>
-          </Pressable>
+          {isLoggedIn ? (
+            <>
+              <Pressable
+                style={styles.primaryButton}
+                onPress={() => router.push('/(tabs)/bookings')}
+              >
+                <Text style={styles.primaryButtonText}>My Bookings</Text>
+              </Pressable>
 
-          <Pressable
-            style={styles.secondaryButton}
-            onPress={() => router.push('/(auth)/login')}
-          >
-            <Text style={styles.secondaryButtonText}>Sign In</Text>
-          </Pressable>
+              <Pressable
+                style={styles.secondaryButton}
+                onPress={() => router.push('/(tabs)/profile')}
+              >
+                <Text style={styles.secondaryButtonText}>Profile</Text>
+              </Pressable>
+            </>
+          ) : (
+            <>
+              <Pressable
+                style={styles.primaryButton}
+                onPress={() => router.push('/(auth)/signup')}
+              >
+                <Text style={styles.primaryButtonText}>Get Started</Text>
+              </Pressable>
+
+              <Pressable
+                style={styles.secondaryButton}
+                onPress={() => router.push('/(auth)/login')}
+              >
+                <Text style={styles.secondaryButtonText}>Sign In</Text>
+              </Pressable>
+            </>
+          )}
         </View>
 
         <View style={styles.features}>

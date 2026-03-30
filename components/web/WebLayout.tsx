@@ -30,16 +30,23 @@ export default function WebLayout({ children }: WebLayoutProps) {
 
   const isCompact = useMemo(() => width < 900, [width]);
   const isLanding = pathname === '/' || pathname === '';
+  const isPublicNoSidebar = isLanding || pathname === '/book-my-ground';
   const adminEmail = 'invirtualcoin@gmail.com';
   const isSuperAdmin =
     profile?.role === 'super_admin' ||
     (user?.email?.toLowerCase() ?? '') === adminEmail.toLowerCase();
-  const isAuthenticated = !!profile || isSuperAdmin;
-  const shouldShowSidebar = isAuthenticated ? (!isCompact || menuOpen) : menuOpen;
+  // Treat the presence of a Supabase `user` as authenticated even if `profile`
+  // hasn't loaded yet (prevents briefly showing "Sign In").
+  const isAuthenticated = !!user || !!profile || isSuperAdmin;
+  // App pages: sidebar as before. Public routes (/, book-my-ground): burger opens a small drawer
+  // (Sign In / Sign Up when logged out; Profile when logged in).
+  const showMenuPanel =
+    (!isPublicNoSidebar && (isAuthenticated ? !isCompact || menuOpen : menuOpen)) ||
+    (isPublicNoSidebar && menuOpen);
 
   const handleSignOut = async () => {
     await signOut();
-    router.replace('/(auth)/login');
+    router.replace('/');
   };
 
   const NavLink = ({ href, icon: Icon, label }: { href: string; icon: any; label: string }) => {
@@ -48,7 +55,11 @@ export default function WebLayout({ children }: WebLayoutProps) {
       <TouchableOpacity
         style={[styles.navLink, isActive && styles.navLinkActive]}
         onPress={() => {
-          router.push(href as any);
+          if (href === '/' || href === '') {
+            router.replace('/' as any);
+          } else {
+            router.push(href as any);
+          }
           setMenuOpen(false);
         }}
       >
@@ -64,7 +75,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
         <View style={styles.heroHeader}>
           <View style={styles.headerContent}>
             <TouchableOpacity
-              onPress={() => router.push(isAuthenticated ? '/(tabs)' : '/')}
+              onPress={() => router.replace('/')}
               style={styles.logo}
             >
               <Text style={styles.logoText}>Book my ground</Text>
@@ -80,7 +91,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
                 {menuOpen ? <X size={20} color="#dc8d3c" /> : <Menu size={20} color="#dc8d3c" />}
               </TouchableOpacity>
 
-              {profile && (
+              {profile && !isLanding && (
                 <>
                   <Text style={styles.userName}>{profile.full_name}</Text>
                   <TouchableOpacity onPress={handleSignOut} style={styles.signOutButton}>
@@ -95,9 +106,9 @@ export default function WebLayout({ children }: WebLayoutProps) {
       )}
 
       <View style={styles.body}>
-          {shouldShowSidebar ? (
+          {showMenuPanel ? (
           <>
-              {!isAuthenticated && menuOpen && (
+              {menuOpen && (
                 <TouchableOpacity
                   style={styles.mobileOverlay}
                   activeOpacity={1}
@@ -111,7 +122,23 @@ export default function WebLayout({ children }: WebLayoutProps) {
                   isLanding && styles.sidebarHeaderOffset,
                 ]}
               >
-                {isAuthenticated ? (
+                <TouchableOpacity
+                  onPress={() => router.replace('/')}
+                  style={styles.sidebarBrand}
+                >
+                  <Text style={styles.sidebarBrandText}>Book my ground</Text>
+                </TouchableOpacity>
+
+                {isPublicNoSidebar ? (
+                  isAuthenticated ? (
+                    <NavLink href="/(tabs)/profile" icon={User} label="Profile" />
+                  ) : (
+                    <>
+                      <NavLink href="/(auth)/login" icon={User} label="Sign In" />
+                      <NavLink href="/(auth)/signup" icon={User} label="Sign Up" />
+                    </>
+                  )
+                ) : isAuthenticated ? (
                   <>
                     <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
                     <View style={styles.itemSpacer} />
@@ -162,6 +189,15 @@ export default function WebLayout({ children }: WebLayoutProps) {
                         />
                       </>
                     )}
+
+                    <View style={styles.divider} />
+                    <TouchableOpacity
+                      style={styles.navLink}
+                      onPress={handleSignOut}
+                    >
+                      <LogOut size={20} color="#666" />
+                      <Text style={styles.navLinkText}>Sign Out</Text>
+                    </TouchableOpacity>
                   </>
                 ) : (
                   <>
@@ -226,6 +262,16 @@ const styles = StyleSheet.create({
   logoText: {
     fontSize: 24,
     fontWeight: '700',
+    color: '#dc8d3c',
+  },
+  sidebarBrand: {
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+  },
+  sidebarBrandText: {
+    fontSize: 18,
+    fontWeight: '800',
     color: '#dc8d3c',
   },
   headerRight: {

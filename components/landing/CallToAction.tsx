@@ -2,8 +2,12 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { ArrowRight } from 'lucide-react-native';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function CallToAction() {
+  const { user, profile } = useAuth();
+  const isLoggedIn = !!user || !!profile;
+
   return (
     <View style={styles.container}>
       <View style={styles.content}>
@@ -14,20 +18,32 @@ export default function CallToAction() {
           </Text>
 
           <View style={styles.buttonGroup}>
-            <Pressable
-              style={styles.primaryButton}
-              onPress={() => router.push('/(auth)/signup')}
-            >
-              <Text style={styles.primaryButtonText}>Create Free Account</Text>
-              <ArrowRight size={20} color="#FFFFFF" strokeWidth={2.5} />
-            </Pressable>
+            {isLoggedIn ? (
+              <Pressable
+                style={styles.primaryButton}
+                onPress={() => router.push('/(tabs)/bookings')}
+              >
+                <Text style={styles.primaryButtonText}>My Bookings</Text>
+                <ArrowRight size={20} color="#FFFFFF" strokeWidth={2.5} />
+              </Pressable>
+            ) : (
+              <>
+                <Pressable
+                  style={styles.primaryButton}
+                  onPress={() => router.push('/(auth)/signup')}
+                >
+                  <Text style={styles.primaryButtonText}>Create Free Account</Text>
+                  <ArrowRight size={20} color="#FFFFFF" strokeWidth={2.5} />
+                </Pressable>
 
-            <Pressable
-              style={styles.linkButton}
-              onPress={() => router.push('/(auth)/login')}
-            >
-              <Text style={styles.linkButtonText}>Already have an account? Sign in</Text>
-            </Pressable>
+                <Pressable
+                  style={styles.linkButton}
+                  onPress={() => router.push('/(auth)/login')}
+                >
+                  <Text style={styles.linkButtonText}>Already have an account? Sign in</Text>
+                </Pressable>
+              </>
+            )}
           </View>
         </View>
       </View>

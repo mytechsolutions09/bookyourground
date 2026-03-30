@@ -17,8 +17,7 @@ export default function ProfileScreen() {
   const handleSignOut = () => {
     if (Platform.OS === 'web') {
       if (confirm('Are you sure you want to sign out?')) {
-        signOut();
-        router.replace('/(auth)/login');
+        void signOut().then(() => router.replace('/'));
       }
     } else {
       Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -28,7 +27,7 @@ export default function ProfileScreen() {
           style: 'destructive',
           onPress: async () => {
             await signOut();
-            router.replace('/(auth)/login');
+            router.replace('/');
           },
         },
       ]);

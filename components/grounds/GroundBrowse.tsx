@@ -1,22 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, TextInput, Platform, Pressable } from 'react-native';
-import { useIsFocused } from '@react-navigation/native';
-import { router, usePathname } from 'expo-router';
+import { router } from 'expo-router';
 import { Search } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { GroundWithImages } from '@/types';
 import GroundCard from '@/components/grounds/GroundCard';
-import WebLayout from '@/components/web/WebLayout';
-import LandingScrollContent from '@/components/landing/LandingScrollContent';
-
-/** True when the URL is the marketing home (not /bookings, /profile, etc.). */
-function isWebLandingPath(pathname: string | undefined): boolean {
-  if (pathname == null || pathname === '') return true;
-  const p = pathname.split('?')[0];
-  if (p === '/' || p === '') return true;
-  if (p === '/(tabs)' || p === '/(tabs)/') return true;
-  return false;
-}
 
 function FilterDropdown({
   options,
@@ -49,17 +37,9 @@ function FilterDropdown({
                 onChange(opt);
                 setOpen(false);
               }}
-              style={[
-                styles.dropdownOption,
-                opt === value && styles.dropdownOptionActive,
-              ]}
+              style={[styles.dropdownOption, opt === value && styles.dropdownOptionActive]}
             >
-              <Text
-                style={[
-                  styles.dropdownOptionText,
-                  opt === value && styles.dropdownOptionTextActive,
-                ]}
-              >
+              <Text style={[styles.dropdownOptionText, opt === value && styles.dropdownOptionTextActive]}>
                 {display(opt)}
               </Text>
             </Pressable>
@@ -70,70 +50,43 @@ function FilterDropdown({
   );
 }
 
-export default function HomeScreen() {
-  const isFocused = useIsFocused();
-  const pathname = usePathname();
+export default function GroundBrowse(props: { title?: string }) {
+  const { title = 'Find Cricket Grounds' } = props;
+
   const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [locationFilter, setLocationFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
-  const didRedirectRef = useRef(false);
 
-  const loadGrounds = useCallback(async () => {
+  useEffect(() => {
+    loadGrounds();
+  }, []);
+
+  const loadGrounds = async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
         .from('grounds')
-        .select(`
+        .select(
+          `
           *,
           ground_images(*),
           reviews(rating)
-        `)
+        `,
+        )
         .eq('active', true)
         .eq('approved', true)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setGrounds(data || []);
+      setGrounds((data || []) as GroundWithImages[]);
     } catch (error) {
       console.error('Error loading grounds:', error);
     } finally {
       setLoading(false);
     }
-  }, []);
-
-  useEffect(() => {
-    if (Platform.OS === 'web') return;
-    loadGrounds();
-  }, [loadGrounds]);
-
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    if (!isFocused) {
-      didRedirectRef.current = false;
-      return;
-    }
-    if (isWebLandingPath(pathname)) return;
-    if (didRedirectRef.current) return;
-    didRedirectRef.current = true;
-    router.replace('/');
-  }, [isFocused, pathname, router]);
-
-  // Web: marketing home lives at `/` (hero). When the Home tab is focused on that route,
-  // render the same landing as `app/index.tsx`. Returning `null` here produced a blank
-  // screen after logo navigation to `/`.
-  if (Platform.OS === 'web') {
-    if (!isFocused) return null;
-    if (isWebLandingPath(pathname)) {
-      return (
-        <WebLayout>
-          <LandingScrollContent variant="web" />
-        </WebLayout>
-      );
-    }
-    return null;
-  }
+  };
 
   const locationOptions = useMemo(() => {
     const cities = Array.from(new Set(grounds.map((g) => g.city).filter(Boolean)));
@@ -141,9 +94,7 @@ export default function HomeScreen() {
   }, [grounds]);
 
   const typeOptions = useMemo(() => {
-    const types = Array.from(
-      new Set(grounds.map((g) => g.pitch_type).filter((t): t is string => !!t)),
-    );
+    const types = Array.from(new Set(grounds.map((g) => g.pitch_type).filter((t): t is string => !!t)));
     return ['all', ...types];
   }, [grounds]);
 
@@ -161,10 +112,10 @@ export default function HomeScreen() {
     return matchesSearch && matchesLocation && matchesType;
   });
 
-  const content = (
+  return (
     <View style={styles.container}>
-      <View style={[styles.header, (Platform.OS as any) === 'web' && styles.webHeader]}>
-        <Text style={styles.title}>Find Cricket Grounds</Text>
+      <View style={[styles.header, Platform.OS === 'web' && styles.webHeader]}>
+        <Text style={styles.title}>{title}</Text>
         <View style={styles.searchContainer}>
           <Search size={20} color="#666" style={styles.searchIcon} />
           <TextInput
@@ -179,20 +130,12 @@ export default function HomeScreen() {
         <View style={styles.filtersWrap}>
           <View style={styles.filtersGroup}>
             <Text style={styles.filtersLabel}>Location</Text>
-            <FilterDropdown
-              options={locationOptions}
-              value={locationFilter}
-              onChange={setLocationFilter}
-            />
+            <FilterDropdown options={locationOptions} value={locationFilter} onChange={setLocationFilter} />
           </View>
 
           <View style={styles.filtersGroup}>
             <Text style={styles.filtersLabel}>Type</Text>
-            <FilterDropdown
-              options={typeOptions}
-              value={typeFilter}
-              onChange={setTypeFilter}
-            />
+            <FilterDropdown options={typeOptions} value={typeFilter} onChange={setTypeFilter} />
           </View>
         </View>
       </View>
@@ -206,26 +149,20 @@ export default function HomeScreen() {
             showBookingSchedule={false}
           />
         )}
-        keyExtractor={item => item.id}
+        keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
-        refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={loadGrounds} />
-        }
-        numColumns={(Platform.OS as any) === 'web' ? 2 : 1}
-        key={(Platform.OS as any) === 'web' ? 'web' : 'mobile'}
-        columnWrapperStyle={(Platform.OS as any) === 'web' ? styles.row : undefined}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={loadGrounds} />}
+        numColumns={Platform.OS === 'web' ? 2 : 1}
+        key={Platform.OS === 'web' ? 'web' : 'mobile'}
+        columnWrapperStyle={Platform.OS === 'web' ? styles.row : undefined}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>
-              {searchQuery ? 'No grounds found' : 'No grounds available'}
-            </Text>
+            <Text style={styles.emptyText}>{searchQuery ? 'No grounds found' : 'No grounds available'}</Text>
           </View>
         }
       />
     </View>
   );
-
-  return content;
 }
 
 const styles = StyleSheet.create({
@@ -297,29 +234,27 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    minWidth: 180,
+    minWidth: 160,
   },
   dropdownButtonOpen: {
     borderColor: '#dc8d3c',
-    backgroundColor: 'rgba(220,141,60,0.08)',
   },
   dropdownButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#374151',
+    color: '#111827',
   },
   dropdownMenu: {
     position: 'absolute',
     top: 44,
     left: 0,
-    right: 0,
-    backgroundColor: '#FFFFFF',
+    minWidth: 180,
+    zIndex: 100,
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    paddingVertical: 6,
-    zIndex: 10000,
-    elevation: 50,
+    overflow: 'hidden',
   },
   dropdownOption: {
     paddingHorizontal: 12,
@@ -329,37 +264,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(220,141,60,0.12)',
   },
   dropdownOptionText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: '#374151',
   },
   dropdownOptionTextActive: {
     color: '#dc8d3c',
-  },
-  chipsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  chip: {
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
-  },
-  chipActive: {
-    borderColor: Platform.OS === 'web' ? '#dc8d3c' : '#2196F3',
-    backgroundColor: Platform.OS === 'web' ? 'rgba(220,141,60,0.12)' : 'rgba(33,150,243,0.12)',
-  },
-  chipText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#374151',
-  },
-  chipTextActive: {
-    color: Platform.OS === 'web' ? '#dc8d3c' : '#2196F3',
   },
   emptyContainer: {
     alignItems: 'center',
@@ -371,3 +281,4 @@ const styles = StyleSheet.create({
     color: '#666',
   },
 });
+
