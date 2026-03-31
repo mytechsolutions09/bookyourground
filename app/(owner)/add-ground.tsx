@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
+import WebLayout from '@/components/web/WebLayout';
 import { ensureDefaultTimeSlotsForGround } from '@/utils/timeSlotsDb';
 
 export default function AddGroundScreen() {
@@ -78,7 +79,7 @@ export default function AddGroundScreen() {
     }
   };
 
-  return (
+  const content = (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
@@ -205,6 +206,12 @@ export default function AddGroundScreen() {
       </ScrollView>
     </KeyboardAvoidingView>
   );
+
+  if (Platform.OS === 'web') {
+    return <WebLayout>{content}</WebLayout>;
+  }
+
+  return content;
 }
 
 const styles = StyleSheet.create({

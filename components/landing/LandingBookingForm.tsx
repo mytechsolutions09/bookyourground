@@ -31,6 +31,15 @@ type TimeString = string; // expected: "HH:MM"
 
 const DURATION_HOURS = 1;
 
+function makeGroundSlug(ground: GroundWithImages): string {
+  const name = (ground.name ?? '').toString().toLowerCase().trim();
+  const kebab = name
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '');
+  return kebab || 'ground';
+}
+
 function parseTimeToMinutes(time: string): number | null {
   const match = /^(\d{2}):(\d{2})$/.exec(time.trim());
   if (!match) return null;
@@ -134,7 +143,7 @@ export default function LandingBookingForm({
   const { user } = useAuth();
   const { width: windowWidth } = useWindowDimensions();
 
-  /** Landing: Search → pick ground → Request Booking. Skip when booking a known ground. */
+  /** Landing: Search → pick ground → Book Now. Skip when booking a known ground. */
   const useLandingSearchFlow = hideGroundPicker && !initialGroundId;
 
   const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
@@ -321,9 +330,34 @@ export default function LandingBookingForm({
   // Custom price per slot start time (if set in `time_slots.custom_price`).
   const [slotPriceByStartTime, setSlotPriceByStartTime] = useState<Record<string, number | null>>({});
 
+  const isBoxCricket = useMemo(() => {
+    const p = (selectedGround?.pitch_type ?? typeKey ?? '').toLowerCase();
+    return p.includes('box');
+  }, [selectedGround, typeKey]);
+
+  // Fixed pricing for full cricket grounds (non box):
+  // ₹5000 for 1 team, ₹10000 for both teams, charged per match.
+  const cricketPricePerMatch = useMemo(
+    () => (teamType === 'one' ? 5000 : 10000),
+    [teamType],
+  );
+
   const computed = useMemo(() => {
     if (!selectedGround) return null;
     if (!startTime || !derivedEndTime) return null;
+
+    const isCricketGround = !isBoxCricket;
+
+    if (isCricketGround) {
+      const totalHours = 1;
+      const pricePerMatch = cricketPricePerMatch;
+      const totalAmount = pricePerMatch;
+
+      const _sanity = hoursBetweenBooked(startTime, derivedEndTime);
+      if (_sanity === null || !Number.isFinite(_sanity) || _sanity <= 0) return null;
+
+      return { totalHours, totalAmount, pricePerUnit: pricePerMatch, unitLabel: 'match' as const };
+    }
 
     const totalHours = DURATION_HOURS;
     const basePrice = selectedGround.base_price_per_hour;
@@ -336,13 +370,8 @@ export default function LandingBookingForm({
     const _sanity = hoursBetweenBooked(startTime, derivedEndTime);
     if (_sanity === null || !Number.isFinite(_sanity) || _sanity <= 0) return null;
 
-    return { totalHours, totalAmount };
-  }, [selectedGround, startTime, derivedEndTime, slotPriceByStartTime]);
-
-  const isBoxCricket = useMemo(() => {
-    const p = (selectedGround?.pitch_type ?? typeKey ?? '').toLowerCase();
-    return p.includes('box');
-  }, [selectedGround, typeKey]);
+    return { totalHours, totalAmount, pricePerUnit: pricePerHour, unitLabel: 'hour' as const };
+  }, [selectedGround, startTime, derivedEndTime, slotPriceByStartTime, isBoxCricket, cricketPricePerMatch]);
 
   const timeSlots = useMemo(
     () => getSlotTemplatesForPitch(selectedGround?.pitch_type ?? typeKey),
@@ -483,6 +512,7 @@ export default function LandingBookingForm({
   const isWeb = Platform.OS === 'web';
   const webColumnCount =
     !isWeb ? 1 : windowWidth >= 960 ? 3 : windowWidth >= 640 ? 2 : 1;
+  const isSearchTwoColumn = isWeb && windowWidth >= 900;
 
   const webGridSectionStyle = useMemo(() => {
     if (!isWeb || webColumnCount <= 1) return undefined;
@@ -760,7 +790,9 @@ export default function LandingBookingForm({
       Object.prototype.hasOwnProperty.call(slotPriceByStartTime, startTime) &&
       slotPriceByStartTime[startTime] != null
         ? slotPriceByStartTime[startTime]!
-        : selectedGround.base_price_per_hour;
+        : isBoxCricket
+        ? selectedGround.base_price_per_hour
+        : cricketPricePerMatch;
 
     try {
       setSubmitting(true);
@@ -1065,22 +1097,42 @@ export default function LandingBookingForm({
           ) : null}
 
           {searchResults.length > 0 ? (
-            <ScrollView
+            <View
               style={styles.searchResultsScroller}
-              contentContainerStyle={styles.searchResultsGrid}
-              nestedScrollEnabled
-              showsVerticalScrollIndicator={false}
             >
-              {searchResults.map((g) => (
-                <View key={g.id} style={styles.searchResultTile}>
-                  <GroundCard
-                    ground={g}
-                    onPress={() => router.push(`/grounds/${g.id}`)}
-                    showBookingSchedule={false}
-                  />
-                </View>
-              ))}
-            </ScrollView>
+              <View
+                style={[
+                  styles.searchResultsGrid,
+                  isSearchTwoColumn && styles.searchResultsGridTwoCol,
+                ]}
+              >
+                {searchResults.map((g) => (
+                  <View
+                    key={g.id}
+                    style={[
+                      styles.searchResultTile,
+                      isSearchTwoColumn && styles.searchResultTileHalf,
+                    ]}
+                  >
+                    <GroundCard
+                      ground={g}
+                      onPress={() => {
+                        const query: string[] = [];
+                        if (bookingDate) {
+                          query.push(`date=${encodeURIComponent(bookingDate)}`);
+                        }
+                        if (startTime) {
+                          query.push(`time=${encodeURIComponent(startTime)}`);
+                        }
+                        const suffix = query.length ? `?${query.join('&')}` : '';
+                        router.push(`/grounds/${makeGroundSlug(g)}${suffix}`);
+                      }}
+                      showBookingSchedule={false}
+                    />
+                  </View>
+                ))}
+              </View>
+            </View>
           ) : !searching ? (
             <Text style={styles.smallMuted}>
               No grounds have this slot free. Try another time or date.
@@ -1090,9 +1142,14 @@ export default function LandingBookingForm({
       ) : null}
     </>
   );
-
   return (
-    <View style={[styles.wrapper, fullWidth && styles.wrapperFull]}>
+    <View
+      style={[
+        styles.wrapper,
+        fullWidth && styles.wrapperFull,
+        isWeb && windowWidth < 640 && styles.wrapperMobileTight,
+      ]}
+    >
       <Card style={[styles.card, isWeb && styles.cardWeb]}>
         <Text style={styles.title}>Book a Ground</Text>
         <Text style={styles.subtitle}>
@@ -1118,10 +1175,19 @@ export default function LandingBookingForm({
         {computed && (!useLandingSearchFlow || groundSelectedFromSearch) && (
           <View style={styles.summary}>
             <Text style={styles.summaryText}>
-              Total: <Text style={styles.summaryAccent}>{formatCurrency(computed.totalAmount)}</Text>
+              Total:{' '}
+              <Text style={styles.summaryAccent}>
+                {formatCurrency(computed.totalAmount)}
+              </Text>
             </Text>
             <Text style={styles.summaryMuted}>
-              Duration: {computed.totalHours} hours @ {formatCurrency(selectedGround!.base_price_per_hour)}/hr
+              {isBoxCricket
+                ? `Duration: ${computed.totalHours} hours @ ${formatCurrency(
+                    computed.pricePerUnit,
+                  )}/hr`
+                : `Cricket ground: ${teamType === 'one' ? '1 team' : 'both teams'} · ${formatCurrency(
+                    cricketPricePerMatch,
+                  )} per match`}
             </Text>
           </View>
         )}
@@ -1131,7 +1197,7 @@ export default function LandingBookingForm({
             groundSelectedFromSearch ? (
               <View style={styles.actionsColumn}>
                 <Button
-                  title={submitting ? 'Creating...' : 'Request Booking'}
+                  title={submitting ? 'Processing...' : 'Book Now'}
                   onPress={handleBook}
                   disabled={submitting}
                   loading={submitting}
@@ -1158,7 +1224,7 @@ export default function LandingBookingForm({
             ) : null
           ) : (
             <Button
-              title={submitting ? 'Creating...' : 'Request Booking'}
+              title={submitting ? 'Processing...' : 'Book Now'}
               onPress={handleBook}
               disabled={submitting}
               loading={submitting}
@@ -1192,6 +1258,9 @@ const styles = StyleSheet.create({
         alignSelf: 'stretch',
       },
     }),
+  },
+  wrapperMobileTight: {
+    paddingHorizontal: 8,
   },
   card: {
     backgroundColor: '#FFFFFF',
@@ -1377,23 +1446,28 @@ const styles = StyleSheet.create({
     marginVertical: 12,
   },
   searchResultsScroller: {
-    maxHeight: 420,
     marginTop: 8,
   },
   searchResultsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: 'column',
     gap: 16,
     paddingBottom: 4,
+    width: '100%',
+    alignSelf: 'stretch',
+    alignItems: 'stretch',
+  },
+  searchResultsGridTwoCol: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
   },
   searchResultTile: {
     width: '100%',
-    ...Platform.select({
-      web: {
-        maxWidth: 360,
-        flexGrow: 1,
-      },
-    }),
+    alignSelf: 'stretch',
+  },
+  searchResultTileHalf: {
+    width: '48%',
+    maxWidth: '48%',
   },
   smallMuted: {
     fontSize: 13,

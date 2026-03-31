@@ -56,9 +56,12 @@ export default function OwnerLayout() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="dashboard" />
       <Stack.Screen name="grounds" />
       <Stack.Screen name="add-ground" />
       <Stack.Screen name="bookings" />
+      <Stack.Screen name="earnings" />
+      <Stack.Screen name="settings" />
     </Stack>
   );
 }

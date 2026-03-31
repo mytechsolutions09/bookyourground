@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, Alert, Platform, useWindowDimensions } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { MapPin, Calendar, Clock, User } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
@@ -9,12 +9,15 @@ import { formatCurrency, formatDate, getStatusColor, getStatusLabel } from '@/ut
 import { formatBookingSlotSummary } from '@/utils/bookingSlotFormat';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import WebLayout from '@/components/web/WebLayout';
 
 export default function BookingDetailsScreen() {
   const { id } = useLocalSearchParams();
   const { user } = useAuth();
   const [booking, setBooking] = useState<BookingWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const { width } = useWindowDimensions();
 
   useEffect(() => {
     loadBooking();
@@ -42,6 +45,51 @@ export default function BookingDetailsScreen() {
       Alert.alert('Error', 'Failed to load booking details');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDummyPayment = async () => {
+    if (!booking) return;
+    if (!user) {
+      Alert.alert('Sign in required', 'Please sign in to complete the payment.');
+      return;
+    }
+    if (booking.status !== 'pending') {
+      Alert.alert('Payment not required', 'This booking is already processed.');
+      return;
+    }
+
+    try {
+      setPaymentLoading(true);
+
+      const { error: txError } = await supabase.from('transactions').insert({
+        booking_id: booking.id,
+        user_id: booking.user_id,
+        amount: booking.total_amount,
+        status: 'completed',
+        payment_method: 'dummy',
+        transaction_reference: `DUMMY-${Date.now()}`,
+      });
+
+      if (txError) throw txError;
+
+      const { error: bookingError } = await supabase
+        .from('bookings')
+        .update({
+          status: 'confirmed',
+        })
+        .eq('id', booking.id);
+
+      if (bookingError) throw bookingError;
+
+      await loadBooking();
+
+      router.replace(`/bookings/${booking.id}/confirmed` as any);
+    } catch (error: any) {
+      console.error('Error processing dummy payment:', error);
+      Alert.alert('Payment failed', error.message || 'Unable to process payment.');
+    } finally {
+      setPaymentLoading(false);
     }
   };
 
@@ -77,11 +125,17 @@ export default function BookingDetailsScreen() {
   };
 
   if (loading || !booking) {
-    return (
+    const loadingContent = (
       <View style={styles.loadingContainer}>
         <Text>Loading...</Text>
       </View>
     );
+
+    if (Platform.OS === 'web') {
+      return <WebLayout>{loadingContent}</WebLayout>;
+    }
+
+    return loadingContent;
   }
 
   const primaryImage = booking.ground.ground_images?.[0]?.image_url ||
@@ -89,94 +143,54 @@ export default function BookingDetailsScreen() {
 
   const canCancel = booking.status === 'pending' || booking.status === 'confirmed';
 
-  return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Booking Details</Text>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(booking.status) }]}>
-          <Text style={styles.statusText}>{getStatusLabel(booking.status)}</Text>
-        </View>
-      </View>
+  const isNarrow = width < 900;
 
-      <Image source={{ uri: primaryImage }} style={styles.image} />
+  const detailsSection = (
+    // Left: booking details
+    <View style={isNarrow ? styles.detailsColumnNarrow : styles.detailsColumn}>
+      <View style={styles.detailsContent}>
+          <Image source={{ uri: primaryImage }} style={styles.image} />
 
-      <View style={styles.content}>
-        <Card style={styles.section}>
-          <Text style={styles.groundName}>{booking.ground.name}</Text>
-          <View style={styles.locationRow}>
-            <MapPin size={16} color="#666" />
-            <Text style={styles.location}>{booking.ground.city}, {booking.ground.state}</Text>
-          </View>
-        </Card>
-
-        <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Booking Information</Text>
-          <View style={styles.infoRow}>
-            <Calendar size={18} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Date</Text>
-              <Text style={styles.infoValue}>{formatDate(booking.booking_date)}</Text>
-            </View>
-          </View>
-          <View style={styles.infoRow}>
-            <Clock size={18} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Time</Text>
-              <Text style={styles.infoValue}>
-                {formatBookingSlotSummary(
-                  booking.start_time,
-                  booking.end_time,
-                  booking.ground.pitch_type,
-                )}
+          <Card style={styles.section}>
+            <Text style={styles.groundName}>{booking.ground.name}</Text>
+            <View style={styles.locationRow}>
+              <MapPin size={16} color="#666" />
+              <Text style={styles.location}>
+                {booking.ground.address}, {booking.ground.city}, {booking.ground.state}
               </Text>
             </View>
-          </View>
-          <View style={styles.infoRow}>
-            <Clock size={18} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
-            <View style={styles.infoContent}>
-              <Text style={styles.infoLabel}>Duration</Text>
-              <Text style={styles.infoValue}>{booking.total_hours} hours</Text>
-            </View>
-          </View>
-        </Card>
-
-        {booking.user && (
-          <Card style={styles.section}>
-            <Text style={styles.sectionTitle}>User Information</Text>
-            <View style={styles.infoRow}>
-              <User size={18} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
-              <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Name</Text>
-                <Text style={styles.infoValue}>{booking.user.full_name}</Text>
-              </View>
-            </View>
-            {booking.user.phone && (
-              <View style={styles.infoRow}>
-                <User size={18} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
-                <View style={styles.infoContent}>
-                  <Text style={styles.infoLabel}>Phone</Text>
-                  <Text style={styles.infoValue}>{booking.user.phone}</Text>
-                </View>
-              </View>
-            )}
           </Card>
-        )}
 
-        <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Payment Details</Text>
-          <View style={styles.paymentRow}>
-            <Text style={styles.paymentLabel}>Price per hour</Text>
-            <Text style={styles.paymentValue}>{formatCurrency(booking.price_per_hour)}</Text>
-          </View>
-          <View style={styles.paymentRow}>
-            <Text style={styles.paymentLabel}>Total hours</Text>
-            <Text style={styles.paymentValue}>{booking.total_hours}</Text>
-          </View>
-          <View style={[styles.paymentRow, styles.totalRow]}>
-            <Text style={styles.totalLabel}>Total Amount</Text>
-            <Text style={styles.totalValue}>{formatCurrency(booking.total_amount)}</Text>
-          </View>
-        </Card>
+          <Card style={styles.section}>
+            <Text style={styles.sectionTitle}>Booking Information</Text>
+            <View style={styles.infoRow}>
+              <Calendar size={18} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>Date</Text>
+                <Text style={styles.infoValue}>{formatDate(booking.booking_date)}</Text>
+              </View>
+            </View>
+            <View style={styles.infoRow}>
+              <Clock size={18} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>Time</Text>
+                <Text style={styles.infoValue}>
+                  {formatBookingSlotSummary(
+                    booking.start_time,
+                    booking.end_time,
+                    booking.ground.pitch_type,
+                  )}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.infoRow}>
+              <Clock size={18} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>Duration</Text>
+                <Text style={styles.infoValue}>{booking.total_hours} hours</Text>
+              </View>
+            </View>
+          </Card>
 
         {booking.notes && (
           <Card style={styles.section}>
@@ -184,25 +198,113 @@ export default function BookingDetailsScreen() {
             <Text style={styles.notes}>{booking.notes}</Text>
           </Card>
         )}
-
-        {canCancel && booking.user_id === user?.id && (
-          <Button
-            title="Cancel Booking"
-            onPress={handleCancelBooking}
-            variant="danger"
-            fullWidth
-            style={styles.cancelButton}
-          />
-        )}
       </View>
-    </ScrollView>
+    </View>
   );
+
+  const isBoxCricket = (booking.ground.pitch_type ?? '').toLowerCase().includes('box');
+
+  const paymentSection = (
+    // Right: payment summary + options
+    <View style={isNarrow ? styles.paymentColumnNarrow : styles.paymentColumn}>
+      <Card style={styles.paymentCard}>
+        <Text style={styles.sectionTitle}>Payment Summary</Text>
+        <View style={styles.paymentRow}>
+          <Text style={styles.paymentLabel}>
+            {isBoxCricket ? 'Price per hour' : 'Price per match'}
+          </Text>
+          <Text style={styles.paymentValue}>{formatCurrency(booking.price_per_hour)}</Text>
+        </View>
+        {isBoxCricket && (
+          <View style={styles.paymentRow}>
+            <Text style={styles.paymentLabel}>Total hours</Text>
+            <Text style={styles.paymentValue}>{booking.total_hours}</Text>
+          </View>
+        )}
+        <View style={[styles.paymentRow, styles.totalRow]}>
+          <Text style={styles.totalLabel}>Total Amount</Text>
+          <Text style={styles.totalValue}>{formatCurrency(booking.total_amount)}</Text>
+        </View>
+      </Card>
+
+      <Card style={styles.paymentCard}>
+        <Text style={styles.sectionTitle}>Payment Options</Text>
+        <View style={styles.paymentOptions}>
+          <View style={styles.paymentOptionRow}>
+            <View style={styles.paymentOptionBullet} />
+            <Text style={styles.paymentOptionText}>UPI (coming soon)</Text>
+          </View>
+          <View style={styles.paymentOptionRow}>
+            <View style={styles.paymentOptionBullet} />
+            <Text style={styles.paymentOptionText}>Card (coming soon)</Text>
+          </View>
+          <View style={styles.paymentOptionRow}>
+            <View style={styles.paymentOptionBullet} />
+            <Text style={styles.paymentOptionText}>Pay at ground (cash/UPI)</Text>
+          </View>
+        </View>
+
+        <Button
+          title={booking.status === 'pending' ? 'Confirm Booking' : 'Booking Confirmed'}
+          onPress={handleDummyPayment}
+          fullWidth
+          size="medium"
+          style={styles.payNowButton}
+          disabled={booking.status !== 'pending'}
+          loading={paymentLoading}
+        />
+
+        <Text
+          style={styles.backLink}
+          onPress={() => {
+            if (router.canGoBack?.()) router.back();
+            else router.push('/book-my-ground' as any);
+          }}
+        >
+          Go back
+        </Text>
+      </Card>
+    </View>
+  );
+
+  const content = (
+    <View style={styles.container}>
+      {isNarrow ? (
+        <ScrollView
+          contentContainerStyle={styles.bodyColumn}
+          showsVerticalScrollIndicator
+        >
+          <View style={styles.stackSection}>{detailsSection}</View>
+          <View style={styles.stackSection}>{paymentSection}</View>
+        </ScrollView>
+      ) : (
+        <View style={styles.body}>
+          {detailsSection}
+          {paymentSection}
+        </View>
+      )}
+    </View>
+  );
+
+  if (Platform.OS === 'web') {
+    return <WebLayout>{content}</WebLayout>;
+  }
+
+  return content;
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
+    ...Platform.select({
+      web: {
+        paddingTop: 48,
+        paddingHorizontal: 16,
+        paddingBottom: 32,
+        overflowX: 'hidden' as any,
+      },
+    }),
   },
   loadingContainer: {
     flex: 1,
@@ -211,35 +313,62 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
   },
   header: {
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    paddingTop: 48,
+    // removed header bar from payment page; keep styles in case re-used
+  },
+  body: {
+    flex: 1,
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center',
+    paddingHorizontal: 8,
+    gap: 16,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#212121',
+  bodyColumn: {
+    flexGrow: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 32,
   },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
+  detailsColumn: {
+    flex: 1.4,
+    backgroundColor: '#F5F5F5',
+    minWidth: 0,
+    flexShrink: 1,
   },
-  statusText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
+  detailsColumnNarrow: {
+    width: '100%',
+    backgroundColor: '#F5F5F5',
+  },
+  detailsContent: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  paymentColumn: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: 'transparent',
+    borderLeftWidth: 0,
+    borderLeftColor: '#E5E7EB',
+    minWidth: 0,
+    flexShrink: 1,
+  },
+  paymentColumnNarrow: {
+    width: '100%',
+    marginTop: 16,
+    padding: 0,
+    backgroundColor: 'transparent',
+    borderLeftWidth: 0,
+  },
+  stackSection: {
+    width: '100%',
   },
   image: {
     width: '100%',
     height: 200,
     backgroundColor: '#E0E0E0',
-  },
-  content: {
-    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
   },
   section: {
     marginBottom: 16,
@@ -299,10 +428,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   totalRow: {
-    borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
     marginTop: 8,
-    paddingTop: 16,
+    paddingTop: 8,
   },
   totalLabel: {
     fontSize: 16,
@@ -319,7 +446,39 @@ const styles = StyleSheet.create({
     color: '#666',
     lineHeight: 20,
   },
-  cancelButton: {
-    marginBottom: 32,
+  paymentCard: {
+    marginBottom: 16,
+  },
+  paymentOptions: {
+    marginTop: 8,
+    marginBottom: 16,
+    gap: 8,
+  },
+  paymentOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  paymentOptionBullet: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#D1D5DB',
+  },
+  paymentOptionText: {
+    fontSize: 13,
+    color: '#4B5563',
+    fontWeight: '500',
+  },
+  payNowButton: {
+    marginTop: 8,
+    alignSelf: 'stretch',
+  },
+  backLink: {
+    marginTop: 10,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#2563EB',
+    textAlign: 'center',
   },
 });

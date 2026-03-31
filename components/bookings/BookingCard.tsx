@@ -11,9 +11,15 @@ interface BookingCardProps {
   booking: BookingWithDetails;
   onPress: () => void;
   showGroundDetails?: boolean;
+  metaText?: string;
 }
 
-export default function BookingCard({ booking, onPress, showGroundDetails = true }: BookingCardProps) {
+export default function BookingCard({
+  booking,
+  onPress,
+  showGroundDetails = true,
+  metaText,
+}: BookingCardProps) {
   const primaryImage = booking.ground.ground_images?.[0]?.image_url ||
     'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
 
@@ -30,6 +36,15 @@ export default function BookingCard({ booking, onPress, showGroundDetails = true
                 <Text style={styles.location}>{booking.ground.city}</Text>
               </View>
             </>
+          )}
+
+          {!showGroundDetails && (
+            <View style={styles.compactHeader}>
+              <Text style={styles.compactGroundName}>{booking.ground.name}</Text>
+              <Text style={styles.compactGroundLocation}>
+                {booking.ground.city}, {booking.ground.state}
+              </Text>
+            </View>
           )}
 
           <View style={styles.detailsRow}>
@@ -55,6 +70,8 @@ export default function BookingCard({ booking, onPress, showGroundDetails = true
               <Text style={styles.statusText}>{getStatusLabel(booking.status)}</Text>
             </View>
           </View>
+
+          {metaText ? <Text style={styles.metaText}>{metaText}</Text> : null}
         </View>
       </Card>
     </TouchableOpacity>
@@ -122,5 +139,40 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
+  },
+  compactHeader: {
+    marginBottom: 4,
+  },
+  compactGroundName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#212121',
+  },
+  compactGroundLocation: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  metaText: {
+    marginTop: 6,
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  ownerListCard: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  ownerRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  ownerCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  ownerAmountCol: {
+    alignItems: 'flex-start',
+    gap: 4,
   },
 });

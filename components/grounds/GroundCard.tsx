@@ -31,7 +31,7 @@ export default function GroundCard({
     : 0;
 
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={styles.touchable}>
       <Card style={styles.card}>
         <Image source={{ uri: primaryImage }} style={styles.image} />
         <View style={styles.content}>
@@ -65,7 +65,12 @@ export default function GroundCard({
             </View>
           ) : null}
           <View style={styles.footer}>
-            <Text style={styles.price}>{formatCurrency(ground.base_price_per_hour)}/hr</Text>
+            <Text style={styles.price}>
+              {formatCurrency(ground.base_price_per_hour)}
+              {String(ground.pitch_type ?? '').toLowerCase().includes('box')
+                ? '/hr'
+                : ' / match'}
+            </Text>
             <View style={styles.amenities}>
               {ground.has_floodlights && <Text style={styles.amenity}>Lights</Text>}
               {ground.has_parking && <Text style={styles.amenity}>Parking</Text>}
@@ -78,14 +83,21 @@ export default function GroundCard({
 }
 
 const styles = StyleSheet.create({
+  touchable: {
+    width: '100%',
+    alignSelf: 'stretch',
+  },
   card: {
     padding: 0,
     overflow: 'hidden',
     marginBottom: 16,
+    width: '100%',
+    alignSelf: 'stretch',
   },
   image: {
     width: '100%',
-    height: 180,
+    height: undefined,
+    aspectRatio: 16 / 9,
     backgroundColor: '#E0E0E0',
   },
   content: {

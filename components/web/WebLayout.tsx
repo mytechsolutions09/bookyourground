@@ -48,14 +48,33 @@ export default function WebLayout({ children }: WebLayoutProps) {
   }, []);
 
   const isCompact = useMemo(() => width < 900, [width]);
-  const isLanding = pathname === '/' || pathname === '';
-  const isMarketing = pathname === '/book-my-ground';
-  const isGroundDetails = pathname.startsWith('/grounds');
-  const isPublicNoSidebar = isLanding || isMarketing || isGroundDetails;
+  const cleanPath = pathname.split('?')[0];
+  const isLanding = cleanPath === '/' || cleanPath === '';
+  const isMarketing = cleanPath === '/book-my-ground';
+  // Treat only /grounds/[id] style routes as "ground details".
+  // Plain /grounds (lists, dashboards) should use the normal app navbar.
+  const isGroundDetails = cleanPath.startsWith('/grounds/');
+  const isBookingDetails = cleanPath.startsWith('/bookings/');
+  const adminPathnames = [
+    '/dashboard',
+    '/bookings',
+    '/grounds',
+    '/earnings',
+    '/withdrawals',
+    '/locations',
+    '/manage-ground-owners',
+    '/manage-users',
+    '/settings',
+  ];
+  const isAdminRoute = adminPathnames.includes(cleanPath);
+  const isPublicGroundDetails = isGroundDetails && profile?.role !== 'ground_owner' && profile?.role !== 'super_admin';
+  const isPublicNoSidebar = isLanding || isMarketing || isPublicGroundDetails || isBookingDetails;
   const adminEmail = 'invirtualcoin@gmail.com';
   const isSuperAdmin =
     profile?.role === 'super_admin' ||
     (user?.email?.toLowerCase() ?? '') === adminEmail.toLowerCase();
+  const isGroundOwner = profile?.role === 'ground_owner';
+  const isOwnerGroundsDashboard = isGroundOwner && cleanPath === '/grounds';
   // Treat the presence of a Supabase `user` as authenticated even if `profile`
   // hasn't loaded yet (prevents briefly showing "Sign In").
   const isAuthenticated = !!user || !!profile || isSuperAdmin;
@@ -90,15 +109,20 @@ export default function WebLayout({ children }: WebLayoutProps) {
   };
 
   const bodyStyle = isPublicNoSidebar ? styles.bodyFull : styles.body;
+  const showHeroHeader =
+    isLanding ||
+    isMarketing ||
+    (isGroundDetails && !isOwnerGroundsDashboard && !isSuperAdmin);
 
   return (
     <View style={styles.container}>
-      {(isLanding || isMarketing || isGroundDetails) && (
+      {showHeroHeader && (
         <View
           style={[
             styles.heroHeader,
             isGroundDetails && styles.heroHeaderGround,
-            !isGroundDetails && scrolled && styles.heroHeaderScrolled,
+            isMarketing && styles.heroHeaderMarketing,
+            !isGroundDetails && !isMarketing && scrolled && styles.heroHeaderScrolled,
           ]}
         >
           <View style={styles.headerContent}>
@@ -152,7 +176,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
         </View>
       )}
 
-      {!isLanding && !isMarketing && !isGroundDetails && (
+      {!isLanding && !isMarketing && (!isGroundDetails || isOwnerGroundsDashboard) && (
         <View style={styles.header}>
           <View style={styles.headerContent}>
             <TouchableOpacity onPress={() => router.replace('/')} style={styles.logo}>
@@ -226,18 +250,66 @@ export default function WebLayout({ children }: WebLayoutProps) {
             >
               {isAuthenticated && !isPublicNoSidebar && (
                 <>
-                  <Text style={styles.sidebarSectionTitle}>My Account</Text>
-                  <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
-                  <NavLink href="/(tabs)/profile" icon={User} label="Profile" />
+                  {isSuperAdmin && isAdminRoute ? (
+                    <>
+                      <Text style={styles.sidebarSectionTitle}>Super admin</Text>
+                      <NavLink href="/(admin)/dashboard" icon={Home} label="Dashboard" />
+                      <NavLink href="/(admin)/bookings" icon={Calendar} label="Bookings" />
+                      <NavLink href="/(admin)/grounds" icon={Building2} label="Grounds" />
+                      <NavLink href="/(admin)/earnings" icon={Calendar} label="Earnings" />
+                      <NavLink href="/(admin)/withdrawals" icon={Calendar} label="Withdraw" />
+                      <NavLink
+                        href="/(admin)/manage-ground-owners"
+                        icon={Shield}
+                        label="Ground owners"
+                      />
+                      <NavLink href="/(admin)/manage-users" icon={User} label="Users" />
+                      <NavLink href="/(admin)/settings" icon={Settings} label="Settings" />
 
-                  <View style={styles.sidebarDivider} />
-                  <TouchableOpacity
-                    style={styles.signOutButton}
-                    onPress={handleSignOut}
-                  >
-                    <LogOut size={18} color="#E5E7EB" />
-                    <Text style={styles.signOutText}>Sign out</Text>
-                  </TouchableOpacity>
+                      <View style={styles.sidebarDivider} />
+                      <TouchableOpacity
+                        style={styles.signOutButton}
+                        onPress={handleSignOut}
+                      >
+                        <LogOut size={18} color="#E5E7EB" />
+                        <Text style={styles.signOutText}>Sign out</Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : isGroundOwner ? (
+                    <>
+                      <Text style={styles.sidebarSectionTitle}>Ground owner</Text>
+                      <NavLink href="/(owner)/dashboard" icon={Home} label="Dashboard" />
+                      <NavLink href="/(owner)/grounds" icon={Building2} label="My grounds" />
+                      <NavLink href="/(owner)/bookings" icon={Calendar} label="Bookings" />
+                      <NavLink href="/(owner)/earnings" icon={Calendar} label="Earnings" />
+                      <NavLink href="/(owner)/add-ground" icon={Building2} label="Add ground" />
+                      <NavLink href="/(owner)/settings" icon={Settings} label="Settings" />
+
+                      <View style={styles.sidebarDivider} />
+                      <TouchableOpacity
+                        style={styles.signOutButton}
+                        onPress={handleSignOut}
+                      >
+                        <LogOut size={18} color="#E5E7EB" />
+                        <Text style={styles.signOutText}>Sign out</Text>
+                      </TouchableOpacity>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={styles.sidebarSectionTitle}>My Account</Text>
+                      <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
+                      <NavLink href="/(tabs)/profile" icon={User} label="Profile" />
+
+                      <View style={styles.sidebarDivider} />
+                      <TouchableOpacity
+                        style={styles.signOutButton}
+                        onPress={handleSignOut}
+                      >
+                        <LogOut size={18} color="#E5E7EB" />
+                        <Text style={styles.signOutText}>Sign out</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
                 </>
               )}
             </View>
@@ -277,6 +349,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   heroHeaderGround: {
+    position: 'fixed' as any,
+    backgroundColor: '#2b2f4b',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.12)',
+  },
+  heroHeaderMarketing: {
     position: 'fixed' as any,
     backgroundColor: '#2b2f4b',
     borderBottomWidth: 1,
@@ -381,6 +459,13 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
+    ...Platform.select({
+      web: {
+        position: 'sticky' as any,
+        top: 96,
+        alignSelf: 'flex-start',
+      },
+    }),
   },
   sidebarMobile: {
     position: 'absolute' as any,

@@ -11,13 +11,22 @@ import Button from '@/components/ui/Button';
 import WebLayout from '@/components/web/WebLayout';
 import LandingBookingForm from '@/components/landing/LandingBookingForm';
 
+function looksLikeUuid(value: string | undefined | null): boolean {
+  if (!value) return false;
+  const v = String(value).trim();
+  // Basic UUID v4 shape check: 8-4-4-4-12 hex segments.
+  return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+    v,
+  );
+}
+
 export default function GroundDetailsScreen() {
   const { id, date, time } = useLocalSearchParams();
   const { user } = useAuth();
   const [ground, setGround] = useState<GroundWithImages | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const groundId = Array.isArray(id) ? id[0] : id;
+  const idParam = Array.isArray(id) ? id[0] : id;
 
   useEffect(() => {
     loadGround();
@@ -25,18 +34,58 @@ export default function GroundDetailsScreen() {
 
   const loadGround = async () => {
     try {
-      const { data, error } = await supabase
-        .from('grounds')
-        .select(`
-          *,
-          ground_images(*),
-          reviews(rating, comment, user:profiles(full_name))
-        `)
-        .eq('id', id)
-        .single();
+      if (!idParam) throw new Error('Missing ground identifier');
 
-      if (error) throw error;
-      setGround(data);
+      // First, try to treat `id` as a primary key (legacy URLs with UUID).
+      let data: any | null = null;
+
+      if (looksLikeUuid(idParam)) {
+        const byId = await supabase
+          .from('grounds')
+          .select(
+            `
+            *,
+            ground_images(*),
+            reviews(rating, comment, user:profiles(full_name))
+          `,
+          )
+          .eq('id', idParam)
+          .limit(1);
+
+        if (byId.error) throw byId.error;
+        if (byId.data && byId.data.length > 0) {
+          data = byId.data[0];
+        }
+      }
+
+      // If not found by id, fall back to matching by name derived from slug.
+      if (!data) {
+        const slug = decodeURIComponent(idParam);
+        const nameFromSlug = slug.replace(/-/g, ' ').trim();
+
+        const byName = await supabase
+          .from('grounds')
+          .select(
+            `
+            *,
+            ground_images(*),
+            reviews(rating, comment, user:profiles(full_name))
+          `,
+          )
+          .ilike('name', nameFromSlug)
+          .limit(1);
+
+        if (byName.error) throw byName.error;
+        if (byName.data && byName.data.length > 0) {
+          data = byName.data[0];
+        }
+      }
+
+      if (!data) {
+        throw new Error('Ground not found');
+      }
+
+      setGround(data as GroundWithImages);
     } catch (error) {
       console.error('Error loading ground:', error);
       Alert.alert('Error', 'Failed to load ground details');
@@ -153,9 +202,9 @@ export default function GroundDetailsScreen() {
           </View>
         </Card>
 
-        {groundId ? (
+        {ground.id ? (
           <LandingBookingForm
-            initialGroundId={String(groundId)}
+            initialGroundId={String(ground.id)}
             hideGroundPicker
             initialDate={typeof date === 'string' ? date : undefined}
             initialStartTime={typeof time === 'string' ? time : undefined}

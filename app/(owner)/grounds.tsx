@@ -6,6 +6,17 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { GroundWithImages } from '@/types';
 import GroundCard from '@/components/grounds/GroundCard';
+import type { GroundWithImages as GroundWithImagesType } from '@/types';
+import WebLayout from '@/components/web/WebLayout';
+
+function makeGroundSlug(ground: GroundWithImagesType): string {
+  const name = (ground.name ?? '').toString().toLowerCase().trim();
+  const kebab = name
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '');
+  return kebab || 'ground';
+}
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import TimeSlotsEditor, { TimeSlotsEditorHandle } from '@/components/availability/TimeSlotsEditor';
@@ -173,17 +184,19 @@ export default function OwnerGroundsScreen() {
     }
   };
 
-  return (
+  const content = (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>My Grounds</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => router.push('/(owner)/add-ground')}
-        >
-          <Plus size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
+      {Platform.OS !== 'web' && (
+        <View style={styles.header}>
+          <Text style={styles.title}>My Grounds</Text>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => router.push('/(owner)/add-ground')}
+          >
+            <Plus size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+      )}
 
       <FlatList
         data={grounds}
@@ -210,7 +223,7 @@ export default function OwnerGroundsScreen() {
                   />
                   <Button
                     title="View details"
-                    onPress={() => router.push(`/grounds/${item.id}`)}
+                    onPress={() => router.push(`/grounds/${makeGroundSlug(item)}`)}
                     variant="outline"
                     size="small"
                     style={{ flex: 1 }}
@@ -434,6 +447,12 @@ export default function OwnerGroundsScreen() {
       </Modal>
     </View>
   );
+
+  if (Platform.OS === 'web') {
+    return <WebLayout>{content}</WebLayout>;
+  }
+
+  return content;
 }
 
 const styles = StyleSheet.create({

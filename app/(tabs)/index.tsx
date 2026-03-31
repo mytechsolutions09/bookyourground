@@ -6,6 +6,16 @@ import { Search } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { GroundWithImages } from '@/types';
 import GroundCard from '@/components/grounds/GroundCard';
+import type { GroundWithImages as GroundWithImagesType } from '@/types';
+
+function makeGroundSlug(ground: GroundWithImagesType): string {
+  const name = (ground.name ?? '').toString().toLowerCase().trim();
+  const kebab = name
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+/, '')
+    .replace(/-+$/, '');
+  return kebab || 'ground';
+}
 import WebLayout from '@/components/web/WebLayout';
 import LandingScrollContent from '@/components/landing/LandingScrollContent';
 
@@ -202,7 +212,7 @@ export default function HomeScreen() {
         renderItem={({ item }) => (
           <GroundCard
             ground={item}
-            onPress={() => router.push(`/grounds/${item.id}`)}
+            onPress={() => router.push(`/grounds/${makeGroundSlug(item)}`)}
             showBookingSchedule={false}
           />
         )}

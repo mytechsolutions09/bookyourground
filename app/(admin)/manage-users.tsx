@@ -145,6 +145,9 @@ export default function ManageUsersScreen() {
             </View>
             <View style={styles.userInfo}>
               <Text style={styles.userName}>{item.full_name}</Text>
+            {(item as any).email ? (
+              <Text style={styles.userEmail}>{(item as any).email}</Text>
+            ) : null}
               {item.business_name && (
                 <Text style={styles.businessName}>{item.business_name}</Text>
               )}
@@ -259,6 +262,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#212121',
+  },
+  userEmail: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 2,
   },
   businessName: {
     fontSize: 14,
