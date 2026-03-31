@@ -21,7 +21,7 @@ export default function IndexScreen() {
   if (loading) {
     return os === 'web' ? (
       <WebLayout>
-        <HomePageSkeleton />
+        <LandingScrollContent variant="web" />
       </WebLayout>
     ) : (
       <HomePageSkeleton />

@@ -76,6 +76,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: Platform.OS === 'web' ? 40 : 32,
     fontWeight: '800',
+    fontFamily: 'Inter',
     color: '#FFFFFF',
     textAlign: 'center',
     marginBottom: 16,
@@ -83,6 +84,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 18,
+    fontFamily: 'Inter',
     color: '#D1D5DB',
     textAlign: 'center',
     lineHeight: 28,
@@ -109,6 +111,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   primaryButtonText: {
+    fontFamily: 'Inter',
     color: '#FFFFFF',
     fontSize: 17,
     fontWeight: '700',
@@ -117,6 +120,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   linkButtonText: {
+    fontFamily: 'Inter',
     color: '#D1D5DB',
     fontSize: 15,
     fontWeight: '500',

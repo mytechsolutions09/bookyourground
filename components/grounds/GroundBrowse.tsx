@@ -1,5 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, TextInput, Platform, Pressable } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  RefreshControl,
+  TextInput,
+  Platform,
+  Pressable,
+  useWindowDimensions,
+} from 'react-native';
 import { router } from 'expo-router';
 import { Search } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
@@ -29,35 +39,49 @@ function FilterDropdown({
       </Pressable>
 
       {open ? (
-        <View style={styles.dropdownMenu}>
-          {options.map((opt) => (
-            <Pressable
-              key={opt}
-              onPress={() => {
-                onChange(opt);
-                setOpen(false);
-              }}
-              style={[styles.dropdownOption, opt === value && styles.dropdownOptionActive]}
-            >
-              <Text style={[styles.dropdownOptionText, opt === value && styles.dropdownOptionTextActive]}>
-                {display(opt)}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
+        <>
+          <Pressable
+            style={styles.dropdownBackdrop}
+            onPress={() => setOpen(false)}
+          />
+          <View style={styles.dropdownMenu}>
+            {options.map((opt) => (
+              <Pressable
+                key={opt}
+                onPress={() => {
+                  onChange(opt);
+                  setOpen(false);
+                }}
+                style={[styles.dropdownOption, opt === value && styles.dropdownOptionActive]}
+              >
+                <Text
+                  style={[
+                    styles.dropdownOptionText,
+                    opt === value && styles.dropdownOptionTextActive,
+                  ]}
+                >
+                  {display(opt)}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </>
       ) : null}
     </View>
   );
 }
 
 export default function GroundBrowse(props: { title?: string }) {
-  const { title = 'Find Cricket Grounds' } = props;
+  const { title } = props;
 
   const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [locationFilter, setLocationFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [dateFilter, setDateFilter] = useState<string>('any');
+  const [timeFilter, setTimeFilter] = useState<string>('any');
+  const { width } = useWindowDimensions();
 
   useEffect(() => {
     loadGrounds();
@@ -98,6 +122,9 @@ export default function GroundBrowse(props: { title?: string }) {
     return ['all', ...types];
   }, [grounds]);
 
+  const dateOptions = ['any', 'today', 'tomorrow', 'this week'];
+  const timeOptions = ['any', 'morning', 'afternoon', 'evening', 'night'];
+
   const filteredGrounds = grounds.filter((ground) => {
     const q = searchQuery.toLowerCase().trim();
     const matchesSearch =
@@ -112,49 +139,83 @@ export default function GroundBrowse(props: { title?: string }) {
     return matchesSearch && matchesLocation && matchesType;
   });
 
+  const numColumns = Platform.OS === 'web'
+    ? width >= 1200
+      ? 3
+      : width >= 800
+      ? 2
+      : 1
+    : 1;
+
   return (
     <View style={styles.container}>
-      <View style={[styles.header, Platform.OS === 'web' && styles.webHeader]}>
-        <Text style={styles.title}>{title}</Text>
-        <View style={styles.searchContainer}>
-          <Search size={20} color="#666" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search by name or location"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor="#999"
-          />
-        </View>
-
-        <View style={styles.filtersWrap}>
-          <View style={styles.filtersGroup}>
-            <Text style={styles.filtersLabel}>Location</Text>
-            <FilterDropdown options={locationOptions} value={locationFilter} onChange={setLocationFilter} />
+      <View style={styles.headerOuter}>
+        <View style={[styles.header, Platform.OS === 'web' && styles.webHeader]}>
+          {title ? <Text style={styles.title}>{title}</Text> : null}
+          <View style={styles.searchContainer}>
+            <Search size={20} color="#666" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search by name or location"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor="#999"
+            />
           </View>
 
-          <View style={styles.filtersGroup}>
-            <Text style={styles.filtersLabel}>Type</Text>
-            <FilterDropdown options={typeOptions} value={typeFilter} onChange={setTypeFilter} />
+          <View style={styles.filtersWrap}>
+            <View style={styles.filtersGroup}>
+              <Text style={styles.filtersLabel}>Location</Text>
+              <FilterDropdown
+                options={locationOptions}
+                value={locationFilter}
+                onChange={setLocationFilter}
+              />
+            </View>
+
+            <View style={styles.filtersGroup}>
+              <Text style={styles.filtersLabel}>Type</Text>
+              <FilterDropdown options={typeOptions} value={typeFilter} onChange={setTypeFilter} />
+            </View>
+
+            <View style={styles.filtersGroup}>
+              <Text style={styles.filtersLabel}>Date</Text>
+              <FilterDropdown options={dateOptions} value={dateFilter} onChange={setDateFilter} />
+            </View>
+
+            <View style={styles.filtersGroup}>
+              <Text style={styles.filtersLabel}>Time Slot</Text>
+              <FilterDropdown options={timeOptions} value={timeFilter} onChange={setTimeFilter} />
+            </View>
           </View>
         </View>
       </View>
 
       <FlatList
         data={filteredGrounds}
-        renderItem={({ item }) => (
-          <GroundCard
-            ground={item}
-            onPress={() => router.push(`/grounds/${item.id}`)}
-            showBookingSchedule={false}
-          />
-        )}
+        renderItem={({ item, index }) => {
+          const isWebGrid = Platform.OS === 'web' && numColumns > 1;
+          return (
+            <View
+              style={[
+                isWebGrid && styles.cardColumn,
+                isWebGrid && (index % numColumns !== numColumns - 1) && styles.cardColumnSpacing,
+              ]}
+            >
+              <GroundCard
+                ground={item}
+                onPress={() => router.push(`/grounds/${item.id}`)}
+                showBookingSchedule={false}
+              />
+            </View>
+          );
+        }}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadGrounds} />}
-        numColumns={Platform.OS === 'web' ? 2 : 1}
-        key={Platform.OS === 'web' ? 'web' : 'mobile'}
-        columnWrapperStyle={Platform.OS === 'web' ? styles.row : undefined}
+        numColumns={numColumns}
+        key={Platform.OS === 'web' ? `web-${numColumns}` : 'mobile'}
+        columnWrapperStyle={Platform.OS === 'web' && numColumns > 1 ? styles.row : undefined}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>{searchQuery ? 'No grounds found' : 'No grounds available'}</Text>
@@ -170,20 +231,35 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F5F5',
   },
-  header: {
+  headerOuter: {
     backgroundColor: '#FFFFFF',
-    padding: 16,
-    paddingTop: 48,
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
+    ...Platform.select({
+      web: {
+        marginTop: 78,
+        zIndex: 2000,
+        position: 'relative' as any,
+      },
+    }),
+  },
+  header: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingTop: 48,
+    paddingBottom: 16,
     overflow: 'visible' as any,
-    zIndex: 50,
+    zIndex: 2100,
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
   },
   webHeader: {
-    paddingTop: 16,
+    paddingTop: 20,
   },
   row: {
     gap: 16,
+    justifyContent: 'flex-start',
   },
   title: {
     fontSize: 24,
@@ -208,8 +284,18 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   list: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
     zIndex: 1,
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  cardColumn: {
+    flex: 1,
+  },
+  cardColumnSpacing: {
+    marginRight: 16,
   },
   filtersWrap: {
     marginTop: 12,
@@ -249,7 +335,7 @@ const styles = StyleSheet.create({
     top: 44,
     left: 0,
     minWidth: 180,
-    zIndex: 100,
+    zIndex: 3100,
     borderWidth: 1,
     borderColor: '#E5E7EB',
     backgroundColor: '#FFFFFF',
@@ -270,6 +356,10 @@ const styles = StyleSheet.create({
   },
   dropdownOptionTextActive: {
     color: '#dc8d3c',
+  },
+  dropdownBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 3000,
   },
   emptyContainer: {
     alignItems: 'center',

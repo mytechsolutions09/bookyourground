@@ -47,10 +47,6 @@ export default function ProfileScreen() {
 
   const content = (
     <ScrollView style={styles.container}>
-      <View style={[styles.header, Platform.OS === 'web' && styles.webHeader]}>
-        <Text style={styles.title}>Profile</Text>
-      </View>
-
       <View style={styles.content}>
         <Card style={styles.profileCard}>
           <View style={styles.avatarContainer}>
@@ -77,40 +73,42 @@ export default function ProfileScreen() {
           )}
         </Card>
 
-        {profile?.role === 'ground_owner' && (
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => router.push('/(owner)/grounds')}
-          >
-            <Text style={styles.menuItemText}>Manage Grounds</Text>
+        <View style={styles.menuCard}>
+          {profile?.role === 'ground_owner' && (
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push('/(owner)/grounds')}
+            >
+              <Text style={styles.menuItemText}>Manage Grounds</Text>
+              <ChevronRight size={20} color="#666" />
+            </TouchableOpacity>
+          )}
+
+          {isSuperAdmin && (
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push('/(admin)/dashboard')}
+            >
+              <Text style={styles.menuItemText}>Admin Dashboard</Text>
+              <ChevronRight size={20} color="#666" />
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity style={styles.menuItem}>
+            <Text style={styles.menuItemText}>Favorites</Text>
             <ChevronRight size={20} color="#666" />
           </TouchableOpacity>
-        )}
 
-        {isSuperAdmin && (
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => router.push('/(admin)/dashboard')}
-          >
-            <Text style={styles.menuItemText}>Admin Dashboard</Text>
+          <TouchableOpacity style={styles.menuItem}>
+            <Text style={styles.menuItemText}>Notifications</Text>
             <ChevronRight size={20} color="#666" />
           </TouchableOpacity>
-        )}
 
-        <TouchableOpacity style={styles.menuItem}>
-          <Text style={styles.menuItemText}>Favorites</Text>
-          <ChevronRight size={20} color="#666" />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.menuItem}>
-          <Text style={styles.menuItemText}>Notifications</Text>
-          <ChevronRight size={20} color="#666" />
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.menuItem}>
-          <Text style={styles.menuItemText}>Settings</Text>
-          <ChevronRight size={20} color="#666" />
-        </TouchableOpacity>
+          <TouchableOpacity style={styles.menuItem}>
+            <Text style={styles.menuItemText}>Settings</Text>
+            <ChevronRight size={20} color="#666" />
+          </TouchableOpacity>
+        </View>
 
         {Platform.OS !== 'web' && (
           <Button
@@ -153,7 +151,19 @@ const styles = StyleSheet.create({
     color: '#212121',
   },
   content: {
-    padding: 16,
+    paddingBottom: 32,
+    width: '100%',
+    maxWidth: 1200,
+    alignSelf: 'center',
+    ...Platform.select({
+      web: {
+        paddingHorizontal: 16,
+        paddingTop: 0,
+      },
+      default: {
+        padding: 16,
+      },
+    }),
   },
   profileCard: {
     alignItems: 'center',
@@ -204,10 +214,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: 14,
+  },
+  menuCard: {
+    marginTop: 16,
     backgroundColor: '#FFFFFF',
-    padding: 16,
     borderRadius: 12,
-    marginTop: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
   },
   menuItemText: {
     fontSize: 16,

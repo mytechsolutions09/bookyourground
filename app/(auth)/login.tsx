@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import Input from '@/components/ui/Input';
@@ -63,8 +63,9 @@ export default function LoginScreen() {
     >
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.header}>
-          <Text style={styles.title}>Welcome Back</Text>
-          <Text style={styles.subtitle}>Sign in to continue</Text>
+          <TouchableOpacity onPress={() => router.replace('/')}>
+            <Text style={styles.logoText}>Book my ground</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.form}>
@@ -126,6 +127,15 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 32,
+    alignItems: 'center',
+  },
+  logoText: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#dc8d3c',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 16,
   },
   title: {
     fontSize: 32,

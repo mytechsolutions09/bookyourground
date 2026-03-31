@@ -82,6 +82,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '700',
+    fontFamily: 'Inter',
     color: Platform.OS === 'web' ? '#dc8d3c' : '#10B981',
     textTransform: 'uppercase',
     letterSpacing: 1,
@@ -91,6 +92,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: Platform.OS === 'web' ? 40 : 32,
     fontWeight: '800',
+    fontFamily: 'Inter',
     color: '#111827',
     textAlign: 'center',
     marginBottom: 16,
@@ -98,6 +100,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 18,
+    fontFamily: 'Inter',
     color: '#6B7280',
     textAlign: 'center',
     lineHeight: 28,
@@ -137,11 +140,13 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 20,
     fontWeight: '700',
+    fontFamily: 'Inter',
     color: '#111827',
     marginBottom: 12,
   },
   cardDescription: {
     fontSize: 15,
+    fontFamily: 'Inter',
     color: '#6B7280',
     lineHeight: 24,
   },

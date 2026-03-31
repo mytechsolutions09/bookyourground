@@ -10,6 +10,18 @@ import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import TimeSlotsEditor, { TimeSlotsEditorHandle } from '@/components/availability/TimeSlotsEditor';
 
+function isVideoUrl(url: string): boolean {
+  const lower = url.trim().toLowerCase();
+  return (
+    lower.endsWith('.mp4') ||
+    lower.endsWith('.webm') ||
+    lower.endsWith('.mov') ||
+    lower.includes('youtube.com') ||
+    lower.includes('youtu.be') ||
+    lower.includes('vimeo.com')
+  );
+}
+
 export default function OwnerGroundsScreen() {
   const { user } = useAuth();
   const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
@@ -69,6 +81,7 @@ export default function OwnerGroundsScreen() {
       has_changing_rooms: !!(ground as any).has_changing_rooms,
       has_pavilion: !!(ground as any).has_pavilion,
       active: !!(ground as any).active,
+      mediaUrls: (ground.ground_images ?? []).map((img) => img.image_url),
     });
     setEditOpen(true);
   };
@@ -124,6 +137,30 @@ export default function OwnerGroundsScreen() {
       const ok = await availabilityRef.current?.save?.();
       setSavingAvailability(false);
       if (ok === false) return;
+
+      // Sync ground media (images/videos) – max 8 images + 2 videos.
+      const rawUrls: string[] = Array.isArray(editForm.mediaUrls)
+        ? editForm.mediaUrls
+        : [];
+      const cleaned = rawUrls.map((u) => String(u ?? '').trim()).filter(Boolean);
+      const imageUrls = cleaned.filter((u) => !isVideoUrl(u)).slice(0, 8);
+      const videoUrls = cleaned.filter(isVideoUrl).slice(0, 2);
+      const finalUrls = [...imageUrls, ...videoUrls];
+
+      await supabase.from('ground_images').delete().eq('ground_id', editForm.id);
+
+      if (finalUrls.length > 0) {
+        const rows = finalUrls.map((url, index) => ({
+          ground_id: editForm.id as string,
+          image_url: url,
+          is_primary: index === 0,
+          display_order: index,
+        }));
+        const { error: mediaError } = await supabase
+          .from('ground_images')
+          .insert(rows);
+        if (mediaError) throw mediaError;
+      }
 
       closeEditModal();
       loadGrounds();
@@ -328,6 +365,49 @@ export default function OwnerGroundsScreen() {
                 />
               </View>
 
+              <Text style={styles.modalSectionTitle}>Media (up to 8 images, 2 videos)</Text>
+              {(editForm?.mediaUrls ?? []).map((url: string, index: number) => (
+                <View key={index} style={styles.mediaRow}>
+                  <TextInput
+                    style={[styles.formInput, styles.mediaInput]}
+                    value={url}
+                    onChangeText={(t) =>
+                      setEditForm((prev: any) => {
+                        const next = [...(prev.mediaUrls ?? [])];
+                        next[index] = t;
+                        return { ...prev, mediaUrls: next };
+                      })
+                    }
+                    placeholder="https://example.com/image-or-video"
+                  />
+                  <Pressable
+                    onPress={() =>
+                      setEditForm((prev: any) => {
+                        const next = [...(prev.mediaUrls ?? [])];
+                        next.splice(index, 1);
+                        return { ...prev, mediaUrls: next };
+                      })
+                    }
+                    style={styles.mediaRemove}
+                  >
+                    <Text style={styles.mediaRemoveText}>Remove</Text>
+                  </Pressable>
+                </View>
+              ))}
+              {(editForm?.mediaUrls ?? []).length < 10 ? (
+                <Pressable
+                  onPress={() =>
+                    setEditForm((prev: any) => ({
+                      ...prev,
+                      mediaUrls: [...(prev.mediaUrls ?? []), ''],
+                    }))
+                  }
+                  style={styles.mediaAddButton}
+                >
+                  <Text style={styles.mediaAddText}>Add media URL</Text>
+                </Pressable>
+              ) : null}
+
               <Text style={styles.modalSectionTitle}>Editable availability (Days & Slots)</Text>
               {editForm?.id ? (
                 <TimeSlotsEditor
@@ -482,6 +562,35 @@ const styles = StyleSheet.create({
   },
   formActions: {
     marginTop: 10,
+  },
+  mediaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  mediaInput: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  mediaRemove: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  mediaRemoveText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#B91C1C',
+  },
+  mediaAddButton: {
+    alignSelf: 'flex-start',
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  mediaAddText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#2563EB',
   },
   emptyContainer: {
     alignItems: 'center',

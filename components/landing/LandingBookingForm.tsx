@@ -7,7 +7,6 @@ import {
   TextInput,
   Alert,
   Pressable,
-  Modal,
   Platform,
   useWindowDimensions,
   ActivityIndicator,
@@ -19,6 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { GroundWithImages, GroundType, Location } from '@/types';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
+import GroundCard from '@/components/grounds/GroundCard';
 import { formatCurrency, getDayOfWeek } from '@/utils/helpers';
 import {
   getSlotTemplatesForPitch,
@@ -117,11 +117,19 @@ interface LandingBookingFormProps {
   initialGroundId?: string;
   // When true, the ground picker chips are hidden (ground is assumed from `initialGroundId`).
   hideGroundPicker?: boolean;
+  // Optional initial booking date (YYYY-MM-DD) and time (HH:MM) to prefill.
+  initialDate?: string;
+  initialStartTime?: string;
+  // When true, expand to full available width (used on /book-my-ground and ground pages).
+  fullWidth?: boolean;
 }
 
 export default function LandingBookingForm({
   initialGroundId,
   hideGroundPicker = true,
+  initialDate,
+  initialStartTime,
+  fullWidth = false,
 }: LandingBookingFormProps) {
   const { user } = useAuth();
   const { width: windowWidth } = useWindowDimensions();
@@ -133,11 +141,12 @@ export default function LandingBookingForm({
   const [loadingGrounds, setLoadingGrounds] = useState(true);
   const [selectedGroundId, setSelectedGroundId] = useState<string | null>(null);
 
-  const [bookingDate, setBookingDate] = useState('');
+  const [bookingDate, setBookingDate] = useState(initialDate ?? '');
   /** Landing search: empty until user picks a chip (default 09:00 would enable Search too early). */
-  const [startTime, setStartTime] = useState<TimeString>(() =>
-    hideGroundPicker && !initialGroundId ? '' : '09:00',
-  );
+  const [startTime, setStartTime] = useState<TimeString>(() => {
+    if (initialStartTime) return initialStartTime as TimeString;
+    return hideGroundPicker && !initialGroundId ? '' : ('09:00' as TimeString);
+  });
   const [notes, setNotes] = useState('');
   const [teamType, setTeamType] = useState<'one' | 'both'>('both');
 
@@ -149,17 +158,7 @@ export default function LandingBookingForm({
   const [groundTypeRows, setGroundTypeRows] = useState<GroundType[]>([]);
 
   /** Which select menu is open (mutually exclusive; drives z-index + controlled open state). */
-  const [openSelectMenu, setOpenSelectMenu] = useState<'location' | 'type' | 'date' | null>(null);
-
-  const [calendarMonth, setCalendarMonth] = useState<Date>(() => new Date());
-  const [dateMenuAnchor, setDateMenuAnchor] = useState<{
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  } | null>(null);
-
-  const dateButtonRef = React.useRef<View>(null);
+  const [openSelectMenu, setOpenSelectMenu] = useState<'location' | 'type' | null>(null);
 
   const [searchResults, setSearchResults] = useState<GroundWithImages[]>([]);
   const [searching, setSearching] = useState(false);
@@ -340,12 +339,6 @@ export default function LandingBookingForm({
     return { totalHours, totalAmount };
   }, [selectedGround, startTime, derivedEndTime, slotPriceByStartTime]);
 
-  useEffect(() => {
-    const parsed = parseISODate(bookingDate);
-    if (!parsed) return;
-    setCalendarMonth(new Date(parsed.getFullYear(), parsed.getMonth(), 1));
-  }, [bookingDate]);
-
   const isBoxCricket = useMemo(() => {
     const p = (selectedGround?.pitch_type ?? typeKey ?? '').toLowerCase();
     return p.includes('box');
@@ -511,6 +504,47 @@ export default function LandingBookingForm({
     if (!isWeb || webColumnCount > 1) return undefined;
     return { width: '100%' as const };
   }, [isWeb, webColumnCount]);
+
+  const upcomingDates = useMemo(() => {
+    const today = new Date();
+    const items: { iso: string; label: string }[] = [];
+    const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const end = new Date(start.getFullYear(), start.getMonth() + 3, start.getDate());
+
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const iso = formatISODate(d);
+      const label = d.toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+      });
+      items.push({ iso, label });
+    }
+
+    return items;
+  }, []);
+
+  const [datePage, setDatePage] = useState(0);
+  const datePageSize = useMemo(() => {
+    if (windowWidth >= 1440) return 15;
+    if (windowWidth >= 1200) return 13;
+    if (windowWidth >= 1024) return 11;
+    if (windowWidth >= 768) return 9;
+    if (windowWidth >= 640) return 7;
+    return 5;
+  }, [windowWidth]);
+
+  const { visibleDates, hasPrevDates, hasNextDates } = useMemo(() => {
+    const total = upcomingDates.length;
+    const maxPage = Math.max(0, Math.ceil(total / datePageSize) - 1);
+    const safePage = Math.min(Math.max(datePage, 0), maxPage);
+    const start = safePage * datePageSize;
+    const end = start + datePageSize;
+    return {
+      visibleDates: upcomingDates.slice(start, end),
+      hasPrevDates: safePage > 0,
+      hasNextDates: safePage < maxPage,
+    };
+  }, [upcomingDates, datePage, datePageSize]);
 
   function InlineDropdown({
     value,
@@ -885,48 +919,79 @@ export default function LandingBookingForm({
           webGridSectionStyle,
           webSingleColumnStyle,
           webFullSpanStyle,
-          openSelectMenu === 'date' && styles.sectionDropdownOpen,
         ]}
       >
         <Text style={styles.label}>Date</Text>
 
-        <View style={styles.dropdownOuter}>
+        <View style={styles.datePagerRow}>
           <Pressable
-            ref={dateButtonRef}
             onPress={() => {
-              if (submitting) return;
-              setOpenSelectMenu((prev) => {
-                const next = prev === 'date' ? null : 'date';
-                if (next === 'date') {
-                  // Measure anchor for portal positioning.
-                  requestAnimationFrame(() => {
-                    (dateButtonRef.current as any)?.measureInWindow?.(
-                      (x: number, y: number, width: number, height: number) => {
-                        if (Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(width) && Number.isFinite(height)) {
-                          setDateMenuAnchor({ x, y, width, height });
-                        }
-                      },
-                    );
-                  });
-                } else {
-                  setDateMenuAnchor(null);
-                }
-                return next;
-              });
+              if (!hasPrevDates) return;
+              setDatePage((p) => Math.max(0, p - 1));
             }}
             style={[
-              styles.dropdownButton,
-              openSelectMenu === 'date' && styles.dropdownButtonOpen,
-              submitting && styles.dropdownButtonDisabled,
+              styles.dateArrowButton,
+              !hasPrevDates && styles.dateArrowButtonDisabled,
             ]}
           >
             <Text
               style={[
-                styles.dropdownButtonText,
-                (!bookingDate || submitting) && styles.dropdownButtonTextDisabled,
+                styles.dateArrowText,
+                !hasPrevDates && styles.dateArrowTextDisabled,
               ]}
             >
-              {bookingDate ? formatDateButtonLabel(bookingDate) : 'Select date'}
+              {'<'}
+            </Text>
+          </Pressable>
+
+          <View style={styles.dateChipsWrap}>
+          {visibleDates.map((d) => {
+            const isSelected = bookingDate === d.iso;
+            return (
+              <Pressable
+                key={d.iso}
+                onPress={() => {
+                  if (useLandingSearchFlow) {
+                    clearSearchState();
+                    setStartTime('' as TimeString);
+                  }
+                  setBookingDate(d.iso);
+                }}
+                style={[
+                  styles.dateChip,
+                  isSelected && styles.dateChipActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.dateChipText,
+                    isSelected && styles.dateChipTextActive,
+                  ]}
+                >
+                  {d.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+          </View>
+
+          <Pressable
+            onPress={() => {
+              if (!hasNextDates) return;
+              setDatePage((p) => p + 1);
+            }}
+            style={[
+              styles.dateArrowButton,
+              !hasNextDates && styles.dateArrowButtonDisabled,
+            ]}
+          >
+            <Text
+              style={[
+                styles.dateArrowText,
+                !hasNextDates && styles.dateArrowTextDisabled,
+              ]}
+            >
+              {'>'}
             </Text>
           </Pressable>
         </View>
@@ -993,36 +1058,30 @@ export default function LandingBookingForm({
         <View style={[styles.section, webFullSpanStyle, styles.searchResultsSection]}>
           <Text style={styles.label}>Available grounds</Text>
           {searching ? (
-            <ActivityIndicator style={styles.searchSpinner} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
+            <ActivityIndicator
+              style={styles.searchSpinner}
+              color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'}
+            />
           ) : null}
-          {searchResults.map((g) => {
-            const thumb = g.ground_images?.[0]?.image_url;
-            const active = selectedGroundId === g.id;
-            return (
-              <Pressable
-                key={g.id}
-                onPress={() => setSelectedGroundId(g.id)}
-                style={({ pressed }) => [
-                  styles.searchResultRow,
-                  active && styles.searchResultRowActive,
-                  pressed && styles.searchResultRowPressed,
-                  ...(Platform.OS === 'web' ? [{ cursor: 'pointer' } as object] : []),
-                ]}
-              >
-                {thumb ? <Image source={{ uri: thumb }} style={styles.searchResultThumb} /> : (
-                  <View style={[styles.searchResultThumb, styles.searchResultThumbPlaceholder]} />
-                )}
-                <View style={styles.searchResultTextCol}>
-                  <Text style={styles.searchResultName}>{g.name}</Text>
-                  <Text style={styles.searchResultMeta}>
-                    {g.city}, {g.state}
-                  </Text>
+
+          {searchResults.length > 0 ? (
+            <ScrollView
+              style={styles.searchResultsScroller}
+              contentContainerStyle={styles.searchResultsGrid}
+              nestedScrollEnabled
+              showsVerticalScrollIndicator={false}
+            >
+              {searchResults.map((g) => (
+                <View key={g.id} style={styles.searchResultTile}>
+                  <GroundCard
+                    ground={g}
+                    onPress={() => router.push(`/grounds/${g.id}`)}
+                    showBookingSchedule={false}
+                  />
                 </View>
-                <Text style={styles.searchResultPrice}>{formatCurrency(g.base_price_per_hour)}/hr</Text>
-              </Pressable>
-            );
-          })}
-          {!searching && searchResults.length === 0 ? (
+              ))}
+            </ScrollView>
+          ) : !searching ? (
             <Text style={styles.smallMuted}>
               No grounds have this slot free. Try another time or date.
             </Text>
@@ -1033,7 +1092,7 @@ export default function LandingBookingForm({
   );
 
   return (
-    <View style={styles.wrapper}>
+    <View style={[styles.wrapper, fullWidth && styles.wrapperFull]}>
       <Card style={[styles.card, isWeb && styles.cardWeb]}>
         <Text style={styles.title}>Book a Ground</Text>
         <Text style={styles.subtitle}>
@@ -1087,7 +1146,7 @@ export default function LandingBookingForm({
                   <Text style={styles.changeGroundText}>Choose a different ground</Text>
                 </Pressable>
               </View>
-            ) : (
+            ) : !hasSearched || searchResults.length === 0 ? (
               <Button
                 title="Search"
                 onPress={handleSearch}
@@ -1096,7 +1155,7 @@ export default function LandingBookingForm({
                 fullWidth
                 size="large"
               />
-            )
+            ) : null
           ) : (
             <Button
               title={submitting ? 'Creating...' : 'Request Booking'}
@@ -1109,123 +1168,6 @@ export default function LandingBookingForm({
           )}
         </View>
       </Card>
-
-      <Modal
-        transparent
-        visible={openSelectMenu === 'date' && !submitting}
-        animationType="fade"
-        onRequestClose={() => {
-          setOpenSelectMenu(null);
-          setDateMenuAnchor(null);
-        }}
-      >
-        <Pressable
-          style={styles.portalBackdrop}
-          onPress={() => {
-            setOpenSelectMenu(null);
-            setDateMenuAnchor(null);
-          }}
-        >
-          <Pressable
-            onPress={() => {}}
-            style={[
-              styles.portalMenu,
-              dateMenuAnchor
-                ? {
-                    top: dateMenuAnchor.y + dateMenuAnchor.height + 6,
-                    left: dateMenuAnchor.x,
-                    width: Math.max(220, dateMenuAnchor.width),
-                  }
-                : { top: 120, left: 20, width: 240 },
-            ]}
-          >
-            {(() => {
-              const month = calendarMonth.getMonth();
-              const year = calendarMonth.getFullYear();
-              const todayISO = formatISODate(new Date());
-              const selectedISO = bookingDate;
-              const cells = buildCalendarCells(year, month);
-              const monthLabel = calendarMonth.toLocaleString('en-IN', { month: 'long', year: 'numeric' });
-
-              return (
-                <View style={styles.calendarWrap}>
-                  <View style={styles.calendarHeader}>
-                    <Pressable
-                      onPress={() => {
-                        const prev = new Date(year, month - 1, 1);
-                        setCalendarMonth(prev);
-                      }}
-                      style={styles.calendarNav}
-                    >
-                      <Text style={styles.calendarNavText}>{'<'}</Text>
-                    </Pressable>
-
-                    <Text style={styles.calendarTitle}>{monthLabel}</Text>
-
-                    <Pressable
-                      onPress={() => {
-                        const next = new Date(year, month + 1, 1);
-                        setCalendarMonth(next);
-                      }}
-                      style={styles.calendarNav}
-                    >
-                      <Text style={styles.calendarNavText}>{'>'}</Text>
-                    </Pressable>
-                  </View>
-
-                  <View style={styles.calendarWeekdays}>
-                    {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((w) => (
-                      <Text key={w} style={styles.calendarWeekday}>
-                        {w}
-                      </Text>
-                    ))}
-                  </View>
-
-                  <View style={styles.calendarGrid}>
-                    {cells.map((c, i) => {
-                      const isSelected = selectedISO === c.iso;
-                      const isToday = todayISO === c.iso;
-
-                      return (
-                        <Pressable
-                          key={`${c.iso}-${i}`}
-                          onPress={() => {
-                            if (useLandingSearchFlow) {
-                              clearSearchState();
-                              setStartTime('');
-                            }
-                            setBookingDate(c.iso);
-                            const d = parseISODate(c.iso);
-                            if (d) setCalendarMonth(new Date(d.getFullYear(), d.getMonth(), 1));
-                            setOpenSelectMenu(null);
-                            setDateMenuAnchor(null);
-                          }}
-                          style={[
-                            styles.calendarDayCell,
-                            !c.inMonth && styles.calendarDayCellOut,
-                            isSelected && styles.calendarDayCellSelected,
-                            isToday && !isSelected && styles.calendarDayCellToday,
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.calendarDayText,
-                              isSelected && styles.calendarDayTextSelected,
-                              !c.inMonth && styles.calendarDayTextOut,
-                            ]}
-                          >
-                            {c.dayNum}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                </View>
-              );
-            })()}
-          </Pressable>
-        </Pressable>
-      </Modal>
     </View>
   );
 }
@@ -1241,6 +1183,14 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
       },
       default: {},
+    }),
+  },
+  wrapperFull: {
+    ...Platform.select({
+      web: {
+        maxWidth: '100%',
+        alignSelf: 'stretch',
+      },
     }),
   },
   card: {
@@ -1426,54 +1376,24 @@ const styles = StyleSheet.create({
   searchSpinner: {
     marginVertical: 12,
   },
-  searchResultRow: {
+  searchResultsScroller: {
+    maxHeight: 420,
+    marginTop: 8,
+  },
+  searchResultsGrid: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-    marginBottom: 8,
+    flexWrap: 'wrap',
+    gap: 16,
+    paddingBottom: 4,
   },
-  searchResultRowActive: {
-    borderColor: '#dc8d3c',
-    borderWidth: 2,
-    backgroundColor: 'rgba(220,141,60,0.08)',
-  },
-  searchResultRowPressed: {
-    backgroundColor: '#F9FAFB',
-  },
-  searchResultThumb: {
-    width: 56,
-    height: 56,
-    borderRadius: 8,
-    backgroundColor: '#E5E7EB',
-  },
-  searchResultThumbPlaceholder: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  searchResultTextCol: {
-    flex: 1,
-    minWidth: 0,
-  },
-  searchResultName: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#111827',
-  },
-  searchResultMeta: {
-    marginTop: 2,
-    fontSize: 13,
-    color: '#6B7280',
-  },
-  searchResultPrice: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#dc8d3c',
+  searchResultTile: {
+    width: '100%',
+    ...Platform.select({
+      web: {
+        maxWidth: 360,
+        flexGrow: 1,
+      },
+    }),
   },
   smallMuted: {
     fontSize: 13,
@@ -1558,99 +1478,61 @@ const styles = StyleSheet.create({
   dropdownOptionTextActive: {
     color: '#dc8d3c',
   },
-
-  calendarWrap: {
-    alignSelf: 'stretch',
-    width: '100%',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 6,
-  },
-  calendarHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 2,
-    alignSelf: 'center',
-  },
-  calendarNav: {
-    width: 24,
-    height: 24,
-    borderRadius: 5,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  calendarNavText: {
-    color: '#6B7280',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  calendarTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  calendarWeekdays: {
+  dateChipsWrap: {
     flexDirection: 'row',
     flexWrap: 'nowrap',
-    width: 222,
-    columnGap: 2,
-    marginBottom: 2,
-    alignSelf: 'center',
+    gap: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
   },
-  calendarWeekday: {
-    width: 30,
-    textAlign: 'center',
-    fontSize: 9,
-    fontWeight: '500',
-    color: '#9CA3AF',
-    letterSpacing: 0.2,
-  },
-  calendarGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    width: 222,
-    rowGap: 2,
-    columnGap: 2,
-    alignSelf: 'center',
-  },
-  calendarDayCell: {
-    width: 30,
-    height: 30,
-    borderRadius: 5,
+  dateChip: {
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 999,
     borderWidth: 1,
     borderColor: '#E5E7EB',
     backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  calendarDayCellOut: {
-    backgroundColor: '#FAFAFA',
-    borderColor: '#F3F4F6',
-  },
-  calendarDayCellSelected: {
+  dateChipActive: {
     borderColor: '#dc8d3c',
     backgroundColor: 'rgba(220,141,60,0.12)',
   },
-  calendarDayCellToday: {
-    borderColor: '#dc8d3c',
-  },
-  calendarDayText: {
-    fontSize: 11,
+  dateChipText: {
+    fontSize: 13,
     fontWeight: '700',
-    color: '#111827',
+    color: '#374151',
   },
-  calendarDayTextOut: {
-    color: '#9CA3AF',
-  },
-  calendarDayTextSelected: {
+  dateChipTextActive: {
     color: '#dc8d3c',
+  },
+  datePagerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    columnGap: 12,
+    marginTop: 4,
+  },
+  dateArrowButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+  dateArrowButtonDisabled: {
+    opacity: 0.4,
+  },
+  dateArrowText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#4B5563',
+  },
+  dateArrowTextDisabled: {
+    color: '#9CA3AF',
   },
 
   timeSlotsWrap: {

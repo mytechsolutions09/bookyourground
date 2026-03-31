@@ -10,13 +10,11 @@ export default function Hero() {
   const { user, profile } = useAuth();
   const isLoggedIn = !!user || !!profile;
 
-  // Expo can only bundle local assets inside this repo.
-  // Copy your video to: `h:\site\bookyourground\assets\videos\hero.mp4`
+  // Local hero video bundled with the app.
+  // Path: `assets/videos/hero.mp4`
   const heroVideoModule = require('../../assets/videos/hero.mp4');
   const heroVideoUri = Asset.fromModule(heroVideoModule).uri;
 
-  // Web: use a real HTML5 <video> element.
-  // Native: render the same video via WebView HTML (since we don't have `expo-av`).
   const VideoTag = 'video' as any;
 
   const escapedVideoUri = heroVideoUri
@@ -68,7 +66,6 @@ export default function Hero() {
           loop
           playsInline
           preload="auto"
-          // RN-web understands RN style objects, but intrinsic DOM elements are typed as `any`.
           style={styles.video}
         />
       ) : (
@@ -102,7 +99,8 @@ export default function Hero() {
         </Text>
 
         <Text style={styles.subtitle}>
-          Discover top-quality cricket, football, and multi-sport grounds in your city. Easy booking, verified venues, instant confirmation.
+          Discover top-quality cricket, football, and multi-sport grounds in your city. Easy
+          booking, verified venues, instant confirmation.
         </Text>
 
         <View style={styles.buttonGroup}>
@@ -191,11 +189,13 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 14,
     fontWeight: '600',
+    fontFamily: 'Inter',
     color: Platform.OS === 'web' ? '#dc8d3c' : '#D1FAE5',
   },
   title: {
     fontSize: Platform.OS === 'web' ? 56 : 42,
     fontWeight: '800',
+    fontFamily: 'Inter',
     color: '#FFFFFF',
     textAlign: 'center',
     lineHeight: Platform.OS === 'web' ? 64 : 50,
@@ -204,6 +204,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 18,
+    fontFamily: 'Inter',
     color: '#E5E7EB',
     textAlign: 'center',
     lineHeight: 28,
@@ -229,6 +230,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   primaryButtonText: {
+    fontFamily: 'Inter',
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
@@ -244,6 +246,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.6)',
   },
   secondaryButtonText: {
+    fontFamily: 'Inter',
     color: '#111827',
     fontSize: 16,
     fontWeight: '700',
@@ -262,6 +265,7 @@ const styles = StyleSheet.create({
   },
   featureText: {
     fontSize: 15,
+    fontFamily: 'Inter',
     color: '#D1D5DB',
     fontWeight: '500',
   },

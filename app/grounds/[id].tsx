@@ -12,7 +12,7 @@ import WebLayout from '@/components/web/WebLayout';
 import LandingBookingForm from '@/components/landing/LandingBookingForm';
 
 export default function GroundDetailsScreen() {
-  const { id } = useLocalSearchParams();
+  const { id, date, time } = useLocalSearchParams();
   const { user } = useAuth();
   const [ground, setGround] = useState<GroundWithImages | null>(null);
   const [loading, setLoading] = useState(true);
@@ -154,7 +154,13 @@ export default function GroundDetailsScreen() {
         </Card>
 
         {groundId ? (
-          <LandingBookingForm initialGroundId={String(groundId)} hideGroundPicker />
+          <LandingBookingForm
+            initialGroundId={String(groundId)}
+            hideGroundPicker
+            initialDate={typeof date === 'string' ? date : undefined}
+            initialStartTime={typeof time === 'string' ? time : undefined}
+            fullWidth
+          />
         ) : null}
       </View>
     </ScrollView>
@@ -182,14 +188,20 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 280,
     backgroundColor: '#E0E0E0',
+    ...Platform.select({
+      web: {
+        marginTop: 80,
+      },
+    }),
   },
   content: {
     padding: 16,
     ...Platform.select({
       web: {
-        maxWidth: 800,
+        maxWidth: 1120,
         marginHorizontal: 'auto',
         width: '100%',
+        paddingTop: 80,
       },
     }),
   },
