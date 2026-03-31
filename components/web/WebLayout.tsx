@@ -48,6 +48,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
   }, []);
 
   const isCompact = useMemo(() => width < 900, [width]);
+  const groundsHref = isCompact ? '/(tabs)/grounds' : '/book-my-ground';
   const cleanPath = pathname.split('?')[0];
   const isLanding = cleanPath === '/' || cleanPath === '';
   const isMarketing = cleanPath === '/book-my-ground';
@@ -115,7 +116,12 @@ export default function WebLayout({ children }: WebLayoutProps) {
     (isGroundDetails && !isOwnerGroundsDashboard && !isSuperAdmin);
 
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        (isLanding || isMarketing) && styles.containerLanding,
+      ]}
+    >
       {showHeroHeader && (
         <View
           style={[
@@ -149,7 +155,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
                 <>
                   <TouchableOpacity
                     style={styles.headerPrimaryButton}
-                    onPress={() => router.push('/book-my-ground' as any)}
+                    onPress={() => router.push(groundsHref as any)}
                   >
                     <Text style={styles.headerPrimaryButtonText}>Grounds</Text>
                   </TouchableOpacity>
@@ -184,12 +190,14 @@ export default function WebLayout({ children }: WebLayoutProps) {
             </TouchableOpacity>
 
             <View style={styles.headerRight}>
-              <TouchableOpacity
-                style={styles.headerPrimaryButton}
-                onPress={() => router.push('/book-my-ground' as any)}
-              >
-                <Text style={styles.headerPrimaryButtonText}>Grounds</Text>
-              </TouchableOpacity>
+              {!isCompact && (
+                <TouchableOpacity
+                  style={styles.headerPrimaryButton}
+                  onPress={() => router.push('/book-my-ground' as any)}
+                >
+                  <Text style={styles.headerPrimaryButtonText}>Grounds</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </View>
@@ -209,7 +217,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
                 style={styles.mobilePrimaryButton}
                 onPress={() => {
                   setMenuOpen(false);
-                  router.push('/book-my-ground' as any);
+                  router.push(groundsHref as any);
                 }}
               >
                 <Text style={styles.mobilePrimaryButtonText}>Grounds</Text>
@@ -327,8 +335,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F5F5',
   },
+  containerLanding: {
+    backgroundColor: '#F5F5F5',
+  },
   header: {
-    backgroundColor: '#2b2f4b',
+    backgroundColor: '#F5F5F5',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.12)',
     ...Platform.select({
@@ -442,9 +453,9 @@ const styles = StyleSheet.create({
   },
   bodyFull: {
     flex: 1,
-    flexDirection: 'row',
     width: '100%',
     position: 'relative',
+    overflow: 'hidden',
   },
   sidebarContainer: {
     paddingRight: 16,

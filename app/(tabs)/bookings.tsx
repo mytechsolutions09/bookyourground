@@ -15,6 +15,7 @@ export default function BookingsScreen() {
   const { width } = useWindowDimensions();
   const isWideWeb = Platform.OS === 'web' && width >= 1100;
   const isExtraWideWeb = Platform.OS === 'web' && width >= 1350;
+  const isMediumWeb = Platform.OS === 'web' && width >= 768 && width < 1100;
 
   useEffect(() => {
     if (user) {
@@ -53,28 +54,41 @@ export default function BookingsScreen() {
       {Platform.OS === 'web' ? (
         <View style={styles.webCard}>
           <View style={[styles.header, styles.webHeader]}>
-            <Text style={styles.title}>My Bookings</Text>
+            <View>
+              <Text style={styles.title}>My Bookings</Text>
+              <Text style={styles.subtitle}>
+                Track upcoming games, past sessions, and booking details in one place.
+              </Text>
+            </View>
+            <View style={styles.badgePill}>
+              <Text style={styles.badgePillNumber}>{bookings.length}</Text>
+              <Text style={styles.badgePillLabel}>total bookings</Text>
+            </View>
           </View>
 
           <FlatList
             data={bookings}
             renderItem={({ item }) => (
-              <BookingCard
-                booking={item}
-                onPress={() => router.push(`/bookings/${item.id}`)}
-              />
+              <View style={styles.webItem}>
+                <BookingCard
+                  booking={item}
+                  onPress={() => router.push(`/bookings/${item.id}`)}
+                />
+              </View>
             )}
             keyExtractor={item => item.id}
             key={
               isExtraWideWeb
-                ? 'bookings-3-cols'
+                ? 'bookings-4-cols'
                 : isWideWeb
+                ? 'bookings-3-cols'
+                : isMediumWeb
                 ? 'bookings-2-cols'
                 : 'bookings-1-col'
             }
-            numColumns={isExtraWideWeb ? 3 : isWideWeb ? 2 : 1}
+            numColumns={isExtraWideWeb ? 4 : isWideWeb ? 3 : isMediumWeb ? 2 : 1}
             columnWrapperStyle={
-              isExtraWideWeb || isWideWeb ? styles.webColumnWrapper : undefined
+              isExtraWideWeb || isWideWeb || isMediumWeb ? styles.webColumnWrapper : undefined
             }
             style={styles.webFlatList}
             contentContainerStyle={styles.webList}
@@ -93,6 +107,9 @@ export default function BookingsScreen() {
         <>
           <View style={styles.header}>
             <Text style={styles.title}>My Bookings</Text>
+            <Text style={styles.subtitle}>
+              All your ground reservations and match history.
+            </Text>
           </View>
 
           <FlatList
@@ -135,30 +152,38 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#FFFFFF',
-    padding: 16,
+    paddingHorizontal: 20,
     paddingTop: 48,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    paddingBottom: 14,
+    borderBottomWidth: 0,
   },
   webHeader: {
-    paddingTop: 24,
+    paddingTop: 22,
     paddingHorizontal: 24,
-    borderBottomWidth: 0,
-    borderBottomColor: 'transparent',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    paddingBottom: 18,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(229,231,235,0.9)',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   title: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#212121',
-    marginBottom: 16,
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: '#6B7280',
   },
   webContainer: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingTop: 0,
     width: '100%',
-    maxWidth: 1200,
+    maxWidth: 1180,
     alignSelf: 'center',
   },
   list: {
@@ -166,21 +191,26 @@ const styles = StyleSheet.create({
   },
   webList: {
     paddingHorizontal: 24,
-    paddingTop: 16,
+    paddingTop: 18,
     paddingBottom: 32,
     width: '100%',
   },
   webColumnWrapper: {
     gap: 16,
   },
+  webItem: {
+    flex: 1,
+  },
   webCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 24,
     paddingBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(229,231,235,0.9)',
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 10 },
     ...Platform.select({
       web: {
         flex: 1,
@@ -198,10 +228,32 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 48,
+    paddingVertical: 72,
   },
   emptyText: {
+    fontSize: 15,
+    color: '#6B7280',
+  },
+  badgePill: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(220,141,60,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(220,141,60,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 78,
+  },
+  badgePillNumber: {
     fontSize: 16,
-    color: '#666',
+    fontWeight: '800',
+    color: '#dc8d3c',
+  },
+  badgePillLabel: {
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.7,
+    color: '#9CA3AF',
   },
 });

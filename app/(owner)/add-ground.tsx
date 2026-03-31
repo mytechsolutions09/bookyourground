@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, Switch } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, Switch, TextInput, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,6 +27,7 @@ export default function AddGroundScreen() {
     has_parking: false,
     has_changing_rooms: false,
     has_pavilion: false,
+    mediaUrls: [''],
   });
 
   const handleSubmit = async () => {
@@ -42,32 +43,50 @@ export default function AddGroundScreen() {
       const { data: created, error } = await supabase
         .from('grounds')
         .insert({
-        owner_id: user.id,
-        name: formData.name,
-        description: formData.description || null,
-        address: formData.address,
-        city: formData.city,
-        state: formData.state,
-        pincode: formData.pincode,
-        base_price_per_hour: parseFloat(formData.base_price_per_hour),
-        pitch_type: formData.pitch_type || null,
-        ground_size: formData.ground_size || null,
-        capacity: formData.capacity ? parseInt(formData.capacity) : null,
-        has_floodlights: formData.has_floodlights,
-        has_parking: formData.has_parking,
-        has_changing_rooms: formData.has_changing_rooms,
-        has_pavilion: formData.has_pavilion,
+          owner_id: user.id,
+          name: formData.name,
+          description: formData.description || null,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          pincode: formData.pincode,
+          base_price_per_hour: parseFloat(formData.base_price_per_hour),
+          pitch_type: formData.pitch_type || null,
+          ground_size: formData.ground_size || null,
+          capacity: formData.capacity ? parseInt(formData.capacity) : null,
+          has_floodlights: formData.has_floodlights,
+          has_parking: formData.has_parking,
+          has_changing_rooms: formData.has_changing_rooms,
+          has_pavilion: formData.has_pavilion,
         })
         .select('id')
         .single();
 
       if (error) throw error;
 
+      // Seed default weekly time-slots for this ground (owner can fine-tune later).
       await ensureDefaultTimeSlotsForGround({
         groundId: created.id,
         pitchType: formData.pitch_type,
         supabaseClient: supabase,
       });
+
+      // Optional: attach image URLs (first image becomes primary).
+      const cleaned = (formData.mediaUrls || [])
+        .map((u) => String(u ?? '').trim())
+        .filter(Boolean);
+      if (cleaned.length > 0) {
+        const rows = cleaned.slice(0, 8).map((url, index) => ({
+          ground_id: created.id as string,
+          image_url: url,
+          is_primary: index === 0,
+          display_order: index,
+        }));
+        const { error: mediaError } = await supabase
+          .from('ground_images')
+          .insert(rows);
+        if (mediaError) throw mediaError;
+      }
 
       Alert.alert('Success', 'Ground added successfully! It will be visible after admin approval.', [
         { text: 'OK', onPress: () => router.back() }
@@ -143,12 +162,23 @@ export default function AddGroundScreen() {
             placeholder="1000"
             keyboardType="decimal-pad"
           />
-          <Input
-            label="Pitch Type"
-            value={formData.pitch_type}
-            onChangeText={(text) => setFormData({ ...formData, pitch_type: text })}
-            placeholder="e.g., Turf, Concrete, Natural"
-          />
+          <Text style={styles.subLabel}>Type</Text>
+          <View style={styles.typeChipsRow}>
+            {['Cricket Ground', 'Box Cricket'].map((label) => {
+              const active = formData.pitch_type === label;
+              return (
+                <Pressable
+                  key={label}
+                  onPress={() => setFormData({ ...formData, pitch_type: label })}
+                  style={[styles.typeChip, active && styles.typeChipActive]}
+                >
+                  <Text style={[styles.typeChipText, active && styles.typeChipTextActive]}>
+                    {label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
           <Input
             label="Ground Size"
             value={formData.ground_size}
@@ -196,6 +226,56 @@ export default function AddGroundScreen() {
           </View>
         </Card>
 
+        <Text style={styles.timeSlotsNote}>
+          Default hourly time slots for all days will be auto-created from the selected type after
+          you add this ground. You can fine-tune availability later from the My Grounds → Edit
+          screen.
+        </Text>
+
+        <Card style={styles.section}>
+          <Text style={styles.sectionTitle}>Images</Text>
+          <Text style={styles.helperText}>Add 1–8 image URLs for this ground. First image is used as the primary thumbnail.</Text>
+          {formData.mediaUrls.map((url, index) => (
+            <View key={index} style={styles.mediaRow}>
+              <TextInput
+                style={[styles.mediaInput]}
+                value={url}
+                onChangeText={(text) => {
+                  const next = [...formData.mediaUrls];
+                  next[index] = text;
+                  setFormData({ ...formData, mediaUrls: next });
+                }}
+                placeholder="https://example.com/ground-image.jpg"
+              />
+              {formData.mediaUrls.length > 1 && (
+                <Pressable
+                  onPress={() => {
+                    const next = [...formData.mediaUrls];
+                    next.splice(index, 1);
+                    setFormData({ ...formData, mediaUrls: next });
+                  }}
+                  style={styles.mediaRemove}
+                >
+                  <Text style={styles.mediaRemoveText}>Remove</Text>
+                </Pressable>
+              )}
+            </View>
+          ))}
+          {formData.mediaUrls.length < 8 && (
+            <Pressable
+              onPress={() =>
+                setFormData({
+                  ...formData,
+                  mediaUrls: [...formData.mediaUrls, ''],
+                })
+              }
+              style={styles.mediaAddButton}
+            >
+              <Text style={styles.mediaAddText}>Add another image</Text>
+            </Pressable>
+          )}
+        </Card>
+
         <Button
           title="Add Ground"
           onPress={handleSubmit}
@@ -238,6 +318,17 @@ const styles = StyleSheet.create({
     color: '#212121',
     marginBottom: 16,
   },
+  subLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 8,
+  },
   switchRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -249,6 +340,71 @@ const styles = StyleSheet.create({
   switchLabel: {
     fontSize: 16,
     color: '#333',
+  },
+  typeChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  typeChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+  },
+  typeChipActive: {
+    borderColor: '#dc8d3c',
+    backgroundColor: 'rgba(220,141,60,0.10)',
+  },
+  typeChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  typeChipTextActive: {
+    color: '#dc8d3c',
+  },
+  mediaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  mediaInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: '#FFFFFF',
+    fontSize: 14,
+  },
+  mediaRemove: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+  },
+  mediaRemoveText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#B91C1C',
+  },
+  mediaAddButton: {
+    marginTop: 4,
+  },
+  mediaAddText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#2563EB',
+  },
+  timeSlotsNote: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 4,
+    marginBottom: 24,
   },
   submitButton: {
     marginTop: 8,

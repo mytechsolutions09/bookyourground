@@ -1555,14 +1555,15 @@ const styles = StyleSheet.create({
   dateChipsWrap: {
     flexDirection: 'row',
     flexWrap: 'nowrap',
-    gap: 8,
+    gap: 6,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     flex: 1,
+    overflow: 'hidden',
   },
   dateChip: {
-    paddingVertical: 8,
-    paddingHorizontal: 10,
+    paddingVertical: 7,
+    paddingHorizontal: 8,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: '#E5E7EB',
@@ -1573,7 +1574,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(220,141,60,0.12)',
   },
   dateChipText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: '#374151',
   },

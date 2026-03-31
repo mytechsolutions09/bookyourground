@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { Hop as Home, Calendar, User } from 'lucide-react-native';
+import { Hop as Home, Calendar, User, Building2, LogOut } from 'lucide-react-native';
 import { Platform, useWindowDimensions } from 'react-native';
 
 export default function TabLayout() {
@@ -10,9 +10,9 @@ export default function TabLayout() {
   const tabBarStyle = hideTabBarOnBigScreens
     ? ({ display: 'none' } as any)
     : {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: '#2b2f4b',
         borderTopWidth: 1,
-        borderTopColor: '#E0E0E0',
+        borderTopColor: '#1f243a',
         height: 60,
         paddingBottom: 8,
         paddingTop: 8,
@@ -22,8 +22,8 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: Platform.OS === 'web' ? '#dc8d3c' : '#2196F3',
-        tabBarInactiveTintColor: '#666',
+        tabBarActiveTintColor: '#dc8d3c',
+        tabBarInactiveTintColor: '#e5e7eb',
         tabBarStyle,
         tabBarLabelStyle: {
           fontSize: 12,
@@ -39,6 +39,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="grounds"
+        options={{
+          title: 'Grounds',
+          tabBarIcon: ({ color, size }) => <Building2 size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="bookings"
         options={{
           title: 'Bookings',
@@ -50,6 +57,13 @@ export default function TabLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="logout"
+        options={{
+          title: 'Logout',
+          tabBarIcon: ({ color, size }) => <LogOut size={size} color={color} />,
         }}
       />
     </Tabs>

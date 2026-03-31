@@ -1,23 +1,9 @@
-import React, { useEffect } from 'react';
-import { Platform, View, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
-import { router } from 'expo-router';
+import React from 'react';
+import { Platform, View, StyleSheet, ScrollView } from 'react-native';
 import WebLayout from '@/components/web/WebLayout';
 import LandingBookingForm from '@/components/landing/LandingBookingForm';
 
-export default function BookMyGroundPage() {
-  const { width } = useWindowDimensions();
-
-  // On small web screens, always render booking under the Grounds tab (with bottom bar).
-  useEffect(() => {
-    if (Platform.OS === 'web' && width < 900) {
-      router.replace('/(tabs)/grounds' as any);
-    }
-  }, [width]);
-
-  if (Platform.OS === 'web' && width < 900) {
-    return null;
-  }
-
+export default function GroundsTabScreen() {
   const inner = (
     <View style={styles.page}>
       <LandingBookingForm fullWidth />
@@ -52,4 +38,5 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
 });
+
 

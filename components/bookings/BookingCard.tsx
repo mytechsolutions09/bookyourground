@@ -24,8 +24,8 @@ export default function BookingCard({
     'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
 
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
-      <Card style={styles.card}>
+    <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
+      <Card style={[styles.card, Platform.OS === 'web' && styles.cardWeb]}>
         <View style={styles.content}>
           {showGroundDetails && (
             <>
@@ -49,11 +49,11 @@ export default function BookingCard({
 
           <View style={styles.detailsRow}>
             <View style={styles.detail}>
-              <Calendar size={16} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
+              <Calendar size={16} color="#dc8d3c" />
               <Text style={styles.detailText}>{formatDate(booking.booking_date)}</Text>
             </View>
             <View style={styles.detail}>
-              <Clock size={16} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
+              <Clock size={16} color="#dc8d3c" />
               <Text style={styles.detailText}>
                 {formatBookingSlotSummary(
                   booking.start_time,
@@ -65,7 +65,9 @@ export default function BookingCard({
           </View>
 
           <View style={styles.footer}>
-            <Text style={styles.amount}>{formatCurrency(booking.total_amount)}</Text>
+            <View style={styles.footerLeft}>
+              <Text style={styles.amount}>{formatCurrency(booking.total_amount)}</Text>
+            </View>
             <View style={[styles.statusBadge, { backgroundColor: getStatusColor(booking.status) }]}>
               <Text style={styles.statusText}>{getStatusLabel(booking.status)}</Text>
             </View>
@@ -80,22 +82,34 @@ export default function BookingCard({
 
 const styles = StyleSheet.create({
   card: {
-    marginBottom: 12,
+    marginBottom: 14,
+    borderRadius: 18,
+    overflow: 'hidden',
+    flex: 1,
+  },
+  cardWeb: {
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    borderWidth: 1,
+    borderColor: 'rgba(229,231,235,0.9)',
   },
   content: {
     gap: 8,
+    padding: 10,
   },
   image: {
     width: '100%',
-    height: 120,
-    borderRadius: 8,
+    height: 140,
+    borderRadius: 14,
     backgroundColor: '#E0E0E0',
     marginBottom: 4,
   },
   groundName: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#212121',
+    fontWeight: '800',
+    color: '#111827',
   },
   locationRow: {
     flexDirection: 'row',
@@ -107,7 +121,7 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   detailsRow: {
-    gap: 8,
+    gap: 6,
     marginTop: 4,
   },
   detail: {
@@ -116,24 +130,27 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   detailText: {
-    fontSize: 14,
-    color: '#333',
+    fontSize: 13,
+    color: '#4B5563',
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 10,
+  },
+  footerLeft: {
+    gap: 2,
   },
   amount: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
-    color: Platform.OS === 'web' ? '#dc8d3c' : '#2196F3',
+    color: '#dc8d3c',
   },
   statusBadge: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 6,
+    borderRadius: 999,
   },
   statusText: {
     color: '#FFFFFF',
@@ -146,7 +163,7 @@ const styles = StyleSheet.create({
   compactGroundName: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#212121',
+    color: '#111827',
   },
   compactGroundLocation: {
     fontSize: 13,
@@ -155,6 +172,10 @@ const styles = StyleSheet.create({
   },
   metaText: {
     marginTop: 6,
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  metaMuted: {
     fontSize: 12,
     color: '#6B7280',
   },
