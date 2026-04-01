@@ -1,23 +1,28 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, TouchableOpacity, Image, useWindowDimensions } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 
 export default function SignupScreen() {
-  const [fullName, setFullName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [phone, setPhone] = useState('');
+  const [stateName, setStateName] = useState('');
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
+  const { width } = useWindowDimensions();
+  const showHeroImage = Platform.OS === 'web' && width >= 900;
 
   const handleSignup = async () => {
-    if (!fullName || !email || !password) {
+    if (!firstName || !lastName || !phone || !stateName || !email || !password) {
       if (Platform.OS === 'web') {
-        alert('Please fill in all fields');
+        alert('Please fill in all required fields');
       } else {
-        Alert.alert('Error', 'Please fill in all fields');
+        Alert.alert('Error', 'Please fill in all required fields');
       }
       return;
     }
@@ -32,6 +37,7 @@ export default function SignupScreen() {
     }
 
     setLoading(true);
+    const fullName = `${firstName} ${lastName}`.trim();
     const { error } = await signUp(email, password, fullName);
     setLoading(false);
 
@@ -53,26 +59,38 @@ export default function SignupScreen() {
     }
   };
 
-  return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.replace('/')}>
-            <Text style={styles.logoText}>Book my ground</Text>
-          </TouchableOpacity>
-        </View>
+  const contentInner = (
+    <>
+      <View style={styles.heroColumn}>
+        <View style={styles.formContainer}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => router.replace('/')}>
+              <Text style={styles.logoText}>Book my ground</Text>
+            </TouchableOpacity>
+          </View>
 
-        <View style={styles.form}>
-          <Input
-            label="Full Name"
-            value={fullName}
-            onChangeText={setFullName}
-            placeholder="Enter your full name"
-            autoComplete="name"
-          />
+          <View style={styles.form}>
+          <View style={styles.row}>
+            <View style={styles.col}>
+              <Input
+                label="First Name"
+                value={firstName}
+                onChangeText={setFirstName}
+                placeholder="Enter your first name"
+                autoComplete="name"
+              />
+            </View>
+
+            <View style={styles.col}>
+              <Input
+                label="Last Name"
+                value={lastName}
+                onChangeText={setLastName}
+                placeholder="Enter your last name"
+                autoComplete="name-family"
+              />
+            </View>
+          </View>
 
           <Input
             label="Email"
@@ -84,6 +102,28 @@ export default function SignupScreen() {
             autoComplete="email"
           />
 
+          <View style={styles.row}>
+            <View style={styles.col}>
+              <Input
+                label="Mobile Number"
+                value={phone}
+                onChangeText={setPhone}
+                placeholder="Enter your mobile number"
+                keyboardType="phone-pad"
+                autoComplete="tel"
+              />
+            </View>
+
+            <View style={styles.col}>
+              <Input
+                label="State"
+                value={stateName}
+                onChangeText={setStateName}
+                placeholder="Select your state"
+              />
+            </View>
+          </View>
+
           <Input
             label="Password"
             value={password}
@@ -93,22 +133,51 @@ export default function SignupScreen() {
             autoComplete="password"
           />
 
-          <Button
-            title="Sign Up"
-            onPress={handleSignup}
-            loading={loading}
-            fullWidth
-            style={styles.button}
-          />
+            <Button
+              title="Sign Up"
+              onPress={handleSignup}
+              loading={loading}
+              fullWidth
+              style={styles.button}
+            />
 
-          <Button
-            title="Already have an account? Sign In"
-            onPress={() => router.back()}
-            variant="outline"
-            fullWidth
+            <Button
+              title="Already have an account? Sign In"
+              onPress={() => router.back()}
+              variant="outline"
+              fullWidth
+            />
+          </View>
+        </View>
+      </View>
+
+      {showHeroImage && (
+        <View style={styles.heroImage}>
+          <Image
+            source={require('../../assets/signup-stadium.png')}
+            style={{ width: '100%', height: '100%' }}
+            resizeMode="cover"
           />
         </View>
+      )}
+    </>
+  );
+
+  const formBody =
+    Platform.OS === 'web' ? (
+      <View style={styles.scrollContent}>{contentInner}</View>
+    ) : (
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        {contentInner}
       </ScrollView>
+    );
+
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+    >
+      {formBody}
     </KeyboardAvoidingView>
   );
 }
@@ -120,18 +189,20 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     padding: 24,
     ...Platform.select({
       web: {
-        maxWidth: 500,
-        marginHorizontal: 'auto',
+        flexDirection: 'row-reverse',
+        alignItems: 'stretch',
         width: '100%',
+        gap: 0,
+        padding: 0,
       },
     }),
   },
   header: {
-    marginBottom: 32,
+    marginBottom: 24,
     alignItems: 'center',
   },
   logoText: {
@@ -141,6 +212,18 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: 16,
+  },
+  heroImage: {
+    display: 'none',
+    ...Platform.select({
+      web: {
+        display: 'flex',
+        flex: 1,
+        width: '50%',
+        borderRadius: 0,
+        overflow: 'hidden',
+      },
+    }),
   },
   title: {
     fontSize: 32,
@@ -154,6 +237,36 @@ const styles = StyleSheet.create({
   },
   form: {
     gap: 16,
+    ...Platform.select({
+      web: {
+        flex: 1,
+      },
+    }),
+  },
+  heroColumn: {
+    flex: 1,
+    width: '50%',
+    paddingVertical: 0,
+  },
+  formContainer: {
+    flex: 1,
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 0,
+    paddingHorizontal: 40,
+    paddingVertical: 40,
+  },
+  row: {
+    flexDirection: 'column',
+    gap: 12,
+    ...Platform.select({
+      web: {
+        flexDirection: 'row',
+      },
+    }),
+  },
+  col: {
+    flex: 1,
   },
   button: {
     marginTop: 8,

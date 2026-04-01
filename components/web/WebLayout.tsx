@@ -456,9 +456,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
   },
   header: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#2b2f4b',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.12)',
+    borderBottomColor: 'rgba(15,23,42,0.35)',
     ...Platform.select({
       web: {
         position: 'sticky' as any,

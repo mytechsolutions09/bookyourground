@@ -1273,12 +1273,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '400',
+    fontFamily: 'Inter',
     color: '#111827',
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 14,
+    fontFamily: 'Inter',
     color: '#6B7280',
     marginBottom: 12,
   },
@@ -1290,12 +1292,14 @@ const styles = StyleSheet.create({
   },
   authTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '400',
+    fontFamily: 'Inter',
     color: '#111827',
     marginBottom: 4,
   },
   authText: {
     fontSize: 13,
+    fontFamily: 'Inter',
     color: '#6B7280',
   },
   formFieldsWeb: {
@@ -1323,7 +1327,8 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '400',
+    fontFamily: 'Inter',
     color: '#374151',
     marginBottom: 6,
   },
@@ -1334,6 +1339,7 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     paddingHorizontal: 10,
     fontSize: 14,
+    fontFamily: 'Inter',
     backgroundColor: '#FFF',
     color: '#111827',
   },
@@ -1349,6 +1355,7 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     paddingHorizontal: 10,
     fontSize: 14,
+    fontFamily: 'Inter',
     backgroundColor: '#F3F4F6',
     color: '#6B7280',
   },
@@ -1371,7 +1378,8 @@ const styles = StyleSheet.create({
   },
   groundChipText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '400',
+    fontFamily: 'Inter',
     color: '#374151',
   },
   groundChipTextActive: {
@@ -1397,7 +1405,8 @@ const styles = StyleSheet.create({
   },
   teamToggleText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '400',
+    fontFamily: 'Inter',
     color: '#374151',
   },
   teamToggleTextActive: {
@@ -1412,12 +1421,14 @@ const styles = StyleSheet.create({
   },
   summaryText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '400',
+    fontFamily: 'Inter',
     color: '#111827',
   },
   summaryMuted: {
     marginTop: 6,
     fontSize: 12,
+    fontFamily: 'Inter',
     color: '#6B7280',
   },
   summaryAccent: {
@@ -1436,7 +1447,8 @@ const styles = StyleSheet.create({
   },
   changeGroundText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '400',
+    fontFamily: 'Inter',
     color: '#dc8d3c',
   },
   searchResultsSection: {
@@ -1471,6 +1483,7 @@ const styles = StyleSheet.create({
   },
   smallMuted: {
     fontSize: 13,
+    fontFamily: 'Inter',
     color: '#6B7280',
   },
   dropdownOuter: {
@@ -1493,7 +1506,8 @@ const styles = StyleSheet.create({
   },
   dropdownButtonText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '400',
+    fontFamily: 'Inter',
     color: '#111827',
   },
   dropdownButtonTextDisabled: {
@@ -1546,7 +1560,8 @@ const styles = StyleSheet.create({
   },
   dropdownOptionText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '400',
+    fontFamily: 'Inter',
     color: '#374151',
   },
   dropdownOptionTextActive: {
@@ -1575,7 +1590,8 @@ const styles = StyleSheet.create({
   },
   dateChipText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '400',
+    fontFamily: 'Inter',
     color: '#374151',
   },
   dateChipTextActive: {
@@ -1603,7 +1619,8 @@ const styles = StyleSheet.create({
   },
   dateArrowText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '400',
+    fontFamily: 'Inter',
     color: '#4B5563',
   },
   dateArrowTextDisabled: {
@@ -1644,7 +1661,8 @@ const styles = StyleSheet.create({
   },
   timeSlotText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '400',
+    fontFamily: 'Inter',
     color: '#374151',
   },
   timeSlotTextDense: {
