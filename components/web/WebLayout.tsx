@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Platform,
   useWindowDimensions,
+  TextInput,
 } from 'react-native';
 import { router, usePathname } from 'expo-router';
 import {
@@ -20,6 +21,7 @@ import {
   Settings,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 interface WebLayoutProps {
   children: React.ReactNode;
@@ -31,6 +33,11 @@ export default function WebLayout({ children }: WebLayoutProps) {
   const { width } = useWindowDimensions();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<
+    { id: string; name: string; city: string | null; state: string | null }[]
+  >([]);
+  const [searchLoading, setSearchLoading] = useState(false);
 
   if (Platform.OS !== 'web') {
     return <>{children}</>;
@@ -46,6 +53,47 @@ export default function WebLayout({ children }: WebLayoutProps) {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  // Navbar search: fetch ground suggestions as user types on landing pages.
+  useEffect(() => {
+    if (!searchQuery || searchQuery.trim().length < 2) {
+      setSearchResults([]);
+      setSearchLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    setSearchLoading(true);
+
+    const timeout = setTimeout(async () => {
+      try {
+        const { data, error } = await supabase
+          .from('grounds')
+          .select('id, name, city, state')
+          .eq('active', true)
+          .eq('approved', true)
+          .ilike('name', `%${searchQuery.trim()}%`)
+          .limit(6);
+
+        if (cancelled) return;
+        if (error) {
+          console.warn('Navbar search error:', error);
+          setSearchResults([]);
+        } else {
+          setSearchResults(
+            (data || []) as { id: string; name: string; city: string | null; state: string | null }[],
+          );
+        }
+      } finally {
+        if (!cancelled) setSearchLoading(false);
+      }
+    }, 250); // simple debounce
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [searchQuery]);
 
   const isCompact = useMemo(() => width < 900, [width]);
   const groundsHref = isCompact ? '/(tabs)/grounds' : '/book-my-ground';
@@ -68,8 +116,10 @@ export default function WebLayout({ children }: WebLayoutProps) {
     '/settings',
   ];
   const isAdminRoute = adminPathnames.includes(cleanPath);
-  const isPublicGroundDetails = isGroundDetails && profile?.role !== 'ground_owner' && profile?.role !== 'super_admin';
-  const isPublicNoSidebar = isLanding || isMarketing || isPublicGroundDetails || isBookingDetails;
+  // On ground info (/grounds/[id]) and booking info (/bookings/[id]) pages,
+  // hide the left sidebar for all roles so the content can take full width.
+  const isGroundInfoPage = isGroundDetails;
+  const isPublicNoSidebar = isLanding || isMarketing || isGroundInfoPage || isBookingDetails;
   const adminEmail = 'invirtualcoin@gmail.com';
   const isSuperAdmin =
     profile?.role === 'super_admin' ||
@@ -166,6 +216,47 @@ export default function WebLayout({ children }: WebLayoutProps) {
                 </TouchableOpacity>
               ) : (
                 <>
+                  {!isCompact && (
+                    <View style={styles.headerSearch}>
+                      <TextInput
+                        placeholder="Search grounds"
+                        placeholderTextColor="#E5E7EB"
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                        style={styles.headerSearchInput}
+                      />
+
+                      {searchQuery.trim().length >= 2 && (
+                        <View style={styles.searchDropdown}>
+                          {searchLoading && searchResults.length === 0 ? (
+                            <Text style={styles.searchDropdownText}>Searching…</Text>
+                          ) : searchResults.length === 0 ? (
+                            <Text style={styles.searchDropdownText}>No grounds found</Text>
+                          ) : (
+                            searchResults.map((g) => (
+                              <TouchableOpacity
+                                key={g.id}
+                                style={styles.searchDropdownItem}
+                                onPress={() => {
+                                  setSearchQuery('');
+                                  setSearchResults([]);
+                                  router.push(`/grounds/${g.id}` as any);
+                                }}
+                              >
+                                <Text style={styles.searchDropdownItemTitle}>{g.name}</Text>
+                                {!!(g.city || g.state) && (
+                                  <Text style={styles.searchDropdownItemSubtitle}>
+                                    {[g.city, g.state].filter(Boolean).join(', ')}
+                                  </Text>
+                                )}
+                              </TouchableOpacity>
+                            ))
+                          )}
+                        </View>
+                      )}
+                    </View>
+                  )}
+
                   <TouchableOpacity
                     style={styles.headerPrimaryButton}
                     onPress={() => router.push(groundsHref as any)}
@@ -547,6 +638,59 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
+  },
+  headerSearch: {
+    minWidth: 220,
+    maxWidth: 320,
+    position: 'relative',
+  },
+  headerSearchInput: {
+    borderWidth: 1,
+    borderColor: 'rgba(249,250,251,0.4)',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    color: '#F9FAFB',
+    fontSize: 14,
+    fontFamily: 'Inter',
+    backgroundColor: 'rgba(15,23,42,0.75)',
+  },
+  searchDropdown: {
+    position: 'absolute' as any,
+    top: 40,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginTop: 6,
+    paddingVertical: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    zIndex: 2500,
+  },
+  searchDropdownText: {
+    fontSize: 13,
+    color: '#6B7280',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  searchDropdownItem: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  searchDropdownItemTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  searchDropdownItemSubtitle: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
   },
   userName: {
     fontSize: 14,

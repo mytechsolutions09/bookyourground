@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, Switch, TextInput, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -8,10 +8,16 @@ import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
 import { ensureDefaultTimeSlotsForGround } from '@/utils/timeSlotsDb';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function AddGroundScreen() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [locationRows, setLocationRows] = useState<any[]>([]);
+  const [locationKey, setLocationKey] = useState<string>('');
+  const [createdGroundId, setCreatedGroundId] = useState<string | null>(null);
+  const availabilityRef = useRef<TimeSlotsEditorHandle | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -29,6 +35,26 @@ export default function AddGroundScreen() {
     has_pavilion: false,
     mediaUrls: [''],
   });
+
+  useEffect(() => {
+    const loadLocations = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('locations')
+          .select('*')
+          .eq('active', true)
+          .order('sort_order', { ascending: true })
+          .order('city', { ascending: true });
+
+        if (error) throw error;
+        setLocationRows(data || []);
+      } catch (e) {
+        console.error('Error loading locations for owner add-ground:', e);
+      }
+    };
+
+    loadLocations();
+  }, []);
 
   const handleSubmit = async () => {
     if (!user) return;
@@ -64,7 +90,7 @@ export default function AddGroundScreen() {
 
       if (error) throw error;
 
-      // Seed default weekly time-slots for this ground (owner can fine-tune later).
+      // Seed default weekly time-slots for this ground so owner can fine-tune immediately.
       await ensureDefaultTimeSlotsForGround({
         groundId: created.id,
         pitchType: formData.pitch_type,
@@ -88,13 +114,72 @@ export default function AddGroundScreen() {
         if (mediaError) throw mediaError;
       }
 
-      Alert.alert('Success', 'Ground added successfully! It will be visible after admin approval.', [
-        { text: 'OK', onPress: () => router.back() }
-      ]);
+      setCreatedGroundId(created.id as string);
+      Alert.alert(
+        'Ground added',
+        'Your ground has been created. You can now adjust hours and availability below.',
+      );
     } catch (error: any) {
       Alert.alert('Error', error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePickMedia = async () => {
+    if (!user) {
+      Alert.alert('Login required', 'Please sign in again to upload media.');
+      return;
+    }
+
+    try {
+      setUploadingMedia(true);
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.All,
+        quality: 0.8,
+      });
+
+      if (result.canceled || !result.assets?.length) {
+        return;
+      }
+
+      const asset = result.assets[0];
+      const uri = asset.uri;
+      const extensionFromUri = uri.split('.').pop() || '';
+      const ext =
+        extensionFromUri.toLowerCase().match(/^(jpg|jpeg|png|webp|mp4|mov|m4v)$/)?.[0] || 'jpg';
+
+      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const filePath = `owner-media/${user.id}/${fileName}`;
+
+      const response = await fetch(uri);
+      const blob = await response.blob();
+
+      const { error: uploadError } = await supabase.storage
+        .from('ground-images')
+        .upload(filePath, blob, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+
+      if (uploadError) {
+        console.error('Media upload failed:', uploadError);
+        Alert.alert('Upload failed', uploadError.message);
+        return;
+      }
+
+      const { data } = supabase.storage.from('ground-images').getPublicUrl(filePath);
+      const publicUrl = data.publicUrl;
+
+      setFormData((prev) => ({
+        ...prev,
+        mediaUrls: [...(prev.mediaUrls || []), publicUrl].slice(0, 8),
+      }));
+    } catch (e: any) {
+      console.error('Error picking/uploading media:', e);
+      Alert.alert('Upload error', e?.message ?? 'Something went wrong while uploading media.');
+    } finally {
+      setUploadingMedia(false);
     }
   };
 
@@ -104,8 +189,6 @@ export default function AddGroundScreen() {
       style={styles.container}
     >
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Add New Ground</Text>
-
         <Card style={styles.section}>
           <Text style={styles.sectionTitle}>Basic Information</Text>
           <Input
@@ -126,23 +209,29 @@ export default function AddGroundScreen() {
 
         <Card style={styles.section}>
           <Text style={styles.sectionTitle}>Location</Text>
+          <View style={styles.locationRow}>
+            <View style={styles.locationCol}>
+              <Text style={styles.subLabel}>City / State *</Text>
+              <LocationDropdown
+                value={locationKey}
+                options={buildLocationOptions(locationRows)}
+                onChange={(k) => {
+                  setLocationKey(k);
+                  const [city, state] = k.split('__');
+                  setFormData((prev) => ({
+                    ...prev,
+                    city: city || '',
+                    state: state || '',
+                  }));
+                }}
+              />
+            </View>
+          </View>
           <Input
             label="Address *"
             value={formData.address}
             onChangeText={(text) => setFormData({ ...formData, address: text })}
             placeholder="Street address"
-          />
-          <Input
-            label="City *"
-            value={formData.city}
-            onChangeText={(text) => setFormData({ ...formData, city: text })}
-            placeholder="City"
-          />
-          <Input
-            label="State *"
-            value={formData.state}
-            onChangeText={(text) => setFormData({ ...formData, state: text })}
-            placeholder="State"
           />
           <Input
             label="Pincode *"
@@ -155,13 +244,6 @@ export default function AddGroundScreen() {
 
         <Card style={styles.section}>
           <Text style={styles.sectionTitle}>Ground Details</Text>
-          <Input
-            label="Base Price Per Hour (₹) *"
-            value={formData.base_price_per_hour}
-            onChangeText={(text) => setFormData({ ...formData, base_price_per_hour: text })}
-            placeholder="1000"
-            keyboardType="decimal-pad"
-          />
           <Text style={styles.subLabel}>Type</Text>
           <View style={styles.typeChipsRow}>
             {['Cricket Ground', 'Box Cricket'].map((label) => {
@@ -179,6 +261,17 @@ export default function AddGroundScreen() {
               );
             })}
           </View>
+          <Input
+            label={
+              formData.pitch_type === 'Cricket Ground'
+                ? 'Base Price Per Match (₹) *'
+                : 'Base Price Per Hour (₹) *'
+            }
+            value={formData.base_price_per_hour}
+            onChangeText={(text) => setFormData({ ...formData, base_price_per_hour: text })}
+            placeholder="1000"
+            keyboardType="decimal-pad"
+          />
           <Input
             label="Ground Size"
             value={formData.ground_size}
@@ -234,7 +327,19 @@ export default function AddGroundScreen() {
 
         <Card style={styles.section}>
           <Text style={styles.sectionTitle}>Images</Text>
-          <Text style={styles.helperText}>Add 1–8 image URLs for this ground. First image is used as the primary thumbnail.</Text>
+          <Text style={styles.helperText}>
+            Add 1–8 image or video URLs, or upload files from your device. Files are stored in the
+            `ground-images` bucket. First image is used as the primary thumbnail.
+          </Text>
+          <Pressable
+            style={[styles.mediaAddButton, styles.mediaUploadButton]}
+            onPress={handlePickMedia}
+            disabled={uploadingMedia}
+          >
+            <Text style={styles.mediaUploadText}>
+              {uploadingMedia ? 'Uploading…' : 'Upload from device'}
+            </Text>
+          </Pressable>
           {formData.mediaUrls.map((url, index) => (
             <View key={index} style={styles.mediaRow}>
               <TextInput
@@ -283,6 +388,22 @@ export default function AddGroundScreen() {
           fullWidth
           style={styles.submitButton}
         />
+
+        {Platform.OS === 'web' && createdGroundId && (
+          <Card style={styles.section}>
+            <Text style={styles.sectionTitle}>Hours & Availability</Text>
+            <Text style={styles.helperText}>
+              Adjust which days and time slots are available for this ground. You can always change
+              this later from My grounds → Edit.
+            </Text>
+            <TimeSlotsEditor
+              ref={availabilityRef}
+              groundId={createdGroundId}
+              pitchType={formData.pitch_type || null}
+              canEdit
+            />
+          </Card>
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -302,6 +423,12 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
     paddingTop: 64,
+    ...Platform.select({
+      web: {
+        paddingTop: 16,
+      },
+    }),
+    overflow: 'visible',
   },
   title: {
     fontSize: 28,
@@ -400,6 +527,30 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#2563EB',
   },
+  mediaUploadButton: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    marginBottom: 8,
+  },
+  mediaUploadText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  locationRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+    zIndex: 20,
+  },
+  locationCol: {
+    flex: 1,
+  },
   timeSlotsNote: {
     fontSize: 12,
     color: '#6B7280',
@@ -409,5 +560,106 @@ const styles = StyleSheet.create({
   submitButton: {
     marginTop: 8,
     marginBottom: 32,
+  },
+});
+
+function buildLocationOptions(rows: any[]) {
+  const map = new Map<string, string>();
+  rows.forEach((row) => {
+    const key = `${row.city}__${row.state}`;
+    const label = row.label?.trim() || `${row.city}, ${row.state}`;
+    map.set(key, label);
+  });
+  return Array.from(map.entries()).map(([key, label]) => ({ key, label }));
+}
+
+function LocationDropdown({
+  value,
+  options,
+  onChange,
+}: {
+  value: string;
+  options: { key: string; label: string }[];
+  onChange: (k: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = options.find((o) => o.key === value);
+
+  return (
+    <View style={stylesDropdown.outer}>
+      <Pressable
+        onPress={() => setOpen((prev) => !prev)}
+        style={[stylesDropdown.button, open && stylesDropdown.buttonOpen]}
+      >
+        <Text style={stylesDropdown.buttonText}>
+          {selected?.label || 'Select city and state'}
+        </Text>
+      </Pressable>
+      {open && (
+        <View style={stylesDropdown.menu}>
+          <ScrollView>
+            {options.map((opt) => (
+              <Pressable
+                key={opt.key}
+                onPress={() => {
+                  onChange(opt.key);
+                  setOpen(false);
+                }}
+                style={stylesDropdown.option}
+              >
+                <Text style={stylesDropdown.optionText}>{opt.label}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+    </View>
+  );
+}
+
+const stylesDropdown = StyleSheet.create({
+  outer: {
+    position: 'relative',
+    zIndex: 25,
+  },
+  button: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    backgroundColor: '#FFFFFF',
+  },
+  buttonOpen: {
+    borderColor: '#dc8d3c',
+    backgroundColor: 'rgba(220,141,60,0.05)',
+  },
+  buttonText: {
+    fontSize: 14,
+    color: '#111827',
+  },
+  menu: {
+    position: 'absolute',
+    top: 46,
+    left: 0,
+    right: 0,
+    maxHeight: 260,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    zIndex: 5000,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+  },
+  option: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  optionText: {
+    fontSize: 14,
+    color: '#111827',
   },
 });

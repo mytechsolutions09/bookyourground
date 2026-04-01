@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Platform, Linking } from 'react-native';
 import { MapPin, Star, Calendar, Clock } from 'lucide-react-native';
 import { GroundWithImages } from '@/types';
 import { formatCurrency } from '@/utils/helpers';
@@ -11,12 +11,15 @@ interface GroundCardProps {
   onPress: () => void;
   /** When true, show booking dates + slot pattern (admin / owner). Default true. */
   showBookingSchedule?: boolean;
+  /** Compact variant for owner dashboards (smaller tile). */
+  compact?: boolean;
 }
 
 export default function GroundCard({
   ground,
   onPress,
   showBookingSchedule = true,
+  compact = false,
 }: GroundCardProps) {
   const schedule = useMemo(
     () => getGroundBookingScheduleLines(ground.pitch_type),
@@ -30,12 +33,25 @@ export default function GroundCard({
     ? ground.reviews.reduce((sum, r) => sum + r.rating, 0) / ground.reviews.length
     : 0;
 
+  const mapsUrl = useMemo(() => {
+    const parts = [ground.address, ground.city, ground.state]
+      .map((v) => String(v ?? '').trim())
+      .filter(Boolean);
+    if (!parts.length) return null;
+    const query = encodeURIComponent(parts.join(', '));
+    return `https://www.google.com/maps/search/?api=1&query=${query}`;
+  }, [ground.address, ground.city, ground.state]);
+
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={styles.touchable}>
-      <Card style={styles.card}>
-        <Image source={{ uri: primaryImage }} style={styles.image} />
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.8}
+      style={[styles.touchable, compact && styles.touchableCompact]}
+    >
+      <Card style={[styles.card, compact && styles.cardCompact]}>
+        <Image source={{ uri: primaryImage }} style={[styles.image, compact && styles.imageCompact]} />
         <View style={styles.content}>
-          <Text style={styles.name}>{ground.name}</Text>
+          <Text style={[styles.name, compact && styles.nameCompact]}>{ground.name}</Text>
           <View style={styles.locationRow}>
             <MapPin size={14} color="#666" />
             <Text style={styles.location}>{ground.city}, {ground.state}</Text>
@@ -64,13 +80,24 @@ export default function GroundCard({
               </View>
             </View>
           ) : null}
-          <View style={styles.footer}>
-            <Text style={styles.price}>
-              {formatCurrency(ground.base_price_per_hour)}
-              {String(ground.pitch_type ?? '').toLowerCase().includes('box')
-                ? '/hr'
-                : ' / match'}
-            </Text>
+            <View style={styles.footer}>
+            <View>
+              <Text style={[styles.price, compact && styles.priceCompact]}>
+                {formatCurrency(ground.base_price_per_hour)}
+                {String(ground.pitch_type ?? '').toLowerCase().includes('box')
+                  ? '/hr'
+                  : ' / match'}
+              </Text>
+              {mapsUrl && (
+                <TouchableOpacity
+                  onPress={() => {
+                    void Linking.openURL(mapsUrl);
+                  }}
+                >
+                  <Text style={styles.mapsLink}>View on Google Maps</Text>
+                </TouchableOpacity>
+              )}
+            </View>
             <View style={styles.amenities}>
               {ground.has_floodlights && <Text style={styles.amenity}>Lights</Text>}
               {ground.has_parking && <Text style={styles.amenity}>Parking</Text>}
@@ -87,6 +114,10 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'stretch',
   },
+  touchableCompact: {
+    marginBottom: 8,
+    paddingHorizontal: 0,
+  },
   card: {
     padding: 0,
     overflow: 'hidden',
@@ -94,11 +125,17 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'stretch',
   },
+  cardCompact: {
+    marginBottom: 8,
+  },
   image: {
     width: '100%',
     height: undefined,
     aspectRatio: 16 / 9,
     backgroundColor: '#E0E0E0',
+  },
+  imageCompact: {
+    aspectRatio: 16 / 6,
   },
   content: {
     padding: 12,
@@ -108,6 +145,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#212121',
     marginBottom: 4,
+  },
+  nameCompact: {
+    fontSize: 14,
   },
   locationRow: {
     flexDirection: 'row',
@@ -155,6 +195,15 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: Platform.OS === 'web' ? '#dc8d3c' : '#2196F3',
+  },
+  priceCompact: {
+    fontSize: 14,
+  },
+  mapsLink: {
+    marginTop: 2,
+    fontSize: 12,
+    color: Platform.OS === 'web' ? '#2563EB' : '#1D4ED8',
+    textDecorationLine: 'underline',
   },
   amenities: {
     flexDirection: 'row',

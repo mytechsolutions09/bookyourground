@@ -33,12 +33,45 @@ as $$
     end as day_of_week
   ),
   booked as (
-    select distinct b.ground_id
+    /*
+      For box cricket:
+        - Any non-cancelled/rejected booking at that start_time blocks the ground.
+
+      For regular cricket grounds:
+        - Each slot has capacity for 2 teams.
+        - A booking for "Both Teams" consumes 2 team slots.
+        - A booking for "1 Team" consumes 1 team slot.
+        - We treat the ground as booked for this slot only when total team capacity
+          used for that slot is >= 2.
+        - Team information is inferred from the standardized notes prefix that
+          the app writes:
+            - 'Teams: 1 Team'
+            - 'Teams: Both Teams'
+          Any other value (or missing notes) defaults to 2 teams.
+    */
+    select b.ground_id
     from public.bookings b
     join candidates c on c.ground_id = b.ground_id
+    join public.grounds g on g.id = b.ground_id
     where b.booking_date = p_booking_date
       and b.start_time = p_start_time
       and b.status not in ('cancelled', 'rejected')
+    group by b.ground_id, g.pitch_type
+    having case
+      -- Box cricket: any active booking blocks the slot.
+      when lower(coalesce(g.pitch_type, '')) like '%box%' then count(*) > 0
+      -- Cricket ground: capacity is 2 teams per slot.
+      else coalesce(
+        sum(
+          case
+            when coalesce(b.notes, '') like '%Teams: Both Teams%' then 2
+            when coalesce(b.notes, '') like '%Teams: 1 Team%' then 1
+            else 2
+          end
+        ),
+        0
+      ) >= 2
+    end
   ),
   has_slots as (
     select ts.ground_id, count(*) as cnt

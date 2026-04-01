@@ -43,12 +43,34 @@ export default function OwnerGroundsScreen() {
   const [savingAvailability, setSavingAvailability] = useState(false);
   const [editForm, setEditForm] = useState<any>(null);
   const availabilityRef = React.useRef<TimeSlotsEditorHandle | null>(null);
+  const [locationRows, setLocationRows] = useState<any[]>([]);
+  const [editLocationKey, setEditLocationKey] = useState<string>('');
 
   useEffect(() => {
     if (user) {
       loadGrounds();
     }
   }, [user]);
+
+  useEffect(() => {
+    const loadLocations = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('locations')
+          .select('*')
+          .eq('active', true)
+          .order('sort_order', { ascending: true })
+          .order('city', { ascending: true });
+
+        if (error) throw error;
+        setLocationRows(data || []);
+      } catch (e) {
+        console.error('Error loading locations for owner grounds:', e);
+      }
+    };
+
+    loadLocations();
+  }, []);
 
   const loadGrounds = async () => {
     if (!user) return;
@@ -94,6 +116,7 @@ export default function OwnerGroundsScreen() {
       active: !!(ground as any).active,
       mediaUrls: (ground.ground_images ?? []).map((img) => img.image_url),
     });
+    setEditLocationKey(`${ground.city ?? ''}__${ground.state ?? ''}`);
     setEditOpen(true);
   };
 
@@ -208,6 +231,7 @@ export default function OwnerGroundsScreen() {
                 setSelectedGroundId((prev) => (prev === item.id ? null : item.id))
               }
               showBookingSchedule
+              compact={Platform.OS === 'web'}
             />
 
             {selectedGroundId === item.id ? (
@@ -243,6 +267,8 @@ export default function OwnerGroundsScreen() {
         )}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
+        numColumns={Platform.OS === 'web' ? 2 : 1}
+        columnWrapperStyle={Platform.OS === 'web' ? styles.listRowWeb : undefined}
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={loadGrounds} />
         }
@@ -285,26 +311,30 @@ export default function OwnerGroundsScreen() {
                 onChangeText={(t) => setEditForm((p: any) => ({ ...p, description: t }))}
                 placeholder="Description"
               />
+              <View style={styles.formRow2}>
+                <View style={styles.formInputHalf}>
+                  <Text style={styles.locationLabel}>City / State</Text>
+                  <OwnerLocationDropdown
+                    value={editLocationKey}
+                    options={buildLocationOptions(locationRows)}
+                    onChange={(k) => {
+                      setEditLocationKey(k);
+                      const [city, state] = k.split('__');
+                      setEditForm((p: any) => ({
+                        ...p,
+                        city: city || '',
+                        state: state || '',
+                      }));
+                    }}
+                  />
+                </View>
+              </View>
               <TextInput
                 style={styles.formInput}
                 value={String(editForm?.address ?? '')}
                 onChangeText={(t) => setEditForm((p: any) => ({ ...p, address: t }))}
                 placeholder="Address"
               />
-              <View style={styles.formRow2}>
-                <TextInput
-                  style={[styles.formInput, styles.formInputHalf]}
-                  value={String(editForm?.city ?? '')}
-                  onChangeText={(t) => setEditForm((p: any) => ({ ...p, city: t }))}
-                  placeholder="City"
-                />
-                <TextInput
-                  style={[styles.formInput, styles.formInputHalf]}
-                  value={String(editForm?.state ?? '')}
-                  onChangeText={(t) => setEditForm((p: any) => ({ ...p, state: t }))}
-                  placeholder="State"
-                />
-              </View>
               <View style={styles.formRow2}>
                 <TextInput
                   style={[styles.formInput, styles.formInputHalf]}
@@ -486,6 +516,9 @@ const styles = StyleSheet.create({
   list: {
     padding: 16,
   },
+  listRowWeb: {
+    gap: 12,
+  },
   editorCard: {
     marginBottom: 16,
     padding: 14,
@@ -517,11 +550,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     padding: 16,
+    zIndex: 10,
   },
   modalCard: {
     maxHeight: '90%',
     padding: 14,
     borderRadius: 14,
+    overflow: 'visible',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -537,7 +572,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   modalScroll: {
-    maxHeight: 560,
+    overflow: 'visible',
   },
   modalSectionTitle: {
     fontSize: 12,
@@ -564,9 +599,17 @@ const styles = StyleSheet.create({
   formRow2: {
     flexDirection: 'row',
     gap: 10,
+    zIndex: 20,
+    marginBottom: 10,
   },
   formInputHalf: {
     flex: 1,
+  },
+  locationLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#374151',
+    marginBottom: 4,
   },
   switchRow: {
     flexDirection: 'row',
@@ -624,5 +667,103 @@ const styles = StyleSheet.create({
   },
   emptyButton: {
     marginTop: 16,
+  },
+});
+
+function buildLocationOptions(rows: any[]) {
+  const map = new Map<string, string>();
+  rows.forEach((row) => {
+    const key = `${row.city}__${row.state}`;
+    const label = row.label?.trim() || `${row.city}, ${row.state}`;
+    map.set(key, label);
+  });
+  return Array.from(map.entries()).map(([key, label]) => ({ key, label }));
+}
+
+function OwnerLocationDropdown({
+  value,
+  options,
+  onChange,
+}: {
+  value: string;
+  options: { key: string; label: string }[];
+  onChange: (k: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = options.find((o) => o.key === value);
+
+  return (
+    <View style={locationDropdownStyles.outer}>
+      <Pressable
+        onPress={() => setOpen((prev) => !prev)}
+        style={[locationDropdownStyles.button, open && locationDropdownStyles.buttonOpen]}
+      >
+        <Text style={locationDropdownStyles.buttonText}>
+          {selected?.label || 'Select city and state'}
+        </Text>
+      </Pressable>
+      {open && (
+        <View style={locationDropdownStyles.menu}>
+          <ScrollView>
+            {options.map((opt) => (
+              <Pressable
+                key={opt.key}
+                onPress={() => {
+                  onChange(opt.key);
+                  setOpen(false);
+                }}
+                style={locationDropdownStyles.option}
+              >
+                <Text style={locationDropdownStyles.optionText}>{opt.label}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+    </View>
+  );
+}
+
+const locationDropdownStyles = StyleSheet.create({
+  outer: {
+    position: 'relative',
+    zIndex: 25,
+  },
+  button: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    backgroundColor: '#FFFFFF',
+  },
+  buttonOpen: {
+    borderColor: '#dc8d3c',
+    backgroundColor: 'rgba(220,141,60,0.05)',
+  },
+  buttonText: {
+    fontSize: 14,
+    color: '#111827',
+  },
+  menu: {
+    position: 'relative' as any,
+    maxHeight: 260,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    zIndex: 5000,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+  },
+  option: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  optionText: {
+    fontSize: 14,
+    color: '#111827',
   },
 });

@@ -61,8 +61,10 @@ export default function OwnerDashboardScreen() {
       refreshControl={<RefreshControl refreshing={loading} onRefresh={loadStats} />}
     >
       <View style={styles.header}>
-        <Text style={styles.title}>Ground owner dashboard</Text>
-        <Text style={styles.subtitle}>Overview of your grounds and bookings</Text>
+        <View style={styles.headerCard}>
+          <Text style={styles.title}>Ground owner dashboard</Text>
+          <Text style={styles.subtitle}>Overview of your grounds and bookings</Text>
+        </View>
       </View>
 
       <View style={styles.grid}>
@@ -107,8 +109,25 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 16,
-    paddingTop: 48,
     paddingBottom: 16,
+    ...Platform.select({
+      web: {
+        paddingTop: 16,
+      },
+      default: {
+        paddingTop: 48,
+      },
+    }),
+  },
+  headerCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 18,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
   },
   title: {
     fontSize: 24,

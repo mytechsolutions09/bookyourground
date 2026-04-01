@@ -335,22 +335,19 @@ export default function LandingBookingForm({
     return p.includes('box');
   }, [selectedGround, typeKey]);
 
-  // Fixed pricing for full cricket grounds (non box):
-  // ₹5000 for 1 team, ₹10000 for both teams, charged per match.
-  const cricketPricePerMatch = useMemo(
-    () => (teamType === 'one' ? 5000 : 10000),
-    [teamType],
-  );
-
   const computed = useMemo(() => {
     if (!selectedGround) return null;
     if (!startTime || !derivedEndTime) return null;
 
     const isCricketGround = !isBoxCricket;
 
+    // For cricket grounds, `base_price_per_hour` actually stores the price for BOTH teams.
+    // If user selects only 1 team, show half that price.
     if (isCricketGround) {
+      const baseMatchPrice = selectedGround.base_price_per_hour ?? 0;
+      const pricePerMatch =
+        teamType === 'one' ? Math.round((baseMatchPrice / 2) * 100) / 100 : baseMatchPrice;
       const totalHours = 1;
-      const pricePerMatch = cricketPricePerMatch;
       const totalAmount = pricePerMatch;
 
       const _sanity = hoursBetweenBooked(startTime, derivedEndTime);
@@ -371,7 +368,7 @@ export default function LandingBookingForm({
     if (_sanity === null || !Number.isFinite(_sanity) || _sanity <= 0) return null;
 
     return { totalHours, totalAmount, pricePerUnit: pricePerHour, unitLabel: 'hour' as const };
-  }, [selectedGround, startTime, derivedEndTime, slotPriceByStartTime, isBoxCricket, cricketPricePerMatch]);
+  }, [selectedGround, startTime, derivedEndTime, slotPriceByStartTime, isBoxCricket, teamType]);
 
   const timeSlots = useMemo(
     () => getSlotTemplatesForPitch(selectedGround?.pitch_type ?? typeKey),
@@ -792,7 +789,8 @@ export default function LandingBookingForm({
         ? slotPriceByStartTime[startTime]!
         : isBoxCricket
         ? selectedGround.base_price_per_hour
-        : cricketPricePerMatch;
+        : // For cricket grounds, store per-match price in price_per_hour column.
+          (computed?.pricePerUnit ?? 0);
 
     try {
       setSubmitting(true);
@@ -1185,9 +1183,9 @@ export default function LandingBookingForm({
                 ? `Duration: ${computed.totalHours} hours @ ${formatCurrency(
                     computed.pricePerUnit,
                   )}/hr`
-                : `Cricket ground: ${teamType === 'one' ? '1 team' : 'both teams'} · ${formatCurrency(
-                    cricketPricePerMatch,
-                  )} per match`}
+                : `Cricket ground: ${
+                    teamType === 'one' ? '1 team' : 'both teams'
+                  } · ${formatCurrency(computed.pricePerUnit)} per match`}
             </Text>
           </View>
         )}
