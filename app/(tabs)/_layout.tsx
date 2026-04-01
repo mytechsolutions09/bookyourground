@@ -2,9 +2,11 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import { Hop as Home, Calendar, User, Building2, LogOut } from 'lucide-react-native';
 import { Platform, useWindowDimensions } from 'react-native';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function TabLayout() {
   const { width } = useWindowDimensions();
+  const { user } = useAuth();
   const hideTabBarOnBigScreens = Platform.OS === 'web' && width >= 900;
 
   const tabBarStyle = hideTabBarOnBigScreens
@@ -62,7 +64,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="logout"
         options={{
-          title: 'Logout',
+          title: user ? 'Logout' : 'Login',
+          // When not authenticated, route this tab to the login screen
+          href: user ? undefined : '/(auth)/login',
           tabBarIcon: ({ color, size }) => <LogOut size={size} color={color} />,
         }}
       />
