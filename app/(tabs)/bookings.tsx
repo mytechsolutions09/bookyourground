@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, Platform, useWindowDimensions } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -12,6 +12,7 @@ export default function BookingsScreen() {
   const { user } = useAuth();
   const [bookings, setBookings] = useState<BookingWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
   const { width } = useWindowDimensions();
   const isWideWeb = Platform.OS === 'web' && width >= 1100;
   const isExtraWideWeb = Platform.OS === 'web' && width >= 1350;
@@ -49,6 +50,26 @@ export default function BookingsScreen() {
     }
   };
 
+  const todayIso = useMemo(() => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = `${d.getMonth() + 1}`.padStart(2, '0');
+    const dd = `${d.getDate()}`.padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }, []);
+
+  const upcomingBookings = useMemo(
+    () => bookings.filter(b => b.booking_date >= todayIso),
+    [bookings, todayIso],
+  );
+
+  const pastBookings = useMemo(
+    () => bookings.filter(b => b.booking_date < todayIso),
+    [bookings, todayIso],
+  );
+
+  const visibleBookings = activeTab === 'upcoming' ? upcomingBookings : pastBookings;
+
   const content = (
     <View style={[styles.container, Platform.OS === 'web' && styles.webContainer]}>
       {Platform.OS === 'web' ? (
@@ -59,6 +80,40 @@ export default function BookingsScreen() {
               <Text style={styles.subtitle}>
                 Track upcoming games, past sessions, and booking details in one place.
               </Text>
+              <View style={styles.tabRow}>
+                <View
+                  style={[
+                    styles.tabChip,
+                    activeTab === 'upcoming' && styles.tabChipActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.tabChipText,
+                      activeTab === 'upcoming' && styles.tabChipTextActive,
+                    ]}
+                    onPress={() => setActiveTab('upcoming')}
+                  >
+                    {`Upcoming (${upcomingBookings.length})`}
+                  </Text>
+                </View>
+                <View
+                  style={[
+                    styles.tabChip,
+                    activeTab === 'past' && styles.tabChipActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.tabChipText,
+                      activeTab === 'past' && styles.tabChipTextActive,
+                    ]}
+                    onPress={() => setActiveTab('past')}
+                  >
+                    {`Past (${pastBookings.length})`}
+                  </Text>
+                </View>
+              </View>
             </View>
             <View style={styles.badgePill}>
               <Text style={styles.badgePillNumber}>{bookings.length}</Text>
@@ -67,7 +122,7 @@ export default function BookingsScreen() {
           </View>
 
           <FlatList
-            data={bookings}
+            data={visibleBookings}
             renderItem={({ item }) => (
               <View style={styles.webItem}>
                 <BookingCard
@@ -110,10 +165,44 @@ export default function BookingsScreen() {
             <Text style={styles.subtitle}>
               All your ground reservations and match history.
             </Text>
+            <View style={styles.tabRow}>
+              <View
+                style={[
+                  styles.tabChip,
+                  activeTab === 'upcoming' && styles.tabChipActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.tabChipText,
+                    activeTab === 'upcoming' && styles.tabChipTextActive,
+                  ]}
+                  onPress={() => setActiveTab('upcoming')}
+                >
+                  {`Upcoming (${upcomingBookings.length})`}
+                </Text>
+              </View>
+              <View
+                style={[
+                  styles.tabChip,
+                  activeTab === 'past' && styles.tabChipActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.tabChipText,
+                    activeTab === 'past' && styles.tabChipTextActive,
+                  ]}
+                  onPress={() => setActiveTab('past')}
+                >
+                  {`Past (${pastBookings.length})`}
+                </Text>
+              </View>
+            </View>
           </View>
 
           <FlatList
-            data={bookings}
+            data={visibleBookings}
             renderItem={({ item }) => (
               <BookingCard
                 booking={item}
@@ -255,5 +344,30 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.7,
     color: '#9CA3AF',
+  },
+  tabRow: {
+    marginTop: 12,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  tabChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#374151',
+    backgroundColor: '#111827',
+  },
+  tabChipActive: {
+    backgroundColor: '#F9FAFB',
+    borderColor: '#F9FAFB',
+  },
+  tabChipText: {
+    fontSize: 13,
+    color: '#D1D5DB',
+  },
+  tabChipTextActive: {
+    color: '#111827',
+    fontWeight: '600',
   },
 });

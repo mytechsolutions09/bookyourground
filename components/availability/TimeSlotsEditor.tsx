@@ -1,5 +1,13 @@
 import React, { useEffect, useImperativeHandle, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  ActivityIndicator,
+  Alert,
+  TextInput,
+} from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { TimeSlot, DayOfWeek } from '@/types';
 import Button from '@/components/ui/Button';
@@ -49,7 +57,11 @@ function TimeSlotsEditorInner(
 
   // Map slot.id -> is_available (local edits)
   const [availabilityById, setAvailabilityById] = useState<Record<string, boolean>>({});
-  const [dirtyById, setDirtyById] = useState<Record<string, boolean>>({});
+  // Map slot.id -> custom_price text (local edits, empty string = use ground default price)
+  const [priceTextById, setPriceTextById] = useState<Record<string, string>>({});
+  // Track which slots have unsaved changes for availability / price.
+  const [dirtyAvailabilityById, setDirtyAvailabilityById] = useState<Record<string, boolean>>({});
+  const [dirtyPriceById, setDirtyPriceById] = useState<Record<string, boolean>>({});
 
   const slotsByDay = useMemo(() => {
     const map: Record<DayOfWeek, TimeSlot[]> = {
@@ -96,9 +108,19 @@ function TimeSlotsEditorInner(
         setSlots(rows);
 
         const nextAvailability: Record<string, boolean> = {};
-        for (const r of rows) nextAvailability[r.id] = !!r.is_available;
+        const nextPriceText: Record<string, string> = {};
+        for (const r of rows) {
+          nextAvailability[r.id] = !!r.is_available;
+          const price = r.custom_price;
+          nextPriceText[r.id] =
+            price === null || price === undefined || Number.isNaN(price as any)
+              ? ''
+              : String(price);
+        }
         setAvailabilityById(nextAvailability);
-        setDirtyById({});
+        setPriceTextById(nextPriceText);
+        setDirtyAvailabilityById({});
+        setDirtyPriceById({});
       } catch (e: any) {
         console.error('TimeSlotsEditor: load failed', e);
         Alert.alert('Error', e?.message ?? 'Failed to load time slots');
@@ -114,7 +136,7 @@ function TimeSlotsEditorInner(
   const setSlotAvailable = (slotId: string, next: boolean) => {
     if (!canEdit) return;
     setAvailabilityById((prev) => ({ ...prev, [slotId]: next }));
-    setDirtyById((prev) => ({ ...prev, [slotId]: next }));
+    setDirtyAvailabilityById((prev) => ({ ...prev, [slotId]: true }));
     setSlots((prev) => prev.map((s) => (s.id === slotId ? { ...s, is_available: next } : s)));
   };
 
@@ -131,7 +153,16 @@ function TimeSlotsEditorInner(
     return typeof v === 'boolean' ? v : !!s.is_available;
   }
 
-  const changedIds = useMemo(() => Object.keys(dirtyById), [dirtyById]);
+  const changedIds = useMemo(() => {
+    const ids = new Set<string>();
+    Object.keys(dirtyAvailabilityById).forEach((id) => {
+      if (dirtyAvailabilityById[id]) ids.add(id);
+    });
+    Object.keys(dirtyPriceById).forEach((id) => {
+      if (dirtyPriceById[id]) ids.add(id);
+    });
+    return Array.from(ids);
+  }, [dirtyAvailabilityById, dirtyPriceById]);
 
   const saveInternal = async (): Promise<boolean> => {
     if (!canEdit) return false;
@@ -139,15 +170,38 @@ function TimeSlotsEditorInner(
 
     try {
       setSaving(true);
-      const updates = changedIds.map((id) => ({
-        id,
-        is_available: !!dirtyById[id],
-      }));
+      // Update each changed row individually so we never hit NOT NULL / onConflict issues.
+      for (const id of changedIds) {
+        const slot = slots.find((s) => s.id === id);
+        if (!slot) continue;
 
-      // `id` is the primary key, so upsert-by-id will only touch changed rows.
-      const { error } = await supabase.from('time_slots').upsert(updates, { onConflict: 'id' });
-      if (error) throw error;
-      setDirtyById({});
+        // Availability: fall back to the current slot value if not explicitly edited.
+        const isAvailable =
+          dirtyAvailabilityById[id] !== undefined
+            ? !!availabilityById[id]
+            : !!slot.is_available;
+
+        // Price: parse from text; empty/invalid => null (use ground default).
+        const rawText = priceTextById[id];
+        let customPrice: number | null = null;
+        if (rawText != null && String(rawText).trim() !== '') {
+          const parsed = parseFloat(String(rawText).trim());
+          customPrice = Number.isFinite(parsed) ? parsed : null;
+        }
+
+        const { error } = await supabase
+          .from('time_slots')
+          .update({
+            is_available: isAvailable,
+            custom_price: customPrice,
+          })
+          .eq('id', id);
+
+        if (error) throw error;
+      }
+
+      setDirtyAvailabilityById({});
+      setDirtyPriceById({});
       return true;
     } catch (e: any) {
       console.error('TimeSlotsEditor: save failed', e);
@@ -166,9 +220,19 @@ function TimeSlotsEditorInner(
       setSlots(rows);
 
       const nextAvailability: Record<string, boolean> = {};
-      for (const r of rows) nextAvailability[r.id] = !!r.is_available;
+      const nextPriceText: Record<string, string> = {};
+      for (const r of rows) {
+        nextAvailability[r.id] = !!r.is_available;
+        const price = r.custom_price;
+        nextPriceText[r.id] =
+          price === null || price === undefined || Number.isNaN(price as any)
+            ? ''
+            : String(price);
+      }
       setAvailabilityById(nextAvailability);
-      setDirtyById({});
+      setPriceTextById(nextPriceText);
+      setDirtyAvailabilityById({});
+      setDirtyPriceById({});
     }
   };
 
@@ -180,9 +244,9 @@ function TimeSlotsEditorInner(
         if (saving) return false;
         return await saveInternal();
       },
-      hasUnsavedChanges: () => Object.keys(dirtyById).length > 0,
+      hasUnsavedChanges: () => changedIds.length > 0,
     }),
-    [saving, dirtyById, canEdit, changedIds, groundId],
+    [saving, canEdit, changedIds, groundId],
   );
 
   if (loading) {
@@ -240,21 +304,51 @@ function TimeSlotsEditorInner(
               {daySlots.map((s) => {
                 const hhmm = normalizeDbTimeToHHMM(s.start_time) ?? '';
                 const active = isSlotActive(s);
+                const priceText = priceTextById[s.id] ?? '';
                 return (
-                  <Pressable
-                    key={s.id}
-                    disabled={!canEdit || saving}
-                    onPress={() => setSlotAvailable(s.id, !active)}
-                    style={({ pressed }) => [
-                      styles.slotChip,
-                      active && styles.slotChipActive,
-                      pressed && !active && styles.slotChipPressed,
-                    ]}
-                  >
-                    <Text style={[styles.slotChipText, active && styles.slotChipTextActive]} numberOfLines={1}>
-                      {hhmm ? timeLabelFromHHMM(hhmm) : '—'}
-                    </Text>
-                  </Pressable>
+                  <View key={s.id} style={styles.slotItem}>
+                    <Pressable
+                      disabled={!canEdit || saving}
+                      onPress={() => setSlotAvailable(s.id, !active)}
+                      style={({ pressed }) => [
+                        styles.slotChip,
+                        active && styles.slotChipActive,
+                        pressed && !active && styles.slotChipPressed,
+                      ]}
+                    >
+                      <Text
+                        style={[styles.slotChipText, active && styles.slotChipTextActive]}
+                        numberOfLines={1}
+                      >
+                        {hhmm ? timeLabelFromHHMM(hhmm) : '—'}
+                      </Text>
+                    </Pressable>
+                    {canEdit ? (
+                      <View style={styles.priceWrap}>
+                        <Text style={styles.priceLabel}>₹</Text>
+                        <TextInput
+                          style={[
+                            styles.priceInput,
+                            priceText ? styles.priceInputSet : styles.priceInputUnset,
+                          ]}
+                          value={priceText}
+                          onChangeText={(text) => {
+                            setPriceTextById((prev) => ({
+                              ...prev,
+                              [s.id]: text,
+                            }));
+                            setDirtyPriceById((prev) => ({
+                              ...prev,
+                              [s.id]: true,
+                            }));
+                          }}
+                          keyboardType="numeric"
+                          placeholder="default"
+                          placeholderTextColor="#9CA3AF"
+                        />
+                      </View>
+                    ) : null}
+                  </View>
                 );
               })}
             </View>
@@ -355,6 +449,11 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 8,
   },
+  slotItem: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 4,
+  },
   slotChip: {
     borderRadius: 999,
     paddingHorizontal: 10,
@@ -379,6 +478,36 @@ const styles = StyleSheet.create({
   },
   slotChipTextActive: {
     color: '#15803D',
+  },
+  priceWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  priceLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#4B5563',
+    marginRight: 2,
+  },
+  priceInput: {
+    minWidth: 40,
+    paddingHorizontal: 4,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    fontSize: 10,
+    textAlign: 'center',
+  },
+  priceInputSet: {
+    backgroundColor: '#ECFDF3',
+    borderColor: '#4CAF50',
+    color: '#166534',
+  },
+  priceInputUnset: {
+    backgroundColor: '#F9FAFB',
+    color: '#6B7280',
   },
   saveRow: {
     marginTop: 12,

@@ -1,15 +1,19 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, Platform } from 'react-native';
-import { Building2, Calendar } from 'lucide-react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, Platform, TouchableOpacity } from 'react-native';
+import { Building2, Calendar, IndianRupee } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
+import { router } from 'expo-router';
 
 interface OwnerStats {
   totalGrounds: number;
   totalBookingsOnMyGrounds: number;
   myOwnBookings: number;
+  totalEarningsOnMyGrounds: number;
+  totalSpentOnOtherGrounds: number;
+  totalWithdrawn: number;
 }
 
 export default function OwnerDashboardScreen() {
@@ -18,6 +22,9 @@ export default function OwnerDashboardScreen() {
     totalGrounds: 0,
     totalBookingsOnMyGrounds: 0,
     myOwnBookings: 0,
+    totalEarningsOnMyGrounds: 0,
+    totalSpentOnOtherGrounds: 0,
+    totalWithdrawn: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -31,22 +38,65 @@ export default function OwnerDashboardScreen() {
     try {
       setLoading(true);
 
-      const [groundsRes, bookingsOnMyGroundsRes, myBookingsRes] = await Promise.all([
+      const [
+        groundsRes,
+        bookingsOnMyGroundsRes,
+        myBookingsRes,
+        earningsRes,
+        withdrawalsRes,
+      ] = await Promise.all([
         supabase.from('grounds').select('id', { count: 'exact', head: true }).eq('owner_id', user.id),
+        // All bookings on any ground owned by this user (including self bookings).
         supabase
           .from('bookings')
-          .select('id', { count: 'exact', head: true })
+          .select('id, ground:grounds!inner(owner_id)', { count: 'exact', head: true })
           .eq('ground.owner_id', user.id),
+        // Bookings this owner made on OTHER grounds (not their own grounds) – needed for both
+        // count and total spent.
         supabase
           .from('bookings')
-          .select('id', { count: 'exact', head: true })
-          .eq('user_id', user.id),
+          .select('id, total_amount, status, ground:grounds!inner(owner_id)')
+          .eq('user_id', user.id)
+          .neq('ground.owner_id', user.id),
+        // Total earnings from bookings on this owner's grounds (exclude cancelled/rejected).
+        supabase
+          .from('bookings')
+          .select('total_amount, status, ground:grounds!inner(owner_id)')
+          .eq('ground.owner_id', user.id),
+        // Sum of completed withdrawals requested by this owner.
+        supabase
+          .from('withdrawals')
+          .select('amount, status')
+          .eq('owner_id', user.id),
       ]);
+
+      const earningsRows =
+        (earningsRes.data as { total_amount: number | null; status: string }[] | null) ?? [];
+      const totalEarningsOnMyGrounds = earningsRows
+        .filter((b) => b.status !== 'cancelled' && b.status !== 'rejected')
+        .reduce((sum, b) => sum + (b.total_amount ?? 0), 0);
+
+      const otherGroundRows =
+        (myBookingsRes.data as { id: string; total_amount: number | null; status: string }[] | null) ??
+        [];
+      const myOwnBookings = otherGroundRows.length;
+      const totalSpentOnOtherGrounds = otherGroundRows
+        .filter((b) => b.status !== 'cancelled' && b.status !== 'rejected')
+        .reduce((sum, b) => sum + (b.total_amount ?? 0), 0);
+
+      const withdrawalRows =
+        (withdrawalsRes.data as { amount: number | null; status: string }[] | null) ?? [];
+      const totalWithdrawn = withdrawalRows
+        .filter((w) => (w.status || '').toLowerCase() === 'completed')
+        .reduce((sum, w) => sum + (w.amount ?? 0), 0);
 
       setStats({
         totalGrounds: groundsRes.count || 0,
         totalBookingsOnMyGrounds: bookingsOnMyGroundsRes.count || 0,
-        myOwnBookings: myBookingsRes.count || 0,
+        myOwnBookings,
+        totalEarningsOnMyGrounds,
+        totalSpentOnOtherGrounds,
+        totalWithdrawn,
       });
     } catch (e) {
       console.error('Error loading owner stats:', e);
@@ -76,20 +126,61 @@ export default function OwnerDashboardScreen() {
           <Text style={styles.statLabel}>My grounds</Text>
         </Card>
 
-        <Card style={styles.statCard}>
-          <View style={styles.iconCircle}>
-            <Calendar size={22} color="#4CAF50" />
-          </View>
-          <Text style={styles.statValue}>{stats.totalBookingsOnMyGrounds}</Text>
-          <Text style={styles.statLabel}>Bookings on my grounds</Text>
-        </Card>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => router.push('/(owner)/bookings' as any)}
+        >
+          <Card style={styles.statCard}>
+            <View style={styles.iconCircle}>
+              <Calendar size={22} color="#4CAF50" />
+            </View>
+            <Text style={styles.statValue}>{stats.totalBookingsOnMyGrounds}</Text>
+            <Text style={styles.statLabel}>Bookings on my grounds</Text>
+          </Card>
+        </TouchableOpacity>
 
         <Card style={styles.statCard}>
           <View style={styles.iconCircle}>
             <Calendar size={22} color="#6366F1" />
           </View>
           <Text style={styles.statValue}>{stats.myOwnBookings}</Text>
-          <Text style={styles.statLabel}>My own bookings</Text>
+          <Text style={styles.statLabel}>Other ground bookings</Text>
+        </Card>
+
+        <Card style={styles.statCard}>
+          <View style={styles.iconCircle}>
+            <IndianRupee size={22} color="#16A34A" />
+          </View>
+          <Text style={styles.statValue}>
+            {stats.totalEarningsOnMyGrounds.toLocaleString('en-IN', {
+              maximumFractionDigits: 0,
+            })}
+          </Text>
+          <Text style={styles.statLabel}>Total earnings from my grounds</Text>
+        </Card>
+
+        <Card style={styles.statCard}>
+          <View style={styles.iconCircle}>
+            <IndianRupee size={22} color="#0EA5E9" />
+          </View>
+          <Text style={styles.statValue}>
+            {stats.totalWithdrawn.toLocaleString('en-IN', {
+              maximumFractionDigits: 0,
+            })}
+          </Text>
+          <Text style={styles.statLabel}>Amount withdrawn</Text>
+        </Card>
+
+        <Card style={styles.statCard}>
+          <View style={styles.iconCircle}>
+            <IndianRupee size={22} color="#EA580C" />
+          </View>
+          <Text style={styles.statValue}>
+            {stats.totalSpentOnOtherGrounds.toLocaleString('en-IN', {
+              maximumFractionDigits: 0,
+            })}
+          </Text>
+          <Text style={styles.statLabel}>Total spent on other grounds</Text>
         </Card>
       </View>
     </ScrollView>

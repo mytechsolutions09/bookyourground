@@ -16,10 +16,10 @@ export default function OwnerLayout() {
         router.replace('/(auth)/login');
       } else if (profile) {
         if (profile.role !== 'ground_owner' && profile.role !== 'super_admin') {
-          router.replace('/(tabs)');
+          router.replace('/(tabs)/dashboard');
         }
       } else if (!isSuperAdmin) {
-        router.replace('/(tabs)');
+        router.replace('/(tabs)/dashboard');
       }
     }
   }, [user, profile, loading, isSuperAdmin]);

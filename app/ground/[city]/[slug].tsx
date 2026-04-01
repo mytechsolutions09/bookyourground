@@ -1,5 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, Alert, Platform, TextInput, Pressable, Linking } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Image,
+  Alert,
+  Platform,
+  TextInput,
+  Pressable,
+  Linking,
+} from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { MapPin, Star, Clock, Users } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
@@ -11,17 +22,8 @@ import Button from '@/components/ui/Button';
 import WebLayout from '@/components/web/WebLayout';
 import LandingBookingForm from '@/components/landing/LandingBookingForm';
 
-function looksLikeUuid(value: string | undefined | null): boolean {
-  if (!value) return false;
-  const v = String(value).trim();
-  // Basic UUID v4 shape check: 8-4-4-4-12 hex segments.
-  return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
-    v,
-  );
-}
-
-export default function GroundDetailsScreen() {
-  const { id, date, time, teams } = useLocalSearchParams();
+export default function GroundDetailsPrettyUrlScreen() {
+  const { city, slug, date, time, teams } = useLocalSearchParams();
   const { user } = useAuth();
   const [ground, setGround] = useState<GroundWithImages | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,84 +33,39 @@ export default function GroundDetailsScreen() {
   const [existingReviewId, setExistingReviewId] = useState<string | null>(null);
   const [reviewRating, setReviewRating] = useState<number>(5);
   const [reviewComment, setReviewComment] = useState<string>('');
-  const [minCustomSlotPrice, setMinCustomSlotPrice] = useState<number | null>(null);
 
-  const idParam = Array.isArray(id) ? id[0] : id;
+  const slugParam = Array.isArray(slug) ? slug[0] : slug;
 
   const loadGround = async () => {
     try {
-      if (!idParam) throw new Error('Missing ground identifier');
+      if (!slugParam) throw new Error('Missing ground slug');
 
-      // First, try to treat `id` as a primary key (legacy URLs with UUID).
-      let data: any | null = null;
+      const decodedSlug = decodeURIComponent(String(slugParam));
+      const nameFromSlug = decodedSlug.replace(/-/g, ' ').trim();
 
-      if (looksLikeUuid(idParam)) {
-        const byId = await supabase
-          .from('grounds')
-          .select(
-            `
-            *,
-            ground_images(*),
-            reviews(rating, comment, user:profiles(full_name))
-          `,
-          )
-          .eq('id', idParam)
-          .limit(1);
+      const { data, error } = await supabase
+        .from('grounds')
+        .select(
+          `
+          *,
+          ground_images(*),
+          reviews(rating, comment, user:profiles(full_name))
+        `,
+        )
+        .ilike('name', nameFromSlug)
+        .limit(1);
 
-        if (byId.error) throw byId.error;
-        if (byId.data && byId.data.length > 0) {
-          data = byId.data[0];
-        }
-      }
-
-      // If not found by id, fall back to matching by name derived from slug.
-      if (!data) {
-        const slug = decodeURIComponent(idParam);
-        const nameFromSlug = slug.replace(/-/g, ' ').trim();
-
-        const byName = await supabase
-          .from('grounds')
-          .select(
-            `
-            *,
-            ground_images(*),
-            reviews(rating, comment, user:profiles(full_name))
-          `,
-          )
-          .ilike('name', nameFromSlug)
-          .limit(1);
-
-        if (byName.error) throw byName.error;
-        if (byName.data && byName.data.length > 0) {
-          data = byName.data[0];
-        }
-      }
-
-      if (!data) {
+      if (error) throw error;
+      if (!data || data.length === 0) {
         throw new Error('Ground not found');
       }
 
-      const groundData = data as GroundWithImages;
-      setGround(groundData);
-      // If any slot has a custom_price, use the lowest one as the "from" price.
-      try {
-        const { data: slots } = await supabase
-          .from('time_slots')
-          .select('custom_price')
-          .eq('ground_id', groundData.id)
-          .not('custom_price', 'is', null)
-          .order('custom_price', { ascending: true })
-          .limit(1);
-        const first = (slots as { custom_price: number | null }[] | null)?.[0];
-        setMinCustomSlotPrice(first?.custom_price ?? null);
-      } catch {
-        setMinCustomSlotPrice(null);
-      }
+      setGround(data[0] as GroundWithImages);
       setExistingReviewId(null);
       setReviewBookingId(null);
       setCanReview(false);
     } catch (error) {
-      console.error('Error loading ground:', error);
+      console.error('Error loading ground (pretty URL):', error);
       Alert.alert('Error', 'Failed to load ground details');
     } finally {
       setLoading(false);
@@ -118,9 +75,8 @@ export default function GroundDetailsScreen() {
   useEffect(() => {
     loadGround();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idParam]);
+  }, [slugParam]);
 
-  // Derive reviews array with relaxed typing so we can safely read extra fields
   const reviews = useMemo(() => {
     if (!ground) return [] as any[];
     return ((ground as any).reviews || []) as {
@@ -150,7 +106,6 @@ export default function GroundDetailsScreen() {
     return `https://www.google.com/maps/search/?api=1&query=${query}`;
   }, [ground]);
 
-  // When ground + user change, check if user can review this ground.
   useEffect(() => {
     const checkEligibility = async () => {
       if (!ground?.id || !user?.id) {
@@ -161,7 +116,6 @@ export default function GroundDetailsScreen() {
       }
 
       try {
-        // Does user already have a review for this ground?
         const { data: existing, error: existingErr } = await supabase
           .from('reviews')
           .select('id, rating, comment, booking_id')
@@ -182,7 +136,6 @@ export default function GroundDetailsScreen() {
           return;
         }
 
-        // Otherwise, require at least one completed booking.
         const { data: booking, error: bookingErr } = await supabase
           .from('bookings')
           .select('id')
@@ -284,7 +237,6 @@ export default function GroundDetailsScreen() {
       router.push('/(auth)/login');
       return;
     }
-    // Booking is handled by `LandingBookingForm` below on all platforms.
   };
 
   const isLoading = loading || !ground;
@@ -337,22 +289,14 @@ export default function GroundDetailsScreen() {
             </View>
           )}
 
-          {(() => {
-            const isBox = String(ground.pitch_type ?? '').toLowerCase().includes('box');
-            const hasCustom = minCustomSlotPrice != null;
-            if (!hasCustom && !ground.base_price_per_hour) return null;
-            const amount = hasCustom ? minCustomSlotPrice! : ground.base_price_per_hour;
-            const unit = isBox ? '/hour' : ' / match';
-            return (
-              <Card style={styles.priceCard}>
-                <Text style={styles.price}>
-                  {hasCustom ? 'From ' : ''}
-                  {formatCurrency(amount)}
-                  {unit}
-                </Text>
-              </Card>
-            );
-          })()}
+          <Card style={styles.priceCard}>
+            <Text style={styles.price}>
+              {formatCurrency(ground.base_price_per_hour)}
+              {String(ground.pitch_type ?? '').toLowerCase().includes('box')
+                ? '/hour'
+                : ' / match'}
+            </Text>
+          </Card>
 
           {ground.description && (
             <Card style={styles.section}>
@@ -737,3 +681,4 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
 });
+

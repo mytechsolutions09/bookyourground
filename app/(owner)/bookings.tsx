@@ -15,6 +15,8 @@ export default function OwnerBookingsScreen() {
   const [loading, setLoading] = useState(true);
   const isWeb = Platform.OS === 'web';
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
+  const [ownerScope, setOwnerScope] = useState<'own' | 'other'>('own');
 
   useEffect(() => {
     if (user) {
@@ -139,11 +141,60 @@ export default function OwnerBookingsScreen() {
   );
 
   const filteredBookings = useMemo(
+    () => {
+      const d = new Date();
+      const yyyy = d.getFullYear();
+      const mm = `${d.getMonth() + 1}`.padStart(2, '0');
+      const dd = `${d.getDate()}`.padStart(2, '0');
+      const todayIso = `${yyyy}-${mm}-${dd}`;
+
+      const byScope = bookings.filter((b) =>
+        ownerScope === 'own'
+          ? b.ground.owner_id === user?.id
+          : b.ground.owner_id !== user?.id,
+      );
+
+      const byDate = !selectedDate
+        ? byScope
+        : byScope.filter((b) => b.booking_date === selectedDate);
+
+      return activeTab === 'upcoming'
+        ? byDate.filter((b) => b.booking_date >= todayIso)
+        : byDate.filter((b) => b.booking_date < todayIso);
+    },
+    [bookings, selectedDate, activeTab, ownerScope, user?.id],
+  );
+
+  const todayIsoForCounts = useMemo(() => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = `${d.getMonth() + 1}`.padStart(2, '0');
+    const dd = `${d.getDate()}`.padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }, []);
+
+  const upcomingCount = useMemo(
     () =>
-      !selectedDate
-        ? bookings
-        : bookings.filter((b) => b.booking_date === selectedDate),
-    [bookings, selectedDate],
+      bookings.filter(
+        (b) =>
+          (ownerScope === 'own'
+            ? b.ground.owner_id === user?.id
+            : b.ground.owner_id !== user?.id) &&
+          b.booking_date >= todayIsoForCounts,
+      ).length,
+    [bookings, todayIsoForCounts, ownerScope, user?.id],
+  );
+
+  const pastCount = useMemo(
+    () =>
+      bookings.filter(
+        (b) =>
+          (ownerScope === 'own'
+            ? b.ground.owner_id === user?.id
+            : b.ground.owner_id !== user?.id) &&
+          b.booking_date < todayIsoForCounts,
+      ).length,
+    [bookings, todayIsoForCounts, ownerScope, user?.id],
   );
 
   const content = (
@@ -151,58 +202,212 @@ export default function OwnerBookingsScreen() {
       {!isWeb && (
         <View style={styles.header}>
           <Text style={styles.title}>Ground Bookings</Text>
-        </View>
-      )}
-
-      {isWeb && bookings.length > 0 && (
-        <View style={styles.filterRow}>
-          <Text style={styles.filterLabel}>Filter by date</Text>
-          {/* Web-only native date input */}
-          {/* eslint-disable-next-line react-native/no-inline-styles */}
-          {
-            // @ts-ignore web only element
-            <input
-              type="date"
-              value={selectedDate ?? ''}
-              onChange={(e: any) =>
-                setSelectedDate(e.target.value ? e.target.value : null)
-              }
-              style={{
-                padding: 6,
-                borderRadius: 6,
-                border: '1px solid #E5E7EB',
-                fontSize: 12,
-              }}
-            />
-          }
-          {selectedDate && (
-            <TouchableOpacity onPress={() => setSelectedDate(null)}>
-              <Text style={styles.clearFilterText}>Clear</Text>
+          <View style={styles.tabRow}>
+            <TouchableOpacity
+              onPress={() => setActiveTab('upcoming')}
+              style={[
+                styles.tabChip,
+                activeTab === 'upcoming' && styles.tabChipActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.tabChipText,
+                  activeTab === 'upcoming' && styles.tabChipTextActive,
+                ]}
+              >
+                {`Upcoming (${upcomingCount})`}
+              </Text>
             </TouchableOpacity>
-          )}
+            <TouchableOpacity
+              onPress={() => setActiveTab('past')}
+              style={[
+                styles.tabChip,
+                activeTab === 'past' && styles.tabChipActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.tabChipText,
+                  activeTab === 'past' && styles.tabChipTextActive,
+                ]}
+              >
+                {`Past (${pastCount})`}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.tabRow}>
+            <TouchableOpacity
+              onPress={() => setOwnerScope('own')}
+              style={[
+                styles.tabChip,
+                ownerScope === 'own' && styles.tabChipActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.tabChipText,
+                  ownerScope === 'own' && styles.tabChipTextActive,
+                ]}
+              >
+                Own grounds
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setOwnerScope('other')}
+              style={[
+                styles.tabChip,
+                ownerScope === 'other' && styles.tabChipActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.tabChipText,
+                  ownerScope === 'other' && styles.tabChipTextActive,
+                ]}
+              >
+                Other grounds
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
       {isWeb && bookings.length > 0 && (
-        <View style={styles.tableHeaderRow}>
-          <Text style={[styles.tableHeaderCell, styles.colGround]}>Ground</Text>
-          <Text style={[styles.tableHeaderCell, styles.colDateTime]}>Date & time</Text>
-          <Text style={[styles.tableHeaderCell, styles.colAmount]}>Amount & status</Text>
-          <Text style={[styles.tableHeaderCell, styles.colWho]}>Who</Text>
+        <View style={styles.filterContainer}>
+          <View style={styles.filterRow}>
+            <View style={styles.tabsAndFilterLeft}>
+              <TouchableOpacity
+                onPress={() => setActiveTab('upcoming')}
+                style={[
+                  styles.tabChip,
+                  activeTab === 'upcoming' && styles.tabChipActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.tabChipText,
+                    activeTab === 'upcoming' && styles.tabChipTextActive,
+                  ]}
+                >
+                  {`Upcoming (${upcomingCount})`}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setActiveTab('past')}
+                style={[
+                  styles.tabChip,
+                  activeTab === 'past' && styles.tabChipActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.tabChipText,
+                    activeTab === 'past' && styles.tabChipTextActive,
+                  ]}
+                >
+                  {`Past (${pastCount})`}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setOwnerScope('own')}
+                style={[
+                  styles.tabChip,
+                  ownerScope === 'own' && styles.tabChipActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.tabChipText,
+                    ownerScope === 'own' && styles.tabChipTextActive,
+                  ]}
+                >
+                  Own grounds
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => setOwnerScope('other')}
+                style={[
+                  styles.tabChip,
+                  ownerScope === 'other' && styles.tabChipActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.tabChipText,
+                    ownerScope === 'other' && styles.tabChipTextActive,
+                  ]}
+                >
+                  Other grounds
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.filterLabel}>Filter by date</Text>
+            {/* Web-only native date input */}
+            {/* eslint-disable-next-line react-native/no-inline-styles */}
+            {
+              // @ts-ignore web only element
+              <input
+                type="date"
+                value={selectedDate ?? ''}
+                onChange={(e: any) =>
+                  setSelectedDate(e.target.value ? e.target.value : null)
+                }
+                style={{
+                  padding: 6,
+                  borderRadius: 6,
+                  border: '1px solid #E5E7EB',
+                  fontSize: 12,
+                }}
+              />
+            }
+            {selectedDate && (
+              <TouchableOpacity onPress={() => setSelectedDate(null)}>
+                <Text style={styles.clearFilterText}>Clear</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
+
+      {isWeb && bookings.length > 0 && (
+        <View style={styles.tableHeaderContainer}>
+          <View style={styles.tableHeaderRow}>
+            <Text style={[styles.tableHeaderCell, styles.colGround]}>Ground</Text>
+            <Text style={[styles.tableHeaderCell, styles.colDateTime]}>Date & time</Text>
+            <Text style={[styles.tableHeaderCell, styles.colTeams]}>Teams</Text>
+            <Text style={[styles.tableHeaderCell, styles.colAmount]}>Amount & status</Text>
+            <Text style={[styles.tableHeaderCell, styles.colWho]}>Who</Text>
+          </View>
         </View>
       )}
 
       <FlatList
         data={filteredBookings}
         renderItem={({ item }) => {
+          const isOwnGround = item.ground.owner_id === user?.id;
+          const isSelfBooking = item.user_id === user?.id;
           const meta =
-            item.ground.owner_id === user?.id
-              ? item.user_id === user?.id
-                ? 'Self booking on your own ground'
-                : `Customer: ${item.user?.full_name ?? 'Unknown'}`
+            isOwnGround && isSelfBooking
+              ? 'Self booking on your own ground'
+              : isOwnGround
+              ? `Customer: ${item.user?.full_name ?? 'Unknown'}`
               : 'Your booking on another ground';
 
           if (isWeb) {
+            const isBox = String(item.ground.pitch_type ?? '').toLowerCase().includes('box');
+            let teamsCount: number = 2;
+            if (!isBox && item.notes) {
+              const match = /Teams:\s*(\d+)/i.exec(item.notes);
+              if (match) {
+                const parsed = Number(match[1]);
+                if (Number.isFinite(parsed) && parsed >= 1) teamsCount = parsed;
+              }
+            }
+
             return (
               <TouchableOpacity
                 onPress={() => router.push(`/bookings/${item.id}`)}
@@ -223,12 +428,19 @@ export default function OwnerBookingsScreen() {
                   </Text>
                 </View>
 
+                <View style={[styles.tableCell, styles.colTeams]}>
+                  <Text style={styles.teamsText}>{teamsCount}</Text>
+                </View>
+
                 <View style={[styles.tableCell, styles.colAmount]}>
                   <Text style={styles.amount}>{item.total_amount}</Text>
                   <Text style={styles.statusTextInline}>{item.status}</Text>
                 </View>
 
                 <View style={[styles.tableCell, styles.colWho]}>
+                  <Text style={styles.whoPrimaryText}>
+                    {isSelfBooking ? 'Self' : 'Other'}
+                  </Text>
                   <Text style={styles.metaInline}>{meta}</Text>
                 </View>
               </TouchableOpacity>
@@ -317,11 +529,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
   },
+  tableHeaderContainer: {
+    marginHorizontal: 16,
+    marginBottom: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
   tableHeaderRow: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-    paddingTop: 4,
   },
   tableHeaderCell: {
     fontSize: 12,
@@ -339,7 +558,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   tableCell: {
-    paddingRight: 8,
+    paddingRight: 16,
   },
   colGround: {
     flex: 2,
@@ -347,11 +566,14 @@ const styles = StyleSheet.create({
   colDateTime: {
     flex: 2,
   },
+  colTeams: {
+    width: 72,
+  },
   colAmount: {
-    flex: 1.2,
+    flex: 1.3,
   },
   colWho: {
-    flex: 2,
+    flex: 1.8,
   },
   groundName: {
     fontSize: 14,
@@ -373,6 +595,12 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginTop: 2,
   },
+  teamsText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#111827',
+    textAlign: 'center',
+  },
   statusTextInline: {
     fontSize: 12,
     color: '#6B7280',
@@ -383,12 +611,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
   },
+  whoPrimaryText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  filterContainer: {
+    marginTop: 8,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 0,
+  },
   filterRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 8,
-    paddingHorizontal: 16,
-    paddingBottom: 12,
   },
   filterLabel: {
     fontSize: 12,
@@ -398,6 +641,36 @@ const styles = StyleSheet.create({
   clearFilterText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#dc8d3c',
+    color: '#2b2f4b',
+  },
+  tabRow: {
+    marginTop: 12,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  tabsAndFilterLeft: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  tabChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#2b2f4b',
+    backgroundColor: '#FFFFFF',
+  },
+  tabChipActive: {
+    backgroundColor: '#2b2f4b',
+    borderColor: '#2b2f4b',
+  },
+  tabChipText: {
+    fontSize: 13,
+    color: '#2b2f4b',
+  },
+  tabChipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 });

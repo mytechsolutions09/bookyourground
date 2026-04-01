@@ -31,13 +31,17 @@ type TimeString = string; // expected: "HH:MM"
 
 const DURATION_HOURS = 1;
 
-function makeGroundSlug(ground: GroundWithImages): string {
+function makeGroundPath(ground: GroundWithImages): string {
   const name = (ground.name ?? '').toString().toLowerCase().trim();
-  const kebab = name
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+/, '')
-    .replace(/-+$/, '');
-  return kebab || 'ground';
+  const city = (ground.city ?? '').toString().toLowerCase().trim();
+  const slugify = (value: string) =>
+    (value || 'ground')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+/, '')
+      .replace(/-+$/, '');
+  const citySlug = slugify(city || 'city');
+  const nameSlug = slugify(name);
+  return `/ground/${encodeURIComponent(citySlug)}/${encodeURIComponent(nameSlug)}`;
 }
 
 function parseTimeToMinutes(time: string): number | null {
@@ -129,6 +133,8 @@ interface LandingBookingFormProps {
   // Optional initial booking date (YYYY-MM-DD) and time (HH:MM) to prefill.
   initialDate?: string;
   initialStartTime?: string;
+  // Optional initial team selection for cricket grounds.
+  initialTeamType?: 'one' | 'both';
   // When true, expand to full available width (used on /book-my-ground and ground pages).
   fullWidth?: boolean;
 }
@@ -138,6 +144,7 @@ export default function LandingBookingForm({
   hideGroundPicker = true,
   initialDate,
   initialStartTime,
+  initialTeamType,
   fullWidth = false,
 }: LandingBookingFormProps) {
   const { user } = useAuth();
@@ -157,7 +164,7 @@ export default function LandingBookingForm({
     return hideGroundPicker && !initialGroundId ? '' : ('09:00' as TimeString);
   });
   const [notes, setNotes] = useState('');
-  const [teamType, setTeamType] = useState<'one' | 'both'>('both');
+  const [teamType, setTeamType] = useState<'one' | 'both'>(initialTeamType ?? 'both');
 
   const [submitting, setSubmitting] = useState(false);
 
@@ -172,11 +179,16 @@ export default function LandingBookingForm({
   const [searchResults, setSearchResults] = useState<GroundWithImages[]>([]);
   const [searching, setSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  // For landing search results: custom price for the chosen slot per ground (if any).
+  const [searchSlotPriceByGroundId, setSearchSlotPriceByGroundId] = useState<
+    Record<string, number | null>
+  >({});
 
   const clearSearchState = React.useCallback(() => {
     setHasSearched(false);
     setSearchResults([]);
     setSelectedGroundId(null);
+    setSearchSlotPriceByGroundId({});
   }, []);
 
   useEffect(() => {
@@ -227,7 +239,8 @@ export default function LandingBookingForm({
           .from('grounds')
           .select(`
             *,
-            ground_images(*)
+            ground_images(*),
+            reviews(rating)
           `)
           .eq('active', true)
           .eq('approved', true)
@@ -340,11 +353,19 @@ export default function LandingBookingForm({
     if (!startTime || !derivedEndTime) return null;
 
     const isCricketGround = !isBoxCricket;
-
-    // For cricket grounds, `base_price_per_hour` actually stores the price for BOTH teams.
-    // If user selects only 1 team, show half that price.
+    // For cricket grounds, allow per-slot custom pricing as well:
+    // - `time_slots.custom_price` (if present) is treated as the price for BOTH teams for that slot
+    // - otherwise fall back to the ground's `base_price_per_hour` (also "both teams" price)
     if (isCricketGround) {
-      const baseMatchPrice = selectedGround.base_price_per_hour ?? 0;
+      const customMatchPrice = Object.prototype.hasOwnProperty.call(slotPriceByStartTime, startTime)
+        ? slotPriceByStartTime[startTime]
+        : undefined;
+      const baseMatchPrice =
+        customMatchPrice == null
+          ? selectedGround.base_price_per_hour ?? 0
+          : customMatchPrice ?? 0;
+
+      // If user selects only 1 team, charge half of the "both teams" price.
       const pricePerMatch =
         teamType === 'one' ? Math.round((baseMatchPrice / 2) * 100) / 100 : baseMatchPrice;
       const totalHours = 1;
@@ -685,7 +706,7 @@ export default function LandingBookingForm({
       return;
     }
 
-    const candidates = grounds.filter((g) => {
+      const candidates = grounds.filter((g) => {
       const matchesLocation = locationKeyForGround(g) === locationKey;
       const matchesType = (g.pitch_type ?? '') === typeKey;
       return matchesLocation && matchesType;
@@ -698,9 +719,10 @@ export default function LandingBookingForm({
       return;
     }
 
-    setSearching(true);
+      setSearching(true);
     setHasSearched(true);
     setSelectedGroundId(null);
+      setSearchSlotPriceByGroundId({});
     try {
       const candidateIds = candidates.map((c) => c.id);
       const startTimeDb = `${startTime}:00`;
@@ -724,12 +746,11 @@ export default function LandingBookingForm({
       });
 
       // Fallback: if RPC is missing/misconfigured and returns no rows, use the old per-ground check.
+      let nextResults: GroundWithImages[] = [];
       if (!error && allowed.size > 0) {
-        setSearchResults(candidates.filter((g) => allowed.has(g.id)));
-        return;
-      }
-
-      const fallbackAvailable: GroundWithImages[] = [];
+        nextResults = candidates.filter((g) => allowed.has(g.id));
+      } else {
+        const fallbackAvailable: GroundWithImages[] = [];
       for (const g of candidates) {
         const { data: bookedRows, error: bookedErr } = await supabase.rpc('booked_start_times_for_ground_day', {
           p_ground_id: g.id,
@@ -743,7 +764,49 @@ export default function LandingBookingForm({
         });
         if (!booked.has(startTime)) fallbackAvailable.push(g);
       }
-      setSearchResults(fallbackAvailable);
+        nextResults = fallbackAvailable;
+      }
+
+      setSearchResults(nextResults);
+
+      // Load custom price for the chosen slot per ground so cards can display it.
+      try {
+        if (!nextResults.length) {
+          setSearchSlotPriceByGroundId({});
+        } else {
+          const parsedDate = parseISODate(bookingDate);
+          if (!parsedDate) {
+            setSearchSlotPriceByGroundId({});
+          } else {
+            const dow = getDayOfWeek(parsedDate) as any;
+            const { data: slotRows, error: slotErr } = await supabase
+              .from('time_slots')
+              .select('ground_id, start_time, custom_price')
+              .in(
+                'ground_id',
+                nextResults.map((g) => g.id),
+              )
+              .eq('day_of_week', dow)
+              .eq('is_available', true)
+              .eq('start_time', `${startTime}:00`);
+
+            if (slotErr) {
+              console.warn('landing search slot prices load failed', slotErr);
+              setSearchSlotPriceByGroundId({});
+            } else {
+              const map: Record<string, number | null> = {};
+              (slotRows ?? []).forEach((row: any) => {
+                if (!row?.ground_id) return;
+                map[row.ground_id] = row.custom_price ?? null;
+              });
+              setSearchSlotPriceByGroundId(map);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('landing search slot prices unexpected error', e);
+        setSearchSlotPriceByGroundId({});
+      }
     } finally {
       setSearching(false);
     }
@@ -760,7 +823,24 @@ export default function LandingBookingForm({
       } else {
         Alert.alert('Login required', 'Please sign in to create a booking.');
       }
-      router.push('/(auth)/login');
+
+      // Preserve the current ground + slot selection so that after login
+      // the user is taken back to the same ground page with the same options.
+      const targetGroundId = initialGroundId ?? selectedGroundId;
+      if (targetGroundId && bookingDate && startTime) {
+        const redirectPath = `/grounds/${encodeURIComponent(targetGroundId)}`;
+        const params = new URLSearchParams();
+        params.set('date', bookingDate);
+        params.set('time', startTime);
+        if (!isBoxCricket) {
+          params.set('teams', teamType);
+        }
+        const redirect = `${redirectPath}?${params.toString()}`;
+        const loginUrl = `/(auth)/login?redirect=${encodeURIComponent(redirect)}`;
+        router.push(loginUrl as any);
+      } else {
+        router.push('/(auth)/login' as any);
+      }
       return;
     }
 
@@ -1104,31 +1184,61 @@ export default function LandingBookingForm({
                   isSearchTwoColumn && styles.searchResultsGridTwoCol,
                 ]}
               >
-                {searchResults.map((g) => (
-                  <View
-                    key={g.id}
-                    style={[
-                      styles.searchResultTile,
-                      isSearchTwoColumn && styles.searchResultTileHalf,
-                    ]}
-                  >
-                    <GroundCard
-                      ground={g}
-                      onPress={() => {
-                        const query: string[] = [];
-                        if (bookingDate) {
-                          query.push(`date=${encodeURIComponent(bookingDate)}`);
-                        }
-                        if (startTime) {
-                          query.push(`time=${encodeURIComponent(startTime)}`);
-                        }
+                {searchResults.map((g) => {
+                  const isBox = String(g.pitch_type ?? '').toLowerCase().includes('box');
+                  const slotCustom =
+                    Object.prototype.hasOwnProperty.call(searchSlotPriceByGroundId, g.id) &&
+                    searchSlotPriceByGroundId[g.id] != null
+                      ? searchSlotPriceByGroundId[g.id]!
+                      : null;
+
+                  let displayPricePerUnit: number | null = null;
+                  let unitLabelOverride: string | undefined;
+
+                  if (isBox) {
+                    const base = g.base_price_per_hour ?? 0;
+                    const perHour = slotCustom != null ? slotCustom : base;
+                    displayPricePerUnit = perHour;
+                    unitLabelOverride = '/hr';
+                  } else {
+                    const baseBothTeams =
+                      slotCustom != null ? slotCustom : g.base_price_per_hour ?? 0;
+                    const perMatch =
+                      teamType === 'one'
+                        ? Math.round((baseBothTeams / 2) * 100) / 100
+                        : baseBothTeams;
+                    displayPricePerUnit = perMatch;
+                    unitLabelOverride = ' / match';
+                  }
+
+                  return (
+                    <View
+                      key={g.id}
+                      style={[
+                        styles.searchResultTile,
+                        isSearchTwoColumn && styles.searchResultTileHalf,
+                      ]}
+                    >
+                      <GroundCard
+                        ground={g}
+                        displayPricePerUnit={displayPricePerUnit}
+                        unitLabelOverride={unitLabelOverride}
+                        onPress={() => {
+                          const query: string[] = [];
+                          if (bookingDate) {
+                            query.push(`date=${encodeURIComponent(bookingDate)}`);
+                          }
+                          if (startTime) {
+                            query.push(`time=${encodeURIComponent(startTime)}`);
+                          }
                         const suffix = query.length ? `?${query.join('&')}` : '';
-                        router.push(`/grounds/${makeGroundSlug(g)}${suffix}`);
-                      }}
-                      showBookingSchedule={false}
-                    />
-                  </View>
-                ))}
+                        router.push(`${makeGroundPath(g)}${suffix}`);
+                        }}
+                        showBookingSchedule={false}
+                      />
+                    </View>
+                  );
+                })}
               </View>
             </View>
           ) : !searching ? (

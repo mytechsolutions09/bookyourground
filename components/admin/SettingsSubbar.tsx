@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
 import { router, usePathname } from 'expo-router';
-import { Settings as SettingsIcon, MapPin, Tag } from 'lucide-react-native';
+import { Settings as SettingsIcon, MapPin, Tag, LifeBuoy } from 'lucide-react-native';
 
 const BASE = '/(admin)/settings';
 
@@ -12,6 +12,7 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
     !pathname.includes('/settings/') && String(pathname).includes('settings');
   const isLocations = pathname.includes('/settings/locations');
   const isGroundTypes = pathname.includes('/settings/ground-types');
+  const isSupport = pathname.includes('/settings/support');
 
   return (
     <View style={styles.shell}>
@@ -45,6 +46,16 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
             Ground types
           </Text>
         </Pressable>
+
+        <Pressable
+          onPress={() => router.push((BASE + '/support') as any)}
+          style={[styles.subLink, isSupport && styles.subLinkActive]}
+        >
+          <LifeBuoy size={18} color={isSupport ? '#dc8d3c' : '#666'} />
+          <Text style={[styles.subLinkText, isSupport && styles.subLinkTextActive]}>
+            Support
+          </Text>
+        </Pressable>
       </View>
 
       <View style={styles.content}>{children}</View>
@@ -57,15 +68,23 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     backgroundColor: '#F5F5F5',
+    // Pull the settings subbar left so it visually touches
+    // the main super-admin sidebar card (which has a 16px
+    // right padding applied in WebLayout).
+    marginLeft: -16,
   },
   subbar: {
-    width: 200,
+    width: 220,
     backgroundColor: '#FFFFFF',
-    borderRightWidth: 1,
-    borderRightColor: '#E0E0E0',
-    padding: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
     ...Platform.select({
-      web: { height: '100vh' as any, position: 'sticky' as any, top: 0 },
+      web: { position: 'sticky' as any, top: 96, alignSelf: 'flex-start' as any },
     }),
   },
   subbarTitle: {

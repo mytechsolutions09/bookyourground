@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { BookingWithDetails } from '@/types';
@@ -11,6 +11,7 @@ export default function AdminBookingsScreen() {
   const { user } = useAuth();
   const [bookings, setBookings] = useState<BookingWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
 
   useEffect(() => {
     if (user) loadBookings();
@@ -41,15 +42,68 @@ export default function AdminBookingsScreen() {
     }
   };
 
+  const todayIso = useMemo(() => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = `${d.getMonth() + 1}`.padStart(2, '0');
+    const dd = `${d.getDate()}`.padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }, []);
+
+  const upcomingBookings = useMemo(
+    () => bookings.filter(b => b.booking_date >= todayIso),
+    [bookings, todayIso],
+  );
+
+  const pastBookings = useMemo(
+    () => bookings.filter(b => b.booking_date < todayIso),
+    [bookings, todayIso],
+  );
+
+  const visibleBookings = activeTab === 'upcoming' ? upcomingBookings : pastBookings;
+
   const content = (
     <View style={styles.container}>
       <View style={[styles.header, Platform.OS === 'web' && styles.webHeader]}>
         <Text style={styles.title}>All Bookings</Text>
-        <Text style={styles.subtitle}>{bookings.length} total</Text>
+        <View style={styles.tabsRow}>
+          <View
+            style={[
+              styles.tabChip,
+              activeTab === 'upcoming' && styles.tabChipActive,
+            ]}
+          >
+            <Text
+              style={[
+                styles.tabChipText,
+                activeTab === 'upcoming' && styles.tabChipTextActive,
+              ]}
+              onPress={() => setActiveTab('upcoming')}
+            >
+              {`Upcoming (${upcomingBookings.length})`}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.tabChip,
+              activeTab === 'past' && styles.tabChipActive,
+            ]}
+          >
+            <Text
+              style={[
+                styles.tabChipText,
+                activeTab === 'past' && styles.tabChipTextActive,
+              ]}
+              onPress={() => setActiveTab('past')}
+            >
+              {`Past (${pastBookings.length})`}
+            </Text>
+          </View>
+        </View>
       </View>
 
       <FlatList
-        data={bookings}
+        data={visibleBookings}
         renderItem={({ item }) => (
           <BookingCard
             booking={item}
@@ -113,6 +167,31 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
     color: '#666',
+  },
+  tabsRow: {
+    marginTop: 8,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  tabChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#374151',
+    backgroundColor: '#111827',
+  },
+  tabChipActive: {
+    backgroundColor: '#F9FAFB',
+    borderColor: '#F9FAFB',
+  },
+  tabChipText: {
+    fontSize: 13,
+    color: '#D1D5DB',
+  },
+  tabChipTextActive: {
+    color: '#111827',
+    fontWeight: '600',
   },
 });
 

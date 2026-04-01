@@ -8,13 +8,17 @@ import { GroundWithImages } from '@/types';
 import GroundCard from '@/components/grounds/GroundCard';
 import type { GroundWithImages as GroundWithImagesType } from '@/types';
 
-function makeGroundSlug(ground: GroundWithImagesType): string {
+function makeGroundPath(ground: GroundWithImagesType): string {
   const name = (ground.name ?? '').toString().toLowerCase().trim();
-  const kebab = name
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+/, '')
-    .replace(/-+$/, '');
-  return kebab || 'ground';
+  const city = (ground.city ?? '').toString().toLowerCase().trim();
+  const slugify = (value: string) =>
+    (value || 'ground')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+/, '')
+      .replace(/-+$/, '');
+  const citySlug = slugify(city || 'city');
+  const nameSlug = slugify(name);
+  return `/ground/${encodeURIComponent(citySlug)}/${encodeURIComponent(nameSlug)}`;
 }
 import WebLayout from '@/components/web/WebLayout';
 import LandingScrollContent from '@/components/landing/LandingScrollContent';
@@ -212,7 +216,7 @@ export default function HomeScreen() {
         renderItem={({ item }) => (
           <GroundCard
             ground={item}
-            onPress={() => router.push(`/grounds/${makeGroundSlug(item)}`)}
+            onPress={() => router.push(makeGroundPath(item))}
             showBookingSchedule={false}
           />
         )}

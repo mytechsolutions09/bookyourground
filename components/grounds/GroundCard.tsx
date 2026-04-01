@@ -13,6 +13,10 @@ interface GroundCardProps {
   showBookingSchedule?: boolean;
   /** Compact variant for owner dashboards (smaller tile). */
   compact?: boolean;
+  /** Optional per-slot price to display instead of `ground.base_price_per_hour`. */
+  displayPricePerUnit?: number | null;
+  /** Optional text suffix for the unit, e.g. "/hr" or " / match". */
+  unitLabelOverride?: string;
 }
 
 export default function GroundCard({
@@ -20,6 +24,8 @@ export default function GroundCard({
   onPress,
   showBookingSchedule = true,
   compact = false,
+  displayPricePerUnit,
+  unitLabelOverride,
 }: GroundCardProps) {
   const schedule = useMemo(
     () => getGroundBookingScheduleLines(ground.pitch_type),
@@ -83,10 +89,15 @@ export default function GroundCard({
             <View style={styles.footer}>
             <View>
               <Text style={[styles.price, compact && styles.priceCompact]}>
-                {formatCurrency(ground.base_price_per_hour)}
-                {String(ground.pitch_type ?? '').toLowerCase().includes('box')
-                  ? '/hr'
-                  : ' / match'}
+                {formatCurrency(
+                  displayPricePerUnit != null
+                    ? displayPricePerUnit
+                    : ground.base_price_per_hour,
+                )}
+                {unitLabelOverride ??
+                  (String(ground.pitch_type ?? '').toLowerCase().includes('box')
+                    ? '/hr'
+                    : ' / match')}
               </Text>
               {mapsUrl && (
                 <TouchableOpacity

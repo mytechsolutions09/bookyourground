@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, TouchableOpacity, Image, useWindowDimensions } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
@@ -13,6 +13,8 @@ export default function LoginScreen() {
   const os = Platform.OS as string;
   const { width } = useWindowDimensions();
   const showHeroImage = os === 'web' && width >= 900;
+
+  const { redirect, date, time, teams } = useLocalSearchParams();
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -35,15 +37,37 @@ export default function LoginScreen() {
         Alert.alert('Login Failed', error.message);
       }
     } else {
-      // Route by role once profile is loaded.
+      // If we have a redirect target (user came from a booking flow),
+      // prefer sending regular users back to that page with preserved params.
       const adminEmail = 'invirtualcoin@gmail.com';
       const isSuperAdmin =
         profile?.role === 'super_admin' ||
         (user?.email?.toLowerCase() ?? '') === adminEmail.toLowerCase() ||
         email.toLowerCase() === adminEmail.toLowerCase();
 
+      const isGroundOwner = profile?.role === 'ground_owner';
+
+      const redirectPath = typeof redirect === 'string' ? redirect : null;
+
+      if (!isSuperAdmin && !isGroundOwner && redirectPath) {
+        // Re-append any booking-related params if they were provided separately.
+        let finalUrl = redirectPath;
+        const extraParams = new URLSearchParams();
+        if (typeof date === 'string' && date) extraParams.set('date', date);
+        if (typeof time === 'string' && time) extraParams.set('time', time);
+        if (typeof teams === 'string' && teams) extraParams.set('teams', teams);
+
+        if (Array.from(extraParams.keys()).length > 0) {
+          const hasQuery = redirectPath.includes('?');
+          finalUrl += (hasQuery ? '&' : '?') + extraParams.toString();
+        }
+
+        router.replace(finalUrl as any);
+        return;
+      }
+
       if (isSuperAdmin) router.replace('/(admin)/dashboard');
-      else if (profile?.role === 'ground_owner') router.replace('/(owner)/grounds');
+      else if (isGroundOwner) router.replace('/(owner)/grounds');
       else router.replace('/(tabs)/bookings');
     }
   };

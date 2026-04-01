@@ -15,7 +15,7 @@ export default function AdminLayout() {
       if (!user) {
         router.replace('/(auth)/login');
       } else if (!isSuperAdmin) {
-        router.replace('/(tabs)');
+        router.replace('/(tabs)/dashboard');
       }
     }
   }, [user, profile, loading]);

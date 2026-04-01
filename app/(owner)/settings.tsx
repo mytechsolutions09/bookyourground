@@ -70,26 +70,28 @@ function OwnerSettingsInner() {
             Request a payout of your available earnings. Actual transfers are processed manually.
           </Text>
 
-          <View style={styles.formRow}>
-            <Text style={styles.label}>Amount (₹)</Text>
-            <TextInput
-              value={amount}
-              onChangeText={setAmount}
-              keyboardType="numeric"
-              placeholder="Enter amount to withdraw"
-              style={styles.input}
-            />
-          </View>
+          <View style={styles.formRowHorizontal}>
+            <View style={styles.formCol}>
+              <Text style={styles.label}>Amount (₹)</Text>
+              <TextInput
+                value={amount}
+                onChangeText={setAmount}
+                keyboardType="numeric"
+                placeholder="Enter amount to withdraw"
+                style={styles.input}
+              />
+            </View>
 
-          <View style={styles.formRow}>
-            <Text style={styles.label}>UPI / bank details</Text>
-            <TextInput
-              value={accountDetails}
-              onChangeText={setAccountDetails}
-              placeholder="Enter UPI ID or bank account details"
-              style={[styles.input, styles.multilineInput]}
-              multiline
-            />
+            <View style={styles.formCol}>
+              <Text style={styles.label}>UPI / bank details</Text>
+              <TextInput
+                value={accountDetails}
+                onChangeText={setAccountDetails}
+                placeholder="Enter UPI ID or bank account details"
+                style={[styles.input, styles.multilineInput]}
+                multiline
+              />
+            </View>
           </View>
 
           <View style={styles.actionsRow}>
@@ -108,47 +110,49 @@ function OwnerSettingsInner() {
             Save your payout account details so we can use them for future withdrawals.
           </Text>
 
-          <View style={styles.formRow}>
-            <Text style={styles.label}>Bank name</Text>
-            <TextInput
-              value={bankName}
-              onChangeText={setBankName}
-              placeholder="Enter bank name"
-              style={styles.input}
-            />
+          <View style={styles.formRowHorizontal}>
+            <View style={styles.formCol}>
+              <Text style={styles.label}>Bank name</Text>
+              <TextInput
+                value={bankName}
+                onChangeText={setBankName}
+                placeholder="Enter bank name"
+                style={styles.input}
+              />
+            </View>
+            <View style={styles.formCol}>
+              <Text style={styles.label}>Account number</Text>
+              <TextInput
+                value={accountNumber}
+                onChangeText={setAccountNumber}
+                placeholder="Enter account number"
+                style={styles.input}
+                keyboardType="number-pad"
+              />
+            </View>
           </View>
 
-          <View style={styles.formRow}>
-            <Text style={styles.label}>Account number</Text>
-            <TextInput
-              value={accountNumber}
-              onChangeText={setAccountNumber}
-              placeholder="Enter account number"
-              style={styles.input}
-              keyboardType="number-pad"
-            />
-          </View>
-
-          <View style={styles.formRow}>
-            <Text style={styles.label}>IFSC code</Text>
-            <TextInput
-              value={ifsc}
-              onChangeText={setIfsc}
-              placeholder="Enter IFSC"
-              style={styles.input}
-              autoCapitalize="characters"
-            />
-          </View>
-
-          <View style={styles.formRow}>
-            <Text style={styles.label}>UPI ID (optional)</Text>
-            <TextInput
-              value={upiId}
-              onChangeText={setUpiId}
-              placeholder="Enter UPI ID"
-              style={styles.input}
-              autoCapitalize="none"
-            />
+          <View style={styles.formRowHorizontal}>
+            <View style={styles.formCol}>
+              <Text style={styles.label}>IFSC code</Text>
+              <TextInput
+                value={ifsc}
+                onChangeText={setIfsc}
+                placeholder="Enter IFSC"
+                style={styles.input}
+                autoCapitalize="characters"
+              />
+            </View>
+            <View style={styles.formCol}>
+              <Text style={styles.label}>UPI ID (optional)</Text>
+              <TextInput
+                value={upiId}
+                onChangeText={setUpiId}
+                placeholder="Enter UPI ID"
+                style={styles.input}
+                autoCapitalize="none"
+              />
+            </View>
           </View>
 
           <View style={styles.actionsRow}>
@@ -265,6 +269,14 @@ const styles = StyleSheet.create({
   },
   formRow: {
     marginBottom: 12,
+  },
+  formRowHorizontal: {
+    marginBottom: 12,
+    flexDirection: 'row',
+    gap: 12,
+  },
+  formCol: {
+    flex: 1,
   },
   label: {
     fontSize: 13,

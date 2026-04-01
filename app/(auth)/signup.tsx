@@ -50,10 +50,10 @@ export default function SignupScreen() {
     } else {
       if (Platform.OS === 'web') {
         alert('Account created successfully!');
-        router.replace('/(tabs)');
+        router.replace('/(tabs)/dashboard');
       } else {
         Alert.alert('Success', 'Account created successfully!', [
-          { text: 'OK', onPress: () => router.replace('/(tabs)') }
+          { text: 'OK', onPress: () => router.replace('/(tabs)/dashboard') }
         ]);
       }
     }

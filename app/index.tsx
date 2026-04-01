@@ -14,7 +14,7 @@ export default function IndexScreen() {
     // On mobile, keep redirecting authenticated users to the app tabs.
     // On web, we keep landing visible so the booking form can be used.
     if (!loading && user && os !== 'web') {
-      router.replace('/(tabs)');
+      router.replace('/(tabs)/dashboard');
     }
   }, [user, loading]);
 

@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import { router, usePathname } from 'expo-router';
 import {
-  Hop as Home,
+  Hop as Home, // still used for some public nav
+  LayoutDashboard,
   Calendar,
   User,
   Building2,
@@ -19,6 +20,12 @@ import {
   Menu,
   X,
   Settings,
+  IndianRupee,
+  Wallet2,
+  MapPin,
+  PlusCircle,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -38,6 +45,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
     { id: string; name: string; city: string | null; state: string | null }[]
   >([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   if (Platform.OS !== 'web') {
     return <>{children}</>;
@@ -100,10 +108,16 @@ export default function WebLayout({ children }: WebLayoutProps) {
   const cleanPath = pathname.split('?')[0];
   const isLanding = cleanPath === '/' || cleanPath === '';
   const isMarketing = cleanPath === '/book-my-ground';
-  // Treat only /grounds/[id] style routes as "ground details".
+  // Treat only ground detail routes as "ground details" (hide sidebar, use hero header).
   // Plain /grounds (lists, dashboards) should use the normal app navbar.
-  const isGroundDetails = cleanPath.startsWith('/grounds/');
+  const isGroundDetails =
+    cleanPath.startsWith('/grounds/') || cleanPath.startsWith('/ground/');
   const isBookingDetails = cleanPath.startsWith('/bookings/');
+  const isLegalOrInfoPage =
+    cleanPath === '/terms' ||
+    cleanPath === '/privacy' ||
+    cleanPath === '/refund-policy' ||
+    cleanPath === '/contact';
   const adminPathnames = [
     '/dashboard',
     '/bookings',
@@ -115,11 +129,12 @@ export default function WebLayout({ children }: WebLayoutProps) {
     '/manage-users',
     '/settings',
   ];
-  const isAdminRoute = adminPathnames.includes(cleanPath);
+  const isAdminRoute = adminPathnames.includes(cleanPath) || cleanPath.startsWith('/(admin)/');
   // On ground info (/grounds/[id]) and booking info (/bookings/[id]) pages,
   // hide the left sidebar for all roles so the content can take full width.
   const isGroundInfoPage = isGroundDetails;
-  const isPublicNoSidebar = isLanding || isMarketing || isGroundInfoPage || isBookingDetails;
+  const isPublicNoSidebar =
+    isLanding || isMarketing || isGroundInfoPage || isBookingDetails || isLegalOrInfoPage;
   const adminEmail = 'invirtualcoin@gmail.com';
   const isSuperAdmin =
     profile?.role === 'super_admin' ||
@@ -129,7 +144,9 @@ export default function WebLayout({ children }: WebLayoutProps) {
   const isUserRoute =
     !isGroundOwner &&
     !isSuperAdmin &&
-    (cleanPath === '/(tabs)/bookings' || cleanPath === '/(tabs)/profile');
+    (cleanPath === '/(tabs)/dashboard' ||
+      cleanPath === '/(tabs)/bookings' ||
+      cleanPath === '/(tabs)/profile');
   // Treat the presence of a Supabase `user` as authenticated even if `profile`
   // hasn't loaded yet (prevents briefly showing "Sign In").
   const isAuthenticated = !!user || !!profile || isSuperAdmin;
@@ -152,11 +169,35 @@ export default function WebLayout({ children }: WebLayoutProps) {
     router.replace('/');
   };
 
-  const NavLink = ({ href, icon: Icon, label }: { href: string; icon: any; label: string }) => {
-    const isActive = pathname === href || pathname.startsWith(href + '/');
+  const NavLink = ({
+    href,
+    icon: Icon,
+    label,
+    hideLabel = false,
+  }: {
+    href: string;
+    icon: any;
+    label: string;
+    hideLabel?: boolean;
+  }) => {
+    const normalize = (value: string) => {
+      if (value.length > 1 && value.endsWith('/')) {
+        return value.slice(0, -1);
+      }
+      return value;
+    };
+
+    const currentPath = normalize(pathname);
+    const targetHref = normalize(href);
+    const isActive =
+      currentPath === targetHref || currentPath.startsWith(targetHref + '/');
     return (
       <TouchableOpacity
-        style={[styles.navLink, isActive && styles.navLinkActive]}
+        style={[
+          styles.navLink,
+          isActive && styles.navLinkActive,
+          hideLabel && styles.navLinkCollapsed,
+        ]}
         onPress={() => {
           if (href === '/' || href === '') {
             router.replace('/' as any);
@@ -167,12 +208,15 @@ export default function WebLayout({ children }: WebLayoutProps) {
         }}
       >
         <Icon size={20} color={isActive ? '#dc8d3c' : '#666'} />
-        <Text style={[styles.navLinkText, isActive && styles.navLinkTextActive]}>{label}</Text>
+        {!hideLabel && (
+          <Text style={[styles.navLinkText, isActive && styles.navLinkTextActive]}>{label}</Text>
+        )}
       </TouchableOpacity>
     );
   };
 
-  const bodyStyle = isPublicNoSidebar ? styles.bodyFull : styles.body;
+  const isAdminLayout = isSuperAdmin && isAdminRoute;
+  const bodyStyle = isPublicNoSidebar ? styles.bodyFull : isAdminLayout ? styles.bodyAdmin : styles.body;
   const showHeroHeader =
     isLanding ||
     isMarketing ||
@@ -233,24 +277,39 @@ export default function WebLayout({ children }: WebLayoutProps) {
                           ) : searchResults.length === 0 ? (
                             <Text style={styles.searchDropdownText}>No grounds found</Text>
                           ) : (
-                            searchResults.map((g) => (
-                              <TouchableOpacity
-                                key={g.id}
-                                style={styles.searchDropdownItem}
-                                onPress={() => {
-                                  setSearchQuery('');
-                                  setSearchResults([]);
-                                  router.push(`/grounds/${g.id}` as any);
-                                }}
-                              >
-                                <Text style={styles.searchDropdownItemTitle}>{g.name}</Text>
-                                {!!(g.city || g.state) && (
-                                  <Text style={styles.searchDropdownItemSubtitle}>
-                                    {[g.city, g.state].filter(Boolean).join(', ')}
-                                  </Text>
-                                )}
-                              </TouchableOpacity>
-                            ))
+                            searchResults.map((g) => {
+                              const slugify = (value: string) =>
+                                (value || 'ground')
+                                  .toLowerCase()
+                                  .trim()
+                                  .replace(/[^a-z0-9]+/g, '-')
+                                  .replace(/^-+/, '')
+                                  .replace(/-+$/, '');
+                              const citySlug = slugify(String(g.city ?? '') || 'city');
+                              const nameSlug = slugify(String(g.name ?? 'ground'));
+                              const href = `/ground/${encodeURIComponent(
+                                citySlug,
+                              )}/${encodeURIComponent(nameSlug)}`;
+
+                              return (
+                                <TouchableOpacity
+                                  key={g.id}
+                                  style={styles.searchDropdownItem}
+                                  onPress={() => {
+                                    setSearchQuery('');
+                                    setSearchResults([]);
+                                    router.push(href as any);
+                                  }}
+                                >
+                                  <Text style={styles.searchDropdownItemTitle}>{g.name}</Text>
+                                  {!!(g.city || g.state) && (
+                                    <Text style={styles.searchDropdownItemSubtitle}>
+                                      {[g.city, g.state].filter(Boolean).join(', ')}
+                                    </Text>
+                                  )}
+                                </TouchableOpacity>
+                              );
+                            })
                           )}
                         </View>
                       )}
@@ -274,9 +333,9 @@ export default function WebLayout({ children }: WebLayoutProps) {
                   ) : (
                     <TouchableOpacity
                       style={styles.headerSecondaryButton}
-                      onPress={() => router.push('/(tabs)/profile' as any)}
+                      onPress={() => router.push('/(tabs)/dashboard' as any)}
                     >
-                      <Text style={styles.headerSecondaryButtonText}>Profile</Text>
+                      <Text style={styles.headerSecondaryButtonText}>Dashboard</Text>
                     </TouchableOpacity>
                   )}
                 </>
@@ -382,11 +441,11 @@ export default function WebLayout({ children }: WebLayoutProps) {
               {showOwnerMobileMenu && (
                 <>
                   <Text style={styles.sidebarTitle}>Ground owner</Text>
-                  <NavLink href="/(owner)/dashboard" icon={Home} label="Dashboard" />
-                  <NavLink href="/(owner)/grounds" icon={Building2} label="My grounds" />
+                  <NavLink href="/(owner)/dashboard" icon={LayoutDashboard} label="Dashboard" />
+                  <NavLink href="/(owner)/grounds" icon={MapPin} label="My grounds" />
                   <NavLink href="/(owner)/bookings" icon={Calendar} label="Bookings" />
-                  <NavLink href="/(owner)/earnings" icon={Calendar} label="Earnings" />
-                  <NavLink href="/(owner)/add-ground" icon={Building2} label="Add ground" />
+                  <NavLink href="/(owner)/earnings" icon={IndianRupee} label="Earnings" />
+                  <NavLink href="/(owner)/add-ground" icon={PlusCircle} label="Add ground" />
                   <NavLink href="/(owner)/settings" icon={Settings} label="Settings" />
 
                   <View style={styles.sidebarDivider} />
@@ -406,11 +465,11 @@ export default function WebLayout({ children }: WebLayoutProps) {
               {showAdminMobileMenu && (
                 <>
                   <Text style={styles.sidebarTitle}>Super admin</Text>
-                  <NavLink href="/(admin)/dashboard" icon={Home} label="Dashboard" />
+                  <NavLink href="/(admin)/dashboard" icon={LayoutDashboard} label="Dashboard" />
                   <NavLink href="/(admin)/bookings" icon={Calendar} label="Bookings" />
-                  <NavLink href="/(admin)/grounds" icon={Building2} label="Grounds" />
-                  <NavLink href="/(admin)/earnings" icon={Calendar} label="Earnings" />
-                  <NavLink href="/(admin)/withdrawals" icon={Calendar} label="Withdraw" />
+                  <NavLink href="/(admin)/grounds" icon={MapPin} label="Grounds" />
+                  <NavLink href="/(admin)/earnings" icon={IndianRupee} label="Earnings" />
+                  <NavLink href="/(admin)/withdrawals" icon={Wallet2} label="Withdraw" />
                   <NavLink
                     href="/(admin)/manage-ground-owners"
                     icon={Shield}
@@ -436,6 +495,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
               {showUserMobileMenu && (
                 <>
                   <Text style={styles.sidebarTitle}>My Account</Text>
+                  <NavLink href="/(tabs)/dashboard" icon={LayoutDashboard} label="Dashboard" />
                   <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
                   <NavLink href="/(tabs)/profile" icon={User} label="Profile" />
 
@@ -462,43 +522,98 @@ export default function WebLayout({ children }: WebLayoutProps) {
               style={[
                 styles.sidebar,
                 isLanding && styles.sidebarHeaderOffset,
+                isSuperAdmin && isAdminRoute && sidebarCollapsed && styles.sidebarCollapsed,
               ]}
             >
               {isAuthenticated && !isPublicNoSidebar && (
                 <>
                   {isSuperAdmin && isAdminRoute ? (
                     <>
-                      <Text style={styles.sidebarSectionTitle}>Super admin</Text>
-                      <NavLink href="/(admin)/dashboard" icon={Home} label="Dashboard" />
-                      <NavLink href="/(admin)/bookings" icon={Calendar} label="Bookings" />
-                      <NavLink href="/(admin)/grounds" icon={Building2} label="Grounds" />
-                      <NavLink href="/(admin)/earnings" icon={Calendar} label="Earnings" />
-                      <NavLink href="/(admin)/withdrawals" icon={Calendar} label="Withdraw" />
+                      <View style={styles.sidebarHeaderRow}>
+                        {!sidebarCollapsed && (
+                          <Text style={styles.sidebarSectionTitle}>Super admin</Text>
+                        )}
+                        <TouchableOpacity
+                          style={styles.collapseButton}
+                          onPress={() => setSidebarCollapsed((prev) => !prev)}
+                        >
+                          {sidebarCollapsed ? (
+                            <ChevronRight size={18} color="#9CA3AF" />
+                          ) : (
+                            <ChevronLeft size={18} color="#9CA3AF" />
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                      <NavLink
+                        href="/(admin)/dashboard"
+                        icon={LayoutDashboard}
+                        label="Dashboard"
+                        hideLabel={sidebarCollapsed}
+                      />
+                      <NavLink
+                        href="/(admin)/bookings"
+                        icon={Calendar}
+                        label="Bookings"
+                        hideLabel={sidebarCollapsed}
+                      />
+                      <NavLink
+                        href="/(admin)/grounds"
+                        icon={MapPin}
+                        label="Grounds"
+                        hideLabel={sidebarCollapsed}
+                      />
+                      <NavLink
+                        href="/(admin)/earnings"
+                        icon={IndianRupee}
+                        label="Earnings"
+                        hideLabel={sidebarCollapsed}
+                      />
+                      <NavLink
+                        href="/(admin)/withdrawals"
+                        icon={Wallet2}
+                        label="Withdraw"
+                        hideLabel={sidebarCollapsed}
+                      />
                       <NavLink
                         href="/(admin)/manage-ground-owners"
                         icon={Shield}
                         label="Ground owners"
+                        hideLabel={sidebarCollapsed}
                       />
-                      <NavLink href="/(admin)/manage-users" icon={User} label="Users" />
-                      <NavLink href="/(admin)/settings" icon={Settings} label="Settings" />
+                      <NavLink
+                        href="/(admin)/manage-users"
+                        icon={User}
+                        label="Users"
+                        hideLabel={sidebarCollapsed}
+                      />
+                      <NavLink
+                        href="/(admin)/settings"
+                        icon={Settings}
+                        label="Settings"
+                        hideLabel={sidebarCollapsed}
+                      />
 
                       <View style={styles.sidebarDivider} />
-                  <TouchableOpacity
-                    style={[styles.signOutButton, styles.signOutButtonUser]}
-                    onPress={handleSignOut}
-                  >
+                      <TouchableOpacity
+                        style={[
+                          styles.signOutButton,
+                          styles.signOutButtonUser,
+                          sidebarCollapsed && styles.signOutButtonCollapsed,
+                        ]}
+                        onPress={handleSignOut}
+                      >
                         <LogOut size={18} color="#E5E7EB" />
-                        <Text style={styles.signOutText}>Sign out</Text>
+                        {!sidebarCollapsed && <Text style={styles.signOutText}>Sign out</Text>}
                       </TouchableOpacity>
                     </>
                   ) : isGroundOwner ? (
                     <>
                       <Text style={styles.sidebarSectionTitle}>Ground owner</Text>
-                      <NavLink href="/(owner)/dashboard" icon={Home} label="Dashboard" />
-                      <NavLink href="/(owner)/grounds" icon={Building2} label="My grounds" />
+                      <NavLink href="/(owner)/dashboard" icon={LayoutDashboard} label="Dashboard" />
+                      <NavLink href="/(owner)/grounds" icon={MapPin} label="My grounds" />
                       <NavLink href="/(owner)/bookings" icon={Calendar} label="Bookings" />
-                      <NavLink href="/(owner)/earnings" icon={Calendar} label="Earnings" />
-                      <NavLink href="/(owner)/add-ground" icon={Building2} label="Add ground" />
+                      <NavLink href="/(owner)/earnings" icon={IndianRupee} label="Earnings" />
+                      <NavLink href="/(owner)/add-ground" icon={PlusCircle} label="Add ground" />
                       <NavLink href="/(owner)/settings" icon={Settings} label="Settings" />
 
                       <View style={styles.sidebarDivider} />
@@ -513,6 +628,11 @@ export default function WebLayout({ children }: WebLayoutProps) {
                   ) : (
                     <>
                       <Text style={styles.sidebarSectionTitle}>My Account</Text>
+                      <NavLink
+                        href="/(tabs)/dashboard"
+                        icon={LayoutDashboard}
+                        label="Dashboard"
+                      />
                       <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
                       <NavLink href="/(tabs)/profile" icon={User} label="Profile" />
 
@@ -709,6 +829,10 @@ const styles = StyleSheet.create({
   signOutButtonUser: {
     backgroundColor: '#2b2f4b',
   },
+  signOutButtonCollapsed: {
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
   signOutText: {
     fontSize: 14,
     color: '#E5E7EB',
@@ -722,6 +846,13 @@ const styles = StyleSheet.create({
     position: 'relative',
     paddingTop: 24,
     paddingHorizontal: 24,
+  },
+  bodyAdmin: {
+    flex: 1,
+    flexDirection: 'row',
+    width: '100%',
+    position: 'relative',
+    paddingTop: 24,
   },
   bodyFull: {
     flex: 1,
@@ -750,6 +881,10 @@ const styles = StyleSheet.create({
       },
     }),
   },
+  sidebarCollapsed: {
+    width: 72,
+    paddingHorizontal: 8,
+  },
   sidebarMobile: {
     position: 'absolute' as any,
     top: 0,
@@ -772,6 +907,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     marginBottom: 4,
+  },
+  navLinkCollapsed: {
+    justifyContent: 'center',
+    paddingHorizontal: 0,
   },
   navLinkActive: {
     backgroundColor: '#2b2f4b',
@@ -839,6 +978,21 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
     marginBottom: 8,
     marginLeft: 4,
+  },
+  sidebarHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    paddingHorizontal: 4,
+  },
+  collapseButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F3F4F6',
   },
   sidebarDivider: {
     height: 1,
