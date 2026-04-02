@@ -136,6 +136,7 @@ export default function PopularGrounds() {
               {[
                 g.has_parking ? 'Parking' : null,
                 g.has_changing_rooms ? 'Changing rooms' : null,
+                g.has_washrooms ? 'Washroom' : null,
                 g.has_floodlights ? 'Floodlights' : null,
               ]
                 .filter(Boolean)

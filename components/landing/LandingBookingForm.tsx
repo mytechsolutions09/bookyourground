@@ -333,15 +333,98 @@ export default function LandingBookingForm({
     setSelectedGroundId(matches[0]?.id ?? null);
   };
 
-  const derivedEndTime = useMemo(() => {
-    return addMinutesToTime(startTime, DURATION_HOURS * 60);
-  }, [startTime]);
-
-  // Ground availability for the selected `bookingDate` (from `time_slots`).
-  // If nothing exists in DB yet, we fall back to pitch templates.
+  // Ground slot availability for the selected `bookingDate` (from `time_slots`).
+  // - `allowedStartHHMM`: slots where `is_available = true` (booking allowed)
+  // - `allStartHHMM`: all saved slots (for display), regardless of `is_available`
   const [allowedStartHHMM, setAllowedStartHHMM] = useState<Set<string>>(() => new Set());
+  const [allStartHHMM, setAllStartHHMM] = useState<Set<string>>(() => new Set());
+  // When using the landing search flow (ground not selected yet), show a union of
+  // start times from DB across candidate grounds for the chosen location/type/date.
+  const [searchAllowedStartHHMM, setSearchAllowedStartHHMM] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [searchAllStartHHMM, setSearchAllStartHHMM] = useState<Set<string>>(
+    () => new Set(),
+  );
   // Custom price per slot start time (if set in `time_slots.custom_price`).
   const [slotPriceByStartTime, setSlotPriceByStartTime] = useState<Record<string, number | null>>({});
+  // DB end_time per slot start_time, so we can support custom slot durations.
+  const [endTimeByStartTime, setEndTimeByStartTime] = useState<Record<string, string>>({});
+
+  const derivedEndTime = useMemo(() => {
+    const fromDb = startTime ? endTimeByStartTime[startTime] : undefined;
+    if (fromDb) return fromDb;
+    return addMinutesToTime(startTime, DURATION_HOURS * 60);
+  }, [startTime, endTimeByStartTime]);
+
+  // Search-flow union of available slot start times across candidate grounds.
+  // This makes the Start Time chips show your saved `time_slots` (including custom start times)
+  // even before a specific ground is selected.
+  useEffect(() => {
+    if (!useLandingSearchFlow) return;
+    if (!locationKey || !typeKey || !bookingDate) {
+      setSearchAllowedStartHHMM(new Set());
+      setSearchAllStartHHMM(new Set());
+      return;
+    }
+
+    const parsed = parseISODate(bookingDate);
+    if (!parsed) {
+      setSearchAllowedStartHHMM(new Set());
+      setSearchAllStartHHMM(new Set());
+      return;
+    }
+
+    const dow = getDayOfWeek(parsed) as any;
+
+    let cancelled = false;
+    (async () => {
+      const candidates = grounds.filter((g) => {
+        const matchesLocation = locationKeyForGround(g) === locationKey;
+        const matchesType = (g.pitch_type ?? '') === typeKey;
+        return matchesLocation && matchesType;
+      });
+
+      if (cancelled) return;
+      if (!candidates.length) {
+        setSearchAllowedStartHHMM(new Set());
+        setSearchAllStartHHMM(new Set());
+        return;
+      }
+
+      const candidateIds = candidates.map((c) => c.id);
+      const { data, error } = await supabase
+        .from('time_slots')
+        .select('start_time, is_available')
+        .in('ground_id', candidateIds)
+        .eq('day_of_week', dow)
+        .order('start_time', { ascending: true });
+
+      if (cancelled) return;
+      if (error) {
+        console.warn('landing searchAllowedStartHHMM load failed', error);
+        setSearchAllowedStartHHMM(new Set());
+        setSearchAllStartHHMM(new Set());
+        return;
+      }
+
+      const next = new Set<string>();
+      const nextAllowed = new Set<string>();
+      (data ?? []).forEach((row: any) => {
+        const hh = normalizeDbTimeToHHMM(row.start_time);
+        if (!hh) return;
+        next.add(hh);
+        if (row.is_available) nextAllowed.add(hh);
+      });
+      // Use `is_available` set for enabling booking actions.
+      setSearchAllowedStartHHMM(nextAllowed);
+      setSearchAllStartHHMM(next);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [useLandingSearchFlow, locationKey, typeKey, bookingDate, grounds]);
 
   const isBoxCricket = useMemo(() => {
     const p = (selectedGround?.pitch_type ?? typeKey ?? '').toLowerCase();
@@ -377,16 +460,16 @@ export default function LandingBookingForm({
       return { totalHours, totalAmount, pricePerUnit: pricePerMatch, unitLabel: 'match' as const };
     }
 
-    const totalHours = DURATION_HOURS;
     const basePrice = selectedGround.base_price_per_hour;
     const custom = Object.prototype.hasOwnProperty.call(slotPriceByStartTime, startTime)
       ? slotPriceByStartTime[startTime]
       : undefined;
     const pricePerHour = custom == null ? basePrice : custom;
-    const totalAmount = Math.round(totalHours * pricePerHour * 100) / 100;
-
     const _sanity = hoursBetweenBooked(startTime, derivedEndTime);
     if (_sanity === null || !Number.isFinite(_sanity) || _sanity <= 0) return null;
+
+    const totalHours = _sanity;
+    const totalAmount = Math.round(totalHours * pricePerHour * 100) / 100;
 
     return { totalHours, totalAmount, pricePerUnit: pricePerHour, unitLabel: 'hour' as const };
   }, [selectedGround, startTime, derivedEndTime, slotPriceByStartTime, isBoxCricket, teamType]);
@@ -432,14 +515,18 @@ export default function LandingBookingForm({
   useEffect(() => {
     if (!selectedGround?.id || !bookingDate) {
       setAllowedStartHHMM(new Set());
+      setAllStartHHMM(new Set());
       setSlotPriceByStartTime({});
+      setEndTimeByStartTime({});
       return;
     }
 
     const parsed = parseISODate(bookingDate);
     if (!parsed) {
       setAllowedStartHHMM(new Set());
+      setAllStartHHMM(new Set());
       setSlotPriceByStartTime({});
+      setEndTimeByStartTime({});
       return;
     }
 
@@ -449,31 +536,42 @@ export default function LandingBookingForm({
     (async () => {
       const { data, error } = await supabase
         .from('time_slots')
-        .select('start_time, custom_price')
+        .select('start_time, end_time, custom_price, is_available')
         .eq('ground_id', selectedGround.id)
         .eq('day_of_week', dow)
-        .eq('is_available', true)
         .order('start_time', { ascending: true });
 
       if (cancelled) return;
       if (error) {
         console.warn('time_slots availability load failed', error);
         setAllowedStartHHMM(new Set());
+        setAllStartHHMM(new Set());
         setSlotPriceByStartTime({});
+        setEndTimeByStartTime({});
         return;
       }
 
       const nextAllowed = new Set<string>();
+      const nextAll = new Set<string>();
       const nextPrices: Record<string, number | null> = {};
+      const nextEnds: Record<string, string> = {};
       (data ?? []).forEach((row: any) => {
         const hh = normalizeDbTimeToHHMM(row.start_time);
         if (!hh) return;
-        nextAllowed.add(hh);
+        nextAll.add(hh);
+        // Only allow booking for slots marked as available.
+        if (row.is_available) nextAllowed.add(hh);
+
         nextPrices[hh] = row.custom_price ?? null;
+
+        const endHHMM = normalizeDbTimeToHHMM(row.end_time);
+        if (endHHMM) nextEnds[hh] = endHHMM;
       });
 
       setAllowedStartHHMM(nextAllowed);
+      setAllStartHHMM(nextAll);
       setSlotPriceByStartTime(nextPrices);
+      setEndTimeByStartTime(nextEnds);
     })();
 
     return () => {
@@ -493,21 +591,64 @@ export default function LandingBookingForm({
 
   const availableTimeSlots = useMemo(
     () => {
-      const base =
-        constrainSlotsToDb && allowedStartHHMM.size
-          ? timeSlots.filter((s) => allowedStartHHMM.has(s.value))
-          : timeSlots;
+      const fromSelectedGround =
+        !!selectedGround?.id && allStartHHMM.size
+          ? Array.from(allStartHHMM.values())
+              .sort((a, b) => {
+                const am = parseTimeToMinutes(a) ?? 0;
+                const bm = parseTimeToMinutes(b) ?? 0;
+                return am - bm;
+              })
+              .map((hhmm) => ({
+                value: hhmm as TimeString,
+                label: hhmm,
+              }))
+          : null;
+
+      const fromSearchUnion =
+        useLandingSearchFlow && !selectedGround?.id && searchAllStartHHMM.size
+          ? Array.from(searchAllStartHHMM.values())
+              .sort((a, b) => {
+                const am = parseTimeToMinutes(a) ?? 0;
+                const bm = parseTimeToMinutes(b) ?? 0;
+                return am - bm;
+              })
+              .map((hhmm) => ({
+                value: hhmm as TimeString,
+                label: hhmm,
+              }))
+          : null;
+
+      const baseFromDb = fromSelectedGround ?? fromSearchUnion;
+      const base = baseFromDb ?? timeSlots;
       return base.filter((s) => !bookedStartHHMM.has(s.value));
     },
-    [timeSlots, bookedStartHHMM, allowedStartHHMM, constrainSlotsToDb],
+    [
+      timeSlots,
+      bookedStartHHMM,
+      allowedStartHHMM,
+      allStartHHMM,
+      searchAllowedStartHHMM,
+      searchAllStartHHMM,
+      selectedGround?.id,
+      useLandingSearchFlow,
+    ],
   );
 
   useEffect(() => {
     if (useLandingSearchFlow) return;
     if (!availableTimeSlots.length) return;
     if (availableTimeSlots.some((s) => s.value === startTime)) return;
-    setStartTime(availableTimeSlots[0].value as TimeString);
-  }, [useLandingSearchFlow, availableTimeSlots, startTime]);
+
+    // Prefer first AVAILABLE slot (is_available = true), not just the first DB slot.
+    const firstAllowed = availableTimeSlots.find((s) => allowedStartHHMM.has(s.value));
+    if (firstAllowed) {
+      setStartTime(firstAllowed.value as TimeString);
+    } else {
+      // If no slots are currently available, keep `startTime` empty so booking can't proceed.
+      setStartTime('');
+    }
+  }, [useLandingSearchFlow, availableTimeSlots, startTime, allowedStartHHMM]);
 
   /** Landing: if type/date changes and the previous slot is no longer valid, clear it. */
   useEffect(() => {
@@ -555,7 +696,7 @@ export default function LandingBookingForm({
 
   const upcomingDates = useMemo(() => {
     const today = new Date();
-    const items: { iso: string; label: string }[] = [];
+    const items: { iso: string; label: string; weekdayShort: string }[] = [];
     const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const end = new Date(start.getFullYear(), start.getMonth() + 3, start.getDate());
 
@@ -565,7 +706,9 @@ export default function LandingBookingForm({
         day: 'numeric',
         month: 'short',
       });
-      items.push({ iso, label });
+      const weekdayFull = d.toLocaleDateString('en-IN', { weekday: 'short' });
+      const weekdayShort = weekdayFull.slice(0, 3);
+      items.push({ iso, label, weekdayShort });
     }
 
     return items;
@@ -678,11 +821,16 @@ export default function LandingBookingForm({
   const canRunSearch = useMemo(() => {
     const timeIsValidSlot =
       !!startTime && availableTimeSlots.some((s) => s.value === startTime);
+    const slotIsAvailableForSearch =
+      useLandingSearchFlow && !selectedGround?.id
+        ? !!startTime && searchAllowedStartHHMM.has(startTime)
+        : true;
     return (
       !!locationKey &&
       !!typeKey &&
       !!bookingDate &&
       timeIsValidSlot &&
+      slotIsAvailableForSearch &&
       availableTimeSlots.length > 0 &&
       !loadingGrounds
     );
@@ -693,6 +841,9 @@ export default function LandingBookingForm({
     startTime,
     availableTimeSlots,
     loadingGrounds,
+    useLandingSearchFlow,
+    selectedGround?.id,
+    searchAllowedStartHHMM,
   ]);
 
   const groundSelectedFromSearch = useMemo(() => {
@@ -1072,14 +1223,24 @@ export default function LandingBookingForm({
                   isSelected && styles.dateChipActive,
                 ]}
               >
-                <Text
-                  style={[
-                    styles.dateChipText,
-                    isSelected && styles.dateChipTextActive,
-                  ]}
-                >
-                  {d.label}
-                </Text>
+                <View style={styles.dateChipInner}>
+                  <Text
+                    style={[
+                      styles.dateChipText,
+                      isSelected && styles.dateChipTextActive,
+                    ]}
+                  >
+                    {d.label}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.dateChipWeekday,
+                      isSelected && styles.dateChipWeekdayActive,
+                    ]}
+                  >
+                    {d.weekdayShort}
+                  </Text>
+                </View>
               </Pressable>
             );
           })}
@@ -1118,12 +1279,17 @@ export default function LandingBookingForm({
           ) : (
             availableTimeSlots.map((s) => {
               const active = s.value === startTime;
+              // In search mode (no ground selected yet), show both DB slots and disable
+              // the ones where `is_available = false` for all candidate grounds.
+              const slotIsAvailable = selectedGround?.id
+                ? allowedStartHHMM.has(s.value)
+                : searchAllowedStartHHMM.has(s.value);
               return (
                 <Pressable
                   key={s.value}
-                  disabled={submitting}
+                  disabled={submitting || !slotIsAvailable}
                   accessibilityRole="button"
-                  accessibilityState={{ selected: active, disabled: submitting }}
+                  accessibilityState={{ selected: active, disabled: submitting || !slotIsAvailable }}
                   accessibilityLabel={`${s.label} time slot`}
                   onPress={() => {
                     if (useLandingSearchFlow) clearSearchState();
@@ -1232,7 +1398,7 @@ export default function LandingBookingForm({
                             query.push(`time=${encodeURIComponent(startTime)}`);
                           }
                         const suffix = query.length ? `?${query.join('&')}` : '';
-                        router.push(`${makeGroundPath(g)}${suffix}`);
+                        router.push(`${makeGroundPath(g)}${suffix}` as any);
                         }}
                         showBookingSchedule={false}
                       />
@@ -1685,12 +1851,19 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   dateChip: {
-    paddingVertical: 7,
+    paddingVertical: 6,
     paddingHorizontal: 8,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: '#E5E7EB',
     backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dateChipInner: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
   },
   dateChipActive: {
     borderColor: '#dc8d3c',
@@ -1698,11 +1871,21 @@ const styles = StyleSheet.create({
   },
   dateChipText: {
     fontSize: 12,
-    fontWeight: '400',
+    fontWeight: '500',
     fontFamily: 'Inter',
     color: '#374151',
   },
   dateChipTextActive: {
+    color: '#dc8d3c',
+  },
+  dateChipWeekday: {
+    fontSize: 10,
+    fontWeight: '600',
+    fontFamily: 'Inter',
+    color: '#6B7280',
+    letterSpacing: 0.2,
+  },
+  dateChipWeekdayActive: {
     color: '#dc8d3c',
   },
   datePagerRow: {

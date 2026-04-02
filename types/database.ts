@@ -71,6 +71,7 @@ export interface Database {
           has_parking: boolean;
           has_changing_rooms: boolean;
           has_pavilion: boolean;
+          has_washrooms: boolean;
           capacity: number | null;
           verified: boolean;
           approved: boolean;
@@ -96,6 +97,7 @@ export interface Database {
           has_parking?: boolean;
           has_changing_rooms?: boolean;
           has_pavilion?: boolean;
+          has_washrooms?: boolean;
           capacity?: number | null;
           verified?: boolean;
           approved?: boolean;
@@ -121,6 +123,7 @@ export interface Database {
           has_parking?: boolean;
           has_changing_rooms?: boolean;
           has_pavilion?: boolean;
+          has_washrooms?: boolean;
           capacity?: number | null;
           verified?: boolean;
           approved?: boolean;

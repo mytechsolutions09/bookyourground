@@ -12,11 +12,11 @@ import {
   Linking,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { MapPin, Star, Clock, Users } from 'lucide-react-native';
+import { MapPin, Star } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
+import { slugifyGroundSegment } from '@/utils/groundSlug';
 import { useAuth } from '@/contexts/AuthContext';
 import { GroundWithImages } from '@/types';
-import { formatCurrency } from '@/utils/helpers';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import WebLayout from '@/components/web/WebLayout';
@@ -33,34 +33,67 @@ export default function GroundDetailsPrettyUrlScreen() {
   const [existingReviewId, setExistingReviewId] = useState<string | null>(null);
   const [reviewRating, setReviewRating] = useState<number>(5);
   const [reviewComment, setReviewComment] = useState<string>('');
+  const [heroImageIndex, setHeroImageIndex] = useState(0);
 
   const slugParam = Array.isArray(slug) ? slug[0] : slug;
+  const cityParam = Array.isArray(city) ? city[0] : city;
 
   const loadGround = async () => {
     try {
       if (!slugParam) throw new Error('Missing ground slug');
 
-      const decodedSlug = decodeURIComponent(String(slugParam));
-      const nameFromSlug = decodedSlug.replace(/-/g, ' ').trim();
+      const nameSlug = decodeURIComponent(String(slugParam)).trim();
+      const citySlug = cityParam
+        ? decodeURIComponent(String(cityParam)).trim()
+        : '';
 
-      const { data, error } = await supabase
-        .from('grounds')
-        .select(
-          `
+      const select = `
           *,
           ground_images(*),
           reviews(rating, comment, user:profiles(full_name))
-        `,
-        )
-        .ilike('name', nameFromSlug)
-        .limit(1);
+        `;
 
-      if (error) throw error;
-      if (!data || data.length === 0) {
+      // Narrow by city when possible; links use slugify(city), not "name with spaces" from the slug.
+      const cityWords = citySlug.replace(/-/g, ' ').trim();
+
+      let candidates: any[] = [];
+
+      if (cityWords) {
+        const res = await supabase
+          .from('grounds')
+          .select(select)
+          .eq('active', true)
+          .eq('approved', true)
+          .ilike('city', cityWords);
+        if (res.error) throw res.error;
+        candidates = res.data ?? [];
+      }
+
+      if (!candidates.length) {
+        const res = await supabase
+          .from('grounds')
+          .select(select)
+          .eq('active', true)
+          .eq('approved', true);
+        if (res.error) throw res.error;
+        candidates = res.data ?? [];
+      }
+
+      const byCityAndName = candidates.find(
+        (g) =>
+          slugifyGroundSegment(String(g.city ?? '')) === citySlug &&
+          slugifyGroundSegment(String(g.name ?? '')) === nameSlug,
+      );
+      const byNameOnly = candidates.find(
+        (g) => slugifyGroundSegment(String(g.name ?? '')) === nameSlug,
+      );
+      const match = byCityAndName ?? byNameOnly;
+
+      if (!match) {
         throw new Error('Ground not found');
       }
 
-      setGround(data[0] as GroundWithImages);
+      setGround(match as GroundWithImages);
       setExistingReviewId(null);
       setReviewBookingId(null);
       setCanReview(false);
@@ -75,7 +108,11 @@ export default function GroundDetailsPrettyUrlScreen() {
   useEffect(() => {
     loadGround();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slugParam]);
+  }, [slugParam, cityParam]);
+
+  useEffect(() => {
+    setHeroImageIndex(0);
+  }, [ground?.id]);
 
   const reviews = useMemo(() => {
     if (!ground) return [] as any[];
@@ -250,35 +287,76 @@ export default function GroundDetailsPrettyUrlScreen() {
       </View>
     );
   } else {
-    const primaryImage =
-      ground.ground_images?.find((img) => img.is_primary)?.image_url ||
-      ground.ground_images?.[0]?.image_url ||
-      'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
+    const fallbackUri = 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
+    const rawImages = (ground.ground_images ?? []).filter((img) => img.image_url);
+    const sortedImages = [...rawImages].sort((a, b) => {
+      if (a.is_primary && !b.is_primary) return -1;
+      if (!a.is_primary && b.is_primary) return 1;
+      return (a.display_order ?? 0) - (b.display_order ?? 0);
+    });
+    const imageUrls = sortedImages.length
+      ? sortedImages.map((img) => img.image_url)
+      : [fallbackUri];
+
+    const heroIdx = Math.min(heroImageIndex, Math.max(0, imageUrls.length - 1));
 
     content = (
       <ScrollView style={styles.container}>
-        <Image source={{ uri: primaryImage }} style={styles.image} />
-
         <View style={styles.content}>
-          <Text style={styles.name}>{ground.name}</Text>
+          <Card style={[styles.section, styles.imageCard]}>
+            <Image
+              source={{ uri: imageUrls[heroIdx] }}
+              style={styles.heroImage}
+              resizeMode="cover"
+            />
+            {imageUrls.length > 1 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.thumbScroll}
+                contentContainerStyle={styles.thumbScrollContent}
+              >
+                {imageUrls.map((uri, idx) => (
+                  <Pressable
+                    key={`${uri}-${idx}`}
+                    onPress={() => setHeroImageIndex(idx)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Show image ${idx + 1} of ${imageUrls.length}`}
+                    style={({ pressed }) => [
+                      styles.thumbPressable,
+                      idx === heroIdx && styles.thumbPressableSelected,
+                      pressed && styles.thumbPressablePressed,
+                      Platform.OS === 'web' && styles.thumbPressableWeb,
+                    ]}
+                  >
+                    <Image source={{ uri }} style={styles.thumbImage} resizeMode="cover" />
+                  </Pressable>
+                ))}
+              </ScrollView>
+            ) : null}
+          </Card>
 
-          <View style={styles.locationRow}>
-            <MapPin size={18} color="#666" />
-            <Text style={styles.location}>
-              {ground.address}, {ground.city}, {ground.state} - {ground.pincode}
-            </Text>
-          </View>
+          <Card style={styles.section}>
+            <Text style={styles.name}>{ground.name}</Text>
 
-          {mapsUrl && (
-            <Pressable
-              onPress={() => {
-                void Linking.openURL(mapsUrl);
-              }}
-              style={styles.mapsLinkWrap}
-            >
-              <Text style={styles.mapsLinkText}>View on Google Maps</Text>
-            </Pressable>
-          )}
+            <View style={styles.locationRow}>
+              <MapPin size={18} color="#666" />
+              <Text style={styles.location}>
+                {ground.address}, {ground.city}, {ground.state} - {ground.pincode}
+              </Text>
+            </View>
+
+            {mapsUrl && (
+              <Pressable
+                onPress={() => {
+                  void Linking.openURL(mapsUrl);
+                }}
+                style={styles.mapsLinkWrap}
+              >
+                <Text style={styles.mapsLinkText}>View on Google Maps</Text>
+              </Pressable>
+            )}
+          </Card>
 
           {reviews.length > 0 && (
             <View style={styles.ratingRow}>
@@ -288,15 +366,6 @@ export default function GroundDetailsPrettyUrlScreen() {
               </Text>
             </View>
           )}
-
-          <Card style={styles.priceCard}>
-            <Text style={styles.price}>
-              {formatCurrency(ground.base_price_per_hour)}
-              {String(ground.pitch_type ?? '').toLowerCase().includes('box')
-                ? '/hour'
-                : ' / match'}
-            </Text>
-          </Card>
 
           {ground.description && (
             <Card style={styles.section}>
@@ -321,8 +390,8 @@ export default function GroundDetailsPrettyUrlScreen() {
             )}
             {ground.capacity && (
               <View style={styles.detailRow}>
-                <Users size={16} color="#666" />
-                <Text style={styles.detailValue}>Capacity: {ground.capacity} players</Text>
+                <Text style={styles.detailLabel}>Capacity</Text>
+                <Text style={styles.detailValue}>{ground.capacity} players</Text>
               </View>
             )}
           </Card>
@@ -348,6 +417,11 @@ export default function GroundDetailsPrettyUrlScreen() {
               {ground.has_pavilion && (
                 <View style={styles.amenityChip}>
                   <Text style={styles.amenityText}>Pavilion</Text>
+                </View>
+              )}
+              {ground.has_washrooms && (
+                <View style={styles.amenityChip}>
+                  <Text style={styles.amenityText}>Washroom</Text>
                 </View>
               )}
             </View>
@@ -480,15 +554,46 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#F5F5F5',
   },
-  image: {
+  imageCard: {
+    padding: 0,
+    overflow: 'hidden',
+  },
+  heroImage: {
     width: '100%',
     height: 280,
     backgroundColor: '#E0E0E0',
-    ...Platform.select({
-      web: {
-        marginTop: 80,
-      },
-    }),
+  },
+  thumbScroll: {
+    maxHeight: 100,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+  },
+  thumbScrollContent: {
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+  },
+  thumbPressable: {
+    marginRight: 10,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    overflow: 'hidden',
+  },
+  thumbPressableSelected: {
+    borderColor: '#2563EB',
+  },
+  thumbPressablePressed: {
+    opacity: 0.85,
+  },
+  thumbPressableWeb: {
+    cursor: 'pointer' as any,
+  },
+  thumbImage: {
+    width: 120,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: '#E0E0E0',
   },
   content: {
     padding: 16,
@@ -538,16 +643,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
     fontWeight: '600',
-  },
-  priceCard: {
-    backgroundColor: Platform.OS === 'web' ? '#2b2f4b' : '#E3F2FD',
-    marginBottom: 16,
-  },
-  price: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: Platform.OS === 'web' ? '#dc8d3c' : '#2196F3',
-    textAlign: 'center',
   },
   section: {
     marginBottom: 16,

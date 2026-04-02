@@ -217,10 +217,12 @@ export default function WebLayout({ children }: WebLayoutProps) {
 
   const isAdminLayout = isSuperAdmin && isAdminRoute;
   const bodyStyle = isPublicNoSidebar ? styles.bodyFull : isAdminLayout ? styles.bodyAdmin : styles.body;
+  // Ground/booking detail pretty URLs must always get the top bar (logo, search, Grounds, Sign in).
+  // Do not exclude super admins here — otherwise neither hero nor the app header renders on /ground/... .
   const showHeroHeader =
     isLanding ||
     isMarketing ||
-    (isGroundDetails && !isOwnerGroundsDashboard && !isSuperAdmin);
+    (isGroundDetails && !isOwnerGroundsDashboard);
 
   return (
     <View
@@ -468,6 +470,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
                   <NavLink href="/(admin)/dashboard" icon={LayoutDashboard} label="Dashboard" />
                   <NavLink href="/(admin)/bookings" icon={Calendar} label="Bookings" />
                   <NavLink href="/(admin)/grounds" icon={MapPin} label="Grounds" />
+                  <NavLink href="/(owner)/add-ground" icon={PlusCircle} label="Add ground" />
                   <NavLink href="/(admin)/earnings" icon={IndianRupee} label="Earnings" />
                   <NavLink href="/(admin)/withdrawals" icon={Wallet2} label="Withdraw" />
                   <NavLink
@@ -560,6 +563,12 @@ export default function WebLayout({ children }: WebLayoutProps) {
                         href="/(admin)/grounds"
                         icon={MapPin}
                         label="Grounds"
+                        hideLabel={sidebarCollapsed}
+                      />
+                      <NavLink
+                        href="/(owner)/add-ground"
+                        icon={PlusCircle}
+                        label="Add ground"
                         hideLabel={sidebarCollapsed}
                       />
                       <NavLink

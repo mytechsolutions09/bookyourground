@@ -112,6 +112,7 @@ export default function GroundCard({
             <View style={styles.amenities}>
               {ground.has_floodlights && <Text style={styles.amenity}>Lights</Text>}
               {ground.has_parking && <Text style={styles.amenity}>Parking</Text>}
+              {ground.has_washrooms && <Text style={styles.amenity}>Washroom</Text>}
             </View>
           </View>
         </View>

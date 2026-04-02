@@ -21,6 +21,7 @@ import GroundCard from '@/components/grounds/GroundCard';
 import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
 import { useLocalSearchParams } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import Button from '@/components/ui/Button';
 import { useAuth } from '@/contexts/AuthContext';
 import TimeSlotsEditor, { TimeSlotsEditorHandle } from '@/components/availability/TimeSlotsEditor';
@@ -106,6 +107,7 @@ function FilterDropdown({
 export default function GroundsAdminScreen() {
   const params = useLocalSearchParams();
   const ownerIdParam = Array.isArray(params.ownerId) ? params.ownerId[0] : params.ownerId;
+  const createParam = Array.isArray(params.create) ? params.create[0] : params.create;
 
   const { user } = useAuth();
   const { width } = useWindowDimensions();
@@ -122,6 +124,7 @@ export default function GroundsAdminScreen() {
   const [editOpen, setEditOpen] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [savingAvailability, setSavingAvailability] = useState(false);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
 
   const [editForm, setEditForm] = useState<any>(null);
   const availabilityRef = React.useRef<TimeSlotsEditorHandle | null>(null);
@@ -255,6 +258,16 @@ export default function GroundsAdminScreen() {
     if (createOpen) resetCreateForm();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [createOpen]);
+
+  // Support opening the "Add Ground" modal directly from the left sidebar tab
+  // (e.g. `/ (admin) /grounds?create=1`).
+  useEffect(() => {
+    if (!createParam) return;
+    const v = String(createParam).trim().toLowerCase();
+    if (v === '1' || v === 'true') {
+      setCreateOpen(true);
+    }
+  }, [createParam]);
 
   const startEditGround = (ground: GroundWithImages) => {
     setSelectedGround(ground);
@@ -419,6 +432,84 @@ export default function GroundsAdminScreen() {
     setEditForm(null);
   };
 
+  const handlePickMediaForEdit = async () => {
+    if (!user) {
+      if (Platform.OS === 'web') alert('Please sign in again to upload media.');
+      else Alert.alert('Login required', 'Please sign in again to upload media.');
+      return;
+    }
+    if (!editForm?.id) return;
+
+    try {
+      setUploadingMedia(true);
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.All,
+        quality: 0.8,
+      });
+
+      if (result.canceled || !result.assets?.length) {
+        return;
+      }
+
+      const asset = result.assets[0];
+      const uri = asset.uri;
+      const extensionFromUri = uri.split('.').pop() || '';
+      const ext =
+        extensionFromUri.toLowerCase().match(/^(jpg|jpeg|png|webp|mp4|mov|m4v)$/)?.[0] || 'jpg';
+
+      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const filePath = `owner-media/${user.id}/${fileName}`;
+
+      const response = await fetch(uri);
+      const blob = await response.blob();
+
+      const { error: uploadError } = await supabase.storage
+        .from('ground-images')
+        .upload(filePath, blob, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+
+      if (uploadError) {
+        console.error('Media upload failed:', uploadError);
+        if (Platform.OS === 'web') alert(uploadError.message);
+        else Alert.alert('Upload failed', uploadError.message);
+        return;
+      }
+
+      const { data } = supabase.storage.from('ground-images').getPublicUrl(filePath);
+      const publicUrl = data.publicUrl;
+
+      setEditForm((prev: any) => {
+        const urls = (prev.mediaUrls ?? [])
+          .map((u: string) => String(u ?? '').trim())
+          .filter(Boolean);
+        const addingVideo = isVideoUrl(publicUrl);
+        const imgCount = urls.filter((u) => !isVideoUrl(u)).length;
+        const vidCount = urls.filter(isVideoUrl).length;
+        if (addingVideo) {
+          if (vidCount >= 2) {
+            if (Platform.OS === 'web') alert('You can add up to 2 videos.');
+            else Alert.alert('Limit reached', 'You can add up to 2 videos.');
+            return prev;
+          }
+        } else if (imgCount >= 8) {
+          if (Platform.OS === 'web') alert('You can add up to 8 images.');
+          else Alert.alert('Limit reached', 'You can add up to 8 images.');
+          return prev;
+        }
+        return { ...prev, mediaUrls: [...urls, publicUrl] };
+      });
+    } catch (e: any) {
+      console.error('Error picking/uploading media:', e);
+      const msg = e?.message ?? 'Something went wrong while uploading media.';
+      if (Platform.OS === 'web') alert(msg);
+      else Alert.alert('Upload error', msg);
+    } finally {
+      setUploadingMedia(false);
+    }
+  };
+
   const handleCreateGround = async () => {
     if (!user) {
       if (Platform.OS === 'web') alert('Please login');
@@ -475,7 +566,7 @@ export default function GroundsAdminScreen() {
     }
   };
 
-  const renderGroundActions = (ground: GroundWithImages) => {
+  const renderGroundActions = (ground: GroundWithImages, isApproved: boolean) => {
     const ownerName = (ground as any).owner?.business_name || (ground as any).owner?.full_name;
 
     return (
@@ -489,19 +580,39 @@ export default function GroundsAdminScreen() {
           </View>
         ) : null}
 
-        <Text style={styles.approvalText}>Status: Pending approval</Text>
+        <Text style={styles.approvalText}>{isApproved ? 'Status: Approved' : 'Status: Pending approval'}</Text>
 
         <View style={styles.actionsButtons}>
+          {!isApproved ? (
+            <>
+              <Button
+                title="Approve"
+                onPress={() => updateGroundStatus(ground.id, true)}
+                variant="secondary"
+                size="small"
+                style={{ flex: 1 }}
+              />
+              <Button
+                title="Reject"
+                onPress={() => updateGroundStatus(ground.id, false)}
+                variant="danger"
+                size="small"
+                style={{ flex: 1 }}
+              />
+            </>
+          ) : null}
+
           <Button
-            title="Approve"
-            onPress={() => updateGroundStatus(ground.id, true)}
-            variant="secondary"
+            title="Edit"
+            onPress={() => startEditGround(ground)}
+            variant="outline"
             size="small"
             style={{ flex: 1 }}
           />
+
           <Button
-            title="Reject"
-            onPress={() => updateGroundStatus(ground.id, false)}
+            title="Delete"
+            onPress={() => handleDeleteGround(ground.id)}
             variant="danger"
             size="small"
             style={{ flex: 1 }}
@@ -772,7 +883,7 @@ export default function GroundsAdminScreen() {
                     setSelectedGround(selectedGround?.id === item.id ? null : latestGround)
                   }
                 />
-                {isSelected && !isApproved ? renderGroundActions(latestGround) : null}
+                {isSelected ? renderGroundActions(latestGround, isApproved) : null}
               </View>
             );
           }
@@ -1064,6 +1175,18 @@ export default function GroundsAdminScreen() {
               </View>
 
               <Text style={styles.detailsSectionTitle}>Media (up to 8 images, 2 videos)</Text>
+              <Text style={styles.mediaHint}>
+                Add URLs below, or upload files from your device (stored in the ground-images bucket).
+              </Text>
+              <Pressable
+                style={[styles.mediaAddButton, styles.mediaUploadButton]}
+                onPress={handlePickMediaForEdit}
+                disabled={uploadingMedia}
+              >
+                <Text style={styles.mediaUploadText}>
+                  {uploadingMedia ? 'Uploading…' : 'Upload from device'}
+                </Text>
+              </Pressable>
               {(editForm?.mediaUrls ?? []).map((url: string, index: number) => (
                 <View key={index} style={styles.mediaRow}>
                   <TextInput
@@ -1144,7 +1267,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#FFFFFF',
-    padding: 16,
+    padding: 12,
     paddingTop: 48,
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
@@ -1152,7 +1275,7 @@ const styles = StyleSheet.create({
     zIndex: 50,
   },
   webHeader: {
-    paddingTop: 16,
+    paddingTop: 12,
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -1169,14 +1292,14 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '700',
     color: '#212121',
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#666',
-    marginTop: 4,
+    marginTop: 2,
   },
   list: {
     padding: 16,
@@ -1229,13 +1352,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'flex-end',
-    gap: 14,
+    gap: 10,
   },
   filtersGroup: {
-    minWidth: 210,
+    minWidth: 190,
   },
   filtersLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: '#374151',
   },
@@ -1246,10 +1369,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    minWidth: 180,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    minWidth: 160,
   },
   dropdownButtonOpen: {
     borderColor: '#dc8d3c',
@@ -1262,7 +1385,7 @@ const styles = StyleSheet.create({
   },
   dropdownMenu: {
     position: 'absolute',
-    top: 44,
+    top: 40,
     left: 0,
     right: 0,
     backgroundColor: '#FFFFFF',
@@ -1318,9 +1441,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   viewToggleOption: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#E5E7EB',
     backgroundColor: '#FFFFFF',
@@ -1330,7 +1453,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(220,141,60,0.12)',
   },
   viewToggleText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: '#374151',
   },
@@ -1338,11 +1461,11 @@ const styles = StyleSheet.create({
     color: '#dc8d3c',
   },
   controlsRow: {
-    marginTop: 14,
+    marginTop: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    gap: 16,
+    alignItems: 'center',
+    gap: 12,
     flexWrap: 'wrap',
   },
   tileItem: {
@@ -1559,6 +1682,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: '#2563EB',
+  },
+  mediaHint: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginBottom: 8,
+    lineHeight: 16,
+  },
+  mediaUploadButton: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    marginBottom: 10,
+  },
+  mediaUploadText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
   },
   modalOverlay: {
     position: 'absolute',

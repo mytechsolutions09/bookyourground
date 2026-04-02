@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Platform, Modal, Pressable, ScrollView, TextInput, Switch, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { Plus } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { GroundWithImages } from '@/types';
@@ -49,6 +50,7 @@ export default function OwnerGroundsScreen() {
   const availabilityRef = React.useRef<TimeSlotsEditorHandle | null>(null);
   const [locationRows, setLocationRows] = useState<any[]>([]);
   const [editLocationKey, setEditLocationKey] = useState<string>('');
+  const [uploadingMedia, setUploadingMedia] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -117,6 +119,7 @@ export default function OwnerGroundsScreen() {
       has_parking: !!(ground as any).has_parking,
       has_changing_rooms: !!(ground as any).has_changing_rooms,
       has_pavilion: !!(ground as any).has_pavilion,
+      has_washrooms: !!(ground as any).has_washrooms,
       active: !!(ground as any).active,
       mediaUrls: (ground.ground_images ?? []).map((img) => img.image_url),
     });
@@ -127,6 +130,78 @@ export default function OwnerGroundsScreen() {
   const closeEditModal = () => {
     setEditOpen(false);
     setEditForm(null);
+  };
+
+  const handlePickMediaForEdit = async () => {
+    if (!user) {
+      Alert.alert('Login required', 'Please sign in again to upload media.');
+      return;
+    }
+    if (!editForm?.id) return;
+
+    try {
+      setUploadingMedia(true);
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.All,
+        quality: 0.8,
+      });
+
+      if (result.canceled || !result.assets?.length) {
+        return;
+      }
+
+      const asset = result.assets[0];
+      const uri = asset.uri;
+      const extensionFromUri = uri.split('.').pop() || '';
+      const ext =
+        extensionFromUri.toLowerCase().match(/^(jpg|jpeg|png|webp|mp4|mov|m4v)$/)?.[0] || 'jpg';
+
+      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const filePath = `owner-media/${user.id}/${fileName}`;
+
+      const response = await fetch(uri);
+      const blob = await response.blob();
+
+      const { error: uploadError } = await supabase.storage
+        .from('ground-images')
+        .upload(filePath, blob, {
+          cacheControl: '3600',
+          upsert: false,
+        });
+
+      if (uploadError) {
+        console.error('Media upload failed:', uploadError);
+        Alert.alert('Upload failed', uploadError.message);
+        return;
+      }
+
+      const { data } = supabase.storage.from('ground-images').getPublicUrl(filePath);
+      const publicUrl = data.publicUrl;
+
+      setEditForm((prev: any) => {
+        const urls = (prev.mediaUrls ?? [])
+          .map((u: string) => String(u ?? '').trim())
+          .filter(Boolean);
+        const addingVideo = isVideoUrl(publicUrl);
+        const imgCount = urls.filter((u) => !isVideoUrl(u)).length;
+        const vidCount = urls.filter(isVideoUrl).length;
+        if (addingVideo) {
+          if (vidCount >= 2) {
+            Alert.alert('Limit reached', 'You can add up to 2 videos.');
+            return prev;
+          }
+        } else if (imgCount >= 8) {
+          Alert.alert('Limit reached', 'You can add up to 8 images.');
+          return prev;
+        }
+        return { ...prev, mediaUrls: [...urls, publicUrl] };
+      });
+    } catch (e: any) {
+      console.error('Error picking/uploading media:', e);
+      Alert.alert('Upload error', e?.message ?? 'Something went wrong while uploading media.');
+    } finally {
+      setUploadingMedia(false);
+    }
   };
 
   const parseNullableFloat = (value: string): number | null => {
@@ -162,6 +237,7 @@ export default function OwnerGroundsScreen() {
         has_parking: !!editForm.has_parking,
         has_changing_rooms: !!editForm.has_changing_rooms,
         has_pavilion: !!editForm.has_pavilion,
+        has_washrooms: !!editForm.has_washrooms,
         active: !!editForm.active,
       };
 
@@ -398,6 +474,13 @@ export default function OwnerGroundsScreen() {
                 />
               </View>
               <View style={styles.switchRow}>
+                <Text style={styles.switchLabel}>Washroom</Text>
+                <Switch
+                  value={!!editForm?.has_washrooms}
+                  onValueChange={(v) => setEditForm((p: any) => ({ ...p, has_washrooms: v }))}
+                />
+              </View>
+              <View style={styles.switchRow}>
                 <Text style={styles.switchLabel}>Pavilion</Text>
                 <Switch
                   value={!!editForm?.has_pavilion}
@@ -413,6 +496,18 @@ export default function OwnerGroundsScreen() {
               </View>
 
               <Text style={styles.modalSectionTitle}>Media (up to 8 images, 2 videos)</Text>
+              <Text style={styles.mediaHint}>
+                Add URLs below, or upload files from your device (stored in the ground-images bucket).
+              </Text>
+              <Pressable
+                style={[styles.mediaAddButton, styles.mediaUploadButton]}
+                onPress={handlePickMediaForEdit}
+                disabled={uploadingMedia}
+              >
+                <Text style={styles.mediaUploadText}>
+                  {uploadingMedia ? 'Uploading…' : 'Upload from device'}
+                </Text>
+              </Pressable>
               {(editForm?.mediaUrls ?? []).map((url: string, index: number) => (
                 <View key={index} style={styles.mediaRow}>
                   <TextInput
@@ -657,6 +752,27 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: '#2563EB',
+  },
+  mediaHint: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginBottom: 8,
+    lineHeight: 16,
+  },
+  mediaUploadButton: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    marginBottom: 10,
+  },
+  mediaUploadText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
   },
   emptyContainer: {
     alignItems: 'center',
