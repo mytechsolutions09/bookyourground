@@ -15,6 +15,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { MapPin, Star } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { slugifyGroundSegment } from '@/utils/groundSlug';
+import { isCricketGroundType } from '@/utils/cricketGround';
 import { useAuth } from '@/contexts/AuthContext';
 import { GroundWithImages } from '@/types';
 import Card from '@/components/ui/Card';
@@ -356,16 +357,26 @@ export default function GroundDetailsPrettyUrlScreen() {
                 <Text style={styles.mapsLinkText}>View on Google Maps</Text>
               </Pressable>
             )}
-          </Card>
 
-          {reviews.length > 0 && (
-            <View style={styles.ratingRow}>
-              <Star size={18} color="#FFA000" fill="#FFA000" />
+            <View style={styles.starsSummaryRow}>
+              {[1, 2, 3, 4, 5].map((i) => {
+                const filled = reviews.length > 0 && i <= Math.round(averageRating);
+                return (
+                  <Star
+                    key={i}
+                    size={18}
+                    color={filled ? '#FFA000' : '#D1D5DB'}
+                    fill={filled ? '#FFA000' : 'none'}
+                  />
+                );
+              })}
               <Text style={styles.rating}>
-                {averageRating.toFixed(1)} ({reviews.length} reviews)
+                {reviews.length > 0
+                  ? `${averageRating.toFixed(1)} (${reviews.length} reviews)`
+                  : 'No reviews yet'}
               </Text>
             </View>
-          )}
+          </Card>
 
           {ground.description && (
             <Card style={styles.section}>
@@ -378,10 +389,25 @@ export default function GroundDetailsPrettyUrlScreen() {
             <Text style={styles.sectionTitle}>Details</Text>
             {ground.pitch_type && (
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Pitch Type</Text>
+                <Text style={styles.detailLabel}>Ground type</Text>
                 <Text style={styles.detailValue}>{ground.pitch_type}</Text>
               </View>
             )}
+            {isCricketGroundType(ground.pitch_type) ? (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Pitch surface</Text>
+                <Text
+                  style={[
+                    styles.detailValue,
+                    !String(ground.cricket_pitch_surface ?? '').trim() && styles.detailValueMuted,
+                  ]}
+                >
+                  {String(ground.cricket_pitch_surface ?? '').trim()
+                    ? String(ground.cricket_pitch_surface)
+                    : '—'}
+                </Text>
+              </View>
+            ) : null}
             {ground.ground_size && (
               <View style={styles.detailRow}>
                 <Text style={styles.detailLabel}>Ground Size</Text>
@@ -398,33 +424,41 @@ export default function GroundDetailsPrettyUrlScreen() {
 
           <Card style={styles.section}>
             <Text style={styles.sectionTitle}>Amenities</Text>
-            <View style={styles.amenitiesGrid}>
-              {ground.has_floodlights && (
-                <View style={styles.amenityChip}>
-                  <Text style={styles.amenityText}>Floodlights</Text>
-                </View>
-              )}
-              {ground.has_parking && (
-                <View style={styles.amenityChip}>
-                  <Text style={styles.amenityText}>Parking</Text>
-                </View>
-              )}
-              {ground.has_changing_rooms && (
-                <View style={styles.amenityChip}>
-                  <Text style={styles.amenityText}>Changing Rooms</Text>
-                </View>
-              )}
-              {ground.has_pavilion && (
-                <View style={styles.amenityChip}>
-                  <Text style={styles.amenityText}>Pavilion</Text>
-                </View>
-              )}
-              {ground.has_washrooms && (
-                <View style={styles.amenityChip}>
-                  <Text style={styles.amenityText}>Washroom</Text>
-                </View>
-              )}
-            </View>
+            {ground.has_floodlights ||
+            ground.has_parking ||
+            ground.has_changing_rooms ||
+            ground.has_pavilion ||
+            ground.has_washrooms ? (
+              <View style={styles.amenitiesGrid}>
+                {ground.has_floodlights ? (
+                  <View style={styles.amenityChip}>
+                    <Text style={styles.amenityText}>Floodlights</Text>
+                  </View>
+                ) : null}
+                {ground.has_parking ? (
+                  <View style={styles.amenityChip}>
+                    <Text style={styles.amenityText}>Parking</Text>
+                  </View>
+                ) : null}
+                {ground.has_changing_rooms ? (
+                  <View style={styles.amenityChip}>
+                    <Text style={styles.amenityText}>Changing Rooms</Text>
+                  </View>
+                ) : null}
+                {ground.has_pavilion ? (
+                  <View style={styles.amenityChip}>
+                    <Text style={styles.amenityText}>Pavilion</Text>
+                  </View>
+                ) : null}
+                {ground.has_washrooms ? (
+                  <View style={styles.amenityChip}>
+                    <Text style={styles.amenityText}>Washroom</Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : (
+              <Text style={styles.amenitiesEmpty}>None listed</Text>
+            )}
           </Card>
 
           <Card style={styles.section}>
@@ -633,11 +667,12 @@ const styles = StyleSheet.create({
     color: '#2563EB',
     textDecorationLine: 'underline',
   },
-  ratingRow: {
+  starsSummaryRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: 6,
-    marginBottom: 16,
+    marginTop: 12,
   },
   rating: {
     fontSize: 16,
@@ -674,6 +709,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#333',
     fontWeight: '600',
+  },
+  detailValueMuted: {
+    color: '#9CA3AF',
+    fontWeight: '500',
+  },
+  amenitiesEmpty: {
+    fontSize: 14,
+    color: '#9CA3AF',
   },
   amenitiesGrid: {
     flexDirection: 'row',

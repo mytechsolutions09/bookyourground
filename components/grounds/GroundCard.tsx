@@ -35,9 +35,11 @@ export default function GroundCard({
     ground.ground_images?.[0]?.image_url ||
     'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
 
-  const averageRating = ground.reviews?.length
-    ? ground.reviews.reduce((sum, r) => sum + r.rating, 0) / ground.reviews.length
-    : 0;
+  const reviewCount = ground.reviews?.length ?? 0;
+  const averageRating =
+    reviewCount > 0
+      ? (ground.reviews ?? []).reduce((sum, r) => sum + r.rating, 0) / reviewCount
+      : 0;
 
   const mapsUrl = useMemo(() => {
     const parts = [ground.address, ground.city, ground.state]
@@ -57,19 +59,38 @@ export default function GroundCard({
       <Card style={[styles.card, compact && styles.cardCompact]}>
         <Image source={{ uri: primaryImage }} style={[styles.image, compact && styles.imageCompact]} />
         <View style={styles.content}>
-          <Text style={[styles.name, compact && styles.nameCompact]}>{ground.name}</Text>
+          <View style={styles.titleRow}>
+            <Text
+              style={[styles.name, compact && styles.nameCompact]}
+              numberOfLines={2}
+            >
+              {ground.name}
+            </Text>
+            <View style={styles.ratingBlock}>
+              <View style={styles.starRow}>
+                {[1, 2, 3, 4, 5].map((i) => {
+                  const filled = reviewCount > 0 && i <= Math.round(averageRating);
+                  return (
+                    <Star
+                      key={i}
+                      size={compact ? 12 : 14}
+                      color={filled ? '#FFA000' : '#D1D5DB'}
+                      fill={filled ? '#FFA000' : 'none'}
+                    />
+                  );
+                })}
+              </View>
+              <Text style={[styles.rating, compact && styles.ratingCompact]} numberOfLines={1}>
+                {reviewCount > 0
+                  ? `${averageRating.toFixed(1)} (${reviewCount})`
+                  : 'No reviews yet'}
+              </Text>
+            </View>
+          </View>
           <View style={styles.locationRow}>
             <MapPin size={14} color="#666" />
             <Text style={styles.location}>{ground.city}, {ground.state}</Text>
           </View>
-          {ground.reviews && ground.reviews.length > 0 && (
-            <View style={styles.ratingRow}>
-              <Star size={14} color="#FFA000" fill="#FFA000" />
-              <Text style={styles.rating}>
-                {averageRating.toFixed(1)} ({ground.reviews.length})
-              </Text>
-            </View>
-          )}
           {showBookingSchedule ? (
             <View style={styles.scheduleBlock}>
               <View style={styles.scheduleRow}>
@@ -87,7 +108,7 @@ export default function GroundCard({
             </View>
           ) : null}
             <View style={styles.footer}>
-            <View>
+            <View style={styles.footerLeft}>
               <Text style={[styles.price, compact && styles.priceCompact]}>
                 {formatCurrency(
                   displayPricePerUnit != null
@@ -110,9 +131,13 @@ export default function GroundCard({
               )}
             </View>
             <View style={styles.amenities}>
-              {ground.has_floodlights && <Text style={styles.amenity}>Lights</Text>}
-              {ground.has_parking && <Text style={styles.amenity}>Parking</Text>}
-              {ground.has_washrooms && <Text style={styles.amenity}>Washroom</Text>}
+              {ground.has_floodlights ? <Text style={styles.amenity}>Lights</Text> : null}
+              {ground.has_parking ? <Text style={styles.amenity}>Parking</Text> : null}
+              {ground.has_changing_rooms ? (
+                <Text style={styles.amenity}>Changing rooms</Text>
+              ) : null}
+              {ground.has_pavilion ? <Text style={styles.amenity}>Pavilion</Text> : null}
+              {ground.has_washrooms ? <Text style={styles.amenity}>Washroom</Text> : null}
             </View>
           </View>
         </View>
@@ -152,14 +177,33 @@ const styles = StyleSheet.create({
   content: {
     padding: 12,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 4,
+  },
   name: {
+    flex: 1,
+    minWidth: 0,
     fontSize: 18,
     fontWeight: '700',
     color: '#212121',
-    marginBottom: 4,
   },
   nameCompact: {
     fontSize: 14,
+  },
+  ratingBlock: {
+    alignItems: 'flex-end',
+    flexShrink: 0,
+    maxWidth: '46%',
+    gap: 2,
+  },
+  starRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
   },
   locationRow: {
     flexDirection: 'row',
@@ -171,16 +215,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 8,
-  },
   rating: {
-    fontSize: 14,
-    color: '#333',
+    fontSize: 12,
+    color: '#666',
     fontWeight: '600',
+    textAlign: 'right',
+  },
+  ratingCompact: {
+    fontSize: 11,
   },
   scheduleBlock: {
     marginBottom: 10,
@@ -201,7 +243,12 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  footerLeft: {
+    flex: 1,
+    minWidth: 0,
   },
   price: {
     fontSize: 20,
@@ -219,7 +266,11 @@ const styles = StyleSheet.create({
   },
   amenities: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 6,
+    justifyContent: 'flex-end',
+    flex: 1,
+    minWidth: 120,
   },
   amenity: {
     fontSize: 12,

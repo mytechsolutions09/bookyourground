@@ -25,6 +25,7 @@ function makeGroundPath(ground: GroundWithImagesType): string {
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import TimeSlotsEditor, { TimeSlotsEditorHandle } from '@/components/availability/TimeSlotsEditor';
+import { cricketPitchSurfaceForDb, isCricketGroundType } from '@/utils/cricketGround';
 
 function isVideoUrl(url: string): boolean {
   const lower = url.trim().toLowerCase();
@@ -113,6 +114,7 @@ export default function OwnerGroundsScreen() {
       pincode: ground.pincode ?? '',
       base_price_per_hour: ground.base_price_per_hour != null ? String(ground.base_price_per_hour) : '',
       pitch_type: (ground.pitch_type ?? '') as string,
+      cricket_pitch_surface: ((ground as any).cricket_pitch_surface ?? '') as string,
       ground_size: (ground.ground_size ?? '') as string,
       capacity: ground.capacity != null ? String(ground.capacity) : '',
       has_floodlights: !!(ground as any).has_floodlights,
@@ -220,6 +222,13 @@ export default function OwnerGroundsScreen() {
 
   const handleSaveEdit = async () => {
     if (!editForm?.id) return;
+    if (isCricketGroundType(editForm.pitch_type)) {
+      const s = cricketPitchSurfaceForDb(editForm.pitch_type, editForm.cricket_pitch_surface);
+      if (!s) {
+        Alert.alert('Pitch surface', 'Please choose Turf or Matting for this cricket ground.');
+        return;
+      }
+    }
     try {
       setEditLoading(true);
       const payload: any = {
@@ -231,6 +240,10 @@ export default function OwnerGroundsScreen() {
         pincode: String(editForm.pincode ?? '').trim(),
         base_price_per_hour: parseNullableFloat(String(editForm.base_price_per_hour ?? '')) ?? 0,
         pitch_type: String(editForm.pitch_type ?? '').trim() || null,
+        cricket_pitch_surface: cricketPitchSurfaceForDb(
+          editForm.pitch_type,
+          editForm.cricket_pitch_surface,
+        ),
         ground_size: String(editForm.ground_size ?? '').trim() || null,
         capacity: parseNullableInt(String(editForm.capacity ?? '')),
         has_floodlights: !!editForm.has_floodlights,
@@ -433,9 +446,40 @@ export default function OwnerGroundsScreen() {
               <TextInput
                 style={styles.formInput}
                 value={String(editForm?.pitch_type ?? '')}
-                onChangeText={(t) => setEditForm((p: any) => ({ ...p, pitch_type: t }))}
+                onChangeText={(t) =>
+                  setEditForm((p: any) => ({
+                    ...p,
+                    pitch_type: t,
+                    cricket_pitch_surface: isCricketGroundType(t) ? p.cricket_pitch_surface : '',
+                  }))
+                }
                 placeholder="Type (Cricket Ground / Box Cricket)"
               />
+              {isCricketGroundType(String(editForm?.pitch_type ?? '')) ? (
+                <>
+                  <Text style={styles.locationLabel}>Pitch surface</Text>
+                  <View style={styles.surfaceChipsRow}>
+                    {(['Turf', 'Matting'] as const).map((surfaceLabel) => {
+                      const active = String(editForm?.cricket_pitch_surface ?? '') === surfaceLabel;
+                      return (
+                        <Pressable
+                          key={surfaceLabel}
+                          onPress={() =>
+                            setEditForm((p: any) => ({ ...p, cricket_pitch_surface: surfaceLabel }))
+                          }
+                          style={[styles.surfaceChip, active && styles.surfaceChipActive]}
+                        >
+                          <Text
+                            style={[styles.surfaceChipText, active && styles.surfaceChipTextActive]}
+                          >
+                            {surfaceLabel}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </>
+              ) : null}
               <TextInput
                 style={styles.formInput}
                 value={String(editForm?.ground_size ?? '')}
@@ -773,6 +817,32 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#374151',
+  },
+  surfaceChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 10,
+  },
+  surfaceChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+  },
+  surfaceChipActive: {
+    borderColor: '#2563EB',
+    backgroundColor: '#EFF6FF',
+  },
+  surfaceChipText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#374151',
+  },
+  surfaceChipTextActive: {
+    color: '#1D4ED8',
   },
   emptyContainer: {
     alignItems: 'center',

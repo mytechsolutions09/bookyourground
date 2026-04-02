@@ -66,6 +66,7 @@ export interface Database {
           longitude: number | null;
           base_price_per_hour: number;
           pitch_type: string | null;
+          cricket_pitch_surface: string | null;
           ground_size: string | null;
           has_floodlights: boolean;
           has_parking: boolean;
@@ -92,6 +93,7 @@ export interface Database {
           longitude?: number | null;
           base_price_per_hour: number;
           pitch_type?: string | null;
+          cricket_pitch_surface?: string | null;
           ground_size?: string | null;
           has_floodlights?: boolean;
           has_parking?: boolean;
@@ -118,6 +120,7 @@ export interface Database {
           longitude?: number | null;
           base_price_per_hour?: number;
           pitch_type?: string | null;
+          cricket_pitch_surface?: string | null;
           ground_size?: string | null;
           has_floodlights?: boolean;
           has_parking?: boolean;

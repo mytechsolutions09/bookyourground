@@ -22,6 +22,7 @@ import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
 import TimeSlotsEditor, { TimeSlotsEditorHandle } from '@/components/availability/TimeSlotsEditor';
 import { createTimeSlotsForGround } from '@/utils/timeSlotsDb';
+import { cricketPitchSurfaceForDb, isCricketGroundType } from '@/utils/cricketGround';
 import * as ImagePicker from 'expo-image-picker';
 import type { DayOfWeek } from '@/types';
 
@@ -128,6 +129,7 @@ export default function AddGroundScreen() {
     pincode: '',
     base_price_per_hour: '',
     pitch_type: '',
+    cricket_pitch_surface: '' as '' | 'Turf' | 'Matting',
     ground_size: '',
     capacity: '',
     has_floodlights: false,
@@ -267,6 +269,14 @@ export default function AddGroundScreen() {
       return;
     }
 
+    if (isCricketGroundType(formData.pitch_type)) {
+      const s = cricketPitchSurfaceForDb(formData.pitch_type, formData.cricket_pitch_surface);
+      if (!s) {
+        Alert.alert('Pitch surface', 'Please choose Turf or Matting for this cricket ground.');
+        return;
+      }
+    }
+
     setLoading(true);
     try {
       const { data: created, error } = await supabase
@@ -281,6 +291,10 @@ export default function AddGroundScreen() {
           pincode: formData.pincode,
           base_price_per_hour: parseFloat(formData.base_price_per_hour),
           pitch_type: formData.pitch_type || null,
+          cricket_pitch_surface: cricketPitchSurfaceForDb(
+            formData.pitch_type,
+            formData.cricket_pitch_surface,
+          ),
           ground_size: formData.ground_size || null,
           capacity: formData.capacity ? parseInt(formData.capacity) : null,
           has_floodlights: formData.has_floodlights,
@@ -538,7 +552,13 @@ export default function AddGroundScreen() {
               return (
                 <Pressable
                   key={label}
-                  onPress={() => setFormData({ ...formData, pitch_type: label })}
+                  onPress={() =>
+                    setFormData({
+                      ...formData,
+                      pitch_type: label,
+                      cricket_pitch_surface: '',
+                    })
+                  }
                   style={[styles.typeChip, active && styles.typeChipActive]}
                 >
                   <Text style={[styles.typeChipText, active && styles.typeChipTextActive]}>
@@ -548,6 +568,29 @@ export default function AddGroundScreen() {
               );
             })}
           </View>
+          {formData.pitch_type === 'Cricket Ground' ? (
+            <>
+              <Text style={styles.subLabel}>Pitch surface</Text>
+              <View style={styles.typeChipsRow}>
+                {(['Turf', 'Matting'] as const).map((surfaceLabel) => {
+                  const active = formData.cricket_pitch_surface === surfaceLabel;
+                  return (
+                    <Pressable
+                      key={surfaceLabel}
+                      onPress={() =>
+                        setFormData({ ...formData, cricket_pitch_surface: surfaceLabel })
+                      }
+                      style={[styles.typeChip, active && styles.typeChipActive]}
+                    >
+                      <Text style={[styles.typeChipText, active && styles.typeChipTextActive]}>
+                        {surfaceLabel}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </>
+          ) : null}
           <Input
             label={
               formData.pitch_type === 'Cricket Ground'

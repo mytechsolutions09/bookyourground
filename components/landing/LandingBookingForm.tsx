@@ -70,6 +70,16 @@ function pad2(n: number): string {
   return `${n}`.padStart(2, '0');
 }
 
+/** `HH:MM` → `HH:MM:SS` for Postgres `time` RPC args. */
+function hhmmToPgTime(value: string): string {
+  const t = String(value ?? '').trim();
+  const m = /^(\d{1,2}):(\d{2})$/.exec(t);
+  if (!m) return t;
+  const hh = Math.min(23, Math.max(0, parseInt(m[1], 10)));
+  const mm = Math.min(59, Math.max(0, parseInt(m[2], 10)));
+  return `${pad2(hh)}:${pad2(mm)}:00`;
+}
+
 function parseISODate(iso: string): Date | null {
   // Expects `YYYY-MM-DD`.
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso.trim());
@@ -163,8 +173,11 @@ export default function LandingBookingForm({
     if (initialStartTime) return initialStartTime as TimeString;
     return hideGroundPicker && !initialGroundId ? '' : ('09:00' as TimeString);
   });
-  const [notes, setNotes] = useState('');
   const [teamType, setTeamType] = useState<'one' | 'both'>(initialTeamType ?? 'both');
+  /** Cricket only: team slots (0–2) already used for selected ground + date + time; null = not loaded. */
+  const [cricketSlotsUsed, setCricketSlotsUsed] = useState<number | null>(null);
+  /** True when not waiting on `cricket_team_slots_used_for_slot` (idle or response received). */
+  const [cricketSlotsFetched, setCricketSlotsFetched] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
 
@@ -346,6 +359,16 @@ export default function LandingBookingForm({
   const [searchAllStartHHMM, setSearchAllStartHHMM] = useState<Set<string>>(
     () => new Set(),
   );
+  /**
+   * Search flow (no ground selected yet): start times where at least one candidate ground
+   * still has capacity (cricket: 2 team slots per start; box: slot taken only after
+   * confirmed/completed booking — see `booked_start_times_for_ground_day`).
+   * DB: `booked_start_times_for_ground_day` + per-ground `time_slots` (is_available).
+   * `undefined` = not loaded yet (do not filter by capacity).
+   */
+  const [searchStartTimesWithCapacity, setSearchStartTimesWithCapacity] = useState<
+    Set<string> | undefined
+  >(undefined);
   // Custom price per slot start time (if set in `time_slots.custom_price`).
   const [slotPriceByStartTime, setSlotPriceByStartTime] = useState<Record<string, number | null>>({});
   // DB end_time per slot start_time, so we can support custom slot durations.
@@ -426,10 +449,133 @@ export default function LandingBookingForm({
     };
   }, [useLandingSearchFlow, locationKey, typeKey, bookingDate, grounds]);
 
+  useEffect(() => {
+    if (!useLandingSearchFlow || selectedGround?.id || !locationKey || !typeKey || !bookingDate) {
+      setSearchStartTimesWithCapacity(undefined);
+      return;
+    }
+
+    const parsed = parseISODate(bookingDate);
+    if (!parsed) {
+      setSearchStartTimesWithCapacity(undefined);
+      return;
+    }
+
+    const candidates = grounds.filter((g) => {
+      const matchesLocation = locationKeyForGround(g) === locationKey;
+      const matchesType = (g.pitch_type ?? '') === typeKey;
+      return matchesLocation && matchesType;
+    });
+
+    if (!candidates.length) {
+      setSearchStartTimesWithCapacity(new Set());
+      return;
+    }
+
+    const dow = getDayOfWeek(parsed) as any;
+    let cancelled = false;
+    setSearchStartTimesWithCapacity(undefined);
+
+    (async () => {
+      try {
+        const rows = await Promise.all(
+          candidates.map(async (g) => {
+            const [slotsRes, bookedRes] = await Promise.all([
+              supabase
+                .from('time_slots')
+                .select('start_time')
+                .eq('ground_id', g.id)
+                .eq('day_of_week', dow)
+                .eq('is_available', true),
+              supabase.rpc('booked_start_times_for_ground_day', {
+                p_ground_id: g.id,
+                p_booking_date: bookingDate,
+              }),
+            ]);
+
+            if (slotsRes.error || bookedRes.error) {
+              console.warn('search capacity slot load', slotsRes.error ?? bookedRes.error);
+              return { available: [] as string[] };
+            }
+
+            const full = new Set<string>();
+            (bookedRes.data as { start_time: string }[] | null)?.forEach((row) => {
+              const hh = normalizeDbTimeToHHMM(row.start_time);
+              if (hh) full.add(hh);
+            });
+
+            const available: string[] = [];
+            (slotsRes.data ?? []).forEach((row: { start_time: string }) => {
+              const hh = normalizeDbTimeToHHMM(row.start_time);
+              if (hh && !full.has(hh)) available.push(hh);
+            });
+            return { available };
+          }),
+        );
+
+        if (cancelled) return;
+        const union = new Set<string>();
+        rows.forEach((r) => r.available.forEach((h) => union.add(h)));
+        setSearchStartTimesWithCapacity(union);
+      } catch (e) {
+        console.warn('searchStartTimesWithCapacity unexpected', e);
+        if (!cancelled) setSearchStartTimesWithCapacity(new Set());
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [useLandingSearchFlow, selectedGround?.id, locationKey, typeKey, bookingDate, grounds]);
+
   const isBoxCricket = useMemo(() => {
     const p = (selectedGround?.pitch_type ?? typeKey ?? '').toLowerCase();
     return p.includes('box');
   }, [selectedGround, typeKey]);
+
+  const shouldFetchCricketSlotUsage =
+    !isBoxCricket && !!selectedGround?.id && !!bookingDate && !!startTime;
+
+  const hideBothTeamsOption =
+    !isBoxCricket &&
+    shouldFetchCricketSlotUsage &&
+    (cricketSlotsFetched ? cricketSlotsUsed !== null && cricketSlotsUsed >= 1 : true);
+
+  useEffect(() => {
+    if (isBoxCricket || !selectedGround?.id || !bookingDate || !startTime) {
+      setCricketSlotsUsed(null);
+      setCricketSlotsFetched(true);
+      return;
+    }
+    let cancelled = false;
+    setCricketSlotsFetched(false);
+    (async () => {
+      const { data, error } = await supabase.rpc('cricket_team_slots_used_for_slot', {
+        p_ground_id: selectedGround.id,
+        p_booking_date: bookingDate,
+        p_start_time: hhmmToPgTime(startTime),
+      });
+      if (cancelled) return;
+      if (error) {
+        console.warn('cricket_team_slots_used_for_slot', error);
+        setCricketSlotsUsed(0);
+        setCricketSlotsFetched(true);
+        return;
+      }
+      const n = typeof data === 'number' ? data : Number(data);
+      setCricketSlotsUsed(Number.isFinite(n) ? n : 0);
+      setCricketSlotsFetched(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isBoxCricket, selectedGround?.id, bookingDate, startTime]);
+
+  useEffect(() => {
+    if (!isBoxCricket && hideBothTeamsOption && teamType === 'both') {
+      setTeamType('one');
+    }
+  }, [isBoxCricket, hideBothTeamsOption, teamType]);
 
   const computed = useMemo(() => {
     if (!selectedGround) return null;
@@ -621,7 +767,15 @@ export default function LandingBookingForm({
 
       const baseFromDb = fromSelectedGround ?? fromSearchUnion;
       const base = baseFromDb ?? timeSlots;
-      return base.filter((s) => !bookedStartHHMM.has(s.value));
+      let list = base.filter((s) => !bookedStartHHMM.has(s.value));
+      if (
+        useLandingSearchFlow &&
+        !selectedGround?.id &&
+        searchStartTimesWithCapacity !== undefined
+      ) {
+        list = list.filter((s) => searchStartTimesWithCapacity.has(s.value));
+      }
+      return list;
     },
     [
       timeSlots,
@@ -630,6 +784,7 @@ export default function LandingBookingForm({
       allStartHHMM,
       searchAllowedStartHHMM,
       searchAllStartHHMM,
+      searchStartTimesWithCapacity,
       selectedGround?.id,
       useLandingSearchFlow,
     ],
@@ -657,16 +812,6 @@ export default function LandingBookingForm({
     if (availableTimeSlots.some((s) => s.value === startTime)) return;
     setStartTime('');
   }, [useLandingSearchFlow, availableTimeSlots, startTime]);
-
-  const finalNotes = useMemo(() => {
-    const trimmed = notes.trim();
-    if (isBoxCricket) {
-      return trimmed || null;
-    }
-    const teamLine = teamType === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams';
-    if (!trimmed) return teamLine;
-    return `${trimmed}\n${teamLine}`;
-  }, [notes, teamType, isBoxCricket]);
 
   const isWeb = Platform.OS === 'web';
   const webColumnCount =
@@ -818,29 +963,27 @@ export default function LandingBookingForm({
     );
   }
 
+  /** Availability filtering runs only when both date and start time are chosen. */
+  const wantsSlotFilter = !!(bookingDate && startTime);
+
   const canRunSearch = useMemo(() => {
-    const timeIsValidSlot =
-      !!startTime && availableTimeSlots.some((s) => s.value === startTime);
+    if (!locationKey || !typeKey || loadingGrounds) return false;
+    if (!wantsSlotFilter) return true;
+
+    const timeIsValidSlot = availableTimeSlots.some((s) => s.value === startTime);
     const slotIsAvailableForSearch =
       useLandingSearchFlow && !selectedGround?.id
-        ? !!startTime && searchAllowedStartHHMM.has(startTime)
+        ? searchAllowedStartHHMM.has(startTime)
         : true;
-    return (
-      !!locationKey &&
-      !!typeKey &&
-      !!bookingDate &&
-      timeIsValidSlot &&
-      slotIsAvailableForSearch &&
-      availableTimeSlots.length > 0 &&
-      !loadingGrounds
-    );
+    return timeIsValidSlot && slotIsAvailableForSearch && availableTimeSlots.length > 0;
   }, [
     locationKey,
     typeKey,
+    loadingGrounds,
+    wantsSlotFilter,
     bookingDate,
     startTime,
     availableTimeSlots,
-    loadingGrounds,
     useLandingSearchFlow,
     selectedGround?.id,
     searchAllowedStartHHMM,
@@ -853,11 +996,16 @@ export default function LandingBookingForm({
 
   const handleSearch = async () => {
     if (!canRunSearch) {
-      Alert.alert('Missing details', 'Please choose location, type, date, and start time.');
+      Alert.alert(
+        'Missing details',
+        wantsSlotFilter
+          ? 'Please choose location, type, date, and a valid start time.'
+          : 'Please choose location and ground type.',
+      );
       return;
     }
 
-      const candidates = grounds.filter((g) => {
+    const candidates = grounds.filter((g) => {
       const matchesLocation = locationKeyForGround(g) === locationKey;
       const matchesType = (g.pitch_type ?? '') === typeKey;
       return matchesLocation && matchesType;
@@ -870,10 +1018,19 @@ export default function LandingBookingForm({
       return;
     }
 
-      setSearching(true);
+    // Browse: list all grounds for location + type (no availability filter).
+    if (!wantsSlotFilter) {
+      setHasSearched(true);
+      setSelectedGroundId(null);
+      setSearchSlotPriceByGroundId({});
+      setSearchResults(candidates);
+      return;
+    }
+
+    setSearching(true);
     setHasSearched(true);
     setSelectedGroundId(null);
-      setSearchSlotPriceByGroundId({});
+    setSearchSlotPriceByGroundId({});
     try {
       const candidateIds = candidates.map((c) => c.id);
       const startTimeDb = `${startTime}:00`;
@@ -1036,7 +1193,11 @@ export default function LandingBookingForm({
           total_hours: computed.totalHours,
           price_per_hour: pricePerHour,
           total_amount: computed.totalAmount,
-          notes: finalNotes || null,
+          notes: isBoxCricket
+            ? null
+            : teamType === 'one'
+              ? 'Teams: 1 Team'
+              : 'Teams: Both Teams',
           status: 'pending',
         })
         .select('id')
@@ -1153,24 +1314,43 @@ export default function LandingBookingForm({
                 setTeamType('one');
                 if (useLandingSearchFlow) clearSearchState();
               }}
-              style={[styles.teamToggleOption, teamType === 'one' && styles.teamToggleOptionActive]}
+              style={[
+                styles.teamToggleOption,
+                teamType === 'one' && styles.teamToggleOptionActive,
+              ]}
             >
               <Text style={[styles.teamToggleText, teamType === 'one' && styles.teamToggleTextActive]}>
                 1 Team
               </Text>
             </Pressable>
             <Pressable
+              disabled={hideBothTeamsOption}
               onPress={() => {
                 setTeamType('both');
                 if (useLandingSearchFlow) clearSearchState();
               }}
-              style={[styles.teamToggleOption, teamType === 'both' && styles.teamToggleOptionActive]}
+              style={[
+                styles.teamToggleOption,
+                hideBothTeamsOption && styles.teamToggleOptionDisabled,
+                teamType === 'both' && !hideBothTeamsOption && styles.teamToggleOptionActive,
+              ]}
             >
-              <Text style={[styles.teamToggleText, teamType === 'both' && styles.teamToggleTextActive]}>
+              <Text
+                style={[
+                  styles.teamToggleText,
+                  teamType === 'both' && !hideBothTeamsOption && styles.teamToggleTextActive,
+                  hideBothTeamsOption && styles.teamToggleTextDisabled,
+                ]}
+              >
                 Both Teams
               </Text>
             </Pressable>
           </View>
+          {hideBothTeamsOption ? (
+            <Text style={styles.teamToggleHint}>
+              One team slot is already booked for this time — only a single-team booking is available.
+            </Text>
+          ) : null}
         </View>
       ) : null}
 
@@ -1319,17 +1499,6 @@ export default function LandingBookingForm({
         </View>
       </View>
 
-      <View style={[styles.section, webGridSectionStyle, webSingleColumnStyle, webFullSpanStyle]}>
-        <Text style={styles.label}>Notes (optional)</Text>
-        <TextInput
-          style={[styles.input, styles.inputWide]}
-          placeholder="Any special requests"
-          value={notes}
-          onChangeText={setNotes}
-          editable={!submitting}
-        />
-      </View>
-
       {useLandingSearchFlow && hasSearched ? (
         <View style={[styles.section, webFullSpanStyle, styles.searchResultsSection]}>
           <Text style={styles.label}>Available grounds</Text>
@@ -1409,7 +1578,9 @@ export default function LandingBookingForm({
             </View>
           ) : !searching ? (
             <Text style={styles.smallMuted}>
-              No grounds have this slot free. Try another time or date.
+              {wantsSlotFilter
+                ? 'No grounds have this slot free. Try another time or date.'
+                : 'No grounds match your search.'}
             </Text>
           ) : null}
         </View>
@@ -1429,7 +1600,7 @@ export default function LandingBookingForm({
         <Text style={styles.subtitle}>
           {hideGroundPicker
             ? useLandingSearchFlow
-              ? 'Choose location, type, date, and time, then search and pick a ground to book.'
+              ? 'Choose location and type to search. Optionally add date and time to filter by an open slot.'
               : 'Choose location, ground type, date, and time to request your booking.'
             : 'Pick a ground and time slot to request your booking.'}
         </Text>
@@ -1673,6 +1844,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
   },
+  teamToggleOptionDisabled: {
+    backgroundColor: '#F3F4F6',
+    borderColor: '#E5E7EB',
+    opacity: 0.85,
+    ...Platform.select({
+      web: { cursor: 'not-allowed' as const },
+    }),
+  },
+  teamToggleHint: {
+    marginTop: 8,
+    fontSize: 12,
+    color: '#6B7280',
+    lineHeight: 18,
+  },
   teamToggleOptionActive: {
     borderColor: '#dc8d3c',
     backgroundColor: 'rgba(220,141,60,0.12)',
@@ -1685,6 +1870,9 @@ const styles = StyleSheet.create({
   },
   teamToggleTextActive: {
     color: '#dc8d3c',
+  },
+  teamToggleTextDisabled: {
+    color: '#9CA3AF',
   },
   summary: {
     marginTop: 12,

@@ -8,6 +8,7 @@ import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
 import { router } from 'expo-router';
+import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
 
 export default function OwnerBookingsScreen() {
   const { user } = useAuth();
@@ -398,15 +399,8 @@ export default function OwnerBookingsScreen() {
               : 'Your booking on another ground';
 
           if (isWeb) {
-            const isBox = String(item.ground.pitch_type ?? '').toLowerCase().includes('box');
-            let teamsCount: number = 2;
-            if (!isBox && item.notes) {
-              const match = /Teams:\s*(\d+)/i.exec(item.notes);
-              if (match) {
-                const parsed = Number(match[1]);
-                if (Number.isFinite(parsed) && parsed >= 1) teamsCount = parsed;
-              }
-            }
+            const teamsCell =
+              cricketTeamsLabelFromBooking(item.ground.pitch_type, item.notes) ?? '—';
 
             return (
               <TouchableOpacity
@@ -429,7 +423,7 @@ export default function OwnerBookingsScreen() {
                 </View>
 
                 <View style={[styles.tableCell, styles.colTeams]}>
-                  <Text style={styles.teamsText}>{teamsCount}</Text>
+                  <Text style={styles.teamsText}>{teamsCell}</Text>
                 </View>
 
                 <View style={[styles.tableCell, styles.colAmount]}>
@@ -567,7 +561,7 @@ const styles = StyleSheet.create({
     flex: 2,
   },
   colTeams: {
-    width: 72,
+    width: 108,
   },
   colAmount: {
     flex: 1.3,
@@ -599,7 +593,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#111827',
-    textAlign: 'center',
+    textAlign: 'left',
   },
   statusTextInline: {
     fontSize: 12,

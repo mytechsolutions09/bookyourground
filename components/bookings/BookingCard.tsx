@@ -1,10 +1,11 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
-import { Calendar, Clock, MapPin } from 'lucide-react-native';
+import { Calendar, Clock, MapPin, Users } from 'lucide-react-native';
 import { Platform } from 'react-native';
 import { BookingWithDetails } from '@/types';
 import { formatCurrency, formatDate, getStatusColor, getStatusLabel } from '@/utils/helpers';
 import { formatBookingSlotSummary } from '@/utils/bookingSlotFormat';
+import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
 import Card from '@/components/ui/Card';
 
 interface BookingCardProps {
@@ -22,6 +23,11 @@ export default function BookingCard({
 }: BookingCardProps) {
   const primaryImage = booking.ground.ground_images?.[0]?.image_url ||
     'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
+
+  const cricketTeamsLabel = cricketTeamsLabelFromBooking(
+    booking.ground.pitch_type,
+    booking.notes,
+  );
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
@@ -62,6 +68,12 @@ export default function BookingCard({
                 )}
               </Text>
             </View>
+            {cricketTeamsLabel ? (
+              <View style={styles.detail}>
+                <Users size={16} color="#dc8d3c" />
+                <Text style={styles.detailText}>{cricketTeamsLabel}</Text>
+              </View>
+            ) : null}
           </View>
 
           <View style={styles.footer}>

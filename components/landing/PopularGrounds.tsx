@@ -121,7 +121,7 @@ export default function PopularGrounds() {
 
         <View style={styles.cardBody}>
           <View style={styles.metaRow}>
-            <Text style={styles.metaLabel}>Pitch</Text>
+            <Text style={styles.metaLabel}>Type</Text>
             <Text style={styles.metaValue}>{g.pitch_type || 'Standard ground'}</Text>
           </View>
           {g.capacity ? (

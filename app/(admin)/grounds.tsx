@@ -26,6 +26,7 @@ import Button from '@/components/ui/Button';
 import { useAuth } from '@/contexts/AuthContext';
 import TimeSlotsEditor, { TimeSlotsEditorHandle } from '@/components/availability/TimeSlotsEditor';
 import { ensureDefaultTimeSlotsForGround } from '@/utils/timeSlotsDb';
+import { cricketPitchSurfaceForDb, isCricketGroundType } from '@/utils/cricketGround';
 import { getGroundBookingScheduleLines } from '@/utils/bookingSlots';
 
 function isVideoUrl(url: string): boolean {
@@ -137,6 +138,7 @@ export default function GroundsAdminScreen() {
     pincode: '',
     base_price_per_hour: '',
     pitch_type: '',
+    cricket_pitch_surface: '',
     ground_size: '',
     capacity: '',
     has_floodlights: false,
@@ -283,6 +285,7 @@ export default function GroundsAdminScreen() {
       pincode: ground.pincode ?? '',
       base_price_per_hour: ground.base_price_per_hour != null ? String(ground.base_price_per_hour) : '',
       pitch_type: (ground.pitch_type ?? '') as string,
+      cricket_pitch_surface: ((ground as any).cricket_pitch_surface ?? '') as string,
       ground_size: (ground.ground_size ?? '') as string,
       capacity: ground.capacity != null ? String(ground.capacity) : '',
       has_floodlights: !!(ground as any).has_floodlights,
@@ -314,6 +317,14 @@ export default function GroundsAdminScreen() {
 
   const handleSaveEdit = async () => {
     if (!editForm?.id) return;
+    if (isCricketGroundType(editForm.pitch_type)) {
+      const s = cricketPitchSurfaceForDb(editForm.pitch_type, editForm.cricket_pitch_surface);
+      if (!s) {
+        if (Platform.OS === 'web') alert('Please choose Turf or Matting for this cricket ground.');
+        else Alert.alert('Pitch surface', 'Please choose Turf or Matting for this cricket ground.');
+        return;
+      }
+    }
     try {
       setEditLoading(true);
       const payload: any = {
@@ -325,6 +336,10 @@ export default function GroundsAdminScreen() {
         pincode: String(editForm.pincode ?? '').trim(),
         base_price_per_hour: parseNullableFloat(String(editForm.base_price_per_hour ?? '')) ?? 0,
         pitch_type: String(editForm.pitch_type ?? '').trim() || null,
+        cricket_pitch_surface: cricketPitchSurfaceForDb(
+          editForm.pitch_type,
+          editForm.cricket_pitch_surface,
+        ),
         ground_size: String(editForm.ground_size ?? '').trim() || null,
         capacity: parseNullableInt(String(editForm.capacity ?? '')),
         has_floodlights: !!editForm.has_floodlights,
@@ -516,6 +531,14 @@ export default function GroundsAdminScreen() {
       else Alert.alert('Error', 'Please login');
       return;
     }
+    if (isCricketGroundType(createForm.pitch_type)) {
+      const s = cricketPitchSurfaceForDb(createForm.pitch_type, createForm.cricket_pitch_surface);
+      if (!s) {
+        if (Platform.OS === 'web') alert('Please choose Turf or Matting for this cricket ground.');
+        else Alert.alert('Pitch surface', 'Please choose Turf or Matting for this cricket ground.');
+        return;
+      }
+    }
     try {
       setCreateLoading(true);
 
@@ -529,6 +552,10 @@ export default function GroundsAdminScreen() {
         pincode: String(createForm.pincode ?? '').trim(),
         base_price_per_hour: parseNullableFloat(String(createForm.base_price_per_hour ?? '')) ?? 0,
         pitch_type: String(createForm.pitch_type ?? '').trim() || null,
+        cricket_pitch_surface: cricketPitchSurfaceForDb(
+          createForm.pitch_type,
+          createForm.cricket_pitch_surface,
+        ),
         ground_size: String(createForm.ground_size ?? '').trim() || null,
         capacity: parseNullableInt(String(createForm.capacity ?? '')),
         has_floodlights: !!createForm.has_floodlights,
@@ -771,9 +798,42 @@ export default function GroundsAdminScreen() {
                 <TextInput
                   style={styles.formInput}
                   value={String(createForm.pitch_type ?? '')}
-                  onChangeText={(t) => setCreateForm({ ...createForm, pitch_type: t })}
+                  onChangeText={(t) =>
+                    setCreateForm({
+                      ...createForm,
+                      pitch_type: t,
+                      cricket_pitch_surface: isCricketGroundType(t)
+                        ? createForm.cricket_pitch_surface
+                        : '',
+                    })
+                  }
                   placeholder="Type (Cricket Ground / Box Cricket)"
                 />
+                {isCricketGroundType(String(createForm.pitch_type ?? '')) ? (
+                  <>
+                    <Text style={styles.surfaceFieldLabel}>Pitch surface</Text>
+                    <View style={styles.surfaceChipsRow}>
+                      {(['Turf', 'Matting'] as const).map((surfaceLabel) => {
+                        const active = String(createForm.cricket_pitch_surface ?? '') === surfaceLabel;
+                        return (
+                          <Pressable
+                            key={surfaceLabel}
+                            onPress={() =>
+                              setCreateForm({ ...createForm, cricket_pitch_surface: surfaceLabel })
+                            }
+                            style={[styles.surfaceChip, active && styles.surfaceChipActive]}
+                          >
+                            <Text
+                              style={[styles.surfaceChipText, active && styles.surfaceChipTextActive]}
+                            >
+                              {surfaceLabel}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </>
+                ) : null}
 
                 <TextInput
                   style={styles.formInput}
@@ -1100,9 +1160,43 @@ export default function GroundsAdminScreen() {
               <TextInput
                 style={styles.formInput}
                 value={String(editForm?.pitch_type ?? '')}
-                onChangeText={(t) => setEditForm((prev: any) => ({ ...prev, pitch_type: t }))}
+                onChangeText={(t) =>
+                  setEditForm((prev: any) => ({
+                    ...prev,
+                    pitch_type: t,
+                    cricket_pitch_surface: isCricketGroundType(t) ? prev.cricket_pitch_surface : '',
+                  }))
+                }
                 placeholder="Type (Cricket Ground / Box Cricket)"
               />
+              {isCricketGroundType(String(editForm?.pitch_type ?? '')) ? (
+                <>
+                  <Text style={styles.surfaceFieldLabel}>Pitch surface</Text>
+                  <View style={styles.surfaceChipsRow}>
+                    {(['Turf', 'Matting'] as const).map((surfaceLabel) => {
+                      const active = String(editForm?.cricket_pitch_surface ?? '') === surfaceLabel;
+                      return (
+                        <Pressable
+                          key={surfaceLabel}
+                          onPress={() =>
+                            setEditForm((prev: any) => ({
+                              ...prev,
+                              cricket_pitch_surface: surfaceLabel,
+                            }))
+                          }
+                          style={[styles.surfaceChip, active && styles.surfaceChipActive]}
+                        >
+                          <Text
+                            style={[styles.surfaceChipText, active && styles.surfaceChipTextActive]}
+                          >
+                            {surfaceLabel}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </>
+              ) : null}
               <TextInput
                 style={styles.formInput}
                 value={String(editForm?.ground_size ?? '')}
@@ -1639,6 +1733,38 @@ const styles = StyleSheet.create({
   },
   formInputHalf: {
     flex: 1,
+  },
+  surfaceFieldLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#374151',
+    marginBottom: 6,
+  },
+  surfaceChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 10,
+  },
+  surfaceChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+  },
+  surfaceChipActive: {
+    borderColor: '#2563EB',
+    backgroundColor: '#EFF6FF',
+  },
+  surfaceChipText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#374151',
+  },
+  surfaceChipTextActive: {
+    color: '#1D4ED8',
   },
   switchRow: {
     flexDirection: 'row',

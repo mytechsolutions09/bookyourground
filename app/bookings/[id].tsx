@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, Alert, Platform, useWindowDimensions } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { MapPin, Calendar, Clock, User } from 'lucide-react-native';
+import { MapPin, Calendar, Clock, User, Users } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { BookingWithDetails } from '@/types';
 import { formatCurrency, formatDate, getStatusColor, getStatusLabel } from '@/utils/helpers';
 import { formatBookingSlotSummary } from '@/utils/bookingSlotFormat';
+import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import WebLayout from '@/components/web/WebLayout';
@@ -145,6 +146,11 @@ export default function BookingDetailsScreen() {
 
   const isNarrow = width < 900;
 
+  const cricketTeamsLabel = cricketTeamsLabelFromBooking(
+    booking.ground.pitch_type,
+    booking.notes,
+  );
+
   const detailsSection = (
     // Left: booking details
     <View style={isNarrow ? styles.detailsColumnNarrow : styles.detailsColumn}>
@@ -190,6 +196,15 @@ export default function BookingDetailsScreen() {
                 <Text style={styles.infoValue}>{booking.total_hours} hours</Text>
               </View>
             </View>
+            {cricketTeamsLabel ? (
+              <View style={styles.infoRow}>
+                <Users size={18} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>Teams</Text>
+                  <Text style={styles.infoValue}>{cricketTeamsLabel}</Text>
+                </View>
+              </View>
+            ) : null}
           </Card>
 
         {booking.notes && (
