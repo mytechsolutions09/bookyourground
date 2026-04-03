@@ -15,12 +15,17 @@ interface BookingCardProps {
   metaText?: string;
 }
 
+const NATIVE_CARD_BG = '#043529';
+const NATIVE_ACCENT = '#02c259';
+const NATIVE_TEXT = '#dcc093';
+
 export default function BookingCard({
   booking,
   onPress,
   showGroundDetails = true,
   metaText,
 }: BookingCardProps) {
+  const isWeb = Platform.OS === 'web';
   const primaryImage = booking.ground.ground_images?.[0]?.image_url ||
     'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
 
@@ -29,25 +34,43 @@ export default function BookingCard({
     booking.notes,
   );
 
+  const iconDetail = isWeb ? '#dc8d3c' : NATIVE_ACCENT;
+  const pinColor = isWeb ? '#666' : NATIVE_TEXT;
+  const groundNameStyle = [styles.groundName, !isWeb && styles.groundNameNative];
+  const locationStyle = [styles.location, !isWeb && styles.locationNative];
+  const detailTextStyle = [styles.detailText, !isWeb && styles.detailTextNative];
+  const compactNameStyle = [styles.compactGroundName, !isWeb && styles.compactGroundNameNative];
+  const compactLocStyle = [styles.compactGroundLocation, !isWeb && styles.compactGroundLocationNative];
+  const amountStyle = [styles.amount, !isWeb && styles.amountNative];
+  const metaStyle = [styles.metaText, !isWeb && styles.metaTextNative];
+  const badgeBg = isWeb ? getStatusColor(booking.status) : NATIVE_ACCENT;
+  const statusLabelStyle = styles.statusText;
+
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
-      <Card style={[styles.card, Platform.OS === 'web' && styles.cardWeb]}>
+      <Card
+        style={[
+          styles.card,
+          isWeb && styles.cardWeb,
+          !isWeb && styles.cardNative,
+        ]}
+      >
         <View style={styles.content}>
           {showGroundDetails && (
             <>
               <Image source={{ uri: primaryImage }} style={styles.image} />
-              <Text style={styles.groundName}>{booking.ground.name}</Text>
+              <Text style={groundNameStyle}>{booking.ground.name}</Text>
               <View style={styles.locationRow}>
-                <MapPin size={14} color="#666" />
-                <Text style={styles.location}>{booking.ground.city}</Text>
+                <MapPin size={14} color={pinColor} />
+                <Text style={locationStyle}>{booking.ground.city}</Text>
               </View>
             </>
           )}
 
           {!showGroundDetails && (
             <View style={styles.compactHeader}>
-              <Text style={styles.compactGroundName}>{booking.ground.name}</Text>
-              <Text style={styles.compactGroundLocation}>
+              <Text style={compactNameStyle}>{booking.ground.name}</Text>
+              <Text style={compactLocStyle}>
                 {booking.ground.city}, {booking.ground.state}
               </Text>
             </View>
@@ -55,12 +78,12 @@ export default function BookingCard({
 
           <View style={styles.detailsRow}>
             <View style={styles.detail}>
-              <Calendar size={16} color="#dc8d3c" />
-              <Text style={styles.detailText}>{formatDate(booking.booking_date)}</Text>
+              <Calendar size={16} color={iconDetail} />
+              <Text style={detailTextStyle}>{formatDate(booking.booking_date)}</Text>
             </View>
             <View style={styles.detail}>
-              <Clock size={16} color="#dc8d3c" />
-              <Text style={styles.detailText}>
+              <Clock size={16} color={iconDetail} />
+              <Text style={detailTextStyle}>
                 {formatBookingSlotSummary(
                   booking.start_time,
                   booking.end_time,
@@ -70,22 +93,22 @@ export default function BookingCard({
             </View>
             {cricketTeamsLabel ? (
               <View style={styles.detail}>
-                <Users size={16} color="#dc8d3c" />
-                <Text style={styles.detailText}>{cricketTeamsLabel}</Text>
+                <Users size={16} color={iconDetail} />
+                <Text style={detailTextStyle}>{cricketTeamsLabel}</Text>
               </View>
             ) : null}
           </View>
 
           <View style={styles.footer}>
             <View style={styles.footerLeft}>
-              <Text style={styles.amount}>{formatCurrency(booking.total_amount)}</Text>
+              <Text style={amountStyle}>{formatCurrency(booking.total_amount)}</Text>
             </View>
-            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(booking.status) }]}>
-              <Text style={styles.statusText}>{getStatusLabel(booking.status)}</Text>
+            <View style={[styles.statusBadge, { backgroundColor: badgeBg }]}>
+              <Text style={statusLabelStyle}>{getStatusLabel(booking.status)}</Text>
             </View>
           </View>
 
-          {metaText ? <Text style={styles.metaText}>{metaText}</Text> : null}
+          {metaText ? <Text style={metaStyle}>{metaText}</Text> : null}
         </View>
       </Card>
     </TouchableOpacity>
@@ -107,6 +130,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(229,231,235,0.9)',
   },
+  cardNative: {
+    backgroundColor: NATIVE_CARD_BG,
+    borderWidth: 1,
+    borderColor: NATIVE_ACCENT,
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 0,
+  },
   content: {
     gap: 8,
     padding: 10,
@@ -123,6 +155,9 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#111827',
   },
+  groundNameNative: {
+    color: NATIVE_TEXT,
+  },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -131,6 +166,9 @@ const styles = StyleSheet.create({
   location: {
     fontSize: 14,
     color: '#666',
+  },
+  locationNative: {
+    color: NATIVE_TEXT,
   },
   detailsRow: {
     gap: 6,
@@ -145,6 +183,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#4B5563',
   },
+  detailTextNative: {
+    color: NATIVE_TEXT,
+  },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -155,9 +196,12 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   amount: {
-    fontSize: 17,
+    fontSize: 15,
     fontWeight: '700',
     color: '#dc8d3c',
+  },
+  amountNative: {
+    color: NATIVE_ACCENT,
   },
   statusBadge: {
     paddingHorizontal: 12,
@@ -177,15 +221,24 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#111827',
   },
+  compactGroundNameNative: {
+    color: NATIVE_TEXT,
+  },
   compactGroundLocation: {
     fontSize: 13,
     color: '#6B7280',
     marginTop: 2,
   },
+  compactGroundLocationNative: {
+    color: NATIVE_TEXT,
+  },
   metaText: {
     marginTop: 6,
     fontSize: 12,
     color: '#6B7280',
+  },
+  metaTextNative: {
+    color: NATIVE_TEXT,
   },
   metaMuted: {
     fontSize: 12,

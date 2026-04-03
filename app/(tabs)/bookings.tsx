@@ -1,10 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, Platform, useWindowDimensions } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  RefreshControl,
+  Platform,
+  useWindowDimensions,
+  Pressable,
+} from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { BookingWithDetails } from '@/types';
-import { BookingStatus } from '@/types/database';
 import BookingCard from '@/components/bookings/BookingCard';
 import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '../../components/MobileAppNavbar';
@@ -51,23 +59,43 @@ export default function BookingsScreen() {
     }
   };
 
-  const todayIso = useMemo(() => {
+  /** Compare YYYY-MM-DD only; handles DB values with time / timezone suffix. */
+  const bookingDateOnly = (raw: string | null | undefined) =>
+    String(raw ?? '')
+      .trim()
+      .slice(0, 10);
+
+  /** Pending / unpaid bookings are not listed. */
+  const listBookings = useMemo(
+    () => bookings.filter((b) => b.status !== 'pending'),
+    [bookings],
+  );
+
+  const upcomingBookings = useMemo(() => {
     const d = new Date();
     const yyyy = d.getFullYear();
     const mm = `${d.getMonth() + 1}`.padStart(2, '0');
     const dd = `${d.getDate()}`.padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-  }, []);
+    const today = `${yyyy}-${mm}-${dd}`;
+    return listBookings.filter((b) => {
+      const bd = bookingDateOnly(b.booking_date as string);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(bd)) return false;
+      return bd >= today;
+    });
+  }, [listBookings]);
 
-  const upcomingBookings = useMemo(
-    () => bookings.filter(b => b.booking_date >= todayIso),
-    [bookings, todayIso],
-  );
-
-  const pastBookings = useMemo(
-    () => bookings.filter(b => b.booking_date < todayIso),
-    [bookings, todayIso],
-  );
+  const pastBookings = useMemo(() => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = `${d.getMonth() + 1}`.padStart(2, '0');
+    const dd = `${d.getDate()}`.padStart(2, '0');
+    const today = `${yyyy}-${mm}-${dd}`;
+    return listBookings.filter((b) => {
+      const bd = bookingDateOnly(b.booking_date as string);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(bd)) return false;
+      return bd < today;
+    });
+  }, [listBookings]);
 
   const visibleBookings = activeTab === 'upcoming' ? upcomingBookings : pastBookings;
 
@@ -117,7 +145,7 @@ export default function BookingsScreen() {
               </View>
             </View>
             <View style={styles.badgePill}>
-              <Text style={styles.badgePillNumber}>{bookings.length}</Text>
+              <Text style={styles.badgePillNumber}>{listBookings.length}</Text>
               <Text style={styles.badgePillLabel}>total bookings</Text>
             </View>
           </View>
@@ -161,44 +189,42 @@ export default function BookingsScreen() {
         </View>
       ) : (
         <>
-          <View style={styles.header}>
-            <Text style={styles.title}>My Bookings</Text>
-            <Text style={styles.subtitle}>
-              All your ground reservations and match history.
-            </Text>
-            <View style={styles.tabRow}>
-              <View
-                style={[
-                  styles.tabChip,
-                  activeTab === 'upcoming' && styles.tabChipActive,
+          <View style={styles.nativeFilterBar}>
+            <View style={styles.nativeTabRow}>
+              <Pressable
+                onPress={() => setActiveTab('upcoming')}
+                style={({ pressed }) => [
+                  styles.nativeTabChip,
+                  activeTab === 'upcoming' && styles.nativeTabChipActive,
+                  pressed && styles.nativeTabChipPressed,
                 ]}
               >
                 <Text
                   style={[
-                    styles.tabChipText,
-                    activeTab === 'upcoming' && styles.tabChipTextActive,
+                    styles.nativeTabChipText,
+                    activeTab === 'upcoming' && styles.nativeTabChipTextActive,
                   ]}
-                  onPress={() => setActiveTab('upcoming')}
                 >
                   {`Upcoming (${upcomingBookings.length})`}
                 </Text>
-              </View>
-              <View
-                style={[
-                  styles.tabChip,
-                  activeTab === 'past' && styles.tabChipActive,
+              </Pressable>
+              <Pressable
+                onPress={() => setActiveTab('past')}
+                style={({ pressed }) => [
+                  styles.nativeTabChip,
+                  activeTab === 'past' && styles.nativeTabChipActive,
+                  pressed && styles.nativeTabChipPressed,
                 ]}
               >
                 <Text
                   style={[
-                    styles.tabChipText,
-                    activeTab === 'past' && styles.tabChipTextActive,
+                    styles.nativeTabChipText,
+                    activeTab === 'past' && styles.nativeTabChipTextActive,
                   ]}
-                  onPress={() => setActiveTab('past')}
                 >
                   {`Past (${pastBookings.length})`}
                 </Text>
-              </View>
+              </Pressable>
             </View>
           </View>
 
@@ -213,13 +239,18 @@ export default function BookingsScreen() {
             keyExtractor={item => item.id}
             key="bookings-1-col"
             numColumns={1}
-            contentContainerStyle={styles.list}
+            contentContainerStyle={styles.listNative}
             refreshControl={
-              <RefreshControl refreshing={loading} onRefresh={loadBookings} />
+              <RefreshControl
+                refreshing={loading}
+                onRefresh={loadBookings}
+                tintColor="#00ea6b"
+                colors={['#00ea6b']}
+              />
             }
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No bookings found</Text>
+                <Text style={styles.emptyTextNative}>No bookings found</Text>
               </View>
             }
           />
@@ -234,7 +265,7 @@ export default function BookingsScreen() {
 
   return (
     <View style={styles.nativeScreen}>
-      <MobileAppNavbar />
+      <MobileAppNavbar title="My bookings" titleColor="#00ea6b" />
       <View style={styles.nativeBody}>{content}</View>
     </View>
   );
@@ -243,14 +274,53 @@ export default function BookingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    ...Platform.select({
+      web: { backgroundColor: '#F5F5F5' },
+      default: { backgroundColor: '#043529' },
+    }),
   },
   nativeScreen: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#043529',
   },
   nativeBody: {
     flex: 1,
+    backgroundColor: '#043529',
+  },
+  nativeFilterBar: {
+    backgroundColor: '#043529',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 12,
+  },
+  nativeTabRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  nativeTabChip: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#00ea6b',
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nativeTabChipActive: {
+    backgroundColor: '#00ea6b',
+  },
+  nativeTabChipPressed: {
+    opacity: 0.85,
+  },
+  nativeTabChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#00ea6b',
+  },
+  nativeTabChipTextActive: {
+    color: '#043529',
   },
   header: {
     backgroundColor: '#FFFFFF',
@@ -290,6 +360,11 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: 16,
+  },
+  listNative: {
+    padding: 16,
+    paddingBottom: 24,
+    flexGrow: 1,
   },
   webList: {
     paddingHorizontal: 24,
@@ -335,6 +410,10 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 15,
     color: '#6B7280',
+  },
+  emptyTextNative: {
+    fontSize: 15,
+    color: '#E5E7EB',
   },
   badgePill: {
     paddingHorizontal: 14,

@@ -24,9 +24,9 @@ export default function GroundsTabScreen() {
   // Native: full-screen booking with navbar + logo.
   return (
     <View style={styles.nativeRoot}>
-      <MobileAppNavbar />
+      <MobileAppNavbar title="Book a ground" />
       <View style={styles.page}>
-        <LandingBookingForm fullWidth noCard />
+        <LandingBookingForm fullWidth noCard bookGroundScreenNative hideTitle />
       </View>
     </View>
   );

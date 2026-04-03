@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
-import { Platform } from 'react-native';
+import { Platform, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { MobileTabBarHost } from '@/components/navigation/MobileTabBarHost';
 
 export default function RootLayout() {
   useFrameworkReady();
@@ -27,20 +28,26 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <Stack
-        screenOptions={{
-          headerShown: false,
-          // Avoid default nav/card tint flashing blue before the landing paints.
-          contentStyle: { backgroundColor: '#FFFFFF' },
-        }}
-      >
-        <Stack.Screen name="index" />
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="(owner)" />
-        <Stack.Screen name="(admin)" />
-        <Stack.Screen name="+not-found" />
-      </Stack>
+      <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+        <View style={{ flex: 1 }}>
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              // Avoid default nav/card tint flashing blue before the landing paints.
+              contentStyle: { backgroundColor: '#FFFFFF', flex: 1 },
+            }}
+          >
+            <Stack.Screen name="index" />
+            <Stack.Screen name="welcome" />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="(owner)" />
+            <Stack.Screen name="(admin)" />
+            <Stack.Screen name="+not-found" />
+          </Stack>
+        </View>
+        <MobileTabBarHost />
+      </View>
       <StatusBar style="auto" />
     </AuthProvider>
   );

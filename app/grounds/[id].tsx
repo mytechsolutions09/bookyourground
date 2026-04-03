@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, Alert, Platform, TextInput, Pressable, Linking } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { MapPin, Star } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { slugifyGroundSegment } from '@/utils/groundSlug';
@@ -11,7 +11,6 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import WebLayout from '@/components/web/WebLayout';
 import LandingBookingForm from '@/components/landing/LandingBookingForm';
-
 function looksLikeUuid(value: string | undefined | null): boolean {
   if (!value) return false;
   const v = String(value).trim();
@@ -304,7 +303,10 @@ export default function GroundDetailsScreen() {
     const heroIdx = Math.min(heroImageIndex, Math.max(0, imageUrls.length - 1));
 
     content = (
-      <ScrollView style={styles.container}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={Platform.OS === 'web' ? undefined : { paddingBottom: 0 }}
+      >
         <View style={styles.content}>
           <Card style={[styles.section, styles.imageCard]}>
             <Image
@@ -426,41 +428,34 @@ export default function GroundDetailsScreen() {
 
           <Card style={styles.section}>
             <Text style={styles.sectionTitle}>Amenities</Text>
-            {ground.has_floodlights ||
-            ground.has_parking ||
-            ground.has_changing_rooms ||
-            ground.has_pavilion ||
-            ground.has_washrooms ? (
-              <View style={styles.amenitiesGrid}>
-                {ground.has_floodlights ? (
-                  <View style={styles.amenityChip}>
-                    <Text style={styles.amenityText}>Floodlights</Text>
-                  </View>
-                ) : null}
-                {ground.has_parking ? (
-                  <View style={styles.amenityChip}>
-                    <Text style={styles.amenityText}>Parking</Text>
-                  </View>
-                ) : null}
-                {ground.has_changing_rooms ? (
-                  <View style={styles.amenityChip}>
-                    <Text style={styles.amenityText}>Changing Rooms</Text>
-                  </View>
-                ) : null}
-                {ground.has_pavilion ? (
-                  <View style={styles.amenityChip}>
-                    <Text style={styles.amenityText}>Pavilion</Text>
-                  </View>
-                ) : null}
-                {ground.has_washrooms ? (
-                  <View style={styles.amenityChip}>
-                    <Text style={styles.amenityText}>Washroom</Text>
-                  </View>
-                ) : null}
-              </View>
-            ) : (
-              <Text style={styles.amenitiesEmpty}>None listed</Text>
-            )}
+            {(() => {
+              const items: string[] = [];
+              if (ground.has_floodlights) items.push('Floodlights');
+              if (ground.has_parking) items.push('Parking');
+              if (ground.has_changing_rooms) items.push('Changing Rooms');
+              if (ground.has_pavilion) items.push('Pavilion');
+              if (ground.has_washrooms) items.push('Washroom');
+
+              if (!items.length) {
+                return <Text style={styles.amenitiesEmpty}>None listed</Text>;
+              }
+
+              return (
+                <View style={styles.amenitiesGrid}>
+                  {items.map((label, index) => (
+                    <View
+                      key={label}
+                      style={[
+                        styles.amenityChip,
+                        index % 2 === 0 ? styles.amenityChipDark : styles.amenityChipGreen,
+                      ]}
+                    >
+                      <Text style={styles.amenityText}>{label}</Text>
+                    </View>
+                  ))}
+                </View>
+              );
+            })()}
           </Card>
 
           <Card style={styles.section}>
@@ -565,6 +560,8 @@ export default function GroundDetailsScreen() {
                 teams === 'one' || teams === 'both' ? (teams as 'one' | 'both') : undefined
               }
               fullWidth
+              hideTitle
+              groundPageAccent
             />
           ) : null}
         </View>
@@ -572,11 +569,12 @@ export default function GroundDetailsScreen() {
     );
   }
 
-  if (Platform.OS === 'web') {
-    return <WebLayout>{content}</WebLayout>;
-  }
-
-  return content;
+  return (
+    <>
+      <Stack.Screen options={{ title: ground?.name ?? 'Ground' }} />
+      {Platform.OS === 'web' ? <WebLayout>{content}</WebLayout> : content}
+    </>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -639,6 +637,9 @@ const styles = StyleSheet.create({
         marginHorizontal: 'auto',
         width: '100%',
         paddingTop: 80,
+      },
+      default: {
+        paddingBottom: 0,
       },
     }),
   },
@@ -726,10 +727,15 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   amenityChip: {
-    backgroundColor: '#4CAF50',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
+  },
+  amenityChipDark: {
+    backgroundColor: '#043529',
+  },
+  amenityChipGreen: {
+    backgroundColor: '#02c259',
   },
   amenityText: {
     fontSize: 14,

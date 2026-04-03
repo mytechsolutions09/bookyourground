@@ -1,24 +1,22 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, Alert, Platform, useWindowDimensions } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { MapPin, Calendar, Clock, User, Users } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/contexts/AuthContext';
 import { BookingWithDetails } from '@/types';
-import { formatCurrency, formatDate, getStatusColor, getStatusLabel } from '@/utils/helpers';
+import { formatCurrency, formatDate } from '@/utils/helpers';
 import { formatBookingSlotSummary } from '@/utils/bookingSlotFormat';
+import { hoursBetweenBooked, normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
 import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
 import Card from '@/components/ui/Card';
-import Button from '@/components/ui/Button';
 import WebLayout from '@/components/web/WebLayout';
 
 export default function BookingDetailsScreen() {
   const { id } = useLocalSearchParams();
-  const { user } = useAuth();
   const [booking, setBooking] = useState<BookingWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
-  const [paymentLoading, setPaymentLoading] = useState(false);
   const { width } = useWindowDimensions();
+  const Section = Platform.OS === 'web' ? Card : View;
 
   useEffect(() => {
     loadBooking();
@@ -49,81 +47,18 @@ export default function BookingDetailsScreen() {
     }
   };
 
-  const handleDummyPayment = async () => {
-    if (!booking) return;
-    if (!user) {
-      Alert.alert('Sign in required', 'Please sign in to complete the payment.');
-      return;
+  const durationHoursLabel = useMemo(() => {
+    if (!booking) return '';
+    const st = normalizeDbTimeToHHMM(booking.start_time);
+    const et = normalizeDbTimeToHHMM(booking.end_time);
+    if (st && et) {
+      const h = hoursBetweenBooked(st, et);
+      if (h != null && Number.isFinite(h) && h > 0) {
+        return `${Math.round(h * 100) / 100}`;
+      }
     }
-    if (booking.status !== 'pending') {
-      Alert.alert('Payment not required', 'This booking is already processed.');
-      return;
-    }
-
-    try {
-      setPaymentLoading(true);
-
-      const { error: txError } = await supabase.from('transactions').insert({
-        booking_id: booking.id,
-        user_id: booking.user_id,
-        amount: booking.total_amount,
-        status: 'completed',
-        payment_method: 'dummy',
-        transaction_reference: `DUMMY-${Date.now()}`,
-      });
-
-      if (txError) throw txError;
-
-      const { error: bookingError } = await supabase
-        .from('bookings')
-        .update({
-          status: 'confirmed',
-        })
-        .eq('id', booking.id);
-
-      if (bookingError) throw bookingError;
-
-      await loadBooking();
-
-      router.replace(`/bookings/${booking.id}/confirmed` as any);
-    } catch (error: any) {
-      console.error('Error processing dummy payment:', error);
-      Alert.alert('Payment failed', error.message || 'Unable to process payment.');
-    } finally {
-      setPaymentLoading(false);
-    }
-  };
-
-  const handleCancelBooking = () => {
-    Alert.alert(
-      'Cancel Booking',
-      'Are you sure you want to cancel this booking?',
-      [
-        { text: 'No', style: 'cancel' },
-        {
-          text: 'Yes, Cancel',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const { error } = await supabase
-                .from('bookings')
-                .update({
-                  status: 'cancelled',
-                  cancelled_at: new Date().toISOString(),
-                })
-                .eq('id', id);
-
-              if (error) throw error;
-              Alert.alert('Success', 'Booking cancelled successfully');
-              loadBooking();
-            } catch (error: any) {
-              Alert.alert('Error', error.message);
-            }
-          },
-        },
-      ]
-    );
-  };
+    return String(booking.total_hours ?? '');
+  }, [booking]);
 
   if (loading || !booking) {
     const loadingContent = (
@@ -132,32 +67,60 @@ export default function BookingDetailsScreen() {
       </View>
     );
 
-    if (Platform.OS === 'web') {
-      return <WebLayout>{loadingContent}</WebLayout>;
-    }
-
-    return loadingContent;
+    return (
+      <>
+        <Stack.Screen options={{ title: 'Booking' }} />
+        {Platform.OS === 'web' ? <WebLayout>{loadingContent}</WebLayout> : loadingContent}
+      </>
+    );
   }
 
   const primaryImage = booking.ground.ground_images?.[0]?.image_url ||
     'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
 
-  const canCancel = booking.status === 'pending' || booking.status === 'confirmed';
-
   const isNarrow = width < 900;
+
+  if (booking.status === 'pending') {
+    const blocked = (
+      <View style={styles.loadingContainer}>
+        <Text style={styles.blockedTitle}>Booking not available</Text>
+        <Text style={styles.blockedSubtitle}>
+          This booking is not confirmed yet. It will appear here after confirmation.
+        </Text>
+        <Text
+          style={styles.backLink}
+          onPress={() => {
+            if (router.canGoBack?.()) router.back();
+            else router.push('/(tabs)/bookings' as any);
+          }}
+        >
+          Go back
+        </Text>
+      </View>
+    );
+    return (
+      <>
+        <Stack.Screen options={{ title: 'Booking' }} />
+        {Platform.OS === 'web' ? <WebLayout>{blocked}</WebLayout> : blocked}
+      </>
+    );
+  }
 
   const cricketTeamsLabel = cricketTeamsLabelFromBooking(
     booking.ground.pitch_type,
     booking.notes,
   );
 
+  const isWeb = Platform.OS === 'web';
+
   const detailsSection = (
     // Left: booking details
     <View style={isNarrow ? styles.detailsColumnNarrow : styles.detailsColumn}>
-      <View style={styles.detailsContent}>
-          <Image source={{ uri: primaryImage }} style={styles.image} />
+      <View style={isWeb ? styles.detailsContentWeb : styles.detailsContentMobileOuter}>
+        <Image source={{ uri: primaryImage }} style={[styles.image, !isWeb && styles.imageMobile]} />
 
-          <Card style={styles.section}>
+        <View style={isWeb ? styles.detailsBodyWeb : styles.detailsBodyNative}>
+          <Section style={styles.section}>
             <Text style={styles.groundName}>{booking.ground.name}</Text>
             <View style={styles.locationRow}>
               <MapPin size={16} color="#666" />
@@ -165,9 +128,9 @@ export default function BookingDetailsScreen() {
                 {booking.ground.address}, {booking.ground.city}, {booking.ground.state}
               </Text>
             </View>
-          </Card>
+          </Section>
 
-          <Card style={styles.section}>
+          <Section style={styles.section}>
             <Text style={styles.sectionTitle}>Booking Information</Text>
             <View style={styles.infoRow}>
               <Calendar size={18} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
@@ -193,7 +156,7 @@ export default function BookingDetailsScreen() {
               <Clock size={18} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
               <View style={styles.infoContent}>
                 <Text style={styles.infoLabel}>Duration</Text>
-                <Text style={styles.infoValue}>{booking.total_hours} hours</Text>
+                <Text style={styles.infoValue}>{durationHoursLabel} hours</Text>
               </View>
             </View>
             {cricketTeamsLabel ? (
@@ -205,14 +168,15 @@ export default function BookingDetailsScreen() {
                 </View>
               </View>
             ) : null}
-          </Card>
+          </Section>
 
-        {booking.notes && (
-          <Card style={styles.section}>
-            <Text style={styles.sectionTitle}>Notes</Text>
-            <Text style={styles.notes}>{booking.notes}</Text>
-          </Card>
-        )}
+          {booking.notes && (
+            <Section style={styles.section}>
+              <Text style={styles.sectionTitle}>Notes</Text>
+              <Text style={styles.notes}>{booking.notes}</Text>
+            </Section>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -220,65 +184,38 @@ export default function BookingDetailsScreen() {
   const isBoxCricket = (booking.ground.pitch_type ?? '').toLowerCase().includes('box');
 
   const paymentSection = (
-    // Right: payment summary + options
     <View style={isNarrow ? styles.paymentColumnNarrow : styles.paymentColumn}>
-      <Card style={styles.paymentCard}>
+      <Section style={styles.paymentCard}>
         <Text style={styles.sectionTitle}>Payment Summary</Text>
-        <View style={styles.paymentRow}>
-          <Text style={styles.paymentLabel}>
-            {isBoxCricket ? 'Price per hour' : 'Price per match'}
-          </Text>
-          <Text style={styles.paymentValue}>{formatCurrency(booking.price_per_hour)}</Text>
-        </View>
+        {(Platform.OS === 'web' || isBoxCricket) && (
+          <View style={styles.paymentRow}>
+            <Text style={styles.paymentLabel}>
+              {isBoxCricket ? 'Price per hour' : 'Price per match'}
+            </Text>
+            <Text style={styles.paymentValue}>{formatCurrency(booking.price_per_hour)}</Text>
+          </View>
+        )}
         {isBoxCricket && (
           <View style={styles.paymentRow}>
             <Text style={styles.paymentLabel}>Total hours</Text>
-            <Text style={styles.paymentValue}>{booking.total_hours}</Text>
+            <Text style={styles.paymentValue}>{durationHoursLabel}</Text>
           </View>
         )}
         <View style={[styles.paymentRow, styles.totalRow]}>
           <Text style={styles.totalLabel}>Total Amount</Text>
           <Text style={styles.totalValue}>{formatCurrency(booking.total_amount)}</Text>
         </View>
-      </Card>
+      </Section>
 
-      <Card style={styles.paymentCard}>
-        <Text style={styles.sectionTitle}>Payment Options</Text>
-        <View style={styles.paymentOptions}>
-          <View style={styles.paymentOptionRow}>
-            <View style={styles.paymentOptionBullet} />
-            <Text style={styles.paymentOptionText}>UPI (coming soon)</Text>
-          </View>
-          <View style={styles.paymentOptionRow}>
-            <View style={styles.paymentOptionBullet} />
-            <Text style={styles.paymentOptionText}>Card (coming soon)</Text>
-          </View>
-          <View style={styles.paymentOptionRow}>
-            <View style={styles.paymentOptionBullet} />
-            <Text style={styles.paymentOptionText}>Pay at ground (cash/UPI)</Text>
-          </View>
-        </View>
-
-        <Button
-          title={booking.status === 'pending' ? 'Confirm Booking' : 'Booking Confirmed'}
-          onPress={handleDummyPayment}
-          fullWidth
-          size="medium"
-          style={styles.payNowButton}
-          disabled={booking.status !== 'pending'}
-          loading={paymentLoading}
-        />
-
-        <Text
-          style={styles.backLink}
-          onPress={() => {
-            if (router.canGoBack?.()) router.back();
-            else router.push('/book-my-ground' as any);
-          }}
-        >
-          Go back
-        </Text>
-      </Card>
+      <Text
+        style={styles.backLink}
+        onPress={() => {
+          if (router.canGoBack?.()) router.back();
+          else router.push('/book-my-ground' as any);
+        }}
+      >
+        Go back
+      </Text>
     </View>
   );
 
@@ -301,23 +238,27 @@ export default function BookingDetailsScreen() {
     </View>
   );
 
-  if (Platform.OS === 'web') {
-    return <WebLayout>{content}</WebLayout>;
-  }
-
-  return content;
+  return (
+    <>
+      <Stack.Screen options={{ title: booking.ground.name ?? 'Booking' }} />
+      {Platform.OS === 'web' ? <WebLayout>{content}</WebLayout> : content}
+    </>
+  );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
     ...Platform.select({
       web: {
+        backgroundColor: '#F5F5F5',
         paddingTop: 48,
         paddingHorizontal: 16,
         paddingBottom: 32,
         overflowX: 'hidden' as any,
+      },
+      default: {
+        backgroundColor: '#FFFFFF',
       },
     }),
   },
@@ -325,7 +266,25 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    paddingHorizontal: 24,
+    ...Platform.select({
+      web: { backgroundColor: '#F5F5F5' },
+      default: { backgroundColor: '#FFFFFF' },
+    }),
+  },
+  blockedTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#212121',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  blockedSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 16,
   },
   header: {
     // removed header bar from payment page; keep styles in case re-used
@@ -341,23 +300,50 @@ const styles = StyleSheet.create({
   },
   bodyColumn: {
     flexGrow: 1,
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 32,
+    ...Platform.select({
+      web: {
+        paddingHorizontal: 16,
+        paddingTop: 16,
+        paddingBottom: 32,
+      },
+      default: {
+        paddingHorizontal: 0,
+        paddingTop: 0,
+        paddingBottom: 16,
+      },
+    }),
   },
   detailsColumn: {
     flex: 1.4,
-    backgroundColor: '#F5F5F5',
+    ...Platform.select({
+      web: { backgroundColor: '#F5F5F5' },
+      default: { backgroundColor: '#FFFFFF' },
+    }),
     minWidth: 0,
     flexShrink: 1,
   },
   detailsColumnNarrow: {
     width: '100%',
-    backgroundColor: '#F5F5F5',
+    ...Platform.select({
+      web: { backgroundColor: '#F5F5F5' },
+      default: { backgroundColor: '#FFFFFF' },
+    }),
   },
-  detailsContent: {
+  detailsContentWeb: {
     padding: 16,
     paddingBottom: 32,
+  },
+  detailsContentMobileOuter: {
+    padding: 0,
+  },
+  detailsBodyWeb: {
+    alignSelf: 'stretch',
+  },
+  detailsBodyNative: {
+    alignSelf: 'stretch',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 16,
   },
   paymentColumn: {
     flex: 1,
@@ -371,9 +357,12 @@ const styles = StyleSheet.create({
   paymentColumnNarrow: {
     width: '100%',
     marginTop: 16,
-    padding: 0,
     backgroundColor: 'transparent',
     borderLeftWidth: 0,
+    ...Platform.select({
+      web: { padding: 0 },
+      default: { paddingHorizontal: 16, paddingBottom: 0 },
+    }),
   },
   stackSection: {
     width: '100%',
@@ -384,6 +373,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0E0E0',
     borderRadius: 12,
     marginBottom: 16,
+  },
+  /** Native: full-bleed under stack header, no side padding / rounding */
+  imageMobile: {
+    borderRadius: 0,
+    marginBottom: 0,
   },
   section: {
     marginBottom: 16,
@@ -463,31 +457,6 @@ const styles = StyleSheet.create({
   },
   paymentCard: {
     marginBottom: 16,
-  },
-  paymentOptions: {
-    marginTop: 8,
-    marginBottom: 16,
-    gap: 8,
-  },
-  paymentOptionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  paymentOptionBullet: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#D1D5DB',
-  },
-  paymentOptionText: {
-    fontSize: 13,
-    color: '#4B5563',
-    fontWeight: '500',
-  },
-  payNowButton: {
-    marginTop: 8,
-    alignSelf: 'stretch',
   },
   backLink: {
     marginTop: 10,

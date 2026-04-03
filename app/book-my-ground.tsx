@@ -38,9 +38,15 @@ export default function BookMyGroundPage() {
   // Native (iOS / Android): full-screen booking form with simple navbar.
   return (
     <View style={styles.nativeRoot}>
-      <MobileAppNavbar />
+      <MobileAppNavbar title="Book a ground" />
       <View style={styles.page}>
-        <LandingBookingForm fullWidth separateSearchResults noCard />
+        <LandingBookingForm
+          fullWidth
+          separateSearchResults
+          noCard
+          bookGroundScreenNative
+          hideTitle
+        />
       </View>
     </View>
   );

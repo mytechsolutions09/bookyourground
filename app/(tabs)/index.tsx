@@ -224,7 +224,12 @@ export default function HomeScreen() {
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={loadGrounds} />
+          <RefreshControl
+            refreshing={loading}
+            onRefresh={loadGrounds}
+            tintColor="#00ea6b"
+            colors={['#00ea6b']}
+          />
         }
         numColumns={(Platform.OS as any) === 'web' ? 2 : 1}
         key={(Platform.OS as any) === 'web' ? 'web' : 'mobile'}
@@ -252,11 +257,11 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   nativeScreen: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#043529',
   },
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#043529',
   },
   header: {
     backgroundColor: '#043529',
@@ -393,6 +398,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#666',
+    color: '#E5E7EB',
   },
 });

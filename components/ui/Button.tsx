@@ -11,6 +11,8 @@ interface ButtonProps {
   fullWidth?: boolean;
   style?: ViewStyle;
   textStyle?: TextStyle;
+  /** Overrides default spinner color when `loading` (e.g. match `textStyle` on dark buttons). */
+  loadingIndicatorColor?: string;
 }
 
 export default function Button({
@@ -23,6 +25,7 @@ export default function Button({
   fullWidth = false,
   style,
   textStyle,
+  loadingIndicatorColor,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
   const primaryColor = '#01e669';
@@ -42,7 +45,12 @@ export default function Button({
       activeOpacity={0.7}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'outline' ? primaryColor : '#FFFFFF'} />
+        <ActivityIndicator
+          color={
+            loadingIndicatorColor ??
+            (variant === 'outline' ? primaryColor : '#FFFFFF')
+          }
+        />
       ) : (
         <Text style={[styles.text, styles[`${variant}Text`], styles[`${size}Text`], textStyle]}>
           {title}

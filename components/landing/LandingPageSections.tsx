@@ -16,7 +16,7 @@ export default function LandingPageSections({ variant }: { variant: Variant }) {
       <Hero />
       {variant === 'web' ? (
         <View style={styles.bookingSectionSpacer}>
-          <LandingBookingForm fullWidth />
+          <LandingBookingForm fullWidth separateSearchResults />
         </View>
       ) : null}
       <PopularGrounds />

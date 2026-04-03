@@ -6,6 +6,10 @@ import { formatCurrency } from '@/utils/helpers';
 import { getGroundBookingScheduleLines } from '@/utils/bookingSlots';
 import Card from '@/components/ui/Card';
 
+const NATIVE_CARD_BG = '#043529';
+const NATIVE_BORDER = '#02c259';
+const NATIVE_TEXT = '#dcc093';
+
 interface GroundCardProps {
   ground: GroundWithImages;
   onPress: () => void;
@@ -27,6 +31,7 @@ export default function GroundCard({
   displayPricePerUnit,
   unitLabelOverride,
 }: GroundCardProps) {
+  const isWeb = Platform.OS === 'web';
   const schedule = useMemo(
     () => getGroundBookingScheduleLines(ground.pitch_type),
     [ground.pitch_type],
@@ -50,20 +55,33 @@ export default function GroundCard({
     return `https://www.google.com/maps/search/?api=1&query=${query}`;
   }, [ground.address, ground.city, ground.state]);
 
+  const pinColor = isWeb ? '#666' : NATIVE_TEXT;
+  const scheduleIconColor = isWeb ? '#6B7280' : NATIVE_BORDER;
+  const nameStyle = [styles.name, compact && styles.nameCompact, !isWeb && styles.nameNative];
+  const ratingStyle = [styles.rating, compact && styles.ratingCompact, !isWeb && styles.ratingNative];
+  const locationStyle = [styles.location, !isWeb && styles.locationNative];
+  const scheduleTextStyle = [styles.scheduleText, !isWeb && styles.scheduleTextNative];
+  const priceStyle = [styles.price, compact && styles.priceCompact, !isWeb && styles.priceNative];
+  const mapsLinkStyle = [styles.mapsLink, !isWeb && styles.mapsLinkNative];
+  const amenityStyle = [styles.amenity, !isWeb && styles.amenityNative];
+
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.8}
       style={[styles.touchable, compact && styles.touchableCompact]}
     >
-      <Card style={[styles.card, compact && styles.cardCompact]}>
+      <Card
+        style={[
+          styles.card,
+          compact && styles.cardCompact,
+          !isWeb && styles.cardNative,
+        ]}
+      >
         <Image source={{ uri: primaryImage }} style={[styles.image, compact && styles.imageCompact]} />
         <View style={styles.content}>
           <View style={styles.titleRow}>
-            <Text
-              style={[styles.name, compact && styles.nameCompact]}
-              numberOfLines={2}
-            >
+            <Text style={nameStyle} numberOfLines={2}>
               {ground.name}
             </Text>
             <View style={styles.ratingBlock}>
@@ -80,7 +98,7 @@ export default function GroundCard({
                   );
                 })}
               </View>
-              <Text style={[styles.rating, compact && styles.ratingCompact]} numberOfLines={1}>
+              <Text style={ratingStyle} numberOfLines={1}>
                 {reviewCount > 0
                   ? `${averageRating.toFixed(1)} (${reviewCount})`
                   : 'No reviews yet'}
@@ -88,20 +106,20 @@ export default function GroundCard({
             </View>
           </View>
           <View style={styles.locationRow}>
-            <MapPin size={14} color="#666" />
-            <Text style={styles.location}>{ground.city}, {ground.state}</Text>
+            <MapPin size={14} color={pinColor} />
+            <Text style={locationStyle}>{ground.city}, {ground.state}</Text>
           </View>
           {showBookingSchedule ? (
             <View style={styles.scheduleBlock}>
               <View style={styles.scheduleRow}>
-                <Calendar size={13} color="#6B7280" />
-                <Text style={styles.scheduleText} numberOfLines={2}>
+                <Calendar size={13} color={scheduleIconColor} />
+                <Text style={scheduleTextStyle} numberOfLines={2}>
                   {schedule.datesLine}
                 </Text>
               </View>
               <View style={styles.scheduleRow}>
-                <Clock size={13} color="#6B7280" />
-                <Text style={styles.scheduleText} numberOfLines={3}>
+                <Clock size={13} color={scheduleIconColor} />
+                <Text style={scheduleTextStyle} numberOfLines={3}>
                   {schedule.slotsLine}
                 </Text>
               </View>
@@ -109,7 +127,7 @@ export default function GroundCard({
           ) : null}
             <View style={styles.footer}>
             <View style={styles.footerLeft}>
-              <Text style={[styles.price, compact && styles.priceCompact]}>
+              <Text style={priceStyle}>
                 {formatCurrency(
                   displayPricePerUnit != null
                     ? displayPricePerUnit
@@ -126,18 +144,18 @@ export default function GroundCard({
                     void Linking.openURL(mapsUrl);
                   }}
                 >
-                  <Text style={styles.mapsLink}>View on Google Maps</Text>
+                  <Text style={mapsLinkStyle}>View on Google Maps</Text>
                 </TouchableOpacity>
               )}
             </View>
             <View style={styles.amenities}>
-              {ground.has_floodlights ? <Text style={styles.amenity}>Lights</Text> : null}
-              {ground.has_parking ? <Text style={styles.amenity}>Parking</Text> : null}
+              {ground.has_floodlights ? <Text style={amenityStyle}>Lights</Text> : null}
+              {ground.has_parking ? <Text style={amenityStyle}>Parking</Text> : null}
               {ground.has_changing_rooms ? (
-                <Text style={styles.amenity}>Changing rooms</Text>
+                <Text style={amenityStyle}>Changing rooms</Text>
               ) : null}
-              {ground.has_pavilion ? <Text style={styles.amenity}>Pavilion</Text> : null}
-              {ground.has_washrooms ? <Text style={styles.amenity}>Washroom</Text> : null}
+              {ground.has_pavilion ? <Text style={amenityStyle}>Pavilion</Text> : null}
+              {ground.has_washrooms ? <Text style={amenityStyle}>Washroom</Text> : null}
             </View>
           </View>
         </View>
@@ -165,6 +183,15 @@ const styles = StyleSheet.create({
   cardCompact: {
     marginBottom: 8,
   },
+  cardNative: {
+    backgroundColor: NATIVE_CARD_BG,
+    borderWidth: 2,
+    borderColor: NATIVE_BORDER,
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 0,
+  },
   image: {
     width: '100%',
     height: undefined,
@@ -189,10 +216,13 @@ const styles = StyleSheet.create({
     minWidth: 0,
     fontSize: 18,
     fontWeight: '700',
-    color: '#212121',
+    color: '#043529',
   },
   nameCompact: {
     fontSize: 14,
+  },
+  nameNative: {
+    color: NATIVE_TEXT,
   },
   ratingBlock: {
     alignItems: 'flex-end',
@@ -215,6 +245,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
   },
+  locationNative: {
+    color: NATIVE_TEXT,
+  },
   rating: {
     fontSize: 12,
     color: '#666',
@@ -223,6 +256,9 @@ const styles = StyleSheet.create({
   },
   ratingCompact: {
     fontSize: 11,
+  },
+  ratingNative: {
+    color: NATIVE_TEXT,
   },
   scheduleBlock: {
     marginBottom: 10,
@@ -240,6 +276,9 @@ const styles = StyleSheet.create({
     color: '#4B5563',
     lineHeight: 16,
   },
+  scheduleTextNative: {
+    color: NATIVE_TEXT,
+  },
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -251,17 +290,24 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   price: {
-    fontSize: 20,
+    fontSize: 17,
     fontWeight: '700',
-    color: Platform.OS === 'web' ? '#dc8d3c' : '#2196F3',
+    color: '#02c259',
   },
   priceCompact: {
-    fontSize: 14,
+    fontSize: 13,
+  },
+  priceNative: {
+    color: NATIVE_BORDER,
   },
   mapsLink: {
     marginTop: 2,
     fontSize: 12,
     color: Platform.OS === 'web' ? '#2563EB' : '#1D4ED8',
+    textDecorationLine: 'underline',
+  },
+  mapsLinkNative: {
+    color: NATIVE_BORDER,
     textDecorationLine: 'underline',
   },
   amenities: {
@@ -279,5 +325,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
+  },
+  amenityNative: {
+    color: NATIVE_TEXT,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: NATIVE_BORDER,
   },
 });

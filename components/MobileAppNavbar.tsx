@@ -1,16 +1,26 @@
 import React from 'react';
-import { View, Image, StyleSheet } from 'react-native';
+import { View, Image, Text, StyleSheet } from 'react-native';
+
+type MobileAppNavbarProps = {
+  /** When set, shows this label instead of the logo (e.g. tab title). */
+  title?: string;
+  titleColor?: string;
+};
 
 /** Green top bar with logo — use on native-only screens (not web). */
-export default function MobileAppNavbar() {
+export default function MobileAppNavbar({ title, titleColor = '#02c259' }: MobileAppNavbarProps) {
   return (
     <View style={styles.navbar} accessibilityRole="header">
-      <Image
-        source={require('../assets/logo.png')}
-        style={styles.logo}
-        resizeMode="contain"
-        accessibilityLabel="Book my ground"
-      />
+      {title ? (
+        <Text style={[styles.titleText, { color: titleColor }]}>{title}</Text>
+      ) : (
+        <Image
+          source={require('../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
+          style={styles.logo}
+          resizeMode="contain"
+          accessibilityLabel="Book my ground"
+        />
+      )}
     </View>
   );
 }
@@ -33,5 +43,12 @@ const styles = StyleSheet.create({
     height: 40,
     width: 200,
     maxWidth: '100%',
+  },
+  titleText: {
+    marginTop: 8,
+    marginBottom: 6,
+    fontSize: 20,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
 });

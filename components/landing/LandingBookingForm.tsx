@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -26,6 +26,11 @@ import {
   formatSlotLabelHour,
   normalizeDbTimeToHHMM,
 } from '@/utils/bookingSlots';
+import {
+  savePendingBookingDraft,
+  peekPendingBookingDraft,
+  clearPendingBookingDraft,
+} from '@/lib/pendingBookingDraft';
 
 type TimeString = string; // expected: "HH:MM"
 
@@ -151,6 +156,12 @@ interface LandingBookingFormProps {
   separateSearchResults?: boolean;
   /** Native-only: render without Card container (used on /book-my-ground). */
   noCard?: boolean;
+  /** Hide the "Book a Ground" heading (e.g. on ground detail where the nav title is the ground name). */
+  hideTitle?: boolean;
+  /** Ground detail page: location/type fields use green/tan accents; Book Now fill `#01b854` (compact on native). */
+  groundPageAccent?: boolean;
+  /** Native /book-my-ground & Grounds tab: pin form to top with tight spacing (not vertically centered). */
+  bookGroundScreenNative?: boolean;
 }
 
 export default function LandingBookingForm({
@@ -162,6 +173,9 @@ export default function LandingBookingForm({
   fullWidth = false,
   separateSearchResults = false,
   noCard = false,
+  hideTitle = false,
+  groundPageAccent = false,
+  bookGroundScreenNative = false,
 }: LandingBookingFormProps) {
   const { user } = useAuth();
   const { width: windowWidth } = useWindowDimensions();
@@ -186,6 +200,11 @@ export default function LandingBookingForm({
   const [cricketSlotsFetched, setCricketSlotsFetched] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
+
+  /** After login: re-run Search and optionally re-select a ground from results. */
+  const pendingPostLoginSearchRef = useRef(false);
+  const pendingReselectGroundIdRef = useRef<string | null>(null);
+  const handleSearchRef = useRef<() => Promise<void>>(async () => {});
 
   const [locationKey, setLocationKey] = useState<string>('');
   const [typeKey, setTypeKey] = useState<string>('');
@@ -603,11 +622,12 @@ export default function LandingBookingForm({
       // If user selects only 1 team, charge half of the "both teams" price.
       const pricePerMatch =
         teamType === 'one' ? Math.round((baseMatchPrice / 2) * 100) / 100 : baseMatchPrice;
-      const totalHours = 1;
       const totalAmount = pricePerMatch;
 
       const _sanity = hoursBetweenBooked(startTime, derivedEndTime);
       if (_sanity === null || !Number.isFinite(_sanity) || _sanity <= 0) return null;
+      // Store actual slot span (e.g. 4h window) — price is still per match, not hourly.
+      const totalHours = _sanity;
 
       return { totalHours, totalAmount, pricePerUnit: pricePerMatch, unitLabel: 'match' as const };
     }
@@ -896,6 +916,8 @@ export default function LandingBookingForm({
     disabled,
     open: openControlled,
     onOpenChange,
+    groundPageDropdown,
+    bookGroundNative = false,
   }: {
     value: string;
     options: { key: string; label: string }[];
@@ -905,6 +927,10 @@ export default function LandingBookingForm({
     /** When set, menu open state is fully controlled by the parent. */
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
+    /** Ground detail: #043529 field + #02c259 border/text. */
+    groundPageDropdown?: boolean;
+    /** Book a ground tab (native): tan text/borders instead of white. */
+    bookGroundNative?: boolean;
   }) {
     const [internalOpen, setInternalOpen] = useState(false);
     const controlled = openControlled !== undefined;
@@ -925,16 +951,40 @@ export default function LandingBookingForm({
           }}
           style={[
             styles.dropdownButton,
-            open && styles.dropdownButtonOpen,
-            !!value && !disabled && styles.dropdownButtonSelected,
-            disabled && styles.dropdownButtonDisabled,
+            groundPageDropdown && styles.dropdownButtonGroundPage,
+            bookGroundNative && !groundPageDropdown && styles.dropdownButtonBookGroundNative,
+            open &&
+              (groundPageDropdown ? styles.dropdownButtonOpenGroundPage : styles.dropdownButtonOpen),
+            !!value && !disabled &&
+              (groundPageDropdown
+                ? styles.dropdownButtonSelectedGroundPage
+                : styles.dropdownButtonSelected),
+            disabled &&
+              (groundPageDropdown
+                ? styles.dropdownButtonDisabledGroundPage
+                : bookGroundNative
+                  ? styles.dropdownButtonDisabledBookGroundNative
+                  : styles.dropdownButtonDisabled),
           ]}
         >
           <Text
             style={[
               styles.dropdownButtonText,
-              !!value && !disabled && styles.dropdownButtonTextSelected,
-              disabled && styles.dropdownButtonTextDisabled,
+              groundPageDropdown && styles.dropdownButtonTextGroundPage,
+              bookGroundNative &&
+                !groundPageDropdown &&
+                styles.dropdownButtonTextBookGroundNative,
+              !!value &&
+                !disabled &&
+                (groundPageDropdown
+                  ? styles.dropdownButtonTextSelectedGroundPage
+                  : styles.dropdownButtonTextSelected),
+              disabled &&
+                (groundPageDropdown
+                  ? styles.dropdownButtonTextDisabledGroundPage
+                  : bookGroundNative
+                    ? styles.dropdownButtonTextDisabledBookGroundNative
+                    : styles.dropdownButtonTextDisabled),
             ]}
           >
             {selectedLabel || label}
@@ -942,7 +992,9 @@ export default function LandingBookingForm({
         </Pressable>
 
         {open && !disabled ? (
-          <View style={styles.dropdownMenu}>
+          <View
+            style={[styles.dropdownMenu, groundPageDropdown && styles.dropdownMenuGroundPage]}
+          >
             {options.map((opt) => (
               <Pressable
                 key={opt.key}
@@ -952,13 +1004,23 @@ export default function LandingBookingForm({
                 }}
                 style={[
                   styles.dropdownOption,
-                  opt.key === value && styles.dropdownOptionActive,
+                  opt.key === value &&
+                    (groundPageDropdown
+                      ? styles.dropdownOptionActiveGroundPage
+                      : styles.dropdownOptionActive),
                 ]}
               >
                 <Text
                   style={[
                     styles.dropdownOptionText,
-                    opt.key === value && styles.dropdownOptionTextActive,
+                    groundPageDropdown && styles.dropdownOptionTextGroundPage,
+                    bookGroundNative &&
+                      !groundPageDropdown &&
+                      styles.dropdownOptionTextBookGroundNative,
+                    opt.key === value &&
+                      (groundPageDropdown
+                        ? styles.dropdownOptionTextActiveGroundPage
+                        : styles.dropdownOptionTextActive),
                   ]}
                 >
                   {opt.label}
@@ -1128,6 +1190,67 @@ export default function LandingBookingForm({
     }
   };
 
+  handleSearchRef.current = handleSearch;
+
+  /** Native: restore booking form draft after returning from login (see `handleBook` when !user). */
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    if (loadingGrounds) return;
+
+    let cancelled = false;
+    (async () => {
+      const draft = await peekPendingBookingDraft();
+      if (cancelled || !draft) return;
+
+      if (draft.landing && useLandingSearchFlow) {
+        await clearPendingBookingDraft();
+        const L = draft.landing;
+        setLocationKey(L.locationKey);
+        setTypeKey(L.typeKey);
+        setBookingDate(L.bookingDate);
+        setStartTime(L.startTime as TimeString);
+        setTeamType(L.teamType);
+        if (L.hadCompletedSearch) {
+          pendingPostLoginSearchRef.current = true;
+          pendingReselectGroundIdRef.current = L.selectedGroundId;
+        } else if (L.selectedGroundId) {
+          setSelectedGroundId(L.selectedGroundId);
+        }
+        return;
+      }
+
+      if (draft.groundDetail && initialGroundId && draft.groundDetail.groundId === initialGroundId) {
+        await clearPendingBookingDraft();
+        const g = draft.groundDetail;
+        if (g.bookingDate) setBookingDate(g.bookingDate);
+        if (g.startTime) setStartTime(g.startTime as TimeString);
+        setTeamType(g.teamType);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loadingGrounds, useLandingSearchFlow, initialGroundId]);
+
+  useEffect(() => {
+    if (!pendingPostLoginSearchRef.current) return;
+    if (!useLandingSearchFlow) return;
+    if (loadingGrounds) return;
+    if (!locationKey || !typeKey) return;
+    if (!canRunSearch) return;
+    pendingPostLoginSearchRef.current = false;
+    void handleSearchRef.current();
+  }, [useLandingSearchFlow, loadingGrounds, locationKey, typeKey, canRunSearch]);
+
+  useEffect(() => {
+    const id = pendingReselectGroundIdRef.current;
+    if (!id) return;
+    if (!searchResults.some((g) => g.id === id)) return;
+    setSelectedGroundId(id);
+    pendingReselectGroundIdRef.current = null;
+  }, [searchResults]);
+
   const handleBook = async () => {
     if (useLandingSearchFlow && !groundSelectedFromSearch) {
       Alert.alert('Select a ground', 'Search and choose a ground from the list first.');
@@ -1140,8 +1263,63 @@ export default function LandingBookingForm({
         Alert.alert('Login required', 'Please sign in to create a booking.');
       }
 
-      // Preserve the current ground + slot selection so that after login
-      // the user is taken back to the same ground page with the same options.
+      if (Platform.OS !== 'web') {
+        try {
+          if (useLandingSearchFlow) {
+            await savePendingBookingDraft({
+              landing: {
+                locationKey,
+                typeKey,
+                bookingDate,
+                startTime,
+                teamType,
+                selectedGroundId,
+                hadCompletedSearch: hasSearched,
+              },
+            });
+          } else if (initialGroundId) {
+            await savePendingBookingDraft({
+              groundDetail: {
+                groundId: initialGroundId,
+                bookingDate,
+                startTime,
+                teamType,
+              },
+            });
+          }
+        } catch (e) {
+          console.warn('pending booking draft', e);
+        }
+
+        const buildLoginReturnRoute = (): string => {
+          if (useLandingSearchFlow) {
+            return separateSearchResults ? '/book-my-ground' : '/(tabs)/grounds';
+          }
+          if (initialGroundId && selectedGround) {
+            const q = new URLSearchParams();
+            if (bookingDate) q.set('date', bookingDate);
+            if (startTime) q.set('time', startTime);
+            if (!isBoxCricket) q.set('teams', teamType);
+            const qs = q.toString();
+            return `${makeGroundPath(selectedGround)}${qs ? `?${qs}` : ''}`;
+          }
+          if (initialGroundId) {
+            const q = new URLSearchParams();
+            if (bookingDate) q.set('date', bookingDate);
+            if (startTime) q.set('time', startTime);
+            if (!isBoxCricket) q.set('teams', teamType);
+            const qs = q.toString();
+            return `/grounds/${encodeURIComponent(initialGroundId)}${qs ? `?${qs}` : ''}`;
+          }
+          return '/(tabs)/grounds';
+        };
+
+        const loginUrl = `/(auth)/login?redirect=${encodeURIComponent(buildLoginReturnRoute())}`;
+        router.push(loginUrl as any);
+        return;
+      }
+
+      // Web: preserve selection via redirect URL when possible.
       const targetGroundId = initialGroundId ?? selectedGroundId;
       if (targetGroundId && bookingDate && startTime) {
         const redirectPath = `/grounds/${encodeURIComponent(targetGroundId)}`;
@@ -1228,7 +1406,13 @@ export default function LandingBookingForm({
   const searchResultsBody = showSearchResults ? (
     <>
       <Text
-        style={separateSearchResults ? styles.labelOnWhite : styles.label}
+        style={[
+          separateSearchResults ? styles.labelOnWhite : styles.label,
+          bookGroundScreenNative &&
+            !isWeb &&
+            !separateSearchResults &&
+            styles.labelBookGroundNative,
+        ]}
       >
         Available grounds
       </Text>
@@ -1314,11 +1498,20 @@ export default function LandingBookingForm({
     </>
   ) : null;
 
+  const fieldLabelStyle = [
+    styles.label,
+    bookGroundScreenNative && !isWeb && styles.labelBookGroundNative,
+    groundPageAccent && !isWeb && styles.labelBookGroundNative,
+  ];
+
+  const nativeTanChrome =
+    (bookGroundScreenNative || groundPageAccent) && !isWeb;
+
   const formFields = (
     <>
       {!hideGroundPicker && (
         <View style={[styles.section, webGridSectionStyle, webSingleColumnStyle]}>
-          <Text style={styles.label}>Ground</Text>
+          <Text style={fieldLabelStyle}>Ground</Text>
           {user ? (
             <View style={styles.groundsRow}>
               {loadingGrounds ? (
@@ -1354,7 +1547,7 @@ export default function LandingBookingForm({
           openSelectMenu === 'location' && styles.sectionDropdownOpen,
         ]}
       >
-        <Text style={styles.label}>Location</Text>
+        <Text style={fieldLabelStyle}>Location</Text>
         <InlineDropdown
           label="Location"
           value={locationKey}
@@ -1372,6 +1565,8 @@ export default function LandingBookingForm({
               selectGroundByLocationAndType(k, typeKey);
             }
           }}
+          groundPageDropdown={groundPageAccent}
+          bookGroundNative={nativeTanChrome}
         />
       </View>
 
@@ -1383,7 +1578,7 @@ export default function LandingBookingForm({
           openSelectMenu === 'type' && styles.sectionDropdownOpen,
         ]}
       >
-        <Text style={styles.label}>Type</Text>
+        <Text style={fieldLabelStyle}>Type</Text>
         <InlineDropdown
           label="Type"
           value={typeKey}
@@ -1401,12 +1596,14 @@ export default function LandingBookingForm({
               selectGroundByLocationAndType(locationKey, t);
             }
           }}
+          groundPageDropdown={groundPageAccent}
+          bookGroundNative={nativeTanChrome}
         />
       </View>
 
       {!isBoxCricket ? (
         <View style={[styles.section, webGridSectionStyle, webSingleColumnStyle]}>
-          <Text style={styles.label}>Teams</Text>
+          <Text style={fieldLabelStyle}>Teams</Text>
           <View style={styles.teamToggle}>
             <Pressable
               onPress={() => {
@@ -1415,10 +1612,17 @@ export default function LandingBookingForm({
               }}
               style={[
                 styles.teamToggleOption,
+                nativeTanChrome && styles.teamToggleOptionBookGroundNative,
                 teamType === 'one' && styles.teamToggleOptionActive,
               ]}
             >
-              <Text style={[styles.teamToggleText, teamType === 'one' && styles.teamToggleTextActive]}>
+              <Text
+                style={[
+                  styles.teamToggleText,
+                  nativeTanChrome && styles.teamToggleTextBookGroundNative,
+                  teamType === 'one' && styles.teamToggleTextActive,
+                ]}
+              >
                 1 Team
               </Text>
             </Pressable>
@@ -1430,6 +1634,7 @@ export default function LandingBookingForm({
               }}
               style={[
                 styles.teamToggleOption,
+                nativeTanChrome && styles.teamToggleOptionBookGroundNative,
                 hideBothTeamsOption && styles.teamToggleOptionDisabled,
                 teamType === 'both' && !hideBothTeamsOption && styles.teamToggleOptionActive,
               ]}
@@ -1437,6 +1642,7 @@ export default function LandingBookingForm({
               <Text
                 style={[
                   styles.teamToggleText,
+                  nativeTanChrome && styles.teamToggleTextBookGroundNative,
                   teamType === 'both' && !hideBothTeamsOption && styles.teamToggleTextActive,
                   hideBothTeamsOption && styles.teamToggleTextDisabled,
                 ]}
@@ -1461,7 +1667,7 @@ export default function LandingBookingForm({
           webFullSpanStyle,
         ]}
       >
-        <Text style={styles.label}>Date</Text>
+        <Text style={fieldLabelStyle}>Date</Text>
 
         {/*
          * Web: use paged slices (`visibleDates`) with arrow buttons.
@@ -1582,6 +1788,7 @@ export default function LandingBookingForm({
                     style={[
                       styles.dateChip,
                       styles.dateChipMobile,
+                      nativeTanChrome && styles.dateChipBorderBookGroundNative,
                       isSelected && styles.dateChipActive,
                     ]}
                   >
@@ -1590,6 +1797,7 @@ export default function LandingBookingForm({
                         style={[
                           styles.dateChipText,
                           styles.dateChipTextMobile,
+                          nativeTanChrome && styles.dateChipTextBookGroundNative,
                           isSelected && styles.dateChipTextActive,
                         ]}
                       >
@@ -1599,6 +1807,7 @@ export default function LandingBookingForm({
                         style={[
                           styles.dateChipWeekday,
                           styles.dateChipWeekdayMobile,
+                          nativeTanChrome && styles.dateChipWeekdayBookGroundNative,
                           isSelected && styles.dateChipWeekdayActive,
                         ]}
                       >
@@ -1614,7 +1823,7 @@ export default function LandingBookingForm({
       </View>
 
       <View style={[styles.section, webSingleColumnStyle, webFullSpanStyle]}>
-        <Text style={styles.label}>Start Time</Text>
+        <Text style={fieldLabelStyle}>Start Time</Text>
 
         {isWeb ? (
           <View style={[styles.timeSlotsWrap, isBoxCricket && styles.timeSlotsWrapBox]}>
@@ -1692,14 +1901,20 @@ export default function LandingBookingForm({
                       styles.timeSlotChip,
                       styles.timeSlotChipMobile,
                       isBoxCricket && styles.timeSlotChipDense,
+                      nativeTanChrome && styles.timeSlotChipBorderBookGroundNative,
                       active && styles.timeSlotChipActive,
-                      pressed && !active && styles.timeSlotChipPressed,
+                      pressed &&
+                        !active &&
+                        (nativeTanChrome
+                          ? styles.timeSlotChipPressedBookGroundNative
+                          : styles.timeSlotChipPressed),
                     ]}
                   >
                     <Text
                       style={[
                         styles.timeSlotText,
                         styles.timeSlotTextMobile,
+                        nativeTanChrome && styles.timeSlotTextBookGroundNative,
                         isBoxCricket && styles.timeSlotTextDense,
                         active && styles.timeSlotTextActive,
                       ]}
@@ -1729,6 +1944,9 @@ export default function LandingBookingForm({
     isWeb && styles.cardWeb,
     fullWidth && !isWeb && styles.cardNativeFull,
     !isWeb && noCard && styles.cardPlainNative,
+    !isWeb && noCard && bookGroundScreenNative && styles.cardPlainNativeBookGround,
+    !isWeb && noCard && groundPageAccent && styles.cardPlainGroundPage,
+    fullWidth && !isWeb && groundPageAccent && !noCard && styles.cardGroundPageNative,
   ];
 
   return (
@@ -1737,11 +1955,15 @@ export default function LandingBookingForm({
         styles.wrapper,
         fullWidth && isWeb && styles.wrapperFull,
         fullWidth && !isWeb && styles.wrapperNativeFull,
+        fullWidth && !isWeb && bookGroundScreenNative && styles.wrapperBookGroundScreenNative,
+        fullWidth && !isWeb && groundPageAccent && styles.groundPageFormWrapperNative,
         isWeb && windowWidth < 640 && styles.wrapperMobileTight,
       ]}
     >
       <ContainerComponent style={mainCardStyle}>
-        <Text style={[styles.title, !isWeb && styles.titleMobile]}>Book a Ground</Text>
+        {!hideTitle && (
+          <Text style={[styles.title, !isWeb && styles.titleMobile]}>Book a Ground</Text>
+        )}
         {isWeb && (
           <Text style={styles.subtitle}>
             {hideGroundPicker
@@ -1765,14 +1987,34 @@ export default function LandingBookingForm({
         )}
 
         {computed && (!useLandingSearchFlow || groundSelectedFromSearch) && (
-          <View style={styles.summary}>
-            <Text style={styles.summaryText}>
+          <View
+            style={[
+              styles.summary,
+              groundPageAccent && !isWeb && styles.summaryGroundPageMobile,
+            ]}
+          >
+            <Text
+              style={[
+                styles.summaryText,
+                groundPageAccent && !isWeb && styles.summaryTextGroundMobile,
+              ]}
+            >
               Total:{' '}
-              <Text style={styles.summaryAccent}>
+              <Text
+                style={[
+                  styles.summaryAccent,
+                  groundPageAccent && !isWeb && styles.summaryAccentGroundMobile,
+                ]}
+              >
                 {formatCurrency(computed.totalAmount)}
               </Text>
             </Text>
-            <Text style={styles.summaryMuted}>
+            <Text
+              style={[
+                styles.summaryMuted,
+                groundPageAccent && !isWeb && styles.summaryMutedGroundMobile,
+              ]}
+            >
               {isBoxCricket
                 ? `Duration: ${computed.totalHours} hours @ ${formatCurrency(
                     computed.pricePerUnit,
@@ -1784,7 +2026,12 @@ export default function LandingBookingForm({
           </View>
         )}
 
-        <View style={styles.actions}>
+        <View
+          style={[
+            styles.actions,
+            groundPageAccent && !isWeb && styles.actionsGroundPageNative,
+          ]}
+        >
           {useLandingSearchFlow ? (
             groundSelectedFromSearch ? (
               <View style={styles.actionsColumn}>
@@ -1795,6 +2042,9 @@ export default function LandingBookingForm({
                   loading={submitting}
                   fullWidth
                   size="large"
+                  style={nativeTanChrome ? { backgroundColor: '#01b854' } : undefined}
+                  textStyle={nativeTanChrome ? styles.bookNowPrimaryButtonText : undefined}
+                  loadingIndicatorColor={nativeTanChrome ? '#FFFFFF' : undefined}
                 />
                 <Pressable
                   onPress={() => setSelectedGroundId(null)}
@@ -1812,6 +2062,9 @@ export default function LandingBookingForm({
                 loading={searching}
                 fullWidth
                 size="large"
+                style={styles.searchButtonAlignedHeight}
+                textStyle={nativeTanChrome ? styles.bookGroundNativeButtonText : undefined}
+                loadingIndicatorColor={nativeTanChrome ? '#dcc093' : undefined}
               />
             ) : null
           ) : (
@@ -1821,7 +2074,18 @@ export default function LandingBookingForm({
               disabled={submitting}
               loading={submitting}
               fullWidth
-              size="large"
+              size={groundPageAccent && !isWeb ? 'small' : 'large'}
+              style={
+                groundPageAccent || nativeTanChrome ? { backgroundColor: '#01b854' } : undefined
+              }
+              textStyle={
+                groundPageAccent || nativeTanChrome
+                  ? styles.bookNowPrimaryButtonText
+                  : undefined
+              }
+              loadingIndicatorColor={
+                groundPageAccent || nativeTanChrome ? '#FFFFFF' : undefined
+              }
             />
           )}
         </View>
@@ -1870,6 +2134,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingBottom: 24,
   },
+  /** Native Book a Ground stack: align form to top; 8px below nav area (see MobileAppNavbar). */
+  wrapperBookGroundScreenNative: {
+    justifyContent: 'flex-start',
+    paddingTop: 8,
+  },
   wrapperMobileTight: {
     paddingHorizontal: 8,
   },
@@ -1886,6 +2155,10 @@ const styles = StyleSheet.create({
   cardWeb: {
     overflow: 'visible',
   },
+  /** Ground detail with Card wrapper (e.g. `/grounds/[id]`): remove extra space under Book Now. */
+  cardGroundPageNative: {
+    paddingBottom: 0,
+  },
   /** Native-only plain wrapper when `noCard` is true (e.g. /book-my-ground). */
   cardPlainNative: {
     backgroundColor: 'transparent',
@@ -1893,6 +2166,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingTop: 12,
     paddingBottom: 16,
+  },
+  /** Slightly tighter top padding when pinned to top (book-my-ground / Grounds tab). */
+  cardPlainNativeBookGround: {
+    paddingTop: 8,
+  },
+  /** Ground detail native: flush booking block to bottom of scroll. */
+  cardPlainGroundPage: {
+    paddingBottom: 0,
+  },
+  /** Override `wrapperNativeFull` flex/center so the strip does not stretch with empty space below the CTA. */
+  groundPageFormWrapperNative: {
+    paddingBottom: 0,
+    flex: 0,
+    flexGrow: 0,
+    justifyContent: 'flex-start',
+    alignItems: 'stretch',
+    alignSelf: 'stretch',
+    width: '100%',
+  },
+  actionsGroundPageNative: {
+    marginBottom: 0,
+    paddingBottom: 0,
   },
   title: {
     fontSize: 20,
@@ -1959,12 +2254,25 @@ const styles = StyleSheet.create({
     color: '#E5E7EB',
     marginBottom: 6,
   },
+  /** Book-a-ground native screen: field headings match tan accent (#dcc093). */
+  labelBookGroundNative: {
+    color: '#dcc093',
+  },
+  /** `separateSearchResults` — heading on light card (e.g. /book-my-ground). */
+  labelOnWhite: {
+    fontSize: 12,
+    fontWeight: '400',
+    fontFamily: 'Inter',
+    color: '#374151',
+    marginBottom: 6,
+  },
   input: {
     borderWidth: 1,
     borderColor: '#00ea6b',
     borderRadius: 10,
-    paddingVertical: 9,
     paddingHorizontal: 10,
+    paddingVertical: 10,
+    minHeight: 44,
     fontSize: 14,
     fontFamily: 'Inter',
     backgroundColor: '#06392e',
@@ -1979,8 +2287,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#64748B',
     borderRadius: 10,
-    paddingVertical: 9,
     paddingHorizontal: 10,
+    paddingVertical: 10,
+    minHeight: 44,
     fontSize: 14,
     fontFamily: 'Inter',
     backgroundColor: '#022c22',
@@ -2018,13 +2327,15 @@ const styles = StyleSheet.create({
   },
   teamToggleOption: {
     flex: 1,
-    paddingVertical: 10,
     paddingHorizontal: 12,
+    paddingVertical: 10,
+    minHeight: 44,
     borderWidth: 1,
     borderColor: '#FFFFFF',
     borderRadius: 10,
     backgroundColor: '#043529',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   teamToggleOptionDisabled: {
     backgroundColor: '#F3F4F6',
@@ -2056,6 +2367,19 @@ const styles = StyleSheet.create({
   teamToggleTextDisabled: {
     color: '#9CA3AF',
   },
+  teamToggleOptionBookGroundNative: {
+    borderColor: '#dcc093',
+  },
+  teamToggleTextBookGroundNative: {
+    color: '#dcc093',
+  },
+  /** Search CTA: same row height as Location / Type / Teams (44px min, 10 vertical padding). */
+  searchButtonAlignedHeight: {
+    minHeight: 44,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    backgroundColor: '#02c259',
+  },
   summary: {
     marginTop: 12,
     marginBottom: 16,
@@ -2077,6 +2401,38 @@ const styles = StyleSheet.create({
   },
   summaryAccent: {
     color: '#00ea6b',
+  },
+  /** Ground detail on native: large capsule (tan border/text on mobile only). */
+  summaryGroundPageMobile: {
+    marginTop: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+    borderRadius: 28,
+    backgroundColor: '#06392e',
+    borderWidth: 1,
+    ...Platform.select({
+      web: { borderColor: '#02c259' },
+      default: { borderColor: '#dcc093' },
+    }),
+  },
+  summaryTextGroundMobile: {
+    ...Platform.select({
+      web: { color: '#F9FAFB' },
+      default: { color: '#dcc093' },
+    }),
+  },
+  summaryAccentGroundMobile: {
+    fontWeight: '700',
+    ...Platform.select({
+      web: { color: '#02c259' },
+      default: { color: '#dcc093' },
+    }),
+  },
+  summaryMutedGroundMobile: {
+    ...Platform.select({
+      web: { color: '#E5E7EB' },
+      default: { color: 'rgba(220,192,147,0.88)' },
+    }),
   },
   actions: {
     marginTop: 8,
@@ -2148,6 +2504,11 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
     color: '#9CA3AF',
   },
+  smallMutedOnWhite: {
+    fontSize: 13,
+    fontFamily: 'Inter',
+    color: '#6B7280',
+  },
   dropdownOuter: {
     position: 'relative',
   },
@@ -2156,8 +2517,10 @@ const styles = StyleSheet.create({
     borderColor: '#FFFFFF',
     backgroundColor: '#043529',
     borderRadius: 10,
-    paddingVertical: 9,
     paddingHorizontal: 10,
+    paddingVertical: 10,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   dropdownButtonOpen: {
     borderColor: '#00ea6b',
@@ -2182,6 +2545,24 @@ const styles = StyleSheet.create({
   },
   dropdownButtonTextDisabled: {
     color: '#6B7280',
+  },
+  /** Book a ground (native): replace white borders/text with tan. */
+  dropdownButtonBookGroundNative: {
+    borderColor: '#dcc093',
+  },
+  dropdownButtonTextBookGroundNative: {
+    color: '#dcc093',
+  },
+  dropdownOptionTextBookGroundNative: {
+    color: '#dcc093',
+  },
+  /** Book a ground (native): loading/disabled — avoid gray `#F3F4F6` flash on refresh. */
+  dropdownButtonDisabledBookGroundNative: {
+    backgroundColor: '#043529',
+    borderColor: 'rgba(220,192,147,0.45)',
+  },
+  dropdownButtonTextDisabledBookGroundNative: {
+    color: 'rgba(220,192,147,0.7)',
   },
   dropdownMenu: {
     position: 'absolute',
@@ -2237,6 +2618,80 @@ const styles = StyleSheet.create({
   dropdownOptionTextActive: {
     color: '#00ea6b',
   },
+  /** Ground detail: Location / Type — web keeps green accent; native uses tan (#dcc093). */
+  dropdownButtonGroundPage: {
+    backgroundColor: '#043529',
+    ...Platform.select({
+      web: { borderColor: '#02c259' },
+      default: { borderColor: '#dcc093' },
+    }),
+  },
+  dropdownButtonOpenGroundPage: {
+    backgroundColor: '#043529',
+    ...Platform.select({
+      web: { borderColor: '#02c259' },
+      default: { borderColor: '#dcc093' },
+    }),
+  },
+  dropdownButtonSelectedGroundPage: {
+    backgroundColor: '#043529',
+    ...Platform.select({
+      web: { borderColor: '#02c259' },
+      default: { borderColor: '#dcc093' },
+    }),
+  },
+  dropdownButtonDisabledGroundPage: {
+    backgroundColor: '#043529',
+    ...Platform.select({
+      web: { borderColor: 'rgba(2,194,89,0.45)' },
+      default: { borderColor: 'rgba(220,192,147,0.45)' },
+    }),
+  },
+  dropdownButtonTextGroundPage: {
+    ...Platform.select({
+      web: { color: '#02c259' },
+      default: { color: '#dcc093' },
+    }),
+  },
+  dropdownButtonTextSelectedGroundPage: {
+    fontWeight: '600',
+    ...Platform.select({
+      web: { color: '#02c259' },
+      default: { color: '#dcc093' },
+    }),
+  },
+  dropdownButtonTextDisabledGroundPage: {
+    ...Platform.select({
+      web: { color: 'rgba(2,194,89,0.55)' },
+      default: { color: 'rgba(220,192,147,0.55)' },
+    }),
+  },
+  dropdownMenuGroundPage: {
+    backgroundColor: '#043529',
+    ...Platform.select({
+      web: { borderColor: '#02c259' },
+      default: { borderColor: '#dcc093' },
+    }),
+  },
+  dropdownOptionActiveGroundPage: {
+    ...Platform.select({
+      web: { backgroundColor: 'rgba(2,194,89,0.12)' },
+      default: { backgroundColor: 'rgba(220,192,147,0.12)' },
+    }),
+  },
+  dropdownOptionTextGroundPage: {
+    ...Platform.select({
+      web: { color: '#02c259' },
+      default: { color: '#dcc093' },
+    }),
+  },
+  dropdownOptionTextActiveGroundPage: {
+    fontWeight: '600',
+    ...Platform.select({
+      web: { color: '#02c259' },
+      default: { color: '#dcc093' },
+    }),
+  },
   dateChipsWrap: {
     flexDirection: 'row',
     flexWrap: 'nowrap',
@@ -2279,6 +2734,10 @@ const styles = StyleSheet.create({
     borderColor: '#00ea6b',
     backgroundColor: '#043529',
   },
+  /** Book a ground (native): inactive chip outline — tan instead of gray/white. */
+  dateChipBorderBookGroundNative: {
+    borderColor: '#dcc093',
+  },
   dateChipText: {
     fontSize: 12,
     fontWeight: '500',
@@ -2290,6 +2749,9 @@ const styles = StyleSheet.create({
   },
   dateChipTextActive: {
     color: '#00ea6b',
+  },
+  dateChipTextBookGroundNative: {
+    color: '#dcc093',
   },
   dateChipWeekday: {
     fontSize: 10,
@@ -2303,6 +2765,9 @@ const styles = StyleSheet.create({
   },
   dateChipWeekdayActive: {
     color: '#00ea6b',
+  },
+  dateChipWeekdayBookGroundNative: {
+    color: '#dcc093',
   },
   datePagerRow: {
     flexDirection: 'row',
@@ -2360,6 +2825,9 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     backgroundColor: '#043529',
   },
+  timeSlotChipBorderBookGroundNative: {
+    borderColor: '#dcc093',
+  },
   /** Mobile-only: slightly smaller time chip for scrolling. */
   timeSlotChipMobile: {
     paddingVertical: 6,
@@ -2378,6 +2846,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#06392e',
     borderColor: '#FFFFFF',
   },
+  timeSlotChipPressedBookGroundNative: {
+    backgroundColor: '#06392e',
+    borderColor: '#dcc093',
+  },
   timeSlotText: {
     fontSize: 13,
     fontWeight: '400',
@@ -2392,6 +2864,17 @@ const styles = StyleSheet.create({
   },
   timeSlotTextActive: {
     color: '#00ea6b',
+  },
+  timeSlotTextBookGroundNative: {
+    color: '#dcc093',
+  },
+  bookGroundNativeButtonText: {
+    color: '#dcc093',
+  },
+  /** Book Now CTA fill `#01b854` — white label for contrast. */
+  bookNowPrimaryButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '600',
   },
 });
 

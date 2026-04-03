@@ -41,6 +41,13 @@ export default function TabLayout() {
 
   const hideTabBarOnBigScreens = Platform.OS === 'web' && width >= 900;
 
+  /** Native uses `MobileTabBarHost` in root layout — hide RN tab bar and take no layout space. */
+  const nativeTabBarOff = {
+    tabBar: () => null,
+    tabBarStyle: { height: 0, display: 'none' as const, overflow: 'hidden' as const },
+    tabBarItemStyle: { height: 0, width: 0, overflow: 'hidden' as const },
+  } as const;
+
   if (loading && needsAuth) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#043529' }}>
@@ -53,8 +60,8 @@ export default function TabLayout() {
     return <Redirect href="/(auth)/login" />;
   }
 
-  const tabBarStyle = hideTabBarOnBigScreens
-    ? ({ display: 'none' } as any)
+  const webTabBarStyle = hideTabBarOnBigScreens
+    ? ({ display: 'none' } as const)
     : {
         backgroundColor: '#043529',
         borderTopWidth: 1,
@@ -70,9 +77,12 @@ export default function TabLayout() {
         headerShown: false,
         tabBarActiveTintColor: '#00ea6b',
         tabBarInactiveTintColor: '#e5e7eb',
-        tabBarStyle,
-        // On small screens we show only icons (no text labels).
-        tabBarShowLabel: false,
+        ...(Platform.OS === 'web'
+          ? {
+              tabBarStyle: webTabBarStyle,
+              tabBarShowLabel: false,
+            }
+          : nativeTabBarOff),
       }}
     >
       <Tabs.Screen

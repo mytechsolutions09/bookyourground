@@ -13,8 +13,11 @@ export const formatDate = (date: string): string => {
 };
 
 export const formatTime = (time: string): string => {
-  const [hours, minutes] = time.split(':');
-  const hour = parseInt(hours, 10);
+  const s = String(time ?? '').trim();
+  const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(s);
+  if (!m) return s;
+  const hour = parseInt(m[1], 10);
+  const minutes = m[2];
   const ampm = hour >= 12 ? 'PM' : 'AM';
   const displayHour = hour % 12 || 12;
   return `${displayHour}:${minutes} ${ampm}`;
@@ -31,13 +34,17 @@ export const formatDateTime = (datetime: string): string => {
 };
 
 export const calculateHoursBetween = (startTime: string, endTime: string): number => {
-  const [startHours, startMinutes] = startTime.split(':').map(Number);
-  const [endHours, endMinutes] = endTime.split(':').map(Number);
-
-  const startTotalMinutes = startHours * 60 + startMinutes;
-  const endTotalMinutes = endHours * 60 + endMinutes;
-
-  return (endTotalMinutes - startTotalMinutes) / 60;
+  const parseHm = (t: string) => {
+    const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(String(t).trim());
+    if (!m) return NaN;
+    return Number(m[1]) * 60 + Number(m[2]);
+  };
+  const a = parseHm(startTime);
+  const b = parseHm(endTime);
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return NaN;
+  let diff = b - a;
+  if (diff <= 0) diff += 24 * 60;
+  return diff / 60;
 };
 
 export const getStatusColor = (status: string): string => {

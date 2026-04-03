@@ -11,7 +11,7 @@ import {
   Pressable,
   Linking,
 } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { MapPin, Star } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { slugifyGroundSegment } from '@/utils/groundSlug';
@@ -22,7 +22,6 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import WebLayout from '@/components/web/WebLayout';
 import LandingBookingForm from '@/components/landing/LandingBookingForm';
-
 export default function GroundDetailsPrettyUrlScreen() {
   const { city, slug, date, time, teams } = useLocalSearchParams();
   const { user } = useAuth();
@@ -278,6 +277,7 @@ export default function GroundDetailsPrettyUrlScreen() {
   };
 
   const isLoading = loading || !ground;
+  const Section = Platform.OS === 'web' ? Card : View;
 
   let content: React.ReactNode;
 
@@ -302,9 +302,12 @@ export default function GroundDetailsPrettyUrlScreen() {
     const heroIdx = Math.min(heroImageIndex, Math.max(0, imageUrls.length - 1));
 
     content = (
-      <ScrollView style={styles.container}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={Platform.OS === 'web' ? undefined : { paddingBottom: 0 }}
+      >
         <View style={styles.content}>
-          <Card style={[styles.section, styles.imageCard]}>
+          <Section style={[styles.section, styles.imageCard]}>
             <Image
               source={{ uri: imageUrls[heroIdx] }}
               style={styles.heroImage}
@@ -335,9 +338,9 @@ export default function GroundDetailsPrettyUrlScreen() {
                 ))}
               </ScrollView>
             ) : null}
-          </Card>
+          </Section>
 
-          <Card style={styles.section}>
+          <Section style={styles.section}>
             <Text style={styles.name}>{ground.name}</Text>
 
             <View style={styles.locationRow}>
@@ -376,16 +379,16 @@ export default function GroundDetailsPrettyUrlScreen() {
                   : 'No reviews yet'}
               </Text>
             </View>
-          </Card>
+          </Section>
 
           {ground.description && (
-            <Card style={styles.section}>
+            <Section style={styles.section}>
               <Text style={styles.sectionTitle}>About</Text>
               <Text style={styles.description}>{ground.description}</Text>
-            </Card>
+            </Section>
           )}
 
-          <Card style={styles.section}>
+          <Section style={styles.section}>
             <Text style={styles.sectionTitle}>Details</Text>
             {ground.pitch_type && (
               <View style={styles.detailRow}>
@@ -420,48 +423,41 @@ export default function GroundDetailsPrettyUrlScreen() {
                 <Text style={styles.detailValue}>{ground.capacity} players</Text>
               </View>
             )}
-          </Card>
+          </Section>
 
-          <Card style={styles.section}>
+          <Section style={styles.section}>
             <Text style={styles.sectionTitle}>Amenities</Text>
-            {ground.has_floodlights ||
-            ground.has_parking ||
-            ground.has_changing_rooms ||
-            ground.has_pavilion ||
-            ground.has_washrooms ? (
-              <View style={styles.amenitiesGrid}>
-                {ground.has_floodlights ? (
-                  <View style={styles.amenityChip}>
-                    <Text style={styles.amenityText}>Floodlights</Text>
-                  </View>
-                ) : null}
-                {ground.has_parking ? (
-                  <View style={styles.amenityChip}>
-                    <Text style={styles.amenityText}>Parking</Text>
-                  </View>
-                ) : null}
-                {ground.has_changing_rooms ? (
-                  <View style={styles.amenityChip}>
-                    <Text style={styles.amenityText}>Changing Rooms</Text>
-                  </View>
-                ) : null}
-                {ground.has_pavilion ? (
-                  <View style={styles.amenityChip}>
-                    <Text style={styles.amenityText}>Pavilion</Text>
-                  </View>
-                ) : null}
-                {ground.has_washrooms ? (
-                  <View style={styles.amenityChip}>
-                    <Text style={styles.amenityText}>Washroom</Text>
-                  </View>
-                ) : null}
-              </View>
-            ) : (
-              <Text style={styles.amenitiesEmpty}>None listed</Text>
-            )}
-          </Card>
+            {(() => {
+              const items: string[] = [];
+              if (ground.has_floodlights) items.push('Floodlights');
+              if (ground.has_parking) items.push('Parking');
+              if (ground.has_changing_rooms) items.push('Changing Rooms');
+              if (ground.has_pavilion) items.push('Pavilion');
+              if (ground.has_washrooms) items.push('Washroom');
 
-          <Card style={styles.section}>
+              if (!items.length) {
+                return <Text style={styles.amenitiesEmpty}>None listed</Text>;
+              }
+
+              return (
+                <View style={styles.amenitiesGrid}>
+                  {items.map((label, index) => (
+                    <View
+                      key={label}
+                      style={[
+                        styles.amenityChip,
+                        index % 2 === 0 ? styles.amenityChipDark : styles.amenityChipGreen,
+                      ]}
+                    >
+                      <Text style={styles.amenityText}>{label}</Text>
+                    </View>
+                  ))}
+                </View>
+              );
+            })()}
+          </Section>
+
+          <Section style={styles.section}>
             <Text style={styles.sectionTitle}>Reviews</Text>
 
             {reviews.length === 0 && (
@@ -551,46 +547,77 @@ export default function GroundDetailsPrettyUrlScreen() {
                 Sign in and complete a booking to leave a review.
               </Text>
             )}
-          </Card>
+          </Section>
 
           {ground.id ? (
-            <LandingBookingForm
-              initialGroundId={String(ground.id)}
-              hideGroundPicker
-              initialDate={typeof date === 'string' ? date : undefined}
-              initialStartTime={typeof time === 'string' ? time : undefined}
-              initialTeamType={
-                teams === 'one' || teams === 'both' ? (teams as 'one' | 'both') : undefined
-              }
-              fullWidth
-            />
+            Platform.OS === 'web' ? (
+              <LandingBookingForm
+                initialGroundId={String(ground.id)}
+                hideGroundPicker
+                initialDate={typeof date === 'string' ? date : undefined}
+                initialStartTime={typeof time === 'string' ? time : undefined}
+                initialTeamType={
+                  teams === 'one' || teams === 'both' ? (teams as 'one' | 'both') : undefined
+                }
+                fullWidth
+                hideTitle
+                groundPageAccent
+              />
+            ) : (
+              <View style={styles.bookingStripNative}>
+                <LandingBookingForm
+                  initialGroundId={String(ground.id)}
+                  hideGroundPicker
+                  initialDate={typeof date === 'string' ? date : undefined}
+                  initialStartTime={typeof time === 'string' ? time : undefined}
+                  initialTeamType={
+                    teams === 'one' || teams === 'both' ? (teams as 'one' | 'both') : undefined
+                  }
+                  fullWidth
+                  noCard
+                  hideTitle
+                  groundPageAccent
+                />
+              </View>
+            )
           ) : null}
         </View>
       </ScrollView>
     );
   }
 
-  if (Platform.OS === 'web') {
-    return <WebLayout>{content}</WebLayout>;
-  }
-
-  return content;
+  return (
+    <>
+      <Stack.Screen options={{ title: ground?.name ?? 'Ground' }} />
+      {Platform.OS === 'web' ? <WebLayout>{content}</WebLayout> : content}
+    </>
+  );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    ...Platform.select({
+      web: { backgroundColor: '#F5F5F5' },
+      default: { backgroundColor: '#FFFFFF' },
+    }),
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    ...Platform.select({
+      web: { backgroundColor: '#F5F5F5' },
+      default: { backgroundColor: '#FFFFFF' },
+    }),
   },
   imageCard: {
     padding: 0,
     overflow: 'hidden',
+    ...Platform.select({
+      default: { marginHorizontal: -16 },
+      web: {},
+    }),
   },
   heroImage: {
     width: '100%',
@@ -630,13 +657,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#E0E0E0',
   },
   content: {
-    padding: 16,
     ...Platform.select({
       web: {
+        padding: 16,
+        paddingTop: 80,
         maxWidth: 1120,
         marginHorizontal: 'auto',
         width: '100%',
-        paddingTop: 80,
+      },
+      default: {
+        paddingHorizontal: 16,
+        paddingBottom: 0,
+        paddingTop: 0,
       },
     }),
   },
@@ -678,6 +710,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#333',
     fontWeight: '600',
+  },
+  bookingStripNative: {
+    ...Platform.select({
+      default: {
+        backgroundColor: '#043529',
+        marginHorizontal: -16,
+        paddingHorizontal: 8,
+        paddingTop: 16,
+        paddingBottom: 0,
+      },
+      web: {},
+    }),
   },
   section: {
     marginBottom: 16,
@@ -724,10 +768,15 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   amenityChip: {
-    backgroundColor: '#4CAF50',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
+  },
+  amenityChipDark: {
+    backgroundColor: '#043529',
+  },
+  amenityChipGreen: {
+    backgroundColor: '#02c259',
   },
   amenityText: {
     fontSize: 14,

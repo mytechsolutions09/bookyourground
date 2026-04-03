@@ -249,7 +249,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
               accessibilityLabel="Book my ground — home"
             >
               <Image
-                source={require('../../assets/logo.png')}
+                source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
                 style={styles.logoImage}
                 resizeMode="contain"
                 accessibilityIgnoresInvertColors
@@ -371,7 +371,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
               accessibilityLabel="Book my ground — home"
             >
               <Image
-                source={require('../../assets/logo.png')}
+                source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
                 style={styles.logoImage}
                 resizeMode="contain"
                 accessibilityIgnoresInvertColors
