@@ -2,14 +2,9 @@ import React from 'react';
 import { Platform, View, StyleSheet, ScrollView } from 'react-native';
 import WebLayout from '@/components/web/WebLayout';
 import LandingBookingForm from '@/components/landing/LandingBookingForm';
+import MobileAppNavbar from '../../components/MobileAppNavbar';
 
 export default function GroundsTabScreen() {
-  const inner = (
-    <View style={styles.page}>
-      <LandingBookingForm fullWidth />
-    </View>
-  );
-
   if (Platform.OS === 'web') {
     return (
       <WebLayout>
@@ -18,18 +13,33 @@ export default function GroundsTabScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator
         >
-          {inner}
+          <View style={styles.page}>
+            <LandingBookingForm fullWidth />
+          </View>
         </ScrollView>
       </WebLayout>
     );
   }
 
-  return inner;
+  // Native: full-screen booking with navbar + logo.
+  return (
+    <View style={styles.nativeRoot}>
+      <MobileAppNavbar />
+      <View style={styles.page}>
+        <LandingBookingForm fullWidth noCard />
+      </View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
+  nativeRoot: {
+    flex: 1,
+    backgroundColor: '#043529',
+  },
   page: {
-    paddingTop: Platform.OS === 'web' ? 96 : 16,
+    flex: 1,
+    paddingTop: Platform.OS === 'web' ? 96 : 0,
   },
   scroll: {
     flex: 1,

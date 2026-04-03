@@ -7,6 +7,7 @@ import { BookingWithDetails } from '@/types';
 import { BookingStatus } from '@/types/database';
 import BookingCard from '@/components/bookings/BookingCard';
 import WebLayout from '@/components/web/WebLayout';
+import MobileAppNavbar from '../../components/MobileAppNavbar';
 
 export default function BookingsScreen() {
   const { user } = useAuth();
@@ -231,7 +232,12 @@ export default function BookingsScreen() {
     return <WebLayout>{content}</WebLayout>;
   }
 
-  return content;
+  return (
+    <View style={styles.nativeScreen}>
+      <MobileAppNavbar />
+      <View style={styles.nativeBody}>{content}</View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -239,10 +245,17 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F5F5F5',
   },
+  nativeScreen: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+  },
+  nativeBody: {
+    flex: 1,
+  },
   header: {
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
-    paddingTop: 48,
+    paddingTop: 14,
     paddingBottom: 14,
     borderBottomWidth: 0,
   },

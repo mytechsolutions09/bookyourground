@@ -1,11 +1,12 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
 import { router } from 'expo-router';
-import { User, Phone, Mail, LogOut, ChevronRight } from 'lucide-react-native';
+import { User, Phone, Mail, ChevronRight } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import WebLayout from '@/components/web/WebLayout';
+import MobileAppNavbar from '../../components/MobileAppNavbar';
 
 export default function ProfileScreen() {
   const { user, profile, signOut } = useAuth();
@@ -45,92 +46,108 @@ export default function ProfileScreen() {
     }
   };
 
-  const content = (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <Card style={styles.profileCard}>
-          <View style={styles.avatarContainer}>
-            <View style={styles.avatar}>
-              <User size={40} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
-            </View>
+  const profileBody = (
+    <View style={styles.content}>
+      <Card style={styles.profileCard}>
+        <View style={styles.avatarContainer}>
+          <View style={styles.avatar}>
+            <User size={40} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
           </View>
-          <Text style={styles.name}>{profile?.full_name}</Text>
-          <View style={styles.roleBadge}>
-            <Text style={styles.roleText}>{profile && getRoleLabel(profile.role)}</Text>
-          </View>
-        </Card>
-
-        <Card style={styles.infoCard}>
-          <View style={styles.infoRow}>
-            <Mail size={20} color="#666" />
-            <Text style={styles.infoText}>{user?.email}</Text>
-          </View>
-          {profile?.phone && (
-            <View style={styles.infoRow}>
-              <Phone size={20} color="#666" />
-              <Text style={styles.infoText}>{profile.phone}</Text>
-            </View>
-          )}
-        </Card>
-
-        <View style={styles.menuCard}>
-          {profile?.role === 'ground_owner' && (
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => router.push('/(owner)/grounds')}
-            >
-              <Text style={styles.menuItemText}>Manage Grounds</Text>
-              <ChevronRight size={20} color="#666" />
-            </TouchableOpacity>
-          )}
-
-          {isSuperAdmin && (
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => router.push('/(admin)/dashboard')}
-            >
-              <Text style={styles.menuItemText}>Admin Dashboard</Text>
-              <ChevronRight size={20} color="#666" />
-            </TouchableOpacity>
-          )}
-
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuItemText}>Favorites</Text>
-            <ChevronRight size={20} color="#666" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuItemText}>Notifications</Text>
-            <ChevronRight size={20} color="#666" />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuItemText}>Settings</Text>
-            <ChevronRight size={20} color="#666" />
-          </TouchableOpacity>
         </View>
+        <Text style={styles.name}>{profile?.full_name}</Text>
+        <View style={styles.roleBadge}>
+          <Text style={styles.roleText}>{profile && getRoleLabel(profile.role)}</Text>
+        </View>
+      </Card>
 
-        {Platform.OS !== 'web' && (
-          <Button
-            title="Sign Out"
-            onPress={handleSignOut}
-            variant="danger"
-            fullWidth
-            style={styles.signOutButton}
-          />
+      <Card style={styles.infoCard}>
+        <View style={styles.infoRow}>
+          <Mail size={20} color="#666" />
+          <Text style={styles.infoText}>{user?.email}</Text>
+        </View>
+        {profile?.phone && (
+          <View style={styles.infoRow}>
+            <Phone size={20} color="#666" />
+            <Text style={styles.infoText}>{profile.phone}</Text>
+          </View>
         )}
+      </Card>
+
+      <View style={styles.menuCard}>
+        {profile?.role === 'ground_owner' && (
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => router.push('/(owner)/grounds')}
+          >
+            <Text style={styles.menuItemText}>Manage Grounds</Text>
+            <ChevronRight size={20} color="#666" />
+          </TouchableOpacity>
+        )}
+
+        {isSuperAdmin && (
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => router.push('/(admin)/dashboard')}
+          >
+            <Text style={styles.menuItemText}>Admin Dashboard</Text>
+            <ChevronRight size={20} color="#666" />
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity style={styles.menuItem}>
+          <Text style={styles.menuItemText}>Favorites</Text>
+          <ChevronRight size={20} color="#666" />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.menuItem}>
+          <Text style={styles.menuItemText}>Notifications</Text>
+          <ChevronRight size={20} color="#666" />
+        </TouchableOpacity>
+
+        <TouchableOpacity style={styles.menuItem}>
+          <Text style={styles.menuItemText}>Settings</Text>
+          <ChevronRight size={20} color="#666" />
+        </TouchableOpacity>
       </View>
-    </ScrollView>
+
+      {Platform.OS !== 'web' && (
+        <Button
+          title="Sign Out"
+          onPress={handleSignOut}
+          variant="danger"
+          fullWidth
+          style={styles.signOutButton}
+        />
+      )}
+    </View>
   );
 
   if (Platform.OS === 'web') {
-    return <WebLayout>{content}</WebLayout>;
+    return (
+      <WebLayout>
+        <ScrollView style={styles.container}>{profileBody}</ScrollView>
+      </WebLayout>
+    );
   }
 
-  return content;
+  return (
+    <View style={styles.nativeScreen}>
+      <MobileAppNavbar />
+      <ScrollView style={styles.container} contentContainerStyle={styles.nativeScrollContent}>
+        {profileBody}
+      </ScrollView>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
+  nativeScreen: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+  },
+  nativeScrollContent: {
+    paddingBottom: 24,
+  },
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',

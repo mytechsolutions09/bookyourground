@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle, Platform } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle } from 'react-native';
 
 interface ButtonProps {
   title: string;
@@ -25,7 +25,7 @@ export default function Button({
   textStyle,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
-  const primaryColor = Platform.OS === 'web' ? '#dc8d3c' : '#2196F3';
+  const primaryColor = '#01e669';
 
   return (
     <TouchableOpacity
@@ -60,7 +60,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   primary: {
-    backgroundColor: Platform.OS === 'web' ? '#dc8d3c' : '#2196F3',
+    backgroundColor: '#01e669',
   },
   secondary: {
     backgroundColor: '#4CAF50',
@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
   outline: {
     backgroundColor: 'transparent',
     borderWidth: 1.5,
-    borderColor: Platform.OS === 'web' ? '#dc8d3c' : '#2196F3',
+    borderColor: '#01e669',
   },
   danger: {
     backgroundColor: '#F44336',
@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   outlineText: {
-    color: Platform.OS === 'web' ? '#dc8d3c' : '#2196F3',
+    color: '#01e669',
   },
   dangerText: {
     color: '#FFFFFF',

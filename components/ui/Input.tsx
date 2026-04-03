@@ -23,7 +23,7 @@ export default function Input({
           error && styles.inputError,
           style,
         ]}
-        placeholderTextColor="#999"
+        placeholderTextColor="#9CA3AF"
         {...props}
       />
       {error && <Text style={styles.errorText}>{error}</Text>}
@@ -38,17 +38,17 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: '#E5E7EB',
     marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#DDD',
+    borderColor: '#00ea6b',
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    backgroundColor: '#FFF',
-    color: '#333',
+    backgroundColor: '#06392e',
+    color: '#00ea6b',
   },
   inputError: {
     borderColor: '#F44336',

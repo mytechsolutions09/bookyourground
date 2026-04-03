@@ -147,6 +147,10 @@ interface LandingBookingFormProps {
   initialTeamType?: 'one' | 'both';
   // When true, expand to full available width (used on /book-my-ground and ground pages).
   fullWidth?: boolean;
+  /** When true (e.g. /book-my-ground), render search results in a second card below the form. */
+  separateSearchResults?: boolean;
+  /** Native-only: render without Card container (used on /book-my-ground). */
+  noCard?: boolean;
 }
 
 export default function LandingBookingForm({
@@ -156,6 +160,8 @@ export default function LandingBookingForm({
   initialStartTime,
   initialTeamType,
   fullWidth = false,
+  separateSearchResults = false,
+  noCard = false,
 }: LandingBookingFormProps) {
   const { user } = useAuth();
   const { width: windowWidth } = useWindowDimensions();
@@ -920,12 +926,14 @@ export default function LandingBookingForm({
           style={[
             styles.dropdownButton,
             open && styles.dropdownButtonOpen,
+            !!value && !disabled && styles.dropdownButtonSelected,
             disabled && styles.dropdownButtonDisabled,
           ]}
         >
           <Text
             style={[
               styles.dropdownButtonText,
+              !!value && !disabled && styles.dropdownButtonTextSelected,
               disabled && styles.dropdownButtonTextDisabled,
             ]}
           >
@@ -1215,6 +1223,97 @@ export default function LandingBookingForm({
     }
   };
 
+  const showSearchResults = useLandingSearchFlow && hasSearched;
+
+  const searchResultsBody = showSearchResults ? (
+    <>
+      <Text
+        style={separateSearchResults ? styles.labelOnWhite : styles.label}
+      >
+        Available grounds
+      </Text>
+      {searching ? (
+        <ActivityIndicator
+          style={styles.searchSpinner}
+          color="#01e669"
+        />
+      ) : null}
+
+      {searchResults.length > 0 ? (
+        <View style={styles.searchResultsScroller}>
+          <View
+            style={[
+              styles.searchResultsGrid,
+              isSearchTwoColumn && styles.searchResultsGridTwoCol,
+            ]}
+          >
+            {searchResults.map((g) => {
+              const isBox = String(g.pitch_type ?? '').toLowerCase().includes('box');
+              const slotCustom =
+                Object.prototype.hasOwnProperty.call(searchSlotPriceByGroundId, g.id) &&
+                searchSlotPriceByGroundId[g.id] != null
+                  ? searchSlotPriceByGroundId[g.id]!
+                  : null;
+
+              let displayPricePerUnit: number | null = null;
+              let unitLabelOverride: string | undefined;
+
+              if (isBox) {
+                const base = g.base_price_per_hour ?? 0;
+                const perHour = slotCustom != null ? slotCustom : base;
+                displayPricePerUnit = perHour;
+                unitLabelOverride = '/hr';
+              } else {
+                const baseBothTeams =
+                  slotCustom != null ? slotCustom : g.base_price_per_hour ?? 0;
+                const perMatch =
+                  teamType === 'one'
+                    ? Math.round((baseBothTeams / 2) * 100) / 100
+                    : baseBothTeams;
+                displayPricePerUnit = perMatch;
+                unitLabelOverride = ' / match';
+              }
+
+              return (
+                <View
+                  key={g.id}
+                  style={[
+                    styles.searchResultTile,
+                    isSearchTwoColumn && styles.searchResultTileHalf,
+                  ]}
+                >
+                  <GroundCard
+                    ground={g}
+                    displayPricePerUnit={displayPricePerUnit}
+                    unitLabelOverride={unitLabelOverride}
+                    onPress={() => {
+                      const query: string[] = [];
+                      if (bookingDate) {
+                        query.push(`date=${encodeURIComponent(bookingDate)}`);
+                      }
+                      if (startTime) {
+                        query.push(`time=${encodeURIComponent(startTime)}`);
+                      }
+                      const suffix = query.length ? `?${query.join('&')}` : '';
+                      router.push(`${makeGroundPath(g)}${suffix}` as any);
+                    }}
+                    showBookingSchedule={false}
+                  />
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      ) : !searching ? (
+        <Text style={separateSearchResults ? styles.smallMutedOnWhite : styles.smallMuted}>
+          {wantsSlotFilter
+            ? 'No grounds have this slot free. Try another time or date.'
+            : 'No grounds match your search.'}
+        </Text>
+      ) : null}
+    </>
+  ) : null;
+
   const formFields = (
     <>
       {!hideGroundPicker && (
@@ -1364,246 +1463,294 @@ export default function LandingBookingForm({
       >
         <Text style={styles.label}>Date</Text>
 
-        <View style={styles.datePagerRow}>
-          <Pressable
-            onPress={() => {
-              if (!hasPrevDates) return;
-              setDatePage((p) => Math.max(0, p - 1));
-            }}
-            style={[
-              styles.dateArrowButton,
-              !hasPrevDates && styles.dateArrowButtonDisabled,
-            ]}
-          >
-            <Text
-              style={[
-                styles.dateArrowText,
-                !hasPrevDates && styles.dateArrowTextDisabled,
-              ]}
-            >
-              {'<'}
-            </Text>
-          </Pressable>
+        {/*
+         * Web: use paged slices (`visibleDates`) with arrow buttons.
+         * Native: show full 3‑month range (`upcomingDates`) in a horizontal scroller.
+         */}
+        {(() => {
+          const webDates = visibleDates;
+          const nativeDates = upcomingDates;
+          const datesForWeb = webDates;
+          const datesForNative = nativeDates;
 
-          <View style={styles.dateChipsWrap}>
-          {visibleDates.map((d) => {
-            const isSelected = bookingDate === d.iso;
+          if (isWeb) {
             return (
-              <Pressable
-                key={d.iso}
-                onPress={() => {
-                  if (useLandingSearchFlow) {
-                    clearSearchState();
-                    setStartTime('' as TimeString);
-                  }
-                  setBookingDate(d.iso);
-                }}
-                style={[
-                  styles.dateChip,
-                  isSelected && styles.dateChipActive,
-                ]}
-              >
-                <View style={styles.dateChipInner}>
+              <View style={styles.datePagerRow}>
+                <Pressable
+                  onPress={() => {
+                    if (!hasPrevDates) return;
+                    setDatePage((p) => Math.max(0, p - 1));
+                  }}
+                  style={[
+                    styles.dateArrowButton,
+                    !hasPrevDates && styles.dateArrowButtonDisabled,
+                  ]}
+                >
                   <Text
                     style={[
-                      styles.dateChipText,
-                      isSelected && styles.dateChipTextActive,
+                      styles.dateArrowText,
+                      !hasPrevDates && styles.dateArrowTextDisabled,
                     ]}
                   >
-                    {d.label}
+                    {'<'}
                   </Text>
-                  <Text
-                    style={[
-                      styles.dateChipWeekday,
-                      isSelected && styles.dateChipWeekdayActive,
-                    ]}
-                  >
-                    {d.weekdayShort}
-                  </Text>
-                </View>
-              </Pressable>
-            );
-          })}
-          </View>
+                </Pressable>
 
-          <Pressable
-            onPress={() => {
-              if (!hasNextDates) return;
-              setDatePage((p) => p + 1);
-            }}
-            style={[
-              styles.dateArrowButton,
-              !hasNextDates && styles.dateArrowButtonDisabled,
-            ]}
-          >
-            <Text
-              style={[
-                styles.dateArrowText,
-                !hasNextDates && styles.dateArrowTextDisabled,
-              ]}
+                <View style={styles.dateChipsWrap}>
+                  {datesForWeb.map((d) => {
+                    const isSelected = bookingDate === d.iso;
+                    return (
+                      <Pressable
+                        key={d.iso}
+                        onPress={() => {
+                          if (useLandingSearchFlow) {
+                            clearSearchState();
+                            setStartTime('' as TimeString);
+                          }
+                          setBookingDate(d.iso);
+                        }}
+                        style={[
+                          styles.dateChip,
+                          isSelected && styles.dateChipActive,
+                        ]}
+                      >
+                        <View style={styles.dateChipInner}>
+                          <Text
+                            style={[
+                              styles.dateChipText,
+                              isSelected && styles.dateChipTextActive,
+                            ]}
+                          >
+                            {d.label}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.dateChipWeekday,
+                              isSelected && styles.dateChipWeekdayActive,
+                            ]}
+                          >
+                            {d.weekdayShort}
+                          </Text>
+                        </View>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+
+                <Pressable
+                  onPress={() => {
+                    if (!hasNextDates) return;
+                    setDatePage((p) => p + 1);
+                  }}
+                  style={[
+                    styles.dateArrowButton,
+                    !hasNextDates && styles.dateArrowButtonDisabled,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.dateArrowText,
+                      !hasNextDates && styles.dateArrowTextDisabled,
+                    ]}
+                  >
+                    {'>'}
+                  </Text>
+                </Pressable>
+              </View>
+            );
+          }
+
+          return (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.dateChipsScrollContent}
+              style={styles.dateScrollNative}
             >
-              {'>'}
-            </Text>
-          </Pressable>
-        </View>
+              {datesForNative.map((d) => {
+                const isSelected = bookingDate === d.iso;
+                return (
+                  <Pressable
+                    key={d.iso}
+                    onPress={() => {
+                      if (useLandingSearchFlow) {
+                        clearSearchState();
+                        setStartTime('' as TimeString);
+                      }
+                      setBookingDate(d.iso);
+                    }}
+                    style={[
+                      styles.dateChip,
+                      styles.dateChipMobile,
+                      isSelected && styles.dateChipActive,
+                    ]}
+                  >
+                    <View style={styles.dateChipInner}>
+                      <Text
+                        style={[
+                          styles.dateChipText,
+                          styles.dateChipTextMobile,
+                          isSelected && styles.dateChipTextActive,
+                        ]}
+                      >
+                        {d.label}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.dateChipWeekday,
+                          styles.dateChipWeekdayMobile,
+                          isSelected && styles.dateChipWeekdayActive,
+                        ]}
+                      >
+                        {d.weekdayShort}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          );
+        })()}
       </View>
 
       <View style={[styles.section, webSingleColumnStyle, webFullSpanStyle]}>
         <Text style={styles.label}>Start Time</Text>
 
-        <View style={[styles.timeSlotsWrap, isBoxCricket && styles.timeSlotsWrapBox]}>
-          {!timeSlots.length ? (
-            <Text style={styles.smallMuted}>Select a ground type to see time slots.</Text>
-          ) : !availableTimeSlots.length ? (
-            <Text style={styles.smallMuted}>All slots are booked for this date.</Text>
-          ) : (
-            availableTimeSlots.map((s) => {
-              const active = s.value === startTime;
-              // In search mode (no ground selected yet), show both DB slots and disable
-              // the ones where `is_available = false` for all candidate grounds.
-              const slotIsAvailable = selectedGround?.id
-                ? allowedStartHHMM.has(s.value)
-                : searchAllowedStartHHMM.has(s.value);
-              return (
-                <Pressable
-                  key={s.value}
-                  disabled={submitting || !slotIsAvailable}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: active, disabled: submitting || !slotIsAvailable }}
-                  accessibilityLabel={`${s.label} time slot`}
-                  onPress={() => {
-                    if (useLandingSearchFlow) clearSearchState();
-                    setStartTime(s.value as TimeString);
-                  }}
-                  style={({ pressed }) => [
-                    styles.timeSlotChip,
-                    isBoxCricket && styles.timeSlotChipDense,
-                    ...(Platform.OS === 'web' ? [{ cursor: 'pointer' } as object] : []),
-                    active && styles.timeSlotChipActive,
-                    pressed && !active && styles.timeSlotChipPressed,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.timeSlotText,
-                      isBoxCricket && styles.timeSlotTextDense,
-                      active && styles.timeSlotTextActive,
+        {isWeb ? (
+          <View style={[styles.timeSlotsWrap, isBoxCricket && styles.timeSlotsWrapBox]}>
+            {!timeSlots.length ? (
+              <Text style={styles.smallMuted}>Select a ground type to see time slots.</Text>
+            ) : !availableTimeSlots.length ? (
+              <Text style={styles.smallMuted}>All slots are booked for this date.</Text>
+            ) : (
+              availableTimeSlots.map((s) => {
+                const active = s.value === startTime;
+                const slotIsAvailable = selectedGround?.id
+                  ? allowedStartHHMM.has(s.value)
+                  : searchAllowedStartHHMM.has(s.value);
+                return (
+                  <Pressable
+                    key={s.value}
+                    disabled={submitting || !slotIsAvailable}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active, disabled: submitting || !slotIsAvailable }}
+                    accessibilityLabel={`${s.label} time slot`}
+                    onPress={() => {
+                      if (useLandingSearchFlow) clearSearchState();
+                      setStartTime(s.value as TimeString);
+                    }}
+                    style={({ pressed }) => [
+                      styles.timeSlotChip,
+                      isBoxCricket && styles.timeSlotChipDense,
+                      ...(Platform.OS === 'web' ? [{ cursor: 'pointer' } as object] : []),
+                      active && styles.timeSlotChipActive,
+                      pressed && !active && styles.timeSlotChipPressed,
                     ]}
                   >
-                    {s.label}
-                  </Text>
-                </Pressable>
-              );
-            })
-          )}
-        </View>
-      </View>
-
-      {useLandingSearchFlow && hasSearched ? (
-        <View style={[styles.section, webFullSpanStyle, styles.searchResultsSection]}>
-          <Text style={styles.label}>Available grounds</Text>
-          {searching ? (
-            <ActivityIndicator
-              style={styles.searchSpinner}
-              color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'}
-            />
-          ) : null}
-
-          {searchResults.length > 0 ? (
-            <View
-              style={styles.searchResultsScroller}
-            >
-              <View
-                style={[
-                  styles.searchResultsGrid,
-                  isSearchTwoColumn && styles.searchResultsGridTwoCol,
-                ]}
-              >
-                {searchResults.map((g) => {
-                  const isBox = String(g.pitch_type ?? '').toLowerCase().includes('box');
-                  const slotCustom =
-                    Object.prototype.hasOwnProperty.call(searchSlotPriceByGroundId, g.id) &&
-                    searchSlotPriceByGroundId[g.id] != null
-                      ? searchSlotPriceByGroundId[g.id]!
-                      : null;
-
-                  let displayPricePerUnit: number | null = null;
-                  let unitLabelOverride: string | undefined;
-
-                  if (isBox) {
-                    const base = g.base_price_per_hour ?? 0;
-                    const perHour = slotCustom != null ? slotCustom : base;
-                    displayPricePerUnit = perHour;
-                    unitLabelOverride = '/hr';
-                  } else {
-                    const baseBothTeams =
-                      slotCustom != null ? slotCustom : g.base_price_per_hour ?? 0;
-                    const perMatch =
-                      teamType === 'one'
-                        ? Math.round((baseBothTeams / 2) * 100) / 100
-                        : baseBothTeams;
-                    displayPricePerUnit = perMatch;
-                    unitLabelOverride = ' / match';
-                  }
-
-                  return (
-                    <View
-                      key={g.id}
+                    <Text
                       style={[
-                        styles.searchResultTile,
-                        isSearchTwoColumn && styles.searchResultTileHalf,
+                        styles.timeSlotText,
+                        isBoxCricket && styles.timeSlotTextDense,
+                        active && styles.timeSlotTextActive,
                       ]}
                     >
-                      <GroundCard
-                        ground={g}
-                        displayPricePerUnit={displayPricePerUnit}
-                        unitLabelOverride={unitLabelOverride}
-                        onPress={() => {
-                          const query: string[] = [];
-                          if (bookingDate) {
-                            query.push(`date=${encodeURIComponent(bookingDate)}`);
-                          }
-                          if (startTime) {
-                            query.push(`time=${encodeURIComponent(startTime)}`);
-                          }
-                        const suffix = query.length ? `?${query.join('&')}` : '';
-                        router.push(`${makeGroundPath(g)}${suffix}` as any);
-                        }}
-                        showBookingSchedule={false}
-                      />
-                    </View>
-                  );
-                })}
-              </View>
-            </View>
-          ) : !searching ? (
-            <Text style={styles.smallMuted}>
-              {wantsSlotFilter
-                ? 'No grounds have this slot free. Try another time or date.'
-                : 'No grounds match your search.'}
-            </Text>
-          ) : null}
+                      {s.label}
+                    </Text>
+                  </Pressable>
+                );
+              })
+            )}
+          </View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.timeSlotsScrollContent}
+          >
+            {!timeSlots.length ? (
+              <Text style={styles.smallMuted}>Select a ground type to see time slots.</Text>
+            ) : !availableTimeSlots.length ? (
+              <Text style={styles.smallMuted}>All slots are booked for this date.</Text>
+            ) : (
+              availableTimeSlots.map((s) => {
+                const active = s.value === startTime;
+                const slotIsAvailable = selectedGround?.id
+                  ? allowedStartHHMM.has(s.value)
+                  : searchAllowedStartHHMM.has(s.value);
+                return (
+                  <Pressable
+                    key={s.value}
+                    disabled={submitting || !slotIsAvailable}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active, disabled: submitting || !slotIsAvailable }}
+                    accessibilityLabel={`${s.label} time slot`}
+                    onPress={() => {
+                      if (useLandingSearchFlow) clearSearchState();
+                      setStartTime(s.value as TimeString);
+                    }}
+                    style={({ pressed }) => [
+                      styles.timeSlotChip,
+                      styles.timeSlotChipMobile,
+                      isBoxCricket && styles.timeSlotChipDense,
+                      active && styles.timeSlotChipActive,
+                      pressed && !active && styles.timeSlotChipPressed,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.timeSlotText,
+                        styles.timeSlotTextMobile,
+                        isBoxCricket && styles.timeSlotTextDense,
+                        active && styles.timeSlotTextActive,
+                      ]}
+                    >
+                      {s.label}
+                    </Text>
+                  </Pressable>
+                );
+              })
+            )}
+          </ScrollView>
+        )}
+      </View>
+
+      {!separateSearchResults && searchResultsBody ? (
+        <View style={[styles.section, webFullSpanStyle, styles.searchResultsSection]}>
+          {searchResultsBody}
         </View>
       ) : null}
     </>
   );
+
+  const ContainerComponent: React.ComponentType<any> =
+    !isWeb && noCard ? View : Card;
+  const mainCardStyle = [
+    styles.card,
+    isWeb && styles.cardWeb,
+    fullWidth && !isWeb && styles.cardNativeFull,
+    !isWeb && noCard && styles.cardPlainNative,
+  ];
+
   return (
     <View
       style={[
         styles.wrapper,
-        fullWidth && styles.wrapperFull,
+        fullWidth && isWeb && styles.wrapperFull,
+        fullWidth && !isWeb && styles.wrapperNativeFull,
         isWeb && windowWidth < 640 && styles.wrapperMobileTight,
       ]}
     >
-      <Card style={[styles.card, isWeb && styles.cardWeb]}>
-        <Text style={styles.title}>Book a Ground</Text>
-        <Text style={styles.subtitle}>
-          {hideGroundPicker
-            ? useLandingSearchFlow
-              ? 'Choose location and type to search. Optionally add date and time to filter by an open slot.'
-              : 'Choose location, ground type, date, and time to request your booking.'
-            : 'Pick a ground and time slot to request your booking.'}
-        </Text>
+      <ContainerComponent style={mainCardStyle}>
+        <Text style={[styles.title, !isWeb && styles.titleMobile]}>Book a Ground</Text>
+        {isWeb && (
+          <Text style={styles.subtitle}>
+            {hideGroundPicker
+              ? useLandingSearchFlow
+                ? 'Choose location and type to search. Optionally add date and time to filter by an open slot.'
+                : 'Choose location, ground type, date, and time to request your booking.'
+              : 'Pick a ground and time slot to request your booking.'}
+          </Text>
+        )}
 
         {isWeb ? (
           <View style={styles.formFieldsWeb}>{formFields}</View>
@@ -1678,7 +1825,17 @@ export default function LandingBookingForm({
             />
           )}
         </View>
-      </Card>
+      </ContainerComponent>
+
+      {separateSearchResults && searchResultsBody ? (
+        <Card style={[styles.searchResultsCard, isWeb && styles.cardWeb]}>
+          <Text style={styles.searchResultsTitle}>Search results</Text>
+          <Text style={styles.searchResultsSubtitle}>
+            Grounds that match your location, type, and optional date and time.
+          </Text>
+          {searchResultsBody}
+        </Card>
+      ) : null}
     </View>
   );
 }
@@ -1704,42 +1861,67 @@ const styles = StyleSheet.create({
       },
     }),
   },
+  /** Native-only: when `fullWidth` and rendered in dedicated booking screens, stretch to fill. */
+  wrapperNativeFull: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#043529',
+    paddingHorizontal: 8,
+    paddingBottom: 24,
+  },
   wrapperMobileTight: {
     paddingHorizontal: 8,
   },
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#043529',
     borderRadius: 14,
     padding: 16,
     marginTop: 0,
   },
+  /** Native-only full-screen card (no rounding, no side margins). */
+  cardNativeFull: {
+    alignSelf: 'stretch',
+  },
   cardWeb: {
     overflow: 'visible',
+  },
+  /** Native-only plain wrapper when `noCard` is true (e.g. /book-my-ground). */
+  cardPlainNative: {
+    backgroundColor: 'transparent',
+    borderRadius: 0,
+    paddingHorizontal: 8,
+    paddingTop: 12,
+    paddingBottom: 16,
   },
   title: {
     fontSize: 20,
     fontWeight: '400',
     fontFamily: 'Inter',
-    color: '#111827',
+    color: '#F9FAFB',
     marginBottom: 4,
+  },
+  /** Native-only title accent colour. */
+  titleMobile: {
+    color: '#02c259',
   },
   subtitle: {
     fontSize: 14,
     fontFamily: 'Inter',
-    color: '#6B7280',
+    color: '#E5E7EB',
     marginBottom: 12,
   },
   authRequired: {
     marginBottom: 16,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: 'rgba(220,141,60,0.12)',
+    backgroundColor: 'rgba(6,57,46,0.12)', // #06392e
   },
   authTitle: {
     fontSize: 16,
     fontWeight: '400',
     fontFamily: 'Inter',
-    color: '#111827',
+    color: '#043529',
     marginBottom: 4,
   },
   authText: {
@@ -1774,19 +1956,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '400',
     fontFamily: 'Inter',
-    color: '#374151',
+    color: '#E5E7EB',
     marginBottom: 6,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#DDD',
+    borderColor: '#00ea6b',
     borderRadius: 10,
     paddingVertical: 9,
     paddingHorizontal: 10,
     fontSize: 14,
     fontFamily: 'Inter',
-    backgroundColor: '#FFF',
-    color: '#111827',
+    backgroundColor: '#06392e',
+    color: '#F9FAFB',
   },
   inputWide: {
     width: '100%',
@@ -1795,14 +1977,14 @@ const styles = StyleSheet.create({
   },
   inputDisabled: {
     borderWidth: 1,
-    borderColor: '#DDD',
+    borderColor: '#64748B',
     borderRadius: 10,
     paddingVertical: 9,
     paddingHorizontal: 10,
     fontSize: 14,
     fontFamily: 'Inter',
-    backgroundColor: '#F3F4F6',
-    color: '#6B7280',
+    backgroundColor: '#022c22',
+    color: '#9CA3AF',
   },
   groundsRow: {
     flexDirection: 'row',
@@ -1814,12 +1996,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderColor: '#1f2937',
+    backgroundColor: '#06392e',
   },
   groundChipActive: {
-    borderColor: '#dc8d3c',
-    backgroundColor: 'rgba(220,141,60,0.12)',
+    borderColor: '#00ea6b',
+    backgroundColor: 'rgba(0,234,107,0.12)',
   },
   groundChipText: {
     fontSize: 13,
@@ -1828,7 +2010,7 @@ const styles = StyleSheet.create({
     color: '#374151',
   },
   groundChipTextActive: {
-    color: '#dc8d3c',
+    color: '#00ea6b',
   },
   teamToggle: {
     flexDirection: 'row',
@@ -1839,9 +2021,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#FFFFFF',
     borderRadius: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#043529',
     alignItems: 'center',
   },
   teamToggleOptionDisabled: {
@@ -1859,17 +2041,17 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   teamToggleOptionActive: {
-    borderColor: '#dc8d3c',
-    backgroundColor: 'rgba(220,141,60,0.12)',
+    borderColor: '#00ea6b',
+    backgroundColor: '#043529',
   },
   teamToggleText: {
     fontSize: 14,
     fontWeight: '400',
     fontFamily: 'Inter',
-    color: '#374151',
+    color: '#E5E7EB',
   },
   teamToggleTextActive: {
-    color: '#dc8d3c',
+    color: '#00ea6b',
   },
   teamToggleTextDisabled: {
     color: '#9CA3AF',
@@ -1879,7 +2061,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: 'rgba(220,141,60,0.10)',
+    backgroundColor: 'rgba(6,57,46,0.18)', // subtle #06392e panel
   },
   summaryText: {
     fontSize: 14,
@@ -1894,7 +2076,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   summaryAccent: {
-    color: '#dc8d3c',
+    color: '#00ea6b',
   },
   actions: {
     marginTop: 8,
@@ -1911,10 +2093,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '400',
     fontFamily: 'Inter',
-    color: '#dc8d3c',
+    color: '#00ea6b',
   },
   searchResultsSection: {
     marginTop: 4,
+  },
+  /** Second card below the form when `separateSearchResults` (e.g. /book-my-ground). */
+  searchResultsCard: {
+    marginTop: 20,
+    backgroundColor: '#FFFFFF',
+  },
+  searchResultsTitle: {
+    fontSize: 20,
+    fontWeight: '400',
+    fontFamily: 'Inter',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  searchResultsSubtitle: {
+    fontSize: 14,
+    fontFamily: 'Inter',
+    color: '#6B7280',
+    marginBottom: 12,
   },
   searchSpinner: {
     marginVertical: 12,
@@ -1946,22 +2146,27 @@ const styles = StyleSheet.create({
   smallMuted: {
     fontSize: 13,
     fontFamily: 'Inter',
-    color: '#6B7280',
+    color: '#9CA3AF',
   },
   dropdownOuter: {
     position: 'relative',
   },
   dropdownButton: {
     borderWidth: 1,
-    borderColor: '#DDD',
-    backgroundColor: '#FFF',
+    borderColor: '#FFFFFF',
+    backgroundColor: '#043529',
     borderRadius: 10,
     paddingVertical: 9,
     paddingHorizontal: 10,
   },
   dropdownButtonOpen: {
-    borderColor: '#dc8d3c',
-    backgroundColor: 'rgba(220,141,60,0.08)',
+    borderColor: '#00ea6b',
+    backgroundColor: '#043529',
+  },
+  /** After user picks Location / Type — match chip “selected” accent */
+  dropdownButtonSelected: {
+    borderColor: '#00ea6b',
+    backgroundColor: '#043529',
   },
   dropdownButtonDisabled: {
     backgroundColor: '#F3F4F6',
@@ -1970,7 +2175,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '400',
     fontFamily: 'Inter',
-    color: '#111827',
+    color: '#FFFFFF',
+  },
+  dropdownButtonTextSelected: {
+    color: '#00ea6b',
   },
   dropdownButtonTextDisabled: {
     color: '#6B7280',
@@ -1980,9 +2188,9 @@ const styles = StyleSheet.create({
     top: 44,
     left: 0,
     right: 0,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#043529',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#00ea6b',
     borderRadius: 10,
     paddingVertical: 6,
     zIndex: 10000,
@@ -2002,9 +2210,9 @@ const styles = StyleSheet.create({
   },
   portalMenu: {
     position: 'absolute',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#043529',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#00ea6b',
     borderRadius: 12,
     padding: 8,
     shadowColor: '#000',
@@ -2018,16 +2226,16 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   dropdownOptionActive: {
-    backgroundColor: 'rgba(220,141,60,0.12)',
+    backgroundColor: '#043529',
   },
   dropdownOptionText: {
     fontSize: 14,
     fontWeight: '400',
     fontFamily: 'Inter',
-    color: '#374151',
+    color: '#FFFFFF',
   },
   dropdownOptionTextActive: {
-    color: '#dc8d3c',
+    color: '#00ea6b',
   },
   dateChipsWrap: {
     flexDirection: 'row',
@@ -2038,15 +2246,29 @@ const styles = StyleSheet.create({
     flex: 1,
     overflow: 'hidden',
   },
+  /** Mobile-only: tighter horizontal scroller spacing for dates. */
+  dateChipsScrollContent: {
+    paddingHorizontal: 2,
+    gap: 6,
+    alignItems: 'center',
+  },
+  dateScrollNative: {
+    alignSelf: 'stretch',
+  },
   dateChip: {
     paddingVertical: 6,
-    paddingHorizontal: 8,
+    paddingHorizontal: 22,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#043529',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  /** Mobile-only: smaller chip for compact horizontal scrolling. */
+  dateChipMobile: {
+    paddingVertical: 4,
+    paddingHorizontal: 14,
   },
   dateChipInner: {
     alignItems: 'center',
@@ -2054,27 +2276,33 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   dateChipActive: {
-    borderColor: '#dc8d3c',
-    backgroundColor: 'rgba(220,141,60,0.12)',
+    borderColor: '#00ea6b',
+    backgroundColor: '#043529',
   },
   dateChipText: {
     fontSize: 12,
     fontWeight: '500',
     fontFamily: 'Inter',
-    color: '#374151',
+    color: '#FFFFFF',
+  },
+  dateChipTextMobile: {
+    fontSize: 11,
   },
   dateChipTextActive: {
-    color: '#dc8d3c',
+    color: '#00ea6b',
   },
   dateChipWeekday: {
     fontSize: 10,
     fontWeight: '600',
     fontFamily: 'Inter',
-    color: '#6B7280',
+    color: '#FFFFFF',
     letterSpacing: 0.2,
   },
+  dateChipWeekdayMobile: {
+    fontSize: 9,
+  },
   dateChipWeekdayActive: {
-    color: '#dc8d3c',
+    color: '#00ea6b',
   },
   datePagerRow: {
     flexDirection: 'row',
@@ -2088,19 +2316,19 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
   },
   dateArrowButtonDisabled: {
     opacity: 0.4,
   },
   dateArrowText: {
     fontSize: 14,
-    fontWeight: '400',
+    fontWeight: '700',
     fontFamily: 'Inter',
-    color: '#4B5563',
+    color: '#02c259',
   },
   dateArrowTextDisabled: {
     color: '#9CA3AF',
@@ -2111,6 +2339,13 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 10,
   },
+  /** Mobile-only: horizontal scroll spacing for time chips. */
+  timeSlotsScrollContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 2,
+  },
   /** Box Cricket: many hourly chips; keep full width so all slots wrap visibly. */
   timeSlotsWrapBox: {
     width: '100%',
@@ -2118,12 +2353,17 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   timeSlotChip: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 22,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#043529',
+  },
+  /** Mobile-only: slightly smaller time chip for scrolling. */
+  timeSlotChipMobile: {
+    paddingVertical: 6,
+    paddingHorizontal: 16,
   },
   timeSlotChipDense: {
     paddingVertical: 7,
@@ -2131,24 +2371,27 @@ const styles = StyleSheet.create({
   },
   timeSlotChipActive: {
     borderWidth: 2,
-    borderColor: '#dc8d3c',
-    backgroundColor: 'rgba(220,141,60,0.16)',
+    borderColor: '#00ea6b',
+    backgroundColor: '#043529',
   },
   timeSlotChipPressed: {
-    backgroundColor: '#F3F4F6',
-    borderColor: '#D1D5DB',
+    backgroundColor: '#06392e',
+    borderColor: '#FFFFFF',
   },
   timeSlotText: {
     fontSize: 13,
     fontWeight: '400',
     fontFamily: 'Inter',
-    color: '#374151',
+    color: '#FFFFFF',
+  },
+  timeSlotTextMobile: {
+    fontSize: 12,
   },
   timeSlotTextDense: {
     fontSize: 11,
   },
   timeSlotTextActive: {
-    color: '#dc8d3c',
+    color: '#00ea6b',
   },
 });
 

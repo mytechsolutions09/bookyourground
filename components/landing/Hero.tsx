@@ -149,7 +149,7 @@ export default function Hero() {
 
 const styles = StyleSheet.create({
   root: {
-    backgroundColor: '#020617',
+    backgroundColor: '#043529',
     paddingVertical: Platform.OS === 'web' ? 48 : 40,
     paddingHorizontal: 24,
     justifyContent: 'center',
@@ -167,8 +167,8 @@ const styles = StyleSheet.create({
     width: 260,
     height: 260,
     borderRadius: 999,
-    backgroundColor: 'rgba(56,189,248,0.12)',
-    shadowColor: '#22d3ee',
+    backgroundColor: 'rgba(0,234,107,0.12)',
+    shadowColor: '#00ea6b',
     shadowOpacity: Platform.OS === 'web' ? 0.6 : 0.3,
     shadowOffset: { width: 0, height: 0 },
     shadowRadius: 80,
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     borderColor: 'rgba(148, 163, 184, 0.5)',
-    backgroundColor: 'rgba(15,23,42,0.85)',
+    backgroundColor: 'rgba(6,57,46,0.85)', // #06392e
     marginBottom: 18,
   },
   pillLabel: {
@@ -223,12 +223,12 @@ const styles = StyleSheet.create({
     letterSpacing: -0.8,
   },
   titleAccent: {
-    color: '#dc8d3c',
+    color: '#00ea6b',
   },
   subtitle: {
     fontSize: 16,
     lineHeight: 26,
-    color: '#cbd5f5',
+    color: '#e5e7eb',
     maxWidth: 520,
     marginBottom: 28,
   },
@@ -238,14 +238,14 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   primaryButton: {
-    backgroundColor: '#dc8d3c',
+    backgroundColor: '#00ea6b',
     paddingHorizontal: 28,
     paddingVertical: 14,
     borderRadius: 999,
     minWidth: 170,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#dc8d3c',
+    shadowColor: '#00ea6b',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
     shadowRadius: 18,
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: '#043529',
   },
   secondaryButton: {
     paddingHorizontal: 26,
@@ -266,12 +266,12 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     borderColor: 'rgba(148,163,184,0.6)',
-    backgroundColor: 'rgba(15,23,42,0.9)',
+    backgroundColor: 'rgba(6,57,46,0.9)', // #06392e
     alignItems: 'center',
     justifyContent: 'center',
   },
   secondaryButtonPressed: {
-    backgroundColor: 'rgba(30,64,175,0.9)',
+    backgroundColor: '#06392e',
   },
   secondaryButtonText: {
     fontSize: 15,
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 24,
     padding: 18,
-    backgroundColor: 'rgba(15,23,42,0.95)',
+    backgroundColor: '#06392e',
     borderWidth: 1,
     borderColor: 'rgba(55,65,81,0.9)',
     shadowColor: '#000000',
@@ -328,11 +328,11 @@ const styles = StyleSheet.create({
   cardBadge: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#f97316',
+    color: '#00ea6b',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
-    backgroundColor: 'rgba(248,113,113,0.08)',
+    backgroundColor: 'rgba(0,234,107,0.12)',
   },
   cardBody: {},
   cardVenueRow: {
@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 999,
-    backgroundColor: 'rgba(220,141,60,0.08)',
+    backgroundColor: 'rgba(0,234,107,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 999,
-    backgroundColor: '#dc8d3c',
+    backgroundColor: '#00ea6b',
   },
   venueInfo: {
     flex: 1,
@@ -378,9 +378,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 14,
-    backgroundColor: 'rgba(220,141,60,0.12)',
+    backgroundColor: 'rgba(0,234,107,0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(220,141,60,0.55)',
+    borderColor: 'rgba(0,234,107,0.55)',
   },
   slotChipPrimaryLabel: {
     fontSize: 13,
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 14,
-    backgroundColor: 'rgba(15,23,42,0.9)',
+    backgroundColor: 'rgba(6,57,46,0.9)', // #06392e
     borderWidth: 1,
     borderColor: 'rgba(55,65,81,0.85)',
   },
@@ -431,12 +431,12 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0f172a',
+    backgroundColor: '#06392e',
     borderWidth: 1,
     borderColor: 'rgba(148,163,184,0.7)',
   },
   cardCtaButtonPressed: {
-    backgroundColor: '#020617',
+    backgroundColor: '#043529',
   },
   cardCtaText: {
     fontSize: 14,
@@ -453,7 +453,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 16,
-    backgroundColor: 'rgba(15,23,42,0.9)',
+    backgroundColor: 'rgba(6,57,46,0.9)', // #06392e
     borderWidth: 1,
     borderColor: 'rgba(31,41,55,0.9)',
     minWidth: 90,

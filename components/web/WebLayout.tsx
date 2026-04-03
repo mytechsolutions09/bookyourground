@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
+  Image,
   StyleSheet,
   TouchableOpacity,
   Platform,
@@ -244,8 +245,15 @@ export default function WebLayout({ children }: WebLayoutProps) {
             <TouchableOpacity
               onPress={() => router.replace('/')}
               style={[styles.logo, scrolled && styles.logoScrolled]}
+              accessibilityRole="link"
+              accessibilityLabel="Book my ground — home"
             >
-              <Text style={styles.logoText}>Book my ground</Text>
+              <Image
+                source={require('../../assets/logo.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+                accessibilityIgnoresInvertColors
+              />
             </TouchableOpacity>
 
             <View style={styles.headerRight}>
@@ -318,27 +326,27 @@ export default function WebLayout({ children }: WebLayoutProps) {
                     </View>
                   )}
 
-                  <TouchableOpacity
-                    style={styles.headerPrimaryButton}
+                  <Text
+                    style={styles.headerPrimaryButtonText}
                     onPress={() => router.push(groundsHref as any)}
                   >
-                    <Text style={styles.headerPrimaryButtonText}>Grounds</Text>
-                  </TouchableOpacity>
+                    Grounds
+                  </Text>
 
                   {!isAuthenticated ? (
-                    <TouchableOpacity
-                      style={styles.headerSecondaryButton}
+                    <Text
+                      style={styles.headerSecondaryButtonText}
                       onPress={() => router.push('/(auth)/login' as any)}
                     >
-                      <Text style={styles.headerSecondaryButtonText}>Sign in</Text>
-                    </TouchableOpacity>
+                      Sign in
+                    </Text>
                   ) : (
-                    <TouchableOpacity
-                      style={styles.headerSecondaryButton}
+                    <Text
+                      style={styles.headerSecondaryButtonText}
                       onPress={() => router.push('/(tabs)/dashboard' as any)}
                     >
-                      <Text style={styles.headerSecondaryButtonText}>Dashboard</Text>
-                    </TouchableOpacity>
+                      Dashboard
+                    </Text>
                   )}
                 </>
               )}
@@ -356,8 +364,18 @@ export default function WebLayout({ children }: WebLayoutProps) {
           ]}
         >
           <View style={styles.headerContent}>
-            <TouchableOpacity onPress={() => router.replace('/')} style={styles.logo}>
-              <Text style={styles.logoText}>Book my ground</Text>
+            <TouchableOpacity
+              onPress={() => router.replace('/')}
+              style={styles.logo}
+              accessibilityRole="link"
+              accessibilityLabel="Book my ground — home"
+            >
+              <Image
+                source={require('../../assets/logo.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+                accessibilityIgnoresInvertColors
+              />
             </TouchableOpacity>
 
             <View style={styles.headerRight}>
@@ -374,12 +392,12 @@ export default function WebLayout({ children }: WebLayoutProps) {
                 </TouchableOpacity>
               ) : (
                 !isCompact && (
-                  <TouchableOpacity
-                    style={styles.headerPrimaryButton}
+                  <Text
+                    style={styles.headerPrimaryButtonText}
                     onPress={() => router.push('/book-my-ground' as any)}
                   >
-                    <Text style={styles.headerPrimaryButtonText}>Grounds</Text>
-                  </TouchableOpacity>
+                    Grounds
+                  </Text>
                 )
               )}
             </View>
@@ -676,9 +694,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
   },
   header: {
-    backgroundColor: '#2b2f4b',
+    backgroundColor: '#043529',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(15,23,42,0.35)',
+    borderBottomColor: '#06392e',
     ...Platform.select({
       web: {
         position: 'sticky' as any,
@@ -688,12 +706,12 @@ const styles = StyleSheet.create({
     }),
   },
   ownerHeader: {
-    backgroundColor: '#2b2f4b',
-    borderBottomColor: 'rgba(15,23,42,0.35)',
+    backgroundColor: '#043529',
+    borderBottomColor: '#06392e',
   },
   userHeader: {
-    backgroundColor: '#2b2f4b',
-    borderBottomColor: 'rgba(15,23,42,0.35)',
+    backgroundColor: '#043529',
+    borderBottomColor: '#06392e',
   },
   heroHeader: {
     position: 'absolute' as any,
@@ -706,21 +724,21 @@ const styles = StyleSheet.create({
   },
   heroHeaderGround: {
     position: 'fixed' as any,
-    backgroundColor: '#2b2f4b',
+    backgroundColor: '#043529',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.12)',
   },
   heroHeaderMarketing: {
     position: 'fixed' as any,
-    backgroundColor: '#2b2f4b',
+    backgroundColor: '#043529',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.12)',
   },
   heroHeaderScrolled: {
     position: 'fixed' as any,
-    backgroundColor: 'rgba(15,23,42,0.9)',
+    backgroundColor: '#06392e',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(15,23,42,0.35)',
+    borderBottomColor: '#043529',
   },
   headerContent: {
     flexDirection: 'row',
@@ -742,13 +760,10 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: 'rgba(15,23,42,0.85)',
   },
-  logoText: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#dc8d3c',
-    fontFamily: 'Inter',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+  logoImage: {
+    height: 40,
+    width: 220,
+    maxWidth: '100%' as any,
   },
   sidebarBrand: {
     paddingVertical: 12,
@@ -767,6 +782,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
+    marginRight: 24,
   },
   headerSearch: {
     minWidth: 220,
@@ -775,14 +791,14 @@ const styles = StyleSheet.create({
   },
   headerSearchInput: {
     borderWidth: 1,
-    borderColor: 'rgba(249,250,251,0.4)',
+    borderColor: 'rgba(0,234,107,0.45)', // #00ea6b
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 8,
     color: '#F9FAFB',
     fontSize: 14,
     fontFamily: 'Inter',
-    backgroundColor: 'rgba(15,23,42,0.75)',
+    backgroundColor: 'rgba(6,57,46,0.95)', // #06392e
   },
   searchDropdown: {
     position: 'absolute' as any,

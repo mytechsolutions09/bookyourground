@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     marginTop: 40,
     paddingHorizontal: 16,
     paddingBottom: 32,
-    backgroundColor: '#020617',
+    backgroundColor: '#043529',
   },
   footerMain: {
     maxWidth: 1280,
@@ -113,7 +113,7 @@ const styles = StyleSheet.create({
   footerBrandTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#F9FAFB',
+    color: '#02c259',
   },
   footerBrandSubtitle: {
     marginTop: 6,

@@ -1,6 +1,17 @@
 import React, { useMemo } from 'react';
 import { Redirect, Tabs, usePathname, useSegments } from 'expo-router';
-import { Hop as Home, Calendar, User, Building2, LogOut } from 'lucide-react-native';
+import {
+  Hop as Home,
+  Calendar,
+  User,
+  Building2,
+  LogOut,
+  House,
+  LandPlot,
+  CalendarCheck2,
+  CircleUser,
+  LogIn,
+} from 'lucide-react-native';
 import { ActivityIndicator, Platform, useWindowDimensions, View } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -32,8 +43,8 @@ export default function TabLayout() {
 
   if (loading && needsAuth) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F5F5F5' }}>
-        <ActivityIndicator size="large" color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#043529' }}>
+        <ActivityIndicator size="large" color={Platform.OS === 'web' ? '#00ea6b' : '#00ea6b'} />
       </View>
     );
   }
@@ -45,9 +56,9 @@ export default function TabLayout() {
   const tabBarStyle = hideTabBarOnBigScreens
     ? ({ display: 'none' } as any)
     : {
-        backgroundColor: '#2b2f4b',
+        backgroundColor: '#043529',
         borderTopWidth: 1,
-        borderTopColor: '#1f243a',
+        borderTopColor: '#06392e',
         height: 60,
         paddingBottom: 8,
         paddingTop: 8,
@@ -57,7 +68,7 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#dc8d3c',
+        tabBarActiveTintColor: '#00ea6b',
         tabBarInactiveTintColor: '#e5e7eb',
         tabBarStyle,
         // On small screens we show only icons (no text labels).
@@ -68,28 +79,48 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color, size }) => <Home size={size} color={color} />,
+          tabBarIcon: ({ color, size }) =>
+            Platform.OS === 'web' ? (
+              <Home size={size} color={color} />
+            ) : (
+              <House size={size} color={color} />
+            ),
         }}
       />
       <Tabs.Screen
         name="grounds"
         options={{
           title: 'Grounds',
-          tabBarIcon: ({ color, size }) => <Building2 size={size} color={color} />,
+          tabBarIcon: ({ color, size }) =>
+            Platform.OS === 'web' ? (
+              <Building2 size={size} color={color} />
+            ) : (
+              <LandPlot size={size} color={color} />
+            ),
         }}
       />
       <Tabs.Screen
         name="bookings"
         options={{
           title: 'Bookings',
-          tabBarIcon: ({ color, size }) => <Calendar size={size} color={color} />,
+          tabBarIcon: ({ color, size }) =>
+            Platform.OS === 'web' ? (
+              <Calendar size={size} color={color} />
+            ) : (
+              <CalendarCheck2 size={size} color={color} />
+            ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color, size }) => <User size={size} color={color} />,
+          tabBarIcon: ({ color, size }) =>
+            Platform.OS === 'web' ? (
+              <User size={size} color={color} />
+            ) : (
+              <CircleUser size={size} color={color} />
+            ),
         }}
       />
       <Tabs.Screen
@@ -98,7 +129,14 @@ export default function TabLayout() {
           title: user ? 'Logout' : 'Login',
           // When not authenticated, route this tab to the login screen
           href: user ? undefined : '/(auth)/login',
-          tabBarIcon: ({ color, size }) => <LogOut size={size} color={color} />,
+          tabBarIcon: ({ color, size }) =>
+            Platform.OS === 'web' ? (
+              <LogOut size={size} color={color} />
+            ) : user ? (
+              <LogOut size={size} color={color} />
+            ) : (
+              <LogIn size={size} color={color} />
+            ),
         }}
       />
     </Tabs>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { View, StyleSheet } from 'react-native';
 import Hero from '@/components/landing/Hero';
 import LandingBookingForm from '@/components/landing/LandingBookingForm';
 import PopularGrounds from '@/components/landing/PopularGrounds';
@@ -13,7 +14,11 @@ export default function LandingPageSections({ variant }: { variant: Variant }) {
   return (
     <>
       <Hero />
-      {variant === 'web' ? <LandingBookingForm /> : null}
+      {variant === 'web' ? (
+        <View style={styles.bookingSectionSpacer}>
+          <LandingBookingForm fullWidth />
+        </View>
+      ) : null}
       <PopularGrounds />
       <Features />
       <CallToAction />
@@ -21,3 +26,9 @@ export default function LandingPageSections({ variant }: { variant: Variant }) {
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  bookingSectionSpacer: {
+    paddingTop: 28,
+  },
+});

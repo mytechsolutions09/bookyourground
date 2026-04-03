@@ -164,11 +164,11 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#043529',
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'flex-start',
+    justifyContent: 'center',
     padding: 24,
     ...Platform.select({
       web: {
@@ -187,7 +187,7 @@ const styles = StyleSheet.create({
   logoText: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#dc8d3c',
+    color: '#02c259',
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: 16,
@@ -212,16 +212,21 @@ const styles = StyleSheet.create({
   },
   heroColumn: {
     flex: 1,
-    width: '50%',
+    width: '100%',
     paddingVertical: 0,
+    ...Platform.select({
+      web: {
+        width: '50%',
+      },
+    }),
   },
   formContainer: {
     flex: 1,
     width: '100%',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#043529',
     borderRadius: 0,
-    paddingHorizontal: 40,
-    paddingVertical: 40,
+    paddingHorizontal: 24,
+    paddingVertical: 32,
   },
   heroImage: {
     display: 'none',

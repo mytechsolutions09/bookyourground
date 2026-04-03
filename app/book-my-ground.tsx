@@ -3,6 +3,7 @@ import { Platform, View, StyleSheet, ScrollView, useWindowDimensions } from 'rea
 import { router } from 'expo-router';
 import WebLayout from '@/components/web/WebLayout';
 import LandingBookingForm from '@/components/landing/LandingBookingForm';
+import MobileAppNavbar from '../components/MobileAppNavbar';
 
 export default function BookMyGroundPage() {
   const { width } = useWindowDimensions();
@@ -18,12 +19,6 @@ export default function BookMyGroundPage() {
     return null;
   }
 
-  const inner = (
-    <View style={styles.page}>
-      <LandingBookingForm fullWidth />
-    </View>
-  );
-
   if (Platform.OS === 'web') {
     return (
       <WebLayout>
@@ -32,18 +27,33 @@ export default function BookMyGroundPage() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator
         >
-          {inner}
+          <View style={styles.page}>
+            <LandingBookingForm fullWidth separateSearchResults />
+          </View>
         </ScrollView>
       </WebLayout>
     );
   }
 
-  return inner;
+  // Native (iOS / Android): full-screen booking form with simple navbar.
+  return (
+    <View style={styles.nativeRoot}>
+      <MobileAppNavbar />
+      <View style={styles.page}>
+        <LandingBookingForm fullWidth separateSearchResults noCard />
+      </View>
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
+  nativeRoot: {
+    flex: 1,
+    backgroundColor: '#043529',
+  },
   page: {
-    paddingTop: Platform.OS === 'web' ? 96 : 16,
+    flex: 1,
+    paddingTop: Platform.OS === 'web' ? 96 : 0,
   },
   scroll: {
     flex: 1,

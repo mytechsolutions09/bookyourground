@@ -53,7 +53,7 @@ export default function Features() {
                 <View style={styles.iconContainer}>
                   <IconComponent
                     size={24}
-                    color={Platform.OS === 'web' ? '#dc8d3c' : '#10B981'}
+                    color="#02c259"
                     strokeWidth={2}
                   />
                 </View>
@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     fontFamily: 'Inter',
-    color: Platform.OS === 'web' ? '#dc8d3c' : '#10B981',
+    color: '#02c259',
     textTransform: 'uppercase',
     letterSpacing: 1,
     textAlign: 'center',
@@ -93,7 +93,7 @@ const styles = StyleSheet.create({
     fontSize: Platform.OS === 'web' ? 40 : 32,
     fontWeight: '800',
     fontFamily: 'Inter',
-    color: '#111827',
+    color: '#043529',
     textAlign: 'center',
     marginBottom: 16,
     letterSpacing: -0.5,
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 12,
-    backgroundColor: Platform.OS === 'web' ? 'rgba(220,141,60,0.18)' : '#ECFDF5',
+    backgroundColor: 'rgba(4,53,41,0.12)', // #043529 tint
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     fontFamily: 'Inter',
-    color: '#111827',
+    color: '#043529',
     marginBottom: 12,
   },
   cardDescription: {

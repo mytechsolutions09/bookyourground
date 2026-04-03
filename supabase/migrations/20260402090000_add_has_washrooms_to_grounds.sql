@@ -7,3 +7,4 @@
 ALTER TABLE public.grounds
 ADD COLUMN IF NOT EXISTS has_washrooms boolean NOT NULL DEFAULT false;
 
+

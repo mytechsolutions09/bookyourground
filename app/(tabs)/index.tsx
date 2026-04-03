@@ -22,6 +22,7 @@ function makeGroundPath(ground: GroundWithImagesType): string {
 }
 import WebLayout from '@/components/web/WebLayout';
 import LandingScrollContent from '@/components/landing/LandingScrollContent';
+import MobileAppNavbar from '../../components/MobileAppNavbar';
 
 /** True when the URL is the marketing home (not /bookings, /profile, etc.). */
 function isWebLandingPath(pathname: string | undefined): boolean {
@@ -239,20 +240,30 @@ export default function HomeScreen() {
     </View>
   );
 
-  return content;
+  // Native: wrap content with shared mobile navbar.
+  return (
+    <View style={styles.nativeScreen}>
+      <MobileAppNavbar />
+      {content}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
+  nativeScreen: {
+    flex: 1,
+    backgroundColor: '#F5F5F5',
+  },
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
   },
   header: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#043529',
     padding: 16,
     paddingTop: 48,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: '#06392e',
     overflow: 'visible' as any,
     zIndex: 50,
   },
@@ -265,13 +276,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#212121',
+    color: '#F9FAFB',
     marginBottom: 16,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#06392e',
     borderRadius: 8,
     paddingHorizontal: 12,
   },
@@ -282,7 +293,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#333',
+    color: '#F9FAFB',
   },
   list: {
     padding: 16,
@@ -298,7 +309,7 @@ const styles = StyleSheet.create({
   filtersLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#374151',
+    color: '#E5E7EB',
     marginBottom: 6,
   },
   dropdownOuter: {
@@ -307,27 +318,27 @@ const styles = StyleSheet.create({
   dropdownButton: {
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#043529',
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 10,
     minWidth: 180,
   },
   dropdownButtonOpen: {
-    borderColor: '#dc8d3c',
-    backgroundColor: 'rgba(220,141,60,0.08)',
+    borderColor: '#02c259',
+    backgroundColor: '#043529',
   },
   dropdownButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#374151',
+    color: '#F9FAFB',
   },
   dropdownMenu: {
     position: 'absolute',
     top: 44,
     left: 0,
     right: 0,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#043529',
     borderWidth: 1,
     borderColor: '#E5E7EB',
     borderRadius: 12,
@@ -340,15 +351,15 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   dropdownOptionActive: {
-    backgroundColor: 'rgba(220,141,60,0.12)',
+    backgroundColor: '#06392e',
   },
   dropdownOptionText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#374151',
+    color: '#F9FAFB',
   },
   dropdownOptionTextActive: {
-    color: '#dc8d3c',
+    color: '#02c259',
   },
   chipsWrap: {
     flexDirection: 'row',
@@ -358,22 +369,22 @@ const styles = StyleSheet.create({
   chip: {
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#043529',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
   },
   chipActive: {
-    borderColor: Platform.OS === 'web' ? '#dc8d3c' : '#2196F3',
-    backgroundColor: Platform.OS === 'web' ? 'rgba(220,141,60,0.12)' : 'rgba(33,150,243,0.12)',
+    borderColor: '#02c259',
+    backgroundColor: '#06392e',
   },
   chipText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#374151',
+    color: '#E5E7EB',
   },
   chipTextActive: {
-    color: Platform.OS === 'web' ? '#dc8d3c' : '#2196F3',
+    color: '#02c259',
   },
   emptyContainer: {
     alignItems: 'center',
