@@ -1384,7 +1384,7 @@ export default function LandingBookingForm({
             : teamType === 'one'
               ? 'Teams: 1 Team'
               : 'Teams: Both Teams',
-          status: 'pending',
+          status: 'confirmed',
         })
         .select('id')
         .single();

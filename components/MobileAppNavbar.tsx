@@ -5,10 +5,11 @@ type MobileAppNavbarProps = {
   /** When set, shows this label instead of the logo (e.g. tab title). */
   title?: string;
   titleColor?: string;
+  rightAction?: React.ReactNode;
 };
 
 /** Green top bar with logo — use on native-only screens (not web). */
-export default function MobileAppNavbar({ title, titleColor = '#02c259' }: MobileAppNavbarProps) {
+export default function MobileAppNavbar({ title, titleColor = '#02c259', rightAction }: MobileAppNavbarProps) {
   return (
     <View style={styles.navbar} accessibilityRole="header">
       {title ? (
@@ -21,6 +22,7 @@ export default function MobileAppNavbar({ title, titleColor = '#02c259' }: Mobil
           accessibilityLabel="Book my ground"
         />
       )}
+      {rightAction && <View style={styles.rightActionContainer}>{rightAction}</View>}
     </View>
   );
 }
@@ -50,5 +52,10 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     letterSpacing: 0.2,
+  },
+  rightActionContainer: {
+    position: 'absolute',
+    right: 16,
+    bottom: 12,
   },
 });

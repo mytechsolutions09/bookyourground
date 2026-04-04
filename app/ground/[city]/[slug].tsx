@@ -12,7 +12,7 @@ import {
   Linking,
 } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { MapPin, Star } from 'lucide-react-native';
+import { MapPin, Star, ArrowLeft, Phone, Navigation2, CheckCircle2, Heart } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { slugifyGroundSegment } from '@/utils/groundSlug';
 import { isCricketGroundType } from '@/utils/cricketGround';
@@ -34,6 +34,8 @@ export default function GroundDetailsPrettyUrlScreen() {
   const [reviewRating, setReviewRating] = useState<number>(5);
   const [reviewComment, setReviewComment] = useState<string>('');
   const [heroImageIndex, setHeroImageIndex] = useState(0);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
 
   const slugParam = Array.isArray(slug) ? slug[0] : slug;
   const cityParam = Array.isArray(city) ? city[0] : city;
@@ -105,10 +107,69 @@ export default function GroundDetailsPrettyUrlScreen() {
     }
   };
 
+  const checkFavorite = async () => {
+    if (!user?.id || !ground?.id) {
+      setIsFavorite(false);
+      return;
+    }
+    try {
+      const { data, error } = await supabase
+        .from('favorites')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('ground_id', ground.id)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      setIsFavorite(!!data);
+    } catch (e) {
+      console.warn('Error checking favorite:', e);
+    }
+  };
+
+  const toggleFavorite = async () => {
+    if (!user) {
+      Alert.alert('Login required', 'Please sign in to favorite grounds.');
+      router.push('/(auth)/login' as any);
+      return;
+    }
+    if (!ground?.id || favoriteLoading) return;
+
+    setFavoriteLoading(true);
+    try {
+      if (isFavorite) {
+        const { error } = await supabase
+          .from('favorites')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('ground_id', ground.id);
+        if (error) throw error;
+        setIsFavorite(false);
+      } else {
+        const { error } = await supabase
+          .from('favorites')
+          .insert({ user_id: user.id, ground_id: ground.id });
+        if (error) throw error;
+        setIsFavorite(true);
+      }
+    } catch (e: any) {
+      console.error('Error toggling favorite:', e);
+      Alert.alert('Error', e.message ?? 'Failed to update favorites');
+    } finally {
+      setFavoriteLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadGround();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slugParam, cityParam]);
+
+  useEffect(() => {
+    if (ground?.id && user?.id) {
+      checkFavorite();
+    }
+  }, [ground?.id, user?.id]);
 
   useEffect(() => {
     setHeroImageIndex(0);
@@ -284,7 +345,7 @@ export default function GroundDetailsPrettyUrlScreen() {
   if (isLoading || !ground) {
     content = (
       <View style={styles.loadingContainer}>
-        <Text>Loading...</Text>
+        <Text style={styles.loadingText}>Loading ground...</Text>
       </View>
     );
   } else {
@@ -302,17 +363,69 @@ export default function GroundDetailsPrettyUrlScreen() {
     const heroIdx = Math.min(heroImageIndex, Math.max(0, imageUrls.length - 1));
 
     content = (
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={Platform.OS === 'web' ? undefined : { paddingBottom: 0 }}
-      >
+      <>
+        {/* Fixed Header Buttons (Mobile Only) */}
+        {Platform.OS !== 'web' && (
+          <View style={styles.fixedHeader}>
+            <Pressable
+              style={styles.backBtn}
+              onPress={() => router.back()}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <ArrowLeft size={20} color="#f9fafb" strokeWidth={2.5} />
+            </Pressable>
+
+            {ground?.id && (
+              <Pressable
+                style={[styles.favBtn, isFavorite && styles.favBtnActive]}
+                onPress={toggleFavorite}
+                disabled={favoriteLoading}
+                accessibilityRole="button"
+                accessibilityLabel={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+              >
+                <Heart
+                  size={22}
+                  color={isFavorite ? '#00ea6b' : '#f9fafb'}
+                  fill={isFavorite ? '#00ea6b' : 'rgba(0,0,0,0.2)'}
+                  strokeWidth={2}
+                />
+              </Pressable>
+            )}
+          </View>
+        )}
+
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={Platform.OS === 'web' ? undefined : { paddingBottom: 32 }}
+          showsVerticalScrollIndicator={false}
+        >
+
         <View style={styles.content}>
+          {/* ── Hero image + thumbnails ── */}
           <Section style={[styles.section, styles.imageCard]}>
             <Image
               source={{ uri: imageUrls[heroIdx] }}
               style={styles.heroImage}
               resizeMode="cover"
             />
+            {/* ── Favorite Button (Web Only) ── */}
+            {Platform.OS === 'web' && (
+              <Pressable
+                style={[styles.favBtn, isFavorite && styles.favBtnActive]}
+                onPress={toggleFavorite}
+                disabled={favoriteLoading}
+                accessibilityRole="button"
+                accessibilityLabel={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+              >
+                <Heart
+                  size={22}
+                  color={isFavorite ? '#00ea6b' : '#f9fafb'}
+                  fill={isFavorite ? '#00ea6b' : 'rgba(0,0,0,0.2)'}
+                  strokeWidth={2}
+                />
+              </Pressable>
+            )}
             {imageUrls.length > 1 ? (
               <ScrollView
                 horizontal
@@ -340,11 +453,12 @@ export default function GroundDetailsPrettyUrlScreen() {
             ) : null}
           </Section>
 
+          {/* ── Name + location + rating ── */}
           <Section style={styles.section}>
             <Text style={styles.name}>{ground.name}</Text>
 
             <View style={styles.locationRow}>
-              <MapPin size={18} color="#666" />
+              <MapPin size={16} color="#dcc093" strokeWidth={2} />
               <Text style={styles.location}>
                 {ground.address}, {ground.city}, {ground.state} - {ground.pincode}
               </Text>
@@ -352,11 +466,10 @@ export default function GroundDetailsPrettyUrlScreen() {
 
             {mapsUrl && (
               <Pressable
-                onPress={() => {
-                  void Linking.openURL(mapsUrl);
-                }}
+                onPress={() => { void Linking.openURL(mapsUrl); }}
                 style={styles.mapsLinkWrap}
               >
+                <Navigation2 size={13} color="#00ea6b" strokeWidth={2} />
                 <Text style={styles.mapsLinkText}>View on Google Maps</Text>
               </Pressable>
             )}
@@ -367,9 +480,9 @@ export default function GroundDetailsPrettyUrlScreen() {
                 return (
                   <Star
                     key={i}
-                    size={18}
-                    color={filled ? '#FFA000' : '#D1D5DB'}
-                    fill={filled ? '#FFA000' : 'none'}
+                    size={16}
+                    color={filled ? '#dcc093' : '#374151'}
+                    fill={filled ? '#dcc093' : 'none'}
                   />
                 );
               })}
@@ -379,8 +492,24 @@ export default function GroundDetailsPrettyUrlScreen() {
                   : 'No reviews yet'}
               </Text>
             </View>
+
+            {/* Price strip (mobile) */}
+            {Platform.OS !== 'web' && ground.base_price_per_hour ? (
+              <View style={styles.priceStrip}>
+                <View>
+                  <Text style={styles.priceLabel}>Starting from</Text>
+                  <Text style={styles.priceValue}>
+                    ₹{Number(ground.base_price_per_hour).toLocaleString('en-IN')}
+                    <Text style={styles.priceUnit}>
+                      {String(ground.pitch_type ?? '').toLowerCase().includes('box') ? ' /hr' : ' /match'}
+                    </Text>
+                  </Text>
+                </View>
+              </View>
+            ) : null}
           </Section>
 
+          {/* ── About ── */}
           {ground.description && (
             <Section style={styles.section}>
               <Text style={styles.sectionTitle}>About</Text>
@@ -388,6 +517,7 @@ export default function GroundDetailsPrettyUrlScreen() {
             </Section>
           )}
 
+          {/* ── Details ── */}
           <Section style={styles.section}>
             <Text style={styles.sectionTitle}>Details</Text>
             {ground.pitch_type && (
@@ -425,6 +555,7 @@ export default function GroundDetailsPrettyUrlScreen() {
             )}
           </Section>
 
+          {/* ── Amenities ── */}
           <Section style={styles.section}>
             <Text style={styles.sectionTitle}>Amenities</Text>
             {(() => {
@@ -441,14 +572,9 @@ export default function GroundDetailsPrettyUrlScreen() {
 
               return (
                 <View style={styles.amenitiesGrid}>
-                  {items.map((label, index) => (
-                    <View
-                      key={label}
-                      style={[
-                        styles.amenityChip,
-                        index % 2 === 0 ? styles.amenityChipDark : styles.amenityChipGreen,
-                      ]}
-                    >
+                  {items.map((label) => (
+                    <View key={label} style={styles.amenityChip}>
+                      <CheckCircle2 size={15} color="#00ea6b" strokeWidth={2.5} />
                       <Text style={styles.amenityText}>{label}</Text>
                     </View>
                   ))}
@@ -457,6 +583,7 @@ export default function GroundDetailsPrettyUrlScreen() {
             })()}
           </Section>
 
+          {/* ── Reviews ── */}
           <Section style={styles.section}>
             <Text style={styles.sectionTitle}>Reviews</Text>
 
@@ -472,7 +599,14 @@ export default function GroundDetailsPrettyUrlScreen() {
                   <View key={r.id ?? idx} style={styles.reviewItem}>
                     <View style={styles.reviewHeader}>
                       <View style={styles.reviewRatingRow}>
-                        <Star size={14} color="#FFA000" fill="#FFA000" />
+                        {[1,2,3,4,5].map((s) => (
+                          <Star
+                            key={s}
+                            size={13}
+                            color={s <= r.rating ? '#dcc093' : '#374151'}
+                            fill={s <= r.rating ? '#dcc093' : 'none'}
+                          />
+                        ))}
                         <Text style={styles.reviewRatingText}>{r.rating}/5</Text>
                       </View>
                       {r.user?.full_name && (
@@ -504,9 +638,9 @@ export default function GroundDetailsPrettyUrlScreen() {
                           style={styles.reviewStarPressable}
                         >
                           <Star
-                            size={20}
-                            color={active ? '#FFA000' : '#D1D5DB'}
-                            fill={active ? '#FFA000' : 'none'}
+                            size={22}
+                            color={active ? '#dcc093' : '#374151'}
+                            fill={active ? '#dcc093' : 'none'}
                           />
                         </Pressable>
                       );
@@ -516,6 +650,7 @@ export default function GroundDetailsPrettyUrlScreen() {
                   <TextInput
                     style={styles.reviewInput}
                     placeholder="Share your experience (optional)"
+                    placeholderTextColor="#6b7280"
                     value={reviewComment}
                     onChangeText={setReviewComment}
                     multiline
@@ -549,6 +684,7 @@ export default function GroundDetailsPrettyUrlScreen() {
             )}
           </Section>
 
+          {/* ── Booking form ── */}
           {ground.id ? (
             Platform.OS === 'web' ? (
               <LandingBookingForm
@@ -583,6 +719,7 @@ export default function GroundDetailsPrettyUrlScreen() {
           ) : null}
         </View>
       </ScrollView>
+    </>
     );
   }
 
@@ -594,68 +731,73 @@ export default function GroundDetailsPrettyUrlScreen() {
   );
 }
 
+const IS_WEB = Platform.OS === 'web';
+
 const styles = StyleSheet.create({
+  // ── Shell ──────────────────────────────────────────────
   container: {
     flex: 1,
-    ...Platform.select({
-      web: { backgroundColor: '#F5F5F5' },
-      default: { backgroundColor: '#FFFFFF' },
-    }),
+    backgroundColor: IS_WEB ? '#F5F5F5' : '#043529',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    ...Platform.select({
-      web: { backgroundColor: '#F5F5F5' },
-      default: { backgroundColor: '#FFFFFF' },
-    }),
+    backgroundColor: IS_WEB ? '#F5F5F5' : '#043529',
   },
-  imageCard: {
-    padding: 0,
-    overflow: 'hidden',
-    ...Platform.select({
-      default: { marginHorizontal: -16 },
-      web: {},
-    }),
+  loadingText: {
+    fontSize: 15,
+    color: IS_WEB ? '#6B7280' : '#9ca3af',
+    fontWeight: '500',
   },
-  heroImage: {
-    width: '100%',
-    height: 280,
-    backgroundColor: '#E0E0E0',
+
+  // ── Fixed Header (mobile) ─────────────────────────────
+  fixedHeader: {
+    position: 'absolute',
+    top: 16,
+    left: 0,
+    right: 0,
+    height: 44,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    zIndex: 100,
+    pointerEvents: 'box-none' as any,
   },
-  thumbScroll: {
-    maxHeight: 100,
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-  },
-  thumbScrollContent: {
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 999,
+    backgroundColor: 'rgba(4,53,41,0.85)',
+    justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,234,107,0.3)',
   },
-  thumbPressable: {
-    marginRight: 10,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    overflow: 'hidden',
+  favBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 999,
+    backgroundColor: 'rgba(4,53,41,0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,234,107,0.15)',
+    ...Platform.select({
+      web: {
+        position: 'absolute',
+        top: 16,
+        right: 16,
+        cursor: 'pointer' as any,
+        zIndex: 20,
+      },
+    }),
   },
-  thumbPressableSelected: {
-    borderColor: '#2563EB',
+  favBtnActive: {
+    borderColor: 'rgba(0,234,107,0.6)',
   },
-  thumbPressablePressed: {
-    opacity: 0.85,
-  },
-  thumbPressableWeb: {
-    cursor: 'pointer' as any,
-  },
-  thumbImage: {
-    width: 120,
-    height: 80,
-    borderRadius: 8,
-    backgroundColor: '#E0E0E0',
-  },
+
+  // ── Content wrapper ───────────────────────────────────
   content: {
     ...Platform.select({
       web: {
@@ -667,50 +809,151 @@ const styles = StyleSheet.create({
       },
       default: {
         paddingHorizontal: 16,
-        paddingBottom: 0,
+        paddingBottom: 16,
         paddingTop: 0,
       },
     }),
   },
+
+  // ── Image card ────────────────────────────────────────
+  imageCard: {
+    padding: 0,
+    overflow: 'hidden',
+    ...Platform.select({
+      default: { marginHorizontal: -16, marginBottom: 0 },
+      web: {},
+    }),
+  },
+  heroImage: {
+    width: '100%',
+    height: IS_WEB ? 280 : 260,
+    backgroundColor: '#06392e',
+  },
+  thumbScroll: {
+    maxHeight: 96,
+    backgroundColor: IS_WEB ? '#F0F0F0' : '#06392e',
+    borderTopWidth: 1,
+    borderTopColor: IS_WEB ? '#E0E0E0' : 'rgba(0,234,107,0.12)',
+  },
+  thumbScrollContent: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    gap: 8,
+  },
+  thumbPressable: {
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    overflow: 'hidden',
+  },
+  thumbPressableSelected: {
+    borderColor: IS_WEB ? '#2563EB' : '#00ea6b',
+  },
+  thumbPressablePressed: {
+    opacity: 0.8,
+  },
+  thumbPressableWeb: {
+    cursor: 'pointer' as any,
+  },
+  thumbImage: {
+    width: 110,
+    height: 72,
+    borderRadius: 8,
+    backgroundColor: IS_WEB ? '#E0E0E0' : '#043529',
+  },
+
+  // ── Section card ─────────────────────────────────────
+  section: {
+    marginBottom: 12,
+    ...Platform.select({
+      default: {
+        backgroundColor: '#06392e',
+        borderRadius: 20,
+        padding: 18,
+        marginTop: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(0,234,107,0.1)',
+      },
+      web: {},
+    }),
+  },
+
+  // ── Name / location / rating ──────────────────────────
   name: {
-    fontSize: 26,
-    fontWeight: '700',
-    color: '#212121',
+    fontSize: IS_WEB ? 26 : 22,
+    fontWeight: '800',
+    color: IS_WEB ? '#212121' : '#f9fafb',
     marginBottom: 8,
+    letterSpacing: -0.3,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 6,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   location: {
     flex: 1,
-    fontSize: 15,
-    color: '#666',
+    fontSize: 13,
+    color: IS_WEB ? '#666' : '#9ca3af',
     lineHeight: 20,
   },
   mapsLinkWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     marginTop: 4,
     marginBottom: 8,
   },
   mapsLinkText: {
     fontSize: 13,
-    color: '#2563EB',
-    textDecorationLine: 'underline',
+    color: IS_WEB ? '#2563EB' : '#00ea6b',
+    fontWeight: '600',
+    textDecorationLine: IS_WEB ? 'underline' : 'none',
   },
   starsSummaryRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
-    gap: 6,
-    marginTop: 12,
+    gap: 5,
+    marginTop: 10,
+    marginBottom: 4,
   },
   rating: {
-    fontSize: 16,
-    color: '#333',
+    fontSize: 14,
+    color: IS_WEB ? '#333' : '#dcc093',
     fontWeight: '600',
   },
+
+  // ── Price strip (mobile) ─────────────────────────────
+  priceStrip: {
+    marginTop: 14,
+    paddingTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,234,107,0.15)',
+  },
+  priceLabel: {
+    fontSize: 11,
+    color: '#6b7280',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 2,
+  },
+  priceValue: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#f9fafb',
+    letterSpacing: -0.5,
+  },
+  priceUnit: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6b7280',
+  },
+
+  // ── Booking strip (native) ────────────────────────────
   bookingStripNative: {
     ...Platform.select({
       default: {
@@ -723,44 +966,47 @@ const styles = StyleSheet.create({
       web: {},
     }),
   },
-  section: {
-    marginBottom: 16,
-  },
+
+  // ── Section title ─────────────────────────────────────
   sectionTitle: {
-    fontSize: 18,
+    fontSize: IS_WEB ? 18 : 16,
     fontWeight: '700',
-    color: '#212121',
+    color: IS_WEB ? '#212121' : '#f9fafb',
     marginBottom: 12,
   },
   description: {
-    fontSize: 15,
-    color: '#666',
+    fontSize: 14,
+    color: IS_WEB ? '#666' : '#9ca3af',
     lineHeight: 22,
   },
+
+  // ── Details table ─────────────────────────────────────
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: IS_WEB ? '#F0F0F0' : 'rgba(0,234,107,0.1)',
   },
   detailLabel: {
-    fontSize: 15,
-    color: '#666',
+    fontSize: 14,
+    color: IS_WEB ? '#666' : '#9ca3af',
   },
   detailValue: {
-    fontSize: 15,
-    color: '#333',
+    fontSize: 14,
+    color: IS_WEB ? '#333' : '#f9fafb',
     fontWeight: '600',
   },
   detailValueMuted: {
-    color: '#9CA3AF',
-    fontWeight: '500',
+    color: '#6b7280',
+    fontWeight: '400',
   },
+
+  // ── Amenities ─────────────────────────────────────────
   amenitiesEmpty: {
-    fontSize: 14,
-    color: '#9CA3AF',
+    fontSize: 13,
+    color: '#6b7280',
   },
   amenitiesGrid: {
     flexDirection: 'row',
@@ -768,92 +1014,104 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   amenityChip: {
-    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 20,
-  },
-  amenityChipDark: {
-    backgroundColor: '#043529',
-  },
-  amenityChipGreen: {
-    backgroundColor: '#02c259',
+    borderRadius: 999,
+    backgroundColor: IS_WEB ? '#043529' : 'rgba(0,234,107,0.1)',
+    borderWidth: 1,
+    borderColor: IS_WEB ? 'transparent' : 'rgba(0,234,107,0.25)',
   },
   amenityText: {
-    fontSize: 14,
-    color: '#FFFFFF',
+    fontSize: 13,
+    color: IS_WEB ? '#FFFFFF' : '#e5e7eb',
     fontWeight: '600',
   },
+
+  // ── Reviews ───────────────────────────────────────────
   noReviewsText: {
-    fontSize: 14,
-    color: '#6B7280',
+    fontSize: 13,
+    color: '#6b7280',
   },
   reviewsList: {
-    marginTop: 8,
+    marginTop: 4,
     marginBottom: 8,
-    gap: 8,
+    gap: 10,
   },
   reviewItem: {
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    paddingVertical: 10,
+    paddingHorizontal: IS_WEB ? 0 : 12,
+    borderRadius: IS_WEB ? 0 : 14,
+    backgroundColor: IS_WEB ? 'transparent' : 'rgba(4,53,41,0.7)',
+    borderWidth: IS_WEB ? 0 : 1,
+    borderColor: 'rgba(0,234,107,0.08)',
+    borderBottomWidth: IS_WEB ? 1 : 0,
+    borderBottomColor: IS_WEB ? '#E5E7EB' : 'transparent',
   },
   reviewHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 5,
   },
   reviewRatingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
   },
   reviewRatingText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
-    color: '#374151',
+    color: IS_WEB ? '#374151' : '#dcc093',
+    marginLeft: 4,
   },
   reviewAuthorText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: '#6b7280',
+    fontWeight: '500',
   },
   reviewCommentText: {
     fontSize: 13,
-    color: '#4B5563',
-    lineHeight: 18,
+    color: IS_WEB ? '#4B5563' : '#d1d5db',
+    lineHeight: 20,
   },
+
+  // ── Review form ───────────────────────────────────────
   reviewForm: {
-    marginTop: 12,
-    paddingTop: 8,
+    marginTop: 14,
+    paddingTop: 14,
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    borderTopColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.15)',
   },
   reviewFormTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#111827',
-    marginBottom: 8,
+    color: IS_WEB ? '#111827' : '#f9fafb',
+    marginBottom: 10,
   },
   reviewStarsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 8,
+    gap: 8,
+    marginBottom: 12,
   },
   reviewStarPressable: {
     padding: 4,
   },
   reviewInput: {
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    minHeight: 70,
+    borderColor: IS_WEB ? '#D1D5DB' : 'rgba(0,234,107,0.25)',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    minHeight: 80,
     textAlignVertical: 'top',
     fontSize: 13,
-    color: '#111827',
-    marginBottom: 8,
+    color: IS_WEB ? '#111827' : '#f9fafb',
+    backgroundColor: IS_WEB ? '#FFFFFF' : 'rgba(4,53,41,0.6)',
+    marginBottom: 10,
   },
   reviewSubmitButton: {
     marginTop: 4,
@@ -861,8 +1119,10 @@ const styles = StyleSheet.create({
   reviewHintText: {
     marginTop: 8,
     fontSize: 13,
-    color: '#6B7280',
+    color: '#6b7280',
+    lineHeight: 20,
   },
+
   bookButton: {
     marginTop: 8,
     marginBottom: 32,

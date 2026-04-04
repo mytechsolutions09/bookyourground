@@ -48,6 +48,7 @@ export default function BookingsScreen() {
           )
         `)
         .eq('user_id', user.id)
+        .eq('status', 'confirmed')
         .order('booking_date', { ascending: false });
 
       if (error) throw error;
@@ -65,11 +66,8 @@ export default function BookingsScreen() {
       .trim()
       .slice(0, 10);
 
-  /** Pending / unpaid bookings are not listed. */
-  const listBookings = useMemo(
-    () => bookings.filter((b) => b.status !== 'pending'),
-    [bookings],
-  );
+  /** Only confirmed / paid bookings are fetched. */
+  const listBookings = bookings;
 
   const upcomingBookings = useMemo(() => {
     const d = new Date();

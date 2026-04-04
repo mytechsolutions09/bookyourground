@@ -13,8 +13,10 @@ import {
 import { router } from 'expo-router';
 import { Search } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 import { GroundWithImages } from '@/types';
 import GroundCard from '@/components/grounds/GroundCard';
+import { Alert } from 'react-native';
 import type { GroundWithImages as GroundWithImagesType } from '@/types';
 
 function makeGroundPath(ground: GroundWithImagesType): string {
@@ -95,11 +97,33 @@ export default function GroundBrowse(props: { title?: string }) {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<string>('any');
   const [timeFilter, setTimeFilter] = useState<string>('any');
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const [favoriteLoadingId, setFavoriteLoadingId] = useState<string | null>(null);
+  const { user } = useAuth();
   const { width } = useWindowDimensions();
 
   useEffect(() => {
     loadGrounds();
-  }, []);
+    if (user?.id) {
+      loadFavorites();
+    } else {
+      setFavoriteIds(new Set());
+    }
+  }, [user?.id]);
+
+  const loadFavorites = async () => {
+    if (!user?.id) return;
+    try {
+      const { data, error } = await supabase
+        .from('favorites')
+        .select('ground_id')
+        .eq('user_id', user.id);
+      if (error) throw error;
+      setFavoriteIds(new Set((data || []).map(f => f.ground_id)));
+    } catch (e) {
+      console.warn('Error loading favorites:', e);
+    }
+  };
 
   const loadGrounds = async () => {
     try {
@@ -123,6 +147,44 @@ export default function GroundBrowse(props: { title?: string }) {
       console.error('Error loading grounds:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleFavorite = async (groundId: string) => {
+    if (!user) {
+      Alert.alert('Login required', 'Please sign in to favorite grounds.');
+      router.push('/(auth)/login' as any);
+      return;
+    }
+    if (favoriteLoadingId) return;
+
+    const isFav = favoriteIds.has(groundId);
+    setFavoriteLoadingId(groundId);
+    try {
+      if (isFav) {
+        const { error } = await supabase
+          .from('favorites')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('ground_id', groundId);
+        if (error) throw error;
+        setFavoriteIds(prev => {
+          const next = new Set(prev);
+          next.delete(groundId);
+          return next;
+        });
+      } else {
+        const { error } = await supabase
+          .from('favorites')
+          .insert({ user_id: user.id, ground_id: groundId });
+        if (error) throw error;
+        setFavoriteIds(prev => new Set([...prev, groundId]));
+      }
+    } catch (e: any) {
+      console.error('Error toggling favorite:', e);
+      Alert.alert('Error', e.message ?? 'Failed to update favorites');
+    } finally {
+      setFavoriteLoadingId(null);
     }
   };
 
@@ -218,8 +280,11 @@ export default function GroundBrowse(props: { title?: string }) {
             >
               <GroundCard
                 ground={item}
-                onPress={() => router.push(makeGroundPath(item))}
+                onPress={() => router.push(makeGroundPath(item) as any)}
                 showBookingSchedule={false}
+                isFavorite={favoriteIds.has(item.id)}
+                onToggleFavorite={() => toggleFavorite(item.id)}
+                favoriteLoading={favoriteLoadingId === item.id}
               />
             </View>
           );

@@ -1,14 +1,38 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, TextInput, Platform, Pressable } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  RefreshControl,
+  TextInput,
+  Platform,
+  Pressable,
+  Image,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, usePathname } from 'expo-router';
-import { Search } from 'lucide-react-native';
+import {
+  Search,
+  MapPin,
+  Star,
+  ChevronRight,
+  Shield,
+  Clock,
+  Zap,
+  Users,
+  ArrowRight,
+} from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { GroundWithImages } from '@/types';
-import GroundCard from '@/components/grounds/GroundCard';
-import type { GroundWithImages as GroundWithImagesType } from '@/types';
+import WebLayout from '@/components/web/WebLayout';
+import LandingScrollContent from '@/components/landing/LandingScrollContent';
+import { useAuth } from '@/contexts/AuthContext';
 
-function makeGroundPath(ground: GroundWithImagesType): string {
+function makeGroundPath(ground: GroundWithImages): string {
   const name = (ground.name ?? '').toString().toLowerCase().trim();
   const city = (ground.city ?? '').toString().toLowerCase().trim();
   const slugify = (value: string) =>
@@ -20,9 +44,6 @@ function makeGroundPath(ground: GroundWithImagesType): string {
   const nameSlug = slugify(name);
   return `/ground/${encodeURIComponent(citySlug)}/${encodeURIComponent(nameSlug)}`;
 }
-import WebLayout from '@/components/web/WebLayout';
-import LandingScrollContent from '@/components/landing/LandingScrollContent';
-import MobileAppNavbar from '../../components/MobileAppNavbar';
 
 /** True when the URL is the marketing home (not /bookings, /profile, etc.). */
 function isWebLandingPath(pathname: string | undefined): boolean {
@@ -33,88 +54,117 @@ function isWebLandingPath(pathname: string | undefined): boolean {
   return false;
 }
 
-function FilterDropdown({
-  options,
-  value,
-  onChange,
-}: {
-  options: string[];
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
+const SPORT_CATEGORIES = [
+  { label: 'All', value: 'all' },
+  { label: 'Football', value: 'football' },
+  { label: 'Cricket', value: 'cricket' },
+  { label: 'Box Cricket', value: 'box' },
+  { label: 'Multi-Sport', value: 'multi' },
+];
 
-  const display = (v: string) => (v === 'all' ? 'All' : v);
+const FEATURES = [
+  { icon: Search, label: 'Easy Discovery', desc: 'Find by sport, location, price' },
+  { icon: Clock, label: 'Live Slots', desc: 'Real-time availability' },
+  { icon: Shield, label: 'Verified', desc: 'All grounds are verified' },
+  { icon: Zap, label: 'Instant Book', desc: 'No calls needed' },
+];
+
+function GroundCardMobile({ ground, index }: { ground: any; index: number }) {
+  const primaryImage =
+    ground.ground_images?.find((img: any) => img.is_primary)?.image_url ||
+    ground.ground_images?.[0]?.image_url ||
+    'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
+
+  const reviews = (ground.reviews || []) as { rating: number }[];
+  const avgRating =
+    reviews.length > 0
+      ? reviews.reduce((s: number, r: { rating: number }) => s + (r.rating || 0), 0) / reviews.length
+      : 0;
+
+  const href = makeGroundPath(ground);
+  const isTop = index < 3;
 
   return (
-    <View style={styles.dropdownOuter}>
-      <Pressable
-        onPress={() => setOpen((v) => !v)}
-        style={[styles.dropdownButton, open && styles.dropdownButtonOpen]}
-      >
-        <Text style={styles.dropdownButtonText}>{display(value)}</Text>
-      </Pressable>
-
-      {open ? (
-        <View style={styles.dropdownMenu}>
-          {options.map((opt) => (
-            <Pressable
-              key={opt}
-              onPress={() => {
-                onChange(opt);
-                setOpen(false);
-              }}
-              style={[
-                styles.dropdownOption,
-                opt === value && styles.dropdownOptionActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.dropdownOptionText,
-                  opt === value && styles.dropdownOptionTextActive,
-                ]}
-              >
-                {display(opt)}
-              </Text>
-            </Pressable>
-          ))}
+    <TouchableOpacity
+      activeOpacity={0.88}
+      onPress={() => router.push(href as any)}
+      style={styles.groundCard}
+    >
+      <View style={styles.groundImageWrap}>
+        <Image source={{ uri: primaryImage }} style={styles.groundImage} />
+        <View style={styles.groundImageOverlay} />
+        {isTop && (
+          <View style={styles.popularBadge}>
+            <Text style={styles.popularBadgeText}>🔥 Popular</Text>
+          </View>
+        )}
+        <View style={styles.groundImageContent}>
+          <Text style={styles.groundName} numberOfLines={1}>
+            {ground.name}
+          </Text>
+          <View style={styles.groundLocationRow}>
+            <MapPin size={11} color="#dcc093" strokeWidth={2} />
+            <Text style={styles.groundLocation} numberOfLines={1}>
+              {ground.city}, {ground.state}
+            </Text>
+          </View>
         </View>
-      ) : null}
-    </View>
+      </View>
+
+      <View style={styles.groundCardBody}>
+        <View style={styles.groundMeta}>
+          <Text style={styles.groundType}>{ground.pitch_type || 'Standard'}</Text>
+          {avgRating > 0 ? (
+            <View style={styles.ratingRow}>
+              <Star size={11} color="#dcc093" fill="#dcc093" />
+              <Text style={styles.ratingText}>{avgRating.toFixed(1)}</Text>
+            </View>
+          ) : null}
+        </View>
+        <View style={styles.groundFooter}>
+          <Text style={styles.groundPrice}>
+            ₹{Number(ground.base_price_per_hour || 0).toLocaleString('en-IN')}
+            <Text style={styles.groundPriceUnit}>
+              {String(ground.pitch_type ?? '').toLowerCase().includes('box') ? '/hr' : '/match'}
+            </Text>
+          </Text>
+          <View style={styles.bookNowBtn}>
+            <Text style={styles.bookNowText}>Book</Text>
+            <ArrowRight size={13} color="#043529" strokeWidth={2.5} />
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
   );
 }
 
 export default function HomeScreen() {
   const isFocused = useIsFocused();
+  const insets = useSafeAreaInsets();
   const pathname = usePathname();
+  const { user } = useAuth();
   const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [locationFilter, setLocationFilter] = useState<string>('all');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
-  const didRedirectRef = useRef(false);
+  const [sportFilter, setSportFilter] = useState('all');
 
   const loadGrounds = useCallback(async () => {
     try {
-      setLoading(true);
       const { data, error } = await supabase
         .from('grounds')
-        .select(`
-          *,
-          ground_images(*),
-          reviews(rating)
-        `)
+        .select(`*, ground_images(*), reviews(rating)`)
         .eq('active', true)
         .eq('approved', true)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       setGrounds(data || []);
-    } catch (error) {
-      console.error('Error loading grounds:', error);
+    } catch (e) {
+      console.error('Error loading grounds:', e);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
@@ -125,19 +175,11 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
-    if (!isFocused) {
-      didRedirectRef.current = false;
-      return;
-    }
+    if (!isFocused) return;
     if (isWebLandingPath(pathname)) return;
-    if (didRedirectRef.current) return;
-    didRedirectRef.current = true;
     router.replace('/');
-  }, [isFocused, pathname, router]);
+  }, [isFocused, pathname]);
 
-  // Web: marketing home lives at `/` (hero). When the Home tab is focused on that route,
-  // render the same landing as `app/index.tsx`. Returning `null` here produced a blank
-  // screen after logo navigation to `/`.
   if (Platform.OS === 'web') {
     if (!isFocused) return null;
     if (isWebLandingPath(pathname)) {
@@ -150,254 +192,745 @@ export default function HomeScreen() {
     return null;
   }
 
-  const locationOptions = useMemo(() => {
-    const cities = Array.from(new Set(grounds.map((g) => g.city).filter(Boolean)));
-    return ['all', ...cities];
+  // ── Mobile Homepage ──────────────────────────────────────────────────────
+  const popularGrounds = useMemo(() => {
+    const scored = grounds.map((g: any) => {
+      const reviews = (g.reviews || []) as { rating: number }[];
+      const avg =
+        reviews.length > 0
+          ? reviews.reduce((s: number, r: { rating: number }) => s + (r.rating || 0), 0) / reviews.length
+          : 0;
+      return { ...g, _avg: avg, _count: reviews.length };
+    });
+    scored.sort((a: any, b: any) => {
+      if (b._avg !== a._avg) return b._avg - a._avg;
+      return b._count - a._count;
+    });
+    return scored.slice(0, 8);
   }, [grounds]);
 
-  const typeOptions = useMemo(() => {
-    const types = Array.from(
-      new Set(grounds.map((g) => g.pitch_type).filter((t): t is string => !!t)),
-    );
-    return ['all', ...types];
-  }, [grounds]);
+  const filteredGrounds = useMemo(() => {
+    return grounds.filter((g: any) => {
+      const q = searchQuery.toLowerCase().trim();
+      const matchSearch =
+        !q ||
+        (g.name || '').toLowerCase().includes(q) ||
+        (g.city || '').toLowerCase().includes(q) ||
+        (g.state || '').toLowerCase().includes(q) ||
+        (g.pitch_type || '').toLowerCase().includes(q);
 
-  const filteredGrounds = grounds.filter((ground) => {
-    const q = searchQuery.toLowerCase().trim();
-    const matchesSearch =
-      !q ||
-      ground.name.toLowerCase().includes(q) ||
-      ground.city.toLowerCase().includes(q) ||
-      ground.state.toLowerCase().includes(q);
+      const matchSport =
+        sportFilter === 'all' ||
+        (g.pitch_type || '').toLowerCase().includes(sportFilter.toLowerCase());
 
-    const matchesLocation = locationFilter === 'all' || ground.city === locationFilter;
-    const matchesType = typeFilter === 'all' || ground.pitch_type === typeFilter;
+      return matchSearch && matchSport;
+    });
+  }, [grounds, searchQuery, sportFilter]);
 
-    return matchesSearch && matchesLocation && matchesType;
-  });
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadGrounds();
+  }, [loadGrounds]);
 
-  const content = (
-    <View style={styles.container}>
-      <View style={[styles.header, (Platform.OS as any) === 'web' && styles.webHeader]}>
-        <Text style={styles.title}>Find Cricket Grounds</Text>
-        <View style={styles.searchContainer}>
-          <Search size={20} color="#666" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search by name or location"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor="#999"
-          />
-        </View>
+  const primaryCta = user ? '/(tabs)/bookings' : '/(auth)/signup';
 
-        <View style={styles.filtersWrap}>
-          <View style={styles.filtersGroup}>
-            <Text style={styles.filtersLabel}>Location</Text>
-            <FilterDropdown
-              options={locationOptions}
-              value={locationFilter}
-              onChange={setLocationFilter}
-            />
-          </View>
-
-          <View style={styles.filtersGroup}>
-            <Text style={styles.filtersLabel}>Type</Text>
-            <FilterDropdown
-              options={typeOptions}
-              value={typeFilter}
-              onChange={setTypeFilter}
-            />
-          </View>
-        </View>
-      </View>
-
-      <FlatList
-        data={filteredGrounds}
-        renderItem={({ item }) => (
-          <GroundCard
-            ground={item}
-            onPress={() => router.push(makeGroundPath(item))}
-            showBookingSchedule={false}
-          />
-        )}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.list}
+  return (
+    <View style={styles.screen}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
-            refreshing={loading}
-            onRefresh={loadGrounds}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
             tintColor="#00ea6b"
             colors={['#00ea6b']}
           />
         }
-        numColumns={(Platform.OS as any) === 'web' ? 2 : 1}
-        key={(Platform.OS as any) === 'web' ? 'web' : 'mobile'}
-        columnWrapperStyle={(Platform.OS as any) === 'web' ? styles.row : undefined}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>
-              {searchQuery ? 'No grounds found' : 'No grounds available'}
-            </Text>
-          </View>
-        }
-      />
-    </View>
-  );
+      >
+        {/* ── Hero Section ─────────────────────────────── */}
+        <View style={[styles.hero, { paddingTop: Math.max(insets.top + 32, 40) }]}>
+          <View style={styles.heroBgGlow} />
 
-  // Native: wrap content with shared mobile navbar.
-  return (
-    <View style={styles.nativeScreen}>
-      <MobileAppNavbar />
-      {content}
+          <Text style={styles.heroTitle}>
+            Find your perfect{'\n'}
+            <Text style={styles.heroTitleAccent}>ground, today.</Text>
+          </Text>
+          <Text style={styles.heroSubtitle}>
+            Book cricket, football & multi-sport grounds near you — instantly.
+          </Text>
+
+          {/* Search bar in hero */}
+          <View style={styles.heroSearch}>
+            <Search size={18} color="#9ca3af" strokeWidth={2} />
+            <TextInput
+              style={styles.heroSearchInput}
+              placeholder="Search grounds, city..."
+              placeholderTextColor="#6b7280"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+
+          {/* Stats row */}
+          <View style={styles.statsRow}>
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>200+</Text>
+              <Text style={styles.statLabel}>Venues</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>30+</Text>
+              <Text style={styles.statLabel}>Cities</Text>
+            </View>
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={styles.statNumber}>4.9 ⭐</Text>
+              <Text style={styles.statLabel}>Rating</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* ── Sport Categories ──────────────────────────── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Browse by Sport</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoriesRow}
+          >
+            {SPORT_CATEGORIES.map((cat) => (
+              <Pressable
+                key={cat.value}
+                style={[
+                  styles.categoryChip,
+                  sportFilter === cat.value && styles.categoryChipActive,
+                ]}
+                onPress={() => setSportFilter(cat.value)}
+              >
+                <Text
+                  style={[
+                    styles.categoryLabel,
+                    sportFilter === cat.value && styles.categoryLabelActive,
+                  ]}
+                >
+                  {cat.label}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* ── Popular Grounds ───────────────────────────── */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View>
+              <Text style={styles.sectionLabel}>Popular Grounds</Text>
+              <Text style={styles.sectionTitle}>Trending near you</Text>
+            </View>
+            <Pressable
+              style={styles.seeAllBtn}
+              onPress={() => router.push('/(tabs)/grounds' as any)}
+            >
+              <Text style={styles.seeAllText}>See all</Text>
+              <ChevronRight size={14} color="#00ea6b" strokeWidth={2.5} />
+            </Pressable>
+          </View>
+
+          {loading ? (
+            <ActivityIndicator color="#00ea6b" style={{ marginTop: 24, marginBottom: 8 }} />
+          ) : popularGrounds.length === 0 ? (
+            <Text style={styles.emptyText}>No grounds found</Text>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalList}
+            >
+              {popularGrounds.map((g: any, i: number) => (
+                <View key={g.id} style={styles.horizontalItem}>
+                  <GroundCardMobile ground={g} index={i} />
+                </View>
+              ))}
+            </ScrollView>
+          )}
+        </View>
+
+        {/* ── All / Filtered Grounds ───────────────────── */}
+        {(searchQuery.trim() || sportFilter !== 'all') && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View>
+                <Text style={styles.sectionLabel}>Search Results</Text>
+                <Text style={styles.sectionTitle}>{filteredGrounds.length} grounds found</Text>
+              </View>
+            </View>
+
+            {loading ? (
+              <ActivityIndicator color="#00ea6b" style={{ marginTop: 16 }} />
+            ) : filteredGrounds.length === 0 ? (
+              <Text style={styles.emptyText}>No grounds match your search.</Text>
+            ) : (
+              <View style={styles.verticalList}>
+                {filteredGrounds.map((g: any, i: number) => (
+                  <TouchableOpacity
+                    key={g.id}
+                    activeOpacity={0.88}
+                    onPress={() => router.push(makeGroundPath(g) as any)}
+                    style={styles.listRow}
+                  >
+                    <Image
+                      source={{
+                        uri:
+                          g.ground_images?.find((img: any) => img.is_primary)?.image_url ||
+                          g.ground_images?.[0]?.image_url ||
+                          'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg',
+                      }}
+                      style={styles.listRowImage}
+                    />
+                    <View style={styles.listRowInfo}>
+                      <Text style={styles.listRowName} numberOfLines={1}>
+                        {g.name}
+                      </Text>
+                      <View style={styles.listRowMeta}>
+                        <MapPin size={11} color="#9ca3af" strokeWidth={2} />
+                        <Text style={styles.listRowCity} numberOfLines={1}>
+                          {g.city}
+                        </Text>
+                      </View>
+                      <Text style={styles.listRowType}>{g.pitch_type || 'Standard'}</Text>
+                    </View>
+                    <View style={styles.listRowRight}>
+                      <Text style={styles.listRowPrice}>
+                        ₹{Number(g.base_price_per_hour || 0).toLocaleString('en-IN')}
+                      </Text>
+                      <Text style={styles.listRowPriceUnit}>
+                        {String(g.pitch_type ?? '').toLowerCase().includes('box') ? '/hr' : '/match'}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* ── Features Strip ───────────────────────────── */}
+        <View style={styles.featuresSection}>
+          <Text style={styles.sectionLabel}>Why BookYourGround?</Text>
+          <Text style={styles.sectionTitle}>Everything you need</Text>
+          <View style={styles.featuresGrid}>
+            {FEATURES.map((f, i) => {
+              const Icon = f.icon;
+              return (
+                <View key={i} style={styles.featureCard}>
+                  <View style={styles.featureIconWrap}>
+                    <Icon size={22} color="#00ea6b" strokeWidth={2} />
+                  </View>
+                  <Text style={styles.featureLabel}>{f.label}</Text>
+                  <Text style={styles.featureDesc}>{f.desc}</Text>
+                </View>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* ── CTA Banner ───────────────────────────────── */}
+        <View style={styles.ctaBanner}>
+          <View style={styles.ctaBannerGlow} />
+          <Text style={styles.ctaTitle}>Ready to play?</Text>
+          <Text style={styles.ctaSubtitle}>
+            Join thousands booking their favourite grounds every day.
+          </Text>
+          <Pressable
+            style={({ pressed }) => [styles.ctaButton, pressed && { opacity: 0.85 }]}
+            onPress={() => router.push(primaryCta as any)}
+          >
+            <Text style={styles.ctaButtonText}>
+              {user ? 'Book a Ground' : 'Get Started Free'}
+            </Text>
+            <ArrowRight size={18} color="#043529" strokeWidth={2.5} />
+          </Pressable>
+          {!user && (
+            <Pressable onPress={() => router.push('/(auth)/login' as any)} style={styles.ctaSignIn}>
+              <Text style={styles.ctaSignInText}>Already have an account? Sign in</Text>
+            </Pressable>
+          )}
+        </View>
+
+        <View style={{ height: 32 }} />
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  nativeScreen: {
+  screen: {
     flex: 1,
     backgroundColor: '#043529',
   },
-  container: {
+  scroll: {
     flex: 1,
     backgroundColor: '#043529',
   },
-  header: {
+  scrollContent: {
+    paddingBottom: 24,
+  },
+
+  // ── Hero ──────────────────────────────────────
+  hero: {
     backgroundColor: '#043529',
-    padding: 16,
-    paddingTop: 48,
-    borderBottomWidth: 1,
-    borderBottomColor: '#06392e',
-    overflow: 'visible' as any,
-    zIndex: 50,
+    paddingTop: 24,
+    paddingBottom: 36,
+    paddingHorizontal: 20,
+    overflow: 'hidden',
   },
-  webHeader: {
-    paddingTop: 16,
+  heroBgGlow: {
+    position: 'absolute',
+    top: -80,
+    right: -50,
+    width: 220,
+    height: 220,
+    borderRadius: 999,
+    backgroundColor: 'rgba(0,234,107,0.1)',
   },
-  row: {
-    gap: 16,
+  heroTitle: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#f9fafb',
+    lineHeight: 40,
+    letterSpacing: -0.5,
+    marginBottom: 10,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#F9FAFB',
-    marginBottom: 16,
+  heroTitleAccent: {
+    color: '#00ea6b',
   },
-  searchContainer: {
+  heroSubtitle: {
+    fontSize: 14,
+    color: '#9ca3af',
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  heroSearch: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#06392e',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
+    borderRadius: 14,
+    paddingHorizontal: 14,
     paddingVertical: 12,
-    fontSize: 16,
-    color: '#F9FAFB',
-  },
-  list: {
-    padding: 16,
-    zIndex: 1,
-  },
-  filtersWrap: {
-    marginTop: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0,234,107,0.2)',
+    marginBottom: 20,
     gap: 10,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
   },
-  filtersGroup: {},
-  filtersLabel: {
+  heroSearchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#f9fafb',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 0,
+    backgroundColor: 'rgba(6,57,46,0.6)',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(0,234,107,0.15)',
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statNumber: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#f9fafb',
+  },
+  statLabel: {
+    fontSize: 11,
+    color: '#6b7280',
+    marginTop: 2,
+  },
+  statDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: 'rgba(107,114,128,0.4)',
+  },
+
+  // ── Sections ──────────────────────────────────
+  section: {
+    marginTop: 8,
+    paddingTop: 20,
+    paddingBottom: 4,
+    backgroundColor: '#043529',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginBottom: 14,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#00ea6b',
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    marginBottom: 4,
+    paddingHorizontal: 20,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#f9fafb',
+    letterSpacing: -0.3,
+  },
+  seeAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingBottom: 2,
+  },
+  seeAllText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#00ea6b',
+  },
+
+  // ── Sport Categories ──────────────────────────
+  categoriesRow: {
+    paddingHorizontal: 20,
+    gap: 10,
+    paddingBottom: 8,
+  },
+  categoryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: '#06392e',
+    borderWidth: 1,
+    borderColor: 'rgba(0,234,107,0.15)',
+  },
+  categoryChipActive: {
+    backgroundColor: '#00ea6b',
+    borderColor: '#00ea6b',
+  },
+  categoryLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#9ca3af',
+  },
+  categoryLabelActive: {
+    color: '#043529',
+  },
+
+  // ── Ground cards (horizontal) ─────────────────
+  horizontalList: {
+    paddingHorizontal: 20,
+    gap: 12,
+    paddingBottom: 8,
+  },
+  horizontalItem: {
+    width: 240,
+  },
+  groundCard: {
+    borderRadius: 20,
+    backgroundColor: '#06392e',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  groundImageWrap: {
+    position: 'relative',
+    height: 130,
+  },
+  groundImage: {
+    width: '100%',
+    height: '100%',
+  },
+  groundImageOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(4,53,41,0.55)',
+  },
+  popularBadge: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    backgroundColor: 'rgba(0,234,107,0.9)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  popularBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#043529',
+  },
+  groundImageContent: {
+    position: 'absolute',
+    bottom: 10,
+    left: 12,
+    right: 12,
+  },
+  groundName: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#ffffff',
+  },
+  groundLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginTop: 2,
+  },
+  groundLocation: {
+    fontSize: 11,
+    color: '#dcc093',
+  },
+  groundCardBody: {
+    padding: 12,
+  },
+  groundMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  groundType: {
+    fontSize: 11,
+    color: '#6b7280',
+    fontWeight: '600',
+    textTransform: 'capitalize',
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  ratingText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#E5E7EB',
-    marginBottom: 6,
+    color: '#dcc093',
   },
-  dropdownOuter: {
-    position: 'relative',
+  groundFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  dropdownButton: {
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#043529',
-    borderRadius: 12,
+  groundPrice: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#f9fafb',
+  },
+  groundPriceUnit: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: '#6b7280',
+  },
+  bookNowBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#00ea6b',
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    minWidth: 180,
-  },
-  dropdownButtonOpen: {
-    borderColor: '#02c259',
-    backgroundColor: '#043529',
-  },
-  dropdownButtonText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#F9FAFB',
-  },
-  dropdownMenu: {
-    position: 'absolute',
-    top: 44,
-    left: 0,
-    right: 0,
-    backgroundColor: '#043529',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
     paddingVertical: 6,
-    zIndex: 10000,
-    elevation: 50,
+    borderRadius: 999,
   },
-  dropdownOption: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+  bookNowText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#043529',
   },
-  dropdownOptionActive: {
+
+  // ── Vertical list (search results) ───────────
+  verticalList: {
+    paddingHorizontal: 20,
+    gap: 10,
+  },
+  listRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#06392e',
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(0,234,107,0.1)',
   },
-  dropdownOptionText: {
+  listRowImage: {
+    width: 80,
+    height: 80,
+  },
+  listRowInfo: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingLeft: 12,
+    paddingRight: 4,
+  },
+  listRowName: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#F9FAFB',
+    color: '#f9fafb',
+    marginBottom: 3,
   },
-  dropdownOptionTextActive: {
-    color: '#02c259',
+  listRowMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginBottom: 3,
   },
-  chipsWrap: {
+  listRowCity: {
+    fontSize: 11,
+    color: '#9ca3af',
+  },
+  listRowType: {
+    fontSize: 11,
+    color: '#00ea6b',
+    fontWeight: '700',
+    textTransform: 'capitalize',
+  },
+  listRowRight: {
+    paddingRight: 14,
+    alignItems: 'flex-end',
+  },
+  listRowPrice: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#dcc093',
+  },
+  listRowPriceUnit: {
+    fontSize: 10,
+    color: '#6b7280',
+    marginTop: 1,
+  },
+
+  // ── Features ─────────────────────────────────
+  featuresSection: {
+    marginTop: 16,
+    paddingTop: 28,
+    paddingBottom: 28,
+    paddingHorizontal: 20,
+    backgroundColor: '#06392e',
+    marginHorizontal: 16,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(0,234,107,0.12)',
+  },
+  featuresGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 12,
+    marginTop: 16,
   },
-  chip: {
+  featureCard: {
+    width: '47%',
+    backgroundColor: 'rgba(4,53,41,0.7)',
+    borderRadius: 16,
+    padding: 14,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#043529',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderColor: 'rgba(0,234,107,0.1)',
+  },
+  featureIconWrap: {
+    width: 40,
+    height: 40,
     borderRadius: 12,
+    backgroundColor: 'rgba(0,234,107,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
   },
-  chipActive: {
-    borderColor: '#02c259',
-    backgroundColor: '#06392e',
-  },
-  chipText: {
+  featureLabel: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#E5E7EB',
+    color: '#f9fafb',
+    marginBottom: 3,
   },
-  chipTextActive: {
-    color: '#02c259',
+  featureDesc: {
+    fontSize: 11,
+    color: '#6b7280',
+    lineHeight: 16,
   },
-  emptyContainer: {
+
+  // ── CTA ──────────────────────────────────────
+  ctaBanner: {
+    margin: 16,
+    marginTop: 20,
+    backgroundColor: '#043529',
+    borderRadius: 24,
+    padding: 28,
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 48,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(0,234,107,0.25)',
   },
+  ctaBannerGlow: {
+    position: 'absolute',
+    top: -60,
+    right: -40,
+    width: 180,
+    height: 180,
+    borderRadius: 999,
+    backgroundColor: 'rgba(0,234,107,0.12)',
+  },
+  ctaTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#f9fafb',
+    marginBottom: 8,
+    letterSpacing: -0.3,
+    textAlign: 'center',
+  },
+  ctaSubtitle: {
+    fontSize: 14,
+    color: '#9ca3af',
+    lineHeight: 22,
+    textAlign: 'center',
+    marginBottom: 24,
+    maxWidth: 260,
+  },
+  ctaButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#00ea6b',
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 999,
+    shadowColor: '#00ea6b',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 14,
+    elevation: 6,
+  },
+  ctaButtonText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#043529',
+  },
+  ctaSignIn: {
+    marginTop: 14,
+    paddingVertical: 6,
+  },
+  ctaSignInText: {
+    fontSize: 13,
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+
   emptyText: {
-    fontSize: 16,
-    color: '#E5E7EB',
+    fontSize: 14,
+    color: '#6b7280',
+    textAlign: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 20,
   },
 });

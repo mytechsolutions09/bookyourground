@@ -9,6 +9,7 @@ import {
   CircleUser,
   LogIn,
   LogOut,
+  Heart,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -17,17 +18,19 @@ const INACTIVE = '#e5e7eb';
 
 function getActiveTab(
   segments: string[],
-): 'home' | 'grounds' | 'bookings' | 'profile' | 'logout' {
+): 'home' | 'grounds' | 'bookings' | 'favorites' | 'profile' | 'logout' {
   const root = segments[0];
   if (root === 'ground' || root === 'grounds' || root === 'book-my-ground') {
     return 'grounds';
   }
   if (root === 'bookings') return 'bookings';
+  if (root === 'favorites') return 'favorites';
   if (root !== '(tabs)') return 'home';
   const tab = segments[1] ?? 'index';
   if (tab === 'index') return 'home';
   if (tab === 'grounds') return 'grounds';
   if (tab === 'bookings') return 'bookings';
+  if (tab === 'favorites') return 'favorites';
   if (tab === 'profile') return 'profile';
   if (tab === 'logout') return 'logout';
   return 'home';
@@ -85,6 +88,15 @@ export default function MobileTabBar() {
         accessibilityState={{ selected: activeTab === 'bookings' }}
       >
         <CalendarCheck2 size={size} color={activeTab === 'bookings' ? ACTIVE : INACTIVE} />
+      </Pressable>
+      <Pressable
+        style={styles.item}
+        onPress={() => go('/(tabs)/favorites')}
+        accessibilityRole="button"
+        accessibilityLabel="Favorites"
+        accessibilityState={{ selected: activeTab === 'favorites' }}
+      >
+        <Heart size={size} color={activeTab === 'favorites' ? ACTIVE : INACTIVE} fill={activeTab === 'favorites' ? ACTIVE : 'none'} />
       </Pressable>
       <Pressable
         style={styles.item}

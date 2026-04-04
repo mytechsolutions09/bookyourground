@@ -11,6 +11,7 @@ import {
   CalendarCheck2,
   CircleUser,
   LogIn,
+  Heart,
 } from 'lucide-react-native';
 import { ActivityIndicator, Platform, useWindowDimensions, View } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
@@ -119,6 +120,15 @@ export default function TabLayout() {
             ) : (
               <CalendarCheck2 size={size} color={color} />
             ),
+        }}
+      />
+      <Tabs.Screen
+        name="favorites"
+        options={{
+          title: 'Favorites',
+          tabBarIcon: ({ color, size }) => (
+            <Heart size={size} color={color} fill={color === '#00ea6b' ? '#00ea6b' : 'none'} />
+          ),
         }}
       />
       <Tabs.Screen

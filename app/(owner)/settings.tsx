@@ -5,6 +5,9 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import MobileAppNavbar from '@/components/MobileAppNavbar';
+
+const IS_WEB = Platform.OS === 'web';
 
 function OwnerSettingsInner() {
   const { user } = useAuth();
@@ -100,6 +103,7 @@ function OwnerSettingsInner() {
               onPress={handleWithdraw}
               loading={submitting}
               disabled={submitting}
+              style={styles.submitButton}
             />
           </View>
         </Card>
@@ -201,6 +205,7 @@ function OwnerSettingsInner() {
               }}
               loading={savingBank}
               disabled={savingBank}
+              style={styles.submitButton}
             />
           </View>
         </Card>
@@ -208,9 +213,8 @@ function OwnerSettingsInner() {
     </ScrollView>
   );
 }
-
 export default function OwnerSettingsScreen() {
-  if (Platform.OS === 'web') {
+  if (IS_WEB) {
     return (
       <WebLayout>
         <OwnerSettingsInner />
@@ -218,13 +222,22 @@ export default function OwnerSettingsScreen() {
     );
   }
 
-  return <OwnerSettingsInner />;
+  return (
+    <View style={styles.nativeRoot}>
+      <MobileAppNavbar title="Ground owner settings" titleColor="#00ea6b" />
+      <OwnerSettingsInner />
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
+  nativeRoot: {
+    flex: 1,
+    backgroundColor: '#043529',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: IS_WEB ? '#F5F5F5' : '#043529',
     padding: 16,
     ...Platform.select({
       web: {
@@ -245,6 +258,9 @@ const styles = StyleSheet.create({
   panel: {
     paddingVertical: 16,
     paddingHorizontal: 16,
+    backgroundColor: IS_WEB ? '#FFFFFF' : '#06392e',
+    borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.15)',
+    borderWidth: 1,
   },
   title: {
     fontSize: 24,
@@ -259,12 +275,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: IS_WEB ? '#111827' : '#FFFFFF',
     marginBottom: 6,
   },
   sectionSubtitle: {
     fontSize: 13,
-    color: '#6B7280',
+    color: IS_WEB ? '#6B7280' : '#9ca3af',
     marginBottom: 16,
   },
   formRow: {
@@ -281,26 +297,30 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#4B5563',
+    color: IS_WEB ? '#4B5563' : '#9ca3af',
     marginBottom: 4,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: IS_WEB ? '#D1D5DB' : 'rgba(0,234,107,0.2)',
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: Platform.OS === 'web' ? 8 : 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: IS_WEB ? '#FFFFFF' : '#043529',
     fontSize: 14,
+    color: IS_WEB ? '#000' : '#FFF',
   },
   multilineInput: {
     minHeight: 72,
     textAlignVertical: 'top',
   },
   actionsRow: {
-    marginTop: 8,
     flexDirection: 'row',
     justifyContent: 'flex-start',
+  },
+  submitButton: {
+    backgroundColor: '#01b854',
+    borderWidth: 0,
   },
 });
 

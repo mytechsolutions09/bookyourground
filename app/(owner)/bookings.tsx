@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, Platform, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, Platform, TouchableOpacity, ScrollView } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { BookingWithDetails } from '@/types';
@@ -9,6 +9,7 @@ import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
 import { router } from 'expo-router';
 import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
+import MobileAppNavbar from '@/components/MobileAppNavbar';
 
 export default function OwnerBookingsScreen() {
   const { user } = useAuth();
@@ -43,7 +44,8 @@ export default function OwnerBookingsScreen() {
           user:profiles(full_name, phone)
         `,
         )
-        .eq('ground.owner_id', user.id);
+        .eq('ground.owner_id', user.id)
+        .eq('status', 'confirmed');
 
       // 2) Bookings this user made as a player (any ground)
       const selfPromise = supabase
@@ -58,7 +60,8 @@ export default function OwnerBookingsScreen() {
           user:profiles(full_name, phone)
         `,
         )
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .eq('status', 'confirmed');
 
       const [{ data: ownedData, error: ownedError }, { data: selfData, error: selfError }] =
         await Promise.all([ownedPromise, selfPromise]);
@@ -82,59 +85,6 @@ export default function OwnerBookingsScreen() {
     }
   };
 
-  const updateBookingStatus = async (bookingId: string, status: 'confirmed' | 'rejected') => {
-    try {
-      const { error } = await supabase
-        .from('bookings')
-        .update({ status })
-        .eq('id', bookingId);
-
-      if (error) throw error;
-
-      Alert.alert('Success', `Booking ${status} successfully`);
-      loadBookings();
-    } catch (error: any) {
-      Alert.alert('Error', error.message);
-    }
-  };
-
-  const renderBookingActions = (booking: BookingWithDetails) => {
-    if (booking.status !== 'pending') return null;
-    const groundApproved = !!booking.ground?.approved;
-
-    if (!groundApproved) {
-      return (
-        <Card style={styles.actionsCard}>
-          <Text style={styles.actionsTitle}>Waiting for admin approval</Text>
-          <Text style={styles.actionsSubtext}>
-            This ground is not approved by the platform yet.
-          </Text>
-        </Card>
-      );
-    }
-
-    return (
-      <Card style={styles.actionsCard}>
-        <Text style={styles.actionsTitle}>Pending Approval</Text>
-        <View style={styles.actionsButtons}>
-          <Button
-            title="Approve"
-            onPress={() => updateBookingStatus(booking.id, 'confirmed')}
-            variant="secondary"
-            size="small"
-            style={{ flex: 1 }}
-          />
-          <Button
-            title="Reject"
-            onPress={() => updateBookingStatus(booking.id, 'rejected')}
-            variant="danger"
-            size="small"
-            style={{ flex: 1 }}
-          />
-        </View>
-      </Card>
-    );
-  };
 
   const availableDates = useMemo(
     () => Array.from(new Set(bookings.map((b) => b.booking_date))).sort(),
@@ -202,8 +152,13 @@ export default function OwnerBookingsScreen() {
     <View style={styles.container}>
       {!isWeb && (
         <View style={styles.header}>
-          <Text style={styles.title}>Ground Bookings</Text>
-          <View style={styles.tabRow}>
+          {isWeb && <Text style={styles.title}>Ground Bookings</Text>}
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            contentContainerStyle={styles.tabRow}
+            style={styles.tabScrollWrap}
+          >
             <TouchableOpacity
               onPress={() => setActiveTab('upcoming')}
               style={[
@@ -236,8 +191,6 @@ export default function OwnerBookingsScreen() {
                 {`Past (${pastCount})`}
               </Text>
             </TouchableOpacity>
-          </View>
-          <View style={styles.tabRow}>
             <TouchableOpacity
               onPress={() => setOwnerScope('own')}
               style={[
@@ -270,7 +223,7 @@ export default function OwnerBookingsScreen() {
                 Other grounds
               </Text>
             </TouchableOpacity>
-          </View>
+          </ScrollView>
         </View>
       )}
 
@@ -449,7 +402,6 @@ export default function OwnerBookingsScreen() {
                 showGroundDetails={false}
                 metaText={meta}
               />
-              {renderBookingActions(item)}
             </View>
           );
         }}
@@ -471,25 +423,37 @@ export default function OwnerBookingsScreen() {
     return <WebLayout>{content}</WebLayout>;
   }
 
-  return content;
+  return (
+    <View style={styles.nativeContainer}>
+      <MobileAppNavbar title="Ground Bookings" titleColor="#00ea6b" />
+      {content}
+    </View>
+  );
 }
 
+const IS_WEB = Platform.OS === 'web';
+
 const styles = StyleSheet.create({
+  nativeContainer: {
+    flex: 1,
+    backgroundColor: '#043529',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: IS_WEB ? '#F5F5F5' : '#043529',
   },
   header: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: IS_WEB ? '#FFFFFF' : '#043529',
     padding: 16,
-    paddingTop: Platform.OS === 'web' ? 16 : 48,
+    paddingTop: IS_WEB ? 16 : 0,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: IS_WEB ? '#E0E0E0' : 'rgba(0,234,107,0.15)',
   },
   title: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#212121',
+    fontWeight: '800',
+    color: IS_WEB ? '#212121' : '#f9fafb',
+    letterSpacing: -0.3,
   },
   list: {
     padding: 16,
@@ -501,27 +465,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#666',
-  },
-  actionsCard: {
-    marginTop: -4,
-    marginBottom: 12,
-    backgroundColor: '#FFF9E6',
-  },
-  actionsTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#F57C00',
-    marginBottom: 12,
-  },
-  actionsSubtext: {
-    fontSize: 13,
-    color: '#6B7280',
-    marginBottom: 4,
-  },
-  actionsButtons: {
-    flexDirection: 'row',
-    gap: 12,
+    color: IS_WEB ? '#666' : '#9ca3af',
   },
   tableHeaderContainer: {
     marginHorizontal: 16,
@@ -578,6 +522,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
     marginTop: 2,
+  },
+  amount: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
   },
   dateText: {
     fontSize: 13,
@@ -637,10 +586,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#2b2f4b',
   },
-  tabRow: {
+  tabScrollWrap: {
     marginTop: 12,
+  },
+  tabRow: {
     flexDirection: 'row',
     gap: 8,
+    paddingRight: 16,
   },
   tabsAndFilterLeft: {
     flexDirection: 'row',
@@ -648,23 +600,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tabChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#2b2f4b',
-    backgroundColor: '#FFFFFF',
+    borderColor: IS_WEB ? '#2b2f4b' : 'rgba(0,234,107,0.25)',
+    backgroundColor: IS_WEB ? '#FFFFFF' : 'rgba(4,53,41,0.6)',
   },
   tabChipActive: {
-    backgroundColor: '#2b2f4b',
-    borderColor: '#2b2f4b',
+    backgroundColor: IS_WEB ? '#2b2f4b' : '#00ea6b',
+    borderColor: IS_WEB ? '#2b2f4b' : '#00ea6b',
   },
   tabChipText: {
     fontSize: 13,
-    color: '#2b2f4b',
+    fontWeight: '600',
+    color: IS_WEB ? '#2b2f4b' : '#f9fafb',
   },
   tabChipTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '600',
+    color: IS_WEB ? '#FFFFFF' : '#043529',
+    fontWeight: '700',
   },
 });

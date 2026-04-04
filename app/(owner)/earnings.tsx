@@ -5,6 +5,9 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency } from '@/utils/helpers';
 import Card from '@/components/ui/Card';
+import MobileAppNavbar from '@/components/MobileAppNavbar';
+
+const IS_WEB = Platform.OS === 'web';
 
 interface EarningsStats {
   totalEarnings: number;
@@ -81,7 +84,9 @@ function OwnerEarningsScreenInner() {
     >
       <View style={styles.inner}>
         <Card style={styles.panel}>
-          <Text style={styles.title}>Earnings</Text>
+          {Platform.OS === 'web' && (
+            <Text style={styles.title}>Earnings</Text>
+          )}
           <Text style={styles.subtitle}>
             Confirmed and completed bookings on your grounds.
           </Text>
@@ -146,8 +151,8 @@ function OwnerEarningsScreenInner() {
                     <Text style={[styles.transactionsCell, styles.txColDate]}>
                       {tx.booking_date}
                     </Text>
-                    <View style={[styles.transactionsCell, styles.txColGround]}>
-                      <Text>{tx.ground?.name ?? 'Unknown ground'}</Text>
+                    <View style={styles.txColGround}>
+                      <Text style={styles.transactionsCell}>{tx.ground?.name ?? 'Unknown ground'}</Text>
                       <Text style={styles.txGroundSub}>
                         {tx.ground?.city}, {tx.ground?.state}
                       </Text>
@@ -178,15 +183,24 @@ export default function OwnerEarningsScreen() {
     );
   }
 
-  return <OwnerEarningsScreenInner />;
+  return (
+    <View style={styles.nativeContainer}>
+      <MobileAppNavbar title="Earnings" titleColor="#00ea6b" />
+      <OwnerEarningsScreenInner />
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
+  nativeContainer: {
+    flex: 1,
+    backgroundColor: '#043529',
+  },
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: IS_WEB ? '#F5F5F5' : '#043529',
     padding: 16,
-    paddingTop: 48,
+    paddingTop: IS_WEB ? 0 : 16,
     ...Platform.select({
       web: {
         paddingLeft: 0,
@@ -206,21 +220,27 @@ const styles = StyleSheet.create({
   panel: {
     paddingVertical: 16,
     paddingHorizontal: 16,
+    backgroundColor: IS_WEB ? '#FFFFFF' : '#06392e',
+    borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.2)',
+    borderWidth: 1,
   },
   panelSecondary: {
     marginTop: 16,
     paddingVertical: 12,
     paddingHorizontal: 16,
+    backgroundColor: IS_WEB ? '#FFFFFF' : '#06392e',
+    borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.2)',
+    borderWidth: 1,
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#111827',
+    color: IS_WEB ? '#111827' : '#FFFFFF',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 14,
-    color: '#6B7280',
+    color: IS_WEB ? '#6B7280' : '#9ca3af',
   },
   filterRow: {
     flexDirection: 'row',
@@ -250,17 +270,19 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: IS_WEB ? '#FFFFFF' : '#043529',
+    borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.3)',
+    borderWidth: 1,
   },
   cardLabel: {
     fontSize: 13,
-    color: '#6B7280',
+    color: IS_WEB ? '#6B7280' : '#9ca3af',
     marginBottom: 6,
   },
   cardValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
+    color: IS_WEB ? '#111827' : '#00ea6b',
   },
   transactionsSection: {
     marginTop: 20,
@@ -274,11 +296,11 @@ const styles = StyleSheet.create({
   transactionsTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: IS_WEB ? '#111827' : '#FFFFFF',
   },
   transactionsEmpty: {
     fontSize: 13,
-    color: '#6B7280',
+    color: IS_WEB ? '#6B7280' : '#9ca3af',
   },
   transactionsTable: {
     marginTop: 4,
@@ -290,18 +312,18 @@ const styles = StyleSheet.create({
   transactionsHeaderCell: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#6B7280',
+    color: IS_WEB ? '#6B7280' : '#00ea6b',
     textTransform: 'uppercase',
   },
   transactionsRow: {
     flexDirection: 'row',
     paddingVertical: 8,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: IS_WEB ? '#F3F4F6' : 'rgba(0,234,107,0.15)',
   },
   transactionsCell: {
     fontSize: 13,
-    color: '#111827',
+    color: IS_WEB ? '#111827' : '#E5E7EB',
   },
   txColDate: {
     flex: 1,
@@ -318,7 +340,7 @@ const styles = StyleSheet.create({
   },
   txGroundSub: {
     fontSize: 12,
-    color: '#6B7280',
+    color: IS_WEB ? '#6B7280' : '#9ca3af',
   },
 });
 

@@ -9,6 +9,7 @@ import { GroundWithImages } from '@/types';
 import GroundCard from '@/components/grounds/GroundCard';
 import type { GroundWithImages as GroundWithImagesType } from '@/types';
 import WebLayout from '@/components/web/WebLayout';
+import MobileAppNavbar from '@/components/MobileAppNavbar';
 
 function makeGroundPath(ground: GroundWithImagesType): string {
   const name = (ground.name ?? '').toString().toLowerCase().trim();
@@ -303,15 +304,10 @@ export default function OwnerGroundsScreen() {
   const content = (
     <View style={styles.container}>
       {Platform.OS !== 'web' && (
-        <View style={styles.header}>
-          <Text style={styles.title}>My Grounds</Text>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => router.push('/(owner)/add-ground')}
-          >
-            <Plus size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
+        <MobileAppNavbar 
+          title="My Grounds" 
+          titleColor="#00ea6b" 
+        />
       )}
 
       <FlatList
@@ -628,31 +624,34 @@ export default function OwnerGroundsScreen() {
   return content;
 }
 
+const IS_WEB = Platform.OS === 'web';
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: IS_WEB ? '#F5F5F5' : '#043529',
   },
   header: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: IS_WEB ? '#FFFFFF' : '#043529',
     padding: 16,
-    paddingTop: 48,
+    paddingTop: IS_WEB ? 48 : 64,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: IS_WEB ? '#E0E0E0' : 'rgba(0,234,107,0.15)',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   title: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#212121',
+    fontWeight: '800',
+    color: IS_WEB ? '#212121' : '#f9fafb',
+    letterSpacing: -0.3,
   },
   addButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: Platform.OS === 'web' ? '#dc8d3c' : '#2196F3',
+    backgroundColor: IS_WEB ? '#dc8d3c' : '#00ea6b',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -665,12 +664,15 @@ const styles = StyleSheet.create({
   editorCard: {
     marginBottom: 16,
     padding: 14,
-    backgroundColor: '#FFF9E6',
+    backgroundColor: IS_WEB ? '#FFF9E6' : '#06392e',
+    borderWidth: IS_WEB ? 0 : 1,
+    borderColor: 'rgba(0,234,107,0.15)',
+    borderRadius: 16,
   },
   editorTitle: {
     fontSize: 14,
     fontWeight: '900',
-    color: '#212121',
+    color: IS_WEB ? '#212121' : '#f9fafb',
     marginBottom: 10,
   },
   actionsRow: {
@@ -700,6 +702,9 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 14,
     overflow: 'visible',
+    backgroundColor: IS_WEB ? '#FFFFFF' : '#06392e',
+    borderWidth: IS_WEB ? 0 : 1,
+    borderColor: 'rgba(0,234,107,0.25)',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -711,7 +716,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 16,
     fontWeight: '900',
-    color: '#212121',
+    color: IS_WEB ? '#212121' : '#f9fafb',
     flex: 1,
   },
   modalScroll: {
@@ -720,7 +725,7 @@ const styles = StyleSheet.create({
   modalSectionTitle: {
     fontSize: 12,
     fontWeight: '900',
-    color: '#374151',
+    color: IS_WEB ? '#374151' : '#f9fafb',
     marginTop: 12,
     marginBottom: 6,
   },
@@ -729,14 +734,14 @@ const styles = StyleSheet.create({
   },
   formInput: {
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.25)',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: IS_WEB ? '#FFFFFF' : 'rgba(4,53,41,0.6)',
     fontSize: 14,
     fontWeight: '700',
-    color: '#111827',
+    color: IS_WEB ? '#111827' : '#f9fafb',
     marginBottom: 10,
   },
   formRow2: {
@@ -751,7 +756,7 @@ const styles = StyleSheet.create({
   locationLabel: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#374151',
+    color: IS_WEB ? '#374151' : '#9ca3af',
     marginBottom: 4,
   },
   switchRow: {
@@ -763,7 +768,7 @@ const styles = StyleSheet.create({
   switchLabel: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#374151',
+    color: IS_WEB ? '#374151' : '#e5e7eb',
   },
   formActions: {
     marginTop: 10,
@@ -809,14 +814,14 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderColor: IS_WEB ? '#E5E7EB' : '#00ea6b',
+    backgroundColor: IS_WEB ? '#FFFFFF' : 'rgba(0,234,107,0.1)',
     marginBottom: 10,
   },
   mediaUploadText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#374151',
+    color: IS_WEB ? '#374151' : '#00ea6b',
   },
   surfaceChipsRow: {
     flexDirection: 'row',
@@ -829,20 +834,20 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.25)',
+    backgroundColor: IS_WEB ? '#FFFFFF' : 'rgba(4,53,41,0.6)',
   },
   surfaceChipActive: {
-    borderColor: '#2563EB',
-    backgroundColor: '#EFF6FF',
+    borderColor: IS_WEB ? '#2563EB' : '#00ea6b',
+    backgroundColor: IS_WEB ? '#EFF6FF' : '#00ea6b',
   },
   surfaceChipText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#374151',
+    color: IS_WEB ? '#374151' : '#f9fafb',
   },
   surfaceChipTextActive: {
-    color: '#1D4ED8',
+    color: IS_WEB ? '#1D4ED8' : '#043529',
   },
   emptyContainer: {
     alignItems: 'center',
@@ -851,7 +856,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#666',
+    color: IS_WEB ? '#666' : '#9ca3af',
     marginBottom: 24,
     textAlign: 'center',
   },
@@ -921,26 +926,26 @@ const locationDropdownStyles = StyleSheet.create({
   },
   button: {
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.25)',
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: IS_WEB ? '#FFFFFF' : 'rgba(4,53,41,0.6)',
   },
   buttonOpen: {
-    borderColor: '#dc8d3c',
-    backgroundColor: 'rgba(220,141,60,0.05)',
+    borderColor: IS_WEB ? '#dc8d3c' : '#00ea6b',
+    backgroundColor: IS_WEB ? 'rgba(220,141,60,0.05)' : 'rgba(0,234,107,0.1)',
   },
   buttonText: {
     fontSize: 14,
-    color: '#111827',
+    color: IS_WEB ? '#111827' : '#f9fafb',
   },
   menu: {
     position: 'relative' as any,
     maxHeight: 260,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: IS_WEB ? '#FFFFFF' : '#06392e',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.25)',
     borderRadius: 10,
     zIndex: 5000,
     shadowColor: '#000',
@@ -954,6 +959,6 @@ const locationDropdownStyles = StyleSheet.create({
   },
   optionText: {
     fontSize: 14,
-    color: '#111827',
+    color: IS_WEB ? '#111827' : '#f9fafb',
   },
 });

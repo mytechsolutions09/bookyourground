@@ -47,6 +47,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
   >([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [searchFocused, setSearchFocused] = useState(false);
 
   if (Platform.OS !== 'web') {
     return <>{children}</>;
@@ -273,11 +274,17 @@ export default function WebLayout({ children }: WebLayoutProps) {
                   {!isCompact && (
                     <View style={styles.headerSearch}>
                       <TextInput
-                        placeholder="Search grounds"
-                        placeholderTextColor="#E5E7EB"
+                        placeholder="SEARCH GROUNDS"
+                        placeholderTextColor="#dcc093"
                         value={searchQuery}
                         onChangeText={setSearchQuery}
-                        style={styles.headerSearchInput}
+                        onFocus={() => setSearchFocused(true)}
+                        onBlur={() => setSearchFocused(false)}
+                        style={[
+                          styles.headerSearchInput,
+                          searchFocused && { borderColor: '#dcc093', outlineColor: '#dcc093' } as any,
+                          !searchFocused && { outlineColor: 'transparent' } as any,
+                        ]}
                       />
 
                       {searchQuery.trim().length >= 2 && (
@@ -1033,8 +1040,9 @@ const styles = StyleSheet.create({
   headerPrimaryButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#dcc093',
     fontFamily: 'Inter',
+    textTransform: 'uppercase' as any,
   },
   headerSecondaryButton: {
     paddingHorizontal: 18,
@@ -1047,8 +1055,9 @@ const styles = StyleSheet.create({
   headerSecondaryButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#F9FAFB',
+    color: '#dcc093',
     fontFamily: 'Inter',
+    textTransform: 'uppercase' as any,
   },
   mobilePrimaryButton: {
     marginTop: 8,

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, Platform, Linking } from 'react-native';
-import { MapPin, Star, Calendar, Clock } from 'lucide-react-native';
+import { MapPin, Star, Calendar, Clock, Heart } from 'lucide-react-native';
 import { GroundWithImages } from '@/types';
 import { formatCurrency } from '@/utils/helpers';
 import { getGroundBookingScheduleLines } from '@/utils/bookingSlots';
@@ -21,6 +21,9 @@ interface GroundCardProps {
   displayPricePerUnit?: number | null;
   /** Optional text suffix for the unit, e.g. "/hr" or " / match". */
   unitLabelOverride?: string;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
+  favoriteLoading?: boolean;
 }
 
 export default function GroundCard({
@@ -30,6 +33,9 @@ export default function GroundCard({
   compact = false,
   displayPricePerUnit,
   unitLabelOverride,
+  isFavorite = false,
+  onToggleFavorite,
+  favoriteLoading = false,
 }: GroundCardProps) {
   const isWeb = Platform.OS === 'web';
   const schedule = useMemo(
@@ -78,7 +84,27 @@ export default function GroundCard({
           !isWeb && styles.cardNative,
         ]}
       >
-        <Image source={{ uri: primaryImage }} style={[styles.image, compact && styles.imageCompact]} />
+        <View style={styles.imageWrapper}>
+          <Image source={{ uri: primaryImage }} style={[styles.image, compact && styles.imageCompact]} />
+          {onToggleFavorite && (
+            <TouchableOpacity
+              style={[styles.favBtn, isFavorite && styles.favBtnActive]}
+              onPress={(e) => {
+                e.stopPropagation();
+                onToggleFavorite();
+              }}
+              disabled={favoriteLoading}
+              activeOpacity={0.7}
+            >
+              <Heart
+                size={compact ? 16 : 20}
+                color={isFavorite ? '#00ea6b' : '#f9fafb'}
+                fill={isFavorite ? '#00ea6b' : 'rgba(0,0,0,0.3)'}
+                strokeWidth={2.5}
+              />
+            </TouchableOpacity>
+          )}
+        </View>
         <View style={styles.content}>
           <View style={styles.titleRow}>
             <Text style={nameStyle} numberOfLines={2}>
@@ -200,6 +226,27 @@ const styles = StyleSheet.create({
   },
   imageCompact: {
     aspectRatio: 16 / 6,
+  },
+  imageWrapper: {
+    position: 'relative',
+    width: '100%',
+  },
+  favBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    zIndex: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(4,53,41,0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,234,107,0.2)',
+  },
+  favBtnActive: {
+    borderColor: 'rgba(0,234,107,0.5)',
   },
   content: {
     padding: 12,
