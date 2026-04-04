@@ -196,8 +196,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(148, 163, 184, 0.5)',
-    backgroundColor: 'rgba(6,57,46,0.85)', // #06392e
+    borderColor: 'rgba(0,234,107,0.25)',
+    backgroundColor: '#06392e', // Deep theme green
     marginBottom: 18,
   },
   pillLabel: {
@@ -265,8 +265,8 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.6)',
-    backgroundColor: 'rgba(6,57,46,0.9)', // #06392e
+    borderColor: 'rgba(0,234,107,0.3)',
+    backgroundColor: '#06392e', // Deep theme green
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
     padding: 18,
     backgroundColor: '#06392e',
     borderWidth: 1,
-    borderColor: 'rgba(55,65,81,0.9)',
+    borderColor: 'rgba(0,234,107,0.2)',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 18 },
     shadowOpacity: 0.55,
@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#06392e',
     borderWidth: 1,
-    borderColor: 'rgba(148,163,184,0.7)',
+    borderColor: 'rgba(0,234,107,0.3)',
   },
   cardCtaButtonPressed: {
     backgroundColor: '#043529',
@@ -453,9 +453,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 16,
-    backgroundColor: 'rgba(6,57,46,0.9)', // #06392e
+    backgroundColor: '#06392e',
     borderWidth: 1,
-    borderColor: 'rgba(31,41,55,0.9)',
+    borderColor: 'rgba(0,234,107,0.2)',
     minWidth: 90,
   },
   floatingStatNumber: {

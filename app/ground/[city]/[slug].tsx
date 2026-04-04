@@ -369,7 +369,13 @@ export default function GroundDetailsPrettyUrlScreen() {
           <View style={styles.fixedHeader}>
             <Pressable
               style={styles.backBtn}
-              onPress={() => router.back()}
+              onPress={() => {
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/');
+                }
+              }}
               accessibilityRole="button"
               accessibilityLabel="Go back"
             >

@@ -30,16 +30,22 @@ export default function WelcomeScreen() {
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: '#000' }]} />
       <Video
         source={require('../assets/videos/welcome.mp4')}
         style={StyleSheet.absoluteFill}
         resizeMode={ResizeMode.COVER}
         shouldPlay
         isLooping={false}
+        useNativeControls={false}
         onPlaybackStatusUpdate={(status) => {
           if (status.isLoaded && status.didJustFinish) {
             finish();
           }
+        }}
+        onError={(error) => {
+          console.error('Welcome video error:', error);
+          finish(); // Skip on fatal error
         }}
       />
       <Pressable

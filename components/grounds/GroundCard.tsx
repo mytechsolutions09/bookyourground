@@ -210,9 +210,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   cardNative: {
-    backgroundColor: NATIVE_CARD_BG,
-    borderWidth: 2,
-    borderColor: NATIVE_BORDER,
+    backgroundColor: '#06392e',
+    borderWidth: 1,
+    borderColor: 'rgba(0,234,107,0.2)',
     shadowOpacity: 0,
     shadowRadius: 0,
     shadowOffset: { width: 0, height: 0 },

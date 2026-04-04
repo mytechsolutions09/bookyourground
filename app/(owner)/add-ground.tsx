@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import * as React from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -138,7 +139,7 @@ export default function AddGroundScreen() {
     has_changing_rooms: false,
     has_pavilion: false,
     has_washrooms: false,
-    mediaUrls: [''],
+    mediaUrls: [] as string[],
   });
 
   const trimmedDurationMinutes = String(slotDurationMinutesText ?? '').trim();
@@ -368,6 +369,17 @@ export default function AddGroundScreen() {
     }
   };
 
+  useEffect(() => {
+    (async () => {
+      if (Platform.OS !== 'web') {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          // Alert.alert('Permission required', 'We need access to your photos to upload ground images.');
+        }
+      }
+    })();
+  }, []);
+
   const handlePickMedia = async () => {
     if (!user) {
       Alert.alert('Login required', 'Please sign in again to upload media.');
@@ -375,9 +387,8 @@ export default function AddGroundScreen() {
     }
 
     try {
-      setUploadingMedia(true);
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.All,
+        mediaTypes: ['images', 'videos'] as const,
         quality: 0.8,
       });
 
@@ -385,21 +396,39 @@ export default function AddGroundScreen() {
         return;
       }
 
+      setUploadingMedia(true);
       const asset = result.assets[0];
       const uri = asset.uri;
-      const extensionFromUri = uri.split('.').pop() || '';
-      const ext =
-        extensionFromUri.toLowerCase().match(/^(jpg|jpeg|png|webp|mp4|mov|m4v)$/)?.[0] || 'jpg';
 
-      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      // Extract filename and extension
+      const extension = uri.split('.').pop() || 'jpg';
+      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
       const filePath = `owner-media/${user.id}/${fileName}`;
 
-      const response = await fetch(uri);
-      const blob = await response.blob();
+      // Determine MIME type
+      const mimeType = asset.mimeType || (extension === 'mp4' || extension === 'mov' ? 'video/mp4' : 'image/jpeg');
+
+      // Use fetch → arrayBuffer to avoid the '.blob()' issue in some RN environments
+      let uploadBody: ArrayBuffer | Blob;
+      try {
+        const resp = await fetch(uri);
+        uploadBody = await resp.arrayBuffer();
+      } catch {
+        // Fallback: XHR blob (works in Expo Go on some platforms)
+        uploadBody = await new Promise<Blob>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.onload = () => resolve(xhr.response);
+          xhr.onerror = () => reject(new TypeError('Network request failed'));
+          xhr.responseType = 'blob';
+          xhr.open('GET', uri, true);
+          xhr.send(null);
+        });
+      }
 
       const { error: uploadError } = await supabase.storage
         .from('ground-images')
-        .upload(filePath, blob, {
+        .upload(filePath, uploadBody, {
+          contentType: mimeType,
           cacheControl: '3600',
           upsert: false,
         });

@@ -2042,9 +2042,9 @@ export default function LandingBookingForm({
                   loading={submitting}
                   fullWidth
                   size="large"
-                  style={nativeTanChrome ? { backgroundColor: '#01b854' } : undefined}
+                  style={nativeTanChrome ? { backgroundColor: '#01e669' } : undefined}
                   textStyle={nativeTanChrome ? styles.bookNowPrimaryButtonText : undefined}
-                  loadingIndicatorColor={nativeTanChrome ? '#FFFFFF' : undefined}
+                  loadingIndicatorColor={nativeTanChrome ? '#043529' : undefined}
                 />
                 <Pressable
                   onPress={() => setSelectedGroundId(null)}
@@ -2064,7 +2064,7 @@ export default function LandingBookingForm({
                 size="large"
                 style={styles.searchButtonAlignedHeight}
                 textStyle={nativeTanChrome ? styles.bookGroundNativeButtonText : undefined}
-                loadingIndicatorColor={nativeTanChrome ? '#dcc093' : undefined}
+                loadingIndicatorColor={nativeTanChrome ? '#043529' : undefined}
               />
             ) : null
           ) : (
@@ -2076,7 +2076,7 @@ export default function LandingBookingForm({
               fullWidth
               size={groundPageAccent && !isWeb ? 'small' : 'large'}
               style={
-                groundPageAccent || nativeTanChrome ? { backgroundColor: '#01b854' } : undefined
+                groundPageAccent || nativeTanChrome ? { backgroundColor: '#01e669' } : undefined
               }
               textStyle={
                 groundPageAccent || nativeTanChrome
@@ -2084,7 +2084,7 @@ export default function LandingBookingForm({
                   : undefined
               }
               loadingIndicatorColor={
-                groundPageAccent || nativeTanChrome ? '#FFFFFF' : undefined
+                groundPageAccent || nativeTanChrome ? '#043529' : undefined
               }
             />
           )}
@@ -2254,9 +2254,14 @@ const styles = StyleSheet.create({
     color: '#E5E7EB',
     marginBottom: 6,
   },
-  /** Book-a-ground native screen: field headings match tan accent (#dcc093). */
+  /** Book-a-ground native screen: field headings match neon green section labels. */
   labelBookGroundNative: {
-    color: '#dcc093',
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#9ca3af',
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    marginBottom: 6,
   },
   /** `separateSearchResults` — heading on light card (e.g. /book-my-ground). */
   labelOnWhite: {
@@ -2305,7 +2310,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#1f2937',
+    borderColor: 'rgba(0,234,107,0.15)',
     backgroundColor: '#06392e',
   },
   groundChipActive: {
@@ -2368,10 +2373,13 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
   },
   teamToggleOptionBookGroundNative: {
-    borderColor: '#dcc093',
+    borderColor: 'rgba(0,234,107,0.2)',
+    backgroundColor: '#06392e',
+    borderRadius: 999,
   },
   teamToggleTextBookGroundNative: {
-    color: '#dcc093',
+    color: '#f9fafb',
+    fontWeight: '500',
   },
   /** Search CTA: same row height as Location / Type / Teams (44px min, 10 vertical padding). */
   searchButtonAlignedHeight: {
@@ -2546,23 +2554,29 @@ const styles = StyleSheet.create({
   dropdownButtonTextDisabled: {
     color: '#6B7280',
   },
-  /** Book a ground (native): replace white borders/text with tan. */
+  /** Book a ground (native): replace white borders/text with neon green transparent. */
   dropdownButtonBookGroundNative: {
-    borderColor: '#dcc093',
+    borderColor: 'rgba(0,234,107,0.2)',
+    backgroundColor: '#06392e',
+    borderRadius: 999,
+    paddingHorizontal: 16,
   },
   dropdownButtonTextBookGroundNative: {
-    color: '#dcc093',
+    color: '#f9fafb',
+    fontSize: 14,
+    fontWeight: '500',
   },
   dropdownOptionTextBookGroundNative: {
-    color: '#dcc093',
+    color: '#f9fafb',
   },
-  /** Book a ground (native): loading/disabled — avoid gray `#F3F4F6` flash on refresh. */
+  /** Book a ground (native): loading/disabled — match capsule look. */
   dropdownButtonDisabledBookGroundNative: {
-    backgroundColor: '#043529',
-    borderColor: 'rgba(220,192,147,0.45)',
+    backgroundColor: '#06392e',
+    borderColor: 'rgba(0,234,107,0.1)',
+    borderRadius: 999,
   },
   dropdownButtonTextDisabledBookGroundNative: {
-    color: 'rgba(220,192,147,0.7)',
+    color: 'rgba(249,250,251,0.4)',
   },
   dropdownMenu: {
     position: 'absolute',
@@ -2734,9 +2748,10 @@ const styles = StyleSheet.create({
     borderColor: '#00ea6b',
     backgroundColor: '#043529',
   },
-  /** Book a ground (native): inactive chip outline — tan instead of gray/white. */
+  /** Book a ground (native): inactive chip outline — neon green transparent. */
   dateChipBorderBookGroundNative: {
-    borderColor: '#dcc093',
+    borderColor: 'rgba(0,234,107,0.15)',
+    backgroundColor: '#06392e',
   },
   dateChipText: {
     fontSize: 12,
@@ -2751,7 +2766,7 @@ const styles = StyleSheet.create({
     color: '#00ea6b',
   },
   dateChipTextBookGroundNative: {
-    color: '#dcc093',
+    color: '#9ca3af',
   },
   dateChipWeekday: {
     fontSize: 10,
@@ -2767,7 +2782,7 @@ const styles = StyleSheet.create({
     color: '#00ea6b',
   },
   dateChipWeekdayBookGroundNative: {
-    color: '#dcc093',
+    color: '#9ca3af',
   },
   datePagerRow: {
     flexDirection: 'row',
@@ -2826,7 +2841,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#043529',
   },
   timeSlotChipBorderBookGroundNative: {
-    borderColor: '#dcc093',
+    borderColor: 'rgba(0,234,107,0.15)',
+    backgroundColor: '#06392e',
   },
   /** Mobile-only: slightly smaller time chip for scrolling. */
   timeSlotChipMobile: {
@@ -2848,7 +2864,7 @@ const styles = StyleSheet.create({
   },
   timeSlotChipPressedBookGroundNative: {
     backgroundColor: '#06392e',
-    borderColor: '#dcc093',
+    borderColor: '#00ea6b',
   },
   timeSlotText: {
     fontSize: 13,
@@ -2866,15 +2882,16 @@ const styles = StyleSheet.create({
     color: '#00ea6b',
   },
   timeSlotTextBookGroundNative: {
-    color: '#dcc093',
+    color: '#9ca3af',
   },
   bookGroundNativeButtonText: {
-    color: '#dcc093',
+    color: '#043529',
+    fontWeight: '700',
   },
-  /** Book Now CTA fill `#01b854` — white label for contrast. */
+  /** Book Now CTA fill neon green — dark label for classic premium look. */
   bookNowPrimaryButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
+    color: '#043529',
+    fontWeight: '700',
   },
 });
 

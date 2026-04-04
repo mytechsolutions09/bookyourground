@@ -14,12 +14,15 @@ export default function LandingPageSections({ variant }: { variant: Variant }) {
   return (
     <>
       <Hero />
-      {variant === 'web' ? (
-        <View style={styles.bookingSectionSpacer}>
-          <LandingBookingForm fullWidth separateSearchResults />
-        </View>
-      ) : null}
       <PopularGrounds />
+      <View style={styles.bookingSectionSpacer}>
+        <LandingBookingForm 
+          fullWidth 
+          separateSearchResults={variant === 'web'} 
+          noCard={variant === 'native'}
+          hideTitle={variant === 'native'}
+        />
+      </View>
       <Features />
       <CallToAction />
       {variant === 'web' ? <SiteFooter /> : null}

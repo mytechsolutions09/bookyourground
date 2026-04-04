@@ -131,9 +131,9 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(229,231,235,0.9)',
   },
   cardNative: {
-    backgroundColor: NATIVE_CARD_BG,
+    backgroundColor: '#06392e',
     borderWidth: 1,
-    borderColor: NATIVE_ACCENT,
+    borderColor: 'rgba(0,234,107,0.2)',
     shadowOpacity: 0,
     shadowRadius: 0,
     shadowOffset: { width: 0, height: 0 },

@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     width: Platform.OS === 'web' ? 360 : '100%',
     maxWidth: 360,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: 'rgba(0, 234, 107, 0.25)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,

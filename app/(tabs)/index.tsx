@@ -30,6 +30,7 @@ import { supabase } from '@/lib/supabase';
 import { GroundWithImages } from '@/types';
 import WebLayout from '@/components/web/WebLayout';
 import LandingScrollContent from '@/components/landing/LandingScrollContent';
+import LandingBookingForm from '@/components/landing/LandingBookingForm';
 import { useAuth } from '@/contexts/AuthContext';
 
 function makeGroundPath(ground: GroundWithImages): string {
@@ -292,36 +293,6 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* ── Sport Categories ──────────────────────────── */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Browse by Sport</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoriesRow}
-          >
-            {SPORT_CATEGORIES.map((cat) => (
-              <Pressable
-                key={cat.value}
-                style={[
-                  styles.categoryChip,
-                  sportFilter === cat.value && styles.categoryChipActive,
-                ]}
-                onPress={() => setSportFilter(cat.value)}
-              >
-                <Text
-                  style={[
-                    styles.categoryLabel,
-                    sportFilter === cat.value && styles.categoryLabelActive,
-                  ]}
-                >
-                  {cat.label}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        </View>
-
         {/* ── Popular Grounds ───────────────────────────── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -355,6 +326,52 @@ export default function HomeScreen() {
               ))}
             </ScrollView>
           )}
+        </View>
+
+        {/* ── Book a Ground Section ────────────────────── */}
+        <View style={[styles.section, { marginBottom: 20 }]}>
+          <View style={styles.sectionHeader}>
+            <View>
+              <Text style={styles.sectionLabel}>Direct Booking</Text>
+              <Text style={styles.sectionTitle}>Book a Ground</Text>
+            </View>
+          </View>
+          <LandingBookingForm 
+            fullWidth 
+            noCard 
+            hideTitle 
+            bookGroundScreenNative
+          />
+        </View>
+
+        {/* ── Sport Categories ──────────────────────────── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Browse by Sport</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoriesRow}
+          >
+            {SPORT_CATEGORIES.map((cat) => (
+              <Pressable
+                key={cat.value}
+                style={[
+                  styles.categoryChip,
+                  sportFilter === cat.value && styles.categoryChipActive,
+                ]}
+                onPress={() => setSportFilter(cat.value)}
+              >
+                <Text
+                  style={[
+                    styles.categoryLabel,
+                    sportFilter === cat.value && styles.categoryLabelActive,
+                  ]}
+                >
+                  {cat.label}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
         </View>
 
         {/* ── All / Filtered Grounds ───────────────────── */}

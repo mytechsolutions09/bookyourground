@@ -1,0 +1,14 @@
+﻿app/(admin)/earnings.tsx(107,33): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: ViewProps): View', gave the following error.
+    Type '{ fontSize: number; color: string; }' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+  Overload 2 of 2, '(props: ViewProps, context: any): View', gave the following error.
+    Type '{ fontSize: number; color: string; }' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+app/(admin)/grounds.tsx(503,39): error TS7006: Parameter 'u' implicitly has an 'any' type.
+app/(admin)/withdrawals.tsx(77,33): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: ViewProps): View', gave the following error.
+    Type '{ fontSize: number; color: string; }' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+  Overload 2 of 2, '(props: ViewProps, context: any): View', gave the following error.
+    Type '{ fontSize: number; color: string; }' is not assignable to type 'ViewStyle | Falsy | RegisteredStyle<ViewStyle> | RecursiveArray<ViewStyle | Falsy | RegisteredStyle<ViewStyle>> | readonly (ViewStyle | ... 1 more ... | RegisteredStyle<...>)[]'.
+app/bookings/[id]/confirmed.tsx(113,11): error TS2322: Type '(false | { marginTop: number; } | { borderColor: string; backgroundColor: string; })[]' is not assignable to type 'ViewStyle'.
+  Types of property 'filter' are incompatible.
+    Type '{ <S extends false | { marginTop: number; } | { borderColor: string; backgroundColor: string; }>(predicate: (value: false | { marginTop: number; } | { borderColor: string; backgroundColor: string; }, index: number, array: (false | ... 1 more ... | { ...; })[]) => value is S, thisArg?: any): S[]; (predicate: (value: ...' is not assignable to type 'string | readonly FilterFunction[] | undefined'.

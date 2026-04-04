@@ -15,57 +15,56 @@ export default function IndexScreen() {
   const [welcomeChecked, setWelcomeChecked] = useState(Platform.OS === 'web');
 
   useEffect(() => {
-    if (Platform.OS === 'web') return;
+    if (Platform.OS === 'web') {
+      setWelcomeChecked(true);
+      return;
+    }
+    
     let cancelled = false;
-    (async () => {
+    const checkWelcome = async () => {
       try {
         const seen = await AsyncStorage.getItem(WELCOME_SEEN_KEY);
         if (cancelled) return;
+        
         if (seen !== '1') {
+          // Explicitly redirect and do NOT set welcomeChecked to true yet
           router.replace('/welcome');
-          return;
+        } else {
+          setWelcomeChecked(true);
         }
-      } catch {
-        // If storage fails, continue to the app without blocking.
+      } catch (err) {
+        console.error('Welcome storage check error:', err);
+        if (!cancelled) setWelcomeChecked(true);
       }
-      if (!cancelled) setWelcomeChecked(true);
-    })();
+    };
+    
+    checkWelcome();
     return () => {
       cancelled = true;
     };
   }, []);
 
   useEffect(() => {
-    // On mobile, keep redirecting authenticated users to the app tabs.
-    // On web, we keep landing visible so the booking form can be used.
-    if (!loading && user && os !== 'web') {
-      router.replace('/(tabs)/dashboard');
+    // skip marketing homepage on mobile: go to app tabs immediately.
+    if (!loading && welcomeChecked && os !== 'web') {
+      if (user) {
+        router.replace('/(tabs)/dashboard');
+      } else {
+        router.replace('/(tabs)');
+      }
     }
-  }, [user, loading]);
+  }, [user, loading, welcomeChecked, os]);
 
-  if (!welcomeChecked) {
+  if (!welcomeChecked || (loading && os !== 'web')) {
     return <HomePageSkeleton />;
   }
 
-  if (loading) {
-    return os === 'web' ? (
-      <WebLayout>
-        <LandingScrollContent variant="web" />
-      </WebLayout>
-    ) : (
-      <HomePageSkeleton />
-    );
-  }
+  // On web, we keep landing visible so the booking form can be used.
+  if (os !== 'web') return null;
 
-  // On mobile we redirect authenticated users to the app tabs.
-  // On web we keep the landing visible so the booking form can be used.
-  if (user && os !== 'web') return null;
-
-  return os === 'web' ? (
+  return (
     <WebLayout>
       <LandingScrollContent variant="web" />
     </WebLayout>
-  ) : (
-    <LandingScrollContent variant="native" />
   );
 }

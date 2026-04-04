@@ -84,94 +84,106 @@ export default function SignupScreen() {
         <View style={webStyles.scrollContent}>
           <View style={webStyles.heroColumn}>
             <View style={webStyles.formContainer}>
-              <View style={webStyles.header}>
-                <TouchableOpacity onPress={() => router.replace('/')}>
-                  <Text style={webStyles.logoText}>Book my ground</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={webStyles.form}>
-                <View style={webStyles.row}>
-                  <View style={webStyles.col}>
-                    <WebInput
-                      label="First Name"
-                      value={firstName}
-                      onChangeText={setFirstName}
-                      placeholder="First name"
-                      autoComplete="name"
+              <View style={webStyles.formCard}>
+                <View style={webStyles.header}>
+                  <TouchableOpacity onPress={() => router.replace('/')}>
+                    <Image
+                      source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
+                      style={webStyles.logoImage}
+                      resizeMode="contain"
                     />
+                  </TouchableOpacity>
+                  <Text style={webStyles.formTitle}>Create Account</Text>
+                </View>
+  
+                <View style={webStyles.form}>
+                  <View style={webStyles.row}>
+                    <View style={webStyles.col}>
+                      <WebInput
+                        label="First Name"
+                        value={firstName}
+                        onChangeText={setFirstName}
+                        placeholder="First name"
+                        autoComplete="name"
+                      />
+                    </View>
+                    <View style={webStyles.col}>
+                      <WebInput
+                        label="Last Name"
+                        value={lastName}
+                        onChangeText={setLastName}
+                        placeholder="Last name"
+                        autoComplete="name-family"
+                      />
+                    </View>
                   </View>
-                  <View style={webStyles.col}>
-                    <WebInput
-                      label="Last Name"
-                      value={lastName}
-                      onChangeText={setLastName}
-                      placeholder="Last name"
-                      autoComplete="name-family"
-                    />
+  
+                  <View style={webStyles.row}>
+                    <View style={webStyles.col}>
+                      <WebInput
+                        label="Mobile Number"
+                        value={phone}
+                        onChangeText={setPhone}
+                        placeholder="Mobile number"
+                        keyboardType="phone-pad"
+                        autoComplete="tel"
+                      />
+                    </View>
+                    <View style={webStyles.col}>
+                      <WebInput
+                        label="State"
+                        value={stateName}
+                        onChangeText={setStateName}
+                        placeholder="Your state"
+                      />
+                    </View>
+                  </View>
+  
+                  <View style={webStyles.row}>
+                    <View style={webStyles.col}>
+                      <WebInput
+                        label="Email"
+                        value={email}
+                        onChangeText={setEmail}
+                        placeholder="Enter your email"
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        autoComplete="email"
+                      />
+                    </View>
+                    <View style={webStyles.col}>
+                      <WebInput
+                        label="Password"
+                        value={password}
+                        onChangeText={setPassword}
+                        placeholder="Password"
+                        secureTextEntry
+                        autoComplete="password-new"
+                      />
+                    </View>
+                  </View>
+  
+                  <View style={webStyles.buttonRow}>
+                    <TouchableOpacity
+                      style={[webStyles.button, loading && { opacity: 0.7 }]}
+                      onPress={handleSignup}
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <ActivityIndicator color="#043529" size="small" />
+                      ) : (
+                        <Text style={webStyles.buttonText}>CREATE ACCOUNT</Text>
+                      )}
+                    </TouchableOpacity>
+  
+                    <TouchableOpacity
+                      style={webStyles.outlineButton}
+                      onPress={() => router.back()}
+                    >
+                      <Text style={webStyles.outlineButtonText}>SIGN IN</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
-
-                <WebInput
-                  label="Email"
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="Enter your email"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                />
-
-                <View style={webStyles.row}>
-                  <View style={webStyles.col}>
-                    <WebInput
-                      label="Mobile Number"
-                      value={phone}
-                      onChangeText={setPhone}
-                      placeholder="Mobile number"
-                      keyboardType="phone-pad"
-                      autoComplete="tel"
-                    />
-                  </View>
-                  <View style={webStyles.col}>
-                    <WebInput
-                      label="State"
-                      value={stateName}
-                      onChangeText={setStateName}
-                      placeholder="Your state"
-                    />
-                  </View>
-                </View>
-
-                <WebInput
-                  label="Password"
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="Password (min 6 characters)"
-                  secureTextEntry
-                  autoComplete="password-new"
-                />
-
-                <TouchableOpacity
-                  style={[webStyles.button, loading && { opacity: 0.7 }]}
-                  onPress={handleSignup}
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <ActivityIndicator color="#043529" />
-                  ) : (
-                    <Text style={webStyles.buttonText}>Sign Up</Text>
-                  )}
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={webStyles.outlineButton}
-                  onPress={() => router.back()}
-                >
-                  <Text style={webStyles.outlineButtonText}>
-                    Already have an account? Sign In
-                  </Text>
-                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -183,6 +195,9 @@ export default function SignupScreen() {
                 style={{ width: '100%', height: '100%' }}
                 resizeMode="cover"
               />
+              <View style={StyleSheet.absoluteFillObject}>
+                <View style={{ flex: 1, backgroundColor: 'rgba(4,53,41,0.4)' }} />
+              </View>
             </View>
           )}
         </View>
@@ -351,30 +366,34 @@ export default function SignupScreen() {
             </View>
           </View>
 
-          {/* Sign Up button */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.signUpBtn,
-              pressed && { opacity: 0.88 },
-              loading && { opacity: 0.7 },
-            ]}
-            onPress={handleSignup}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#043529" />
-            ) : (
-              <Text style={styles.signUpBtnText}>Create Account</Text>
-            )}
-          </Pressable>
-        </View>
-
-        {/* Sign in link */}
-        <View style={styles.signInRow}>
-          <Text style={styles.signInHint}>Already have an account?</Text>
-          <Pressable onPress={() => router.back()}>
-            <Text style={styles.signInLink}> Sign In</Text>
-          </Pressable>
+          {/* Action buttons */}
+          <View style={styles.buttonRow}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.signUpBtn,
+                pressed && { opacity: 0.88 },
+                loading && { opacity: 0.7 },
+              ]}
+              onPress={handleSignup}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#043529" size="small" />
+              ) : (
+                <Text style={styles.signUpBtnText}>SIGN UP</Text>
+              )}
+            </Pressable>
+  
+            <Pressable
+              style={({ pressed }) => [
+                styles.outlineBtn,
+                pressed && { opacity: 0.7 },
+              ]}
+              onPress={() => router.back()}
+            >
+              <Text style={styles.outlineBtnText}>SIGN IN</Text>
+            </Pressable>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -385,9 +404,9 @@ export default function SignupScreen() {
 function WebInput(props: any) {
   const { label, ...rest } = props;
   return (
-    <View style={{ marginBottom: 16 }}>
+    <View style={{ marginBottom: 10 }}>
       {label && (
-        <Text style={{ fontSize: 14, fontWeight: '600', color: '#E5E7EB', marginBottom: 8 }}>
+        <Text style={{ fontSize: 12, fontWeight: '600', color: '#E5E7EB', marginBottom: 4 }}>
           {label}
         </Text>
       )}
@@ -396,8 +415,9 @@ function WebInput(props: any) {
           borderWidth: 1,
           borderColor: '#00ea6b',
           borderRadius: 8,
-          padding: 12,
-          fontSize: 16,
+          paddingHorizontal: 10,
+          paddingVertical: 8,
+          fontSize: 14,
           backgroundColor: '#06392e',
           color: '#f9fafb',
         }}
@@ -500,39 +520,44 @@ const styles = StyleSheet.create({
     color: '#f9fafb',
     paddingVertical: 0,
   },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+  },
   signUpBtn: {
-    marginTop: 6,
+    flex: 1,
     backgroundColor: '#00ea6b',
-    borderRadius: 14,
-    paddingVertical: 15,
+    borderRadius: 12,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#00ea6b',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 14,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
   },
   signUpBtnText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: '#043529',
-    letterSpacing: 0.2,
+    letterSpacing: 0.5,
   },
-  signInRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+  outlineBtn: {
+    flex: 1,
+    borderRadius: 12,
+    height: 48,
+    borderWidth: 1.5,
+    borderColor: '#00ea6b',
     alignItems: 'center',
-    marginTop: 24,
+    justifyContent: 'center',
   },
-  signInHint: {
-    fontSize: 14,
-    color: '#6b7280',
-  },
-  signInLink: {
-    fontSize: 14,
+  outlineBtnText: {
+    fontSize: 15,
     fontWeight: '700',
     color: '#00ea6b',
+    letterSpacing: 0.5,
   },
 });
 
@@ -550,19 +575,15 @@ const webStyles = StyleSheet.create({
     width: '100%',
   },
   header: {
-    marginBottom: 24,
+    marginBottom: 16,
     alignItems: 'center',
   },
-  logoText: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#02c259',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 16,
+  logoImage: {
+    width: 180,
+    height: 40,
+    marginBottom: 8,
   },
   form: {
-    flex: 1,
   },
   heroColumn: {
     flex: 1,
@@ -574,6 +595,35 @@ const webStyles = StyleSheet.create({
     backgroundColor: '#043529',
     paddingHorizontal: 24,
     paddingVertical: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  formCard: {
+    width: '100%',
+    maxWidth: 580,
+    backgroundColor: '#06392e',
+    borderRadius: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(0,234,107,0.12)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+  },
+  formTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#f9fafb',
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  formSubtitle: {
+    fontSize: 14,
+    color: '#9ca3af',
+    marginBottom: 4,
+    textAlign: 'center',
   },
   heroImage: {
     flex: 1,
@@ -588,33 +638,38 @@ const webStyles = StyleSheet.create({
   col: {
     flex: 1,
   },
-  button: {
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
     marginTop: 8,
+  },
+  button: {
+    flex: 1,
     backgroundColor: '#01e669',
     borderRadius: 8,
-    paddingVertical: 14,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    width: '100%',
   },
   buttonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#043529',
+    letterSpacing: 0.5,
   },
   outlineButton: {
-    marginTop: 10,
+    flex: 1,
     borderRadius: 8,
-    paddingVertical: 12,
+    height: 40,
     borderWidth: 1.5,
     borderColor: '#01e669',
     alignItems: 'center',
     justifyContent: 'center',
-    width: '100%',
   },
   outlineButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
     color: '#01e669',
+    textTransform: 'uppercase' as any,
   },
 });

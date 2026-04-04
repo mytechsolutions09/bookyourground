@@ -42,7 +42,7 @@ export default function SiteFooter() {
             <Text style={styles.footerHeading}>For ground owners</Text>
             <Text
               style={styles.footerLink}
-              onPress={() => router.push('/(auth)/signup' as any)}
+              onPress={() => router.push('/(auth)/owner-signup' as any)}
             >
               Become a partner
             </Text>

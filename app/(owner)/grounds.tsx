@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import * as React from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Platform, Modal, Pressable, ScrollView, TextInput, Switch, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { Plus } from 'lucide-react-native';
@@ -143,9 +144,8 @@ export default function OwnerGroundsScreen() {
     if (!editForm?.id) return;
 
     try {
-      setUploadingMedia(true);
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.All,
+        mediaTypes: ['images', 'videos'] as const,
         quality: 0.8,
       });
 
@@ -153,21 +153,39 @@ export default function OwnerGroundsScreen() {
         return;
       }
 
+      setUploadingMedia(true);
       const asset = result.assets[0];
       const uri = asset.uri;
-      const extensionFromUri = uri.split('.').pop() || '';
-      const ext =
-        extensionFromUri.toLowerCase().match(/^(jpg|jpeg|png|webp|mp4|mov|m4v)$/)?.[0] || 'jpg';
 
-      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      // Extract extension
+      const extension = uri.split('.').pop() || 'jpg';
+      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
       const filePath = `owner-media/${user.id}/${fileName}`;
 
-      const response = await fetch(uri);
-      const blob = await response.blob();
+      // Determine MIME type
+      const mimeType = asset.mimeType || (extension === 'mp4' || extension === 'mov' ? 'video/mp4' : 'image/jpeg');
+
+      // Use fetch → arrayBuffer to avoid the '.blob()' issue in some RN environments
+      let uploadBody: ArrayBuffer | Blob;
+      try {
+        const resp = await fetch(uri);
+        uploadBody = await resp.arrayBuffer();
+      } catch {
+        // Fallback: XHR blob
+        uploadBody = await new Promise<Blob>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.onload = () => resolve(xhr.response);
+          xhr.onerror = () => reject(new TypeError('Network request failed'));
+          xhr.responseType = 'blob';
+          xhr.open('GET', uri, true);
+          xhr.send(null);
+        });
+      }
 
       const { error: uploadError } = await supabase.storage
         .from('ground-images')
-        .upload(filePath, blob, {
+        .upload(filePath, uploadBody, {
+          contentType: mimeType,
           cacheControl: '3600',
           upsert: false,
         });
@@ -186,8 +204,8 @@ export default function OwnerGroundsScreen() {
           .map((u: string) => String(u ?? '').trim())
           .filter(Boolean);
         const addingVideo = isVideoUrl(publicUrl);
-        const imgCount = urls.filter((u) => !isVideoUrl(u)).length;
-        const vidCount = urls.filter(isVideoUrl).length;
+        const imgCount = urls.filter((u: string) => !isVideoUrl(u)).length;
+        const vidCount = urls.filter((u: string) => isVideoUrl(u)).length;
         if (addingVideo) {
           if (vidCount >= 2) {
             Alert.alert('Limit reached', 'You can add up to 2 videos.');
@@ -206,6 +224,17 @@ export default function OwnerGroundsScreen() {
       setUploadingMedia(false);
     }
   };
+
+  useEffect(() => {
+    (async () => {
+      if (Platform.OS !== 'web') {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== 'granted') {
+          // Alert.alert('Permission required', 'We need access to your photos to upload ground images.');
+        }
+      }
+    })();
+  }, []);
 
   const parseNullableFloat = (value: string): number | null => {
     const trimmed = value.trim();
@@ -336,7 +365,7 @@ export default function OwnerGroundsScreen() {
                   />
                   <Button
                     title="View details"
-                    onPress={() => router.push(makeGroundPath(item))}
+                    onPress={() => router.push(makeGroundPath(item) as any)}
                     variant="outline"
                     size="small"
                     style={{ flex: 1 }}

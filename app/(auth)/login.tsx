@@ -26,7 +26,7 @@ export default function LoginScreen() {
   const [emailFocused, setEmailFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
 
-  const { signIn, profile, user } = useAuth();
+  const { signIn, profile, user, resetPassword } = useAuth();
   const os = Platform.OS as string;
   const { width } = useWindowDimensions();
   const showHeroImage = os === 'web' && width >= 900;
@@ -85,6 +85,35 @@ export default function LoginScreen() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (!email) {
+      if (Platform.OS === 'web') {
+        alert('Please enter your email to reset your password');
+      } else {
+        Alert.alert('Email Required', 'Please enter your email to reset your password');
+      }
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await resetPassword(email);
+    setLoading(false);
+
+    if (error) {
+      if (Platform.OS === 'web') {
+        alert('Error: ' + error.message);
+      } else {
+        Alert.alert('Error', error.message);
+      }
+    } else {
+      if (Platform.OS === 'web') {
+        alert('Password reset link sent to your email');
+      } else {
+        Alert.alert('Success', 'Password reset link sent to your email');
+      }
+    }
+  };
+
   useEffect(() => {
     if (os !== 'web') return;
     if (!user) return;
@@ -102,52 +131,64 @@ export default function LoginScreen() {
         <View style={webStyles.scrollContent}>
           <View style={webStyles.heroColumn}>
             <View style={webStyles.formContainer}>
-              <View style={webStyles.header}>
-                <TouchableOpacity onPress={() => router.replace('/')}>
-                  <Text style={webStyles.logoText}>Book my ground</Text>
-                </TouchableOpacity>
-              </View>
-
-              <View style={webStyles.form}>
-                <WebInput
-                  label="Email"
-                  value={email}
-                  onChangeText={setEmail}
-                  placeholder="Enter your email"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                />
-
-                <WebInput
-                  label="Password"
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="Enter your password"
-                  secureTextEntry
-                  autoComplete="password"
-                />
-
-                <TouchableOpacity
-                  style={[webStyles.button, loading && { opacity: 0.7 }]}
-                  onPress={handleLogin}
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <ActivityIndicator color="#043529" />
-                  ) : (
-                    <Text style={webStyles.buttonText}>Sign In</Text>
-                  )}
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={webStyles.outlineButton}
-                  onPress={() => router.push('/(auth)/signup')}
-                >
-                  <Text style={webStyles.outlineButtonText}>
-                    Don't have an account? Sign Up
-                  </Text>
-                </TouchableOpacity>
+              <View style={webStyles.formCard}>
+                <View style={webStyles.header}>
+                  <TouchableOpacity onPress={() => router.replace('/')}>
+                    <Image
+                      source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
+                      style={webStyles.logoImage}
+                      resizeMode="contain"
+                    />
+                  </TouchableOpacity>
+                  <Text style={webStyles.formTitle}>Sign In</Text>
+                  <Text style={webStyles.formSubtitle}>Access your account to book grounds</Text>
+                </View>
+  
+                <View style={webStyles.form}>
+                  <WebInput
+                    label="Email"
+                    value={email}
+                    onChangeText={setEmail}
+                    placeholder="Enter your email"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoComplete="email"
+                  />
+  
+                  <WebInput
+                    label="Password"
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="Enter your password"
+                    secureTextEntry
+                    autoComplete="password"
+                  />
+  
+                  <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')} style={webStyles.forgotWrap}>
+                    <Text style={webStyles.forgotText}>Forgot password?</Text>
+                  </TouchableOpacity>
+  
+                  <View style={webStyles.buttonRow}>
+                    <TouchableOpacity
+                      style={[webStyles.button, loading && { opacity: 0.7 }]}
+                      onPress={handleLogin}
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <ActivityIndicator color="#043529" size="small" />
+                      ) : (
+                        <Text style={webStyles.buttonText}>SIGN IN</Text>
+                      )}
+                    </TouchableOpacity>
+  
+                    <TouchableOpacity
+                      style={webStyles.outlineButton}
+                      onPress={() => router.push('/(auth)/signup')}
+                    >
+                      <Text style={webStyles.outlineButtonText}>SIGN UP</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               </View>
             </View>
           </View>
@@ -159,6 +200,9 @@ export default function LoginScreen() {
                 style={{ width: '100%', height: '100%' }}
                 resizeMode="cover"
               />
+              <View style={StyleSheet.absoluteFillObject}>
+                <View style={{ flex: 1, backgroundColor: 'rgba(4,53,41,0.4)' }} />
+              </View>
             </View>
           )}
         </View>
@@ -260,31 +304,39 @@ export default function LoginScreen() {
               </Pressable>
             </View>
           </View>
+  
+          <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')} style={styles.forgotWrap}>
+            <Text style={styles.forgotText}>Forgot Password?</Text>
+          </TouchableOpacity>
 
-          {/* Sign In button */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.signInBtn,
-              pressed && { opacity: 0.88 },
-              loading && { opacity: 0.7 },
-            ]}
-            onPress={handleLogin}
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#043529" />
-            ) : (
-              <Text style={styles.signInBtnText}>Sign In</Text>
-            )}
-          </Pressable>
-        </View>
-
-        {/* Sign up link */}
-        <View style={styles.signUpRow}>
-          <Text style={styles.signUpHint}>Don't have an account?</Text>
-          <Pressable onPress={() => router.push('/(auth)/signup')}>
-            <Text style={styles.signUpLink}> Sign Up</Text>
-          </Pressable>
+          {/* Action buttons */}
+          <View style={styles.buttonRow}>
+            <Pressable
+              style={({ pressed }) => [
+                styles.signInBtn,
+                pressed && { opacity: 0.88 },
+                loading && { opacity: 0.7 },
+              ]}
+              onPress={handleLogin}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#043529" size="small" />
+              ) : (
+                <Text style={styles.signInBtnText}>SIGN IN</Text>
+              )}
+            </Pressable>
+  
+            <Pressable
+              style={({ pressed }) => [
+                styles.outlineBtn,
+                pressed && { opacity: 0.7 },
+              ]}
+              onPress={() => router.push('/(auth)/signup')}
+            >
+              <Text style={styles.outlineBtnText}>SIGN UP</Text>
+            </Pressable>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -295,9 +347,9 @@ export default function LoginScreen() {
 function WebInput(props: any) {
   const { label, ...rest } = props;
   return (
-    <View style={{ marginBottom: 16 }}>
+    <View style={{ marginBottom: 10 }}>
       {label && (
-        <Text style={{ fontSize: 14, fontWeight: '600', color: '#E5E7EB', marginBottom: 8 }}>
+        <Text style={{ fontSize: 12, fontWeight: '600', color: '#E5E7EB', marginBottom: 4 }}>
           {label}
         </Text>
       )}
@@ -306,8 +358,9 @@ function WebInput(props: any) {
           borderWidth: 1,
           borderColor: '#00ea6b',
           borderRadius: 8,
-          padding: 12,
-          fontSize: 16,
+          paddingHorizontal: 10,
+          paddingVertical: 8,
+          fontSize: 14,
           backgroundColor: '#06392e',
           color: '#f9fafb',
         }}
@@ -409,38 +462,53 @@ const styles = StyleSheet.create({
     color: '#f9fafb',
     paddingVertical: 0,
   },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+  },
   signInBtn: {
-    marginTop: 8,
+    flex: 1,
     backgroundColor: '#00ea6b',
-    borderRadius: 14,
-    paddingVertical: 15,
+    borderRadius: 12,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#00ea6b',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 14,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
   },
   signInBtnText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: '#043529',
-    letterSpacing: 0.2,
+    letterSpacing: 0.5,
   },
-  signUpRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+  outlineBtn: {
+    flex: 1,
+    borderRadius: 12,
+    height: 48,
+    borderWidth: 1.5,
+    borderColor: '#00ea6b',
     alignItems: 'center',
-    marginTop: 28,
+    justifyContent: 'center',
   },
-  signUpHint: {
-    fontSize: 14,
-    color: '#6b7280',
-  },
-  signUpLink: {
-    fontSize: 14,
+  outlineBtnText: {
+    fontSize: 15,
     fontWeight: '700',
+    color: '#00ea6b',
+    letterSpacing: 0.5,
+  },
+  forgotWrap: {
+    alignSelf: 'flex-end',
+    marginTop: 8,
+    marginRight: 4,
+  },
+  forgotText: {
+    fontSize: 13,
+    fontWeight: '600',
     color: '#00ea6b',
   },
 });
@@ -459,20 +527,16 @@ const webStyles = StyleSheet.create({
     width: '100%',
   },
   header: {
-    marginBottom: 24,
+    marginBottom: 16,
     alignItems: 'center',
   },
-  logoText: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#02c259',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 16,
+  logoImage: {
+    width: 200,
+    height: 50,
+    marginBottom: 8,
   },
   form: {
     gap: 4,
-    flex: 1,
   },
   heroColumn: {
     flex: 1,
@@ -484,37 +548,80 @@ const webStyles = StyleSheet.create({
     backgroundColor: '#043529',
     paddingHorizontal: 24,
     paddingVertical: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  formCard: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: '#06392e',
+    borderRadius: 20,
+    padding: 32,
+    borderWidth: 1,
+    borderColor: 'rgba(0,234,107,0.12)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+  },
+  formTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#f9fafb',
+    marginTop: 4,
+    marginBottom: 2,
+  },
+  formSubtitle: {
+    fontSize: 14,
+    color: '#9ca3af',
+    marginBottom: 4,
+    textAlign: 'center',
   },
   heroImage: {
     flex: 1,
     width: '50%' as any,
     overflow: 'hidden',
   },
-  button: {
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 12,
     marginTop: 8,
+  },
+  button: {
+    flex: 1,
     backgroundColor: '#01e669',
     borderRadius: 8,
-    paddingVertical: 14,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    width: '100%',
   },
   buttonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#043529',
+    letterSpacing: 0.5,
   },
   outlineButton: {
+    flex: 1,
     borderRadius: 8,
-    paddingVertical: 12,
+    height: 40,
     borderWidth: 1.5,
     borderColor: '#01e669',
     alignItems: 'center',
     justifyContent: 'center',
-    width: '100%',
   },
   outlineButtonText: {
-    fontSize: 16,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#01e669',
+    textTransform: 'uppercase' as any,
+  },
+  forgotWrap: {
+    alignSelf: 'flex-end',
+    marginBottom: 16,
+  },
+  forgotText: {
+    fontSize: 13,
     fontWeight: '600',
     color: '#01e669',
   },

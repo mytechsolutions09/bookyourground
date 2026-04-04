@@ -80,31 +80,7 @@ export default function BookingDetailsScreen() {
 
   const isNarrow = width < 900;
 
-  if (booking.status === 'pending') {
-    const blocked = (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.blockedTitle}>Booking not available</Text>
-        <Text style={styles.blockedSubtitle}>
-          This booking is not confirmed yet. It will appear here after confirmation.
-        </Text>
-        <Text
-          style={styles.backLink}
-          onPress={() => {
-            if (router.canGoBack?.()) router.back();
-            else router.push('/(tabs)/bookings' as any);
-          }}
-        >
-          Go back
-        </Text>
-      </View>
-    );
-    return (
-      <>
-        <Stack.Screen options={{ title: 'Booking' }} />
-        {Platform.OS === 'web' ? <WebLayout>{blocked}</WebLayout> : blocked}
-      </>
-    );
-  }
+
 
   const cricketTeamsLabel = cricketTeamsLabelFromBooking(
     booking.ground.pitch_type,
@@ -120,27 +96,46 @@ export default function BookingDetailsScreen() {
         <Image source={{ uri: primaryImage }} style={[styles.image, !isWeb && styles.imageMobile]} />
 
         <View style={isWeb ? styles.detailsBodyWeb : styles.detailsBodyNative}>
-          <Section style={styles.section}>
-            <Text style={styles.groundName}>{booking.ground.name}</Text>
-            <View style={styles.locationRow}>
-              <MapPin size={16} color="#666" />
-              <Text style={styles.location}>
-                {booking.ground.address}, {booking.ground.city}, {booking.ground.state}
-              </Text>
+          <Section style={styles.sectionHeaderCard}>
+            <View style={styles.headerRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.groundName}>{booking.ground.name}</Text>
+                <View style={styles.locationRow}>
+                  <MapPin size={14} color="#00ea6b" />
+                  <Text style={styles.location}>
+                    {booking.ground.city}, {booking.ground.state}
+                  </Text>
+                </View>
+              </View>
+              <View style={[
+                styles.statusBadge,
+                booking.status === 'confirmed' && styles.statusBadgeConfirmed,
+                booking.status === 'pending' && styles.statusBadgePending,
+                (booking.status === 'cancelled' || booking.status === 'rejected') && styles.statusBadgeCancelled,
+              ]}>
+                <Text style={[
+                  styles.statusText,
+                  booking.status === 'confirmed' && styles.statusTextConfirmed,
+                  booking.status === 'pending' && styles.statusTextPending,
+                  (booking.status === 'cancelled' || booking.status === 'rejected') && styles.statusTextCancelled,
+                ]}>
+                  {booking.status.toUpperCase()}
+                </Text>
+              </View>
             </View>
           </Section>
 
           <Section style={styles.section}>
             <Text style={styles.sectionTitle}>Booking Information</Text>
             <View style={styles.infoRow}>
-              <Calendar size={18} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
+              <Calendar size={18} color="#00ea6b" />
               <View style={styles.infoContent}>
                 <Text style={styles.infoLabel}>Date</Text>
                 <Text style={styles.infoValue}>{formatDate(booking.booking_date)}</Text>
               </View>
             </View>
             <View style={styles.infoRow}>
-              <Clock size={18} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
+              <Clock size={18} color="#00ea6b" />
               <View style={styles.infoContent}>
                 <Text style={styles.infoLabel}>Time</Text>
                 <Text style={styles.infoValue}>
@@ -153,7 +148,7 @@ export default function BookingDetailsScreen() {
               </View>
             </View>
             <View style={styles.infoRow}>
-              <Clock size={18} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
+              <Clock size={18} color="#00ea6b" />
               <View style={styles.infoContent}>
                 <Text style={styles.infoLabel}>Duration</Text>
                 <Text style={styles.infoValue}>{durationHoursLabel} hours</Text>
@@ -161,7 +156,7 @@ export default function BookingDetailsScreen() {
             </View>
             {cricketTeamsLabel ? (
               <View style={styles.infoRow}>
-                <Users size={18} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
+                <Users size={18} color="#00ea6b" />
                 <View style={styles.infoContent}>
                   <Text style={styles.infoLabel}>Teams</Text>
                   <Text style={styles.infoValue}>{cricketTeamsLabel}</Text>
@@ -258,7 +253,7 @@ const styles = StyleSheet.create({
         overflowX: 'hidden' as any,
       },
       default: {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: '#043529',
       },
     }),
   },
@@ -269,7 +264,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     ...Platform.select({
       web: { backgroundColor: '#F5F5F5' },
-      default: { backgroundColor: '#FFFFFF' },
+      default: { backgroundColor: '#043529' },
     }),
   },
   blockedTitle: {
@@ -317,7 +312,7 @@ const styles = StyleSheet.create({
     flex: 1.4,
     ...Platform.select({
       web: { backgroundColor: '#F5F5F5' },
-      default: { backgroundColor: '#FFFFFF' },
+      default: { backgroundColor: '#043529' },
     }),
     minWidth: 0,
     flexShrink: 1,
@@ -326,7 +321,7 @@ const styles = StyleSheet.create({
     width: '100%',
     ...Platform.select({
       web: { backgroundColor: '#F5F5F5' },
-      default: { backgroundColor: '#FFFFFF' },
+      default: { backgroundColor: '#043529' },
     }),
   },
   detailsContentWeb: {
@@ -375,33 +370,101 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   /** Native: full-bleed under stack header, no side padding / rounding */
+  section: {
+    marginBottom: 16,
+    ...Platform.select({
+      default: {
+        backgroundColor: '#06392e',
+        borderRadius: 20,
+        padding: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(0,234,107,0.12)',
+      },
+    }),
+  },
+  sectionHeaderCard: {
+    marginBottom: 20,
+    ...Platform.select({
+      default: {
+        backgroundColor: '#06392e',
+        borderRadius: 20,
+        padding: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(0,234,107,0.2)',
+      },
+      web: {
+        marginBottom: 16,
+      }
+    }),
+  },
   imageMobile: {
     borderRadius: 0,
     marginBottom: 0,
-  },
-  section: {
-    marginBottom: 16,
+    height: 200,
   },
   groundName: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '700',
-    color: '#212121',
-    marginBottom: 4,
+    color:Platform.OS === 'web' ? '#212121' : '#FFFFFF',
+    marginBottom: 6,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   location: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 13,
+    color: Platform.OS === 'web' ? '#666' : '#9ca3af',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(156,163,175,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(156,163,175,0.2)',
+  },
+  statusBadgeConfirmed: {
+    backgroundColor: 'rgba(0,234,107,0.12)',
+    borderColor: 'rgba(0,234,107,0.3)',
+  },
+  statusBadgePending: {
+    backgroundColor: 'rgba(255,193,7,0.12)',
+    borderColor: 'rgba(255,193,7,0.3)',
+  },
+  statusBadgeCancelled: {
+    backgroundColor: 'rgba(244,67,54,0.12)',
+    borderColor: 'rgba(244,67,54,0.3)',
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    color: '#9ca3af',
+  },
+  statusTextConfirmed: {
+    color: '#00ea6b',
+  },
+  statusTextPending: {
+    color: '#FFC107',
+  },
+  statusTextCancelled: {
+    color: '#F44336',
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#212121',
+    color: Platform.OS === 'web' ? '#212121' : '#00ea6b',
     marginBottom: 16,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   infoRow: {
     flexDirection: 'row',
@@ -414,12 +477,12 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 12,
-    color: '#666',
+    color: Platform.OS === 'web' ? '#666' : '#9ca3af',
     marginBottom: 2,
   },
   infoValue: {
     fontSize: 16,
-    color: '#333',
+    color: Platform.OS === 'web' ? '#333' : '#FFFFFF',
     fontWeight: '600',
   },
   paymentRow: {
@@ -429,11 +492,11 @@ const styles = StyleSheet.create({
   },
   paymentLabel: {
     fontSize: 14,
-    color: '#666',
+    color: Platform.OS === 'web' ? '#666' : '#9ca3af',
   },
   paymentValue: {
     fontSize: 14,
-    color: '#333',
+    color: Platform.OS === 'web' ? '#333' : '#FFFFFF',
     fontWeight: '600',
   },
   totalRow: {
@@ -443,26 +506,48 @@ const styles = StyleSheet.create({
   totalLabel: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#212121',
+    color: Platform.OS === 'web' ? '#212121' : '#FFFFFF',
   },
   totalValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: Platform.OS === 'web' ? '#dc8d3c' : '#2196F3',
+    fontSize: 24,
+    fontWeight: '800',
+    color: Platform.OS === 'web' ? '#dc8d3c' : '#00ea6b',
   },
   notes: {
     fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
+    color: Platform.OS === 'web' ? '#666' : '#FFFFFF',
+    lineHeight: 22,
+    opacity: 0.9,
   },
   paymentCard: {
     marginBottom: 16,
+    ...Platform.select({
+      default: {
+        backgroundColor: '#06392e',
+        borderRadius: 16,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(0,234,107,0.15)',
+      }
+    })
   },
   backLink: {
-    marginTop: 10,
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#2563EB',
+    marginTop: 24,
+    fontSize: 14,
+    fontWeight: '700',
     textAlign: 'center',
+    paddingVertical: 14,
+    borderRadius: 12,
+    ...Platform.select({
+      web: {
+        color: '#2563EB',
+      },
+      default: {
+        color: '#043529',
+        backgroundColor: '#00ea6b',
+        borderWidth: 1,
+        borderColor: '#00ea6b',
+      },
+    }),
   },
 });

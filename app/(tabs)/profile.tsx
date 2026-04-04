@@ -180,17 +180,26 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity
+          style={styles.menuItem}
+          onPress={() => router.push('/(tabs)/favorites' as any)}
+        >
           <Text style={styles.menuItemText}>Favorites</Text>
           <ChevronRight size={20} color={chevronColor} />
         </TouchableOpacity>
-
-        <TouchableOpacity style={styles.menuItem}>
+ 
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={() => router.push('/(tabs)/profile/notifications' as any)}
+        >
           <Text style={styles.menuItemText}>Notifications</Text>
           <ChevronRight size={20} color={chevronColor} />
         </TouchableOpacity>
-
-        <TouchableOpacity style={styles.menuItem}>
+ 
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={() => router.push('/(tabs)/profile/settings' as any)}
+        >
           <Text style={styles.menuItemText}>Settings</Text>
           <ChevronRight size={20} color={chevronColor} />
         </TouchableOpacity>
@@ -230,9 +239,9 @@ const styles = StyleSheet.create({
   cardThemed: Platform.select({
     web: {},
     default: {
-      backgroundColor: BG,
+      backgroundColor: '#06392e',
       borderWidth: 1,
-      borderColor: ACCENT,
+      borderColor: 'rgba(0,234,107,0.2)',
       borderRadius: 12,
       elevation: 0,
       shadowOpacity: 0,
@@ -245,7 +254,7 @@ const styles = StyleSheet.create({
     default: {
       backgroundColor: 'transparent',
       borderWidth: 1,
-      borderColor: ACCENT,
+      borderColor: 'rgba(0,234,107,0.4)',
     },
   }),
   nativeScreen: {

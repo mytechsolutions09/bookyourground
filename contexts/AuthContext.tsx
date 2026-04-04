@@ -19,10 +19,12 @@ interface AuthContextType {
   profile: Profile | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, fullName: string, role?: UserRole, businessName?: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: any }>;
+  resetPassword: (email: string) => Promise<{ error: any }>;
+  changePassword: (newPassword: string) => Promise<{ error: any }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -77,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp = async (email: string, password: string, fullName: string, role: UserRole = 'user', businessName?: string) => {
     try {
       const { error } = await supabase.auth.signUp({
         email,
@@ -85,6 +87,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         options: {
           data: {
             full_name: fullName,
+            role: role,
+            business_name: businessName,
           },
         },
       });
@@ -107,6 +111,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
+  };
+
+  const resetPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    return { error };
+  };
+
+  const changePassword = async (newPassword: string) => {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+    return { error };
   };
 
   const updateProfile = async (updates: Partial<Profile>) => {
@@ -135,6 +153,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signIn,
         signOut,
         updateProfile,
+        resetPassword,
+        changePassword,
       }}
     >
       {children}

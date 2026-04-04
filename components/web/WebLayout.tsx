@@ -805,7 +805,7 @@ const styles = StyleSheet.create({
     color: '#F9FAFB',
     fontSize: 14,
     fontFamily: 'Inter',
-    backgroundColor: 'rgba(6,57,46,0.95)', // #06392e
+    backgroundColor: 'transparent',
   },
   searchDropdown: {
     position: 'absolute' as any,

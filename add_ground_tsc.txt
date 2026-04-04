@@ -1,0 +1,26 @@
+﻿app/(owner)/add-ground.tsx(1,8): error TS1259: Module '"h:/site/bookyourground/node_modules/@types/react/index"' can only be default-imported using the 'allowSyntheticDefaultImports' flag
+app/(owner)/add-ground.tsx(17,26): error TS2307: Cannot find module '@/lib/supabase' or its corresponding type declarations.
+app/(owner)/add-ground.tsx(18,25): error TS2307: Cannot find module '@/contexts/AuthContext' or its corresponding type declarations.
+app/(owner)/add-ground.tsx(19,19): error TS2307: Cannot find module '@/components/ui/Input' or its corresponding type declarations.
+app/(owner)/add-ground.tsx(20,20): error TS2307: Cannot find module '@/components/ui/Button' or its corresponding type declarations.
+app/(owner)/add-ground.tsx(21,18): error TS2307: Cannot find module '@/components/ui/Card' or its corresponding type declarations.
+app/(owner)/add-ground.tsx(22,23): error TS2307: Cannot find module '@/components/web/WebLayout' or its corresponding type declarations.
+app/(owner)/add-ground.tsx(23,29): error TS2307: Cannot find module '@/components/MobileAppNavbar' or its corresponding type declarations.
+app/(owner)/add-ground.tsx(24,56): error TS2307: Cannot find module '@/components/availability/TimeSlotsEditor' or its corresponding type declarations.
+app/(owner)/add-ground.tsx(25,42): error TS2307: Cannot find module '@/utils/timeSlotsDb' or its corresponding type declarations.
+app/(owner)/add-ground.tsx(26,63): error TS2307: Cannot find module '@/utils/cricketGround' or its corresponding type declarations.
+app/(owner)/add-ground.tsx(28,32): error TS2307: Cannot find module '@/types' or its corresponding type declarations.
+app/(owner)/add-ground.tsx(776,31): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: ViewProps): View', gave the following error.
+    Type '{ key: string; style: { borderWidth: number; borderColor: string; backgroundColor: string; borderRadius: number; padding: number; flexDirection: "row"; alignItems: "flex-start"; justifyContent: "space-between"; gap: number; }; }' is not assignable to type 'ViewProps'.
+      Property 'key' does not exist on type 'ViewProps'.
+  Overload 2 of 2, '(props: ViewProps, context: any): View', gave the following error.
+    Type '{ key: string; style: { borderWidth: number; borderColor: string; backgroundColor: string; borderRadius: number; padding: number; flexDirection: "row"; alignItems: "flex-start"; justifyContent: "space-between"; gap: number; }; }' is not assignable to type 'ViewProps'.
+      Property 'key' does not exist on type 'ViewProps'.
+app/(owner)/add-ground.tsx(983,19): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(props: ViewProps): View', gave the following error.
+    Type '{ key: number; style: { flexDirection: "row"; alignItems: "center"; gap: number; marginBottom: number; }; }' is not assignable to type 'ViewProps'.
+      Property 'key' does not exist on type 'ViewProps'.
+  Overload 2 of 2, '(props: ViewProps, context: any): View', gave the following error.
+    Type '{ key: number; style: { flexDirection: "row"; alignItems: "center"; gap: number; marginBottom: number; }; }' is not assignable to type 'ViewProps'.
+      Property 'key' does not exist on type 'ViewProps'.
