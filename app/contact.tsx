@@ -98,9 +98,9 @@ export default function ContactScreen() {
             <Text style={styles.sectionTitle}>Email support</Text>
             <Text
               style={styles.link}
-              onPress={() => Linking.openURL('mailto:support@bookyourground.in')}
+              onPress={() => Linking.openURL('mailto:support@bookyourground.com')}
             >
-              support@bookyourground.in
+              support@bookyourground.com
             </Text>
           </View>
 
@@ -124,7 +124,7 @@ export default function ContactScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Send us a message</Text>
             <Text style={styles.paragraph}>
-              Use this form to send a message directly to the support team (super admin).
+              Use this form to send a message directly to the support team.
             </Text>
 
             <View style={styles.formRow}>

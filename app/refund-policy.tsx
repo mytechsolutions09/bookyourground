@@ -22,8 +22,7 @@ export default function RefundPolicyScreen() {
           <Text style={styles.paragraph}>
             A booking may be eligible for a full or partial refund when:{'\n'}
             {'\u2022'} The ground owner cancels the booking or the ground is unavailable.{'\n'}
-            {'\u2022'} The booking is cancelled within the allowed time window defined by the
-            ground owner.{'\n'}
+            {'\u2022'} The booking is cancelled by the user at least 7 days prior to the slot time.{'\n'}
             {'\u2022'} There is a verified double booking or payment error.
           </Text>
 

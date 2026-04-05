@@ -1,12 +1,13 @@
 import React, { useEffect } from 'react';
 import { Platform, View, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import WebLayout from '@/components/web/WebLayout';
 import LandingBookingForm from '@/components/landing/LandingBookingForm';
 import MobileAppNavbar from '../components/MobileAppNavbar';
 
 export default function BookMyGroundPage() {
   const { width } = useWindowDimensions();
+  const { groundId, date, startTime, teamType } = useLocalSearchParams();
 
   // On small web screens, always render booking under the Grounds tab (with bottom bar).
   useEffect(() => {
@@ -19,6 +20,13 @@ export default function BookMyGroundPage() {
     return null;
   }
 
+  const initialProps = {
+    initialGroundId: groundId as string,
+    initialDate: date as string,
+    initialStartTime: startTime as string,
+    initialTeamType: (teamType === 'one' ? 'one' : 'both') as 'one' | 'both',
+  };
+
   if (Platform.OS === 'web') {
     return (
       <WebLayout>
@@ -28,7 +36,11 @@ export default function BookMyGroundPage() {
           showsVerticalScrollIndicator
         >
           <View style={styles.page}>
-            <LandingBookingForm fullWidth separateSearchResults />
+            <LandingBookingForm
+              fullWidth
+              separateSearchResults
+              {...initialProps}
+            />
           </View>
         </ScrollView>
       </WebLayout>
@@ -46,6 +58,7 @@ export default function BookMyGroundPage() {
           noCard
           bookGroundScreenNative
           hideTitle
+          {...initialProps}
         />
       </View>
     </View>

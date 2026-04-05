@@ -182,14 +182,8 @@ export default function HomeScreen() {
   }, [isFocused, pathname]);
 
   if (Platform.OS === 'web') {
-    if (!isFocused) return null;
-    if (isWebLandingPath(pathname)) {
-      return (
-        <WebLayout>
-          <LandingScrollContent variant="web" />
-        </WebLayout>
-      );
-    }
+    // The web landing page is handled by the root app/index.tsx.
+    // We don't want to render a second LandingScrollContent here.
     return null;
   }
 

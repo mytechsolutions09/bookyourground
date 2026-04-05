@@ -18,9 +18,18 @@ import Button from '@/components/ui/Button';
 import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '../../components/MobileAppNavbar';
 
-const THEME_BG = '#043529';
-const THEME_ACCENT = '#00ea6b';
-const THEME_TEXT = '#dcc093';
+const DARK_BG = '#043529';
+const DARK_ACCENT = '#00ea6b';
+const DARK_TEXT = '#dcc093';
+const DARK_CARD = '#06392e';
+const DARK_BORDER = 'rgba(0,234,107,0.2)';
+
+const LIGHT_BG = '#f8fafc';
+const LIGHT_ACCENT = '#10b981';
+const LIGHT_TEXT = '#0f172a';
+const LIGHT_CARD = '#ffffff';
+const LIGHT_BORDER = '#f1f5f9';
+const LIGHT_MUTED = '#64748b';
 
 export default function ProfileScreen() {
   const { user, profile, signOut } = useAuth();
@@ -32,6 +41,14 @@ export default function ProfileScreen() {
   const isSuperAdmin =
     profile?.role === 'super_admin' ||
     (user?.email?.toLowerCase() ?? '') === adminEmail.toLowerCase();
+
+  const isLight = isWeb && !isCompact;
+  const themeBg = isLight ? LIGHT_BG : DARK_BG;
+  const themeAccent = isLight ? LIGHT_ACCENT : DARK_ACCENT;
+  const themeText = isLight ? LIGHT_TEXT : DARK_TEXT;
+  const themeCard = isLight ? LIGHT_CARD : DARK_CARD;
+  const themeBorder = isLight ? LIGHT_BORDER : DARK_BORDER;
+  const themeMuted = isLight ? LIGHT_MUTED : DARK_TEXT;
 
   const handleSignOut = () => {
     if (isWeb) {
@@ -64,46 +81,77 @@ export default function ProfileScreen() {
     }
   };
 
-  const iconMuted = THEME_ACCENT;
-  const chevronColor = isWeb && !isCompact ? '#666' : THEME_ACCENT;
+  const iconMuted = themeAccent;
+  const chevronColor = isLight ? '#94a3b8' : themeAccent;
 
   const profileBody = (
-    <View style={styles.content}>
-      <Card style={[styles.profileCard, styles.cardThemed]}>
+    <View style={[styles.content]}>
+      <Card
+        style={[
+          styles.profileCard,
+          {
+            backgroundColor: themeCard,
+            borderColor: themeBorder,
+            borderWidth: isLight ? 1 : styles.cardThemed.borderWidth,
+            shadowColor: isLight ? '#000' : 'transparent',
+            shadowOpacity: isLight ? 0.04 : 0,
+            shadowRadius: 12,
+            shadowOffset: { width: 0, height: 4 },
+          },
+        ]}
+      >
         <View style={styles.avatarContainer}>
-          <View style={styles.avatar}>
-            <User size={40} color={THEME_ACCENT} />
+          <View style={[styles.avatar, { backgroundColor: isLight ? '#f1f5f9' : DARK_BG, borderColor: themeAccent }]}>
+            <User size={40} color={themeAccent} />
           </View>
         </View>
-        <Text style={styles.name}>{profile?.full_name}</Text>
-        <View style={[styles.roleBadge, styles.roleBadgeThemed]}>
-          <Text style={styles.roleText}>{profile && getRoleLabel(profile.role)}</Text>
+        <Text style={[styles.name, { color: themeText }]}>{profile?.full_name}</Text>
+        <View style={[styles.roleBadge, { borderColor: themeAccent, backgroundColor: isLight ? 'rgba(16, 185, 129, 0.08)' : 'transparent' }]}>
+          <Text style={[styles.roleText, { color: isLight ? themeAccent : themeText }]}>
+            {profile && getRoleLabel(profile.role)}
+          </Text>
         </View>
       </Card>
 
-      <Card style={[styles.infoCard, styles.cardThemed]}>
+      <Card
+        style={[
+          styles.infoCard,
+          {
+            backgroundColor: themeCard,
+            borderColor: themeBorder,
+            borderWidth: isLight ? 1 : styles.cardThemed.borderWidth,
+            shadowColor: isLight ? '#000' : 'transparent',
+            shadowOpacity: isLight ? 0.04 : 0,
+            shadowRadius: 12,
+          },
+        ]}
+      >
         <View style={styles.infoRow}>
-          <Mail size={20} color={iconMuted} />
-          <Text style={styles.infoText}>{user?.email}</Text>
+          <Mail size={20} color={isLight ? '#64748b' : iconMuted} />
+          <Text style={[styles.infoText, { color: isLight ? '#475569' : themeText }]}>
+            {user?.email}
+          </Text>
         </View>
         {profile?.phone && (
           <View style={styles.infoRow}>
-            <Phone size={20} color={iconMuted} />
-            <Text style={styles.infoText}>{profile.phone}</Text>
+            <Phone size={20} color={isLight ? '#64748b' : iconMuted} />
+            <Text style={[styles.infoText, { color: isLight ? '#475569' : themeText }]}>
+              {profile.phone}
+            </Text>
           </View>
         )}
       </Card>
 
       {(profile?.role === 'ground_owner' && (!isWeb || isCompact)) ? (
-        <View style={[styles.menuCard, styles.ownerNavCard, styles.cardThemed]}>
-          <Text style={styles.ownerNavTitle}>Ground owner</Text>
+        <View style={[styles.menuCard, styles.ownerNavCard, { backgroundColor: themeCard, borderColor: themeBorder }]}>
+          <Text style={[styles.ownerNavTitle, { color: isLight ? themeMuted : themeText }]}>Ground owner</Text>
           <TouchableOpacity
             style={styles.menuItem}
             onPress={() => router.push('/(owner)/dashboard' as any)}
           >
             <View style={styles.menuItemLeft}>
-              <LayoutDashboard size={20} color={THEME_ACCENT} />
-              <Text style={styles.menuItemText}>Dashboard</Text>
+              <LayoutDashboard size={20} color={themeAccent} />
+              <Text style={[styles.menuItemText, { color: themeText }]}>Dashboard</Text>
             </View>
             <ChevronRight size={20} color={chevronColor} />
           </TouchableOpacity>
@@ -112,8 +160,8 @@ export default function ProfileScreen() {
             onPress={() => router.push('/(owner)/grounds' as any)}
           >
             <View style={styles.menuItemLeft}>
-              <MapPin size={20} color={THEME_ACCENT} />
-              <Text style={styles.menuItemText}>My grounds</Text>
+              <MapPin size={20} color={themeAccent} />
+              <Text style={[styles.menuItemText, { color: themeText }]}>My grounds</Text>
             </View>
             <ChevronRight size={20} color={chevronColor} />
           </TouchableOpacity>
@@ -122,8 +170,8 @@ export default function ProfileScreen() {
             onPress={() => router.push('/(owner)/bookings' as any)}
           >
             <View style={styles.menuItemLeft}>
-              <Calendar size={20} color={THEME_ACCENT} />
-              <Text style={styles.menuItemText}>Bookings</Text>
+              <Calendar size={20} color={themeAccent} />
+              <Text style={[styles.menuItemText, { color: themeText }]}>Bookings</Text>
             </View>
             <ChevronRight size={20} color={chevronColor} />
           </TouchableOpacity>
@@ -132,8 +180,8 @@ export default function ProfileScreen() {
             onPress={() => router.push('/(owner)/earnings' as any)}
           >
             <View style={styles.menuItemLeft}>
-              <IndianRupee size={20} color={THEME_ACCENT} />
-              <Text style={styles.menuItemText}>Earnings</Text>
+              <IndianRupee size={20} color={themeAccent} />
+              <Text style={[styles.menuItemText, { color: themeText }]}>Earnings</Text>
             </View>
             <ChevronRight size={20} color={chevronColor} />
           </TouchableOpacity>
@@ -142,8 +190,8 @@ export default function ProfileScreen() {
             onPress={() => router.push('/(owner)/add-ground' as any)}
           >
             <View style={styles.menuItemLeft}>
-              <PlusCircle size={20} color={THEME_ACCENT} />
-              <Text style={styles.menuItemText}>Add ground</Text>
+              <PlusCircle size={20} color={themeAccent} />
+              <Text style={[styles.menuItemText, { color: themeText }]}>Add ground</Text>
             </View>
             <ChevronRight size={20} color={chevronColor} />
           </TouchableOpacity>
@@ -152,8 +200,8 @@ export default function ProfileScreen() {
             onPress={() => router.push('/(owner)/settings' as any)}
           >
             <View style={styles.menuItemLeft}>
-              <Settings size={20} color={THEME_ACCENT} />
-              <Text style={styles.menuItemText}>Settings</Text>
+              <Settings size={20} color={themeAccent} />
+              <Text style={[styles.menuItemText, { color: themeText }]}>Settings</Text>
             </View>
             <ChevronRight size={20} color={chevronColor} />
           </TouchableOpacity>
@@ -170,13 +218,13 @@ export default function ProfileScreen() {
         </View>
       ) : null}
 
-      <View style={[styles.menuCard, styles.cardThemed]}>
+      <View style={[styles.menuCard, { backgroundColor: themeCard, borderColor: themeBorder }]}>
         {isSuperAdmin && (
           <TouchableOpacity
             style={styles.menuItem}
             onPress={() => router.push('/(admin)/dashboard')}
           >
-            <Text style={styles.menuItemText}>Admin Dashboard</Text>
+            <Text style={[styles.menuItemText, { color: themeText }]}>Admin Dashboard</Text>
             <ChevronRight size={20} color={chevronColor} />
           </TouchableOpacity>
         )}
@@ -185,7 +233,7 @@ export default function ProfileScreen() {
           style={styles.menuItem}
           onPress={() => router.push('/(tabs)/favorites' as any)}
         >
-          <Text style={styles.menuItemText}>Favorites</Text>
+          <Text style={[styles.menuItemText, { color: themeText }]}>Favorites</Text>
           <ChevronRight size={20} color={chevronColor} />
         </TouchableOpacity>
  
@@ -193,7 +241,7 @@ export default function ProfileScreen() {
           style={styles.menuItem}
           onPress={() => router.push('/(tabs)/profile/notifications' as any)}
         >
-          <Text style={styles.menuItemText}>Notifications</Text>
+          <Text style={[styles.menuItemText, { color: themeText }]}>Notifications</Text>
           <ChevronRight size={20} color={chevronColor} />
         </TouchableOpacity>
  
@@ -201,7 +249,7 @@ export default function ProfileScreen() {
           style={styles.menuItem}
           onPress={() => router.push('/(tabs)/profile/settings' as any)}
         >
-          <Text style={styles.menuItemText}>Settings</Text>
+          <Text style={[styles.menuItemText, { color: themeText }]}>Settings</Text>
           <ChevronRight size={20} color={chevronColor} />
         </TouchableOpacity>
       </View>
@@ -221,7 +269,7 @@ export default function ProfileScreen() {
   if (Platform.OS === 'web') {
     return (
       <WebLayout>
-        <ScrollView style={styles.container}>{profileBody}</ScrollView>
+        <ScrollView style={[styles.container, { backgroundColor: themeBg }]}>{profileBody}</ScrollView>
       </WebLayout>
     );
   }
@@ -306,15 +354,12 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: THEME_BG,
     borderWidth: 1,
-    borderColor: THEME_ACCENT,
   },
   name: {
     fontSize: 22,
     fontWeight: '700',
     marginBottom: 8,
-    color: THEME_TEXT,
   },
   roleBadge: {
     paddingHorizontal: 12,
@@ -322,12 +367,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: THEME_ACCENT,
   },
   roleText: {
     fontSize: 14,
     fontWeight: '600',
-    color: THEME_TEXT,
   },
   infoCard: {
     marginTop: 16,
@@ -340,7 +383,6 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 16,
-    color: THEME_TEXT,
   },
   menuItem: {
     flexDirection: 'row',
@@ -353,9 +395,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: '#06392e',
     borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.2)',
   },
   ownerNavCard: {
     paddingTop: 12,
@@ -367,7 +407,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginBottom: 4,
     paddingHorizontal: 0,
-    color: THEME_TEXT,
   },
   menuItemLeft: {
     flexDirection: 'row',
@@ -377,7 +416,6 @@ const styles = StyleSheet.create({
   menuItemText: {
     fontSize: 16,
     fontWeight: '600',
-    color: THEME_TEXT,
   },
   signOutButton: {
     marginTop: 24,

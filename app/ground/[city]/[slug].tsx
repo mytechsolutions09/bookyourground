@@ -23,7 +23,7 @@ import Button from '@/components/ui/Button';
 import WebLayout from '@/components/web/WebLayout';
 import LandingBookingForm from '@/components/landing/LandingBookingForm';
 export default function GroundDetailsPrettyUrlScreen() {
-  const { city, slug, date, time, teams } = useLocalSearchParams();
+  const { city, slug, date, time, teams, lock } = useLocalSearchParams();
   const { user } = useAuth();
   const [ground, setGround] = useState<GroundWithImages | null>(null);
   const [loading, setLoading] = useState(true);
@@ -704,6 +704,7 @@ export default function GroundDetailsPrettyUrlScreen() {
                 fullWidth
                 hideTitle
                 groundPageAccent
+                lockSlot={lock === 'true'}
               />
             ) : (
               <View style={styles.bookingStripNative}>
@@ -719,6 +720,7 @@ export default function GroundDetailsPrettyUrlScreen() {
                   noCard
                   hideTitle
                   groundPageAccent
+                  lockSlot={lock === 'true'}
                 />
               </View>
             )

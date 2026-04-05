@@ -15,10 +15,22 @@
         "ITSAppUsesNonExemptEncryption": false
       }
     },
+    "android": {
+      "package": "com.arpitkanotra.bookyourground",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#043529"
+      }
+    },
     "web": {
       "bundler": "metro",
       "output": "single",
       "favicon": "./assets/images/favicon.png"
+    },
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#043529"
     },
     "plugins": [
       "expo-router",

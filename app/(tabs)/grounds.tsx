@@ -39,13 +39,20 @@ const styles = StyleSheet.create({
   },
   page: {
     flex: 1,
-    paddingTop: Platform.OS === 'web' ? 96 : 0,
+    paddingTop: Platform.OS === 'web' ? 0 : 0,
+    width: '100%',
+    maxWidth: 800,
+    alignSelf: 'center',
+    paddingHorizontal: 16,
+    paddingBottom: 40,
   },
   scroll: {
     flex: 1,
+    backgroundColor: '#043529',
   },
   scrollContent: {
     flexGrow: 1,
+    paddingTop: 20,
   },
 });
 

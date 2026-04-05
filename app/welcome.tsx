@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useRef, useEffect } from 'react';
 import { View, Pressable, Text, StyleSheet, Platform } from 'react-native';
 import { Redirect, router } from 'expo-router';
 import { Video, ResizeMode } from 'expo-av';
@@ -23,8 +23,19 @@ export default function WelcomeScreen() {
     router.replace('/');
   }, []);
 
+  // On web, we skip the welcome video intro and go straight to the landing page.
+  // However, we avoid an immediate Redirect here to prevent loops with the root index.
+  // Instead, we mark it seen and move on if we ever land here on web.
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      markWelcomeSeen().then(() => {
+        router.replace('/');
+      });
+    }
+  }, []);
+
   if (Platform.OS === 'web') {
-    return <Redirect href="/" />;
+    return null; // Let the useEffect handle the transition
   }
 
   return (

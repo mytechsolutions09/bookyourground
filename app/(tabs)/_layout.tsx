@@ -12,9 +12,12 @@ import {
   CircleUser,
   LogIn,
   Heart,
+  Swords,
+  CalendarClock,
 } from 'lucide-react-native';
-import { ActivityIndicator, Platform, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Platform, useWindowDimensions, View, Pressable, StyleSheet } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const AUTH_REQUIRED_TAB = new Set(['dashboard', 'bookings', 'profile']);
 
@@ -64,25 +67,69 @@ export default function TabLayout() {
   const webTabBarStyle = hideTabBarOnBigScreens
     ? ({ display: 'none' } as const)
     : {
-        backgroundColor: '#043529',
-        borderTopWidth: 1,
-        borderTopColor: '#06392e',
-        height: 60,
-        paddingBottom: 8,
-        paddingTop: 8,
-      };
+      backgroundColor: '#043529',
+      borderTopWidth: 1,
+      borderTopColor: '#06392e',
+      height: 60,
+    };
+
+  const CustomTabBar = ({ state, descriptors, navigation }: any) => {
+    const insets = useSafeAreaInsets();
+    if (hideTabBarOnBigScreens) return null;
+
+    const visibleTabNames = ['index', 'grounds', 'matches', 'bookings', 'favorites', 'profile', 'logout'];
+
+    const visibleRoutes = state.routes.filter((route: any) => {
+      const { options } = descriptors[route.key];
+      return visibleTabNames.includes(route.name) && options.href !== null;
+    });
+
+    return (
+      <View style={[styles.customTabBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+        {visibleRoutes.map((route: any) => {
+          const stateIndex = state.routes.findIndex((r: any) => r.key === route.key);
+          const { options } = descriptors[route.key];
+          const isFocused = state.index === stateIndex;
+          
+          const onPress = () => {
+            const event = navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
+            if (!isFocused && !event.defaultPrevented) {
+              navigation.navigate(route.name);
+            }
+          };
+
+          const Icon = options.tabBarIcon;
+
+          return (
+            <Pressable
+              key={route.key}
+              onPress={onPress}
+              style={styles.tabItem}
+            >
+              {Icon && Icon({ color: isFocused ? '#00ea6b' : '#9ca3af', size: 24 })}
+            </Pressable>
+          );
+        })}
+      </View>
+    );
+  };
 
   return (
     <Tabs
+      tabBar={Platform.OS === 'web' ? (props) => <CustomTabBar {...props} /> : undefined}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: '#00ea6b',
         tabBarInactiveTintColor: '#9ca3af',
         ...(Platform.OS === 'web'
           ? {
-              tabBarStyle: webTabBarStyle,
-              tabBarShowLabel: false,
-            }
+            tabBarStyle: webTabBarStyle,
+            tabBarShowLabel: false,
+          }
           : nativeTabBarOff),
       }}
     >
@@ -98,6 +145,15 @@ export default function TabLayout() {
         options={{
           title: 'Grounds',
           tabBarIcon: ({ color, size }) => <LandPlot size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="matches"
+        options={{
+          title: 'My Matches',
+          tabBarIcon: ({ color, size }) => (
+            <CalendarClock size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -127,7 +183,6 @@ export default function TabLayout() {
         name="logout"
         options={{
           title: user ? 'Logout' : 'Login',
-          // When not authenticated, route this tab to the login screen
           href: user ? undefined : '/(auth)/login',
           tabBarIcon: ({ color, size }) =>
             user ? (
@@ -137,6 +192,31 @@ export default function TabLayout() {
             ),
         }}
       />
+      <Tabs.Screen
+        name="dashboard"
+        options={{
+          href: null,
+        }}
+      />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  customTabBar: {
+    flexDirection: 'row',
+    backgroundColor: '#043529',
+    height: 60,
+    borderTopWidth: 1,
+    borderTopColor: '#06392e',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    width: '100%',
+  },
+  tabItem: {
+    flex: 1,
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

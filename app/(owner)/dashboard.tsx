@@ -355,7 +355,7 @@ export default function OwnerDashboardScreen() {
     </ScrollView>
   );
 
-  if (Platform.OS === 'web' && !isCompact) {
+  if (Platform.OS === 'web') {
     return <WebLayout>{content}</WebLayout>;
   }
 

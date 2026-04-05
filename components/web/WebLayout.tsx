@@ -27,6 +27,8 @@ import {
   PlusCircle,
   ChevronLeft,
   ChevronRight,
+  Swords,
+  CalendarClock,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -136,8 +138,6 @@ export default function WebLayout({ children }: WebLayoutProps) {
   // On ground info (/grounds/[id]) and booking info (/bookings/[id]) pages,
   // hide the left sidebar for all roles so the content can take full width.
   const isGroundInfoPage = isGroundDetails;
-  const isPublicNoSidebar =
-    isLanding || isMarketing || isGroundInfoPage || isBookingDetails || isLegalOrInfoPage;
   const adminEmail = 'invirtualcoin@gmail.com';
   const isSuperAdmin =
     profile?.role === 'super_admin' ||
@@ -150,6 +150,11 @@ export default function WebLayout({ children }: WebLayoutProps) {
     (cleanPath === '/(tabs)/dashboard' ||
       cleanPath === '/(tabs)/bookings' ||
       cleanPath === '/(tabs)/profile');
+
+  // On ground info (/grounds/[id]) and booking info (/bookings/[id]) pages,
+  // hide the left sidebar for all roles so the content can take full width.
+  const isPublicNoSidebar =
+    isLanding || isMarketing || isGroundInfoPage || isBookingDetails || isLegalOrInfoPage || (cleanPath === '/find-an-opponent' && !isSuperAdmin);
   // Treat the presence of a Supabase `user` as authenticated even if `profile`
   // hasn't loaded yet (prevents briefly showing "Sign In").
   const isAuthenticated = !!user || !!profile || isSuperAdmin;
@@ -193,14 +198,14 @@ export default function WebLayout({ children }: WebLayoutProps) {
     const clean = (p: string) => p.replace(/\/\([^)]+\)/g, '');
     const currentPath = clean(normalize(pathname));
     const targetHref = clean(normalize(href));
-    
+
     // Improved isActive check using segments to distinguish grouped routes (e.g. (owner) vs (tabs))
     const hrefSegments = href.split('/').filter(Boolean);
     const isActive =
       (hrefSegments.every((seg, i) => segments[i] === seg)) ||
       (currentPath === targetHref && targetHref !== '/');
-    const iconColor = isActive 
-      ? (!isCompact ? '#043529' : '#00ea6b') 
+    const iconColor = isActive
+      ? (!isCompact ? '#043529' : '#00ea6b')
       : (isCompact ? '#dcc093' : '#6B7280');
     const activeStyle = isCompact ? styles.navLinkActiveMobile : styles.navLinkActive;
 
@@ -226,7 +231,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
             style={[
               styles.navLinkText,
               isCompact && styles.navLinkTextMobile,
-              isActive && styles.navLinkTextActive,
+              isActive && (isCompact ? styles.navLinkTextActiveMobile : styles.navLinkTextActive),
             ]}
           >
             {label}
@@ -354,6 +359,13 @@ export default function WebLayout({ children }: WebLayoutProps) {
 
                   <Text
                     style={styles.headerPrimaryButtonText}
+                    onPress={() => router.push('/find-an-opponent' as any)}
+                  >
+                    Find Match
+                  </Text>
+
+                  <Text
+                    style={styles.headerPrimaryButtonText}
                     onPress={() => router.push(groundsHref as any)}
                   >
                     Grounds
@@ -413,7 +425,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
             </TouchableOpacity>
 
             <View style={styles.headerRight}>
-              {showOwnerMobileMenu || showAdminMobileMenu || showUserMobileMenu ? (
+              {(isCompact && isAuthenticated && !isPublicNoSidebar) ? (
                 <TouchableOpacity
                   style={styles.burgerButton}
                   onPress={() => setMenuOpen((prev) => !prev)}
@@ -426,12 +438,36 @@ export default function WebLayout({ children }: WebLayoutProps) {
                 </TouchableOpacity>
               ) : (
                 !isCompact && (
-                  <Text
-                    style={styles.headerPrimaryButtonText}
-                    onPress={() => router.push('/book-my-ground' as any)}
-                  >
-                    Grounds
-                  </Text>
+                  <View style={{ flexDirection: 'row', gap: 24 }}>
+                    <Text
+                      style={styles.headerPrimaryButtonText}
+                      onPress={() => router.push('/find-an-opponent' as any)}
+                    >
+                      Find Match
+                    </Text>
+                    <Text
+                      style={styles.headerPrimaryButtonText}
+                      onPress={() => router.push('/book-my-ground' as any)}
+                    >
+                      Grounds
+                    </Text>
+                    {isAuthenticated && (
+                      <Text
+                        style={styles.headerPrimaryButtonText}
+                        onPress={() => {
+                          if (isSuperAdmin) {
+                            router.push('/(admin)/dashboard' as any);
+                          } else if (isGroundOwner) {
+                            router.push('/(owner)/dashboard' as any);
+                          } else {
+                            router.push('/(tabs)/dashboard' as any);
+                          }
+                        }}
+                      >
+                        Dashboard
+                      </Text>
+                    )}
+                  </View>
                 )
               )}
             </View>
@@ -458,6 +494,16 @@ export default function WebLayout({ children }: WebLayoutProps) {
                   !showUserMobileMenu && (
                     <>
                       <Text style={styles.sidebarTitle}>Get started</Text>
+                      <TouchableOpacity
+                        style={styles.mobilePrimaryButton}
+                        onPress={() => {
+                          setMenuOpen(false);
+                          router.push('/find-an-opponent' as any);
+                        }}
+                      >
+                        <Text style={styles.mobilePrimaryButtonText}>Find Opponent</Text>
+                      </TouchableOpacity>
+
                       <TouchableOpacity
                         style={styles.mobilePrimaryButton}
                         onPress={() => {
@@ -497,6 +543,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
                     <Text style={styles.sidebarTitle}>Ground owner</Text>
                     <NavLink href="/(owner)/dashboard" icon={LayoutDashboard} label="Dashboard" />
                     <NavLink href="/(owner)/grounds" icon={MapPin} label="My grounds" />
+                    <NavLink href="/(tabs)/matches" icon={CalendarClock} label="My Matches" />
                     <NavLink href="/(owner)/bookings" icon={Calendar} label="Bookings" />
                     <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
                     <NavLink href="/(owner)/earnings" icon={IndianRupee} label="Earnings" />
@@ -552,6 +599,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
                   <>
                     <Text style={styles.sidebarTitle}>My Account</Text>
                     <NavLink href="/(tabs)/dashboard" icon={LayoutDashboard} label="Dashboard" />
+                    <NavLink href="/(tabs)/matches" icon={CalendarClock} label="My Matches" />
                     <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
                     <NavLink href="/(tabs)/profile" icon={User} label="Profile" />
 
@@ -619,6 +667,12 @@ export default function WebLayout({ children }: WebLayoutProps) {
                         hideLabel={sidebarCollapsed}
                       />
                       <NavLink
+                        href="/(tabs)/matches"
+                        icon={CalendarClock}
+                        label="My Matches"
+                        hideLabel={sidebarCollapsed}
+                      />
+                      <NavLink
                         href="/(owner)/add-ground"
                         icon={PlusCircle}
                         label="Add ground"
@@ -673,6 +727,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
                       <Text style={styles.sidebarSectionTitle}>Ground owner</Text>
                       <NavLink href="/(owner)/dashboard" icon={LayoutDashboard} label="Dashboard" />
                       <NavLink href="/(owner)/grounds" icon={MapPin} label="My grounds" />
+                      <NavLink href="/(tabs)/matches" icon={CalendarClock} label="My Matches" />
                       <NavLink href="/(owner)/bookings" icon={Calendar} label="Bookings" />
                       <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
                       <NavLink href="/(owner)/earnings" icon={IndianRupee} label="Earnings" />
@@ -696,6 +751,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
                         icon={LayoutDashboard}
                         label="Dashboard"
                       />
+                      <NavLink href="/(tabs)/matches" icon={CalendarClock} label="My Matches" />
                       <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
                       <NavLink href="/(tabs)/profile" icon={User} label="Profile" />
 
@@ -818,7 +874,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
-    marginRight: 24,
   },
   headerSearch: {
     minWidth: 220,
@@ -831,7 +886,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    color: '#F9FAFB',
+    color: '#dcc093',
     fontSize: 14,
     fontFamily: 'Inter',
     backgroundColor: 'transparent',
@@ -1012,8 +1067,12 @@ const styles = StyleSheet.create({
     color: '#043529',
     fontWeight: '700',
   },
+  navLinkTextActiveMobile: {
+    color: '#00ea6b',
+    fontWeight: '700',
+  },
   navLinkActiveMobile: {
-    backgroundColor: 'rgba(220,141,60,0.12)',
+    backgroundColor: 'rgba(52, 211, 153, 0.12)',
   },
   burgerButton: {
     width: 40,

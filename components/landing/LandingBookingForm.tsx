@@ -162,6 +162,8 @@ interface LandingBookingFormProps {
   groundPageAccent?: boolean;
   /** Native /book-my-ground & Grounds tab: pin form to top with tight spacing (not vertically centered). */
   bookGroundScreenNative?: boolean;
+  /** When true (e.g. joining a match), disable all slot selection fields. */
+  lockSlot?: boolean;
 }
 
 export default function LandingBookingForm({
@@ -176,6 +178,7 @@ export default function LandingBookingForm({
   hideTitle = false,
   groundPageAccent = false,
   bookGroundScreenNative = false,
+  lockSlot = false,
 }: LandingBookingFormProps) {
   const { user } = useAuth();
   const { width: windowWidth } = useWindowDimensions();
@@ -204,7 +207,7 @@ export default function LandingBookingForm({
   /** After login: re-run Search and optionally re-select a ground from results. */
   const pendingPostLoginSearchRef = useRef(false);
   const pendingReselectGroundIdRef = useRef<string | null>(null);
-  const handleSearchRef = useRef<() => Promise<void>>(async () => {});
+  const handleSearchRef = useRef<() => Promise<void>>(async () => { });
 
   const [locationKey, setLocationKey] = useState<string>('');
   const [typeKey, setTypeKey] = useState<string>('');
@@ -731,8 +734,13 @@ export default function LandingBookingForm({
         const hh = normalizeDbTimeToHHMM(row.start_time);
         if (!hh) return;
         nextAll.add(hh);
-        // Only allow booking for slots marked as available.
-        if (row.is_available) nextAllowed.add(hh);
+        
+        // Only allow booking for slots marked as available, 
+        // OR if this is the specifically pre-selected slot for joining a match.
+        const isPreSelected = lockSlot && hh === initialStartTime;
+        if (row.is_available || isPreSelected) {
+          nextAllowed.add(hh);
+        }
 
         nextPrices[hh] = row.custom_price ?? null;
 
@@ -766,40 +774,47 @@ export default function LandingBookingForm({
       const fromSelectedGround =
         !!selectedGround?.id && allStartHHMM.size
           ? Array.from(allStartHHMM.values())
-              .sort((a, b) => {
-                const am = parseTimeToMinutes(a) ?? 0;
-                const bm = parseTimeToMinutes(b) ?? 0;
-                return am - bm;
-              })
-              .map((hhmm) => ({
-                value: hhmm as TimeString,
-                label: hhmm,
-              }))
+            .sort((a, b) => {
+              const am = parseTimeToMinutes(a) ?? 0;
+              const bm = parseTimeToMinutes(b) ?? 0;
+              return am - bm;
+            })
+            .map((hhmm) => ({
+              value: hhmm as TimeString,
+              label: hhmm,
+            }))
           : null;
 
       const fromSearchUnion =
         useLandingSearchFlow && !selectedGround?.id && searchAllStartHHMM.size
           ? Array.from(searchAllStartHHMM.values())
-              .sort((a, b) => {
-                const am = parseTimeToMinutes(a) ?? 0;
-                const bm = parseTimeToMinutes(b) ?? 0;
-                return am - bm;
-              })
-              .map((hhmm) => ({
-                value: hhmm as TimeString,
-                label: hhmm,
-              }))
+            .sort((a, b) => {
+              const am = parseTimeToMinutes(a) ?? 0;
+              const bm = parseTimeToMinutes(b) ?? 0;
+              return am - bm;
+            })
+            .map((hhmm) => ({
+              value: hhmm as TimeString,
+              label: hhmm,
+            }))
           : null;
 
       const baseFromDb = fromSelectedGround ?? fromSearchUnion;
       const base = baseFromDb ?? timeSlots;
-      let list = base.filter((s) => !bookedStartHHMM.has(s.value));
+      let list = base.filter((s) => {
+        // If join-match locking is ON, we must show the targeted slot even if technically 'booked'
+        const isPreSelected = lockSlot && s.value === initialStartTime;
+        return isPreSelected || !bookedStartHHMM.has(s.value);
+      });
       if (
         useLandingSearchFlow &&
         !selectedGround?.id &&
         searchStartTimesWithCapacity !== undefined
       ) {
-        list = list.filter((s) => searchStartTimesWithCapacity.has(s.value));
+        list = list.filter((s) => {
+          const isPreSelected = lockSlot && s.value === initialStartTime;
+          return isPreSelected || searchStartTimesWithCapacity.has(s.value);
+        });
       }
       return list;
     },
@@ -954,17 +969,17 @@ export default function LandingBookingForm({
             groundPageDropdown && styles.dropdownButtonGroundPage,
             bookGroundNative && !groundPageDropdown && styles.dropdownButtonBookGroundNative,
             open &&
-              (groundPageDropdown ? styles.dropdownButtonOpenGroundPage : styles.dropdownButtonOpen),
+            (groundPageDropdown ? styles.dropdownButtonOpenGroundPage : styles.dropdownButtonOpen),
             !!value && !disabled &&
-              (groundPageDropdown
-                ? styles.dropdownButtonSelectedGroundPage
-                : styles.dropdownButtonSelected),
+            (groundPageDropdown
+              ? styles.dropdownButtonSelectedGroundPage
+              : styles.dropdownButtonSelected),
             disabled &&
-              (groundPageDropdown
-                ? styles.dropdownButtonDisabledGroundPage
-                : bookGroundNative
-                  ? styles.dropdownButtonDisabledBookGroundNative
-                  : styles.dropdownButtonDisabled),
+            (groundPageDropdown
+              ? styles.dropdownButtonDisabledGroundPage
+              : bookGroundNative
+                ? styles.dropdownButtonDisabledBookGroundNative
+                : styles.dropdownButtonDisabled),
           ]}
         >
           <Text
@@ -972,19 +987,19 @@ export default function LandingBookingForm({
               styles.dropdownButtonText,
               groundPageDropdown && styles.dropdownButtonTextGroundPage,
               bookGroundNative &&
-                !groundPageDropdown &&
-                styles.dropdownButtonTextBookGroundNative,
+              !groundPageDropdown &&
+              styles.dropdownButtonTextBookGroundNative,
               !!value &&
-                !disabled &&
-                (groundPageDropdown
-                  ? styles.dropdownButtonTextSelectedGroundPage
-                  : styles.dropdownButtonTextSelected),
+              !disabled &&
+              (groundPageDropdown
+                ? styles.dropdownButtonTextSelectedGroundPage
+                : styles.dropdownButtonTextSelected),
               disabled &&
-                (groundPageDropdown
-                  ? styles.dropdownButtonTextDisabledGroundPage
-                  : bookGroundNative
-                    ? styles.dropdownButtonTextDisabledBookGroundNative
-                    : styles.dropdownButtonTextDisabled),
+              (groundPageDropdown
+                ? styles.dropdownButtonTextDisabledGroundPage
+                : bookGroundNative
+                  ? styles.dropdownButtonTextDisabledBookGroundNative
+                  : styles.dropdownButtonTextDisabled),
             ]}
           >
             {selectedLabel || label}
@@ -1005,9 +1020,9 @@ export default function LandingBookingForm({
                 style={[
                   styles.dropdownOption,
                   opt.key === value &&
-                    (groundPageDropdown
-                      ? styles.dropdownOptionActiveGroundPage
-                      : styles.dropdownOptionActive),
+                  (groundPageDropdown
+                    ? styles.dropdownOptionActiveGroundPage
+                    : styles.dropdownOptionActive),
                 ]}
               >
                 <Text
@@ -1015,12 +1030,12 @@ export default function LandingBookingForm({
                     styles.dropdownOptionText,
                     groundPageDropdown && styles.dropdownOptionTextGroundPage,
                     bookGroundNative &&
-                      !groundPageDropdown &&
-                      styles.dropdownOptionTextBookGroundNative,
+                    !groundPageDropdown &&
+                    styles.dropdownOptionTextBookGroundNative,
                     opt.key === value &&
-                      (groundPageDropdown
-                        ? styles.dropdownOptionTextActiveGroundPage
-                        : styles.dropdownOptionTextActive),
+                    (groundPageDropdown
+                      ? styles.dropdownOptionTextActiveGroundPage
+                      : styles.dropdownOptionTextActive),
                   ]}
                 >
                   {opt.label}
@@ -1129,19 +1144,19 @@ export default function LandingBookingForm({
         nextResults = candidates.filter((g) => allowed.has(g.id));
       } else {
         const fallbackAvailable: GroundWithImages[] = [];
-      for (const g of candidates) {
-        const { data: bookedRows, error: bookedErr } = await supabase.rpc('booked_start_times_for_ground_day', {
-          p_ground_id: g.id,
-          p_booking_date: bookingDate,
-        });
-        if (bookedErr) continue;
-        const booked = new Set<string>();
-        (bookedRows as { start_time: string }[] | null)?.forEach((row) => {
-          const hh = normalizeDbTimeToHHMM(row.start_time);
-          if (hh) booked.add(hh);
-        });
-        if (!booked.has(startTime)) fallbackAvailable.push(g);
-      }
+        for (const g of candidates) {
+          const { data: bookedRows, error: bookedErr } = await supabase.rpc('booked_start_times_for_ground_day', {
+            p_ground_id: g.id,
+            p_booking_date: bookingDate,
+          });
+          if (bookedErr) continue;
+          const booked = new Set<string>();
+          (bookedRows as { start_time: string }[] | null)?.forEach((row) => {
+            const hh = normalizeDbTimeToHHMM(row.start_time);
+            if (hh) booked.add(hh);
+          });
+          if (!booked.has(startTime)) fallbackAvailable.push(g);
+        }
         nextResults = fallbackAvailable;
       }
 
@@ -1359,11 +1374,11 @@ export default function LandingBookingForm({
 
     const pricePerHour =
       Object.prototype.hasOwnProperty.call(slotPriceByStartTime, startTime) &&
-      slotPriceByStartTime[startTime] != null
+        slotPriceByStartTime[startTime] != null
         ? slotPriceByStartTime[startTime]!
         : isBoxCricket
-        ? selectedGround.base_price_per_hour
-        : // For cricket grounds, store per-match price in price_per_hour column.
+          ? selectedGround.base_price_per_hour
+          : // For cricket grounds, store per-match price in price_per_hour column.
           (computed?.pricePerUnit ?? 0);
 
     try {
@@ -1409,9 +1424,9 @@ export default function LandingBookingForm({
         style={[
           separateSearchResults ? styles.labelOnWhite : styles.label,
           bookGroundScreenNative &&
-            !isWeb &&
-            !separateSearchResults &&
-            styles.labelBookGroundNative,
+          !isWeb &&
+          !separateSearchResults &&
+          styles.labelBookGroundNative,
         ]}
       >
         Available grounds
@@ -1435,7 +1450,7 @@ export default function LandingBookingForm({
               const isBox = String(g.pitch_type ?? '').toLowerCase().includes('box');
               const slotCustom =
                 Object.prototype.hasOwnProperty.call(searchSlotPriceByGroundId, g.id) &&
-                searchSlotPriceByGroundId[g.id] != null
+                  searchSlotPriceByGroundId[g.id] != null
                   ? searchSlotPriceByGroundId[g.id]!
                   : null;
 
@@ -1523,8 +1538,13 @@ export default function LandingBookingForm({
                   return (
                     <Pressable
                       key={g.id}
-                      onPress={() => setSelectedGroundId(g.id)}
-                      style={[styles.groundChip, active && styles.groundChipActive]}
+                      onPress={() => !lockSlot && setSelectedGroundId(g.id)}
+                      disabled={lockSlot}
+                      style={[
+                        styles.groundChip,
+                        active && styles.groundChipActive,
+                        lockSlot && styles.groundChipDisabled,
+                      ]}
                     >
                       <Text style={[styles.groundChipText, active && styles.groundChipTextActive]}>
                         {g.name}
@@ -1553,7 +1573,7 @@ export default function LandingBookingForm({
           label="Location"
           value={locationKey}
           options={locationOptions}
-          disabled={isLockedByInitialGround || loadingGrounds}
+          disabled={lockSlot || isLockedByInitialGround || loadingGrounds}
           open={openSelectMenu === 'location'}
           onOpenChange={(o) => {
             setOpenSelectMenu(o ? 'location' : (prev) => (prev === 'location' ? null : prev));
@@ -1584,7 +1604,7 @@ export default function LandingBookingForm({
           label="Type"
           value={typeKey}
           options={typeOptions}
-          disabled={isLockedByInitialGround || loadingGrounds}
+          disabled={lockSlot || isLockedByInitialGround || loadingGrounds}
           open={openSelectMenu === 'type'}
           onOpenChange={(o) => {
             setOpenSelectMenu(o ? 'type' : (prev) => (prev === 'type' ? null : prev));
@@ -1607,7 +1627,9 @@ export default function LandingBookingForm({
           <Text style={fieldLabelStyle}>Teams</Text>
           <View style={styles.teamToggle}>
             <Pressable
+              disabled={lockSlot}
               onPress={() => {
+                if (lockSlot) return;
                 setTeamType('one');
                 if (useLandingSearchFlow) clearSearchState();
               }}
@@ -1628,8 +1650,9 @@ export default function LandingBookingForm({
               </Text>
             </Pressable>
             <Pressable
-              disabled={hideBothTeamsOption}
+              disabled={lockSlot || hideBothTeamsOption}
               onPress={() => {
+                if (lockSlot) return;
                 setTeamType('both');
                 if (useLandingSearchFlow) clearSearchState();
               }}
@@ -1710,15 +1733,19 @@ export default function LandingBookingForm({
                       <Pressable
                         key={d.iso}
                         onPress={() => {
+                          if (lockSlot) return;
                           if (useLandingSearchFlow) {
                             clearSearchState();
                             setStartTime('' as TimeString);
                           }
                           setBookingDate(d.iso);
                         }}
+                        disabled={lockSlot}
                         style={[
                           styles.dateChip,
                           isSelected && styles.dateChipActive,
+                          lockSlot && !isSelected && styles.dateChipDisabled,
+                          lockSlot && isSelected && { opacity: 0.8 },
                         ]}
                       >
                         <View style={styles.dateChipInner}>
@@ -1780,17 +1807,22 @@ export default function LandingBookingForm({
                   <Pressable
                     key={d.iso}
                     onPress={() => {
+                      if (lockSlot) return;
                       if (useLandingSearchFlow) {
                         clearSearchState();
                         setStartTime('' as TimeString);
                       }
                       setBookingDate(d.iso);
                     }}
-                    style={[
+                    disabled={lockSlot}
+                    style={({ pressed }) => [
                       styles.dateChip,
                       styles.dateChipMobile,
-                      nativeTanChrome && styles.dateChipBorderBookGroundNative,
                       isSelected && styles.dateChipActive,
+                      lockSlot && !isSelected && styles.dateChipDisabled,
+                      lockSlot && isSelected && { opacity: 0.8 },
+                      nativeTanChrome && !isSelected && styles.dateChipBorderBookGroundNative,
+                      pressed && !isSelected && !lockSlot && styles.dateChipPressed,
                     ]}
                   >
                     <View style={styles.dateChipInner}>
@@ -1841,20 +1873,23 @@ export default function LandingBookingForm({
                 return (
                   <Pressable
                     key={s.value}
-                    disabled={submitting || !slotIsAvailable}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: active, disabled: submitting || !slotIsAvailable }}
-                    accessibilityLabel={`${s.label} time slot`}
                     onPress={() => {
+                      if (lockSlot) return;
                       if (useLandingSearchFlow) clearSearchState();
                       setStartTime(s.value as TimeString);
                     }}
+                    disabled={lockSlot || submitting || !slotIsAvailable}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active, disabled: lockSlot || submitting || !slotIsAvailable }}
+                    accessibilityLabel={`${s.label} time slot`}
                     style={({ pressed }) => [
                       styles.timeSlotChip,
                       isBoxCricket && styles.timeSlotChipDense,
-                      ...(Platform.OS === 'web' ? [{ cursor: 'pointer' } as object] : []),
                       active && styles.timeSlotChipActive,
-                      pressed && !active && styles.timeSlotChipPressed,
+                      lockSlot && !active && styles.timeSlotChipDisabled,
+                      lockSlot && active && { opacity: 0.8 },
+                      ...(Platform.OS === 'web' ? [{ cursor: 'pointer' } as object] : []),
+                      pressed && !active && !lockSlot && styles.timeSlotChipPressed,
                     ]}
                   >
                     <Text
@@ -1890,25 +1925,29 @@ export default function LandingBookingForm({
                 return (
                   <Pressable
                     key={s.value}
-                    disabled={submitting || !slotIsAvailable}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: active, disabled: submitting || !slotIsAvailable }}
-                    accessibilityLabel={`${s.label} time slot`}
                     onPress={() => {
+                      if (lockSlot) return;
                       if (useLandingSearchFlow) clearSearchState();
                       setStartTime(s.value as TimeString);
                     }}
+                    disabled={lockSlot || submitting || !slotIsAvailable}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active, disabled: lockSlot || submitting || !slotIsAvailable }}
+                    accessibilityLabel={`${s.label} time slot`}
                     style={({ pressed }) => [
                       styles.timeSlotChip,
                       styles.timeSlotChipMobile,
                       isBoxCricket && styles.timeSlotChipDense,
-                      nativeTanChrome && styles.timeSlotChipBorderBookGroundNative,
                       active && styles.timeSlotChipActive,
+                      lockSlot && !active && styles.timeSlotChipDisabled,
+                      lockSlot && active && { opacity: 0.8 },
+                      nativeTanChrome && !active && styles.timeSlotChipBorderBookGroundNative,
                       pressed &&
-                        !active &&
-                        (nativeTanChrome
-                          ? styles.timeSlotChipPressedBookGroundNative
-                          : styles.timeSlotChipPressed),
+                      !active &&
+                      !lockSlot &&
+                      (nativeTanChrome
+                        ? styles.timeSlotChipPressedBookGroundNative
+                        : styles.timeSlotChipPressed),
                     ]}
                   >
                     <Text
@@ -2020,11 +2059,10 @@ export default function LandingBookingForm({
             >
               {isBoxCricket
                 ? `Duration: ${computed.totalHours} hours @ ${formatCurrency(
-                    computed.pricePerUnit,
-                  )}/hr`
-                : `Cricket ground: ${
-                    teamType === 'one' ? '1 team' : 'both teams'
-                  } · ${formatCurrency(computed.pricePerUnit)} per match`}
+                  computed.pricePerUnit,
+                )}/hr`
+                : `Cricket ground: ${teamType === 'one' ? '1 team' : 'both teams'
+                } · ${formatCurrency(computed.pricePerUnit)} per match`}
             </Text>
           </View>
         )}
@@ -2755,6 +2793,10 @@ const styles = StyleSheet.create({
     borderColor: '#00ea6b',
     backgroundColor: '#043529',
   },
+  dateChipDisabled: {
+    opacity: 0.5,
+    borderColor: '#64748B',
+  },
   /** Book a ground (native): inactive chip outline — neon green transparent. */
   dateChipBorderBookGroundNative: {
     borderColor: 'rgba(0,234,107,0.15)',
@@ -2865,6 +2907,10 @@ const styles = StyleSheet.create({
     borderColor: '#00ea6b',
     backgroundColor: '#043529',
   },
+  timeSlotChipDisabled: {
+    opacity: 0.5,
+    borderColor: '#64748B',
+  },
   timeSlotChipPressed: {
     backgroundColor: '#06392e',
     borderColor: '#FFFFFF',
@@ -2872,6 +2918,10 @@ const styles = StyleSheet.create({
   timeSlotChipPressedBookGroundNative: {
     backgroundColor: '#06392e',
     borderColor: '#00ea6b',
+  },
+  groundChipDisabled: {
+    opacity: 0.6,
+    borderColor: '#64748B',
   },
   timeSlotText: {
     fontSize: 13,

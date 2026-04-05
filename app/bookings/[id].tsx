@@ -8,13 +8,17 @@ import { formatCurrency, formatDate } from '@/utils/helpers';
 import { formatBookingSlotSummary } from '@/utils/bookingSlotFormat';
 import { hoursBetweenBooked, normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
 import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
+import { useAuth } from '@/contexts/AuthContext';
 import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
+import Button from '@/components/ui/Button';
 
 export default function BookingDetailsScreen() {
   const { id } = useLocalSearchParams();
+  const { user } = useAuth();
   const [booking, setBooking] = useState<BookingWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [cancelling, setCancelling] = useState(false);
   const { width } = useWindowDimensions();
   const Section = View;
 
@@ -59,6 +63,61 @@ export default function BookingDetailsScreen() {
     }
     return String(booking.total_hours ?? '');
   }, [booking]);
+
+  const handleCancelBooking = async () => {
+    if (!booking || !user) return;
+    
+    // Only the customer can use this (Owners/Admins have other ways)
+    if (booking.user_id !== user.id) return;
+    
+    // 7-day restriction:
+    const bDate = new Date(booking.booking_date);
+    const now = new Date();
+    // Normalize to dates only for a cleaner day diff
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const bDay = new Date(bDate.getFullYear(), bDate.getMonth(), bDate.getDate());
+    const diffDays = Math.ceil((bDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 7) {
+      Alert.alert(
+        'Cancellation Policy',
+        'Bookings can only be cancelled at least 7 days before the slot time. For urgent queries, please contact support.'
+      );
+      return;
+    }
+
+    Alert.alert(
+      'Cancel Booking',
+      'Are you sure you want to cancel this booking? This action cannot be undone.',
+      [
+        { text: 'No', style: 'cancel' },
+        { 
+          text: 'Yes, Cancel', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setCancelling(true);
+              const { error } = await supabase
+                .from('bookings')
+                .update({ status: 'cancelled' })
+                .eq('id', booking.id);
+              
+              if (error) throw error;
+              Alert.alert('Success', 'Booking cancelled successfully.');
+              loadBooking();
+            } catch (e: any) {
+              Alert.alert('Error', e.message || 'Failed to cancel booking.');
+            } finally {
+              setCancelling(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const isOwner = booking?.user_id === user?.id;
+  const showCancelButton = isOwner && booking?.status === 'confirmed';
 
   if (loading || !booking) {
     const loadingContent = (
@@ -183,20 +242,6 @@ export default function BookingDetailsScreen() {
     <View style={isNarrow ? styles.paymentColumnNarrow : styles.paymentColumn}>
       <Section style={[styles.paymentCard, !IS_DARK && styles.paymentCardLight]}>
         <Text style={[styles.sectionTitle, !IS_DARK && styles.sectionTitleLight]}>Payment Summary</Text>
-        {(Platform.OS === 'web' || isBoxCricket) && (
-          <View style={styles.paymentRow}>
-            <Text style={[styles.paymentLabel, !IS_DARK && styles.paymentLabelLight]}>
-              {isBoxCricket ? 'Price per hour' : 'Price per match'}
-            </Text>
-            <Text style={[styles.paymentValue, !IS_DARK && styles.paymentValueLight]}>{formatCurrency(booking.price_per_hour)}</Text>
-          </View>
-        )}
-        {isBoxCricket && (
-          <View style={styles.paymentRow}>
-            <Text style={[styles.paymentLabel, !IS_DARK && styles.paymentLabelLight]}>Total hours</Text>
-            <Text style={[styles.paymentValue, !IS_DARK && styles.paymentValueLight]}>{durationHoursLabel}</Text>
-          </View>
-        )}
         <View style={[styles.paymentRow, styles.totalRow]}>
           <Text style={[styles.totalLabel, !IS_DARK && styles.totalLabelLight]}>Total Amount</Text>
           <Text style={[styles.totalValue, !IS_DARK && styles.totalValueLight]}>{formatCurrency(booking.total_amount)}</Text>
@@ -212,6 +257,17 @@ export default function BookingDetailsScreen() {
       >
         Go back
       </Text>
+
+      {showCancelButton && (
+        <Button
+          title={cancelling ? "CANCELLING..." : "CANCEL BOOKING"}
+          onPress={handleCancelBooking}
+          variant="outline"
+          disabled={cancelling}
+          style={styles.cancelButton}
+          textStyle={styles.cancelButtonText}
+        />
+      )}
     </View>
   );
 
@@ -571,5 +627,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#043529',
     color: '#FFFFFF',
     borderColor: '#043529',
+  },
+  cancelButton: {
+    marginTop: 12,
+    borderColor: '#F44336',
+    borderWidth: 1.5,
+    backgroundColor: 'transparent',
+  },
+  cancelButtonText: {
+    color: '#F44336',
+    fontWeight: '800',
+    fontSize: 13,
   },
 });
