@@ -16,7 +16,7 @@ export default function BookingDetailsScreen() {
   const [booking, setBooking] = useState<BookingWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const { width } = useWindowDimensions();
-  const Section = Platform.OS === 'web' ? Card : View;
+  const Section = View;
 
   useEffect(() => {
     loadBooking();
@@ -88,6 +88,7 @@ export default function BookingDetailsScreen() {
   );
 
   const isWeb = Platform.OS === 'web';
+  const IS_DARK = !isWeb || (width < 900);
 
   const detailsSection = (
     // Left: booking details
@@ -96,13 +97,13 @@ export default function BookingDetailsScreen() {
         <Image source={{ uri: primaryImage }} style={[styles.image, !isWeb && styles.imageMobile]} />
 
         <View style={isWeb ? styles.detailsBodyWeb : styles.detailsBodyNative}>
-          <Section style={styles.sectionHeaderCard}>
+          <Section style={[styles.sectionHeaderCard, !IS_DARK && styles.sectionLight]}>
             <View style={styles.headerRow}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.groundName}>{booking.ground.name}</Text>
+                <Text style={[styles.groundName, !IS_DARK && styles.groundNameLight]}>{booking.ground.name}</Text>
                 <View style={styles.locationRow}>
-                  <MapPin size={14} color="#00ea6b" />
-                  <Text style={styles.location}>
+                  <MapPin size={14} color={IS_DARK ? "#00ea6b" : "#10b981"} />
+                  <Text style={[styles.location, !IS_DARK && styles.locationLight]}>
                     {booking.ground.city}, {booking.ground.state}
                   </Text>
                 </View>
@@ -115,7 +116,7 @@ export default function BookingDetailsScreen() {
               ]}>
                 <Text style={[
                   styles.statusText,
-                  booking.status === 'confirmed' && styles.statusTextConfirmed,
+                  booking.status === 'confirmed' && (IS_DARK ? styles.statusTextConfirmed : styles.statusTextConfirmedLight),
                   booking.status === 'pending' && styles.statusTextPending,
                   (booking.status === 'cancelled' || booking.status === 'rejected') && styles.statusTextCancelled,
                 ]}>
@@ -125,20 +126,20 @@ export default function BookingDetailsScreen() {
             </View>
           </Section>
 
-          <Section style={styles.section}>
-            <Text style={styles.sectionTitle}>Booking Information</Text>
+          <Section style={[styles.section, !IS_DARK && styles.sectionLight]}>
+            <Text style={[styles.sectionTitle, !IS_DARK && styles.sectionTitleLight]}>Booking Information</Text>
             <View style={styles.infoRow}>
-              <Calendar size={18} color="#00ea6b" />
+              <Calendar size={18} color={IS_DARK ? "#00ea6b" : "#10b981"} />
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Date</Text>
-                <Text style={styles.infoValue}>{formatDate(booking.booking_date)}</Text>
+                <Text style={[styles.infoLabel, !IS_DARK && styles.infoLabelLight]}>Date</Text>
+                <Text style={[styles.infoValue, !IS_DARK && styles.infoValueLight]}>{formatDate(booking.booking_date)}</Text>
               </View>
             </View>
             <View style={styles.infoRow}>
-              <Clock size={18} color="#00ea6b" />
+              <Clock size={18} color={IS_DARK ? "#00ea6b" : "#10b981"} />
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Time</Text>
-                <Text style={styles.infoValue}>
+                <Text style={[styles.infoLabel, !IS_DARK && styles.infoLabelLight]}>Time</Text>
+                <Text style={[styles.infoValue, !IS_DARK && styles.infoValueLight]}>
                   {formatBookingSlotSummary(
                     booking.start_time,
                     booking.end_time,
@@ -148,27 +149,27 @@ export default function BookingDetailsScreen() {
               </View>
             </View>
             <View style={styles.infoRow}>
-              <Clock size={18} color="#00ea6b" />
+              <Clock size={18} color={IS_DARK ? "#00ea6b" : "#10b981"} />
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Duration</Text>
-                <Text style={styles.infoValue}>{durationHoursLabel} hours</Text>
+                <Text style={[styles.infoLabel, !IS_DARK && styles.infoLabelLight]}>Duration</Text>
+                <Text style={[styles.infoValue, !IS_DARK && styles.infoValueLight]}>{durationHoursLabel} hours</Text>
               </View>
             </View>
             {cricketTeamsLabel ? (
               <View style={styles.infoRow}>
-                <Users size={18} color="#00ea6b" />
+                <Users size={18} color={IS_DARK ? "#00ea6b" : "#10b981"} />
                 <View style={styles.infoContent}>
-                  <Text style={styles.infoLabel}>Teams</Text>
-                  <Text style={styles.infoValue}>{cricketTeamsLabel}</Text>
+                  <Text style={[styles.infoLabel, !IS_DARK && styles.infoLabelLight]}>Teams</Text>
+                  <Text style={[styles.infoValue, !IS_DARK && styles.infoValueLight]}>{cricketTeamsLabel}</Text>
                 </View>
               </View>
             ) : null}
           </Section>
 
           {booking.notes && (
-            <Section style={styles.section}>
-              <Text style={styles.sectionTitle}>Notes</Text>
-              <Text style={styles.notes}>{booking.notes}</Text>
+            <Section style={[styles.section, !IS_DARK && styles.sectionLight]}>
+              <Text style={[styles.sectionTitle, !IS_DARK && styles.sectionTitleLight]}>Notes</Text>
+              <Text style={[styles.notes, !IS_DARK && styles.notesLight]}>{booking.notes}</Text>
             </Section>
           )}
         </View>
@@ -180,30 +181,30 @@ export default function BookingDetailsScreen() {
 
   const paymentSection = (
     <View style={isNarrow ? styles.paymentColumnNarrow : styles.paymentColumn}>
-      <Section style={styles.paymentCard}>
-        <Text style={styles.sectionTitle}>Payment Summary</Text>
+      <Section style={[styles.paymentCard, !IS_DARK && styles.paymentCardLight]}>
+        <Text style={[styles.sectionTitle, !IS_DARK && styles.sectionTitleLight]}>Payment Summary</Text>
         {(Platform.OS === 'web' || isBoxCricket) && (
           <View style={styles.paymentRow}>
-            <Text style={styles.paymentLabel}>
+            <Text style={[styles.paymentLabel, !IS_DARK && styles.paymentLabelLight]}>
               {isBoxCricket ? 'Price per hour' : 'Price per match'}
             </Text>
-            <Text style={styles.paymentValue}>{formatCurrency(booking.price_per_hour)}</Text>
+            <Text style={[styles.paymentValue, !IS_DARK && styles.paymentValueLight]}>{formatCurrency(booking.price_per_hour)}</Text>
           </View>
         )}
         {isBoxCricket && (
           <View style={styles.paymentRow}>
-            <Text style={styles.paymentLabel}>Total hours</Text>
-            <Text style={styles.paymentValue}>{durationHoursLabel}</Text>
+            <Text style={[styles.paymentLabel, !IS_DARK && styles.paymentLabelLight]}>Total hours</Text>
+            <Text style={[styles.paymentValue, !IS_DARK && styles.paymentValueLight]}>{durationHoursLabel}</Text>
           </View>
         )}
         <View style={[styles.paymentRow, styles.totalRow]}>
-          <Text style={styles.totalLabel}>Total Amount</Text>
-          <Text style={styles.totalValue}>{formatCurrency(booking.total_amount)}</Text>
+          <Text style={[styles.totalLabel, !IS_DARK && styles.totalLabelLight]}>Total Amount</Text>
+          <Text style={[styles.totalValue, !IS_DARK && styles.totalValueLight]}>{formatCurrency(booking.total_amount)}</Text>
         </View>
       </Section>
 
       <Text
-        style={styles.backLink}
+        style={[styles.backLink, !IS_DARK && styles.backLinkWeb]}
         onPress={() => {
           if (router.canGoBack?.()) router.back();
           else router.push('/book-my-ground' as any);
@@ -215,22 +216,23 @@ export default function BookingDetailsScreen() {
   );
 
   const content = (
-    <View style={styles.container}>
+    <ScrollView
+      style={[styles.container, !IS_DARK && styles.webContainerRoot]}
+      contentContainerStyle={isNarrow ? styles.bodyColumn : styles.body}
+      showsVerticalScrollIndicator
+    >
       {isNarrow ? (
-        <ScrollView
-          contentContainerStyle={styles.bodyColumn}
-          showsVerticalScrollIndicator
-        >
+        <>
           <View style={styles.stackSection}>{detailsSection}</View>
           <View style={styles.stackSection}>{paymentSection}</View>
-        </ScrollView>
+        </>
       ) : (
-        <View style={styles.body}>
+        <>
           {detailsSection}
           {paymentSection}
-        </View>
+        </>
       )}
-    </View>
+    </ScrollView>
   );
 
   return (
@@ -244,18 +246,13 @@ export default function BookingDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    ...Platform.select({
-      web: {
-        backgroundColor: '#F5F5F5',
-        paddingTop: 48,
-        paddingHorizontal: 16,
-        paddingBottom: 32,
-        overflowX: 'hidden' as any,
-      },
-      default: {
-        backgroundColor: '#043529',
-      },
-    }),
+    backgroundColor: '#043529',
+  },
+  webContainerRoot: {
+    backgroundColor: '#F5F5F5',
+    paddingTop: 24,
+    paddingHorizontal: 16,
+    paddingBottom: 24,
   },
   loadingContainer: {
     flex: 1,
@@ -263,7 +260,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 24,
     ...Platform.select({
-      web: { backgroundColor: '#F5F5F5' },
+      web: { backgroundColor: '#043529' },
       default: { backgroundColor: '#043529' },
     }),
   },
@@ -310,19 +307,11 @@ const styles = StyleSheet.create({
   },
   detailsColumn: {
     flex: 1.4,
-    ...Platform.select({
-      web: { backgroundColor: '#F5F5F5' },
-      default: { backgroundColor: '#043529' },
-    }),
     minWidth: 0,
     flexShrink: 1,
   },
   detailsColumnNarrow: {
     width: '100%',
-    ...Platform.select({
-      web: { backgroundColor: '#F5F5F5' },
-      default: { backgroundColor: '#043529' },
-    }),
   },
   detailsContentWeb: {
     padding: 16,
@@ -372,30 +361,25 @@ const styles = StyleSheet.create({
   /** Native: full-bleed under stack header, no side padding / rounding */
   section: {
     marginBottom: 16,
-    ...Platform.select({
-      default: {
-        backgroundColor: '#06392e',
-        borderRadius: 20,
-        padding: 20,
-        borderWidth: 1,
-        borderColor: 'rgba(0,234,107,0.12)',
-      },
-    }),
+    backgroundColor: '#06392e',
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(0,234,107,0.12)',
   },
   sectionHeaderCard: {
-    marginBottom: 20,
-    ...Platform.select({
-      default: {
-        backgroundColor: '#06392e',
-        borderRadius: 20,
-        padding: 20,
-        borderWidth: 1,
-        borderColor: 'rgba(0,234,107,0.2)',
-      },
-      web: {
-        marginBottom: 16,
-      }
-    }),
+    marginBottom: 16,
+    backgroundColor: '#06392e',
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(0,234,107,0.2)',
+  },
+  sectionLight: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E5E7EB',
+    padding: 14,
+    marginBottom: 12,
   },
   imageMobile: {
     borderRadius: 0,
@@ -405,8 +389,13 @@ const styles = StyleSheet.create({
   groundName: {
     fontSize: 24,
     fontWeight: '700',
-    color:Platform.OS === 'web' ? '#212121' : '#FFFFFF',
+    color: '#FFFFFF',
     marginBottom: 6,
+  },
+  groundNameLight: {
+    color: '#111827',
+    fontSize: 20,
+    marginBottom: 4,
   },
   locationRow: {
     flexDirection: 'row',
@@ -415,7 +404,10 @@ const styles = StyleSheet.create({
   },
   location: {
     fontSize: 13,
-    color: Platform.OS === 'web' ? '#666' : '#9ca3af',
+    color: '#9ca3af',
+  },
+  locationLight: {
+    color: '#6B7280',
   },
   headerRow: {
     flexDirection: 'row',
@@ -452,6 +444,9 @@ const styles = StyleSheet.create({
   statusTextConfirmed: {
     color: '#00ea6b',
   },
+  statusTextConfirmedLight: {
+    color: '#10b981',
+  },
   statusTextPending: {
     color: '#FFC107',
   },
@@ -461,29 +456,40 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: Platform.OS === 'web' ? '#212121' : '#00ea6b',
+    color: '#00ea6b',
     marginBottom: 16,
     textTransform: 'uppercase',
     letterSpacing: 1,
+  },
+  sectionTitleLight: {
+    color: '#10b981',
+    fontSize: 14,
+    marginBottom: 10,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
-    marginBottom: 16,
+    marginBottom: 10,
   },
   infoContent: {
     flex: 1,
   },
   infoLabel: {
     fontSize: 12,
-    color: Platform.OS === 'web' ? '#666' : '#9ca3af',
+    color: '#9ca3af',
     marginBottom: 2,
+  },
+  infoLabelLight: {
+    color: '#6B7280',
   },
   infoValue: {
     fontSize: 16,
-    color: Platform.OS === 'web' ? '#333' : '#FFFFFF',
+    color: '#FFFFFF',
     fontWeight: '600',
+  },
+  infoValueLight: {
+    color: '#111827',
   },
   paymentRow: {
     flexDirection: 'row',
@@ -492,12 +498,18 @@ const styles = StyleSheet.create({
   },
   paymentLabel: {
     fontSize: 14,
-    color: Platform.OS === 'web' ? '#666' : '#9ca3af',
+    color: '#9ca3af',
+  },
+  paymentLabelLight: {
+    color: '#6B7280',
   },
   paymentValue: {
     fontSize: 14,
-    color: Platform.OS === 'web' ? '#333' : '#FFFFFF',
+    color: '#FFFFFF',
     fontWeight: '600',
+  },
+  paymentValueLight: {
+    color: '#111827',
   },
   totalRow: {
     marginTop: 8,
@@ -506,30 +518,42 @@ const styles = StyleSheet.create({
   totalLabel: {
     fontSize: 16,
     fontWeight: '700',
-    color: Platform.OS === 'web' ? '#212121' : '#FFFFFF',
+    color: '#FFFFFF',
+  },
+  totalLabelLight: {
+    color: '#111827',
   },
   totalValue: {
     fontSize: 24,
     fontWeight: '800',
-    color: Platform.OS === 'web' ? '#dc8d3c' : '#00ea6b',
+    color: '#00ea6b',
+  },
+  totalValueLight: {
+    fontSize: 20,
+    color: '#10b981',
   },
   notes: {
     fontSize: 14,
-    color: Platform.OS === 'web' ? '#666' : '#FFFFFF',
+    color: '#FFFFFF',
     lineHeight: 22,
     opacity: 0.9,
   },
+  notesLight: {
+    color: '#374151',
+    opacity: 1,
+  },
   paymentCard: {
     marginBottom: 16,
-    ...Platform.select({
-      default: {
-        backgroundColor: '#06392e',
-        borderRadius: 16,
-        padding: 16,
-        borderWidth: 1,
-        borderColor: 'rgba(0,234,107,0.15)',
-      }
-    })
+    backgroundColor: '#06392e',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(0,234,107,0.15)',
+  },
+  paymentCardLight: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E5E7EB',
+    padding: 14,
   },
   backLink: {
     marginTop: 24,
@@ -538,16 +562,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: 14,
     borderRadius: 12,
-    ...Platform.select({
-      web: {
-        color: '#2563EB',
-      },
-      default: {
-        color: '#043529',
-        backgroundColor: '#00ea6b',
-        borderWidth: 1,
-        borderColor: '#00ea6b',
-      },
-    }),
+    color: '#043529',
+    backgroundColor: '#00ea6b',
+    borderWidth: 1,
+    borderColor: '#00ea6b',
+  },
+  backLinkWeb: {
+    backgroundColor: '#043529',
+    color: '#FFFFFF',
+    borderColor: '#043529',
   },
 });

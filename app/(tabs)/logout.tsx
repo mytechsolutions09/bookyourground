@@ -21,7 +21,7 @@ export default function LogoutScreen() {
     <View style={styles.container}>
       <ActivityIndicator
         size="small"
-        color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'}
+        color={Platform.OS === 'web' ? '#10b981' : '#2196F3'}
       />
     </View>
   );

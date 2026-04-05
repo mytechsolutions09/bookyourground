@@ -52,7 +52,7 @@ export const getStatusColor = (status: string): string => {
     case 'pending':
       return '#FFA500';
     case 'confirmed':
-      return Platform.OS === 'web' ? '#dc8d3c' : '#2196F3';
+      return Platform.OS === 'web' ? '#10b981' : '#2196F3';
     case 'completed':
       return '#4CAF50';
     case 'cancelled':

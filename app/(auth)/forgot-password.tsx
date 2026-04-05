@@ -244,8 +244,8 @@ const webStyles = StyleSheet.create({
   formTitle: { fontSize: 22, fontWeight: '800', color: '#f9fafb', marginTop: 4, marginBottom: 4 },
   formSubtitle: { fontSize: 14, color: '#9ca3af', marginBottom: 12, textAlign: 'center' },
   heroImage: { flex: 1, width: '50%' as any, overflow: 'hidden' },
-  button: { marginTop: 8, backgroundColor: '#01e669', borderRadius: 8, height: 40, alignItems: 'center', justifyContent: 'center', width: '100%' },
+  button: { marginTop: 8, backgroundColor: '#10b981', borderRadius: 8, height: 40, alignItems: 'center', justifyContent: 'center', width: '100%' },
   buttonText: { fontSize: 14, fontWeight: '700', color: '#043529', letterSpacing: 0.5 },
-  outlineButton: { marginTop: 8, borderRadius: 8, height: 40, borderWidth: 1.5, borderColor: '#01e669', alignItems: 'center', justifyContent: 'center', width: '100%' },
-  outlineButtonText: { fontSize: 14, fontWeight: '700', color: '#01e669', textTransform: 'uppercase' as any },
+  outlineButton: { marginTop: 8, borderRadius: 8, height: 40, borderWidth: 1.5, borderColor: '#10b981', alignItems: 'center', justifyContent: 'center', width: '100%' },
+  outlineButtonText: { fontSize: 14, fontWeight: '700', color: '#10b981', textTransform: 'uppercase' as any },
 });

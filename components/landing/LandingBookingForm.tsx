@@ -1419,7 +1419,7 @@ export default function LandingBookingForm({
       {searching ? (
         <ActivityIndicator
           style={styles.searchSpinner}
-          color="#01e669"
+          color="#10b981"
         />
       ) : null}
 
@@ -1504,8 +1504,9 @@ export default function LandingBookingForm({
     groundPageAccent && !isWeb && styles.labelBookGroundNative,
   ];
 
+  const isCompact = windowWidth < 900;
   const nativeTanChrome =
-    (bookGroundScreenNative || groundPageAccent) && !isWeb;
+    (bookGroundScreenNative || groundPageAccent) && (!isWeb || isCompact);
 
   const formFields = (
     <>
@@ -1679,7 +1680,7 @@ export default function LandingBookingForm({
           const datesForWeb = webDates;
           const datesForNative = nativeDates;
 
-          if (isWeb) {
+          if (isWeb && !isCompact) {
             return (
               <View style={styles.datePagerRow}>
                 <Pressable
@@ -1825,7 +1826,7 @@ export default function LandingBookingForm({
       <View style={[styles.section, webSingleColumnStyle, webFullSpanStyle]}>
         <Text style={fieldLabelStyle}>Start Time</Text>
 
-        {isWeb ? (
+        {isWeb && !isCompact ? (
           <View style={[styles.timeSlotsWrap, isBoxCricket && styles.timeSlotsWrapBox]}>
             {!timeSlots.length ? (
               <Text style={styles.smallMuted}>Select a ground type to see time slots.</Text>
@@ -1962,7 +1963,7 @@ export default function LandingBookingForm({
     >
       <ContainerComponent style={mainCardStyle}>
         {!hideTitle && (
-          <Text style={[styles.title, !isWeb && styles.titleMobile]}>Book a Ground</Text>
+          <Text style={[styles.title, (!isWeb || isCompact) && styles.titleMobile]}>Book a Ground</Text>
         )}
         {isWeb && (
           <Text style={styles.subtitle}>
@@ -1974,8 +1975,10 @@ export default function LandingBookingForm({
           </Text>
         )}
 
-        {isWeb ? (
+        {isWeb && !isCompact ? (
           <View style={styles.formFieldsWeb}>{formFields}</View>
+        ) : isWeb ? (
+          <View style={styles.formFieldsNative}>{formFields}</View>
         ) : (
           <ScrollView
             keyboardShouldPersistTaps="handled"
@@ -2042,7 +2045,7 @@ export default function LandingBookingForm({
                   loading={submitting}
                   fullWidth
                   size="large"
-                  style={nativeTanChrome ? { backgroundColor: '#01e669' } : undefined}
+                  style={nativeTanChrome ? { backgroundColor: '#10b981' } : undefined}
                   textStyle={nativeTanChrome ? styles.bookNowPrimaryButtonText : undefined}
                   loadingIndicatorColor={nativeTanChrome ? '#043529' : undefined}
                 />
@@ -2076,7 +2079,7 @@ export default function LandingBookingForm({
               fullWidth
               size={groundPageAccent && !isWeb ? 'small' : 'large'}
               style={
-                groundPageAccent || nativeTanChrome ? { backgroundColor: '#01e669' } : undefined
+                groundPageAccent || nativeTanChrome ? { backgroundColor: '#10b981' } : undefined
               }
               textStyle={
                 groundPageAccent || nativeTanChrome
@@ -2268,7 +2271,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '400',
     fontFamily: 'Inter',
-    color: '#374151',
+    color: '#E5E7EB',
     marginBottom: 6,
   },
   input: {
@@ -2465,19 +2468,23 @@ const styles = StyleSheet.create({
   /** Second card below the form when `separateSearchResults` (e.g. /book-my-ground). */
   searchResultsCard: {
     marginTop: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#043529',
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(0,234,107,0.15)',
   },
   searchResultsTitle: {
     fontSize: 20,
     fontWeight: '400',
     fontFamily: 'Inter',
-    color: '#111827',
+    color: '#F9FAFB',
     marginBottom: 4,
   },
   searchResultsSubtitle: {
     fontSize: 14,
     fontFamily: 'Inter',
-    color: '#6B7280',
+    color: '#E5E7EB',
     marginBottom: 12,
   },
   searchSpinner: {
@@ -2515,7 +2522,7 @@ const styles = StyleSheet.create({
   smallMutedOnWhite: {
     fontSize: 13,
     fontFamily: 'Inter',
-    color: '#6B7280',
+    color: '#9CA3AF',
   },
   dropdownOuter: {
     position: 'relative',

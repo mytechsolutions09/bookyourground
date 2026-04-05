@@ -245,7 +245,7 @@ export default function AdminLocationsManage() {
             <Card style={styles.rowCard}>
               <View style={styles.rowHeader}>
                 <View style={styles.iconPill}>
-                  <MapPin size={18} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
+                  <MapPin size={18} color={Platform.OS === 'web' ? '#10b981' : '#2196F3'} />
                 </View>
                 <View style={styles.rowMain}>
                   <Text style={styles.rowTitle}>{display}</Text>

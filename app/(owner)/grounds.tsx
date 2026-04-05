@@ -396,7 +396,9 @@ export default function OwnerGroundsScreen() {
             <Button
               title="Add Your First Ground"
               onPress={() => router.push('/(owner)/add-ground')}
-              style={styles.emptyButton}
+              style={[styles.emptyButton, { backgroundColor: '#043529', borderWidth: 1.5, borderColor: '#01b854' }]}
+              textStyle={{ color: '#01b854' }}
+              loadingIndicatorColor="#01b854"
             />
           </View>
         }
@@ -680,7 +682,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: IS_WEB ? '#dc8d3c' : '#00ea6b',
+    backgroundColor: IS_WEB ? '#10b981' : '#00ea6b',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -962,7 +964,7 @@ const locationDropdownStyles = StyleSheet.create({
     backgroundColor: IS_WEB ? '#FFFFFF' : 'rgba(4,53,41,0.6)',
   },
   buttonOpen: {
-    borderColor: IS_WEB ? '#dc8d3c' : '#00ea6b',
+    borderColor: IS_WEB ? '#10b981' : '#00ea6b',
     backgroundColor: IS_WEB ? 'rgba(220,141,60,0.05)' : 'rgba(0,234,107,0.1)',
   },
   buttonText: {

@@ -645,7 +645,7 @@ const webStyles = StyleSheet.create({
   },
   button: {
     flex: 1,
-    backgroundColor: '#01e669',
+    backgroundColor: '#10b981',
     borderRadius: 8,
     height: 40,
     alignItems: 'center',
@@ -662,14 +662,14 @@ const webStyles = StyleSheet.create({
     borderRadius: 8,
     height: 40,
     borderWidth: 1.5,
-    borderColor: '#01e669',
+    borderColor: '#10b981',
     alignItems: 'center',
     justifyContent: 'center',
   },
   outlineButtonText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#01e669',
+    color: '#10b981',
     textTransform: 'uppercase' as any,
   },
 });

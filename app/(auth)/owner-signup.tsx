@@ -357,8 +357,8 @@ const webStyles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 16 },
   col: { flex: 1 },
   buttonRow: { flexDirection: 'row', gap: 16, marginTop: 12 },
-  button: { flex: 1, backgroundColor: '#01e669', borderRadius: 10, height: 48, alignItems: 'center', justifyContent: 'center' },
+  button: { flex: 1, backgroundColor: '#10b981', borderRadius: 10, height: 48, alignItems: 'center', justifyContent: 'center' },
   buttonText: { fontSize: 15, fontWeight: '700', color: '#043529', letterSpacing: 0.5 },
-  outlineButton: { flex: 1, borderRadius: 10, height: 48, borderWidth: 1.5, borderColor: '#01e669', alignItems: 'center', justifyContent: 'center' },
-  outlineButtonText: { fontSize: 15, fontWeight: '700', color: '#01e669', textTransform: 'uppercase' as any },
+  outlineButton: { flex: 1, borderRadius: 10, height: 48, borderWidth: 1.5, borderColor: '#10b981', alignItems: 'center', justifyContent: 'center' },
+  outlineButtonText: { fontSize: 15, fontWeight: '700', color: '#10b981', textTransform: 'uppercase' as any },
 });

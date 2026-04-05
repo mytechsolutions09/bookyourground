@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
     minWidth: 160,
   },
   dropdownButtonOpen: {
-    borderColor: '#dc8d3c',
+    borderColor: '#10b981',
   },
   dropdownButtonText: {
     fontSize: 14,
@@ -434,7 +434,7 @@ const styles = StyleSheet.create({
     color: '#374151',
   },
   dropdownOptionTextActive: {
-    color: '#dc8d3c',
+    color: '#10b981',
   },
   dropdownBackdrop: {
     ...StyleSheet.absoluteFillObject,

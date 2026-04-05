@@ -1,5 +1,4 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, useWindowDimensions } from 'react-native';
 import { router } from 'expo-router';
 import {
   User,
@@ -19,19 +18,23 @@ import Button from '@/components/ui/Button';
 import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '../../components/MobileAppNavbar';
 
-const BG = '#043529';
-const ACCENT = '#02c259';
-const TEXT = '#dcc093';
+const THEME_BG = '#043529';
+const THEME_ACCENT = '#00ea6b';
+const THEME_TEXT = '#dcc093';
 
 export default function ProfileScreen() {
   const { user, profile, signOut } = useAuth();
+  const { width } = useWindowDimensions();
+  const isCompact = width < 900;
+  const isWeb = Platform.OS === 'web';
+
   const adminEmail = 'invirtualcoin@gmail.com';
   const isSuperAdmin =
     profile?.role === 'super_admin' ||
     (user?.email?.toLowerCase() ?? '') === adminEmail.toLowerCase();
 
   const handleSignOut = () => {
-    if (Platform.OS === 'web') {
+    if (isWeb) {
       if (confirm('Are you sure you want to sign out?')) {
         void signOut().then(() => router.replace('/'));
       }
@@ -61,15 +64,15 @@ export default function ProfileScreen() {
     }
   };
 
-  const iconMuted = Platform.OS === 'web' ? '#666' : ACCENT;
-  const chevronColor = Platform.OS === 'web' ? '#666' : ACCENT;
+  const iconMuted = THEME_ACCENT;
+  const chevronColor = isWeb && !isCompact ? '#666' : THEME_ACCENT;
 
   const profileBody = (
     <View style={styles.content}>
       <Card style={[styles.profileCard, styles.cardThemed]}>
         <View style={styles.avatarContainer}>
           <View style={styles.avatar}>
-            <User size={40} color={Platform.OS === 'web' ? '#dc8d3c' : ACCENT} />
+            <User size={40} color={THEME_ACCENT} />
           </View>
         </View>
         <Text style={styles.name}>{profile?.full_name}</Text>
@@ -91,7 +94,7 @@ export default function ProfileScreen() {
         )}
       </Card>
 
-      {Platform.OS !== 'web' && profile?.role === 'ground_owner' ? (
+      {(profile?.role === 'ground_owner' && (!isWeb || isCompact)) ? (
         <View style={[styles.menuCard, styles.ownerNavCard, styles.cardThemed]}>
           <Text style={styles.ownerNavTitle}>Ground owner</Text>
           <TouchableOpacity
@@ -99,7 +102,7 @@ export default function ProfileScreen() {
             onPress={() => router.push('/(owner)/dashboard' as any)}
           >
             <View style={styles.menuItemLeft}>
-              <LayoutDashboard size={20} color={ACCENT} />
+              <LayoutDashboard size={20} color={THEME_ACCENT} />
               <Text style={styles.menuItemText}>Dashboard</Text>
             </View>
             <ChevronRight size={20} color={chevronColor} />
@@ -109,7 +112,7 @@ export default function ProfileScreen() {
             onPress={() => router.push('/(owner)/grounds' as any)}
           >
             <View style={styles.menuItemLeft}>
-              <MapPin size={20} color={ACCENT} />
+              <MapPin size={20} color={THEME_ACCENT} />
               <Text style={styles.menuItemText}>My grounds</Text>
             </View>
             <ChevronRight size={20} color={chevronColor} />
@@ -119,7 +122,7 @@ export default function ProfileScreen() {
             onPress={() => router.push('/(owner)/bookings' as any)}
           >
             <View style={styles.menuItemLeft}>
-              <Calendar size={20} color={ACCENT} />
+              <Calendar size={20} color={THEME_ACCENT} />
               <Text style={styles.menuItemText}>Bookings</Text>
             </View>
             <ChevronRight size={20} color={chevronColor} />
@@ -129,7 +132,7 @@ export default function ProfileScreen() {
             onPress={() => router.push('/(owner)/earnings' as any)}
           >
             <View style={styles.menuItemLeft}>
-              <IndianRupee size={20} color={ACCENT} />
+              <IndianRupee size={20} color={THEME_ACCENT} />
               <Text style={styles.menuItemText}>Earnings</Text>
             </View>
             <ChevronRight size={20} color={chevronColor} />
@@ -139,7 +142,7 @@ export default function ProfileScreen() {
             onPress={() => router.push('/(owner)/add-ground' as any)}
           >
             <View style={styles.menuItemLeft}>
-              <PlusCircle size={20} color={ACCENT} />
+              <PlusCircle size={20} color={THEME_ACCENT} />
               <Text style={styles.menuItemText}>Add ground</Text>
             </View>
             <ChevronRight size={20} color={chevronColor} />
@@ -149,15 +152,13 @@ export default function ProfileScreen() {
             onPress={() => router.push('/(owner)/settings' as any)}
           >
             <View style={styles.menuItemLeft}>
-              <Settings size={20} color={ACCENT} />
+              <Settings size={20} color={THEME_ACCENT} />
               <Text style={styles.menuItemText}>Settings</Text>
             </View>
             <ChevronRight size={20} color={chevronColor} />
           </TouchableOpacity>
         </View>
-      ) : null}
-
-      {Platform.OS === 'web' && profile?.role === 'ground_owner' ? (
+      ) : profile?.role === 'ground_owner' && isWeb && !isCompact ? ( // Only for desktop owners, mobile owners use the compact menu above
         <View style={styles.menuCard}>
           <TouchableOpacity
             style={styles.menuItem}
@@ -205,7 +206,7 @@ export default function ProfileScreen() {
         </TouchableOpacity>
       </View>
 
-      {Platform.OS !== 'web' && (
+      {(isCompact || !isWeb) && (
         <Button
           title="Sign Out"
           onPress={handleSignOut}
@@ -236,27 +237,21 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
-  cardThemed: Platform.select({
-    web: {},
-    default: {
-      backgroundColor: '#06392e',
-      borderWidth: 1,
-      borderColor: 'rgba(0,234,107,0.2)',
-      borderRadius: 12,
-      elevation: 0,
-      shadowOpacity: 0,
-      shadowRadius: 0,
-      shadowOffset: { width: 0, height: 0 },
-    },
-  }),
-  roleBadgeThemed: Platform.select({
-    web: {},
-    default: {
-      backgroundColor: 'transparent',
-      borderWidth: 1,
-      borderColor: 'rgba(0,234,107,0.4)',
-    },
-  }),
+  cardThemed: {
+    backgroundColor: '#06392e',
+    borderWidth: 1,
+    borderColor: 'rgba(0,234,107,0.2)',
+    borderRadius: 12,
+    elevation: 0,
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  roleBadgeThemed: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: 'rgba(0,234,107,0.4)',
+  },
   nativeScreen: {
     flex: 1,
     backgroundColor: '#043529',
@@ -311,40 +306,28 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    ...Platform.select({
-      web: { backgroundColor: '#2b2f4b' },
-      default: {
-        backgroundColor: BG,
-        borderWidth: 1,
-        borderColor: ACCENT,
-      },
-    }),
+    backgroundColor: THEME_BG,
+    borderWidth: 1,
+    borderColor: THEME_ACCENT,
   },
   name: {
     fontSize: 22,
     fontWeight: '700',
     marginBottom: 8,
-    ...Platform.select({
-      web: { color: '#212121' },
-      default: { color: TEXT },
-    }),
+    color: THEME_TEXT,
   },
   roleBadge: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 16,
-    ...Platform.select({
-      web: { backgroundColor: '#2b2f4b' },
-      default: {},
-    }),
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: THEME_ACCENT,
   },
   roleText: {
     fontSize: 14,
     fontWeight: '600',
-    ...Platform.select({
-      web: { color: '#dc8d3c' },
-      default: { color: TEXT },
-    }),
+    color: THEME_TEXT,
   },
   infoCard: {
     marginTop: 16,
@@ -357,10 +340,7 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 16,
-    ...Platform.select({
-      web: { color: '#333' },
-      default: { color: TEXT },
-    }),
+    color: THEME_TEXT,
   },
   menuItem: {
     flexDirection: 'row',
@@ -373,16 +353,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    ...Platform.select({
-      web: {
-        backgroundColor: '#FFFFFF',
-        shadowColor: '#000',
-        shadowOpacity: 0.04,
-        shadowRadius: 12,
-        shadowOffset: { width: 0, height: 4 },
-      },
-      default: {},
-    }),
+    backgroundColor: '#06392e',
+    borderWidth: 1,
+    borderColor: 'rgba(0,234,107,0.2)',
   },
   ownerNavCard: {
     paddingTop: 12,
@@ -394,10 +367,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     marginBottom: 4,
     paddingHorizontal: 0,
-    ...Platform.select({
-      web: { color: '#6B7280' },
-      default: { color: TEXT },
-    }),
+    color: THEME_TEXT,
   },
   menuItemLeft: {
     flexDirection: 'row',
@@ -407,10 +377,7 @@ const styles = StyleSheet.create({
   menuItemText: {
     fontSize: 16,
     fontWeight: '600',
-    ...Platform.select({
-      web: { color: '#333' },
-      default: { color: TEXT },
-    }),
+    color: THEME_TEXT,
   },
   signOutButton: {
     marginTop: 24,

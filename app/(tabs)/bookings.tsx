@@ -23,6 +23,8 @@ export default function BookingsScreen() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
   const { width } = useWindowDimensions();
+  const isWeb = Platform.OS === 'web';
+  const IS_DARK = !isWeb || (width < 900);
   const isWideWeb = Platform.OS === 'web' && width >= 1100;
   const isExtraWideWeb = Platform.OS === 'web' && width >= 1350;
   const isMediumWeb = Platform.OS === 'web' && width >= 768 && width < 1100;
@@ -98,8 +100,8 @@ export default function BookingsScreen() {
   const visibleBookings = activeTab === 'upcoming' ? upcomingBookings : pastBookings;
 
   const content = (
-    <View style={[styles.container, Platform.OS === 'web' && styles.webContainer]}>
-      {Platform.OS === 'web' ? (
+    <View style={[styles.container, isWeb && !IS_DARK && styles.webContainerRoot]}>
+      {isWeb && !IS_DARK ? (
         <View style={styles.webCard}>
           <View style={[styles.header, styles.webHeader]}>
             <View>
@@ -272,10 +274,10 @@ export default function BookingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    ...Platform.select({
-      web: { backgroundColor: '#F5F5F5' },
-      default: { backgroundColor: '#043529' },
-    }),
+    backgroundColor: '#043529',
+  },
+  webContainerRoot: {
+    backgroundColor: '#F5F5F5',
   },
   nativeScreen: {
     flex: 1,
@@ -321,18 +323,19 @@ const styles = StyleSheet.create({
     color: '#043529',
   },
   header: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#043529',
     paddingHorizontal: 20,
     paddingTop: 14,
     paddingBottom: 14,
     borderBottomWidth: 0,
   },
   webHeader: {
+    backgroundColor: '#FFFFFF',
     paddingTop: 22,
     paddingHorizontal: 24,
     paddingBottom: 18,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(229,231,235,0.9)',
+    borderBottomColor: 'rgba(0,0,0,0.05)',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     flexDirection: 'row',
@@ -381,7 +384,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     paddingBottom: 8,
     borderWidth: 1,
-    borderColor: 'rgba(229,231,235,0.9)',
+    borderColor: 'rgba(0,0,0,0.05)',
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowRadius: 18,
@@ -411,15 +414,15 @@ const styles = StyleSheet.create({
   },
   emptyTextNative: {
     fontSize: 15,
-    color: '#E5E7EB',
+    color: '#9ca3af',
   },
   badgePill: {
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 999,
-    backgroundColor: 'rgba(220,141,60,0.08)',
+    backgroundColor: 'rgba(0,234,107,0.05)',
     borderWidth: 1,
-    borderColor: 'rgba(220,141,60,0.25)',
+    borderColor: 'rgba(0,234,107,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
     minWidth: 78,
@@ -427,7 +430,7 @@ const styles = StyleSheet.create({
   badgePillNumber: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#dc8d3c',
+    color: '#00ea6b',
   },
   badgePillLabel: {
     fontSize: 11,
@@ -441,23 +444,24 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   tabChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#374151',
-    backgroundColor: '#111827',
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F3F4F6',
   },
   tabChipActive: {
-    backgroundColor: '#F9FAFB',
-    borderColor: '#F9FAFB',
+    backgroundColor: '#00ea6b',
+    borderColor: '#00ea6b',
   },
   tabChipText: {
     fontSize: 13,
-    color: '#D1D5DB',
+    color: '#4B5563',
+    fontWeight: '600',
   },
   tabChipTextActive: {
-    color: '#111827',
-    fontWeight: '600',
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
 });

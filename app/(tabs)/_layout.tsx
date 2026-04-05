@@ -77,7 +77,7 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: '#00ea6b',
-        tabBarInactiveTintColor: '#e5e7eb',
+        tabBarInactiveTintColor: '#9ca3af',
         ...(Platform.OS === 'web'
           ? {
               tabBarStyle: webTabBarStyle,
@@ -90,36 +90,21 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ color, size }) =>
-            Platform.OS === 'web' ? (
-              <Home size={size} color={color} />
-            ) : (
-              <House size={size} color={color} />
-            ),
+          tabBarIcon: ({ color, size }) => <House size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="grounds"
         options={{
           title: 'Grounds',
-          tabBarIcon: ({ color, size }) =>
-            Platform.OS === 'web' ? (
-              <Building2 size={size} color={color} />
-            ) : (
-              <LandPlot size={size} color={color} />
-            ),
+          tabBarIcon: ({ color, size }) => <LandPlot size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="bookings"
         options={{
           title: 'Bookings',
-          tabBarIcon: ({ color, size }) =>
-            Platform.OS === 'web' ? (
-              <Calendar size={size} color={color} />
-            ) : (
-              <CalendarCheck2 size={size} color={color} />
-            ),
+          tabBarIcon: ({ color, size }) => <CalendarCheck2 size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -135,12 +120,7 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color, size }) =>
-            Platform.OS === 'web' ? (
-              <User size={size} color={color} />
-            ) : (
-              <CircleUser size={size} color={color} />
-            ),
+          tabBarIcon: ({ color, size }) => <CircleUser size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -150,9 +130,7 @@ export default function TabLayout() {
           // When not authenticated, route this tab to the login screen
           href: user ? undefined : '/(auth)/login',
           tabBarIcon: ({ color, size }) =>
-            Platform.OS === 'web' ? (
-              <LogOut size={size} color={color} />
-            ) : user ? (
+            user ? (
               <LogOut size={size} color={color} />
             ) : (
               <LogIn size={size} color={color} />

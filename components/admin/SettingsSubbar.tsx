@@ -23,7 +23,7 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
           onPress={() => router.push(BASE as any)}
           style={[styles.subLink, isGeneral && styles.subLinkActive]}
         >
-          <SettingsIcon size={18} color={isGeneral ? '#dc8d3c' : '#666'} />
+          <SettingsIcon size={18} color={isGeneral ? '#10b981' : '#666'} />
           <Text style={[styles.subLinkText, isGeneral && styles.subLinkTextActive]}>General</Text>
         </Pressable>
 
@@ -31,7 +31,7 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
           onPress={() => router.push((BASE + '/locations') as any)}
           style={[styles.subLink, isLocations && styles.subLinkActive]}
         >
-          <MapPin size={18} color={isLocations ? '#dc8d3c' : '#666'} />
+          <MapPin size={18} color={isLocations ? '#10b981' : '#666'} />
           <Text style={[styles.subLinkText, isLocations && styles.subLinkTextActive]}>
             Locations
           </Text>
@@ -41,7 +41,7 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
           onPress={() => router.push((BASE + '/ground-types') as any)}
           style={[styles.subLink, isGroundTypes && styles.subLinkActive]}
         >
-          <Tag size={18} color={isGroundTypes ? '#dc8d3c' : '#666'} />
+          <Tag size={18} color={isGroundTypes ? '#10b981' : '#666'} />
           <Text style={[styles.subLinkText, isGroundTypes && styles.subLinkTextActive]}>
             Ground types
           </Text>
@@ -51,7 +51,7 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
           onPress={() => router.push((BASE + '/support') as any)}
           style={[styles.subLink, isSupport && styles.subLinkActive]}
         >
-          <LifeBuoy size={18} color={isSupport ? '#dc8d3c' : '#666'} />
+          <LifeBuoy size={18} color={isSupport ? '#10b981' : '#666'} />
           <Text style={[styles.subLinkText, isSupport && styles.subLinkTextActive]}>
             Support
           </Text>
@@ -114,7 +114,7 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   subLinkTextActive: {
-    color: '#dc8d3c',
+    color: '#10b981',
   },
   content: {
     flex: 1,

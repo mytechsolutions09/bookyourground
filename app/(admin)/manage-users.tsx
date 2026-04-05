@@ -91,7 +91,7 @@ export default function ManageUsersScreen() {
       case 'super_admin':
         return '#F44336';
       default:
-        return Platform.OS === 'web' ? '#dc8d3c' : '#2196F3';
+        return Platform.OS === 'web' ? '#10b981' : '#2196F3';
     }
   };
 
@@ -141,7 +141,7 @@ export default function ManageUsersScreen() {
         <Card style={styles.userCard}>
           <View style={styles.userHeader}>
             <View style={styles.avatarContainer}>
-                <User size={24} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
+                <User size={24} color={Platform.OS === 'web' ? '#10b981' : '#2196F3'} />
             </View>
             <View style={styles.userInfo}>
               <Text style={styles.userName}>{item.full_name}</Text>

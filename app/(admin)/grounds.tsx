@@ -1469,7 +1469,7 @@ const styles = StyleSheet.create({
     minWidth: 160,
   },
   dropdownButtonOpen: {
-    borderColor: '#dc8d3c',
+    borderColor: '#10b981',
     backgroundColor: 'rgba(220,141,60,0.08)',
   },
   dropdownButtonText: {
@@ -1503,7 +1503,7 @@ const styles = StyleSheet.create({
     color: '#374151',
   },
   dropdownOptionTextActive: {
-    color: '#dc8d3c',
+    color: '#10b981',
   },
   chipsWrap: {
     flexDirection: 'row',
@@ -1519,7 +1519,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   chipActive: {
-    borderColor: '#dc8d3c',
+    borderColor: '#10b981',
     backgroundColor: 'rgba(220,141,60,0.12)',
   },
   chipText: {
@@ -1528,7 +1528,7 @@ const styles = StyleSheet.create({
     color: '#374151',
   },
   chipTextActive: {
-    color: '#dc8d3c',
+    color: '#10b981',
   },
   viewToggle: {
     flexDirection: 'row',
@@ -1543,7 +1543,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   viewToggleOptionActive: {
-    borderColor: '#dc8d3c',
+    borderColor: '#10b981',
     backgroundColor: 'rgba(220,141,60,0.12)',
   },
   viewToggleText: {
@@ -1552,7 +1552,7 @@ const styles = StyleSheet.create({
     color: '#374151',
   },
   viewToggleTextActive: {
-    color: '#dc8d3c',
+    color: '#10b981',
   },
   controlsRow: {
     marginTop: 10,
@@ -1645,8 +1645,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(245,124,0,0.10)',
   },
   badgeActive: {
-    borderColor: '#dc8d3c',
-    color: '#dc8d3c',
+    borderColor: '#10b981',
+    color: '#10b981',
     backgroundColor: 'rgba(220,141,60,0.10)',
   },
   badgeInactive: {

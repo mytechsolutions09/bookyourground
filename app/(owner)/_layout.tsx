@@ -27,7 +27,7 @@ export default function OwnerLayout() {
   if (loading && !user) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
+        <ActivityIndicator size="large" color={Platform.OS === 'web' ? '#10b981' : '#2196F3'} />
         <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );

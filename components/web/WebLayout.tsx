@@ -9,7 +9,7 @@ import {
   useWindowDimensions,
   TextInput,
 } from 'react-native';
-import { router, usePathname } from 'expo-router';
+import { router, usePathname, useSegments } from 'expo-router';
 import {
   Hop as Home, // still used for some public nav
   LayoutDashboard,
@@ -38,6 +38,7 @@ interface WebLayoutProps {
 export default function WebLayout({ children }: WebLayoutProps) {
   const { profile, signOut, user } = useAuth();
   const pathname = usePathname();
+  const segments = useSegments();
   const { width } = useWindowDimensions();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -189,15 +190,25 @@ export default function WebLayout({ children }: WebLayoutProps) {
       return value;
     };
 
-    const currentPath = normalize(pathname);
-    const targetHref = normalize(href);
+    const clean = (p: string) => p.replace(/\/\([^)]+\)/g, '');
+    const currentPath = clean(normalize(pathname));
+    const targetHref = clean(normalize(href));
+    
+    // Improved isActive check using segments to distinguish grouped routes (e.g. (owner) vs (tabs))
+    const hrefSegments = href.split('/').filter(Boolean);
     const isActive =
-      currentPath === targetHref || currentPath.startsWith(targetHref + '/');
+      (hrefSegments.every((seg, i) => segments[i] === seg)) ||
+      (currentPath === targetHref && targetHref !== '/');
+    const iconColor = isActive 
+      ? (!isCompact ? '#043529' : '#00ea6b') 
+      : (isCompact ? '#dcc093' : '#6B7280');
+    const activeStyle = isCompact ? styles.navLinkActiveMobile : styles.navLinkActive;
+
     return (
       <TouchableOpacity
         style={[
           styles.navLink,
-          isActive && styles.navLinkActive,
+          isActive && activeStyle,
           hideLabel && styles.navLinkCollapsed,
         ]}
         onPress={() => {
@@ -209,16 +220,24 @@ export default function WebLayout({ children }: WebLayoutProps) {
           setMenuOpen(false);
         }}
       >
-        <Icon size={20} color={isActive ? '#dc8d3c' : '#666'} />
+        <Icon size={20} color={iconColor} />
         {!hideLabel && (
-          <Text style={[styles.navLinkText, isActive && styles.navLinkTextActive]}>{label}</Text>
+          <Text
+            style={[
+              styles.navLinkText,
+              isCompact && styles.navLinkTextMobile,
+              isActive && styles.navLinkTextActive,
+            ]}
+          >
+            {label}
+          </Text>
         )}
       </TouchableOpacity>
     );
   };
 
   const isAdminLayout = isSuperAdmin && isAdminRoute;
-  const bodyStyle = isPublicNoSidebar ? styles.bodyFull : isAdminLayout ? styles.bodyAdmin : styles.body;
+  const bodyStyle = (isPublicNoSidebar || isCompact) ? styles.bodyFull : isAdminLayout ? styles.bodyAdmin : styles.body;
   // Ground/booking detail pretty URLs must always get the top bar (logo, search, Grounds, Sign in).
   // Do not exclude super admins here — otherwise neither hero nor the app header renders on /ground/... .
   const showHeroHeader =
@@ -264,9 +283,9 @@ export default function WebLayout({ children }: WebLayoutProps) {
                   onPress={() => setMenuOpen((prev) => !prev)}
                 >
                   {menuOpen ? (
-                    <X size={20} color="#F9FAFB" />
+                    <X size={20} color="#dcc093" />
                   ) : (
-                    <Menu size={20} color="#F9FAFB" />
+                    <Menu size={20} color="#dcc093" />
                   )}
                 </TouchableOpacity>
               ) : (
@@ -350,7 +369,15 @@ export default function WebLayout({ children }: WebLayoutProps) {
                   ) : (
                     <Text
                       style={styles.headerSecondaryButtonText}
-                      onPress={() => router.push('/(tabs)/dashboard' as any)}
+                      onPress={() => {
+                        if (isSuperAdmin) {
+                          router.push('/(admin)/dashboard' as any);
+                        } else if (isGroundOwner) {
+                          router.push('/(owner)/dashboard' as any);
+                        } else {
+                          router.push('/(tabs)/dashboard' as any);
+                        }
+                      }}
                     >
                       Dashboard
                     </Text>
@@ -392,9 +419,9 @@ export default function WebLayout({ children }: WebLayoutProps) {
                   onPress={() => setMenuOpen((prev) => !prev)}
                 >
                   {menuOpen ? (
-                    <X size={20} color="#F9FAFB" />
+                    <X size={20} color="#dcc093" />
                   ) : (
-                    <Menu size={20} color="#F9FAFB" />
+                    <Menu size={20} color="#dcc093" />
                   )}
                 </TouchableOpacity>
               ) : (
@@ -418,131 +445,132 @@ export default function WebLayout({ children }: WebLayoutProps) {
           showAdminMobileMenu ||
           showUserMobileMenu) &&
           menuOpen && (
-          <>
-            <TouchableOpacity
-              activeOpacity={1}
-              style={styles.mobileOverlay}
-              onPress={() => setMenuOpen(false)}
-            />
-            <View style={styles.sidebarMobile}>
-              {showLandingMobileMenu &&
-                !showOwnerMobileMenu &&
-                !showAdminMobileMenu &&
-                !showUserMobileMenu && (
-                <>
-                  <Text style={styles.sidebarTitle}>Get started</Text>
-                  <TouchableOpacity
-                    style={styles.mobilePrimaryButton}
-                    onPress={() => {
-                      setMenuOpen(false);
-                      router.push(groundsHref as any);
-                    }}
-                  >
-                    <Text style={styles.mobilePrimaryButtonText}>Grounds</Text>
-                  </TouchableOpacity>
+            <>
+              <TouchableOpacity
+                activeOpacity={1}
+                style={styles.mobileOverlay}
+                onPress={() => setMenuOpen(false)}
+              />
+              <View style={styles.sidebarMobile}>
+                {showLandingMobileMenu &&
+                  !showOwnerMobileMenu &&
+                  !showAdminMobileMenu &&
+                  !showUserMobileMenu && (
+                    <>
+                      <Text style={styles.sidebarTitle}>Get started</Text>
+                      <TouchableOpacity
+                        style={styles.mobilePrimaryButton}
+                        onPress={() => {
+                          setMenuOpen(false);
+                          router.push(groundsHref as any);
+                        }}
+                      >
+                        <Text style={styles.mobilePrimaryButtonText}>Grounds</Text>
+                      </TouchableOpacity>
 
-                  {!isAuthenticated ? (
-                    <TouchableOpacity
-                      style={styles.mobileSecondaryButton}
-                      onPress={() => {
-                        setMenuOpen(false);
-                        router.push('/(auth)/login' as any);
-                      }}
-                    >
-                      <Text style={styles.mobileSecondaryButtonText}>Sign in</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity
-                      style={styles.mobileSecondaryButton}
-                      onPress={() => {
-                        setMenuOpen(false);
-                        router.push('/(tabs)/profile' as any);
-                      }}
-                    >
-                      <Text style={styles.mobileSecondaryButtonText}>Profile</Text>
-                    </TouchableOpacity>
+                      {!isAuthenticated ? (
+                        <TouchableOpacity
+                          style={styles.mobileSecondaryButton}
+                          onPress={() => {
+                            setMenuOpen(false);
+                            router.push('/(auth)/login' as any);
+                          }}
+                        >
+                          <Text style={styles.mobileSecondaryButtonText}>Sign in</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <TouchableOpacity
+                          style={styles.mobileSecondaryButton}
+                          onPress={() => {
+                            setMenuOpen(false);
+                            router.push('/(tabs)/profile' as any);
+                          }}
+                        >
+                          <Text style={styles.mobileSecondaryButtonText}>Profile</Text>
+                        </TouchableOpacity>
+                      )}
+                    </>
                   )}
-                </>
-              )}
 
-              {showOwnerMobileMenu && (
-                <>
-                  <Text style={styles.sidebarTitle}>Ground owner</Text>
-                  <NavLink href="/(owner)/dashboard" icon={LayoutDashboard} label="Dashboard" />
-                  <NavLink href="/(owner)/grounds" icon={MapPin} label="My grounds" />
-                  <NavLink href="/(owner)/bookings" icon={Calendar} label="Bookings" />
-                  <NavLink href="/(owner)/earnings" icon={IndianRupee} label="Earnings" />
-                  <NavLink href="/(owner)/add-ground" icon={PlusCircle} label="Add ground" />
-                  <NavLink href="/(owner)/settings" icon={Settings} label="Settings" />
+                {showOwnerMobileMenu && (
+                  <>
+                    <Text style={styles.sidebarTitle}>Ground owner</Text>
+                    <NavLink href="/(owner)/dashboard" icon={LayoutDashboard} label="Dashboard" />
+                    <NavLink href="/(owner)/grounds" icon={MapPin} label="My grounds" />
+                    <NavLink href="/(owner)/bookings" icon={Calendar} label="Bookings" />
+                    <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
+                    <NavLink href="/(owner)/earnings" icon={IndianRupee} label="Earnings" />
+                    <NavLink href="/(owner)/add-ground" icon={PlusCircle} label="Add ground" />
+                    <NavLink href="/(owner)/settings" icon={Settings} label="Settings" />
 
-                  <View style={styles.sidebarDivider} />
-                  <TouchableOpacity
-                    style={styles.signOutButton}
-                    onPress={async () => {
-                      await handleSignOut();
-                      setMenuOpen(false);
-                    }}
-                  >
-                    <LogOut size={18} color="#E5E7EB" />
-                    <Text style={styles.signOutText}>Sign out</Text>
-                  </TouchableOpacity>
-                </>
-              )}
+                    <View style={styles.sidebarDivider} />
+                    <TouchableOpacity
+                      style={[styles.signOutButton, isCompact && styles.signOutButtonMobile]}
+                      onPress={async () => {
+                        await handleSignOut();
+                        setMenuOpen(false);
+                      }}
+                    >
+                      <LogOut size={18} color={isCompact ? '#dcc093' : '#E5E7EB'} />
+                      <Text style={[styles.signOutText, isCompact && styles.signOutTextMobile]}>Sign out</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
 
-              {showAdminMobileMenu && (
-                <>
-                  <Text style={styles.sidebarTitle}>Super admin</Text>
-                  <NavLink href="/(admin)/dashboard" icon={LayoutDashboard} label="Dashboard" />
-                  <NavLink href="/(admin)/bookings" icon={Calendar} label="Bookings" />
-                  <NavLink href="/(admin)/grounds" icon={MapPin} label="Grounds" />
-                  <NavLink href="/(owner)/add-ground" icon={PlusCircle} label="Add ground" />
-                  <NavLink href="/(admin)/earnings" icon={IndianRupee} label="Earnings" />
-                  <NavLink href="/(admin)/withdrawals" icon={Wallet2} label="Withdraw" />
-                  <NavLink
-                    href="/(admin)/manage-ground-owners"
-                    icon={Shield}
-                    label="Ground owners"
-                  />
-                  <NavLink href="/(admin)/manage-users" icon={User} label="Users" />
-                  <NavLink href="/(admin)/settings" icon={Settings} label="Settings" />
+                {showAdminMobileMenu && (
+                  <>
+                    <Text style={styles.sidebarTitle}>Super admin</Text>
+                    <NavLink href="/(admin)/dashboard" icon={LayoutDashboard} label="Dashboard" />
+                    <NavLink href="/(admin)/bookings" icon={Calendar} label="Bookings" />
+                    <NavLink href="/(admin)/grounds" icon={MapPin} label="Grounds" />
+                    <NavLink href="/(owner)/add-ground" icon={PlusCircle} label="Add ground" />
+                    <NavLink href="/(admin)/earnings" icon={IndianRupee} label="Earnings" />
+                    <NavLink href="/(admin)/withdrawals" icon={Wallet2} label="Withdraw" />
+                    <NavLink
+                      href="/(admin)/manage-ground-owners"
+                      icon={Shield}
+                      label="Ground owners"
+                    />
+                    <NavLink href="/(admin)/manage-users" icon={User} label="Users" />
+                    <NavLink href="/(admin)/settings" icon={Settings} label="Settings" />
 
-                  <View style={styles.sidebarDivider} />
-                  <TouchableOpacity
-                    style={styles.signOutButton}
-                    onPress={async () => {
-                      await handleSignOut();
-                      setMenuOpen(false);
-                    }}
-                  >
-                    <LogOut size={18} color="#E5E7EB" />
-                    <Text style={styles.signOutText}>Sign out</Text>
-                  </TouchableOpacity>
-                </>
-              )}
+                    <View style={styles.sidebarDivider} />
+                    <TouchableOpacity
+                      style={[styles.signOutButton, isCompact && styles.signOutButtonMobile]}
+                      onPress={async () => {
+                        await handleSignOut();
+                        setMenuOpen(false);
+                      }}
+                    >
+                      <LogOut size={18} color={isCompact ? '#dcc093' : '#E5E7EB'} />
+                      <Text style={[styles.signOutText, isCompact && styles.signOutTextMobile]}>Sign out</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
 
-              {showUserMobileMenu && (
-                <>
-                  <Text style={styles.sidebarTitle}>My Account</Text>
-                  <NavLink href="/(tabs)/dashboard" icon={LayoutDashboard} label="Dashboard" />
-                  <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
-                  <NavLink href="/(tabs)/profile" icon={User} label="Profile" />
+                {showUserMobileMenu && (
+                  <>
+                    <Text style={styles.sidebarTitle}>My Account</Text>
+                    <NavLink href="/(tabs)/dashboard" icon={LayoutDashboard} label="Dashboard" />
+                    <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
+                    <NavLink href="/(tabs)/profile" icon={User} label="Profile" />
 
-                  <View style={styles.sidebarDivider} />
-                  <TouchableOpacity
-                    style={[styles.signOutButton, styles.signOutButtonUser]}
-                    onPress={async () => {
-                      await handleSignOut();
-                      setMenuOpen(false);
-                    }}
-                  >
-                    <LogOut size={18} color="#E5E7EB" />
-                    <Text style={styles.signOutText}>Sign out</Text>
-                  </TouchableOpacity>
-                </>
-              )}
-            </View>
-          </>
-        )}
+                    <View style={styles.sidebarDivider} />
+                    <TouchableOpacity
+                      style={[styles.signOutButton, styles.signOutButtonUser, isCompact && styles.signOutButtonMobile]}
+                      onPress={async () => {
+                        await handleSignOut();
+                        setMenuOpen(false);
+                      }}
+                    >
+                      <LogOut size={18} color={isCompact ? '#dcc093' : '#E5E7EB'} />
+                      <Text style={[styles.signOutText, isCompact && styles.signOutTextMobile]}>Sign out</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
+            </>
+          )}
 
         {showMenuPanel ? (
           <View style={styles.sidebarContainer}>
@@ -636,7 +664,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
                         ]}
                         onPress={handleSignOut}
                       >
-                        <LogOut size={18} color="#E5E7EB" />
+                        <LogOut size={18} color="#01b854" />
                         {!sidebarCollapsed && <Text style={styles.signOutText}>Sign out</Text>}
                       </TouchableOpacity>
                     </>
@@ -646,6 +674,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
                       <NavLink href="/(owner)/dashboard" icon={LayoutDashboard} label="Dashboard" />
                       <NavLink href="/(owner)/grounds" icon={MapPin} label="My grounds" />
                       <NavLink href="/(owner)/bookings" icon={Calendar} label="Bookings" />
+                      <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
                       <NavLink href="/(owner)/earnings" icon={IndianRupee} label="Earnings" />
                       <NavLink href="/(owner)/add-ground" icon={PlusCircle} label="Add ground" />
                       <NavLink href="/(owner)/settings" icon={Settings} label="Settings" />
@@ -655,7 +684,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
                         style={styles.signOutButton}
                         onPress={handleSignOut}
                       >
-                        <LogOut size={18} color="#E5E7EB" />
+                        <LogOut size={18} color="#01b854" />
                         <Text style={styles.signOutText}>Sign out</Text>
                       </TouchableOpacity>
                     </>
@@ -675,7 +704,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
                         style={styles.signOutButton}
                         onPress={handleSignOut}
                       >
-                        <LogOut size={18} color="#E5E7EB" />
+                        <LogOut size={18} color="#01b854" />
                         <Text style={styles.signOutText}>Sign out</Text>
                       </TouchableOpacity>
                     </>
@@ -780,7 +809,7 @@ const styles = StyleSheet.create({
   sidebarBrandText: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#dc8d3c',
+    color: '#10b981',
     fontFamily: 'Inter',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -854,9 +883,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-    backgroundColor: '#111827',
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: '#043529',
+    borderWidth: 1.5,
+    borderColor: '#01b854',
   },
   signOutButtonUser: {
     backgroundColor: '#2b2f4b',
@@ -867,7 +898,16 @@ const styles = StyleSheet.create({
   },
   signOutText: {
     fontSize: 14,
-    color: '#E5E7EB',
+    color: '#01b854',
+    fontWeight: '700',
+  },
+  signOutTextMobile: {
+    color: '#dcc093',
+  },
+  signOutButtonMobile: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(220,192,147,0.2)',
   },
   body: {
     flex: 1,
@@ -922,14 +962,19 @@ const styles = StyleSheet.create({
     top: 0,
     right: 0,
     left: 'auto' as any,
-    width: 220,
+    width: 280,
     bottom: 0,
-    backgroundColor: '#FFFFFF',
-    borderRightWidth: 1,
-    borderRightColor: '#E0E0E0',
-    borderLeftWidth: 0,
-    padding: 16,
+    backgroundColor: '#043529',
+    borderLeftWidth: 1,
+    borderLeftColor: 'rgba(220,192,147,0.15)',
+    borderRightWidth: 0,
+    padding: 24,
+    paddingTop: 80,
     zIndex: 3000,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    shadowOffset: { width: -4, height: 0 },
   },
   navLink: {
     flexDirection: 'row',
@@ -945,7 +990,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
   },
   navLinkActive: {
-    backgroundColor: '#2b2f4b',
+    backgroundColor: 'transparent',
   },
   sidebarHeaderOffset: {
     // Keep sidebar content below the landing hero header (logo + burger).
@@ -960,8 +1005,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#666',
   },
+  navLinkTextMobile: {
+    color: '#dcc093',
+  },
   navLinkTextActive: {
-    color: '#dc8d3c',
+    color: '#043529',
+    fontWeight: '700',
+  },
+  navLinkActiveMobile: {
+    backgroundColor: 'rgba(220,141,60,0.12)',
   },
   burgerButton: {
     width: 40,
@@ -979,11 +1031,12 @@ const styles = StyleSheet.create({
   sidebarTitle: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#999',
+    color: '#dcc093',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 8,
+    letterSpacing: 0.8,
+    marginBottom: 16,
     marginLeft: 12,
+    opacity: 0.8,
   },
   main: {
     flex: 1,
@@ -1028,14 +1081,14 @@ const styles = StyleSheet.create({
   },
   sidebarDivider: {
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: 'rgba(220,192,147,0.15)',
     marginVertical: 12,
   },
   headerPrimaryButton: {
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 999,
-    backgroundColor: '#dc8d3c',
+    backgroundColor: '#10b981',
   },
   headerPrimaryButtonText: {
     fontSize: 14,
@@ -1064,7 +1117,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 10,
-    backgroundColor: '#dc8d3c',
+    backgroundColor: '#10b981',
     width: '100%',
   },
   mobilePrimaryButtonText: {
@@ -1079,15 +1132,15 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 10,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: 'rgba(220,192,147,0.3)',
     width: '100%',
   },
   mobileSecondaryButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#111827',
+    color: '#dcc093',
     textAlign: 'center',
     fontFamily: 'Inter',
   },

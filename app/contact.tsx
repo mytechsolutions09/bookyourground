@@ -326,7 +326,7 @@ const styles = {
   },
   submitButton: {
     marginTop: 16,
-    backgroundColor: '#dc8d3c',
+    backgroundColor: '#10b981',
     borderRadius: 999,
     paddingVertical: 12,
     alignItems: 'center',

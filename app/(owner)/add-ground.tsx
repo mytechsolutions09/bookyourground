@@ -1054,7 +1054,7 @@ export default function AddGroundScreen() {
     </KeyboardAvoidingView>
   );
 
-  if (Platform.OS === 'web') {
+  if (Platform.OS === 'web' && windowWidth >= 900) {
     return <WebLayout>{content}</WebLayout>;
   }
 
@@ -1066,7 +1066,8 @@ export default function AddGroundScreen() {
   );
 }
 
-const IS_WEB = Platform.OS === 'web';
+// Force dark premium theme colors across all platforms
+const IS_WEB = false;
 
 const styles = StyleSheet.create({
   nativeRoot: {
@@ -1143,8 +1144,8 @@ const styles = StyleSheet.create({
     backgroundColor: IS_WEB ? '#FFFFFF' : '#043529',
   },
   typeChipActive: {
-    borderColor: '#dc8d3c',
-    backgroundColor: 'rgba(220,141,60,0.10)',
+    borderColor: '#00ea6b',
+    backgroundColor: 'rgba(0,234,107,0.10)',
   },
   typeChipText: {
     fontSize: 13,
@@ -1152,7 +1153,7 @@ const styles = StyleSheet.create({
     color: IS_WEB ? '#374151' : '#9ca3af',
   },
   typeChipTextActive: {
-    color: IS_WEB ? '#dc8d3c' : '#00ea6b',
+    color: '#00ea6b',
   },
   mediaRow: {
     flexDirection: 'row',
@@ -1194,14 +1195,14 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderColor: 'rgba(0,234,107,0.3)',
+    backgroundColor: '#043529',
     marginBottom: 8,
   },
   mediaUploadText: {
     fontSize: 13,
     fontWeight: '600',
-    color: IS_WEB ? '#374151' : '#E5E7EB',
+    color: '#00ea6b',
   },
   locationRow: {
     flexDirection: 'row',
@@ -1527,8 +1528,8 @@ const stylesDropdown = StyleSheet.create({
     backgroundColor: IS_WEB ? '#FFFFFF' : '#043529',
   },
   buttonOpen: {
-    borderColor: '#dc8d3c',
-    backgroundColor: 'rgba(220,141,60,0.05)',
+    borderColor: '#00ea6b',
+    backgroundColor: 'rgba(0,234,107,0.05)',
   },
   buttonText: {
     fontSize: 14,

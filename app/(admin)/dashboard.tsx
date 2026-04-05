@@ -83,7 +83,7 @@ export default function AdminDashboardScreen() {
             icon={Users}
             label="Total Users"
             value={stats.totalUsers}
-            color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'}
+            color={Platform.OS === 'web' ? '#10b981' : '#2196F3'}
           />
           <StatCard
             icon={Building2}
@@ -113,7 +113,7 @@ export default function AdminDashboardScreen() {
             onPress={() => router.push('/(admin)/manage-users')}
           >
             <View style={styles.actionContent}>
-              <Users size={20} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
+              <Users size={20} color={Platform.OS === 'web' ? '#10b981' : '#2196F3'} />
               <Text style={styles.actionText}>Manage Users</Text>
             </View>
             <ChevronRight size={20} color="#666" />

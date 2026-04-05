@@ -85,7 +85,7 @@ const styles = StyleSheet.create({
   code: {
     fontSize: 48,
     fontWeight: '800',
-    color: '#dc8d3c',
+    color: '#10b981',
     letterSpacing: 2,
     marginBottom: 8,
   },

@@ -10,7 +10,7 @@ export default function AdminLocationsRedirect() {
 
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <ActivityIndicator size="large" color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
+      <ActivityIndicator size="large" color={Platform.OS === 'web' ? '#10b981' : '#2196F3'} />
     </View>
   );
 }

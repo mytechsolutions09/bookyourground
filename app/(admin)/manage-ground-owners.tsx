@@ -95,7 +95,7 @@ export default function ManageGroundOwnersScreen() {
           <Card style={styles.ownerCard}>
             <View style={styles.ownerHeader}>
               <View style={styles.iconPill}>
-                <Users size={18} color={Platform.OS === 'web' ? '#dc8d3c' : '#2196F3'} />
+                <Users size={18} color={Platform.OS === 'web' ? '#10b981' : '#2196F3'} />
               </View>
               <View style={styles.ownerInfo}>
                 <Text style={styles.ownerName}>{item.business_name || item.full_name}</Text>
@@ -223,10 +223,10 @@ const styles = StyleSheet.create({
   metaValue: {
     fontSize: 18,
     fontWeight: '800',
-    color: Platform.OS === 'web' ? '#dc8d3c' : '#2196F3',
+    color: Platform.OS === 'web' ? '#10b981' : '#2196F3',
   },
   actionButton: {
-    backgroundColor: Platform.OS === 'web' ? '#dc8d3c' : '#2196F3',
+    backgroundColor: Platform.OS === 'web' ? '#10b981' : '#2196F3',
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 12,

@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
   clearFilter: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#dc8d3c',
+    color: '#10b981',
   },
   cardsRow: {
     flexDirection: 'row',

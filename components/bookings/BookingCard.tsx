@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, useWindowDimensions } from 'react-native';
 import { Calendar, Clock, MapPin, Users } from 'lucide-react-native';
 import { Platform } from 'react-native';
 import { BookingWithDetails } from '@/types';
@@ -25,7 +25,9 @@ export default function BookingCard({
   showGroundDetails = true,
   metaText,
 }: BookingCardProps) {
+  const { width } = useWindowDimensions();
   const isWeb = Platform.OS === 'web';
+  const IS_DARK = !isWeb || (width < 900);
   const primaryImage = booking.ground.ground_images?.[0]?.image_url ||
     'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
 
@@ -34,16 +36,16 @@ export default function BookingCard({
     booking.notes,
   );
 
-  const iconDetail = isWeb ? '#dc8d3c' : NATIVE_ACCENT;
-  const pinColor = isWeb ? '#666' : NATIVE_TEXT;
-  const groundNameStyle = [styles.groundName, !isWeb && styles.groundNameNative];
-  const locationStyle = [styles.location, !isWeb && styles.locationNative];
-  const detailTextStyle = [styles.detailText, !isWeb && styles.detailTextNative];
-  const compactNameStyle = [styles.compactGroundName, !isWeb && styles.compactGroundNameNative];
-  const compactLocStyle = [styles.compactGroundLocation, !isWeb && styles.compactGroundLocationNative];
-  const amountStyle = [styles.amount, !isWeb && styles.amountNative];
-  const metaStyle = [styles.metaText, !isWeb && styles.metaTextNative];
-  const badgeBg = isWeb ? getStatusColor(booking.status) : NATIVE_ACCENT;
+  const iconDetail = IS_DARK ? NATIVE_ACCENT : '#10b981';
+  const pinColor = IS_DARK ? NATIVE_TEXT : '#666';
+  const groundNameStyle = [styles.groundName, IS_DARK && styles.groundNameNative];
+  const locationStyle = [styles.location, IS_DARK && styles.locationNative];
+  const detailTextStyle = [styles.detailText, IS_DARK && styles.detailTextNative];
+  const compactNameStyle = [styles.compactGroundName, IS_DARK && styles.compactGroundNameNative];
+  const compactLocStyle = [styles.compactGroundLocation, IS_DARK && styles.compactGroundLocationNative];
+  const amountStyle = [styles.amount, IS_DARK && styles.amountNative];
+  const metaStyle = [styles.metaText, IS_DARK && styles.metaTextNative];
+  const badgeBg = IS_DARK ? NATIVE_ACCENT : '#10b981';
   const statusLabelStyle = styles.statusText;
 
   return (
@@ -51,8 +53,8 @@ export default function BookingCard({
       <Card
         style={[
           styles.card,
-          isWeb && styles.cardWeb,
-          !isWeb && styles.cardNative,
+          !IS_DARK && styles.cardWeb,
+          IS_DARK && styles.cardNative,
         ]}
       >
         <View style={styles.content}>
@@ -198,7 +200,7 @@ const styles = StyleSheet.create({
   amount: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#dc8d3c',
+    color: '#10b981',
   },
   amountNative: {
     color: NATIVE_ACCENT,

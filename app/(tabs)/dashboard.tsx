@@ -1,11 +1,22 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Platform, TouchableOpacity, useWindowDimensions, ScrollView } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import WebLayout from '@/components/web/WebLayout';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
+import { LayoutDashboard, Calendar, Star, Building2, ChevronRight } from 'lucide-react-native';
+import MobileAppNavbar from '@/components/MobileAppNavbar';
+import { formatBookingSlotSummary } from '@/utils/bookingSlotFormat';
+
+const THEME_BG = '#043529';
+const THEME_CARD_BG = '#06392e';
+const THEME_ACCENT = '#00ea6b';
+const THEME_TEXT = '#FFFFFF';
+const THEME_GOLD = '#dcc093';
 
 function DashboardContent() {
+  const { width } = useWindowDimensions();
+  const isCompact = width < 900;
   const { profile, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [bookings, setBookings] = useState<any[]>([]);
@@ -29,7 +40,8 @@ function DashboardContent() {
               id,
               name,
               city,
-              state
+              state,
+              pitch_type
             )
           `,
           )
@@ -112,199 +124,302 @@ function DashboardContent() {
     [bookings],
   );
 
-  return (
-    <View style={styles.root}>
-      <View style={styles.card}>
-        <View style={styles.headerRowCompact}>
-          <View>
-            <Text style={styles.welcomeTitle}>Dashboard</Text>
-            <Text style={styles.welcomeSubtitle}>
+  const IS_DARK = Platform.OS !== 'web' || isCompact;
+
+  const content = (
+    <ScrollView
+      style={[styles.root, IS_DARK && styles.rootDark]}
+      contentContainerStyle={styles.scrollContent}
+    >
+      <View style={[styles.mainCard, IS_DARK && styles.mainCardDark]}>
+        <View style={styles.headerRow}>
+          <View style={styles.headerTitleWrap}>
+            <Text style={[styles.welcomeTitle, IS_DARK && styles.welcomeTitleDark]}>Dashboard</Text>
+            <Text style={[styles.welcomeSubtitle, IS_DARK && styles.welcomeSubtitleDark]}>
               Overview of your games and favorite grounds.
             </Text>
           </View>
           <TouchableOpacity
-            style={styles.primaryButton}
+            style={[styles.primaryButton, IS_DARK && styles.primaryButtonDark]}
             onPress={() => router.push('/(tabs)/grounds' as any)}
           >
-            <Text style={styles.primaryButtonText}>Book a ground</Text>
+            <Text style={[styles.primaryButtonText, IS_DARK && styles.primaryButtonTextDark]}>Book a ground</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.statsRow}>
-          <View style={styles.statsCard}>
-            <Text style={styles.statsLabel}>Total grounds booked</Text>
-            <Text style={styles.statsValue}>
+        <View style={styles.grid}>
+          <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
+            <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
+              <Building2 size={24} color="#01b854" />
+            </View>
+            <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Total grounds</Text>
+            <Text style={[styles.statsValue, IS_DARK && styles.statsValueDark]}>
               {loading ? '—' : totalUniqueGrounds}
             </Text>
-            <Text style={styles.statsCaption}>
+            <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>
               {loading
-                ? 'Loading your history…'
-                : totalUniqueGrounds === 0
-                ? 'No bookings yet'
+                ? 'Loading…'
                 : totalUniqueGrounds === 1
-                ? 'You have booked 1 ground'
-                : `You have booked ${totalUniqueGrounds} grounds`}
+                  ? '1 ground'
+                  : `${totalUniqueGrounds} grounds`}
             </Text>
           </View>
 
-          <View style={styles.statsCard}>
-            <Text style={styles.statsLabel}>Next booking</Text>
+          <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
+            <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
+              <Calendar size={24} color="#01b854" />
+            </View>
+            <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Next booking</Text>
             {loading ? (
-              <Text style={styles.statsCaption}>Loading…</Text>
+              <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>Loading…</Text>
             ) : nextBooking ? (
               <>
-                <Text style={styles.statsValueHighlight}>
+                <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]} numberOfLines={1}>
                   {nextBooking.ground?.name ?? 'Ground'}
                 </Text>
-                <Text style={styles.statsCaption}>
-                  {nextBooking.booking_date} · {nextBooking.start_time}–
-                  {nextBooking.end_time}
+                <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>
+                  {nextBooking.booking_date}
+                </Text>
+                <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark, { marginTop: 2, fontSize: 10 }]}>
+                  {formatBookingSlotSummary(nextBooking.start_time, nextBooking.end_time, nextBooking.ground?.pitch_type)}
                 </Text>
               </>
             ) : (
-              <Text style={styles.statsCaption}>No upcoming bookings</Text>
+              <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>No upcoming</Text>
             )}
           </View>
-        </View>
 
-        <View style={styles.statsRow}>
-          <View style={styles.statsCard}>
-            <Text style={styles.statsLabel}>Last booking</Text>
+          <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
+            <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
+              <Calendar size={24} color="#01b854" />
+            </View>
+            <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Last booking</Text>
             {loading ? (
-              <Text style={styles.statsCaption}>Loading…</Text>
+              <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>Loading…</Text>
             ) : lastBooking ? (
               <>
-                <Text style={styles.statsValueHighlight}>
+                <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]} numberOfLines={1}>
                   {lastBooking.ground?.name ?? 'Ground'}
                 </Text>
-                <Text style={styles.statsCaption}>
-                  {lastBooking.booking_date} · {lastBooking.start_time}–
-                  {lastBooking.end_time}
+                <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>
+                  {lastBooking.booking_date}
+                </Text>
+                <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark, { marginTop: 2, fontSize: 10 }]}>
+                  {formatBookingSlotSummary(lastBooking.start_time, lastBooking.end_time, lastBooking.ground?.pitch_type)}
                 </Text>
               </>
             ) : (
-              <Text style={styles.statsCaption}>No past bookings yet</Text>
+              <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>None yet</Text>
             )}
           </View>
 
-          <View style={styles.statsCard}>
-            <Text style={styles.statsLabel}>Favorite ground</Text>
+          <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
+            <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
+              <Star size={24} color="#01b854" />
+            </View>
+            <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Favorite</Text>
             {loading ? (
-              <Text style={styles.statsCaption}>Loading…</Text>
+              <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>Loading…</Text>
             ) : favoriteGround ? (
               <>
-                <Text style={styles.statsValueHighlight}>{favoriteGround.name}</Text>
-                <Text style={styles.statsCaption}>
-                  {favoriteGround.count === 1
-                    ? 'Booked 1 time'
-                    : `Booked ${favoriteGround.count} times`}
+                <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]} numberOfLines={1}>
+                  {favoriteGround.name}
+                </Text>
+                <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>
+                  {favoriteGround.count} {favoriteGround.count === 1 ? 'time' : 'times'}
                 </Text>
               </>
             ) : (
-              <Text style={styles.statsCaption}>We will highlight it once you book</Text>
+              <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>TBD</Text>
             )}
           </View>
         </View>
       </View>
+    </ScrollView>
+  );
+
+  if (Platform.OS === 'web' && !isCompact) {
+    return (
+      <WebLayout>
+        {content}
+      </WebLayout>
+    );
+  }
+
+  return (
+    <View style={styles.nativeWrapper}>
+      <MobileAppNavbar title="Dashboard" titleColor={THEME_ACCENT} />
+      {content}
     </View>
   );
 }
 
 export default function DashboardScreen() {
-  if (Platform.OS === 'web') {
-    return (
-      <WebLayout>
-        <DashboardContent />
-      </WebLayout>
-    );
-  }
-
   return <DashboardContent />;
 }
 
 const styles = StyleSheet.create({
+  nativeWrapper: {
+    flex: 1,
+    backgroundColor: THEME_BG,
+  },
   root: {
     flex: 1,
     backgroundColor: '#F5F5F5',
-    paddingHorizontal: 20,
-    paddingTop: 0,
-    paddingBottom: 24,
   },
-  card: {
+  rootDark: {
+    backgroundColor: THEME_BG,
+  },
+  scrollContent: {
+    padding: 16,
+    paddingBottom: 40,
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  mainCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
-    paddingHorizontal: 24,
-    paddingVertical: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(229,231,235,0.9)',
+    padding: 24,
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.03,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
   },
-  headerRowCompact: {
+  mainCardDark: {
+    backgroundColor: THEME_CARD_BG,
+    borderWidth: 1,
+    borderColor: 'rgba(0,234,107,0.15)',
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 12 },
+  },
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 24,
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  headerTitleWrap: {
+    flex: 1,
+    minWidth: 200,
   },
   welcomeTitle: {
-    fontSize: 22,
-    fontWeight: '800',
+    fontSize: 26,
+    fontWeight: '900',
     color: '#111827',
+    letterSpacing: -0.5,
+  },
+  welcomeTitleDark: {
+    color: THEME_TEXT,
   },
   welcomeSubtitle: {
     marginTop: 4,
-    fontSize: 13,
+    fontSize: 14,
     color: '#6B7280',
   },
+  welcomeSubtitleDark: {
+    color: '#9ca3af',
+  },
   primaryButton: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
     borderRadius: 999,
-    backgroundColor: '#dc8d3c',
+    backgroundColor: '#10b981',
+  },
+  primaryButtonDark: {
+    backgroundColor: THEME_ACCENT,
   },
   primaryButtonText: {
     fontSize: 14,
     fontWeight: '700',
     color: '#FFFFFF',
   },
-  statsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 12,
-    flexWrap: 'wrap',
+  primaryButtonTextDark: {
+    color: '#043529',
   },
-  statsCard: {
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  statBox: {
     flex: 1,
-    borderRadius: 18,
+    minWidth: 180,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    padding: 24,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    paddingHorizontal: 20,
-    paddingVertical: 18,
+    borderColor: '#F3F4F6',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.02,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  statBoxDark: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderColor: 'rgba(0,234,107,0.1)',
+  },
+  iconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: '#F9FAFB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  iconCircleDark: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
   statsLabel: {
-    fontSize: 13,
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#4B5563',
     textTransform: 'uppercase',
-    letterSpacing: 0.7,
-    color: '#6B7280',
-    marginBottom: 4,
+    letterSpacing: 1.2,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  statsLabelDark: {
+    color: '#9ca3af',
+    opacity: 0.8,
   },
   statsValue: {
-    fontSize: 28,
-    fontWeight: '800',
+    fontSize: 40,
+    fontWeight: '900',
     color: '#111827',
+    marginBottom: 4,
+    letterSpacing: -1,
   },
-  statsValueHighlight: {
-    fontSize: 16,
-    fontWeight: '700',
+  statsValueDark: {
+    color: THEME_TEXT,
+  },
+  statsValueSmall: {
+    fontSize: 22,
+    fontWeight: '900',
     color: '#111827',
+    marginBottom: 6,
+    textAlign: 'center',
+    letterSpacing: -0.5,
+  },
+  statsValueSmallDark: {
+    color: THEME_GOLD,
   },
   statsCaption: {
-    marginTop: 2,
     fontSize: 13,
+    fontWeight: '500',
     color: '#6B7280',
+    textAlign: 'center',
+  },
+  statsCaptionDark: {
+    color: '#9ca3af',
   },
 });
+
 
