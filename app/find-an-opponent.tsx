@@ -108,13 +108,13 @@ export default function FindAnOpponentScreen() {
   }, [matches, searchQuery, selectedCity, selectedPitch, selectedDateFilter]);
 
   const cities = useMemo(() => {
-    const set = new Set(matches.map(m => m.ground.city));
-    return ['All', ...Array.from(set)].sort();
+    const set = new Set(matches.map(m => m.ground.city).filter(Boolean));
+    return ['All', ...Array.from(set)].sort() as string[];
   }, [matches]);
 
   const pitches = useMemo(() => {
-    const set = new Set(matches.map(m => m.ground.pitch_type));
-    return ['All', ...Array.from(set)].sort();
+    const set = new Set(matches.map(m => m.ground.pitch_type).filter(Boolean));
+    return ['All', ...Array.from(set)].sort() as string[];
   }, [matches]);
 
   const handleJoinMatch = (match: BookingWithDetails) => {
@@ -224,9 +224,9 @@ export default function FindAnOpponentScreen() {
               </View>
             )}
             keyExtractor={item => item.id}
-            numColumns={isExtraWideWeb ? 4 : isWideWeb ? 3 : isMediumWeb ? 2 : 1}
+            numColumns={isWideWeb || isExtraWideWeb ? 3 : isMediumWeb ? 2 : 1}
             columnWrapperStyle={
-              isExtraWideWeb || isWideWeb || isMediumWeb ? styles.webColumnWrapper : undefined
+              isWideWeb || isExtraWideWeb || isMediumWeb ? styles.webColumnWrapper : undefined
             }
             style={styles.webFlatList}
             contentContainerStyle={styles.webList}
@@ -548,8 +548,8 @@ const styles = StyleSheet.create({
     color: '#043529',
   },
   header: {
-    padding: 16,
     paddingHorizontal: 20,
+    paddingVertical: 12,
   },
   webHeader: {
     flexDirection: 'row',
@@ -566,15 +566,15 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 13,
     color: '#6B7280',
-    marginTop: 2,
+    marginTop: 1,
   },
   badgePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
     backgroundColor: '#F0FDF4',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 999,
   },
   badgePillNumber: {
@@ -583,7 +583,7 @@ const styles = StyleSheet.create({
     color: '#166534',
   },
   badgePillLabel: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
     color: '#166534',
     textTransform: 'uppercase',

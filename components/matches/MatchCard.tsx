@@ -166,7 +166,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   groundName: {
-    fontSize: 18,
+    ...Platform.select({
+      web: { fontSize: 22 },
+      default: { fontSize: 18 },
+    }),
     fontWeight: '800',
   },
   locationRow: {
@@ -175,7 +178,10 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   location: {
-    fontSize: 14,
+    ...Platform.select({
+      web: { fontSize: 15 },
+      default: { fontSize: 14 },
+    }),
   },
   mapLink: {
     flexDirection: 'row',
@@ -210,7 +216,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   detailText: {
-    fontSize: 14,
+    ...Platform.select({
+      web: { fontSize: 15 },
+      default: { fontSize: 14 },
+    }),
     fontWeight: '500',
   },
   footer: {
@@ -223,22 +232,32 @@ const styles = StyleSheet.create({
     borderTopColor: 'rgba(0,0,0,0.05)',
   },
   priceContainer: {
-    gap: 2,
+    gap: 0,
   },
   priceLabel: {
-    fontSize: 11,
+    ...Platform.select({
+      web: { fontSize: 12 },
+      default: { fontSize: 11 },
+    }),
     color: '#9CA3AF',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    fontWeight: '600',
   },
   priceValue: {
-    fontSize: 18,
-    fontWeight: '800',
+    ...Platform.select({
+      web: { fontSize: 20 },
+      default: { fontSize: 18 },
+    }),
+    fontWeight: '900',
     color: '#00ea6b',
   },
   joinButton: {
-    borderRadius: 12,
-    minWidth: 120,
+    borderRadius: 10,
+    ...Platform.select({
+      web: { minWidth: 120, height: 36 },
+      default: { minWidth: 110, height: 34 },
+    }),
     backgroundColor: '#00ea6b',
   },
   joinButtonText: {

@@ -48,7 +48,7 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flex: 1,
-    backgroundColor: '#043529',
+    backgroundColor: Platform.OS === 'web' ? 'transparent' : '#043529',
   },
   scrollContent: {
     flexGrow: 1,

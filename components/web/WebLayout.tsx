@@ -8,6 +8,7 @@ import {
   Platform,
   useWindowDimensions,
   TextInput,
+  ScrollView,
 } from 'react-native';
 import { router, usePathname, useSegments } from 'expo-router';
 import {
@@ -29,6 +30,7 @@ import {
   ChevronRight,
   Swords,
   CalendarClock,
+  Star,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -601,6 +603,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
                     <NavLink href="/(tabs)/dashboard" icon={LayoutDashboard} label="Dashboard" />
                     <NavLink href="/(tabs)/matches" icon={CalendarClock} label="My Matches" />
                     <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
+                    <NavLink href="/(tabs)/favorites" icon={Star} label="Favorites" />
                     <NavLink href="/(tabs)/profile" icon={User} label="Profile" />
 
                     <View style={styles.sidebarDivider} />
@@ -629,149 +632,160 @@ export default function WebLayout({ children }: WebLayoutProps) {
                 isSuperAdmin && isAdminRoute && sidebarCollapsed && styles.sidebarCollapsed,
               ]}
             >
-              {isAuthenticated && !isPublicNoSidebar && (
-                <>
-                  {isSuperAdmin && isAdminRoute ? (
-                    <>
-                      <View style={styles.sidebarHeaderRow}>
-                        {!sidebarCollapsed && (
-                          <Text style={styles.sidebarSectionTitle}>Super admin</Text>
-                        )}
-                        <TouchableOpacity
-                          style={styles.collapseButton}
-                          onPress={() => setSidebarCollapsed((prev) => !prev)}
-                        >
-                          {sidebarCollapsed ? (
-                            <ChevronRight size={18} color="#9CA3AF" />
-                          ) : (
-                            <ChevronLeft size={18} color="#9CA3AF" />
+              <ScrollView 
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 20 }}
+              >
+                {isAuthenticated && !isPublicNoSidebar && (
+                  <>
+                    {isSuperAdmin && isAdminRoute ? (
+                      <>
+                        <View style={styles.sidebarHeaderRow}>
+                          {!sidebarCollapsed && (
+                            <Text style={styles.sidebarSectionTitle}>Super admin</Text>
                           )}
+                          <TouchableOpacity
+                            style={styles.collapseButton}
+                            onPress={() => setSidebarCollapsed((prev) => !prev)}
+                          >
+                            {sidebarCollapsed ? (
+                              <ChevronRight size={18} color="#9CA3AF" />
+                            ) : (
+                              <ChevronLeft size={18} color="#9CA3AF" />
+                            )}
+                          </TouchableOpacity>
+                        </View>
+                        <NavLink
+                          href="/(admin)/dashboard"
+                          icon={LayoutDashboard}
+                          label="Dashboard"
+                          hideLabel={sidebarCollapsed}
+                        />
+                        <NavLink
+                          href="/(admin)/bookings"
+                          icon={Calendar}
+                          label="Bookings"
+                          hideLabel={sidebarCollapsed}
+                        />
+                        <NavLink
+                          href="/(admin)/grounds"
+                          icon={MapPin}
+                          label="Grounds"
+                          hideLabel={sidebarCollapsed}
+                        />
+                        <NavLink
+                          href="/(tabs)/matches"
+                          icon={CalendarClock}
+                          label="My Matches"
+                          hideLabel={sidebarCollapsed}
+                        />
+                        <NavLink
+                          href="/(owner)/add-ground"
+                          icon={PlusCircle}
+                          label="Add ground"
+                          hideLabel={sidebarCollapsed}
+                        />
+                        <NavLink
+                          href="/(admin)/earnings"
+                          icon={IndianRupee}
+                          label="Earnings"
+                          hideLabel={sidebarCollapsed}
+                        />
+                        <NavLink
+                          href="/(admin)/withdrawals"
+                          icon={Wallet2}
+                          label="Withdraw"
+                          hideLabel={sidebarCollapsed}
+                        />
+                        <NavLink
+                          href="/(admin)/manage-ground-owners"
+                          icon={Shield}
+                          label="Ground owners"
+                          hideLabel={sidebarCollapsed}
+                        />
+                        <NavLink
+                          href="/(admin)/manage-users"
+                          icon={User}
+                          label="Users"
+                          hideLabel={sidebarCollapsed}
+                        />
+                        <NavLink
+                          href="/(admin)/settings"
+                          icon={Settings}
+                          label="Settings"
+                          hideLabel={sidebarCollapsed}
+                        />
+
+                        <View style={styles.sidebarDivider} />
+                        <TouchableOpacity
+                          style={[
+                            styles.signOutButton,
+                            styles.signOutButtonUser,
+                            sidebarCollapsed && styles.signOutButtonCollapsed,
+                          ]}
+                          onPress={handleSignOut}
+                        >
+                          <LogOut size={18} color="#01b854" />
+                          {!sidebarCollapsed && <Text style={styles.signOutText}>Sign out</Text>}
                         </TouchableOpacity>
-                      </View>
-                      <NavLink
-                        href="/(admin)/dashboard"
-                        icon={LayoutDashboard}
-                        label="Dashboard"
-                        hideLabel={sidebarCollapsed}
-                      />
-                      <NavLink
-                        href="/(admin)/bookings"
-                        icon={Calendar}
-                        label="Bookings"
-                        hideLabel={sidebarCollapsed}
-                      />
-                      <NavLink
-                        href="/(admin)/grounds"
-                        icon={MapPin}
-                        label="Grounds"
-                        hideLabel={sidebarCollapsed}
-                      />
-                      <NavLink
-                        href="/(tabs)/matches"
-                        icon={CalendarClock}
-                        label="My Matches"
-                        hideLabel={sidebarCollapsed}
-                      />
-                      <NavLink
-                        href="/(owner)/add-ground"
-                        icon={PlusCircle}
-                        label="Add ground"
-                        hideLabel={sidebarCollapsed}
-                      />
-                      <NavLink
-                        href="/(admin)/earnings"
-                        icon={IndianRupee}
-                        label="Earnings"
-                        hideLabel={sidebarCollapsed}
-                      />
-                      <NavLink
-                        href="/(admin)/withdrawals"
-                        icon={Wallet2}
-                        label="Withdraw"
-                        hideLabel={sidebarCollapsed}
-                      />
-                      <NavLink
-                        href="/(admin)/manage-ground-owners"
-                        icon={Shield}
-                        label="Ground owners"
-                        hideLabel={sidebarCollapsed}
-                      />
-                      <NavLink
-                        href="/(admin)/manage-users"
-                        icon={User}
-                        label="Users"
-                        hideLabel={sidebarCollapsed}
-                      />
-                      <NavLink
-                        href="/(admin)/settings"
-                        icon={Settings}
-                        label="Settings"
-                        hideLabel={sidebarCollapsed}
-                      />
+                      </>
+                    ) : isGroundOwner ? (
+                      <>
+                        <Text style={styles.sidebarSectionTitle}>Ground owner</Text>
+                        <NavLink href="/(owner)/dashboard" icon={LayoutDashboard} label="Dashboard" />
+                        <NavLink href="/(owner)/grounds" icon={MapPin} label="My grounds" />
+                        <NavLink href="/(tabs)/matches" icon={CalendarClock} label="My Matches" />
+                        <NavLink href="/(owner)/bookings" icon={Calendar} label="Bookings" />
+                        <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
+                        <NavLink href="/(owner)/earnings" icon={IndianRupee} label="Earnings" />
+                        <NavLink href="/(owner)/add-ground" icon={PlusCircle} label="Add ground" />
+                        <NavLink href="/(owner)/settings" icon={Settings} label="Settings" />
 
-                      <View style={styles.sidebarDivider} />
-                      <TouchableOpacity
-                        style={[
-                          styles.signOutButton,
-                          styles.signOutButtonUser,
-                          sidebarCollapsed && styles.signOutButtonCollapsed,
-                        ]}
-                        onPress={handleSignOut}
-                      >
-                        <LogOut size={18} color="#01b854" />
-                        {!sidebarCollapsed && <Text style={styles.signOutText}>Sign out</Text>}
-                      </TouchableOpacity>
-                    </>
-                  ) : isGroundOwner ? (
-                    <>
-                      <Text style={styles.sidebarSectionTitle}>Ground owner</Text>
-                      <NavLink href="/(owner)/dashboard" icon={LayoutDashboard} label="Dashboard" />
-                      <NavLink href="/(owner)/grounds" icon={MapPin} label="My grounds" />
-                      <NavLink href="/(tabs)/matches" icon={CalendarClock} label="My Matches" />
-                      <NavLink href="/(owner)/bookings" icon={Calendar} label="Bookings" />
-                      <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
-                      <NavLink href="/(owner)/earnings" icon={IndianRupee} label="Earnings" />
-                      <NavLink href="/(owner)/add-ground" icon={PlusCircle} label="Add ground" />
-                      <NavLink href="/(owner)/settings" icon={Settings} label="Settings" />
+                        <View style={styles.sidebarDivider} />
+                        <TouchableOpacity
+                          style={styles.signOutButton}
+                          onPress={handleSignOut}
+                        >
+                          <LogOut size={18} color="#01b854" />
+                          <Text style={styles.signOutText}>Sign out</Text>
+                        </TouchableOpacity>
+                      </>
+                    ) : (
+                      <>
+                        <Text style={styles.sidebarSectionTitle}>My Account</Text>
+                        <NavLink
+                          href="/(tabs)/dashboard"
+                          icon={LayoutDashboard}
+                          label="Dashboard"
+                        />
+                        <NavLink href="/(tabs)/matches" icon={CalendarClock} label="My Matches" />
+                        <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
+                        <NavLink href="/(tabs)/favorites" icon={Star} label="Favorites" />
+                        <NavLink href="/(tabs)/profile" icon={User} label="Profile" />
 
-                      <View style={styles.sidebarDivider} />
-                      <TouchableOpacity
-                        style={styles.signOutButton}
-                        onPress={handleSignOut}
-                      >
-                        <LogOut size={18} color="#01b854" />
-                        <Text style={styles.signOutText}>Sign out</Text>
-                      </TouchableOpacity>
-                    </>
-                  ) : (
-                    <>
-                      <Text style={styles.sidebarSectionTitle}>My Account</Text>
-                      <NavLink
-                        href="/(tabs)/dashboard"
-                        icon={LayoutDashboard}
-                        label="Dashboard"
-                      />
-                      <NavLink href="/(tabs)/matches" icon={CalendarClock} label="My Matches" />
-                      <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
-                      <NavLink href="/(tabs)/profile" icon={User} label="Profile" />
-
-                      <View style={styles.sidebarDivider} />
-                      <TouchableOpacity
-                        style={styles.signOutButton}
-                        onPress={handleSignOut}
-                      >
-                        <LogOut size={18} color="#01b854" />
-                        <Text style={styles.signOutText}>Sign out</Text>
-                      </TouchableOpacity>
-                    </>
-                  )}
-                </>
-              )}
+                        <View style={styles.sidebarDivider} />
+                        <TouchableOpacity
+                          style={styles.signOutButton}
+                          onPress={handleSignOut}
+                        >
+                          <LogOut size={18} color="#01b854" />
+                          <Text style={styles.signOutText}>Sign out</Text>
+                        </TouchableOpacity>
+                      </>
+                    )}
+                  </>
+                )}
+              </ScrollView>
             </View>
           </View>
         ) : null}
 
-        <View style={styles.main}>{children}</View>
+        <View style={[
+          styles.main,
+          !isPublicNoSidebar && !isCompact && styles.mainAppCard
+        ]}>
+          {children}
+        </View>
       </View>
     </View>
   );
@@ -1005,6 +1019,7 @@ const styles = StyleSheet.create({
         position: 'sticky' as any,
         top: 96,
         alignSelf: 'flex-start',
+        maxHeight: 'calc(100vh - 120px)' as any,
       },
     }),
   },
@@ -1104,6 +1119,18 @@ const styles = StyleSheet.create({
         minHeight: 'calc(100vh - 65px)' as any,
       },
     }),
+  },
+  mainAppCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    marginBottom: 24,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
   },
   mobileOverlay: {
     position: 'absolute' as any,

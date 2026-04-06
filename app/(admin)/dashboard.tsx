@@ -59,10 +59,10 @@ export default function AdminDashboardScreen() {
 
   const StatCard = ({ icon: Icon, label, value, color }: any) => (
     <Card style={styles.statCard}>
-      <View style={[styles.iconContainer, { backgroundColor: color + '20' }]}>
-        <Icon size={28} color={color} />
+      <View style={[styles.iconContainer, { backgroundColor: color + '15' }]}>
+        <Icon size={18} color={color} />
+        <Text style={styles.statValue}>{value}</Text>
       </View>
-      <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
     </Card>
   );
@@ -186,57 +186,61 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#FFFFFF',
-    padding: 16,
-    paddingTop: 48,
+    padding: 12,
+    paddingTop: Platform.OS === 'ios' ? 60 : 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: '#F0F0F0',
   },
   webHeader: {
-    paddingTop: 16,
+    paddingTop: 12,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#212121',
-    marginBottom: 4,
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: 2,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 13,
+    color: '#6B7280',
   },
   content: {
-    padding: 16,
+    padding: 12,
   },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 16,
+    gap: 8,
+    marginBottom: 12,
   },
   statCard: {
     flex: 1,
-    minWidth: '47%',
+    minWidth: Platform.OS === 'web' ? '23%' : '47%',
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 10,
   },
   iconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginBottom: 6,
   },
   statValue: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#212121',
-    marginBottom: 4,
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
   },
   statLabel: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B7280',
     textAlign: 'center',
+    textTransform: 'uppercase',
   },
   quickActionsCard: {
     marginBottom: 16,

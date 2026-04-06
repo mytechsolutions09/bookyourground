@@ -61,15 +61,16 @@ export default function GroundCard({
     return `https://www.google.com/maps/search/?api=1&query=${query}`;
   }, [ground.address, ground.city, ground.state]);
 
-  const pinColor = NATIVE_TEXT;
-  const scheduleIconColor = NATIVE_BORDER;
-  const nameStyle = [styles.name, compact && styles.nameCompact, styles.nameNative];
-  const ratingStyle = [styles.rating, compact && styles.ratingCompact, styles.ratingNative];
-  const locationStyle = [styles.location, styles.locationNative];
-  const scheduleTextStyle = [styles.scheduleText, styles.scheduleTextNative];
-  const priceStyle = [styles.price, compact && styles.priceCompact, styles.priceNative];
-  const mapsLinkStyle = [styles.mapsLink, styles.mapsLinkNative];
-  const amenityStyle = [styles.amenity, styles.amenityNative];
+  const pinColor = isWeb ? '#6B7280' : NATIVE_TEXT;
+  const scheduleIconColor = isWeb ? '#10b981' : NATIVE_BORDER;
+  
+  const nameStyle = [styles.name, compact && styles.nameCompact, !isWeb && styles.nameNative];
+  const ratingStyle = [styles.rating, compact && styles.ratingCompact, !isWeb && styles.ratingNative];
+  const locationStyle = [styles.location, !isWeb && styles.locationNative];
+  const scheduleTextStyle = [styles.scheduleText, !isWeb && styles.scheduleTextNative];
+  const priceStyle = [styles.price, compact && styles.priceCompact, !isWeb && styles.priceNative];
+  const mapsLinkStyle = [styles.mapsLink, !isWeb && styles.mapsLinkNative];
+  const amenityStyle = [styles.amenity, !isWeb && styles.amenityNative];
 
   return (
     <TouchableOpacity
@@ -81,7 +82,8 @@ export default function GroundCard({
         style={[
           styles.card,
           compact && styles.cardCompact,
-          styles.cardNative,
+          !isWeb && styles.cardNative,
+          isWeb && styles.cardWeb,
         ]}
       >
         <View style={styles.imageWrapper}>
@@ -217,6 +219,11 @@ const styles = StyleSheet.create({
     shadowRadius: 0,
     shadowOffset: { width: 0, height: 0 },
     elevation: 0,
+  },
+  cardWeb: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   image: {
     width: '100%',

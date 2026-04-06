@@ -2009,7 +2009,7 @@ export default function LandingBookingForm({
             {hideGroundPicker
               ? useLandingSearchFlow
                 ? 'Choose location and type to search. Optionally add date and time to filter by an open slot.'
-                : 'Choose location, ground type, date, and time to request your booking.'
+                : null
               : 'Pick a ground and time slot to request your booking.'}
           </Text>
         )}
@@ -2062,7 +2062,7 @@ export default function LandingBookingForm({
                   computed.pricePerUnit,
                 )}/hr`
                 : `Cricket ground: ${teamType === 'one' ? '1 team' : 'both teams'
-                } · ${formatCurrency(computed.pricePerUnit)} per match`}
+                } · ${formatCurrency(computed.pricePerUnit)} ${teamType === 'one' ? 'per team' : 'per match'}`}
             </Text>
           </View>
         )}
@@ -2184,10 +2184,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   card: {
-    backgroundColor: '#043529',
+    backgroundColor: Platform.OS === 'web' ? '#FFFFFF' : '#043529',
     borderRadius: 14,
-    padding: 16,
+    padding: 20,
     marginTop: 0,
+    borderWidth: Platform.OS === 'web' ? 1 : 0,
+    borderColor: '#E5E7EB',
   },
   /** Native-only full-screen card (no rounding, no side margins). */
   cardNativeFull: {
@@ -2232,9 +2234,9 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '400',
+    fontWeight: '700',
     fontFamily: 'Inter',
-    color: '#F9FAFB',
+    color: Platform.OS === 'web' ? '#111827' : '#F9FAFB',
     marginBottom: 4,
   },
   /** Native-only title accent colour. */
@@ -2244,7 +2246,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     fontFamily: 'Inter',
-    color: '#E5E7EB',
+    color: Platform.OS === 'web' ? '#6B7280' : '#E5E7EB',
     marginBottom: 12,
   },
   authRequired: {
@@ -2290,10 +2292,12 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 12,
-    fontWeight: '400',
+    fontWeight: '700',
     fontFamily: 'Inter',
-    color: '#E5E7EB',
+    color: Platform.OS === 'web' ? '#374151' : '#E5E7EB',
     marginBottom: 6,
+    textTransform: Platform.OS === 'web' ? 'uppercase' : 'none',
+    letterSpacing: Platform.OS === 'web' ? 0.5 : 0,
   },
   /** Book-a-ground native screen: field headings match neon green section labels. */
   labelBookGroundNative: {
@@ -2314,15 +2318,15 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#00ea6b',
+    borderColor: Platform.OS === 'web' ? '#E5E7EB' : '#00ea6b',
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 10,
     minHeight: 44,
     fontSize: 14,
     fontFamily: 'Inter',
-    backgroundColor: '#06392e',
-    color: '#F9FAFB',
+    backgroundColor: Platform.OS === 'web' ? 'transparent' : '#06392e',
+    color: Platform.OS === 'web' ? '#111827' : '#F9FAFB',
   },
   inputWide: {
     width: '100%',
@@ -2377,9 +2381,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     minHeight: 44,
     borderWidth: 1,
-    borderColor: '#FFFFFF',
+    borderColor: Platform.OS === 'web' ? '#E5E7EB' : '#FFFFFF',
     borderRadius: 10,
-    backgroundColor: '#043529',
+    backgroundColor: Platform.OS === 'web' ? 'transparent' : '#043529',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2399,27 +2403,29 @@ const styles = StyleSheet.create({
   },
   teamToggleOptionActive: {
     borderColor: '#00ea6b',
-    backgroundColor: '#043529',
+    backgroundColor: Platform.OS === 'web' ? '#F9FAFB' : '#043529',
+    borderWidth: Platform.OS === 'web' ? 2 : 1,
   },
   teamToggleText: {
     fontSize: 14,
     fontWeight: '400',
     fontFamily: 'Inter',
-    color: '#E5E7EB',
+    color: Platform.OS === 'web' ? '#374151' : '#E5E7EB',
   },
   teamToggleTextActive: {
-    color: '#00ea6b',
+    color: Platform.OS === 'web' ? '#043529' : '#00ea6b',
+    fontWeight: Platform.OS === 'web' ? '700' : '400',
   },
   teamToggleTextDisabled: {
     color: '#9CA3AF',
   },
   teamToggleOptionBookGroundNative: {
-    borderColor: 'rgba(0,234,107,0.2)',
-    backgroundColor: '#06392e',
+    borderColor: Platform.OS === 'web' ? '#E5E7EB' : 'rgba(0,234,107,0.2)',
+    backgroundColor: Platform.OS === 'web' ? '#F9FAFB' : '#06392e',
     borderRadius: 999,
   },
   teamToggleTextBookGroundNative: {
-    color: '#f9fafb',
+    color: Platform.OS === 'web' ? '#374151' : '#f9fafb',
     fontWeight: '500',
   },
   /** Search CTA: same row height as Location / Type / Teams (44px min, 10 vertical padding). */
@@ -2434,22 +2440,25 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: 'rgba(6,57,46,0.18)', // subtle #06392e panel
+    backgroundColor: Platform.OS === 'web' ? '#F9FAFB' : 'rgba(6,57,46,0.18)',
+    borderWidth: Platform.OS === 'web' ? 1 : 0,
+    borderColor: '#E5E7EB',
   },
   summaryText: {
     fontSize: 14,
     fontWeight: '400',
     fontFamily: 'Inter',
-    color: '#111827',
+    color: Platform.OS === 'web' ? '#111827' : '#F9FAFB',
   },
   summaryMuted: {
     marginTop: 6,
     fontSize: 12,
     fontFamily: 'Inter',
-    color: '#6B7280',
+    color: '#9CA3AF',
   },
   summaryAccent: {
-    color: '#00ea6b',
+    color: '#01b854',
+    fontWeight: '700',
   },
   /** Ground detail on native: large capsule (tan border/text on mobile only). */
   summaryGroundPageMobile: {
@@ -2500,30 +2509,34 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
     color: '#00ea6b',
   },
+  dateChipPressed: {
+    backgroundColor: '#06392e',
+    borderColor: '#FFFFFF',
+  },
   searchResultsSection: {
     marginTop: 4,
   },
   /** Second card below the form when `separateSearchResults` (e.g. /book-my-ground). */
   searchResultsCard: {
     marginTop: 20,
-    backgroundColor: '#043529',
+    backgroundColor: Platform.OS === 'web' ? '#FFFFFF' : '#043529',
     borderRadius: 14,
-    padding: 16,
+    padding: 20,
     borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.15)',
+    borderColor: Platform.OS === 'web' ? '#E5E7EB' : 'rgba(0,234,107,0.15)',
   },
   searchResultsTitle: {
     fontSize: 20,
-    fontWeight: '400',
+    fontWeight: '700',
     fontFamily: 'Inter',
-    color: '#F9FAFB',
+    color: Platform.OS === 'web' ? '#111827' : '#F9FAFB',
     marginBottom: 4,
   },
   searchResultsSubtitle: {
     fontSize: 14,
     fontFamily: 'Inter',
-    color: '#E5E7EB',
-    marginBottom: 12,
+    color: Platform.OS === 'web' ? '#6B7280' : '#E5E7EB',
+    marginBottom: 16,
   },
   searchSpinner: {
     marginVertical: 12,
@@ -2567,8 +2580,8 @@ const styles = StyleSheet.create({
   },
   dropdownButton: {
     borderWidth: 1,
-    borderColor: '#FFFFFF',
-    backgroundColor: '#043529',
+    borderColor: Platform.OS === 'web' ? '#E5E7EB' : '#FFFFFF',
+    backgroundColor: Platform.OS === 'web' ? '#F9FAFB' : '#043529',
     borderRadius: 10,
     paddingHorizontal: 10,
     paddingVertical: 10,
@@ -2577,12 +2590,12 @@ const styles = StyleSheet.create({
   },
   dropdownButtonOpen: {
     borderColor: '#00ea6b',
-    backgroundColor: '#043529',
+    backgroundColor: Platform.OS === 'web' ? '#F9FAFB' : '#043529',
   },
   /** After user picks Location / Type — match chip “selected” accent */
   dropdownButtonSelected: {
     borderColor: '#00ea6b',
-    backgroundColor: '#043529',
+    backgroundColor: Platform.OS === 'web' ? '#F9FAFB' : '#043529',
   },
   dropdownButtonDisabled: {
     backgroundColor: '#F3F4F6',
@@ -2591,23 +2604,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '400',
     fontFamily: 'Inter',
-    color: '#FFFFFF',
+    color: Platform.OS === 'web' ? '#1F2937' : '#FFFFFF',
   },
   dropdownButtonTextSelected: {
-    color: '#00ea6b',
+    color: Platform.OS === 'web' ? '#043529' : '#00ea6b',
+    fontWeight: Platform.OS === 'web' ? '700' : '400',
   },
   dropdownButtonTextDisabled: {
     color: '#6B7280',
   },
   /** Book a ground (native): replace white borders/text with neon green transparent. */
   dropdownButtonBookGroundNative: {
-    borderColor: 'rgba(0,234,107,0.2)',
-    backgroundColor: '#06392e',
+    borderColor: Platform.OS === 'web' ? '#E5E7EB' : 'rgba(0,234,107,0.2)',
+    backgroundColor: Platform.OS === 'web' ? '#F9FAFB' : '#06392e',
     borderRadius: 999,
     paddingHorizontal: 16,
   },
   dropdownButtonTextBookGroundNative: {
-    color: '#f9fafb',
+    color: Platform.OS === 'web' ? '#1F2937' : '#f9fafb',
     fontSize: 14,
     fontWeight: '500',
   },
@@ -2628,9 +2642,9 @@ const styles = StyleSheet.create({
     top: 44,
     left: 0,
     right: 0,
-    backgroundColor: '#043529',
+    backgroundColor: Platform.OS === 'web' ? '#FFFFFF' : '#043529',
     borderWidth: 1,
-    borderColor: '#00ea6b',
+    borderColor: Platform.OS === 'web' ? '#E5E7EB' : '#00ea6b',
     borderRadius: 10,
     paddingVertical: 6,
     zIndex: 10000,
@@ -2650,9 +2664,9 @@ const styles = StyleSheet.create({
   },
   portalMenu: {
     position: 'absolute',
-    backgroundColor: '#043529',
+    backgroundColor: Platform.OS === 'web' ? '#FFFFFF' : '#043529',
     borderWidth: 1,
-    borderColor: '#00ea6b',
+    borderColor: Platform.OS === 'web' ? '#E5E7EB' : '#00ea6b',
     borderRadius: 12,
     padding: 8,
     shadowColor: '#000',
@@ -2666,13 +2680,13 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   dropdownOptionActive: {
-    backgroundColor: '#043529',
+    backgroundColor: Platform.OS === 'web' ? '#F9FAFB' : '#043529',
   },
   dropdownOptionText: {
     fontSize: 14,
     fontWeight: '400',
     fontFamily: 'Inter',
-    color: '#FFFFFF',
+    color: Platform.OS === 'web' ? '#1F2937' : '#FFFFFF',
   },
   dropdownOptionTextActive: {
     color: '#00ea6b',
@@ -2774,8 +2788,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#043529',
+    borderColor: Platform.OS === 'web' ? '#E5E7EB' : '#E5E7EB',
+    backgroundColor: Platform.OS === 'web' ? '#F9FAFB' : '#043529',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2791,7 +2805,8 @@ const styles = StyleSheet.create({
   },
   dateChipActive: {
     borderColor: '#00ea6b',
-    backgroundColor: '#043529',
+    backgroundColor: Platform.OS === 'web' ? '#F9FAFB' : '#043529',
+    borderWidth: 2,
   },
   dateChipDisabled: {
     opacity: 0.5,
@@ -2799,39 +2814,41 @@ const styles = StyleSheet.create({
   },
   /** Book a ground (native): inactive chip outline — neon green transparent. */
   dateChipBorderBookGroundNative: {
-    borderColor: 'rgba(0,234,107,0.15)',
-    backgroundColor: '#06392e',
+    borderColor: Platform.OS === 'web' ? '#E5E7EB' : 'rgba(0,234,107,0.15)',
+    backgroundColor: Platform.OS === 'web' ? '#F9FAFB' : '#06392e',
   },
   dateChipText: {
     fontSize: 12,
     fontWeight: '500',
     fontFamily: 'Inter',
-    color: '#FFFFFF',
+    color: Platform.OS === 'web' ? '#374151' : '#FFFFFF',
   },
   dateChipTextMobile: {
     fontSize: 11,
   },
   dateChipTextActive: {
-    color: '#00ea6b',
+    color: Platform.OS === 'web' ? '#043529' : '#00ea6b',
+    fontWeight: Platform.OS === 'web' ? '700' : '500',
   },
   dateChipTextBookGroundNative: {
-    color: '#9ca3af',
+    color: Platform.OS === 'web' ? '#374151' : '#9ca3af',
   },
   dateChipWeekday: {
     fontSize: 10,
     fontWeight: '600',
     fontFamily: 'Inter',
-    color: '#FFFFFF',
+    color: Platform.OS === 'web' ? '#6B7280' : '#FFFFFF',
     letterSpacing: 0.2,
   },
   dateChipWeekdayMobile: {
     fontSize: 9,
   },
   dateChipWeekdayActive: {
-    color: '#00ea6b',
+    color: Platform.OS === 'web' ? '#043529' : '#00ea6b',
+    fontWeight: Platform.OS === 'web' ? '700' : '600',
   },
   dateChipWeekdayBookGroundNative: {
-    color: '#9ca3af',
+    color: Platform.OS === 'web' ? '#6B7280' : '#9ca3af',
   },
   datePagerRow: {
     flexDirection: 'row',
@@ -2886,12 +2903,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    backgroundColor: '#043529',
+    borderColor: Platform.OS === 'web' ? '#E5E7EB' : '#E5E7EB',
+    backgroundColor: Platform.OS === 'web' ? '#F9FAFB' : '#043529',
   },
   timeSlotChipBorderBookGroundNative: {
-    borderColor: 'rgba(0,234,107,0.15)',
-    backgroundColor: '#06392e',
+    borderColor: Platform.OS === 'web' ? '#E5E7EB' : 'rgba(0,234,107,0.15)',
+    backgroundColor: Platform.OS === 'web' ? '#F9FAFB' : '#06392e',
   },
   /** Mobile-only: slightly smaller time chip for scrolling. */
   timeSlotChipMobile: {
@@ -2905,7 +2922,7 @@ const styles = StyleSheet.create({
   timeSlotChipActive: {
     borderWidth: 2,
     borderColor: '#00ea6b',
-    backgroundColor: '#043529',
+    backgroundColor: Platform.OS === 'web' ? '#F9FAFB' : '#043529',
   },
   timeSlotChipDisabled: {
     opacity: 0.5,
@@ -2927,7 +2944,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '400',
     fontFamily: 'Inter',
-    color: '#FFFFFF',
+    color: Platform.OS === 'web' ? '#374151' : '#FFFFFF',
   },
   timeSlotTextMobile: {
     fontSize: 12,
@@ -2936,10 +2953,11 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   timeSlotTextActive: {
-    color: '#00ea6b',
+    color: Platform.OS === 'web' ? '#043529' : '#00ea6b',
+    fontWeight: Platform.OS === 'web' ? '700' : '400',
   },
   timeSlotTextBookGroundNative: {
-    color: '#9ca3af',
+    color: Platform.OS === 'web' ? '#374151' : '#9ca3af',
   },
   bookGroundNativeButtonText: {
     color: '#043529',

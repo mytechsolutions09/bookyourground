@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, Platform, TouchableOpacity, useWindowDimensions } from 'react-native';
-import { Building2, Calendar, IndianRupee, Star, LayoutDashboard } from 'lucide-react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, Platform, TouchableOpacity, useWindowDimensions, TextInput, ActivityIndicator } from 'react-native';
+import { Building2, Calendar, IndianRupee, Star, LayoutDashboard, User, Mail, Phone, ShieldCheck, Pencil, Check, X } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import Card from '@/components/ui/Card';
@@ -32,8 +32,11 @@ interface DashboardStats {
 export default function OwnerDashboardScreen() {
   const { width } = useWindowDimensions();
   const isCompact = width < 900;
-  const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'owner' | 'personal'>('owner');
+  const { user, profile, updateProfile } = useAuth();
+  const [activeTab, setActiveTab] = useState<'owner' | 'personal' | 'profile'>('owner');
+  const [editingField, setEditingField] = useState<null | 'full_name' | 'phone' | 'business_name'>(null);
+  const [editValue, setEditValue] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   const [stats, setStats] = useState<DashboardStats>({
     totalGrounds: 0,
     totalBookingsOnMyGrounds: 0,
@@ -186,6 +189,27 @@ export default function OwnerDashboardScreen() {
     }
   };
 
+  const startEditing = (field: 'full_name' | 'phone' | 'business_name', currentVal: string) => {
+    setEditingField(field);
+    setEditValue(currentVal || '');
+  };
+
+  const handleSave = async () => {
+    if (!editingField || !user) return;
+    
+    try {
+      setIsSaving(true);
+      const { error } = await updateProfile({ [editingField]: editValue });
+      if (error) throw error;
+      setEditingField(null);
+    } catch (err) {
+      console.error('Error updating profile:', err);
+      // Optional: alert user of error
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const IS_DARK = Platform.OS !== 'web' || isCompact;
 
   const content = (
@@ -207,6 +231,12 @@ export default function OwnerDashboardScreen() {
             onPress={() => setActiveTab('personal')}
           >
             <Text style={[styles.tabText, activeTab === 'personal' && styles.activeTabText]}>Personal Activity</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.tabButton, activeTab === 'profile' && styles.activeTabButton, IS_DARK && activeTab === 'profile' && styles.activeTabButtonDark]} 
+            onPress={() => setActiveTab('profile')}
+          >
+            <Text style={[styles.tabText, activeTab === 'profile' && styles.activeTabText]}>My Profile</Text>
           </TouchableOpacity>
         </View>
 
@@ -349,6 +379,145 @@ export default function OwnerDashboardScreen() {
                 </View>
               </View>
             </View>
+          </View>
+        )}
+        
+        {activeTab === 'profile' && (
+          <View>
+            <View style={styles.grid}>
+              <View style={styles.statBoxWrapper}>
+                <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
+                  {editingField !== 'full_name' && (
+                    <TouchableOpacity 
+                      style={styles.editBtn} 
+                      onPress={() => startEditing('full_name', profile?.full_name || '')}
+                    >
+                      <Pencil size={12} color={IS_DARK ? THEME_ACCENT : '#01b854'} />
+                    </TouchableOpacity>
+                  )}
+                  <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
+                    <User size={24} color="#01b854" />
+                  </View>
+                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Full Name</Text>
+                  
+                  {editingField === 'full_name' ? (
+                    <View style={styles.editContainer}>
+                      <TextInput
+                        style={[styles.editInput, IS_DARK && styles.editInputDark]}
+                        value={editValue}
+                        onChangeText={setEditValue}
+                        autoFocus
+                        placeholder="Full name"
+                      />
+                      <View style={styles.editActions}>
+                        <TouchableOpacity onPress={handleSave} disabled={isSaving}>
+                          {isSaving ? <ActivityIndicator size="small" color="#01b854" /> : <Check size={18} color="#01b854" />}
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setEditingField(null)} disabled={isSaving}>
+                          <X size={18} color="#EF4444" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ) : (
+                    <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]} numberOfLines={1}>{profile?.full_name || 'N/A'}</Text>
+                  )}
+                  <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>Primary Account holder</Text>
+                </View>
+              </View>
+
+              <View style={styles.statBoxWrapper}>
+                <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
+                  <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
+                    <Mail size={24} color="#0EA5E9" />
+                  </View>
+                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Email Address</Text>
+                  <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]} numberOfLines={1}>{user?.email || 'N/A'}</Text>
+                  <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>Login Email</Text>
+                </View>
+              </View>
+
+              <View style={styles.statBoxWrapper}>
+                <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
+                  {editingField !== 'phone' && (
+                    <TouchableOpacity 
+                      style={styles.editBtn} 
+                      onPress={() => startEditing('phone', profile?.phone || '')}
+                    >
+                      <Pencil size={12} color={IS_DARK ? THEME_ACCENT : '#01b854'} />
+                    </TouchableOpacity>
+                  )}
+                  <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
+                    <Phone size={24} color="#F59E0B" />
+                  </View>
+                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Phone Number</Text>
+                  
+                  {editingField === 'phone' ? (
+                    <View style={styles.editContainer}>
+                      <TextInput
+                        style={[styles.editInput, IS_DARK && styles.editInputDark]}
+                        value={editValue}
+                        onChangeText={setEditValue}
+                        autoFocus
+                        placeholder="Phone"
+                        keyboardType="phone-pad"
+                      />
+                      <View style={styles.editActions}>
+                        <TouchableOpacity onPress={handleSave} disabled={isSaving}>
+                          {isSaving ? <ActivityIndicator size="small" color="#01b854" /> : <Check size={18} color="#01b854" />}
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setEditingField(null)} disabled={isSaving}>
+                          <X size={18} color="#EF4444" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ) : (
+                    <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]}>{profile?.phone || 'Not provided'}</Text>
+                  )}
+                  <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>Contact information</Text>
+                </View>
+              </View>
+
+              <View style={styles.statBoxWrapper}>
+                <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
+                  {editingField !== 'business_name' && (
+                    <TouchableOpacity 
+                      style={styles.editBtn} 
+                      onPress={() => startEditing('business_name', profile?.business_name || '')}
+                    >
+                      <Pencil size={12} color={IS_DARK ? THEME_ACCENT : '#01b854'} />
+                    </TouchableOpacity>
+                  )}
+                  <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
+                    <ShieldCheck size={24} color={profile?.business_verified ? "#01b854" : "#9CA3AF"} />
+                  </View>
+                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Business</Text>
+                  
+                  {editingField === 'business_name' ? (
+                    <View style={styles.editContainer}>
+                      <TextInput
+                        style={[styles.editInput, IS_DARK && styles.editInputDark]}
+                        value={editValue}
+                        onChangeText={setEditValue}
+                        autoFocus
+                        placeholder="Business name"
+                      />
+                      <View style={styles.editActions}>
+                        <TouchableOpacity onPress={handleSave} disabled={isSaving}>
+                          {isSaving ? <ActivityIndicator size="small" color="#01b854" /> : <Check size={18} color="#01b854" />}
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setEditingField(null)} disabled={isSaving}>
+                          <X size={18} color="#EF4444" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ) : (
+                    <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]} numberOfLines={1}>{profile?.business_name || 'Personal Account'}</Text>
+                  )}
+                  <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>{profile?.business_verified ? 'Verified Partner' : 'Verification pending'}</Text>
+                </View>
+              </View>
+            </View>
+            
           </View>
         )}
       </View>
@@ -513,5 +682,43 @@ const styles = StyleSheet.create({
   statsCaptionDark: {
     color: '#9ca3af',
     opacity: 0.8,
+  },
+  editBtn: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  editContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    marginVertical: 2,
+    maxWidth: '100%',
+  },
+  editInput: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#111827',
+    paddingVertical: 6,
+    outlineStyle: 'none',
+  } as any,
+  editInputDark: {
+    color: THEME_TEXT,
+  },
+  editActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginLeft: 4,
   },
 });

@@ -11,13 +11,17 @@ import {
   IndianRupee,
   PlusCircle,
   Settings,
+  Bell,
 } from 'lucide-react-native';
+import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '../../components/MobileAppNavbar';
+import ProfileHeaderTabs from '@/components/profile/ProfileHeaderTabs';
 
+const IS_WEB = Platform.OS === 'web';
 const DARK_BG = '#043529';
 const DARK_ACCENT = '#00ea6b';
 const DARK_TEXT = '#dcc093';
@@ -86,6 +90,19 @@ export default function ProfileScreen() {
 
   const profileBody = (
     <View style={[styles.content]}>
+      <View style={(!isCompact && isWeb) ? styles.desktopHeaderRow : null}>
+        {(!isCompact && isWeb) && (
+          <View style={{ flex: 1 }}>
+            <Text style={styles.pageTitle}>Account Overview</Text>
+          </View>
+        )}
+        <ProfileHeaderTabs
+          themeAccent={themeAccent}
+          themeText={themeText}
+          isCompact={isCompact}
+          style={(!isCompact && isWeb) ? { marginBottom: 0 } : null}
+        />
+      </View>
       <Card
         style={[
           styles.profileCard,
@@ -106,41 +123,30 @@ export default function ProfileScreen() {
           </View>
         </View>
         <Text style={[styles.name, { color: themeText }]}>{profile?.full_name}</Text>
-        <View style={[styles.roleBadge, { borderColor: themeAccent, backgroundColor: isLight ? 'rgba(16, 185, 129, 0.08)' : 'transparent' }]}>
+        <View style={[styles.roleBadge, { borderColor: themeAccent, backgroundColor: isLight ? 'rgba(16, 185, 129, 0.08)' : 'transparent', marginBottom: 16 }]}>
           <Text style={[styles.roleText, { color: isLight ? themeAccent : themeText }]}>
             {profile && getRoleLabel(profile.role)}
           </Text>
         </View>
-      </Card>
 
-      <Card
-        style={[
-          styles.infoCard,
-          {
-            backgroundColor: themeCard,
-            borderColor: themeBorder,
-            borderWidth: isLight ? 1 : styles.cardThemed.borderWidth,
-            shadowColor: isLight ? '#000' : 'transparent',
-            shadowOpacity: isLight ? 0.04 : 0,
-            shadowRadius: 12,
-          },
-        ]}
-      >
-        <View style={styles.infoRow}>
-          <Mail size={20} color={isLight ? '#64748b' : iconMuted} />
-          <Text style={[styles.infoText, { color: isLight ? '#475569' : themeText }]}>
-            {user?.email}
-          </Text>
-        </View>
-        {profile?.phone && (
-          <View style={styles.infoRow}>
-            <Phone size={20} color={isLight ? '#64748b' : iconMuted} />
-            <Text style={[styles.infoText, { color: isLight ? '#475569' : themeText }]}>
-              {profile.phone}
+        <View style={styles.overviewInfo}>
+          <View style={styles.overviewInfoItem}>
+            <Mail size={14} color={themeAccent} />
+            <Text style={[styles.overviewInfoText, { color: isLight ? '#475569' : themeText }]}>
+              {user?.email}
             </Text>
           </View>
-        )}
+          {profile?.phone && (
+            <View style={styles.overviewInfoItem}>
+              <Phone size={14} color={themeAccent} />
+              <Text style={[styles.overviewInfoText, { color: isLight ? '#475569' : themeText }]}>
+                {profile.phone}
+              </Text>
+            </View>
+          )}
+        </View>
       </Card>
+
 
       {(profile?.role === 'ground_owner' && (!isWeb || isCompact)) ? (
         <View style={[styles.menuCard, styles.ownerNavCard, { backgroundColor: themeCard, borderColor: themeBorder }]}>
@@ -218,41 +224,35 @@ export default function ProfileScreen() {
         </View>
       ) : null}
 
-      <View style={[styles.menuCard, { backgroundColor: themeCard, borderColor: themeBorder }]}>
-        {isSuperAdmin && (
-          <TouchableOpacity
+      {(isCompact || !isWeb) && (
+        <View style={[styles.menuCard, { backgroundColor: themeCard, borderColor: themeBorder }]}>
+          {isSuperAdmin && (
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => router.push('/(admin)/dashboard')}
+            >
+              <Text style={[styles.menuItemText, { color: themeText }]}>Admin Dashboard</Text>
+              <ChevronRight size={20} color={chevronColor} />
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity 
             style={styles.menuItem}
-            onPress={() => router.push('/(admin)/dashboard')}
+            onPress={() => router.push('/(tabs)/profile/notifications' as any)}
           >
-            <Text style={[styles.menuItemText, { color: themeText }]}>Admin Dashboard</Text>
+            <Text style={[styles.menuItemText, { color: themeText }]}>Notifications</Text>
             <ChevronRight size={20} color={chevronColor} />
           </TouchableOpacity>
-        )}
-
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={() => router.push('/(tabs)/favorites' as any)}
-        >
-          <Text style={[styles.menuItemText, { color: themeText }]}>Favorites</Text>
-          <ChevronRight size={20} color={chevronColor} />
-        </TouchableOpacity>
- 
-        <TouchableOpacity 
-          style={styles.menuItem}
-          onPress={() => router.push('/(tabs)/profile/notifications' as any)}
-        >
-          <Text style={[styles.menuItemText, { color: themeText }]}>Notifications</Text>
-          <ChevronRight size={20} color={chevronColor} />
-        </TouchableOpacity>
- 
-        <TouchableOpacity 
-          style={styles.menuItem}
-          onPress={() => router.push('/(tabs)/profile/settings' as any)}
-        >
-          <Text style={[styles.menuItemText, { color: themeText }]}>Settings</Text>
-          <ChevronRight size={20} color={chevronColor} />
-        </TouchableOpacity>
-      </View>
+  
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => router.push('/(tabs)/profile/settings' as any)}
+          >
+            <Text style={[styles.menuItemText, { color: themeText }]}>Settings</Text>
+            <ChevronRight size={20} color={chevronColor} />
+          </TouchableOpacity>
+        </View>
+      )}
 
       {(isCompact || !isWeb) && (
         <Button
@@ -326,15 +326,26 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#212121',
   },
+  pageTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: IS_WEB ? '#111827' : '#FFFFFF',
+    marginBottom: 2,
+  },
+  pageSubtitle: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
   content: {
     paddingBottom: 32,
     width: '100%',
-    maxWidth: 1200,
+    maxWidth: 900,
     alignSelf: 'center',
     ...Platform.select({
       web: {
         paddingHorizontal: 16,
-        paddingTop: 0,
+        paddingTop: 16,
       },
       default: {
         padding: 16,
@@ -371,6 +382,19 @@ const styles = StyleSheet.create({
   roleText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  overviewInfo: {
+    gap: 8,
+    alignItems: 'center',
+  },
+  overviewInfoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  overviewInfoText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
   infoCard: {
     marginTop: 16,
@@ -417,7 +441,38 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  actionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+    paddingHorizontal: 4,
+  },
+  actionIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  settingsIcon: {
+    marginLeft: 4,
+  },
   signOutButton: {
     marginTop: 24,
+  },
+  desktopHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
   },
 });

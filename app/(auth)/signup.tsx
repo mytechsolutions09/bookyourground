@@ -13,10 +13,11 @@ import {
   TextInput,
   Pressable,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, User, Mail, Lock, Phone, MapPin, Eye, EyeOff } from 'lucide-react-native';
+import { ArrowLeft, User, Mail, Lock, Phone, MapPin, Eye, EyeOff, CheckCircle } from 'lucide-react-native';
 
 export default function SignupScreen() {
   const [firstName, setFirstName] = useState('');
@@ -27,6 +28,7 @@ export default function SignupScreen() {
   const [stateName, setStateName] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // Focus states
   const [focusedField, setFocusedField] = useState<string | null>(null);
@@ -56,7 +58,7 @@ export default function SignupScreen() {
 
     setLoading(true);
     const fullName = `${firstName} ${lastName}`.trim();
-    const { error } = await signUp(email, password, fullName);
+    const { error } = await signUp(email, password, fullName, phone);
     setLoading(false);
 
     if (error) {
@@ -66,14 +68,7 @@ export default function SignupScreen() {
         Alert.alert('Signup Failed', error.message);
       }
     } else {
-      if (Platform.OS === 'web') {
-        alert('Account created successfully!');
-        router.replace('/(tabs)/dashboard');
-      } else {
-        Alert.alert('Success', 'Account created successfully!', [
-          { text: 'OK', onPress: () => router.replace('/(tabs)/dashboard') },
-        ]);
-      }
+      setShowSuccessModal(true);
     }
   };
 
@@ -396,6 +391,32 @@ export default function SignupScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Success Modal */}
+      <Modal
+        visible={showSuccessModal}
+        transparent
+        animationType="fade"
+      >
+        <View style={modalStyles.overlay}>
+          <View style={modalStyles.card}>
+            <View style={modalStyles.iconBg}>
+              <CheckCircle size={40} color="#00ea6b" strokeWidth={2.5} />
+            </View>
+            <Text style={modalStyles.title}>Success!</Text>
+            <Text style={modalStyles.message}>Your account has been created successfully. Welcome to BookYourGround!</Text>
+            <TouchableOpacity
+              style={modalStyles.button}
+              onPress={() => {
+                setShowSuccessModal(false);
+                router.replace('/(tabs)/dashboard');
+              }}
+            >
+              <Text style={modalStyles.buttonText}>GET STARTED</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -671,5 +692,70 @@ const webStyles = StyleSheet.create({
     fontWeight: '700',
     color: '#10b981',
     textTransform: 'uppercase' as any,
+  },
+});
+
+const modalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(4,53,41,0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  card: {
+    backgroundColor: '#06392e',
+    borderRadius: 28,
+    padding: 32,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,234,107,0.25)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 15 },
+    shadowOpacity: 0.4,
+    shadowRadius: 25,
+    elevation: 10,
+  },
+  iconBg: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(0,234,107,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#f9fafb',
+    marginBottom: 12,
+  },
+  message: {
+    fontSize: 15,
+    color: '#9ca3af',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 28,
+  },
+  button: {
+    backgroundColor: '#00ea6b',
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+    borderRadius: 14,
+    width: '100%',
+    alignItems: 'center',
+    shadowColor: '#00ea6b',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+  },
+  buttonText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#043529',
+    letterSpacing: 1,
   },
 });

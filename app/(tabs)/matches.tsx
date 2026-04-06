@@ -109,8 +109,8 @@ export default function MyMatchesScreen() {
 
       // Filter: Slots that have the current user AND are "Full" (totalTeams >= 2)
       const pairedMatches = Object.values(grouped)
-        .filter(group => group.hasCurrentUser && group.totalTeams >= 2)
-        .map(group => group.bookings.find(b => b.user_id === user.id)); // Just return the user's booking record for display
+        .filter((group: any) => group.hasCurrentUser && group.totalTeams >= 2)
+        .map((group: any) => group.bookings.find((b: any) => b.user_id === user.id)); 
 
       setMatches(pairedMatches);
     } catch (error) {
@@ -123,28 +123,28 @@ export default function MyMatchesScreen() {
   const content = (
     <View style={[styles.container, isWeb && !IS_DARK && styles.webContainerRoot]}>
       {isWeb && !IS_DARK ? (
-        <View style={styles.webCard}>
+        <>
           <View style={[styles.header, styles.webHeader]}>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={styles.title}>My Matches</Text>
               <Text style={styles.subtitle}>
                 Upcoming games where you have a matched opponent.
               </Text>
             </View>
-            <View style={styles.badgePill}>
-              <CalendarClock size={20} color="#00ea6b" />
-              <Text style={styles.badgePillNumber}>{matches.length}</Text>
-              <Text style={styles.badgePillLabel}>Active Matches</Text>
+            <View style={styles.headerActions}>
+              <View style={styles.badgePill}>
+                <CalendarClock size={20} color="#00ea6b" />
+                <Text style={styles.badgePillNumber}>{matches.length}</Text>
+                <Text style={styles.badgePillLabel}>Active Matches</Text>
+              </View>
+              <Button 
+                title="Find an Opponent" 
+                onPress={() => router.push('/find-an-opponent')}
+                variant="primary"
+                size="small"
+                style={styles.headerBtn}
+              />
             </View>
-          </View>
-
-          <View style={styles.actionHeader}>
-             <Button 
-               title="Find an Opponent" 
-               onPress={() => router.push('/find-an-opponent')}
-               variant="primary"
-               style={styles.findBtn}
-             />
           </View>
 
           <FlatList
@@ -160,9 +160,9 @@ export default function MyMatchesScreen() {
               </View>
             )}
             keyExtractor={item => item.id}
-            numColumns={isExtraWideWeb ? 4 : isWideWeb ? 3 : isMediumWeb ? 2 : 1}
+            numColumns={isWideWeb || isExtraWideWeb ? 3 : isMediumWeb ? 2 : 1}
             columnWrapperStyle={
-              isExtraWideWeb || isWideWeb || isMediumWeb ? styles.webColumnWrapper : undefined
+              isWideWeb || isExtraWideWeb || isMediumWeb ? styles.webColumnWrapper : undefined
             }
             style={styles.webFlatList}
             contentContainerStyle={styles.webList}
@@ -183,7 +183,7 @@ export default function MyMatchesScreen() {
               </View>
             }
           />
-        </View>
+        </>
       ) : (
         <>
           <View style={styles.nativeHero}>
@@ -267,6 +267,7 @@ const styles = StyleSheet.create({
   },
   webContainerRoot: {
     backgroundColor: '#F9FAFB',
+    padding: 20,
   },
   nativeScreen: {
     flex: 1,
@@ -310,15 +311,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 13,
   },
-  webCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    margin: 20,
-    flex: 1,
-    overflow: 'hidden',
-  },
+
   header: {
-    padding: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
   },
   webHeader: {
     flexDirection: 'row',
@@ -327,40 +323,40 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f3f4f6',
   },
-  actionHeader: {
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    alignItems: 'flex-end',
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
   },
-  findBtn: {
-    minWidth: 180,
+  headerBtn: {
+    minWidth: 140,
   },
   title: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: '900',
     color: '#111827',
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: 13,
     color: '#6B7280',
-    marginTop: 4,
+    marginTop: 1,
   },
   badgePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 6,
     backgroundColor: '#F0FDF4',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 999,
   },
   badgePillNumber: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: '800',
     color: '#166534',
   },
   badgePillLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: '#166534',
     textTransform: 'uppercase',

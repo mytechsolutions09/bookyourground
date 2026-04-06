@@ -13,10 +13,11 @@ import {
   TextInput,
   Pressable,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
+import { ArrowLeft, Mail, Lock, Eye, EyeOff, CheckCircle, Send } from 'lucide-react-native';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -25,6 +26,8 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [emailFocused, setEmailFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
 
   const { signIn, profile, user, resetPassword } = useAuth();
   const os = Platform.OS as string;
@@ -54,6 +57,8 @@ export default function LoginScreen() {
         Alert.alert('Login Failed', error.message);
       }
     } else {
+      setShowSuccessModal(true);
+      
       const adminEmail = 'invirtualcoin@gmail.com';
       const isSuperAdmin =
         profile?.role === 'super_admin' ||
@@ -63,25 +68,28 @@ export default function LoginScreen() {
       const isGroundOwner = profile?.role === 'ground_owner';
       const redirectPath = typeof redirect === 'string' ? redirect : null;
 
-      if (!isSuperAdmin && !isGroundOwner && redirectPath) {
-        let finalUrl = redirectPath;
-        const extraParams = new URLSearchParams();
-        if (typeof date === 'string' && date) extraParams.set('date', date);
-        if (typeof time === 'string' && time) extraParams.set('time', time);
-        if (typeof teams === 'string' && teams) extraParams.set('teams', teams);
+      setTimeout(() => {
+        setShowSuccessModal(false);
+        if (!isSuperAdmin && !isGroundOwner && redirectPath) {
+          let finalUrl = redirectPath;
+          const extraParams = new URLSearchParams();
+          if (typeof date === 'string' && date) extraParams.set('date', date);
+          if (typeof time === 'string' && time) extraParams.set('time', time);
+          if (typeof teams === 'string' && teams) extraParams.set('teams', teams);
 
-        if (Array.from(extraParams.keys()).length > 0) {
-          const hasQuery = redirectPath.includes('?');
-          finalUrl += (hasQuery ? '&' : '?') + extraParams.toString();
+          if (Array.from(extraParams.keys()).length > 0) {
+            const hasQuery = redirectPath.includes('?');
+            finalUrl += (hasQuery ? '&' : '?') + extraParams.toString();
+          }
+
+          router.replace(finalUrl as any);
+          return;
         }
 
-        router.replace(finalUrl as any);
-        return;
-      }
-
-      if (isSuperAdmin) router.replace('/(admin)/dashboard');
-      else if (isGroundOwner) router.replace('/(owner)/grounds');
-      else router.replace('/(tabs)/bookings');
+        if (isSuperAdmin) router.replace('/(admin)/dashboard');
+        else if (isGroundOwner) router.replace('/(owner)/grounds');
+        else router.replace('/(tabs)/bookings');
+      }, 1500);
     }
   };
 
@@ -106,11 +114,7 @@ export default function LoginScreen() {
         Alert.alert('Error', error.message);
       }
     } else {
-      if (Platform.OS === 'web') {
-        alert('Password reset link sent to your email');
-      } else {
-        Alert.alert('Success', 'Password reset link sent to your email');
-      }
+      setShowResetModal(true);
     }
   };
 
@@ -339,6 +343,46 @@ export default function LoginScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Login Success Modal - Optional but good for consistency */}
+      <Modal
+        visible={showSuccessModal}
+        transparent
+        animationType="fade"
+      >
+        <View style={modalStyles.overlay}>
+          <View style={modalStyles.card}>
+            <View style={[modalStyles.iconBg, { backgroundColor: 'rgba(0,234,107,0.1)' }]}>
+              <CheckCircle size={40} color="#00ea6b" strokeWidth={2.5} />
+            </View>
+            <Text style={modalStyles.title}>Welcome Back!</Text>
+            <Text style={modalStyles.message}>Signed in successfully. redirecting you...</Text>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Password Reset Modal */}
+      <Modal
+        visible={showResetModal}
+        transparent
+        animationType="fade"
+      >
+        <View style={modalStyles.overlay}>
+          <View style={modalStyles.card}>
+            <View style={[modalStyles.iconBg, { backgroundColor: 'rgba(16,185,129,0.1)' }]}>
+              <Send size={40} color="#10b981" strokeWidth={2.5} />
+            </View>
+            <Text style={modalStyles.title}>Email Sent!</Text>
+            <Text style={modalStyles.message}>A password reset link has been sent to your email address.</Text>
+            <TouchableOpacity
+              style={modalStyles.button}
+              onPress={() => setShowResetModal(false)}
+            >
+              <Text style={modalStyles.buttonText}>GOT IT</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -624,5 +668,69 @@ const webStyles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#10b981',
+  },
+});
+
+const modalStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(4,53,41,0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  card: {
+    backgroundColor: '#06392e',
+    borderRadius: 28,
+    padding: 32,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,234,107,0.25)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 15 },
+    shadowOpacity: 0.4,
+    shadowRadius: 25,
+    elevation: 8,
+  },
+  iconBg: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#f9fafb',
+    marginBottom: 12,
+  },
+  message: {
+    fontSize: 15,
+    color: '#9ca3af',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 28,
+  },
+  button: {
+    backgroundColor: '#00ea6b',
+    paddingVertical: 14,
+    paddingHorizontal: 40,
+    borderRadius: 14,
+    width: '100%',
+    alignItems: 'center',
+    shadowColor: '#00ea6b',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+  },
+  buttonText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#043529',
+    letterSpacing: 1,
   },
 });

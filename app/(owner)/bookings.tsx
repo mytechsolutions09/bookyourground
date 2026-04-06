@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, Platform, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, Platform, TouchableOpacity, ScrollView, TextInput } from 'react-native';
+import { Calendar, Filter, X } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { BookingWithDetails } from '@/types';
@@ -9,6 +10,7 @@ import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
 import { router } from 'expo-router';
 import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
+import { normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 
 export default function OwnerBookingsScreen() {
@@ -17,8 +19,8 @@ export default function OwnerBookingsScreen() {
   const [loading, setLoading] = useState(true);
   const isWeb = Platform.OS === 'web';
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
-  const [ownerScope, setOwnerScope] = useState<'own' | 'other'>('own');
+  const [activeTab, setActiveTab] = useState<'all' | 'upcoming' | 'past'>('all');
+  const [ownerScope, setOwnerScope] = useState<'all' | 'own' | 'other'>('all');
 
   useEffect(() => {
     if (user) {
@@ -99,16 +101,18 @@ export default function OwnerBookingsScreen() {
       const dd = `${d.getDate()}`.padStart(2, '0');
       const todayIso = `${yyyy}-${mm}-${dd}`;
 
-      const byScope = bookings.filter((b) =>
-        ownerScope === 'own'
+      const byScope = bookings.filter((b) => {
+        if (ownerScope === 'all') return true;
+        return ownerScope === 'own'
           ? b.ground.owner_id === user?.id
-          : b.ground.owner_id !== user?.id,
-      );
+          : b.ground.owner_id !== user?.id;
+      });
 
       const byDate = !selectedDate
         ? byScope
         : byScope.filter((b) => b.booking_date === selectedDate);
 
+      if (activeTab === 'all') return byDate;
       return activeTab === 'upcoming'
         ? byDate.filter((b) => b.booking_date >= todayIso)
         : byDate.filter((b) => b.booking_date < todayIso);
@@ -127,11 +131,14 @@ export default function OwnerBookingsScreen() {
   const upcomingCount = useMemo(
     () =>
       bookings.filter(
-        (b) =>
-          (ownerScope === 'own'
-            ? b.ground.owner_id === user?.id
-            : b.ground.owner_id !== user?.id) &&
-          b.booking_date >= todayIsoForCounts,
+        (b) => {
+          const scopeMatch = ownerScope === 'all' 
+            ? true 
+            : ownerScope === 'own'
+              ? b.ground.owner_id === user?.id
+              : b.ground.owner_id !== user?.id;
+          return scopeMatch && b.booking_date >= todayIsoForCounts;
+        }
       ).length,
     [bookings, todayIsoForCounts, ownerScope, user?.id],
   );
@@ -139,13 +146,27 @@ export default function OwnerBookingsScreen() {
   const pastCount = useMemo(
     () =>
       bookings.filter(
-        (b) =>
-          (ownerScope === 'own'
-            ? b.ground.owner_id === user?.id
-            : b.ground.owner_id !== user?.id) &&
-          b.booking_date < todayIsoForCounts,
+        (b) => {
+          const scopeMatch = ownerScope === 'all' 
+            ? true 
+            : ownerScope === 'own'
+              ? b.ground.owner_id === user?.id
+              : b.ground.owner_id !== user?.id;
+          return scopeMatch && b.booking_date < todayIsoForCounts;
+        }
       ).length,
     [bookings, todayIsoForCounts, ownerScope, user?.id],
+  );
+
+  const timeAllCount = useMemo(
+    () =>
+      bookings.filter(
+        (b) =>
+          ownerScope === 'all' || (ownerScope === 'own'
+            ? b.ground.owner_id === user?.id
+            : b.ground.owner_id !== user?.id)
+      ).length,
+    [bookings, ownerScope, user?.id],
   );
 
   const content = (
@@ -159,6 +180,22 @@ export default function OwnerBookingsScreen() {
             contentContainerStyle={styles.tabRow}
             style={styles.tabScrollWrap}
           >
+            <TouchableOpacity
+              onPress={() => setActiveTab('all')}
+              style={[
+                styles.tabChip,
+                activeTab === 'all' && styles.tabChipActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.tabChipText,
+                  activeTab === 'all' && styles.tabChipTextActive,
+                ]}
+              >
+                {`All (${timeAllCount})`}
+              </Text>
+            </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setActiveTab('upcoming')}
               style={[
@@ -189,6 +226,23 @@ export default function OwnerBookingsScreen() {
                 ]}
               >
                 {`Past (${pastCount})`}
+              </Text>
+            </TouchableOpacity>
+            <View style={styles.verticalDivider} />
+            <TouchableOpacity
+              onPress={() => setOwnerScope('all')}
+              style={[
+                styles.tabChip,
+                ownerScope === 'all' && styles.tabChipActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.tabChipText,
+                  ownerScope === 'all' && styles.tabChipTextActive,
+                ]}
+              >
+                All grounds
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -232,6 +286,22 @@ export default function OwnerBookingsScreen() {
           <View style={styles.filterRow}>
             <View style={styles.tabsAndFilterLeft}>
               <TouchableOpacity
+                onPress={() => setActiveTab('all')}
+                style={[
+                  styles.tabChip,
+                  activeTab === 'all' && styles.tabChipActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.tabChipText,
+                    activeTab === 'all' && styles.tabChipTextActive,
+                  ]}
+                >
+                  {`All (${timeAllCount})`}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
                 onPress={() => setActiveTab('upcoming')}
                 style={[
                   styles.tabChip,
@@ -261,6 +331,25 @@ export default function OwnerBookingsScreen() {
                   ]}
                 >
                   {`Past (${pastCount})`}
+                </Text>
+              </TouchableOpacity>
+
+              <View style={styles.verticalDivider} />
+
+              <TouchableOpacity
+                onPress={() => setOwnerScope('all')}
+                style={[
+                  styles.tabChip,
+                  ownerScope === 'all' && styles.tabChipActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.tabChipText,
+                    ownerScope === 'all' && styles.tabChipTextActive,
+                  ]}
+                >
+                  All grounds
                 </Text>
               </TouchableOpacity>
 
@@ -299,30 +388,59 @@ export default function OwnerBookingsScreen() {
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.filterLabel}>Filter by date</Text>
-            {/* Web-only native date input */}
-            {/* eslint-disable-next-line react-native/no-inline-styles */}
-            {
-              // @ts-ignore web only element
-              <input
-                type="date"
-                value={selectedDate ?? ''}
-                onChange={(e: any) =>
-                  setSelectedDate(e.target.value ? e.target.value : null)
-                }
-                style={{
-                  padding: 6,
-                  borderRadius: 6,
-                  border: '1px solid #E5E7EB',
-                  fontSize: 12,
-                }}
-              />
-            }
-            {selectedDate && (
-              <TouchableOpacity onPress={() => setSelectedDate(null)}>
-                <Text style={styles.clearFilterText}>Clear</Text>
-              </TouchableOpacity>
-            )}
+            <View style={styles.dateFilterWrap}>
+              <View 
+                style={[
+                  styles.tabChip, 
+                  selectedDate && styles.tabChipActive,
+                  { paddingRight: selectedDate ? 32 : 12 }
+                ]}
+              >
+                <Calendar 
+                  size={14} 
+                  color={selectedDate ? (isWeb ? '#01b854' : '#043529') : '#6B7280'} 
+                />
+                <Text 
+                  style={[
+                    styles.tabChipText, 
+                    selectedDate && styles.tabChipTextActive
+                  ]}
+                >
+                  {selectedDate ? selectedDate : 'Filter by Date'}
+                </Text>
+                
+                {/* Native input overlay for web picker triggering */}
+                {isWeb && (
+                  // @ts-ignore web only element
+                  <input
+                    type="date"
+                    value={selectedDate ?? ''}
+                    onChange={(e: any) =>
+                      setSelectedDate(e.target.value ? e.target.value : null)
+                    }
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      opacity: 0,
+                      cursor: 'pointer',
+                      width: '100%',
+                    }}
+                  />
+                )}
+              </View>
+              
+              {selectedDate && (
+                <TouchableOpacity 
+                  onPress={() => setSelectedDate(null)}
+                  style={styles.dateClearBtn}
+                >
+                  <X size={12} color="#6B7280" />
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         </View>
       )}
@@ -371,7 +489,7 @@ export default function OwnerBookingsScreen() {
                 <View style={[styles.tableCell, styles.colDateTime]}>
                   <Text style={styles.dateText}>{item.booking_date}</Text>
                   <Text style={styles.timeText}>
-                    {`${item.start_time} – ${item.end_time}`}
+                    {`${normalizeDbTimeToHHMM(item.start_time)} – ${normalizeDbTimeToHHMM(item.end_time)}`}
                   </Text>
                 </View>
 
@@ -600,21 +718,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tabChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingHorizontal: IS_WEB ? 11 : 16,
+    paddingVertical: IS_WEB ? 6 : 10,
+    borderRadius: IS_WEB ? 8 : 10,
     borderWidth: 1.5,
     borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.25)',
     backgroundColor: IS_WEB ? '#F9FAFB' : 'rgba(4,53,41,0.6)',
     alignItems: 'center',
     justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 6,
   },
   tabChipActive: {
     backgroundColor: IS_WEB ? '#043529' : '#00ea6b',
     borderColor: IS_WEB ? '#01b854' : '#00ea6b',
   },
   tabChipText: {
-    fontSize: 13,
+    fontSize: IS_WEB ? 11.5 : 13,
     fontWeight: '700',
     color: IS_WEB ? '#6B7280' : '#f9fafb',
     letterSpacing: -0.2,
@@ -622,5 +742,29 @@ const styles = StyleSheet.create({
   tabChipTextActive: {
     color: IS_WEB ? '#01b854' : '#043529',
     fontWeight: '800',
+  },
+  verticalDivider: {
+    width: 1,
+    height: 18,
+    backgroundColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.15)',
+    marginHorizontal: 4,
+  },
+  dateFilterWrap: {
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dateClearBtn: {
+    position: 'absolute',
+    right: 8,
+    top: '50%',
+    marginTop: -8,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
   },
 });

@@ -30,7 +30,7 @@ export default function OwnerSignupScreen() {
   const showHeroImage = Platform.OS === 'web' && width >= 1000;
 
   const handleSignup = async () => {
-    if (!email || !password || !fullName || !businessName) {
+    if (!email || !password || !fullName || !businessName || !phone) {
       const msg = 'Please fill in all required fields';
       if (Platform.OS === 'web') alert(msg);
       else Alert.alert('Error', msg);
@@ -45,7 +45,7 @@ export default function OwnerSignupScreen() {
     }
 
     setLoading(true);
-    const { error } = await signUp(email, password, fullName, 'ground_owner', businessName);
+    const { error } = await signUp(email, password, fullName, phone, 'ground_owner', businessName);
     setLoading(false);
 
     if (error) {
@@ -245,6 +245,21 @@ export default function OwnerSignupScreen() {
                 placeholderTextColor="#4b5563"
                 keyboardType="email-address"
                 autoCapitalize="none"
+              />
+            </View>
+          </View>
+
+          <View style={styles.fieldWrap}>
+            <Text style={styles.fieldLabel}>Mobile Number</Text>
+            <View style={styles.inputRow}>
+              <Phone size={17} color="#6b7280" />
+              <TextInput
+                style={styles.textInput}
+                value={phone}
+                onChangeText={setPhone}
+                placeholder="+91..."
+                placeholderTextColor="#4b5563"
+                keyboardType="phone-pad"
               />
             </View>
           </View>
