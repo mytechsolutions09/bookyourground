@@ -24,6 +24,8 @@ export interface Database {
           avatar_url: string | null;
           business_name: string | null;
           business_verified: boolean;
+          address: string | null;
+          state: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -36,6 +38,8 @@ export interface Database {
           avatar_url?: string | null;
           business_name?: string | null;
           business_verified?: boolean;
+          address?: string | null;
+          state?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -48,6 +52,8 @@ export interface Database {
           avatar_url?: string | null;
           business_name?: string | null;
           business_verified?: boolean;
+          address?: string | null;
+          state?: string | null;
           created_at?: string;
           updated_at?: string;
         };
