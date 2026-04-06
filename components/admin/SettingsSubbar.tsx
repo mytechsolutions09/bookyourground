@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, ScrollView } from 'react-native';
 import { router, usePathname } from 'expo-router';
 import { Settings as SettingsIcon, MapPin, Tag, LifeBuoy } from 'lucide-react-native';
 
@@ -17,45 +17,49 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
   return (
     <View style={styles.shell}>
       <View style={styles.subbar}>
-        <Text style={styles.subbarTitle}>Settings</Text>
-
-        <Pressable
-          onPress={() => router.push(BASE as any)}
-          style={[styles.subLink, isGeneral && styles.subLinkActive]}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.subbarScroll}
         >
-          <SettingsIcon size={18} color={isGeneral ? '#10b981' : '#666'} />
-          <Text style={[styles.subLinkText, isGeneral && styles.subLinkTextActive]}>General</Text>
-        </Pressable>
+          <Pressable
+            onPress={() => router.push(BASE as any)}
+            style={[styles.subLink, isGeneral && styles.subLinkActive]}
+          >
+            <SettingsIcon size={16} color={isGeneral ? '#FFFFFF' : '#666'} />
+            <Text style={[styles.subLinkText, isGeneral && styles.subLinkTextActive]}>General</Text>
+          </Pressable>
 
-        <Pressable
-          onPress={() => router.push((BASE + '/locations') as any)}
-          style={[styles.subLink, isLocations && styles.subLinkActive]}
-        >
-          <MapPin size={18} color={isLocations ? '#10b981' : '#666'} />
-          <Text style={[styles.subLinkText, isLocations && styles.subLinkTextActive]}>
-            Locations
-          </Text>
-        </Pressable>
+          <Pressable
+            onPress={() => router.push((BASE + '/locations') as any)}
+            style={[styles.subLink, isLocations && styles.subLinkActive]}
+          >
+            <MapPin size={16} color={isLocations ? '#FFFFFF' : '#666'} />
+            <Text style={[styles.subLinkText, isLocations && styles.subLinkTextActive]}>
+              Locations
+            </Text>
+          </Pressable>
 
-        <Pressable
-          onPress={() => router.push((BASE + '/ground-types') as any)}
-          style={[styles.subLink, isGroundTypes && styles.subLinkActive]}
-        >
-          <Tag size={18} color={isGroundTypes ? '#10b981' : '#666'} />
-          <Text style={[styles.subLinkText, isGroundTypes && styles.subLinkTextActive]}>
-            Ground types
-          </Text>
-        </Pressable>
+          <Pressable
+            onPress={() => router.push((BASE + '/ground-types') as any)}
+            style={[styles.subLink, isGroundTypes && styles.subLinkActive]}
+          >
+            <Tag size={16} color={isGroundTypes ? '#FFFFFF' : '#666'} />
+            <Text style={[styles.subLinkText, isGroundTypes && styles.subLinkTextActive]}>
+              Ground types
+            </Text>
+          </Pressable>
 
-        <Pressable
-          onPress={() => router.push((BASE + '/support') as any)}
-          style={[styles.subLink, isSupport && styles.subLinkActive]}
-        >
-          <LifeBuoy size={18} color={isSupport ? '#10b981' : '#666'} />
-          <Text style={[styles.subLinkText, isSupport && styles.subLinkTextActive]}>
-            Support
-          </Text>
-        </Pressable>
+          <Pressable
+            onPress={() => router.push((BASE + '/support') as any)}
+            style={[styles.subLink, isSupport && styles.subLinkActive]}
+          >
+            <LifeBuoy size={16} color={isSupport ? '#FFFFFF' : '#666'} />
+            <Text style={[styles.subLinkText, isSupport && styles.subLinkTextActive]}>
+              Support
+            </Text>
+          </Pressable>
+        </ScrollView>
       </View>
 
       <View style={styles.content}>{children}</View>
@@ -66,55 +70,46 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
 const styles = StyleSheet.create({
   shell: {
     flex: 1,
-    flexDirection: 'row',
-    backgroundColor: '#F5F5F5',
-    // Pull the settings subbar left so it visually touches
-    // the main super-admin sidebar card (which has a 16px
-    // right padding applied in WebLayout).
-    marginLeft: -16,
+    flexDirection: 'column',
+    backgroundColor: '#FFFFFF',
   },
   subbar: {
-    width: 220,
     backgroundColor: '#FFFFFF',
-    paddingVertical: 16,
-    paddingHorizontal: 14,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     ...Platform.select({
-      web: { position: 'sticky' as any, top: 96, alignSelf: 'flex-start' as any },
+      web: { position: 'sticky' as any, top: 0, zIndex: 100 },
     }),
   },
-  subbarTitle: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#999',
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    marginBottom: 10,
-    marginLeft: 8,
+  subbarScroll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   subLink: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    borderRadius: 10,
-    marginBottom: 6,
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
   },
   subLinkActive: {
-    backgroundColor: 'rgba(43,47,75,0.08)',
+    backgroundColor: '#10b981',
+    borderColor: '#10b981',
   },
   subLinkText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
-    color: '#666',
+    color: '#6B7280',
   },
   subLinkTextActive: {
-    color: '#10b981',
+    color: '#FFFFFF',
   },
   content: {
     flex: 1,

@@ -12,25 +12,39 @@ import {
   useWindowDimensions,
   TextInput,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { Mail, Lock, User, Phone, MapPin, Building2 } from 'lucide-react-native';
+import { Mail, Lock, User, Phone, MapPin, Building2, ChevronDown } from 'lucide-react-native';
+
+const INDIAN_STATES = [
+  "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", 
+  "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", 
+  "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", 
+  "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", 
+  "Uttarakhand", "West Bengal", "Andaman and Nicobar Islands", "Chandigarh", 
+  "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Jammu and Kashmir", "Ladakh", 
+  "Lakshadweep", "Puducherry"
+];
 
 export default function OwnerSignupScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
+  const [state, setState] = useState('');
   const [businessName, setBusinessName] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showStatePicker, setShowStatePicker] = useState(false);
 
   const { signUp } = useAuth();
   const { width } = useWindowDimensions();
   const showHeroImage = Platform.OS === 'web' && width >= 1000;
 
   const handleSignup = async () => {
-    if (!email || !password || !fullName || !businessName || !phone) {
+    if (!email || !password || !fullName || !businessName || !phone || !address || !state) {
       const msg = 'Please fill in all required fields';
       if (Platform.OS === 'web') alert(msg);
       else Alert.alert('Error', msg);
@@ -45,7 +59,7 @@ export default function OwnerSignupScreen() {
     }
 
     setLoading(true);
-    const { error } = await signUp(email, password, fullName, phone, 'ground_owner', businessName);
+    const { error } = await signUp(email, password, fullName, phone, 'ground_owner', businessName, address, state);
     setLoading(false);
 
     if (error) {
@@ -133,6 +147,24 @@ export default function OwnerSignupScreen() {
                     placeholder="Create a strong password"
                     secureTextEntry
                   />
+
+                  <View style={webStyles.row}>
+                    <View style={webStyles.col}>
+                      <WebInput
+                        label="Business Address"
+                        value={address}
+                        onChangeText={setAddress}
+                        placeholder="Ground street address"
+                      />
+                    </View>
+                    <View style={webStyles.col}>
+                      <WebStatePicker
+                        label="State"
+                        value={state}
+                        onValueChange={setState}
+                      />
+                    </View>
+                  </View>
 
                   <View style={webStyles.buttonRow}>
                     <TouchableOpacity
@@ -265,6 +297,36 @@ export default function OwnerSignupScreen() {
           </View>
 
           <View style={styles.fieldWrap}>
+            <Text style={styles.fieldLabel}>Business Address</Text>
+            <View style={styles.inputRow}>
+              <MapPin size={17} color="#6b7280" />
+              <TextInput
+                style={styles.textInput}
+                value={address}
+                onChangeText={setAddress}
+                placeholder="Ground street address"
+                placeholderTextColor="#4b5563"
+              />
+            </View>
+          </View>
+
+          <View style={styles.fieldWrap}>
+            <Text style={styles.fieldLabel}>State</Text>
+            <TouchableOpacity 
+              onPress={() => setShowStatePicker(true)}
+              style={styles.inputRow}
+            >
+              <MapPin size={17} color="#6b7280" />
+              <Text style={[styles.textInput, !state && { color: '#4b5563' }]}>
+                {state || "Select State"}
+              </Text>
+              <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                <ChevronDown size={15} color="#6b7280" />
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.fieldWrap}>
             <Text style={styles.fieldLabel}>Password</Text>
             <View style={styles.inputRow}>
               <Lock size={17} color="#6b7280" />
@@ -301,9 +363,133 @@ export default function OwnerSignupScreen() {
           <Text style={styles.homeLinkText}>Back to Home</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* State Picker Modal for Mobile */}
+      <Modal visible={showStatePicker} transparent animationType="slide">
+        <View style={mobilePickerStyles.overlay}>
+          <View style={mobilePickerStyles.card}>
+            <View style={mobilePickerStyles.header}>
+              <Text style={mobilePickerStyles.title}>Select State</Text>
+              <TouchableOpacity onPress={() => setShowStatePicker(false)}>
+                <Text style={mobilePickerStyles.doneText}>DONE</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ width: '100%', maxHeight: 400 }}>
+              {INDIAN_STATES.map((s) => (
+                <TouchableOpacity
+                  key={s}
+                  onPress={() => {
+                    setState(s);
+                    setShowStatePicker(false);
+                  }}
+                  style={[
+                    mobilePickerStyles.item,
+                    state === s && mobilePickerStyles.itemActive
+                  ]}
+                >
+                  <Text style={[
+                    mobilePickerStyles.itemText,
+                    state === s && mobilePickerStyles.itemTextActive
+                  ]}>{s}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
+
+// ── Web state picker component ─────────────────────────────────────────────
+function WebStatePicker(props: any) {
+  const { label, value, onValueChange } = props;
+  return (
+    <View style={{ marginBottom: 12 }}>
+      {label && <Text style={{ fontSize: 12, fontWeight: '600', color: '#E5E7EB', marginBottom: 4 }}>{label}</Text>}
+      <div style={{ position: 'relative', width: '100%' }}>
+        <select
+          value={value}
+          onChange={(e) => onValueChange(e.target.value)}
+          style={{
+            width: '100%',
+            appearance: 'none',
+            border: '1px solid #00ea6b',
+            borderRadius: '8px',
+            padding: '10px 12px',
+            fontSize: '14px',
+            backgroundColor: '#06392e',
+            color: '#f9fafb',
+            outline: 'none',
+            cursor: 'pointer',
+          }}
+        >
+          <option value="" disabled hidden>Select state</option>
+          {INDIAN_STATES.map(state => (
+            <option key={state} value={state} style={{ backgroundColor: '#06392e', color: '#f9fafb' }}>
+              {state}
+            </option>
+          ))}
+        </select>
+        <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+          <ChevronDown size={14} color="#6b7280" />
+        </div>
+      </div>
+    </View>
+  );
+}
+
+const mobilePickerStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(4,53,41,0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  card: {
+    backgroundColor: '#06392e',
+    borderRadius: 24,
+    width: '100%',
+    maxWidth: 400,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,234,107,0.25)',
+    overflow: 'hidden',
+  },
+  header: {
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#f9fafb',
+  },
+  doneText: {
+    color: '#00ea6b',
+    fontWeight: '700',
+  },
+  item: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
+  itemActive: {
+    backgroundColor: 'rgba(0,234,107,0.1)',
+  },
+  itemText: {
+    color: '#f9fafb',
+    fontSize: 16,
+  },
+  itemTextActive: {
+    color: '#00ea6b',
+    fontWeight: '600',
+  },
+});
 
 function WebInput(props: any) {
   const { label, ...rest } = props;

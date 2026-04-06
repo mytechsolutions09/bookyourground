@@ -1,6 +1,8 @@
 import { Database } from './database';
 
-export type Profile = Database['public']['Tables']['profiles']['Row'];
+export type Profile = Database['public']['Tables']['profiles']['Row'] & {
+  email?: string | null;
+};
 export type Ground = Database['public']['Tables']['grounds']['Row'];
 export type Location = Database['public']['Tables']['locations']['Row'];
 export type GroundType = Database['public']['Tables']['ground_types']['Row'];

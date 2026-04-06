@@ -177,7 +177,7 @@ function OwnerEarningsScreenInner() {
 export default function OwnerEarningsScreen() {
   if (Platform.OS === 'web') {
     return (
-      <WebLayout>
+      <WebLayout noCard>
         <OwnerEarningsScreenInner />
       </WebLayout>
     );
@@ -210,10 +210,9 @@ const styles = StyleSheet.create({
     }),
   },
   inner: {
-    maxWidth: 1200,
     width: '100%',
     alignSelf: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 24,
   },

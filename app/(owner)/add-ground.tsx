@@ -1054,9 +1054,7 @@ export default function AddGroundScreen() {
     </KeyboardAvoidingView>
   );
 
-  if (Platform.OS === 'web' && windowWidth >= 900) {
-    return <WebLayout>{content}</WebLayout>;
-  }
+  if (Platform.OS === 'web') return <WebLayout noCard>{content}</WebLayout>;
 
   return (
     <View style={styles.nativeRoot}>
@@ -1066,8 +1064,8 @@ export default function AddGroundScreen() {
   );
 }
 
-// Force dark premium theme colors across all platforms
-const IS_WEB = false;
+// Check for web platform
+const IS_WEB = Platform.OS === 'web';
 
 const styles = StyleSheet.create({
   nativeRoot: {
@@ -1108,8 +1106,9 @@ const styles = StyleSheet.create({
   },
   subLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '300',
     color: IS_WEB ? '#374151' : '#9ca3af',
+    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
     marginBottom: 8,
   },
   helperText: {
@@ -1149,8 +1148,9 @@ const styles = StyleSheet.create({
   },
   typeChipText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '300',
     color: IS_WEB ? '#374151' : '#9ca3af',
+    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
   },
   typeChipTextActive: {
     color: '#00ea6b',
@@ -1170,7 +1170,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: IS_WEB ? '#FFFFFF' : '#043529',
     fontSize: 14,
+    fontWeight: '300',
     color: IS_WEB ? '#000' : '#FFF',
+    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
   },
   mediaRemove: {
     paddingHorizontal: 8,
@@ -1317,13 +1319,15 @@ const styles = StyleSheet.create({
   },
   previewMain: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '300',
     color: IS_WEB ? '#111827' : '#FFFFFF',
+    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
   },
   previewSub: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '300',
     color: '#6B7280',
+    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
     marginTop: 4,
   },
   previewEditInput: {
@@ -1335,8 +1339,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: '#FFFFFF',
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '300',
     color: '#111827',
+    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
   },
   previewEmpty: {
     fontSize: 12,
@@ -1533,7 +1538,9 @@ const stylesDropdown = StyleSheet.create({
   },
   buttonText: {
     fontSize: 14,
+    fontWeight: '300',
     color: IS_WEB ? '#111827' : '#FFFFFF',
+    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
   },
   menu: {
     position: 'absolute',
@@ -1558,6 +1565,8 @@ const stylesDropdown = StyleSheet.create({
   },
   optionText: {
     fontSize: 14,
+    fontWeight: '300',
     color: IS_WEB ? '#111827' : '#FFFFFF',
+    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
   },
 });

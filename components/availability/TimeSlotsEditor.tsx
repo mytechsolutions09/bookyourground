@@ -9,12 +9,14 @@ import {
   TextInput,
   Platform,
   useWindowDimensions,
+  ScrollView,
 } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { TimeSlot, DayOfWeek } from '@/types';
 import Button from '@/components/ui/Button';
 import { formatSlotLabelHour, normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
 import { createTimeSlotsForGround, ensureDefaultTimeSlotsForGround } from '@/utils/timeSlotsDb';
+import { Pencil, Trash2, X, Check } from 'lucide-react-native';
 
 const DAY_ORDER: DayOfWeek[] = [
   'monday',
@@ -35,6 +37,40 @@ function timeLabelFromHHMM(hhmm: string): string {
   if (!Number.isFinite(hh)) return hhmm;
   return formatSlotLabelHour(hh);
 }
+
+const DAY_PRESET_OPTIONS: { key: string; label: string; days: DayOfWeek[] }[] = [
+  { key: 'all', label: 'Every day (Mon–Sun)', days: [...DAY_ORDER] },
+  {
+    key: 'weekdays',
+    label: 'Weekdays (Mon–Fri)',
+    days: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'],
+  },
+  { key: 'weekend', label: 'Weekend (Sat–Sun)', days: ['saturday', 'sunday'] },
+  { key: 'monday', label: 'Monday', days: ['monday'] },
+  { key: 'tuesday', label: 'Tuesday', days: ['tuesday'] },
+  { key: 'wednesday', label: 'Wednesday', days: ['wednesday'] },
+  { key: 'thursday', label: 'Thursday', days: ['thursday'] },
+  { key: 'friday', label: 'Friday', days: ['friday'] },
+  { key: 'saturday', label: 'Saturday', days: ['saturday'] },
+  { key: 'sunday', label: 'Sunday', days: ['sunday'] },
+];
+
+function daysForPresetKey(key: string): DayOfWeek[] {
+  const row = DAY_PRESET_OPTIONS.find((o) => o.key === key);
+  return row?.days ?? DAY_ORDER;
+}
+
+/** 08:00 or 8:00 → 08:00 */
+const normalizeHHMM = (value: string): string | null => {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
+  if (!match) return null;
+  const hh = Number(match[1]);
+  const mm = Number(match[2]);
+  if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null;
+  if (hh < 0 || hh > 23) return null;
+  if (mm < 0 || mm > 59) return null;
+  return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+};
 
 export type TimeSlotsEditorHandle = {
   save: () => Promise<boolean>;
@@ -70,10 +106,32 @@ function TimeSlotsEditorInner(
   const [dirtyPriceById, setDirtyPriceById] = useState<Record<string, boolean>>({});
 
   // Add slots UI (applies to all days)
-  const [addSlotsStartTimes, setAddSlotsStartTimes] = useState<string[]>(['']);
-  const [addSlotsDurationMinutesText, setAddSlotsDurationMinutesText] = useState<string>('60');
-  const [addSlotsCustomPriceText, setAddSlotsCustomPriceText] = useState<string>('');
+  const [slotStartTimeText, setSlotStartTimeText] = useState<string>('');
+  const [slotDaysKey, setSlotDaysKey] = useState<string>('all');
+  const [slotDurationMinutesText, setSlotDurationMinutesText] = useState<string>('60');
+  const [slotCustomPriceText, setSlotCustomPriceText] = useState<string>('');
   const [addingSlots, setAddingSlots] = useState(false);
+
+  // Edit preview rows
+  const [editingPreviewKey, setEditingPreviewKey] = useState<string | null>(null);
+  const [editPreviewPrice, setEditPreviewPrice] = useState<string>('');
+  const [editPreviewDuration, setEditPreviewDuration] = useState<string>('');
+  const [deletingPreviewKey, setDeletingPreviewKey] = useState<string | null>(null);
+
+  const dayPresetDropdownOptions = React.useMemo(
+    () => DAY_PRESET_OPTIONS.map(({ key, label }) => ({ key, label })),
+    [],
+  );
+
+  const startTimeDropdownOptions = React.useMemo(() => {
+    const pad2 = (n: number) => String(n).padStart(2, '0');
+    const options: { key: string; label: string }[] = [];
+    for (let hh = 0; hh <= 23; hh += 1) {
+      options.push({ key: `${pad2(hh)}:00`, label: `${pad2(hh)}:00` });
+      options.push({ key: `${pad2(hh)}:30`, label: `${pad2(hh)}:30` });
+    }
+    return options;
+  }, []);
 
   const slotsByDay = useMemo(() => {
     const map: Record<DayOfWeek, TimeSlot[]> = {
@@ -112,6 +170,19 @@ function TimeSlotsEditorInner(
     for (const s of slots) {
       const startHHMM = normalizeDbTimeToHHMM(s.start_time) ?? String(s.start_time ?? '');
       const endHHMM = normalizeDbTimeToHHMM(s.end_time) ?? String(s.end_time ?? '');
+      
+      let durationMinutes = 60;
+      const sh = parseInt(startHHMM.split(':')[0] ?? '0', 10);
+      const sm = parseInt(startHHMM.split(':')[1] ?? '0', 10);
+      const eh = parseInt(endHHMM.split(':')[0] ?? '0', 10);
+      const em = parseInt(endHHMM.split(':')[1] ?? '0', 10);
+      if (!Number.isNaN(sh) && !Number.isNaN(eh)) {
+        const startMins = sh * 60 + sm;
+        let endMins = eh * 60 + em;
+        if (endMins < startMins) endMins += 24 * 60; // Crosses midnight
+        durationMinutes = endMins - startMins;
+      }
+
       const key = String(startHHMM);
       const existing = byStart.get(key);
 
@@ -122,7 +193,8 @@ function TimeSlotsEditorInner(
           customPrice: s.custom_price ?? null,
           availableCount: s.is_available ? 1 : 0,
           total: 1,
-        });
+          durationMinutes,
+        } as any);
         continue;
       }
 
@@ -194,6 +266,72 @@ function TimeSlotsEditorInner(
     const daySlots = slotsByDay[day];
     for (const s of daySlots) {
       setSlotAvailable(s.id, next);
+    }
+  };
+
+  const deleteSlotsByStartTime = async (startHHMM: string) => {
+    if (!canEdit) return;
+    const dbTime = `${startHHMM}:00`;
+    
+    setDeletingPreviewKey(startHHMM);
+    try {
+      const { error } = await supabase
+        .from('time_slots')
+        .delete()
+        .eq('ground_id', groundId)
+        .eq('start_time', dbTime);
+
+      if (error) throw error;
+      await loadSlots();
+    } catch (e: any) {
+      Alert.alert('Error', e?.message ?? 'Failed to delete slots');
+    } finally {
+      setDeletingPreviewKey(null);
+    }
+  };
+
+  const updateSlotsByStartTime = async (startHHMM: string, newPrice: string, newDuration: string) => {
+    if (!canEdit) return;
+    const priceNum = parseFloat(newPrice.trim());
+    const durationNum = parseInt(newDuration.trim(), 10);
+
+    if (isNaN(priceNum) || priceNum < 0) {
+      Alert.alert('Invalid price', 'Price must be a positive number.');
+      return;
+    }
+    if (isNaN(durationNum) || durationNum <= 0) {
+      Alert.alert('Invalid duration', 'Duration must be positive minutes.');
+      return;
+    }
+
+    const startDbTime = `${startHHMM}:00`;
+    
+    // Calculate new end time
+    const startParts = startHHMM.split(':');
+    const startMins = parseInt(startParts[0], 10) * 60 + parseInt(startParts[1], 10);
+    const endMins = (startMins + durationNum) % (24 * 60);
+    const endHH = Math.floor(endMins / 60);
+    const endMM = endMins % 60;
+    const endDbTime = `${String(endHH).padStart(2, '0')}:${String(endMM).padStart(2, '0')}:00`;
+
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('time_slots')
+        .update({
+          custom_price: priceNum,
+          end_time: endDbTime
+        })
+        .eq('ground_id', groundId)
+        .eq('start_time', startDbTime);
+
+      if (error) throw error;
+      setEditingPreviewKey(null);
+      await loadSlots();
+    } catch (e: any) {
+      Alert.alert('Error', e?.message ?? 'Failed to update slots');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -346,111 +484,114 @@ function TimeSlotsEditorInner(
 
       {canEdit ? (
         <View style={styles.addSlotsBox}>
-          <Text style={styles.addSlotsTitle}>Add time slots</Text>
-          <Text style={styles.addSlotsHint}>Enter start times in `HH:MM` format (applies to all days).</Text>
-          {addSlotsStartTimes.map((t, idx) => (
-            <TextInput
-              key={idx}
-              style={styles.addSlotsInput}
-              placeholder={`e.g. 08:00${addSlotsStartTimes.length > 1 ? ` (${idx + 1})` : ''}`}
-              value={t}
-              onChangeText={(text) => {
-                setAddSlotsStartTimes((prev) => {
-                  const next = [...prev];
-                  next[idx] = text;
-                  return next;
-                });
-              }}
-              keyboardType="default"
-            />
-          ))}
-          <Pressable
-            onPress={() => setAddSlotsStartTimes((prev) => [...prev, ''])}
-            style={styles.addAnotherBtn}
-          >
-            <Text style={styles.addAnotherBtnText}>Add another slot</Text>
-          </Pressable>
-          <View style={styles.addSlotsRow}>
-            <TextInput
-              style={[styles.addSlotsInput, styles.addSlotsDuration]}
-              value={addSlotsDurationMinutesText}
-              onChangeText={setAddSlotsDurationMinutesText}
-              keyboardType="numeric"
-              placeholder="60"
-            />
-            <TextInput
-              style={[styles.addSlotsInput, styles.addSlotsDuration, styles.addSlotsPrice]}
-              value={addSlotsCustomPriceText}
-              onChangeText={setAddSlotsCustomPriceText}
-              keyboardType="numeric"
-              placeholder="Custom price (required)"
-              placeholderTextColor="#9CA3AF"
-            />
-            <Button
-              title={addingSlots ? 'Adding...' : 'Add slots'}
-              onPress={async () => {
-                if (addingSlots) return;
-                const durationMinutes = parseInt(addSlotsDurationMinutesText.trim(), 10);
-                if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
-                  Alert.alert('Invalid duration', 'Duration must be a positive number of minutes.');
-                  return;
-                }
-
-                const startTimes = addSlotsStartTimes
-                  .map((s) => String(s ?? '').trim())
-                  .filter(Boolean);
-                if (!startTimes.length) {
-                  Alert.alert('Missing start times', 'Enter at least one start time.');
-                  return;
-                }
-
-                const trimmedPrice = String(addSlotsCustomPriceText ?? '').trim();
-                if (!trimmedPrice) {
-                  Alert.alert('Custom price required', 'Please enter a custom price before adding slots.');
-                  return;
-                }
-                const parsed = parseFloat(trimmedPrice);
-                const customPrice: number | null = Number.isFinite(parsed) ? parsed : null;
-                if (customPrice == null) {
-                  Alert.alert('Invalid custom price', 'Enter a valid number for custom price.');
-                  return;
-                }
-
-                setAddingSlots(true);
-                try {
-                  // If user already toggled any slots/prices but hasn't clicked "Save changes" yet,
-                  // persist those edits before reloading (prevents losing "older selected slot").
-                  if (changedIds.length > 0) {
-                    await saveInternal();
-                  }
-
-                  const res = await createTimeSlotsForGround({
-                    groundId,
-                    days: DAY_ORDER,
-                    startTimesHHMM: startTimes,
-                    durationMinutes,
-                    isAvailable: true,
-                    customPrice,
-                    supabaseClient: undefined,
-                  });
-                  if (res.created === 0 && res.skipped === 0) {
-                    Alert.alert('No slots added', 'No valid slots were created.');
-                    return;
-                  }
-                  setAddSlotsStartTimes(['']);
-                  setAddSlotsCustomPriceText('');
-                  await loadSlots();
-                } finally {
-                  setAddingSlots(false);
-                }
-              }}
-              loading={addingSlots}
-              disabled={addingSlots}
-              size="small"
-              fullWidth
+          <Text style={styles.addSlotsTitle}>Add time slots (Presets)</Text>
+          
+          <View style={[styles.draftField, { zIndex: 50 }]}>
+            <Text style={styles.draftLabel}>Start time (HH:MM) *</Text>
+            <StartTimeDropdown
+              options={startTimeDropdownOptions}
+              value={slotStartTimeText}
+              onChange={setSlotStartTimeText}
+              placeholder="Select time"
             />
           </View>
-          <Text style={styles.addSlotsFootnote}>Tip: after adding, use the chips to set availability and custom price per slot.</Text>
+
+          <View style={[styles.draftField, { zIndex: 40 }]}>
+            <Text style={styles.draftLabel}>Days *</Text>
+            <StartTimeDropdown
+              options={dayPresetDropdownOptions}
+              value={slotDaysKey}
+              onChange={setSlotDaysKey}
+            />
+          </View>
+
+          <View style={[styles.draftField, { zIndex: 30 }]}>
+            <Text style={styles.draftLabel}>Duration (minutes) *</Text>
+            <TextInput
+              style={styles.addSlotsInput}
+              value={slotDurationMinutesText}
+              onChangeText={setSlotDurationMinutesText}
+              keyboardType="numeric"
+              placeholder="60"
+              placeholderTextColor="#9CA3AF"
+            />
+          </View>
+
+          <View style={[styles.draftField, { zIndex: 20 }]}>
+            <Text style={styles.draftLabel}>Custom price per slot (₹) *</Text>
+            <TextInput
+              style={styles.addSlotsInput}
+              value={slotCustomPriceText}
+              onChangeText={setSlotCustomPriceText}
+              keyboardType="numeric"
+              placeholder="e.g. 1500"
+              placeholderTextColor="#9CA3AF"
+            />
+          </View>
+
+          <Button
+            title={addingSlots ? 'Adding...' : 'Add slots'}
+            onPress={async () => {
+              if (addingSlots) return;
+              
+              const hhmm = normalizeHHMM(slotStartTimeText);
+              if (!hhmm) {
+                Alert.alert('Invalid time', 'Please select a valid start time.');
+                return;
+              }
+
+              const durationMinutes = parseInt(slotDurationMinutesText.trim(), 10);
+              if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
+                Alert.alert('Invalid duration', 'Duration must be a positive number of minutes.');
+                return;
+              }
+
+              const trimmedPrice = String(slotCustomPriceText ?? '').trim();
+              if (!trimmedPrice) {
+                Alert.alert('Custom price required', 'Please enter a custom price.');
+                return;
+              }
+              const parsed = parseFloat(trimmedPrice);
+              if (!Number.isFinite(parsed)) {
+                Alert.alert('Invalid custom price', 'Enter a valid number for custom price.');
+                return;
+              }
+
+              setAddingSlots(true);
+              try {
+                if (changedIds.length > 0) {
+                  await saveInternal();
+                }
+
+                const res = await createTimeSlotsForGround({
+                  groundId,
+                  days: daysForPresetKey(slotDaysKey),
+                  startTimesHHMM: [hhmm],
+                  durationMinutes,
+                  isAvailable: true,
+                  customPrice: parsed,
+                  supabaseClient: undefined,
+                });
+                
+                if (res.created === 0 && res.skipped === 0) {
+                  Alert.alert('No slots added', 'No valid slots were created (they might already exist).');
+                } else {
+                  setSlotStartTimeText('');
+                  setSlotCustomPriceText('');
+                  await loadSlots();
+                }
+              } finally {
+                setAddingSlots(false);
+              }
+            }}
+            loading={addingSlots}
+            disabled={addingSlots}
+            size="small"
+            fullWidth
+            style={{ marginTop: 4 }}
+          />
+
+          <Text style={styles.addSlotsFootnote}>Tip: after adding, use the chips to set availability and individual custom prices.</Text>
         </View>
       ) : null}
 
@@ -559,19 +700,117 @@ function TimeSlotsEditorInner(
             <Text style={styles.previewTitle}>Saved slots</Text>
             {savedSlotPreviewRows.length ? (
               <View style={styles.previewList}>
-                {savedSlotPreviewRows.map((r, idx) => (
-                  <View key={r.startHHMM + '-' + idx} style={styles.previewRow}>
-                    <Text style={styles.previewMain}>
-                      {r.startHHMM} - {r.endHHMM}
-                    </Text>
-                    <Text style={styles.previewSub}>
-                      {r.customPrice != null
-                        ? `₹${Number(r.customPrice).toLocaleString('en-IN')}`
-                        : 'default'}{' '}
-                      · Available {r.availableCount}/{r.total}
-                    </Text>
-                  </View>
-                ))}
+                {savedSlotPreviewRows.map((r, idx) => {
+                  const key = r.startHHMM;
+                  const isEditing = editingPreviewKey === key;
+                  const isDeleting = deletingPreviewKey === key;
+
+                  if (isEditing) {
+                    return (
+                      <View key={key + '-' + idx} style={[styles.previewRow, styles.previewRowEditing]}>
+                        <View style={styles.previewEditHeader}>
+                          <Text style={styles.previewTitleInline}>{r.startHHMM} - {r.endHHMM}</Text>
+                          <View style={styles.previewButtons}>
+                            <Pressable 
+                              onPress={() => updateSlotsByStartTime(key, editPreviewPrice, editPreviewDuration)}
+                              style={styles.previewIconBtn}
+                              disabled={saving}
+                            >
+                              <Check size={18} color="#15803D" />
+                            </Pressable>
+                            <Pressable 
+                              onPress={() => setEditingPreviewKey(null)}
+                              style={styles.previewIconBtn}
+                            >
+                              <X size={18} color="#EF4444" />
+                            </Pressable>
+                          </View>
+                        </View>
+
+                        <View style={styles.previewEditForm}>
+                          <View style={styles.previewEditInputGroup}>
+                            <Text style={styles.previewEditLabel}>Price (₹)</Text>
+                            <TextInput
+                              style={styles.previewEditInput}
+                              value={editPreviewPrice}
+                              onChangeText={setEditPreviewPrice}
+                              keyboardType="numeric"
+                              placeholder="Price"
+                            />
+                          </View>
+                          <View style={styles.previewEditInputGroup}>
+                            <Text style={styles.previewEditLabel}>Mins</Text>
+                            <TextInput
+                              style={styles.previewEditInput}
+                              value={editPreviewDuration}
+                              onChangeText={setEditPreviewDuration}
+                              keyboardType="numeric"
+                              placeholder="Mins"
+                            />
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  }
+
+                  return (
+                    <View key={key + '-' + idx} style={styles.previewRow}>
+                      <View style={styles.previewContent}>
+                        <View style={styles.previewTextCol}>
+                          <Text style={styles.previewMain}>
+                            {r.startHHMM} - {r.endHHMM}
+                          </Text>
+                          <Text style={styles.previewSub}>
+                            {r.customPrice != null
+                              ? `₹${Number(r.customPrice).toLocaleString('en-IN')}`
+                              : 'default'}{' '}
+                            · Available {r.availableCount}/{r.total}
+                          </Text>
+                        </View>
+
+                        {canEdit && (
+                          <View style={styles.previewActions}>
+                            <Pressable
+                              onPress={() => {
+                                setEditingPreviewKey(key);
+                                setEditPreviewPrice(r.customPrice != null ? String(r.customPrice) : '');
+                                setEditPreviewDuration(String((r as any).durationMinutes || 60));
+                              }}
+                              style={styles.previewIconBtn}
+                              disabled={isDeleting || saving}
+                            >
+                              <Pencil size={16} color="#4B5563" />
+                            </Pressable>
+                            <Pressable
+                              onPress={() => {
+                                Alert.alert(
+                                  'Delete slots?',
+                                  `Are you sure you want to delete all slots starting at ${r.startHHMM}?`,
+                                  [
+                                    { text: 'Cancel', style: 'cancel' },
+                                    { 
+                                      text: 'Delete', 
+                                      style: 'destructive', 
+                                      onPress: () => deleteSlotsByStartTime(key) 
+                                    }
+                                  ]
+                                );
+                              }}
+                              style={styles.previewIconBtn}
+                              disabled={isDeleting || saving}
+                            >
+                              {isDeleting ? (
+                                <ActivityIndicator size="small" color="#EF4444" />
+                              ) : (
+                                <Trash2 size={16} color="#EF4444" />
+                              )}
+                            </Pressable>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  );
+                })}
               </View>
             ) : (
               <Text style={styles.previewEmpty}>Add time slots to see preview.</Text>
@@ -614,29 +853,37 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 14,
-    fontWeight: '900',
+    fontWeight: '300',
     color: '#212121',
+    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
   },
   subtitle: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '300',
     color: '#6B7280',
+    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
   },
   editorCols: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 16,
+    zIndex: 1, // Base zIndex for stack
   },
   editorLeft: {
     flex: 1,
+    zIndex: 10, // Higher than editorRight
+    position: 'relative',
   },
   editorRight: {
     width: 280,
+    zIndex: 1,
+    position: 'relative',
   },
   previewTitle: {
     fontSize: 13,
-    fontWeight: '900',
+    fontWeight: '300',
     color: '#111827',
+    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
     marginBottom: 8,
   },
   previewList: {
@@ -651,20 +898,84 @@ const styles = StyleSheet.create({
   },
   previewMain: {
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: '300',
     color: '#374151',
+    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
   },
   previewSub: {
     marginTop: 4,
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '300',
     color: '#6B7280',
+    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+  },
+  previewContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  previewTextCol: {
+    flex: 1,
+  },
+  previewActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginLeft: 10,
+  },
+  previewIconBtn: {
+    padding: 6,
+    borderRadius: 6,
+    backgroundColor: '#F3F4F6',
+  },
+  previewRowEditing: {
+    borderColor: '#4CAF50',
+    backgroundColor: '#F0FDF4',
+  },
+  previewEditHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  previewTitleInline: {
+    fontSize: 12,
+    fontWeight: '300',
+    color: '#15803D',
+  },
+  previewButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  previewEditForm: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  previewEditInputGroup: {
+    flex: 1,
+  },
+  previewEditLabel: {
+    fontSize: 10,
+    color: '#6B7280',
+    marginBottom: 2,
+    fontWeight: '300',
+  },
+  previewEditInput: {
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    backgroundColor: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '300',
+    color: '#374151',
   },
   previewEmpty: {
     marginTop: 8,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '300',
     color: '#6B7280',
+    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
     textAlign: 'center',
   },
   dayBlock: {
@@ -699,18 +1010,21 @@ const styles = StyleSheet.create({
   },
   dayBulkBtnText: {
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '300',
     color: '#374151',
+    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
   },
   dayLabel: {
     fontSize: 13,
-    fontWeight: '900',
+    fontWeight: '300',
     color: '#374151',
+    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
   },
   emptyText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '300',
     color: '#6B7280',
+    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
     textAlign: 'center',
   },
   slotsRow: {
@@ -740,8 +1054,9 @@ const styles = StyleSheet.create({
   },
   slotChipText: {
     fontSize: 11,
-    fontWeight: '900',
+    fontWeight: '300',
     color: '#374151',
+    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
     maxWidth: 88,
     textAlign: 'center',
   },
@@ -758,14 +1073,16 @@ const styles = StyleSheet.create({
   },
   addSlotsTitle: {
     fontSize: 13,
-    fontWeight: '900',
+    fontWeight: '300',
     color: '#111827',
+    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
     marginBottom: 4,
   },
   addSlotsHint: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '300',
     color: '#6B7280',
+    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
     marginBottom: 8,
   },
   addSlotsInput: {
@@ -776,8 +1093,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: '#FFFFFF',
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '300',
     color: '#111827',
+    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
     marginBottom: 8,
   },
   addAnotherBtn: {
@@ -792,8 +1110,9 @@ const styles = StyleSheet.create({
   },
   addAnotherBtnText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '300',
     color: '#2563EB',
+    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
   },
   addSlotsRow: {
     flexDirection: 'row',
@@ -811,8 +1130,9 @@ const styles = StyleSheet.create({
   addSlotsFootnote: {
     marginTop: 8,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '300',
     color: '#6B7280',
+    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
   },
   priceWrap: {
     flexDirection: 'row',
@@ -821,8 +1141,9 @@ const styles = StyleSheet.create({
   },
   priceLabel: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '300',
     color: '#4B5563',
+    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
     marginRight: 2,
   },
   priceInput: {
@@ -833,6 +1154,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#D1D5DB',
     fontSize: 10,
+    fontWeight: '300',
+    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
     textAlign: 'center',
   },
   priceInputSet: {
@@ -850,8 +1173,9 @@ const styles = StyleSheet.create({
   helperText: {
     marginTop: 8,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '300',
     color: '#6B7280',
+    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
     textAlign: 'center',
   },
   loadingWrap: {
@@ -862,8 +1186,136 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '300',
     color: '#6B7280',
+    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+  },
+  draftField: {
+    marginBottom: 10,
+    zIndex: 50,
+  },
+  draftLabel: {
+    fontSize: 12,
+    fontWeight: '300',
+    color: '#374151',
+    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+    marginBottom: 4,
+  },
+});
+
+function StartTimeDropdown({
+  options,
+  value,
+  onChange,
+  placeholder = 'Select',
+}: {
+  options: { key: string; label: string }[];
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = options.find((o) => o.key === value);
+
+  return (
+    <View style={startTimeDropdownStyles.outer}>
+      <Pressable
+        onPress={() => setOpen((v) => !v)}
+        style={[startTimeDropdownStyles.button, open && startTimeDropdownStyles.buttonOpen]}
+      >
+        <Text style={startTimeDropdownStyles.buttonText}>{selected?.label || placeholder}</Text>
+      </Pressable>
+
+      {open && (
+        <View style={startTimeDropdownStyles.menu}>
+          <ScrollView
+            style={{ maxHeight: 200 }}
+            nestedScrollEnabled={true}
+            keyboardShouldPersistTaps="handled"
+          >
+            {options.map((opt) => (
+              <Pressable
+                key={opt.key}
+                onPress={() => {
+                  onChange(opt.key);
+                  setOpen(false);
+                }}
+                style={[
+                  startTimeDropdownStyles.option,
+                  opt.key === value && startTimeDropdownStyles.optionActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    startTimeDropdownStyles.optionText,
+                    opt.key === value && startTimeDropdownStyles.optionTextActive,
+                  ]}
+                >
+                  {opt.label}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+    </View>
+  );
+}
+
+const startTimeDropdownStyles = StyleSheet.create({
+  outer: {
+    position: 'relative',
+    zIndex: 100,
+    width: '100%',
+  },
+  button: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    backgroundColor: '#FFFFFF',
+  },
+  buttonOpen: {
+    borderColor: '#10b981',
+    backgroundColor: 'rgba(16,185,129,0.05)',
+  },
+  buttonText: {
+    fontSize: 13,
+    fontWeight: '300',
+    color: '#111827',
+    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+  },
+  menu: {
+    position: 'absolute',
+    top: 45,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    zIndex: 1000,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  option: {
+    padding: 12,
+  },
+  optionActive: {
+    backgroundColor: '#F3F4F6',
+  },
+  optionText: {
+    fontSize: 13,
+    fontWeight: '300',
+    color: '#374151',
+    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+  },
+  optionTextActive: {
+    color: '#10b981',
   },
 });
 

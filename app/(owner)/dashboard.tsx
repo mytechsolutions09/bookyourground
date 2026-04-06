@@ -525,7 +525,7 @@ export default function OwnerDashboardScreen() {
   );
 
   if (Platform.OS === 'web') {
-    return <WebLayout>{content}</WebLayout>;
+    return <WebLayout noCard>{content}</WebLayout>;
   }
 
   return (
@@ -550,13 +550,12 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 40,
-    paddingTop: 16,
+    paddingTop: 0,
   },
   mainWrapper: {
-    maxWidth: 1200,
-    alignSelf: 'center',
     width: '100%',
-    paddingHorizontal: 16,
+    alignSelf: 'center',
+    paddingHorizontal: 24,
   },
   sectionTitle: {
     fontSize: 20,
@@ -707,9 +706,10 @@ const styles = StyleSheet.create({
   editInput: {
     flex: 1,
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '300',
     color: '#111827',
     paddingVertical: 6,
+    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
     outlineStyle: 'none',
   } as any,
   editInputDark: {

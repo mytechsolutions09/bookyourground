@@ -37,9 +37,10 @@ import { supabase } from '@/lib/supabase';
 
 interface WebLayoutProps {
   children: React.ReactNode;
+  noCard?: boolean;
 }
 
-export default function WebLayout({ children }: WebLayoutProps) {
+export default function WebLayout({ children, noCard }: WebLayoutProps) {
   const { profile, signOut, user } = useAuth();
   const pathname = usePathname();
   const segments = useSegments();
@@ -136,7 +137,16 @@ export default function WebLayout({ children }: WebLayoutProps) {
     '/manage-users',
     '/settings',
   ];
-  const isAdminRoute = adminPathnames.includes(cleanPath) || cleanPath.startsWith('/(admin)/');
+  const isAdminRoute =
+    adminPathnames.includes(cleanPath) ||
+    cleanPath.startsWith('/(admin)/') ||
+    cleanPath.startsWith('/settings/') ||
+    cleanPath === '/add-ground' ||
+    cleanPath === '/(owner)/add-ground' ||
+    cleanPath === '/matches' ||
+    cleanPath === '/find-an-opponent' ||
+    cleanPath === '/(tabs)/matches' ||
+    cleanPath === '/(tabs)/find-an-opponent';
   // On ground info (/grounds/[id]) and booking info (/bookings/[id]) pages,
   // hide the left sidebar for all roles so the content can take full width.
   const isGroundInfoPage = isGroundDetails;
@@ -489,6 +499,9 @@ export default function WebLayout({ children }: WebLayoutProps) {
                 style={styles.mobileOverlay}
                 onPress={() => setMenuOpen(false)}
               />
+              <View style={styles.main}>
+                {noCard ? children : <View style={styles.mainAppCard}>{children}</View>}
+              </View>
               <View style={styles.sidebarMobile}>
                 {showLandingMobileMenu &&
                   !showOwnerMobileMenu &&
@@ -624,7 +637,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
           )}
 
         {showMenuPanel ? (
-          <View style={styles.sidebarContainer}>
+          <View style={isAdminLayout ? styles.sidebarContainerAdmin : styles.sidebarContainer}>
             <View
               style={[
                 styles.sidebar,
@@ -632,7 +645,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
                 isSuperAdmin && isAdminRoute && sidebarCollapsed && styles.sidebarCollapsed,
               ]}
             >
-              <ScrollView 
+              <ScrollView
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: 20 }}
               >
@@ -782,7 +795,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
 
         <View style={[
           styles.main,
-          !isPublicNoSidebar && !isCompact && styles.mainAppCard
+          !isPublicNoSidebar && !isCompact && !noCard && styles.mainAppCard
         ]}>
           {children}
         </View>
@@ -985,7 +998,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 'auto',
     width: '100%',
     position: 'relative',
-    paddingTop: 24,
+    paddingTop: 24, // Restored padding for Owners and Users
     paddingHorizontal: 24,
   },
   bodyAdmin: {
@@ -993,7 +1006,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     width: '100%',
     position: 'relative',
-    paddingTop: 24,
+    paddingTop: 0, // Flush to top
   },
   bodyFull: {
     flex: 1,
@@ -1002,13 +1015,16 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   sidebarContainer: {
-    paddingRight: 16,
+    paddingRight: 16, // Added gap back for Owners and Users
+  },
+  sidebarContainerAdmin: {
+    paddingRight: 0, // Keep it flush for Super Admin
   },
   sidebar: {
-    width: 220,
+    width: 200,
     backgroundColor: '#FFFFFF',
-    paddingVertical: 16,
-    paddingHorizontal: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
     borderRadius: 16,
     shadowColor: '#000',
     shadowOpacity: 0.04,
@@ -1017,9 +1033,9 @@ const styles = StyleSheet.create({
     ...Platform.select({
       web: {
         position: 'sticky' as any,
-        top: 96,
+        top: 64, // Closer to top
         alignSelf: 'flex-start',
-        maxHeight: 'calc(100vh - 120px)' as any,
+        maxHeight: 'calc(100vh - 80px)' as any,
       },
     }),
   },
@@ -1049,11 +1065,11 @@ const styles = StyleSheet.create({
   navLink: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    gap: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderRadius: 8,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   navLinkCollapsed: {
     justifyContent: 'center',
@@ -1071,7 +1087,7 @@ const styles = StyleSheet.create({
     height: 14,
   },
   navLinkText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     color: '#666',
   },
@@ -1131,6 +1147,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#F3F4F6',
+    borderTopLeftRadius: 0, // Flush with sidebar/subbar
+    borderBottomLeftRadius: 0,
   },
   mobileOverlay: {
     position: 'absolute' as any,
@@ -1142,12 +1160,12 @@ const styles = StyleSheet.create({
     zIndex: 2500,
   },
   sidebarSectionTitle: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: '#9CA3AF',
     textTransform: 'uppercase',
     letterSpacing: 0.6,
-    marginBottom: 8,
+    marginBottom: 6,
     marginLeft: 4,
   },
   sidebarHeaderRow: {

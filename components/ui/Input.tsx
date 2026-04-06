@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, TextInput, Text, StyleSheet, TextInputProps, ViewStyle } from 'react-native';
+import { View, TextInput, Text, StyleSheet, TextInputProps, ViewStyle, Platform } from 'react-native';
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -37,18 +37,26 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#E5E7EB',
+    fontWeight: '300',
+    color: Platform.OS === 'web' ? '#374151' : '#E5E7EB',
     marginBottom: 8,
+    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#00ea6b',
+    borderColor: Platform.OS === 'web' ? '#D1D5DB' : '#00ea6b',
     borderRadius: 8,
     padding: 12,
-    fontSize: 16,
-    backgroundColor: '#06392e',
-    color: '#00ea6b',
+    fontSize: 14,
+    fontWeight: '300',
+    backgroundColor: Platform.OS === 'web' ? '#FFFFFF' : '#06392e',
+    color: Platform.OS === 'web' ? '#111827' : '#00ea6b',
+    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+    ...Platform.select({
+        web: {
+            outlineStyle: 'none',
+        } as any
+    })
   },
   inputError: {
     borderColor: '#F44336',

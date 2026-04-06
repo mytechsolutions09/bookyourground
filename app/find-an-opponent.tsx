@@ -71,12 +71,7 @@ export default function FindAnOpponentScreen() {
         return;
       }
 
-      // Filter out only the current user's own seek-an-opponent posts
-      const openMatches = (data as any[]).filter(
-        (booking: any) => !currentUserId || booking.user_id !== currentUserId
-      );
-
-      setMatches(openMatches);
+      setMatches(data as any[]);
     } catch (error) {
       console.error('Error loading matches:', error);
     } finally {

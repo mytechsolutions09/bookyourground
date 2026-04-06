@@ -19,6 +19,7 @@ import WebLayout from '@/components/web/WebLayout';
 import MatchCard from '@/components/matches/MatchCard';
 import { Trophy, Swords, MapPin, Search, CalendarClock } from 'lucide-react-native';
 import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
 
 export default function MyMatchesScreen() {
   const { user } = useAuth();
@@ -124,30 +125,33 @@ export default function MyMatchesScreen() {
     <View style={[styles.container, isWeb && !IS_DARK && styles.webContainerRoot]}>
       {isWeb && !IS_DARK ? (
         <>
-          <View style={[styles.header, styles.webHeader]}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.title}>My Matches</Text>
-              <Text style={styles.subtitle}>
-                Upcoming games where you have a matched opponent.
-              </Text>
-            </View>
-            <View style={styles.headerActions}>
-              <View style={styles.badgePill}>
-                <CalendarClock size={20} color="#00ea6b" />
-                <Text style={styles.badgePillNumber}>{matches.length}</Text>
-                <Text style={styles.badgePillLabel}>Active Matches</Text>
+          <Card style={styles.headerCard}>
+            <View style={styles.headerRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.title}>My Matches</Text>
+                <Text style={styles.subtitle}>
+                  Upcoming games where you have a matched opponent.
+                </Text>
               </View>
-              <Button 
-                title="Find an Opponent" 
-                onPress={() => router.push('/find-an-opponent')}
-                variant="primary"
-                size="small"
-                style={styles.headerBtn}
-              />
+              <View style={styles.headerActions}>
+                <View style={styles.badgePill}>
+                  <CalendarClock size={18} color="#10b981" />
+                  <Text style={styles.badgePillNumber}>{matches.length}</Text>
+                  <Text style={styles.badgePillLabel}>Active Matches</Text>
+                </View>
+                <Button 
+                  title="Find an Opponent" 
+                  onPress={() => router.push('/find-an-opponent')}
+                  variant="primary"
+                  size="small"
+                  style={styles.headerBtn}
+                />
+              </View>
             </View>
-          </View>
+          </Card>
 
           <FlatList
+            key={`matches-list-${isWideWeb || isExtraWideWeb ? 3 : isMediumWeb ? 2 : 1}`}
             data={matches}
             renderItem={({ item }) => (
               <View style={styles.webItem}>
@@ -249,7 +253,7 @@ export default function MyMatchesScreen() {
   );
 
   if (Platform.OS === 'web') {
-    return <WebLayout>{content}</WebLayout>;
+    return <WebLayout noCard>{content}</WebLayout>;
   }
 
   return (
@@ -266,8 +270,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#043529',
   },
   webContainerRoot: {
-    backgroundColor: '#F9FAFB',
-    padding: 20,
+    backgroundColor: 'transparent',
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+    paddingTop: 0,
   },
   nativeScreen: {
     flex: 1,
@@ -312,16 +318,23 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
 
-  header: {
+  headerCard: {
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
     paddingVertical: 12,
+    borderRadius: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOpacity: 0.02,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
   },
-  webHeader: {
+  headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
   },
   headerActions: {
     flexDirection: 'row',
@@ -332,12 +345,13 @@ const styles = StyleSheet.create({
     minWidth: 140,
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '900',
     color: '#111827',
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#6B7280',
     marginTop: 1,
   },

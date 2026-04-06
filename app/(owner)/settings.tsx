@@ -216,7 +216,7 @@ function OwnerSettingsInner() {
 export default function OwnerSettingsScreen() {
   if (IS_WEB) {
     return (
-      <WebLayout>
+      <WebLayout noCard>
         <OwnerSettingsInner />
       </WebLayout>
     );
@@ -248,10 +248,9 @@ const styles = StyleSheet.create({
     }),
   },
   inner: {
-    maxWidth: 1200,
     width: '100%',
     alignSelf: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 24,
   },
@@ -296,8 +295,9 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '300',
     color: IS_WEB ? '#4B5563' : '#9ca3af',
+    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
     marginBottom: 4,
   },
   input: {
@@ -308,7 +308,9 @@ const styles = StyleSheet.create({
     paddingVertical: Platform.OS === 'web' ? 8 : 10,
     backgroundColor: IS_WEB ? '#FFFFFF' : '#043529',
     fontSize: 14,
+    fontWeight: '300',
     color: IS_WEB ? '#000' : '#FFF',
+    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
   },
   multilineInput: {
     minHeight: 72,

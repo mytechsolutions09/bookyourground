@@ -17,7 +17,17 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, User, Mail, Lock, Phone, MapPin, Eye, EyeOff, CheckCircle } from 'lucide-react-native';
+import { ArrowLeft, User, Mail, Lock, Phone, MapPin, Eye, EyeOff, CheckCircle, ChevronDown } from 'lucide-react-native';
+
+const INDIAN_STATES = [
+  "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", 
+  "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", 
+  "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", 
+  "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", 
+  "Uttarakhand", "West Bengal", "Andaman and Nicobar Islands", "Chandigarh", 
+  "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Jammu and Kashmir", "Ladakh", 
+  "Lakshadweep", "Puducherry"
+];
 
 export default function SignupScreen() {
   const [firstName, setFirstName] = useState('');
@@ -25,10 +35,12 @@ export default function SignupScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
+  const [address, setAddress] = useState('');
   const [stateName, setStateName] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showStatePicker, setShowStatePicker] = useState(false);
 
   // Focus states
   const [focusedField, setFocusedField] = useState<string | null>(null);
@@ -38,35 +50,28 @@ export default function SignupScreen() {
   const showHeroImage = Platform.OS === 'web' && width >= 900;
 
   const handleSignup = async () => {
-    if (!firstName || !lastName || !phone || !stateName || !email || !password) {
-      if (Platform.OS === 'web') {
-        alert('Please fill in all required fields');
-      } else {
-        Alert.alert('Error', 'Please fill in all required fields');
-      }
+    if (!firstName || !lastName || !phone || !address || !stateName || !email || !password) {
+      const msg = 'Please fill in all required fields';
+      if (Platform.OS === 'web') alert(msg);
+      else Alert.alert('Error', msg);
       return;
     }
 
     if (password.length < 6) {
-      if (Platform.OS === 'web') {
-        alert('Password must be at least 6 characters');
-      } else {
-        Alert.alert('Error', 'Password must be at least 6 characters');
-      }
+      const msg = 'Password must be at least 6 characters';
+      if (Platform.OS === 'web') alert(msg);
+      else Alert.alert('Error', msg);
       return;
     }
 
     setLoading(true);
     const fullName = `${firstName} ${lastName}`.trim();
-    const { error } = await signUp(email, password, fullName, phone);
+    const { error } = await signUp(email, password, fullName, phone, 'user', undefined, address, stateName);
     setLoading(false);
 
     if (error) {
-      if (Platform.OS === 'web') {
-        alert('Signup Failed: ' + error.message);
-      } else {
-        Alert.alert('Signup Failed', error.message);
-      }
+      if (Platform.OS === 'web') alert('Signup Failed: ' + error.message);
+      else Alert.alert('Signup Failed', error.message);
     } else {
       setShowSuccessModal(true);
     }
@@ -99,7 +104,6 @@ export default function SignupScreen() {
                         value={firstName}
                         onChangeText={setFirstName}
                         placeholder="First name"
-                        autoComplete="name"
                       />
                     </View>
                     <View style={webStyles.col}>
@@ -108,7 +112,6 @@ export default function SignupScreen() {
                         value={lastName}
                         onChangeText={setLastName}
                         placeholder="Last name"
-                        autoComplete="name-family"
                       />
                     </View>
                   </View>
@@ -119,44 +122,47 @@ export default function SignupScreen() {
                         label="Mobile Number"
                         value={phone}
                         onChangeText={setPhone}
-                        placeholder="Mobile number"
+                        placeholder="+91..."
                         keyboardType="phone-pad"
-                        autoComplete="tel"
                       />
                     </View>
-                    <View style={webStyles.col}>
-                      <WebInput
-                        label="State"
-                        value={stateName}
-                        onChangeText={setStateName}
-                        placeholder="Your state"
-                      />
-                    </View>
-                  </View>
-  
-                  <View style={webStyles.row}>
                     <View style={webStyles.col}>
                       <WebInput
                         label="Email"
                         value={email}
                         onChangeText={setEmail}
-                        placeholder="Enter your email"
+                        placeholder="email@example.com"
                         keyboardType="email-address"
-                        autoCapitalize="none"
-                        autoComplete="email"
-                      />
-                    </View>
-                    <View style={webStyles.col}>
-                      <WebInput
-                        label="Password"
-                        value={password}
-                        onChangeText={setPassword}
-                        placeholder="Password"
-                        secureTextEntry
-                        autoComplete="password-new"
                       />
                     </View>
                   </View>
+
+                  <View style={webStyles.row}>
+                    <View style={webStyles.col}>
+                      <WebInput
+                        label="Address"
+                        value={address}
+                        onChangeText={setAddress}
+                        placeholder="House / Street"
+                      />
+                    </View>
+                    <View style={webStyles.col}>
+                      <WebStatePicker
+                        label="State"
+                        value={stateName}
+                        onValueChange={setStateName}
+                        placeholder="Select your state"
+                      />
+                    </View>
+                  </View>
+  
+                  <WebInput
+                    label="Password"
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="Min 6 characters"
+                    secureTextEntry
+                  />
   
                   <View style={webStyles.buttonRow}>
                     <TouchableOpacity
@@ -213,36 +219,24 @@ export default function SignupScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Back button */}
-        <Pressable
-          style={styles.backBtn}
-          onPress={() => router.back()}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-        >
+        <Pressable style={styles.backBtn} onPress={() => router.back()}>
           <ArrowLeft size={20} color="#f9fafb" strokeWidth={2.5} />
         </Pressable>
 
-        {/* Logo */}
         <View style={styles.logoWrap}>
           <Image
             source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
             style={styles.logo}
             resizeMode="contain"
-            accessibilityLabel="BookYourGround"
           />
         </View>
 
-        {/* Heading */}
         <View style={styles.headingWrap}>
           <Text style={styles.title}>Create account</Text>
           <Text style={styles.subtitle}>Join thousands booking their game</Text>
         </View>
 
-        {/* Form card */}
         <View style={styles.card}>
-
-          {/* First & Last name row */}
           <View style={styles.nameRow}>
             <View style={[styles.fieldWrap, { flex: 1 }]}>
               <Text style={styles.fieldLabel}>First Name</Text>
@@ -254,13 +248,11 @@ export default function SignupScreen() {
                   onChangeText={setFirstName}
                   placeholder="First"
                   placeholderTextColor="#4b5563"
-                  autoComplete="name"
                   onFocus={() => setFocusedField('firstName')}
                   onBlur={() => setFocusedField(null)}
                 />
               </View>
             </View>
-
             <View style={[styles.fieldWrap, { flex: 1 }]}>
               <Text style={styles.fieldLabel}>Last Name</Text>
               <View style={[styles.inputRow, isFocused('lastName') && styles.inputRowFocused]}>
@@ -270,7 +262,6 @@ export default function SignupScreen() {
                   onChangeText={setLastName}
                   placeholder="Last"
                   placeholderTextColor="#4b5563"
-                  autoComplete="name-family"
                   onFocus={() => setFocusedField('lastName')}
                   onBlur={() => setFocusedField(null)}
                 />
@@ -278,7 +269,6 @@ export default function SignupScreen() {
             </View>
           </View>
 
-          {/* Email */}
           <View style={styles.fieldWrap}>
             <Text style={styles.fieldLabel}>Email</Text>
             <View style={[styles.inputRow, isFocused('email') && styles.inputRowFocused]}>
@@ -291,51 +281,59 @@ export default function SignupScreen() {
                 placeholderTextColor="#4b5563"
                 keyboardType="email-address"
                 autoCapitalize="none"
-                autoComplete="email"
                 onFocus={() => setFocusedField('email')}
                 onBlur={() => setFocusedField(null)}
               />
             </View>
           </View>
 
-          {/* Phone & State row */}
-          <View style={styles.nameRow}>
-            <View style={[styles.fieldWrap, { flex: 1 }]}>
-              <Text style={styles.fieldLabel}>Mobile</Text>
-              <View style={[styles.inputRow, isFocused('phone') && styles.inputRowFocused]}>
-                <Phone size={15} color={isFocused('phone') ? '#00ea6b' : '#6b7280'} strokeWidth={2} />
-                <TextInput
-                  style={styles.textInput}
-                  value={phone}
-                  onChangeText={setPhone}
-                  placeholder="+91..."
-                  placeholderTextColor="#4b5563"
-                  keyboardType="phone-pad"
-                  autoComplete="tel"
-                  onFocus={() => setFocusedField('phone')}
-                  onBlur={() => setFocusedField(null)}
-                />
-              </View>
-            </View>
-
-            <View style={[styles.fieldWrap, { flex: 1 }]}>
-              <Text style={styles.fieldLabel}>State</Text>
-              <View style={[styles.inputRow, isFocused('state') && styles.inputRowFocused]}>
-                <MapPin size={15} color={isFocused('state') ? '#00ea6b' : '#6b7280'} strokeWidth={2} />
-                <TextInput
-                  style={styles.textInput}
-                  value={stateName}
-                  onChangeText={setStateName}
-                  placeholder="State"
-                  placeholderTextColor="#4b5563"
-                  onFocus={() => setFocusedField('state')}
-                  onBlur={() => setFocusedField(null)}
-                />
-              </View>
+          <View style={styles.fieldWrap}>
+            <Text style={styles.fieldLabel}>Mobile</Text>
+            <View style={[styles.inputRow, isFocused('phone') && styles.inputRowFocused]}>
+              <Phone size={15} color={isFocused('phone') ? '#00ea6b' : '#6b7280'} strokeWidth={2} />
+              <TextInput
+                style={styles.textInput}
+                value={phone}
+                onChangeText={setPhone}
+                placeholder="+91..."
+                placeholderTextColor="#4b5563"
+                keyboardType="phone-pad"
+                onFocus={() => setFocusedField('phone')}
+                onBlur={() => setFocusedField(null)}
+              />
             </View>
           </View>
 
-          {/* Password */}
+          <View style={styles.nameRow}>
+            <View style={[styles.fieldWrap, { flex: 1.5 }]}>
+              <Text style={styles.fieldLabel}>Address</Text>
+              <View style={[styles.inputRow, isFocused('address') && styles.inputRowFocused]}>
+                <MapPin size={15} color={isFocused('address') ? '#00ea6b' : '#6b7280'} strokeWidth={2} />
+                <TextInput
+                  style={styles.textInput}
+                  value={address}
+                  onChangeText={setAddress}
+                  placeholder="Street/Locality"
+                  placeholderTextColor="#4b5563"
+                  onFocus={() => setFocusedField('address')}
+                  onBlur={() => setFocusedField(null)}
+                />
+              </View>
+            </View>
+            <View style={[styles.fieldWrap, { flex: 1 }]}>
+              <Text style={styles.fieldLabel}>State</Text>
+              <TouchableOpacity
+                onPress={() => setShowStatePicker(true)}
+                style={[styles.inputRow, isFocused('state') && styles.inputRowFocused]}
+              >
+                <Text style={[styles.textInput, !stateName && { color: '#4b5563' }]}>
+                  {stateName || "State"}
+                </Text>
+                <ChevronDown size={15} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
           <View style={styles.fieldWrap}>
             <Text style={styles.fieldLabel}>Password</Text>
             <View style={[styles.inputRow, isFocused('password') && styles.inputRowFocused]}>
@@ -347,7 +345,6 @@ export default function SignupScreen() {
                 placeholder="Min 6 characters"
                 placeholderTextColor="#4b5563"
                 secureTextEntry={!showPassword}
-                autoComplete="password-new"
                 onFocus={() => setFocusedField('password')}
                 onBlur={() => setFocusedField(null)}
               />
@@ -361,14 +358,9 @@ export default function SignupScreen() {
             </View>
           </View>
 
-          {/* Action buttons */}
           <View style={styles.buttonRow}>
             <Pressable
-              style={({ pressed }) => [
-                styles.signUpBtn,
-                pressed && { opacity: 0.88 },
-                loading && { opacity: 0.7 },
-              ]}
+              style={[styles.signUpBtn, loading && { opacity: 0.7 }]}
               onPress={handleSignup}
               disabled={loading}
             >
@@ -378,26 +370,14 @@ export default function SignupScreen() {
                 <Text style={styles.signUpBtnText}>SIGN UP</Text>
               )}
             </Pressable>
-  
-            <Pressable
-              style={({ pressed }) => [
-                styles.outlineBtn,
-                pressed && { opacity: 0.7 },
-              ]}
-              onPress={() => router.back()}
-            >
+            <Pressable style={styles.outlineBtn} onPress={() => router.back()}>
               <Text style={styles.outlineBtnText}>SIGN IN</Text>
             </Pressable>
           </View>
         </View>
       </ScrollView>
 
-      {/* Success Modal */}
-      <Modal
-        visible={showSuccessModal}
-        transparent
-        animationType="fade"
-      >
+      <Modal visible={showSuccessModal} transparent animationType="fade">
         <View style={modalStyles.overlay}>
           <View style={modalStyles.card}>
             <View style={modalStyles.iconBg}>
@@ -417,20 +397,86 @@ export default function SignupScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* State Picker Modal for Mobile */}
+      <Modal visible={showStatePicker} transparent animationType="slide">
+        <View style={modalStyles.overlay}>
+          <View style={[modalStyles.card, { padding: 0, maxHeight: '80%' }]}>
+            <View style={{ padding: 20, width: '100%', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={[modalStyles.title, { marginBottom: 0 }]}>Select State</Text>
+              <TouchableOpacity onPress={() => setShowStatePicker(false)}>
+                <Text style={{ color: '#00ea6b', fontWeight: '700' }}>DONE</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ width: '100%' }}>
+              {INDIAN_STATES.map((state) => (
+                <TouchableOpacity
+                  key={state}
+                  onPress={() => {
+                    setStateName(state);
+                    setShowStatePicker(false);
+                  }}
+                  style={{
+                    padding: 16,
+                    borderBottomWidth: 1,
+                    borderBottomColor: 'rgba(255,255,255,0.05)',
+                    backgroundColor: stateName === state ? 'rgba(0,234,107,0.1)' : 'transparent',
+                  }}
+                >
+                  <Text style={{ color: stateName === state ? '#00ea6b' : '#f9fafb', fontSize: 16 }}>{state}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
 
-// ── Simple web-only text input ─────────────────────────────────────────────
+// ── Web state picker component ─────────────────────────────────────────────
+function WebStatePicker(props: any) {
+  const { label, value, onValueChange } = props;
+  return (
+    <View style={{ marginBottom: 10 }}>
+      {label && <Text style={{ fontSize: 12, fontWeight: '600', color: '#E5E7EB', marginBottom: 4 }}>{label}</Text>}
+      <div style={{ position: 'relative', width: '100%' }}>
+        <select
+          value={value}
+          onChange={(e) => onValueChange(e.target.value)}
+          style={{
+            width: '100%',
+            appearance: 'none',
+            border: '1px solid #00ea6b',
+            borderRadius: '8px',
+            padding: '8px 10px',
+            fontSize: '14px',
+            backgroundColor: '#06392e',
+            color: '#f9fafb',
+            outline: 'none',
+            cursor: 'pointer',
+          }}
+        >
+          <option value="" disabled hidden>Select state</option>
+          {INDIAN_STATES.map(state => (
+            <option key={state} value={state} style={{ backgroundColor: '#06392e', color: '#f9fafb' }}>
+              {state}
+            </option>
+          ))}
+        </select>
+        <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+          <ChevronDown size={14} color="#6b7280" />
+        </div>
+      </div>
+    </View>
+  );
+}
+
 function WebInput(props: any) {
   const { label, ...rest } = props;
   return (
     <View style={{ marginBottom: 10 }}>
-      {label && (
-        <Text style={{ fontSize: 12, fontWeight: '600', color: '#E5E7EB', marginBottom: 4 }}>
-          {label}
-        </Text>
-      )}
+      {label && <Text style={{ fontSize: 12, fontWeight: '600', color: '#E5E7EB', marginBottom: 4 }}>{label}</Text>}
       <TextInput
         style={{
           borderWidth: 1,
@@ -449,313 +495,55 @@ function WebInput(props: any) {
   );
 }
 
-// ── Mobile styles ──────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#043529',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 56,
-    paddingBottom: 40,
-  },
-  backBtn: {
-    position: 'absolute',
-    top: 52,
-    left: 20,
-    zIndex: 10,
-    width: 40,
-    height: 40,
-    borderRadius: 999,
-    backgroundColor: '#06392e',
-    borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.25)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  logoWrap: {
-    alignItems: 'center',
-    marginTop: 48,
-    marginBottom: 8,
-  },
-  logo: {
-    width: 180,
-    height: 48,
-  },
-  headingWrap: {
-    alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 28,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#f9fafb',
-    letterSpacing: -0.4,
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#9ca3af',
-  },
-  card: {
-    backgroundColor: '#06392e',
-    borderRadius: 24,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.12)',
-  },
-  nameRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  fieldWrap: {
-    marginBottom: 14,
-  },
-  fieldLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#e5e7eb',
-    marginBottom: 6,
-    letterSpacing: 0.2,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#043529',
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,234,107,0.18)',
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-    gap: 8,
-  },
-  inputRowFocused: {
-    borderColor: '#00ea6b',
-  },
-  textInput: {
-    flex: 1,
-    fontSize: 14,
-    color: '#f9fafb',
-    paddingVertical: 0,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 16,
-  },
-  signUpBtn: {
-    flex: 1,
-    backgroundColor: '#00ea6b',
-    borderRadius: 12,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#00ea6b',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  signUpBtnText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#043529',
-    letterSpacing: 0.5,
-  },
-  outlineBtn: {
-    flex: 1,
-    borderRadius: 12,
-    height: 48,
-    borderWidth: 1.5,
-    borderColor: '#00ea6b',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  outlineBtnText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#00ea6b',
-    letterSpacing: 0.5,
-  },
+  screen: { flex: 1, backgroundColor: '#043529' },
+  scrollContent: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 56, paddingBottom: 40 },
+  backBtn: { position: 'absolute', top: 52, left: 20, zIndex: 10, width: 40, height: 40, borderRadius: 999, backgroundColor: '#06392e', borderWidth: 1, borderColor: 'rgba(0,234,107,0.25)', justifyContent: 'center', alignItems: 'center' },
+  logoWrap: { alignItems: 'center', marginTop: 48, marginBottom: 8 },
+  logo: { width: 180, height: 48 },
+  headingWrap: { alignItems: 'center', marginTop: 16, marginBottom: 28 },
+  title: { fontSize: 26, fontWeight: '800', color: '#f9fafb', letterSpacing: -0.4, marginBottom: 6 },
+  subtitle: { fontSize: 14, color: '#9ca3af' },
+  card: { backgroundColor: '#06392e', borderRadius: 24, padding: 20, borderWidth: 1, borderColor: 'rgba(0,234,107,0.12)' },
+  nameRow: { flexDirection: 'row', gap: 10 },
+  fieldWrap: { marginBottom: 14 },
+  fieldLabel: { fontSize: 12, fontWeight: '600', color: '#e5e7eb', marginBottom: 6, letterSpacing: 0.2 },
+  inputRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#043529', borderRadius: 12, borderWidth: 1.5, borderColor: 'rgba(0,234,107,0.18)', paddingHorizontal: 12, paddingVertical: 11, gap: 8 },
+  inputRowFocused: { borderColor: '#00ea6b' },
+  textInput: { flex: 1, fontSize: 14, color: '#f9fafb', paddingVertical: 0 },
+  buttonRow: { flexDirection: 'row', gap: 12, marginTop: 16 },
+  signUpBtn: { flex: 1, backgroundColor: '#00ea6b', borderRadius: 12, height: 48, alignItems: 'center', justifyContent: 'center' },
+  signUpBtnText: { fontSize: 15, fontWeight: '700', color: '#043529', letterSpacing: 0.5 },
+  outlineBtn: { flex: 1, borderRadius: 12, height: 48, borderWidth: 1.5, borderColor: '#00ea6b', alignItems: 'center', justifyContent: 'center' },
+  outlineBtnText: { fontSize: 15, fontWeight: '700', color: '#00ea6b', letterSpacing: 0.5 },
 });
 
-// ── Web styles ─────────────────────────────────────────────────────────────
 const webStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#043529',
-  },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    flexDirection: 'row-reverse' as any,
-    alignItems: 'stretch',
-    width: '100%',
-  },
-  header: {
-    marginBottom: 16,
-    alignItems: 'center',
-  },
-  logoImage: {
-    width: 180,
-    height: 40,
-    marginBottom: 8,
-  },
-  form: {
-  },
-  heroColumn: {
-    flex: 1,
-    width: '50%' as any,
-  },
-  formContainer: {
-    flex: 1,
-    width: '100%',
-    backgroundColor: '#043529',
-    paddingHorizontal: 24,
-    paddingVertical: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  formCard: {
-    width: '100%',
-    maxWidth: 580,
-    backgroundColor: '#06392e',
-    borderRadius: 20,
-    paddingHorizontal: 24,
-    paddingVertical: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.12)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
-    shadowRadius: 20,
-  },
-  formTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#f9fafb',
-    marginTop: 4,
-    marginBottom: 4,
-  },
-  formSubtitle: {
-    fontSize: 14,
-    color: '#9ca3af',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  heroImage: {
-    flex: 1,
-    width: '50%' as any,
-    overflow: 'hidden',
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 0,
-  },
-  col: {
-    flex: 1,
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-  },
-  button: {
-    flex: 1,
-    backgroundColor: '#10b981',
-    borderRadius: 8,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  buttonText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#043529',
-    letterSpacing: 0.5,
-  },
-  outlineButton: {
-    flex: 1,
-    borderRadius: 8,
-    height: 40,
-    borderWidth: 1.5,
-    borderColor: '#10b981',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  outlineButtonText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#10b981',
-    textTransform: 'uppercase' as any,
-  },
+  container: { flex: 1, backgroundColor: '#043529' },
+  scrollContent: { flexGrow: 1, justifyContent: 'center', flexDirection: 'row-reverse' as any, alignItems: 'stretch', width: '100%' },
+  header: { marginBottom: 16, alignItems: 'center' },
+  logoImage: { width: 180, height: 40, marginBottom: 8 },
+  form: { },
+  heroColumn: { flex: 1, width: '50%' as any },
+  formContainer: { flex: 1, width: '100%', backgroundColor: '#043529', paddingHorizontal: 24, paddingVertical: 32, justifyContent: 'center', alignItems: 'center' },
+  formCard: { width: '100%', maxWidth: 580, backgroundColor: '#06392e', borderRadius: 20, paddingHorizontal: 24, paddingVertical: 20, borderWidth: 1, borderColor: 'rgba(0,234,107,0.12)', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.2, shadowRadius: 20 },
+  formTitle: { fontSize: 22, fontWeight: '800', color: '#f9fafb', marginTop: 4, marginBottom: 4 },
+  heroImage: { flex: 1, width: '50%' as any, overflow: 'hidden' },
+  row: { flexDirection: 'row', gap: 12, marginBottom: 0 },
+  col: { flex: 1 },
+  buttonRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
+  button: { flex: 1, backgroundColor: '#10b981', borderRadius: 8, height: 40, alignItems: 'center', justifyContent: 'center' },
+  buttonText: { fontSize: 13, fontWeight: '700', color: '#043529', letterSpacing: 0.5 },
+  outlineButton: { flex: 1, borderRadius: 8, height: 40, borderWidth: 1.5, borderColor: '#10b981', alignItems: 'center', justifyContent: 'center' },
+  outlineButtonText: { fontSize: 13, fontWeight: '700', color: '#10b981', textTransform: 'uppercase' as any },
 });
 
 const modalStyles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(4,53,41,0.85)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  card: {
-    backgroundColor: '#06392e',
-    borderRadius: 28,
-    padding: 32,
-    width: '100%',
-    maxWidth: 400,
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,234,107,0.25)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 15 },
-    shadowOpacity: 0.4,
-    shadowRadius: 25,
-    elevation: 10,
-  },
-  iconBg: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(0,234,107,0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#f9fafb',
-    marginBottom: 12,
-  },
-  message: {
-    fontSize: 15,
-    color: '#9ca3af',
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 28,
-  },
-  button: {
-    backgroundColor: '#00ea6b',
-    paddingVertical: 14,
-    paddingHorizontal: 40,
-    borderRadius: 14,
-    width: '100%',
-    alignItems: 'center',
-    shadowColor: '#00ea6b',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-  },
-  buttonText: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#043529',
-    letterSpacing: 1,
-  },
+  overlay: { flex: 1, backgroundColor: 'rgba(4,53,41,0.85)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  card: { backgroundColor: '#06392e', borderRadius: 28, padding: 32, width: '100%', maxWidth: 400, alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(0,234,107,0.25)', shadowColor: '#000', shadowOffset: { width: 0, height: 15 }, shadowOpacity: 0.4, shadowRadius: 25, elevation: 10 },
+  iconBg: { width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(0,234,107,0.1)', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
+  title: { fontSize: 24, fontWeight: '800', color: '#f9fafb', marginBottom: 12 },
+  message: { fontSize: 15, color: '#9ca3af', textAlign: 'center', lineHeight: 22, marginBottom: 28 },
+  button: { backgroundColor: '#00ea6b', paddingVertical: 14, paddingHorizontal: 40, borderRadius: 14, width: '100%', alignItems: 'center', shadowColor: '#00ea6b', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10 },
+  buttonText: { fontSize: 15, fontWeight: '800', color: '#043529', letterSpacing: 1 },
 });

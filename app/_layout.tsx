@@ -19,7 +19,7 @@ export default function RootLayout() {
       link.id = id;
       link.rel = 'stylesheet';
       link.href =
-        'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap';
+        'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap';
       document.head.appendChild(link);
     }
 

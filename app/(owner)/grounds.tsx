@@ -11,6 +11,8 @@ import GroundCard from '@/components/grounds/GroundCard';
 import type { GroundWithImages as GroundWithImagesType } from '@/types';
 import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
+import { createTimeSlotsForGround } from '@/utils/timeSlotsDb';
+import type { DayOfWeek } from '@/types';
 
 function makeGroundPath(ground: GroundWithImagesType): string {
   const name = (ground.name ?? '').toString().toLowerCase().trim();
@@ -649,7 +651,7 @@ export default function OwnerGroundsScreen() {
   );
 
   if (Platform.OS === 'web') {
-    return <WebLayout>{content}</WebLayout>;
+    return <WebLayout noCard>{content}</WebLayout>;
   }
 
   return content;
@@ -661,6 +663,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: IS_WEB ? '#F5F5F5' : '#043529',
+    paddingHorizontal: IS_WEB ? 24 : 0,
   },
   header: {
     backgroundColor: IS_WEB ? '#FFFFFF' : '#043529',
@@ -755,8 +758,9 @@ const styles = StyleSheet.create({
   },
   modalSectionTitle: {
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: '300',
     color: IS_WEB ? '#374151' : '#f9fafb',
+    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
     marginTop: 12,
     marginBottom: 6,
   },
@@ -771,8 +775,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: IS_WEB ? '#FFFFFF' : 'rgba(4,53,41,0.6)',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '300',
     color: IS_WEB ? '#111827' : '#f9fafb',
+    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
     marginBottom: 10,
   },
   formRow2: {
@@ -786,8 +791,9 @@ const styles = StyleSheet.create({
   },
   locationLabel: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '300',
     color: IS_WEB ? '#374151' : '#9ca3af',
+    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
     marginBottom: 4,
   },
   switchRow: {
@@ -798,8 +804,9 @@ const styles = StyleSheet.create({
   },
   switchLabel: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '300',
     color: IS_WEB ? '#374151' : '#e5e7eb',
+    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
   },
   formActions: {
     marginTop: 10,
@@ -851,8 +858,9 @@ const styles = StyleSheet.create({
   },
   mediaUploadText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '300',
     color: IS_WEB ? '#374151' : '#00ea6b',
+    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
   },
   surfaceChipsRow: {
     flexDirection: 'row',
@@ -874,8 +882,9 @@ const styles = StyleSheet.create({
   },
   surfaceChipText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '300',
     color: IS_WEB ? '#374151' : '#f9fafb',
+    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
   },
   surfaceChipTextActive: {
     color: IS_WEB ? '#1D4ED8' : '#043529',
@@ -893,6 +902,59 @@ const styles = StyleSheet.create({
   },
   emptyButton: {
     marginTop: 16,
+  },
+  subLabel: {
+    fontSize: 14,
+    fontWeight: '300',
+    color: IS_WEB ? '#374151' : '#9ca3af',
+    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
+    marginBottom: 8,
+  },
+  timeSlotsCard: {
+    position: 'relative',
+    zIndex: 50,
+    overflow: 'visible',
+    padding: 12,
+    borderWidth: 1,
+    borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.2)',
+    borderRadius: 12,
+    backgroundColor: IS_WEB ? '#FFFFFF' : '#043529',
+    marginBottom: 16,
+  },
+  startTimeFieldBlock: {
+    marginBottom: 8,
+    position: 'relative',
+    overflow: 'visible',
+    zIndex: 52,
+  },
+  daysFieldBlock: {
+    marginBottom: 8,
+    position: 'relative',
+    overflow: 'visible',
+    zIndex: 51,
+  },
+  timeSlotsFieldsAfterStart: {
+    position: 'relative',
+    zIndex: 0,
+  },
+  addAnotherSlotRow: {
+    position: 'relative',
+    zIndex: 0,
+    marginTop: 8,
+  },
+  actionBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.3)',
+    backgroundColor: IS_WEB ? '#FFFFFF' : 'transparent',
+  },
+  actionBtnText: {
+    fontSize: 12,
+    fontWeight: '300',
+    color: IS_WEB ? '#2563EB' : '#00ea6b',
+    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
   },
 });
 
@@ -969,7 +1031,9 @@ const locationDropdownStyles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 14,
+    fontWeight: '300',
     color: IS_WEB ? '#111827' : '#f9fafb',
+    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
   },
   menu: {
     position: 'relative' as any,
@@ -990,6 +1054,8 @@ const locationDropdownStyles = StyleSheet.create({
   },
   optionText: {
     fontSize: 14,
+    fontWeight: '300',
     color: IS_WEB ? '#111827' : '#f9fafb',
+    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
   },
 });

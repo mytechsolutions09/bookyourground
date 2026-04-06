@@ -49,7 +49,7 @@ export default function AdminSettingsIndex() {
     </SettingsSubbar>
   );
 
-  if (Platform.OS === 'web') return <WebLayout>{inner}</WebLayout>;
+  if (Platform.OS === 'web') return <WebLayout noCard>{inner}</WebLayout>;
   return inner;
 }
 
