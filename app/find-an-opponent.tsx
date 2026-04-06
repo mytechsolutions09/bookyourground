@@ -242,7 +242,7 @@ export default function FindAnOpponentScreen() {
         <>
           <View style={styles.nativeHero}>
             <View style={styles.heroText}>
-              <Text style={styles.heroTitle}>Matchmaking</Text>
+              <Text style={styles.heroTitle}>Find an Opponent</Text>
               <Text style={styles.heroSubtitle}>Find teams looking for opponents</Text>
             </View>
             <View style={styles.heroBadge}>

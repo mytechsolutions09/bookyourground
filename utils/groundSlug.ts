@@ -10,3 +10,10 @@ export function slugifyGroundSegment(value: string): string {
     .replace(/^-+/, '')
     .replace(/-+$/, '');
 }
+
+export function makeGroundPath(ground: any): string {
+  if (!ground) return '/grounds';
+  const c = slugifyGroundSegment(ground.city);
+  const n = slugifyGroundSegment(ground.name);
+  return `/ground/${c}/${n}`;
+}

@@ -3,6 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import Hero from '@/components/landing/Hero';
 import LandingBookingForm from '@/components/landing/LandingBookingForm';
 import PopularGrounds from '@/components/landing/PopularGrounds';
+import GroundsNearYou from '@/components/landing/GroundsNearYou';
 import Features from '@/components/landing/Features';
 import CallToAction from '@/components/landing/CallToAction';
 import SiteFooter from '@/components/web/SiteFooter';
@@ -23,6 +24,7 @@ export default function LandingPageSections({ variant }: { variant: Variant }) {
           hideTitle={variant === 'native'}
         />
       </View>
+      <GroundsNearYou />
       <Features />
       <CallToAction />
       {variant === 'web' ? <SiteFooter /> : null}

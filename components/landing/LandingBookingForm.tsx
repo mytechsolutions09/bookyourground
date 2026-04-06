@@ -2714,9 +2714,9 @@ const styles = StyleSheet.create({
     }),
   },
   dropdownButtonDisabledGroundPage: {
-    backgroundColor: '#043529',
+    backgroundColor: 'transparent',
     ...Platform.select({
-      web: { borderColor: 'rgba(2,194,89,0.45)' },
+      web: { borderColor: '#E5E7EB' },
       default: { borderColor: 'rgba(220,192,147,0.45)' },
     }),
   },
@@ -2735,7 +2735,7 @@ const styles = StyleSheet.create({
   },
   dropdownButtonTextDisabledGroundPage: {
     ...Platform.select({
-      web: { color: 'rgba(2,194,89,0.55)' },
+      web: { color: '#06392e' },
       default: { color: 'rgba(220,192,147,0.55)' },
     }),
   },
