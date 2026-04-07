@@ -28,6 +28,7 @@ export interface Database {
           state: string | null;
           created_at: string;
           updated_at: string;
+          team_name: string | null;
         };
         Insert: {
           id: string;

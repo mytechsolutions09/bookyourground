@@ -59,7 +59,8 @@ export default function FindAnOpponentScreen() {
           ground:grounds(
             *,
             ground_images(*)
-          )
+          ),
+          user:profiles(*)
         `)
         .order('booking_date', { ascending: true })
         .order('start_time', { ascending: true });

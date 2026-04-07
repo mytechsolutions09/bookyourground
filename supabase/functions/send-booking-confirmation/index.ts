@@ -41,7 +41,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         from: 'Book my ground <booking@bookyourground.com>',
-        to: [userEmail],
+        to: userEmail,
         subject: `Booking Confirmed: ${ground.name}`,
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">

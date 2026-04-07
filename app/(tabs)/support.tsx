@@ -103,31 +103,9 @@ export default function SupportScreen() {
     }
   };
 
-  const renderTicketItem = (item: Ticket) => (
-    <Card key={item.id} style={styles.ticketCard}>
-      <View style={styles.ticketHeader}>
-        <View style={styles.ticketSubjectContainer}>
-          <MessageSquare size={16} color="#10b981" />
-          <Text style={styles.ticketSubject}>{item.subject || 'Support Request'}</Text>
-        </View>
-        <View style={[styles.statusBadge, item.resolved ? styles.resolvedBadge : styles.pendingBadge]}>
-          <Text style={[styles.statusText, item.resolved ? styles.resolvedText : styles.pendingText]}>
-            {item.resolved ? 'Resolved' : 'Pending'}
-          </Text>
-        </View>
-      </View>
-      <Text style={styles.ticketMessage}>{item.message}</Text>
-      <View style={styles.ticketFooter}>
-        <Clock size={12} color="#9CA3AF" />
-        <Text style={styles.ticketDate}>{new Date(item.created_at).toLocaleDateString()}</Text>
-      </View>
-    </Card>
-  );
-
   const mainContent = (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-
-      {/* Segmented Control - Match Image Style */}
+      {/* Segmented Control - Styled like Settings */}
       <View style={styles.tabContainer}>
         <View style={styles.tabBackground}>
           <TouchableOpacity 
@@ -160,8 +138,8 @@ export default function SupportScreen() {
       </View>
 
       {activeTab === 'new_ticket' && (
-        <View style={styles.formCard}>
-          <Text style={styles.cardHeader}>Send a Message</Text>
+        <Card style={styles.card}>
+          <Text style={styles.cardTitle}>Send a Message</Text>
           
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Subject</Text>
@@ -199,23 +177,24 @@ export default function SupportScreen() {
               </>
             )}
           </TouchableOpacity>
-        </View>
+        </Card>
       )}
 
       {activeTab === 'activity' && (
         <View>
-          <Text style={styles.sectionTitle}>Your Recent Activity</Text>
           {loading ? (
             <ActivityIndicator style={{ marginTop: 40 }} color="#10b981" />
           ) : tickets.length === 0 ? (
-            <View style={styles.emptyState}>
-              <MessageCircle size={48} color="#E5E7EB" />
-              <Text style={styles.emptyText}>You haven't sent any messages yet.</Text>
-            </View>
+            <Card style={styles.card}>
+              <View style={styles.emptyState}>
+                <MessageCircle size={48} color="#E5E7EB" />
+                <Text style={styles.emptyText}>You haven't sent any messages yet.</Text>
+              </View>
+            </Card>
           ) : (
             <View style={styles.ticketList}>
               {tickets.map((ticket) => (
-                <View key={ticket.id} style={styles.ticketCard}>
+                <Card key={ticket.id} style={styles.ticketCard}>
                   <View style={styles.ticketHeader}>
                     <View style={styles.ticketSubjectContainer}>
                       <MessageSquare size={16} color="#10b981" />
@@ -232,7 +211,7 @@ export default function SupportScreen() {
                     <Clock size={12} color="#9CA3AF" />
                     <Text style={styles.ticketDate}>{new Date(ticket.created_at).toLocaleDateString()}</Text>
                   </View>
-                </View>
+                </Card>
               ))}
             </View>
           )}
@@ -240,24 +219,22 @@ export default function SupportScreen() {
       )}
 
       {activeTab === 'info' && (
-        <View style={styles.infoContent}>
-          <View style={styles.infoCard}>
-            <Text style={styles.infoCardTitle}>Information</Text>
-            
-            <TouchableOpacity 
-              style={styles.contactItem}
-              onPress={() => Linking.openURL('mailto:support@bookyourground.com')}
-            >
-              <View style={styles.iconCircle}>
-                <Mail size={20} color="#10b981" />
-              </View>
-              <View>
-                <Text style={styles.contactLabel}>Official Email</Text>
-                <Text style={styles.contactValue}>support@bookyourground.com</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
+        <Card style={styles.card}>
+          <Text style={styles.cardTitle}>Information</Text>
+          
+          <TouchableOpacity 
+            style={styles.contactItem}
+            onPress={() => Linking.openURL('mailto:support@bookyourground.com')}
+          >
+            <View style={styles.iconCircle}>
+              <Mail size={20} color="#10b981" />
+            </View>
+            <View>
+              <Text style={styles.contactLabel}>Official Email</Text>
+              <Text style={styles.contactValue}>support@bookyourground.com</Text>
+            </View>
+          </TouchableOpacity>
+        </Card>
       )}
     </ScrollView>
   );
@@ -275,36 +252,32 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   content: {
-    padding: Platform.OS === 'web' ? 40 : 20,
-    maxWidth: 800,
-    alignSelf: 'center',
+    padding: Platform.OS === 'web' ? 16 : 20,
+    paddingTop: Platform.OS === 'web' ? 0 : 20,
     width: '100%',
+    maxWidth: 1000,
   },
-  header: {
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  title: {
-    fontSize: 32,
+  pageTitle: {
+    fontSize: 28,
     fontWeight: '800',
     color: '#111827',
+    marginBottom: 8,
   },
-  subtitle: {
+  pageSubtitle: {
     fontSize: 16,
     color: '#6B7280',
-    marginTop: 8,
+    lineHeight: 24,
   },
   tabContainer: {
-    alignItems: 'center',
-    marginBottom: 32,
+    alignItems: 'flex-start',
+    marginBottom: 24,
   },
   tabBackground: {
     flexDirection: 'row',
     backgroundColor: '#EEF2F6',
     padding: 6,
-    borderRadius: 100, // Capsule shape
-    width: Platform.OS === 'web' ? 500 : '100%',
-    maxWidth: '100%',
+    borderRadius: 100,
+    minWidth: Platform.OS === 'web' ? 400 : '100%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -313,7 +286,8 @@ const styles = StyleSheet.create({
   },
   tab: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     alignItems: 'center',
     borderRadius: 100,
   },
@@ -328,16 +302,21 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#4B5563', // Muted text for inactive
+    color: '#4B5563',
   },
   activeTabText: {
-    color: '#01b854', // Green text for active
+    color: '#01b854',
     fontWeight: '700',
   },
-  formCard: {
+  card: {
     padding: 24,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    width: '100%',
   },
-  cardHeader: {
+  cardTitle: {
     fontSize: 20,
     fontWeight: '700',
     color: '#111827',
@@ -353,7 +332,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   input: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E5E7EB',
     borderRadius: 12,
@@ -370,9 +349,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 12,
-    height: 54,
+    height: 52,
     borderRadius: 12,
     marginTop: 8,
+    maxWidth: 200,
   },
   submitBtnDisabled: {
     opacity: 0.7,
@@ -380,19 +360,17 @@ const styles = StyleSheet.create({
   submitBtnText: {
     color: '#FFFFFF',
     fontWeight: '700',
-    fontSize: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#374151',
-    marginBottom: 20,
+    fontSize: 15,
   },
   ticketList: {
     gap: 16,
   },
   ticketCard: {
-    padding: 20,
+    padding: 24,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
   },
   ticketHeader: {
     flexDirection: 'row',
@@ -403,7 +381,7 @@ const styles = StyleSheet.create({
   ticketSubjectContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
     flex: 1,
   },
   ticketSubject: {
@@ -413,7 +391,7 @@ const styles = StyleSheet.create({
   },
   statusBadge: {
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 4,
     borderRadius: 20,
   },
   pendingBadge: {
@@ -452,37 +430,18 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
   },
   emptyState: {
-    padding: 60,
+    padding: 40,
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: '#D1D5DB',
   },
   emptyText: {
     marginTop: 16,
     fontSize: 16,
     color: '#9CA3AF',
-    textAlign: 'center',
-  },
-  infoContent: {
-    gap: 20,
-  },
-  infoCard: {
-    padding: 24,
-  },
-  infoCardTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 24,
   },
   contactItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
-    marginBottom: 24,
   },
   iconCircle: {
     width: 44,

@@ -78,6 +78,15 @@ export default function MatchCard({ match, onJoin, buttonTitle = 'Join Match', t
             </View>
           </TouchableOpacity>
 
+          {match.user?.team_name && (
+            <View style={styles.teamRow}>
+              <Sword size={16} color={iconColor} />
+              <Text style={[styles.teamText, { color: textColor }]}>
+                Opponent: <Text style={styles.teamNameHighlight}>{match.user.team_name}</Text>
+              </Text>
+            </View>
+          )}
+
           <View style={styles.divider} />
 
           <View style={styles.detailsGrid}>
@@ -283,5 +292,23 @@ const styles = StyleSheet.create({
   joinButtonText: {
     color: '#043529',
     fontWeight: '700',
+  },
+  teamRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(0,234,107,0.05)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginTop: 4,
+  },
+  teamText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  teamNameHighlight: {
+    fontWeight: '800',
+    color: '#10b981',
   },
 });
