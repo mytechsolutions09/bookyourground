@@ -14,15 +14,30 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
+    console.log(`Processing booking confirmation for user: ${record.user_id}, ground: ${record.ground_id}`);
+
     // 2. Fetch User Email and Ground Name
-    const { data: userProfile } = await supabase
+    const { data: userProfile, error: profileError } = await supabase
       .from('profiles')
       .select('full_name, id')
       .eq('id', record.user_id)
       .single()
 
-    const { data: userAuth } = await supabase.auth.admin.getUserById(record.user_id)
-    const userEmail = userAuth.user?.email
+    if (profileError || !userProfile) {
+      console.error('Profile not found:', profileError);
+      throw new Error(`User profile not found for ID: ${record.user_id}`);
+    }
+
+    const { data, error: userError } = await supabase.auth.admin.getUserById(record.user_id)
+    if (userError || !data?.user) {
+      console.error('Auth user not found:', userError);
+      throw new Error(`User auth not found for ID: ${record.user_id}`);
+    }
+    
+    const userEmail = data.user.email
+    if (!userEmail) {
+      throw new Error(`User ${record.user_id} has no email address associated with their account.`);
+    }
 
     const { data: ground } = await supabase
       .from('grounds')
