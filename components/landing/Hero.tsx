@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, useWindowDimensions } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { Search, MapPin, Users, Info, ChevronRight, Activity } from 'lucide-react-native';
 
 export default function Hero() {
   const { user, profile } = useAuth();
@@ -75,72 +76,74 @@ export default function Hero() {
         </View>
 
         {showRightColumn && (
-        <View style={styles.rightColumn}>
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>Tonight&apos;s perfect slot</Text>
-              <Text style={styles.cardBadge}>Live</Text>
+          <View style={styles.rightColumn}>
+            <View style={styles.discoveryCard}>
+              <View style={styles.discoveryHero}>
+                <View style={styles.liveIndicator}>
+                  <View style={styles.livePulse} />
+                  <Text style={styles.liveText}>Live Availability</Text>
+                </View>
+                <Text style={styles.discoveryTitle}>Find your next match</Text>
+                <Text style={styles.discoverySubtitle}>Real-time slots at 50+ venues</Text>
+              </View>
+
+              <View style={styles.discoveryBody}>
+                <View style={styles.quickSearch}>
+                  <Search size={18} color="#9CA3AF" />
+                  <Text style={styles.quickSearchPlaceholder}>Search by city or venue name...</Text>
+                </View>
+
+                <View style={styles.miniStatsRow}>
+                  <View style={styles.miniStatItem}>
+                    <View style={styles.miniStatIcon}>
+                      <Users size={16} color="#00ea6b" />
+                    </View>
+                    <View>
+                      <Text style={styles.miniStatValue}>1,240+</Text>
+                      <Text style={styles.miniStatLabel}>Players Online</Text>
+                    </View>
+                  </View>
+                  <View style={styles.miniStatItem}>
+                    <View style={[styles.miniStatIcon, { backgroundColor: 'rgba(56, 189, 248, 0.1)' }]}>
+                      <Activity size={16} color="#38bdf8" />
+                    </View>
+                    <View>
+                      <Text style={styles.miniStatValue}>84</Text>
+                      <Text style={styles.miniStatLabel}>Slots Available</Text>
+                    </View>
+                  </View>
+                </View>
+
+                <Pressable 
+                  style={({ pressed }) => [
+                    styles.discoveryCta,
+                    pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }
+                  ]}
+                  onPress={() => router.push('/(tabs)/grounds' as any)}
+                >
+                  <Text style={styles.discoveryCtaText}>Explore All Grounds</Text>
+                  <ChevronRight size={18} color="#043529" />
+                </Pressable>
+              </View>
             </View>
 
-            <View style={styles.cardBody}>
-              <View style={styles.cardVenueRow}>
-                <View style={styles.venueAvatar}>
-                  <View style={styles.venueAvatarInner} />
-                </View>
-                <View style={styles.venueInfo}>
-                  <Text style={styles.venueName}>Skyline Sports Arena</Text>
-                  <Text style={styles.venueLocation}>Downtown • 7v7 football turf</Text>
-                </View>
+            <View style={styles.statsHorizontal}>
+              <View style={styles.hStat}>
+                <Text style={styles.hStatNum}>30+</Text>
+                <Text style={styles.hStatLab}>Cities</Text>
               </View>
-
-              <View style={styles.cardSlotsRow}>
-                <View style={styles.slotChipPrimary}>
-                  <Text style={styles.slotChipPrimaryLabel}>08:00 – 09:00 PM</Text>
-                  <Text style={styles.slotChipPrimarySub}>Prime time • Few spots left</Text>
-                </View>
-                <View style={styles.slotChipSecondary}>
-                  <Text style={styles.slotChipSecondaryLabel}>06:00 – 07:00 PM</Text>
-                </View>
+              <View style={styles.hStatDivider} />
+              <View style={styles.hStat}>
+                <Text style={styles.hStatNum}>200+</Text>
+                <Text style={styles.hStatLab}>Venues</Text>
               </View>
-
-              <View style={styles.cardFooter}>
-                <View style={styles.cardFooterStat}>
-                  <Text style={styles.cardFooterStatLabel}>Surface</Text>
-                  <Text style={styles.cardFooterStatValue}>FIFA-approved turf</Text>
-                </View>
-                <View style={styles.cardFooterStat}>
-                  <Text style={styles.cardFooterStatLabel}>Price</Text>
-                  <Text style={styles.cardFooterStatValue}>From ₹899 / hr</Text>
-                </View>
+              <View style={styles.hStatDivider} />
+              <View style={styles.hStat}>
+                <Text style={styles.hStatNum}>₹2M+</Text>
+                <Text style={styles.hStatLab}>Payouts</Text>
               </View>
-
-              <Pressable
-                style={({ pressed }) => [
-                  styles.cardCtaButton,
-                  pressed && styles.cardCtaButtonPressed,
-                ]}
-                onPress={() => router.push(primaryCtaTarget)}
-              >
-                <Text style={styles.cardCtaText}>Check all nearby grounds</Text>
-              </Pressable>
             </View>
           </View>
-
-          <View style={styles.floatingStats}>
-            <View style={styles.floatingStat}>
-              <Text style={styles.floatingStatNumber}>30+</Text>
-              <Text style={styles.floatingStatLabel}>Cities</Text>
-            </View>
-            <View style={styles.floatingStat}>
-              <Text style={styles.floatingStatNumber}>200+</Text>
-              <Text style={styles.floatingStatLabel}>Verified venues</Text>
-            </View>
-            <View style={styles.floatingStat}>
-              <Text style={styles.floatingStatNumber}>₹2M+</Text>
-              <Text style={styles.floatingStatLabel}>Payouts to owners</Text>
-            </View>
-          </View>
-        </View>
         )}
       </View>
     </View>
@@ -302,170 +305,145 @@ const styles = StyleSheet.create({
     height: 32,
     backgroundColor: 'rgba(75,85,99,0.8)',
   },
-  card: {
-    borderRadius: 24,
-    padding: 18,
+  discoveryCard: {
     backgroundColor: '#06392e',
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.2)',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 18 },
-    shadowOpacity: 0.55,
-    shadowRadius: 30,
-    elevation: 12,
+    borderColor: 'rgba(0, 234, 107, 0.15)',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
   },
-  cardHeader: {
+  discoveryHero: {
+    padding: 24,
+    backgroundColor: 'rgba(0, 234, 107, 0.05)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 234, 107, 0.1)',
+  },
+  liveIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 14,
+    marginBottom: 12,
+    gap: 8,
   },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#e5e7eb',
+  livePulse: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#00ea6b',
   },
-  cardBadge: {
+  liveText: {
     fontSize: 12,
     fontWeight: '700',
     color: '#00ea6b',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: 'rgba(0,234,107,0.12)',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
-  cardBody: {},
-  cardVenueRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  venueAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 999,
-    backgroundColor: 'rgba(0,234,107,0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  venueAvatarInner: {
-    width: 26,
-    height: 26,
-    borderRadius: 999,
-    backgroundColor: '#00ea6b',
-  },
-  venueInfo: {
-    flex: 1,
-  },
-  venueName: {
-    fontSize: 15,
-    fontWeight: '600',
+  discoveryTitle: {
+    fontSize: 22,
+    fontWeight: '800',
     color: '#f9fafb',
-    marginBottom: 2,
+    marginBottom: 4,
   },
-  venueLocation: {
-    fontSize: 13,
+  discoverySubtitle: {
+    fontSize: 14,
     color: '#9ca3af',
   },
-  cardSlotsRow: {
+  discoveryBody: {
+    padding: 24,
+    gap: 20,
+  },
+  quickSearch: {
     flexDirection: 'row',
-    gap: 10,
-    marginBottom: 14,
-  },
-  slotChipPrimary: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 14,
-    backgroundColor: 'rgba(0,234,107,0.12)',
+    padding: 14,
+    gap: 12,
     borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.55)',
+    borderColor: 'rgba(255,255,255,0.1)',
   },
-  slotChipPrimaryLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#fed7aa',
+  quickSearchPlaceholder: {
+    fontSize: 14,
+    color: '#9ca3af',
   },
-  slotChipPrimarySub: {
-    fontSize: 12,
-    color: '#fed7aa',
-    marginTop: 2,
-  },
-  slotChipSecondary: {
-    flex: 0.9,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 14,
-    backgroundColor: 'rgba(6,57,46,0.9)', // #06392e
-    borderWidth: 1,
-    borderColor: 'rgba(55,65,81,0.85)',
-  },
-  slotChipSecondaryLabel: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#e5e7eb',
-  },
-  cardFooter: {
+  miniStatsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
+    gap: 16,
   },
-  cardFooterStat: {
+  miniStatItem: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    padding: 12,
+    borderRadius: 16,
+    gap: 12,
   },
-  cardFooterStatLabel: {
-    fontSize: 11,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    color: '#6b7280',
-    marginBottom: 2,
-  },
-  cardFooterStatValue: {
-    fontSize: 13,
-    color: '#e5e7eb',
-  },
-  cardCtaButton: {
-    marginTop: 2,
-    borderRadius: 999,
-    paddingVertical: 11,
+  miniStatIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0, 234, 107, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#06392e',
-    borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.3)',
   },
-  cardCtaButtonPressed: {
-    backgroundColor: '#043529',
-  },
-  cardCtaText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#e5e7eb',
-  },
-  floatingStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 18,
-    paddingHorizontal: 8,
-  },
-  floatingStat: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    backgroundColor: '#06392e',
-    borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.2)',
-    minWidth: 90,
-  },
-  floatingStatNumber: {
+  miniStatValue: {
     fontSize: 15,
     fontWeight: '700',
     color: '#f9fafb',
+  },
+  miniStatLabel: {
+    fontSize: 10,
+    color: '#9ca3af',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  discoveryCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#00ea6b',
+    padding: 16,
+    borderRadius: 14,
+    gap: 8,
+  },
+  discoveryCtaText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#043529',
+  },
+  statsHorizontal: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(0,234,107,0.05)',
+    borderRadius: 20,
+    padding: 20,
+    marginTop: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(0,234,107,0.1)',
+  },
+  hStat: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  hStatNum: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#f9fafb',
     marginBottom: 2,
   },
-  floatingStatLabel: {
+  hStatLab: {
     fontSize: 11,
     color: '#9ca3af',
+    textTransform: 'uppercase',
+  },
+  hStatDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: 'rgba(0,234,107,0.1)',
   },
 });

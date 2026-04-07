@@ -41,14 +41,20 @@ export default function MatchCard({ match, onJoin, buttonTitle = 'Join Match', t
       <View style={styles.content}>
         <View style={styles.imageContainer}>
           <Image source={{ uri: primaryImage }} style={styles.image} />
-          <View style={styles.statusBadge}>
-            <Users size={12} color="#fff" />
-            <Text style={styles.statusText}>{teamsCount}</Text>
-          </View>
         </View>
 
         <View style={styles.body}>
-          <Text style={[styles.groundName, { color: titleColor }]}>{match.ground.name}</Text>
+          <View style={styles.titleRow}>
+            <Text style={[styles.groundName, { color: titleColor }]}>{match.ground.name}</Text>
+            <View style={[
+              styles.statusBadge, 
+              styles.statusBadgeInline,
+              !IS_DARK && styles.statusBadgeWeb
+            ]}>
+              <Users size={12} color={IS_DARK ? '#fff' : '#6B7280'} />
+              <Text style={[styles.statusText, !IS_DARK && styles.statusTextWeb]}>{teamsCount}</Text>
+            </View>
+          </View>
           
           <TouchableOpacity 
             style={styles.locationRow}
@@ -144,9 +150,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#eee',
   },
   statusBadge: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     paddingHorizontal: 10,
     paddingVertical: 6,
@@ -154,7 +157,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backdropFilter: 'blur(4px)',
+  },
+  statusBadgeInline: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  statusBadgeWeb: {
+    backgroundColor: '#f3f4f6',
+  },
+  statusTextWeb: {
+    color: '#6B7280',
   },
   statusText: {
     color: '#fff',
@@ -165,12 +177,20 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 8,
   },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   groundName: {
     ...Platform.select({
       web: { fontSize: 22 },
       default: { fontSize: 18 },
     }),
     fontWeight: '800',
+    flex: 1,
+    marginRight: 8,
   },
   locationRow: {
     flexDirection: 'row',

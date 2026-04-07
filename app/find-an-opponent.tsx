@@ -526,9 +526,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5E7EB',
   },
   filterTag: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 16,
     paddingVertical: 5,
-    borderRadius: 6,
+    borderRadius: 999,
     backgroundColor: '#F3F4F6',
   },
   filterTagActive: {
@@ -538,6 +538,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#4B5563',
+    paddingVertical: 2,
   },
   filterTagTextActive: {
     color: '#043529',

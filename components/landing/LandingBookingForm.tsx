@@ -204,10 +204,16 @@ export default function LandingBookingForm({
 
   const [submitting, setSubmitting] = useState(false);
 
+  const [couponCode, setCouponCode] = useState('');
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<any | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+
   /** After login: re-run Search and optionally re-select a ground from results. */
   const pendingPostLoginSearchRef = useRef(false);
   const pendingReselectGroundIdRef = useRef<string | null>(null);
   const handleSearchRef = useRef<() => Promise<void>>(async () => { });
+  const loadMoreSentinelRef = useRef<any>(null);
 
   const [locationKey, setLocationKey] = useState<string>('');
   const [typeKey, setTypeKey] = useState<string>('');
@@ -220,6 +226,8 @@ export default function LandingBookingForm({
   const [searchResults, setSearchResults] = useState<GroundWithImages[]>([]);
   const [searching, setSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [searchPage, setSearchPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
   // For landing search results: custom price for the chosen slot per ground (if any).
   const [searchSlotPriceByGroundId, setSearchSlotPriceByGroundId] = useState<
     Record<string, number | null>
@@ -230,6 +238,9 @@ export default function LandingBookingForm({
     setSearchResults([]);
     setSelectedGroundId(null);
     setSearchSlotPriceByGroundId({});
+    setCouponCode('');
+    setAppliedCoupon(null);
+    setCouponError(null);
   }, []);
 
   useEffect(() => {
@@ -649,6 +660,56 @@ export default function LandingBookingForm({
     return { totalHours, totalAmount, pricePerUnit: pricePerHour, unitLabel: 'hour' as const };
   }, [selectedGround, startTime, derivedEndTime, slotPriceByStartTime, isBoxCricket, teamType]);
 
+  const discountAmount = useMemo(() => {
+    if (!appliedCoupon || !computed) return 0;
+    const { discount_type, discount_value, max_discount } = appliedCoupon;
+    let disc = 0;
+    if (discount_type === 'percentage') {
+      disc = (computed.totalAmount * (discount_value || 0)) / 100;
+      if (max_discount && disc > max_discount) {
+        disc = max_discount;
+      }
+    } else {
+      disc = discount_value || 0;
+    }
+    return Math.min(disc, computed.totalAmount);
+  }, [appliedCoupon, computed]);
+
+  const finalAmount = useMemo(() => {
+    if (!computed) return 0;
+    return Math.max(0, computed.totalAmount - discountAmount);
+  }, [computed, discountAmount]);
+
+  const handleApplyCoupon = async () => {
+    if (!user || !couponCode || !computed) return;
+
+    setValidatingCoupon(true);
+    setCouponError(null);
+    try {
+      const { data, error } = await supabase.rpc('validate_coupon', {
+        p_code: couponCode,
+        p_user_id: user.id,
+        p_booking_amount: computed.totalAmount,
+        p_ground_id: selectedGround?.id,
+      });
+
+      if (error) throw error;
+
+      if (data && data.valid) {
+        setAppliedCoupon(data);
+      } else {
+        setAppliedCoupon(null);
+        setCouponError(data?.message || 'Invalid coupon code');
+      }
+    } catch (e: any) {
+      console.error('Error validating coupon:', e);
+      setAppliedCoupon(null);
+      setCouponError('Failed to validate coupon');
+    } finally {
+      setValidatingCoupon(false);
+    }
+  };
+
   const timeSlots = useMemo(
     () => getSlotTemplatesForPitch(selectedGround?.pitch_type ?? typeKey),
     [selectedGround, typeKey],
@@ -1052,160 +1113,158 @@ export default function LandingBookingForm({
   const wantsSlotFilter = !!(bookingDate && startTime);
 
   const canRunSearch = useMemo(() => {
-    if (!locationKey || !typeKey || loadingGrounds) return false;
-    if (!wantsSlotFilter) return true;
-
-    const timeIsValidSlot = availableTimeSlots.some((s) => s.value === startTime);
-    const slotIsAvailableForSearch =
-      useLandingSearchFlow && !selectedGround?.id
-        ? searchAllowedStartHHMM.has(startTime)
-        : true;
-    return timeIsValidSlot && slotIsAvailableForSearch && availableTimeSlots.length > 0;
-  }, [
-    locationKey,
-    typeKey,
-    loadingGrounds,
-    wantsSlotFilter,
-    bookingDate,
-    startTime,
-    availableTimeSlots,
-    useLandingSearchFlow,
-    selectedGround?.id,
-    searchAllowedStartHHMM,
-  ]);
+    // We allow searching with just location and type (to browse)
+    // or with fully specified slots (to narrow down).
+    return !!(locationKey && typeKey) && !loadingGrounds;
+  }, [locationKey, typeKey, loadingGrounds]);
 
   const groundSelectedFromSearch = useMemo(() => {
     if (!useLandingSearchFlow || !selectedGroundId || !hasSearched) return false;
     return searchResults.some((g) => g.id === selectedGroundId);
   }, [useLandingSearchFlow, selectedGroundId, hasSearched, searchResults]);
 
-  const handleSearch = async () => {
-    if (!canRunSearch) {
-      Alert.alert(
-        'Missing details',
-        wantsSlotFilter
-          ? 'Please choose location, type, date, and a valid start time.'
-          : 'Please choose location and ground type.',
-      );
-      return;
-    }
+  const handleSearch = React.useCallback(async (pageIdx = 0) => {
+    if (!canRunSearch) return;
 
-    const candidates = grounds.filter((g) => {
-      const matchesLocation = locationKeyForGround(g) === locationKey;
-      const matchesType = (g.pitch_type ?? '') === typeKey;
-      return matchesLocation && matchesType;
-    });
-
-    if (!candidates.length) {
-      Alert.alert('No grounds', 'No grounds match this location and type.');
+    const isInitial = pageIdx === 0;
+    if (isInitial) {
+      setSearchPage(0);
+      setHasMore(true);
       setSearchResults([]);
-      setHasSearched(true);
-      return;
-    }
-
-    // Browse: list all grounds for location + type (no availability filter).
-    if (!wantsSlotFilter) {
-      setHasSearched(true);
-      setSelectedGroundId(null);
       setSearchSlotPriceByGroundId({});
-      setSearchResults(candidates);
-      return;
     }
 
     setSearching(true);
     setHasSearched(true);
-    setSelectedGroundId(null);
-    setSearchSlotPriceByGroundId({});
+    
+    // If user is searching a new batch, do not clear selection IF they already picked one from previous batch
+    // unless it's a completely new initial search.
+    if (isInitial) {
+      setSelectedGroundId(null);
+    }
+
     try {
-      const candidateIds = candidates.map((c) => c.id);
-      const startTimeDb = `${startTime}:00`;
-      const { data, error } = await supabase.rpc('available_ground_ids_for_slot', {
-        p_ground_ids: candidateIds,
-        p_booking_date: bookingDate,
-        p_start_time: startTimeDb,
-      });
+      const limit = 12;
+      const offset = pageIdx * limit;
 
-      if (error) {
-        console.warn('available_ground_ids_for_slot', error);
-        Alert.alert(
-          'Search failed',
-          'Availability check failed. Please try again.',
-        );
+      // 1. Build Query
+      let query = supabase
+        .from('grounds')
+        .select(`
+          *,
+          ground_images(*),
+          reviews(rating)
+        `)
+        .eq('active', true)
+        .eq('approved', true);
+
+      if (locationKey) {
+        const [city, state] = locationKey.split('__');
+        query = query.eq('city', city).eq('state', state);
+      }
+      if (typeKey) {
+        query = query.eq('pitch_type', typeKey);
       }
 
-      const allowed = new Set<string>();
-      (data as { ground_id: string }[] | null)?.forEach((row) => {
-        if (row?.ground_id) allowed.add(row.ground_id);
-      });
+      const { data: candidates, error: candError } = await query
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1);
 
-      // Fallback: if RPC is missing/misconfigured and returns no rows, use the old per-ground check.
-      let nextResults: GroundWithImages[] = [];
-      if (!error && allowed.size > 0) {
-        nextResults = candidates.filter((g) => allowed.has(g.id));
-      } else {
-        const fallbackAvailable: GroundWithImages[] = [];
-        for (const g of candidates) {
-          const { data: bookedRows, error: bookedErr } = await supabase.rpc('booked_start_times_for_ground_day', {
-            p_ground_id: g.id,
-            p_booking_date: bookingDate,
-          });
-          if (bookedErr) continue;
-          const booked = new Set<string>();
-          (bookedRows as { start_time: string }[] | null)?.forEach((row) => {
-            const hh = normalizeDbTimeToHHMM(row.start_time);
-            if (hh) booked.add(hh);
-          });
-          if (!booked.has(startTime)) fallbackAvailable.push(g);
+      if (candError) throw candError;
+
+      if (!candidates || candidates.length < limit) {
+        setHasMore(false);
+      }
+
+      if (!candidates || candidates.length === 0) {
+        if (isInitial) setSearchResults([]);
+        return;
+      }
+
+      let nextBatch = candidates as GroundWithImages[];
+
+      // 2. Filter by slot (if chosen)
+      if (wantsSlotFilter) {
+        const candidateIds = candidates.map((c) => c.id);
+        const { data: allowedData, error: allowedErr } = await supabase.rpc('available_ground_ids_for_slot', {
+          p_ground_ids: candidateIds,
+          p_booking_date: bookingDate,
+          p_start_time: `${startTime}:00`,
+        });
+
+        if (!allowedErr && allowedData) {
+          const allowedSet = new Set((allowedData as any[]).map(r => r.ground_id));
+          nextBatch = candidates.filter((g) => allowedSet.has(g.id));
         }
-        nextResults = fallbackAvailable;
       }
 
-      setSearchResults(nextResults);
+      setSearchResults((prev) => (isInitial ? nextBatch : [...prev, ...nextBatch]));
+      setSearchPage(pageIdx);
 
-      // Load custom price for the chosen slot per ground so cards can display it.
-      try {
-        if (!nextResults.length) {
-          setSearchSlotPriceByGroundId({});
-        } else {
-          const parsedDate = parseISODate(bookingDate);
-          if (!parsedDate) {
-            setSearchSlotPriceByGroundId({});
-          } else {
-            const dow = getDayOfWeek(parsedDate) as any;
-            const { data: slotRows, error: slotErr } = await supabase
-              .from('time_slots')
-              .select('ground_id, start_time, custom_price')
-              .in(
-                'ground_id',
-                nextResults.map((g) => g.id),
-              )
-              .eq('day_of_week', dow)
-              .eq('is_available', true)
-              .eq('start_time', `${startTime}:00`);
+      // 3. Load prices for the batch
+      if (nextBatch.length > 0) {
+        const parsedDate = parseISODate(bookingDate);
+        if (parsedDate && startTime) {
+          const dow = getDayOfWeek(parsedDate) as any;
+          const { data: slotRows } = await supabase
+            .from('time_slots')
+            .select('ground_id, custom_price')
+            .in('ground_id', nextBatch.map((g) => g.id))
+            .eq('day_of_week', dow)
+            .eq('is_available', true)
+            .eq('start_time', `${startTime}:00`);
 
-            if (slotErr) {
-              console.warn('landing search slot prices load failed', slotErr);
-              setSearchSlotPriceByGroundId({});
-            } else {
-              const map: Record<string, number | null> = {};
-              (slotRows ?? []).forEach((row: any) => {
-                if (!row?.ground_id) return;
+          if (slotRows) {
+            setSearchSlotPriceByGroundId(prev => {
+              const map = { ...prev };
+              slotRows.forEach((row: any) => {
                 map[row.ground_id] = row.custom_price ?? null;
               });
-              setSearchSlotPriceByGroundId(map);
-            }
+              return map;
+            });
           }
         }
-      } catch (e) {
-        console.warn('landing search slot prices unexpected error', e);
-        setSearchSlotPriceByGroundId({});
       }
+    } catch (e) {
+      console.error('Search unexpected error', e);
     } finally {
       setSearching(false);
     }
-  };
+  }, [canRunSearch, locationKey, typeKey, wantsSlotFilter, bookingDate, startTime]);
 
-  handleSearchRef.current = handleSearch;
+  /** Re-run search whenever core filters change. */
+  useEffect(() => {
+    if (useLandingSearchFlow && canRunSearch) {
+      const timer = setTimeout(() => {
+        handleSearch(0);
+      }, 300); // debounce slightly
+      return () => clearTimeout(timer);
+    }
+  }, [locationKey, typeKey, bookingDate, startTime, useLandingSearchFlow, canRunSearch, handleSearch]);
+
+  /** Web-only: automatic load more via IntersectionObserver */
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !hasMore || searching || !hasSearched) return;
+    if (typeof IntersectionObserver === 'undefined') return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          handleSearch(searchPage + 1);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    const target = loadMoreSentinelRef.current;
+    if (target) {
+      observer.observe(target);
+    }
+
+    return () => observer.disconnect();
+  }, [hasMore, searching, hasSearched, searchPage, handleSearch]);
+
+  handleSearchRef.current = handleSearch as any;
 
   /** Native: restore booking form draft after returning from login (see `handleBook` when !user). */
   useEffect(() => {
@@ -1393,7 +1452,9 @@ export default function LandingBookingForm({
           end_time: derivedEndTime!,
           total_hours: computed.totalHours,
           price_per_hour: pricePerHour,
-          total_amount: computed.totalAmount,
+          total_amount: finalAmount, // Use final amount after discount
+          coupon_id: appliedCoupon?.id || null,
+          discount_amount: discountAmount,
           notes: isBoxCricket
             ? null
             : teamType === 'one'
@@ -1504,12 +1565,28 @@ export default function LandingBookingForm({
           </View>
         </View>
       ) : !searching ? (
-        <Text style={separateSearchResults ? styles.smallMutedOnWhite : styles.smallMuted}>
-          {wantsSlotFilter
-            ? 'No grounds have this slot free. Try another time or date.'
-            : 'No grounds match your search.'}
-        </Text>
+        <View>
+          <Text style={separateSearchResults ? styles.smallMutedOnWhite : styles.smallMuted}>
+            {wantsSlotFilter
+              ? 'No grounds have this slot free. Try another time or date.'
+              : 'No grounds match your search.'}
+          </Text>
+        </View>
       ) : null}
+
+      {hasMore && searchResults.length > 0 && (
+        <View style={styles.loadMoreWrap} ref={loadMoreSentinelRef}>
+          <Button
+            title={searching ? "Loading..." : "Load More Grounds"}
+            onPress={() => handleSearch(searchPage + 1)}
+            variant="outline"
+            size="small"
+            disabled={searching}
+            loading={searching}
+            style={styles.loadMoreBtn}
+          />
+        </View>
+      )}
     </>
   ) : null;
 
@@ -1969,6 +2046,59 @@ export default function LandingBookingForm({
         )}
       </View>
 
+      {/* Coupon Code Section */}
+      {user && (!useLandingSearchFlow || groundSelectedFromSearch) && (
+        <View style={[styles.section, webGridSectionStyle, webSingleColumnStyle]}>
+          <Text style={fieldLabelStyle}>Coupon Code</Text>
+          <View style={styles.couponRow}>
+            <TextInput
+              style={[
+                styles.input,
+                nativeTanChrome && styles.inputBookGroundNative,
+                appliedCoupon && styles.couponInputApplied,
+              ]}
+              placeholder="Enter coupon code"
+              placeholderTextColor={Platform.OS === 'web' ? '#9CA3AF' : '#9ca3af'}
+              value={couponCode}
+              onChangeText={(text) => {
+                setCouponCode(text.toUpperCase());
+                setAppliedCoupon(null);
+                setCouponError(null);
+              }}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              editable={!validatingCoupon}
+            />
+            <Pressable
+              onPress={handleApplyCoupon}
+              disabled={!couponCode || !!appliedCoupon || validatingCoupon || !computed}
+              style={({ pressed }) => [
+                styles.applyBtn,
+                (!couponCode || !!appliedCoupon || validatingCoupon || !computed) && styles.applyBtnDisabled,
+                appliedCoupon && styles.applyBtnApplied,
+                pressed && { opacity: 0.8 },
+              ]}
+            >
+              {validatingCoupon ? (
+                <ActivityIndicator size="small" color="#FFF" />
+              ) : (
+                <Text style={[styles.applyBtnText, appliedCoupon && styles.applyBtnTextApplied]}>
+                  {appliedCoupon ? 'Applied' : 'Apply'}
+                </Text>
+              )}
+            </Pressable>
+          </View>
+          {appliedCoupon && (
+            <Text style={styles.couponSuccess}>
+              Coupon applied! You saved {formatCurrency(discountAmount)}
+            </Text>
+          )}
+          {couponError && (
+            <Text style={styles.couponError}>{couponError}</Text>
+          )}
+        </View>
+      )}
+
       {!separateSearchResults && searchResultsBody ? (
         <View style={[styles.section, webFullSpanStyle, styles.searchResultsSection]}>
           {searchResultsBody}
@@ -2048,8 +2178,13 @@ export default function LandingBookingForm({
                   groundPageAccent && !isWeb && styles.summaryAccentGroundMobile,
                 ]}
               >
-                {formatCurrency(computed.totalAmount)}
+                {formatCurrency(finalAmount)}
               </Text>
+              {discountAmount > 0 && (
+                <Text style={styles.originalAmountLineThrough}>
+                  {' '}{formatCurrency(computed.totalAmount)}
+                </Text>
+              )}
             </Text>
             <Text
               style={[
@@ -2333,6 +2468,10 @@ const styles = StyleSheet.create({
     minWidth: 200,
     alignSelf: 'stretch',
   },
+  inputBookGroundNative: {
+    borderColor: 'rgba(0,234,107,0.2)',
+    backgroundColor: '#06392e',
+  },
   inputDisabled: {
     borderWidth: 1,
     borderColor: '#64748B',
@@ -2375,6 +2514,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
   },
+  loadMoreWrap: {
+    paddingVertical: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadMoreBtn: {
+    minWidth: 200,
+  },
   teamToggleOption: {
     flex: 1,
     paddingHorizontal: 12,
@@ -2392,7 +2539,7 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     opacity: 0.85,
     ...Platform.select({
-      web: { cursor: 'not-allowed' as const },
+      web: { cursor: 'not-allowed' as any },
     }),
   },
   teamToggleHint: {
@@ -2491,6 +2638,59 @@ const styles = StyleSheet.create({
       web: { color: '#E5E7EB' },
       default: { color: 'rgba(220,192,147,0.88)' },
     }),
+  },
+  couponRow: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  applyBtn: {
+    backgroundColor: '#00ea6b',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: 80,
+  },
+  applyBtnDisabled: {
+    backgroundColor: '#E5E7EB',
+    opacity: 0.6,
+  },
+  applyBtnApplied: {
+    backgroundColor: '#10b981',
+  },
+  applyBtnText: {
+    color: '#043529',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  applyBtnTextApplied: {
+    color: '#043529',
+  },
+  couponSuccess: {
+    color: '#10b981',
+    fontSize: 12,
+    marginTop: 6,
+    fontWeight: '600',
+  },
+  couponError: {
+    color: '#EF4444',
+    fontSize: 12,
+    marginTop: 6,
+    fontWeight: '600',
+  },
+  originalAmountLineThrough: {
+    textDecorationLine: 'line-through',
+    color: '#9CA3AF',
+    fontSize: 14,
+    fontWeight: '400',
+  },
+  couponInputApplied: {
+    borderColor: '#10b981',
+    borderWidth: 2,
   },
   actions: {
     marginTop: 8,

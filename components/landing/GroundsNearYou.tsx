@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, Platform, Pressable, ScrollView, ActivityIndicator } from 'react-native';
-import { MapPin, Navigation, Map as MapIcon, ChevronRight } from 'lucide-react-native';
+import { MapPin, Navigation, Map as MapIcon, ChevronRight, Search, ExternalLink } from 'lucide-react-native';
+import { View, Text, StyleSheet, Platform, Pressable, ScrollView, ActivityIndicator, TextInput, Image, Linking, TouchableOpacity } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { GroundWithImages } from '@/types';
 import { router } from 'expo-router';
@@ -11,6 +11,9 @@ export default function GroundsNearYou() {
   const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
   const [loading, setLoading] = useState(true);
   const [focusedGroundId, setFocusedGroundId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [nearMeActive, setNearMeActive] = useState(false);
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
 
   useEffect(() => {
     loadGrounds();
@@ -28,7 +31,7 @@ export default function GroundsNearYou() {
         .eq('active', true)
         .eq('approved', true)
         .order('created_at', { ascending: false })
-        .limit(6);
+        .limit(20);
 
       if (error) throw error;
       const sorted = (data as GroundWithImages[]) || [];
@@ -43,11 +46,53 @@ export default function GroundsNearYou() {
     }
   };
 
+  useEffect(() => {
+    if (nearMeActive && !userLocation) {
+      if (typeof navigator !== 'undefined' && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            setUserLocation({
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude
+            });
+          },
+          (err) => {
+            console.error("Geolocation error:", err);
+            setNearMeActive(false);
+          }
+        );
+      }
+    }
+  }, [nearMeActive, userLocation]);
+
+  const filteredGrounds = useMemo(() => {
+    let result = [...grounds];
+    
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(g => 
+        g.name.toLowerCase().includes(q) || 
+        g.city.toLowerCase().includes(q)
+      );
+    }
+    
+    if (nearMeActive && userLocation) {
+       result.sort((a, b) => {
+         if (!a.latitude || !a.longitude || !b.latitude || !b.longitude) return 0;
+         const distA = Math.sqrt(Math.pow(Number(a.latitude) - userLocation.lat, 2) + Math.pow(Number(a.longitude) - userLocation.lng, 2));
+         const distB = Math.sqrt(Math.pow(Number(b.latitude) - userLocation.lat, 2) + Math.pow(Number(b.longitude) - userLocation.lng, 2));
+         return distA - distB;
+       });
+    }
+    
+    return result.slice(0, 6);
+  }, [grounds, searchQuery, nearMeActive, userLocation]);
+
   const isWeb = Platform.OS === 'web';
 
   const focusedGround = useMemo(() => 
-    grounds.find(g => g.id === focusedGroundId) || grounds[0], 
-  [grounds, focusedGroundId]);
+    filteredGrounds.find(g => g.id === focusedGroundId) || filteredGrounds[0], 
+  [filteredGrounds, focusedGroundId]);
 
   const freeMapEmbed = useMemo(() => {
     if (!focusedGround) {
@@ -72,10 +117,30 @@ export default function GroundsNearYou() {
           <View style={styles.iconCircle}>
             <MapIcon size={24} color="#00ea6b" />
           </View>
-          <View>
+           <View>
             <Text style={styles.title}>Grounds Near You</Text>
             <Text style={styles.subtitle}>Discover and pinpoint cricket grounds in your area</Text>
           </View>
+        </View>
+
+        <View style={styles.controlsRow}>
+          <View style={styles.searchBAR}>
+            <Search size={18} color="#9CA3AF" />
+            <TextInput
+              placeholder="Search grounds or cities..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              style={styles.searchINPUT}
+              placeholderTextColor="#9CA3AF"
+            />
+          </View>
+          <Pressable 
+            style={[styles.nearMeToggle, nearMeActive && styles.nearMeToggleActive]}
+            onPress={() => setNearMeActive(!nearMeActive)}
+          >
+            <Navigation size={18} color={nearMeActive ? "#043529" : "#00ea6b"} />
+            <Text style={[styles.nearMeText, nearMeActive && styles.nearMeTextActive]}>Near Me</Text>
+          </Pressable>
         </View>
       </View>
 
@@ -123,7 +188,7 @@ export default function GroundsNearYou() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.scrollContent}
           >
-            {grounds.map((ground) => {
+            {filteredGrounds.map((ground) => {
               const isFocused = ground.id === focusedGroundId;
               return (
                 <Pressable
@@ -133,18 +198,31 @@ export default function GroundsNearYou() {
                 >
                   <Card style={[styles.itemCard, isFocused && styles.itemCardFocused]}>
                     <View style={styles.itemRow}>
-                      <View style={[styles.itemEmojiWrap, isFocused && styles.itemEmojiWrapActive]}>
-                        <MapPin size={20} color={isFocused ? "#043529" : "#00ea6b"} />
-                      </View>
+                      <Image 
+                        source={{ uri: ground.ground_images?.[0]?.image_url || 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg' }} 
+                        style={styles.itemImage} 
+                      />
                       <View style={styles.itemDetails}>
-                        <Text style={[styles.itemName, isFocused && styles.itemNameActive]} numberOfLines={1}>{ground.name}</Text>
-                        <Text style={[styles.itemCity, isFocused && styles.itemCityActive]}>{ground.city}</Text>
+                        <Text style={styles.itemName} numberOfLines={1}>{ground.name}</Text>
+                        <Text style={styles.itemCity}>{ground.city}</Text>
+                        
+                        <TouchableOpacity 
+                          style={styles.locationLink}
+                          onPress={() => {
+                            const q = encodeURIComponent(`${ground.name}, ${ground.city}, ${ground.state}`);
+                            const url = `https://www.google.com/maps/search/?api=1&query=${q}`;
+                            Linking.openURL(url);
+                          }}
+                        >
+                          <MapPin size={12} color="#10b981" />
+                          <Text style={styles.locationLinkText}>View on Map</Text>
+                        </TouchableOpacity>
                       </View>
                       <Pressable 
                         onPress={() => router.push(makeGroundPath(ground) as any)}
                         style={styles.itemAction}
                       >
-                         <ChevronRight size={20} color={isFocused ? "#043529" : "#9CA3AF"} />
+                         <ChevronRight size={20} color={isFocused ? "#10b981" : "#9CA3AF"} />
                       </Pressable>
                     </View>
                   </Card>
@@ -246,35 +324,49 @@ const styles = StyleSheet.create({
   itemCard: {
     padding: 16,
     backgroundColor: Platform.OS === 'web' ? '#FFF' : '#06392e',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 234, 107, 0.1)',
     borderRadius: 16,
-    transition: 'all 0.2s ease-in-out',
-  } as any,
+    ...Platform.select({
+      web: {
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        cursor: 'pointer',
+      } as any,
+    }),
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 2 },
+  },
   itemCardFocused: {
-    backgroundColor: '#00ea6b',
-    borderColor: '#00ea6b',
-    transform: Platform.OS === 'web' ? [{ scale: 1.02 }] : [],
-    shadowColor: '#00ea6b',
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
+    transform: Platform.OS === 'web' ? [{ scale: 1.02 }, { translateY: -2 }] : [],
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 15,
+    shadowOffset: { width: 0, height: 8 },
+    backgroundColor: '#FFF',
+    zIndex: 10,
+  },
+  itemImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 12,
+    backgroundColor: '#eee',
+  },
+  locationLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  locationLinkText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#10b981',
+    textDecorationLine: 'underline',
   },
   itemRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-  },
-  itemEmojiWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: 'rgba(0, 234, 107, 0.05)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  itemEmojiWrapActive: {
-    backgroundColor: '#043529',
   },
   itemDetails: {
     flex: 1,
@@ -284,16 +376,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Platform.OS === 'web' ? '#111827' : '#F9FAFB',
   },
-  itemNameActive: {
-    color: '#043529',
-  },
   itemCity: {
     fontSize: 13,
     color: '#9CA3AF',
     marginTop: 2,
-  },
-  itemCityActive: {
-    color: 'rgba(4, 53, 41, 0.7)',
   },
   itemAction: {
     padding: 4,
@@ -341,5 +427,54 @@ const styles = StyleSheet.create({
     color: '#043529',
     fontWeight: '700',
     fontSize: 15,
+  },
+  controlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 20,
+    gap: 12,
+  },
+  searchBAR: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Platform.OS === 'web' ? '#FFF' : '#06392e',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 48,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 234, 107, 0.1)',
+  },
+  searchINPUT: {
+    flex: 1,
+    fontSize: 15,
+    marginLeft: 8,
+    color: Platform.OS === 'web' ? '#111827' : '#00ea6b',
+    ...Platform.select({
+      web: { outlineStyle: 'none' } as any,
+    }),
+  },
+  nearMeToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 234, 107, 0.05)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 48,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 234, 107, 0.2)',
+  },
+  nearMeToggleActive: {
+    backgroundColor: '#00ea6b',
+    borderColor: '#00ea6b',
+  },
+  nearMeText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#00ea6b',
+  },
+  nearMeTextActive: {
+    color: '#043529',
   },
 });

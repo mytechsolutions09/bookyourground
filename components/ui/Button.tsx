@@ -1,4 +1,4 @@
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle, StyleProp } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, TextStyle, StyleProp, View } from 'react-native';
 
 interface ButtonProps {
   title: string;
@@ -12,6 +12,7 @@ interface ButtonProps {
   textStyle?: StyleProp<TextStyle>;
   /** Overrides default spinner color when `loading` (e.g. match `textStyle` on dark buttons). */
   loadingIndicatorColor?: string;
+  icon?: any;
 }
 
 export default function Button({
@@ -25,6 +26,7 @@ export default function Button({
   style,
   textStyle,
   loadingIndicatorColor,
+  icon: Icon,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
   const primaryColor = '#01e669';
@@ -51,9 +53,18 @@ export default function Button({
           }
         />
       ) : (
-        <Text style={[styles.text, styles[`${variant}Text`], styles[`${size}Text`], textStyle]}>
-          {title}
-        </Text>
+        <View style={styles.inner}>
+          {Icon && (
+            <Icon
+              size={size === 'small' ? 14 : size === 'large' ? 20 : 18}
+              color={variant === 'outline' ? primaryColor : '#FFFFFF'}
+              style={{ marginRight: 8 }}
+            />
+          )}
+          <Text style={[styles.text, styles[`${variant}Text`], styles[`${size}Text`], textStyle]}>
+            {title}
+          </Text>
+        </View>
       )}
     </TouchableOpacity>
   );
@@ -65,6 +76,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
+  },
+  inner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   primary: {
     backgroundColor: '#01e669',

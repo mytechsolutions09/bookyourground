@@ -290,7 +290,7 @@ export default function OwnerDashboardScreen() {
               <View style={styles.statBoxWrapper}>
                 <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
                   <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
-                    <IndianRupee size={24} color="#0EA5E9" />
+                    <IndianRupee size={24} color="#01b854" />
                   </View>
                   <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Amount withdrawn</Text>
                   <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]}>₹{stats.totalWithdrawn.toLocaleString('en-IN')}</Text>
@@ -301,7 +301,7 @@ export default function OwnerDashboardScreen() {
               <View style={styles.statBoxWrapper}>
                 <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
                   <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
-                    <IndianRupee size={24} color="#EA580C" />
+                    <IndianRupee size={24} color="#01b854" />
                   </View>
                   <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Total spent</Text>
                   <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]}>₹{stats.totalSpentOnOtherGrounds.toLocaleString('en-IN')}</Text>
@@ -428,7 +428,7 @@ export default function OwnerDashboardScreen() {
               <View style={styles.statBoxWrapper}>
                 <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
                   <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
-                    <Mail size={24} color="#0EA5E9" />
+                    <Mail size={24} color="#01b854" />
                   </View>
                   <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Email Address</Text>
                   <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]} numberOfLines={1}>{user?.email || 'N/A'}</Text>
@@ -447,7 +447,7 @@ export default function OwnerDashboardScreen() {
                     </TouchableOpacity>
                   )}
                   <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
-                    <Phone size={24} color="#F59E0B" />
+                    <Phone size={24} color="#01b854" />
                   </View>
                   <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Phone Number</Text>
                   
@@ -488,7 +488,7 @@ export default function OwnerDashboardScreen() {
                     </TouchableOpacity>
                   )}
                   <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
-                    <ShieldCheck size={24} color={profile?.business_verified ? "#01b854" : "#9CA3AF"} />
+                    <ShieldCheck size={24} color="#01b854" />
                   </View>
                   <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Business</Text>
                   
@@ -570,31 +570,34 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: 'rgba(0,0,0,0.03)',
     borderRadius: 999,
-    padding: 4,
-    marginBottom: 20,
+    padding: 6,
+    marginBottom: 24,
     alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.02)',
   },
   tabButton: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 24,
     paddingVertical: 10,
     borderRadius: 999,
   },
   activeTabButton: {
     backgroundColor: '#FFFFFF',
     shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
   },
   activeTabButtonDark: {
-    backgroundColor: THEME_CARD_BG,
+    backgroundColor: 'rgba(255,255,255,0.1)',
   },
   tabText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#6B7280',
+    color: '#64748B',
+    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
   },
   activeTabText: {
     color: '#01b854',
@@ -643,6 +646,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     color: '#4B5563',
+    paddingVertical: 2,
     textTransform: 'uppercase',
     letterSpacing: 1.2,
     marginBottom: 4,
@@ -698,8 +702,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F3F4F6',
-    borderRadius: 8,
-    paddingHorizontal: 8,
+    borderRadius: 999,
+    paddingHorizontal: 16,
     marginVertical: 2,
     maxWidth: '100%',
   },

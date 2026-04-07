@@ -1,16 +1,18 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Platform, ScrollView, TextInput, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Platform, ScrollView, TextInput, Alert, TouchableOpacity, ActivityIndicator } from 'react-native';
 import WebLayout from '@/components/web/WebLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
+import { Tag, Percent, Scissors, Trash2 } from 'lucide-react-native';
 
 const IS_WEB = Platform.OS === 'web';
 
 function OwnerSettingsInner() {
   const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<'payout' | 'bank' | 'coupons'>('payout');
   const [amount, setAmount] = useState('');
   const [accountDetails, setAccountDetails] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -19,6 +21,74 @@ function OwnerSettingsInner() {
   const [ifsc, setIfsc] = useState('');
   const [upiId, setUpiId] = useState('');
   const [savingBank, setSavingBank] = useState(false);
+
+  // Coupon management state
+  const [grounds, setGrounds] = useState<any[]>([]);
+  const [coupons, setCoupons] = useState<any[]>([]);
+  const [newCode, setNewCode] = useState('');
+  const [discType, setDiscType] = useState<'percentage' | 'fixed'>('percentage');
+  const [discValue, setDiscValue] = useState('');
+  const [minSpend, setMinSpend] = useState('');
+  const [selectedGroundForCoupon, setSelectedGroundForCoupon] = useState('all');
+  const [creatingCoupon, setCreatingCoupon] = useState(false);
+  const [loadingCoupons, setLoadingCoupons] = useState(false);
+
+  useEffect(() => {
+    if (user && activeTab === 'coupons') {
+      loadOwnerData();
+    }
+  }, [user, activeTab]);
+
+  const loadOwnerData = async () => {
+    if (!user) return;
+    try {
+      setLoadingCoupons(true);
+      const [groundsRes, couponsRes] = await Promise.all([
+        supabase.from('grounds').select('id, name').eq('owner_id', user.id),
+        supabase.from('coupons').select('*').eq('owner_id', user.id).order('created_at', { ascending: false })
+      ]);
+      setGrounds(groundsRes.data || []);
+      setCoupons(couponsRes.data || []);
+    } catch (e) {
+      console.error('Error loading coupon data', e);
+    } finally {
+      setLoadingCoupons(false);
+    }
+  };
+
+  const handleCreateCoupon = async () => {
+    if (!user) return;
+    if (!newCode.trim() || !discValue) {
+      Alert.alert('Missing details', 'Please provide a code and discount value');
+      return;
+    }
+
+    try {
+      setCreatingCoupon(true);
+      const { error } = await supabase.from('coupons').insert({
+        code: newCode.toUpperCase().trim(),
+        discount_type: discType,
+        discount_value: Number(discValue),
+        min_booking_amount: Number(minSpend) || 0,
+        owner_id: user.id,
+        ground_id: selectedGroundForCoupon === 'all' ? null : selectedGroundForCoupon,
+        is_active: true
+      });
+
+      if (error) throw error;
+
+      Alert.alert('Success', 'Coupon created successfully');
+      setNewCode('');
+      setDiscValue('');
+      setMinSpend('');
+      loadOwnerData();
+    } catch (e: any) {
+      console.error('Create coupon error', e);
+      Alert.alert('Error', e.message || 'Failed to create coupon');
+    } finally {
+      setCreatingCoupon(false);
+    }
+  };
 
   const handleWithdraw = async () => {
     if (!user) {
@@ -64,55 +134,81 @@ function OwnerSettingsInner() {
     }
   };
 
+  const IS_DARK = Platform.OS !== 'web';
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.inner}>
-        <Card style={styles.panel}>
-          <Text style={styles.sectionTitle}>Withdraw earnings</Text>
-          <Text style={styles.sectionSubtitle}>
-            Request a payout of your available earnings. Actual transfers are processed manually.
-          </Text>
+        <View style={styles.tabContainer}>
+          <TouchableOpacity 
+            style={[styles.tabButton, activeTab === 'payout' && styles.activeTabButton, IS_DARK && activeTab === 'payout' && styles.activeTabButtonDark]} 
+            onPress={() => setActiveTab('payout')}
+          >
+            <Text style={[styles.tabText, activeTab === 'payout' && styles.activeTabText]}>Payouts</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.tabButton, activeTab === 'bank' && styles.activeTabButton, IS_DARK && activeTab === 'bank' && styles.activeTabButtonDark]} 
+            onPress={() => setActiveTab('bank')}
+          >
+            <Text style={[styles.tabText, activeTab === 'bank' && styles.activeTabText]}>Bank Account</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.tabButton, activeTab === 'coupons' && styles.activeTabButton, IS_DARK && activeTab === 'coupons' && styles.activeTabButtonDark]} 
+            onPress={() => setActiveTab('coupons')}
+          >
+            <Text style={[styles.tabText, activeTab === 'coupons' && styles.activeTabText]}>Coupons</Text>
+          </TouchableOpacity>
+        </View>
 
-          <View style={styles.formRowHorizontal}>
-            <View style={styles.formCol}>
-              <Text style={styles.label}>Amount (₹)</Text>
-              <TextInput
-                value={amount}
-                onChangeText={setAmount}
-                keyboardType="numeric"
-                placeholder="Enter amount to withdraw"
-                style={styles.input}
-              />
+        {activeTab === 'payout' && (
+          <Card style={styles.panel}>
+            <Text style={styles.sectionTitle}>Withdraw earnings</Text>
+            <Text style={styles.sectionSubtitle}>
+              Request a payout of your available earnings. Actual transfers are processed manually.
+            </Text>
+
+            <View style={styles.formRowHorizontal}>
+              <View style={styles.formCol}>
+                <Text style={styles.label}>Amount (₹)</Text>
+                <TextInput
+                  value={amount}
+                  onChangeText={setAmount}
+                  keyboardType="numeric"
+                  placeholder="Enter amount to withdraw"
+                  style={styles.input}
+                />
+              </View>
+
+              <View style={styles.formCol}>
+                <Text style={styles.label}>UPI / bank details</Text>
+                <TextInput
+                  value={accountDetails}
+                  onChangeText={setAccountDetails}
+                  placeholder="Enter UPI ID or bank account details"
+                  style={[styles.input, styles.multilineInput]}
+                  multiline
+                />
+              </View>
             </View>
 
-            <View style={styles.formCol}>
-              <Text style={styles.label}>UPI / bank details</Text>
-              <TextInput
-                value={accountDetails}
-                onChangeText={setAccountDetails}
-                placeholder="Enter UPI ID or bank account details"
-                style={[styles.input, styles.multilineInput]}
-                multiline
+            <View style={styles.actionsRow}>
+              <Button
+                title={submitting ? 'Requesting...' : 'Request withdrawal'}
+                onPress={handleWithdraw}
+                loading={submitting}
+                disabled={submitting}
+                style={styles.submitButton}
               />
             </View>
-          </View>
+          </Card>
+        )}
 
-          <View style={styles.actionsRow}>
-            <Button
-              title={submitting ? 'Requesting...' : 'Request withdrawal'}
-              onPress={handleWithdraw}
-              loading={submitting}
-              disabled={submitting}
-              style={styles.submitButton}
-            />
-          </View>
-        </Card>
-
-        <Card style={[styles.panel, { marginTop: 16 }]}>
-          <Text style={styles.sectionTitle}>Add bank details</Text>
-          <Text style={styles.sectionSubtitle}>
-            Save your payout account details so we can use them for future withdrawals.
-          </Text>
+        {activeTab === 'bank' && (
+          <Card style={[styles.panel, { marginTop: IS_WEB ? 0 : 16 }]}>
+            <Text style={styles.sectionTitle}>Add bank details</Text>
+            <Text style={styles.sectionSubtitle}>
+              Save your payout account details so we can use them for future withdrawals.
+            </Text>
 
           <View style={styles.formRowHorizontal}>
             <View style={styles.formCol}>
@@ -209,6 +305,145 @@ function OwnerSettingsInner() {
             />
           </View>
         </Card>
+      )}
+        {activeTab === 'coupons' && (
+          <View style={styles.tabContentGap}>
+            <Card style={styles.panel}>
+              <View style={styles.rowBetween}>
+                <View>
+                  <Text style={styles.sectionTitle}>Create New Coupon</Text>
+                  <Text style={styles.sectionSubtitle}>Add a discount for all your grounds or a specific one.</Text>
+                </View>
+                <Tag size={24} color="#01b854" />
+              </View>
+
+              <View style={styles.formRowHorizontal}>
+                <View style={styles.formCol}>
+                  <Text style={styles.label}>Coupon Code</Text>
+                  <TextInput
+                    value={newCode}
+                    onChangeText={(val) => setNewCode(val.toUpperCase())}
+                    placeholder="e.g. SUMMER20"
+                    style={styles.input}
+                    autoCapitalize="characters"
+                  />
+                </View>
+                <View style={styles.formCol}>
+                  <Text style={styles.label}>Min Spend (₹)</Text>
+                  <TextInput
+                    value={minSpend}
+                    onChangeText={setMinSpend}
+                    placeholder="0"
+                    keyboardType="numeric"
+                    style={styles.input}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.formRowHorizontal}>
+                <View style={styles.formCol}>
+                  <Text style={styles.label}>Discount Type</Text>
+                  <View style={styles.toggleRow}>
+                    <TouchableOpacity
+                      onPress={() => setDiscType('percentage')}
+                      style={[styles.toggleBtn, discType === 'percentage' && styles.toggleBtnActive]}
+                    >
+                      <Percent size={14} color={discType === 'percentage' ? '#FFF' : '#64748B'} />
+                      <Text style={[styles.toggleBtnText, discType === 'percentage' && styles.toggleBtnTextActive]}>Percent</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => setDiscType('fixed')}
+                      style={[styles.toggleBtn, discType === 'fixed' && styles.toggleBtnActive]}
+                    >
+                      <Text style={[styles.toggleBtnText, discType === 'fixed' && styles.toggleBtnTextActive]}>₹ Fixed</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+                <View style={styles.formCol}>
+                  <Text style={styles.label}>Discount Value</Text>
+                  <TextInput
+                    value={discValue}
+                    onChangeText={setDiscValue}
+                    placeholder={discType === 'percentage' ? '20' : '100'}
+                    keyboardType="numeric"
+                    style={styles.input}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.formRow}>
+                <Text style={styles.label}>Apply to Ground</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
+                  <TouchableOpacity
+                    onPress={() => setSelectedGroundForCoupon('all')}
+                    style={[styles.groundChip, selectedGroundForCoupon === 'all' && styles.groundChipActive]}
+                  >
+                    <Text style={[styles.groundChipText, selectedGroundForCoupon === 'all' && styles.groundChipTextActive]}>All Grounds</Text>
+                  </TouchableOpacity>
+                  {grounds.map((g) => (
+                    <TouchableOpacity
+                      key={g.id}
+                      onPress={() => setSelectedGroundForCoupon(g.id)}
+                      style={[styles.groundChip, selectedGroundForCoupon === g.id && styles.groundChipActive]}
+                    >
+                      <Text style={[styles.groundChipText, selectedGroundForCoupon === g.id && styles.groundChipTextActive]}>{g.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+
+              <View style={styles.actionsRow}>
+                <Button
+                  title={creatingCoupon ? 'Creating...' : 'Create Coupon'}
+                  onPress={handleCreateCoupon}
+                  loading={creatingCoupon}
+                  disabled={creatingCoupon}
+                  style={styles.submitButton}
+                />
+              </View>
+            </Card>
+
+            <View style={{ marginTop: 24 }}>
+              <Text style={styles.sectionTitle}>Your Active Coupons</Text>
+              {loadingCoupons ? (
+                <ActivityIndicator size="small" color="#01b854" style={{ marginTop: 20 }} />
+              ) : coupons.length === 0 ? (
+                <Text style={styles.emptyText}>You haven't created any coupons yet.</Text>
+              ) : (
+                <View style={styles.couponList}>
+                  {coupons.map((c) => (
+                    <View key={c.id} style={[styles.couponItem, IS_DARK && styles.couponItemDark]}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.couponCodeText}>{c.code}</Text>
+                        <Text style={styles.couponDetsText}>
+                          {c.discount_type === 'percentage' ? `${c.discount_value}%` : `₹${c.discount_value}`} off • Min ₹{c.min_booking_amount || 0}
+                        </Text>
+                        {c.ground_id && (
+                          <Text style={styles.couponTargetText}>
+                            Target: {grounds.find((g) => g.id === c.ground_id)?.name || 'Ground'}
+                          </Text>
+                        )}
+                      </View>
+                      <View style={styles.couponStat}>
+                        <Text style={styles.couponUsedCount}>{c.used_count || 0}</Text>
+                        <Text style={styles.couponUsedLabel}>USED</Text>
+                      </View>
+                      <TouchableOpacity 
+                        onPress={async () => {
+                          const { error } = await supabase.from('coupons').delete().eq('id', c.id);
+                          if (!error) loadOwnerData();
+                        }}
+                        style={styles.deleteBtn}
+                      >
+                        <Trash2 size={16} color="#EF4444" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+          </View>
+        )}
       </View>
     </ScrollView>
   );
@@ -323,6 +558,171 @@ const styles = StyleSheet.create({
   submitButton: {
     backgroundColor: '#01b854',
     borderWidth: 0,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(0,0,0,0.03)',
+    borderRadius: 999,
+    padding: 6,
+    marginBottom: 24,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.02)',
+  },
+  tabButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 999,
+  },
+  activeTabButton: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  activeTabButtonDark: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  tabText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#64748B',
+    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+  },
+  activeTabText: {
+    color: '#01b854',
+  },
+  tabContentGap: {
+    gap: 16,
+  },
+  rowBetween: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  toggleRow: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderRadius: 8,
+    padding: 2,
+    marginTop: 4,
+  },
+  toggleBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 6,
+    gap: 4,
+  },
+  toggleBtnActive: {
+    backgroundColor: '#01b854',
+  },
+  toggleBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  toggleBtnTextActive: {
+    color: '#FFFFFF',
+  },
+  chipScroll: {
+    marginTop: 8,
+    paddingBottom: 4,
+  },
+  groundChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  groundChipActive: {
+    backgroundColor: 'rgba(1,184,84,0.1)',
+    borderColor: '#01b854',
+  },
+  groundChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  groundChipTextActive: {
+    color: '#01b854',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    marginTop: 32,
+    fontStyle: 'italic',
+  },
+  couponList: {
+    gap: 12,
+    marginTop: 12,
+  },
+  couponItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 12,
+  },
+  couponItemDark: {
+    backgroundColor: '#06392e',
+    borderColor: 'rgba(0,234,107,0.1)',
+  },
+  couponCodeText: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#111827',
+    letterSpacing: 1,
+  },
+  couponDetsText: {
+    fontSize: 12,
+    color: '#01b854',
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  couponTargetText: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  couponStat: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.03)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  couponUsedCount: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#111827',
+  },
+  couponUsedLabel: {
+    fontSize: 8,
+    fontWeight: '800',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+  },
+  deleteBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(239,68,68,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 4,
   },
 });
 

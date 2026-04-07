@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, User, Mail, Lock, Phone, MapPin, Eye, EyeOff, CheckCircle, ChevronDown } from 'lucide-react-native';
+import { ArrowLeft, User, Mail, Lock, Phone, MapPin, Eye, EyeOff, CheckCircle, ChevronDown, Users } from 'lucide-react-native';
 
 const INDIAN_STATES = [
   "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", 
@@ -37,6 +37,7 @@ export default function SignupScreen() {
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [stateName, setStateName] = useState('');
+  const [teamName, setTeamName] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -66,7 +67,7 @@ export default function SignupScreen() {
 
     setLoading(true);
     const fullName = `${firstName} ${lastName}`.trim();
-    const { error } = await signUp(email, password, fullName, phone, 'user', undefined, address, stateName);
+    const { error } = await signUp(email, password, fullName, phone, 'user', undefined, address, stateName, teamName);
     setLoading(false);
 
     if (error) {
@@ -156,6 +157,13 @@ export default function SignupScreen() {
                     </View>
                   </View>
   
+                  <WebInput
+                    label="Team Name"
+                    value={teamName}
+                    onChangeText={setTeamName}
+                    placeholder="e.g. Real Madrid FC"
+                  />
+
                   <WebInput
                     label="Password"
                     value={password}
@@ -299,6 +307,22 @@ export default function SignupScreen() {
                 placeholderTextColor="#4b5563"
                 keyboardType="phone-pad"
                 onFocus={() => setFocusedField('phone')}
+                onBlur={() => setFocusedField(null)}
+              />
+            </View>
+          </View>
+
+          <View style={styles.fieldWrap}>
+            <Text style={styles.fieldLabel}>Team Name (Squad)</Text>
+            <View style={[styles.inputRow, isFocused('teamName') && styles.inputRowFocused]}>
+              <Users size={15} color={isFocused('teamName') ? '#00ea6b' : '#6b7280'} strokeWidth={2} />
+              <TextInput
+                style={styles.textInput}
+                value={teamName}
+                onChangeText={setTeamName}
+                placeholder="Real Madrid FC"
+                placeholderTextColor="#4b5563"
+                onFocus={() => setFocusedField('teamName')}
                 onBlur={() => setFocusedField(null)}
               />
             </View>
