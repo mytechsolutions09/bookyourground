@@ -809,7 +809,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
 
         <View style={[
           styles.main,
-          !isPublicNoSidebar && !isCompact && !noCard && styles.mainAppCard
+          !isPublicNoSidebar && !isCompact && !noCard && isSuperAdmin && styles.mainAppCard
         ]}>
           {children}
         </View>
