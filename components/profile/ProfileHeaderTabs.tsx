@@ -19,63 +19,74 @@ export default function ProfileHeaderTabs({ themeAccent, themeText, isCompact, s
   const isActive = (path: string) => pathname === path;
 
   return (
-    <View style={[styles.actionHeader, style]}>
-
-      <TouchableOpacity 
-        style={styles.actionItem} 
-        onPress={() => router.push('/(tabs)/profile/notifications')}
-      >
-        <View style={[styles.actionIconWrap, isActive('/(tabs)/profile/notifications') && { borderColor: themeAccent, borderWidth: 2 }]}>
-          <Bell size={20} color={themeAccent} />
-        </View>
-        <Text style={[styles.actionLabel, isActive('/(tabs)/profile/notifications') && { color: themeAccent, fontWeight: '800' }]}>Notifications</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity 
-        style={styles.actionItem} 
-        onPress={() => router.push('/(tabs)/profile/settings')}
-      >
-        <View style={[styles.actionIconWrap, isActive('/(tabs)/profile/settings') && { borderColor: themeAccent, borderWidth: 2 }]}>
-          <Settings size={20} color={themeAccent} />
-        </View>
-        <Text style={[styles.actionLabel, isActive('/(tabs)/profile/settings') && { color: themeAccent, fontWeight: '800' }]}>Settings</Text>
-      </TouchableOpacity>
+    <View style={[styles.tabContainer, style]}>
+      <View style={styles.tabBackground}>
+        <TouchableOpacity 
+          style={[styles.tab, isActive('/profile') && styles.activeTab]} 
+          onPress={() => router.push('/(tabs)/profile' as any)}
+        >
+          <Text style={[styles.tabText, isActive('/profile') && { color: themeAccent, fontWeight: '700' }]}>
+            Overview
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.tab, isActive('/profile/notifications') && styles.activeTab]} 
+          onPress={() => router.push('/(tabs)/profile/notifications' as any)}
+        >
+          <Text style={[styles.tabText, isActive('/profile/notifications') && { color: themeAccent, fontWeight: '700' }]}>
+            Notifications
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.tab, isActive('/profile/settings') && styles.activeTab]} 
+          onPress={() => router.push('/(tabs)/profile/settings' as any)}
+        >
+          <Text style={[styles.tabText, isActive('/profile/settings') && { color: themeAccent, fontWeight: '700' }]}>
+            Settings
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  actionHeader: {
+  tabContainer: {
+    alignItems: 'flex-start',
+    marginBottom: 24,
+  },
+  tabBackground: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
-    gap: 16,
-    marginBottom: 16,
-    paddingHorizontal: 4,
-  },
-  actionItem: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  actionIconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#EEF2F6',
+    padding: 6,
+    borderRadius: 100,
+    minWidth: 400,
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
   },
-  actionLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#9CA3AF',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    borderRadius: 100,
+  },
+  activeTab: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4B5563',
   },
 });

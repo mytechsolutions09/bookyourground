@@ -12,6 +12,7 @@ import {
   PlusCircle,
   Settings,
   Bell,
+  Swords,
 } from 'lucide-react-native';
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -90,19 +91,13 @@ export default function ProfileScreen() {
 
   const profileBody = (
     <View style={[styles.content]}>
-      <View style={(!isCompact && isWeb) ? styles.desktopHeaderRow : null}>
-        {(!isCompact && isWeb) && (
-          <View style={{ flex: 1 }}>
-            <Text style={styles.pageTitle}>Account Overview</Text>
-          </View>
-        )}
+      {(!isCompact && isWeb) && (
         <ProfileHeaderTabs
           themeAccent={themeAccent}
           themeText={themeText}
           isCompact={isCompact}
-          style={(!isCompact && isWeb) ? { marginBottom: 0 } : null}
         />
-      </View>
+      )}
       <Card
         style={[
           styles.profileCard,
@@ -141,6 +136,14 @@ export default function ProfileScreen() {
               <Phone size={14} color={themeAccent} />
               <Text style={[styles.overviewInfoText, { color: isLight ? '#475569' : themeText }]}>
                 {profile.phone}
+              </Text>
+            </View>
+          )}
+          {profile?.team_name && (
+            <View style={styles.overviewInfoItem}>
+              <Swords size={14} color={themeAccent} />
+              <Text style={[styles.overviewInfoText, { color: isLight ? '#475569' : themeText }]}>
+                Team: {profile.team_name}
               </Text>
             </View>
           )}
@@ -268,8 +271,8 @@ export default function ProfileScreen() {
 
   if (Platform.OS === 'web') {
     return (
-      <WebLayout>
-        <ScrollView style={[styles.container, { backgroundColor: themeBg }]}>{profileBody}</ScrollView>
+      <WebLayout noCard>
+        <ScrollView style={[styles.container, { backgroundColor: 'transparent' }]}>{profileBody}</ScrollView>
       </WebLayout>
     );
   }
@@ -341,11 +344,11 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
     width: '100%',
     maxWidth: 900,
-    alignSelf: 'center',
+    alignSelf: 'flex-start',
     ...Platform.select({
       web: {
         paddingHorizontal: 16,
-        paddingTop: 16,
+        paddingTop: 0,
       },
       default: {
         padding: 16,

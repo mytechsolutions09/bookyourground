@@ -214,11 +214,12 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
     const currentPath = clean(normalize(pathname));
     const targetHref = clean(normalize(href));
 
-    // Improved isActive check using segments to distinguish grouped routes (e.g. (owner) vs (tabs))
     const hrefSegments = href.split('/').filter(Boolean);
     const isActive =
-      (hrefSegments.every((seg, i) => segments[i] === seg)) ||
-      (currentPath === targetHref && targetHref !== '/');
+      hrefSegments.length > 0
+        ? hrefSegments.length === segments.length &&
+          hrefSegments.every((seg, i) => segments[i] === seg)
+        : currentPath === targetHref;
     const iconColor = isActive
       ? (!isCompact ? '#043529' : '#00ea6b')
       : (isCompact ? '#dcc093' : '#6B7280');
@@ -809,7 +810,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
 
         <View style={[
           styles.main,
-          !isPublicNoSidebar && !isCompact && !noCard && isSuperAdmin && styles.mainAppCard
+          !isPublicNoSidebar && !isCompact && !noCard && styles.mainAppCard
         ]}>
           {children}
         </View>

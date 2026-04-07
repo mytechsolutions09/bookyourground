@@ -146,18 +146,13 @@ function NotificationsInner() {
       refreshControl={<RefreshControl refreshing={loading} onRefresh={loadReminders} />}
     >
       <View style={styles.inner}>
-        <View style={IS_WEB ? styles.desktopHeaderRow : null}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.pageTitle}>Notifications</Text>
-            <Text style={styles.pageSubtitle}>Upcoming matches / bookings alerts.</Text>
-          </View>
+        {IS_WEB && (
           <ProfileHeaderTabs
             themeAccent="#00ea6b"
             themeText={IS_WEB ? '#111827' : '#FFFFFF'}
             isCompact={!IS_WEB}
-            style={IS_WEB ? { marginBottom: 0 } : null}
           />
-        </View>
+        )}
 
         {loading ? (
           <View style={styles.loader}>
@@ -190,7 +185,7 @@ function NotificationsInner() {
 export default function NotificationsScreen() {
   if (IS_WEB) {
     return (
-      <WebLayout>
+      <WebLayout noCard>
         <NotificationsInner />
       </WebLayout>
     );
@@ -211,14 +206,14 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: IS_WEB ? '#F9FAFB' : '#043529',
+    backgroundColor: 'transparent',
   },
   inner: {
     width: '100%',
     maxWidth: 900,
-    alignSelf: 'center',
+    alignSelf: 'flex-start',
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 0,
     paddingBottom: 24,
   },
   headerRow: {

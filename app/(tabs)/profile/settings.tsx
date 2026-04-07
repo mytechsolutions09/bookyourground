@@ -16,6 +16,7 @@ function UserSettingsInner() {
   const { user, profile, updateProfile } = useAuth();
   const [fullName, setFullName] = useState(profile?.full_name || '');
   const [phone, setPhone] = useState(profile?.phone || '');
+  const [teamName, setTeamName] = useState(profile?.team_name || '');
   const [submitting, setSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
@@ -23,6 +24,7 @@ function UserSettingsInner() {
     if (profile) {
       setFullName(profile.full_name);
       setPhone(profile.phone || '');
+      setTeamName(profile.team_name || '');
     }
   }, [profile]);
 
@@ -42,6 +44,7 @@ function UserSettingsInner() {
       const { error } = await updateProfile({
         full_name: fullName.trim(),
         phone: phone.trim() || null,
+        team_name: teamName.trim() || null,
       });
 
       if (error) throw error;
@@ -59,18 +62,13 @@ function UserSettingsInner() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.inner}>
-        <View style={IS_WEB ? styles.desktopHeaderRow : null}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.pageTitle}>Account Settings</Text>
-            <Text style={styles.pageSubtitle}>Update personal info & preferences.</Text>
-          </View>
+        {IS_WEB && (
           <ProfileHeaderTabs
             themeAccent="#00ea6b"
             themeText={IS_WEB ? '#111827' : '#FFFFFF'}
             isCompact={!IS_WEB}
-            style={IS_WEB ? { marginBottom: 0 } : null}
           />
-        </View>
+        )}
 
         <Card style={styles.panel}>
           <Text style={styles.sectionTitle}>Personal Information</Text>
@@ -85,6 +83,7 @@ function UserSettingsInner() {
               onChangeText={setFullName}
               placeholder="Enter your full name"
               style={styles.input}
+              placeholderTextColor="#9CA3AF"
             />
           </View>
 
@@ -96,6 +95,18 @@ function UserSettingsInner() {
               keyboardType="phone-pad"
               placeholder="Enter your phone number"
               style={styles.input}
+              placeholderTextColor="#9CA3AF"
+            />
+          </View>
+
+          <View style={styles.formRow}>
+            <Text style={styles.label}>Team Name</Text>
+            <TextInput
+              value={teamName}
+              onChangeText={setTeamName}
+              placeholder="Enter your team name (e.g. Dream XI)"
+              style={styles.input}
+              placeholderTextColor="#9CA3AF"
             />
           </View>
 
@@ -177,7 +188,7 @@ function UserSettingsInner() {
 export default function UserSettingsScreen() {
   if (IS_WEB) {
     return (
-      <WebLayout>
+      <WebLayout noCard>
         <UserSettingsInner />
       </WebLayout>
     );
@@ -198,14 +209,14 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: IS_WEB ? '#F9FAFB' : '#043529',
+    backgroundColor: 'transparent',
   },
   inner: {
     width: '100%',
     maxWidth: 900,
-    alignSelf: 'center',
+    alignSelf: 'flex-start',
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 0,
     paddingBottom: 24,
   },
   pageTitle: {

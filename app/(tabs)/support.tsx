@@ -148,6 +148,7 @@ export default function SupportScreen() {
               placeholder="What's this about?"
               value={subject}
               onChangeText={setSubject}
+              placeholderTextColor="#9CA3AF"
             />
           </View>
 
@@ -160,6 +161,7 @@ export default function SupportScreen() {
               onChangeText={setMessage}
               multiline
               numberOfLines={5}
+              placeholderTextColor="#9CA3AF"
             />
           </View>
 
@@ -249,7 +251,11 @@ export default function SupportScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'transparent',
+  },
+  formContainer: {
+    paddingVertical: 10,
+    width: '100%',
   },
   content: {
     padding: Platform.OS === 'web' ? 16 : 20,
