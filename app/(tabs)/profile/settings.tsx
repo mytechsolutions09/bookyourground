@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Platform, ScrollView, TextInput, Alert, ActivityIndicator, TouchableOpacity, Modal } from 'react-native';
 import { Mail, Phone, CheckCircle } from 'lucide-react-native';
+import { router } from 'expo-router';
 import WebLayout from '@/components/web/WebLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -118,6 +119,33 @@ function UserSettingsInner() {
           <Text style={styles.infoMuted}>
             Password change and two-factor authentication features are coming soon.
           </Text>
+        </Card>
+
+        <Card style={[styles.panel, { marginTop: 16 }]}>
+          <Text style={styles.sectionTitle}>Help & Support</Text>
+          <Text style={styles.sectionSubtitle}>
+            Find answers to common questions and get help.
+          </Text>
+          
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => router.push('/faq' as any)}
+          >
+            <View>
+              <Text style={styles.menuItemTitle}>Frequently Asked Questions</Text>
+              <Text style={styles.menuItemSubtitle}>How to book, cancellations, and more.</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.menuItem, { borderBottomWidth: 0, paddingBottom: 0 }]}
+            onPress={() => router.push('/contact' as any)}
+          >
+            <View>
+              <Text style={styles.menuItemTitle}>Contact Us</Text>
+              <Text style={styles.menuItemSubtitle}>Get in touch with our support team.</Text>
+            </View>
+          </TouchableOpacity>
         </Card>
       </View>
 
@@ -250,6 +278,23 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: IS_WEB ? '#F3F4F6' : 'rgba(0,234,107,0.1)',
+  },
+  menuItemTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: IS_WEB ? '#111827' : '#FFFFFF',
+    marginBottom: 2,
+  },
+  menuItemSubtitle: {
+    fontSize: 13,
+    color: IS_WEB ? '#6B7280' : '#9CA3AF',
   },
 });
 

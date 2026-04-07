@@ -7,6 +7,8 @@ import {
   TrendingUp,
   ChevronRight,
   Settings,
+  Mail,
+  LifeBuoy,
 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -137,6 +139,17 @@ export default function AdminDashboardScreen() {
             <View style={styles.actionContent}>
               <Building2 size={20} color="#4CAF50" />
               <Text style={styles.actionText}>Grounds</Text>
+            </View>
+            <ChevronRight size={20} color="#666" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionItem}
+            onPress={() => router.push('/(admin)/messages' as any)}
+          >
+            <View style={styles.actionContent}>
+              <LifeBuoy size={20} color="#6366F1" />
+              <Text style={styles.actionText}>Support Tickets</Text>
             </View>
             <ChevronRight size={20} color="#666" />
           </TouchableOpacity>

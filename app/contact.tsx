@@ -12,6 +12,7 @@ import {
 import WebLayout from '@/components/web/WebLayout';
 import SiteFooter from '@/components/web/SiteFooter';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function ContactScreen() {
   const [name, setName] = useState('');
@@ -20,6 +21,7 @@ export default function ContactScreen() {
   const [message, setMessage] = useState('');
   const [role, setRole] = useState<'user' | 'ground_owner' | ''>('');
   const [submitting, setSubmitting] = useState(false);
+  const { user, profile } = useAuth();
 
   const handleSubmit = async () => {
     if (!role) {
@@ -36,7 +38,8 @@ export default function ContactScreen() {
       setSubmitting(true);
 
       const { error } = await supabase.from('contact_queries').insert({
-        role,
+        profile_id: user?.id,
+        role: role || profile?.role || 'user',
         name: name.trim(),
         email: email.trim(),
         subject: subject.trim() || null,
@@ -102,6 +105,20 @@ export default function ContactScreen() {
             >
               support@bookyourground.com
             </Text>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Office address</Text>
+            <Text style={styles.paragraph}>
+              Book my ground (Sports Management Platform)
+              {"\n"}WZ-15, 3rd Floor,
+              {"\n"}Janak Puri, New Delhi - 110058.
+            </Text>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Phone</Text>
+            <Text style={styles.paragraph}>+91 98994 61400</Text>
           </View>
 
           <View style={styles.section}>

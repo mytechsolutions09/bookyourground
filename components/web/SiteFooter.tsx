@@ -58,9 +58,31 @@ export default function SiteFooter() {
             <Text style={styles.footerHeading}>Company</Text>
             <Text
               style={styles.footerLink}
+              onPress={() => router.push('/about' as any)}
+            >
+              About Us
+            </Text>
+            <Text
+              style={styles.footerLink}
               onPress={() => router.push('/contact' as any)}
             >
               Contact
+            </Text>
+            <Text
+              style={styles.footerLink}
+              onPress={() => router.push('/faq' as any)}
+            >
+              FAQ
+            </Text>
+          </View>
+
+          <View style={styles.footerColumn}>
+            <Text style={styles.footerHeading}>Legal &amp; Policies</Text>
+            <Text
+              style={styles.footerLink}
+              onPress={() => router.push('/shipping' as any)}
+            >
+              Shipping &amp; Delivery
             </Text>
             <Text
               style={styles.footerLink}

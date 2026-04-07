@@ -40,12 +40,12 @@ export default function RefundPolicyScreen() {
             are at the discretion of the ground owner.
           </Text>
 
-          <Text style={styles.sectionTitle}>5. Weather and safety</Text>
+          <Text style={styles.sectionTitle}>5. Weather and Rain Policy</Text>
           <Text style={styles.paragraph}>
-            In case of severe weather or safety issues, the ground owner may offer to
-            reschedule your booking or provide a refund or credit as per their policy. Book
-            my ground will assist in coordinating but is not responsible for final
-            decisions made by ground owners.
+            For matches affected by rain or wet ground conditions, the following rules apply:
+            {"\n"}{"\u2022"} <Text style={styles.boldText}>Full Refund:</Text> If no ball is bowled during the booked slot due to rain or unplayable wet ground conditions, the entire ground fee will be refunded.
+            {"\n"}{"\u2022"} <Text style={styles.boldText}>No Refund:</Text> If even a single ball is bowled and the match is subsequently interrupted or cancelled due to rain, no refund will be issued. The booking is considered utilized once the match commences.
+            {"\n"}{"\u2022"} The ground owner or on-site staff have the final authority to decide if the ground is playable.
           </Text>
 
           <Text style={styles.sectionTitle}>6. How refunds are processed</Text>
@@ -118,6 +118,10 @@ const styles = {
     fontSize: 14,
     color: '#4B5563',
     lineHeight: 20,
+  },
+  boldText: {
+    fontWeight: '700',
+    color: '#111827',
   },
 } as const;
 

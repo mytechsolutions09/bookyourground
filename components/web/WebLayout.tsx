@@ -31,6 +31,8 @@ import {
   Swords,
   CalendarClock,
   Star,
+  Mail,
+  LifeBuoy,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -135,6 +137,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
     '/locations',
     '/manage-ground-owners',
     '/manage-users',
+    '/messages',
     '/settings',
   ];
   const isAdminRoute =
@@ -564,6 +567,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                     <NavLink href="/(owner)/earnings" icon={IndianRupee} label="Earnings" />
                     <NavLink href="/(owner)/add-ground" icon={PlusCircle} label="Add ground" />
                     <NavLink href="/(owner)/settings" icon={Settings} label="Settings" />
+                    <NavLink href="/(tabs)/support" icon={LifeBuoy} label="Contact Us" />
 
                     <View style={styles.sidebarDivider} />
                     <TouchableOpacity
@@ -594,6 +598,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                       label="Ground owners"
                     />
                     <NavLink href="/(admin)/manage-users" icon={User} label="Users" />
+                    <NavLink href="/(admin)/messages" icon={LifeBuoy} label="Support Tickets" />
                     <NavLink href="/(admin)/settings" icon={Settings} label="Settings" />
 
                     <View style={styles.sidebarDivider} />
@@ -618,6 +623,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                     <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
                     <NavLink href="/(tabs)/favorites" icon={Star} label="Favorites" />
                     <NavLink href="/(tabs)/profile" icon={User} label="Profile" />
+                    <NavLink href="/(tabs)/support" icon={LifeBuoy} label="Contact Us" />
 
                     <View style={styles.sidebarDivider} />
                     <TouchableOpacity
@@ -723,6 +729,12 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                           hideLabel={sidebarCollapsed}
                         />
                         <NavLink
+                          href="/(admin)/messages"
+                          icon={LifeBuoy}
+                          label="Support Tickets"
+                          hideLabel={sidebarCollapsed}
+                        />
+                        <NavLink
                           href="/(admin)/settings"
                           icon={Settings}
                           label="Settings"
@@ -753,6 +765,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                         <NavLink href="/(owner)/earnings" icon={IndianRupee} label="Earnings" />
                         <NavLink href="/(owner)/add-ground" icon={PlusCircle} label="Add ground" />
                         <NavLink href="/(owner)/settings" icon={Settings} label="Settings" />
+                        <NavLink href="/(tabs)/support" icon={LifeBuoy} label="Contact Us" />
 
                         <View style={styles.sidebarDivider} />
                         <TouchableOpacity
@@ -775,6 +788,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                         <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
                         <NavLink href="/(tabs)/favorites" icon={Star} label="Favorites" />
                         <NavLink href="/(tabs)/profile" icon={User} label="Profile" />
+                        <NavLink href="/(tabs)/support" icon={LifeBuoy} label="Contact Us" />
 
                         <View style={styles.sidebarDivider} />
                         <TouchableOpacity

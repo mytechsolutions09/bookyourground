@@ -47,6 +47,7 @@ export default function AdminLayout() {
       <Stack.Screen name="withdrawals" />
       <Stack.Screen name="manage-ground-owners" />
       <Stack.Screen name="manage-users" />
+      <Stack.Screen name="messages" />
       <Stack.Screen name="locations" />
       <Stack.Screen name="settings" />
     </Stack>
