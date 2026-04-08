@@ -620,7 +620,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
   },
   tabChipActive: {
-    backgroundColor: '#00ea6b',
+    backgroundColor: 'transparent',
     borderColor: '#00ea6b',
   },
   tabChipText: {
@@ -629,7 +629,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   tabChipTextActive: {
-    color: '#FFFFFF',
+    color: '#00ea6b',
     fontWeight: '700',
   },
   nativeItemContainer: {

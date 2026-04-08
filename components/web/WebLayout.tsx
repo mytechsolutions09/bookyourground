@@ -986,12 +986,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 10,
-    backgroundColor: '#043529',
+    backgroundColor: 'transparent',
     borderWidth: 1.5,
     borderColor: '#01b854',
   },
   signOutButtonUser: {
-    backgroundColor: '#2b2f4b',
+    backgroundColor: 'transparent',
   },
   signOutButtonCollapsed: {
     justifyContent: 'center',
@@ -1006,7 +1006,7 @@ const styles = StyleSheet.create({
     color: '#dcc093',
   },
   signOutButtonMobile: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'transparent',
     borderWidth: 1,
     borderColor: 'rgba(220,192,147,0.2)',
   },

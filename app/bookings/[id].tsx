@@ -102,54 +102,59 @@ export default function BookingDetailsScreen() {
   const IS_DARK = !isWeb || (width < 900);
 
   const detailsSection = (
-    // Left: booking details
     <View style={isNarrow ? styles.detailsColumnNarrow : styles.detailsColumn}>
-      <View style={isWeb ? styles.detailsContentWeb : styles.detailsContentMobileOuter}>
-        <Image source={{ uri: primaryImage }} style={[styles.image, !isWeb && styles.imageMobile]} />
-
+      <View style={isWeb ? [styles.detailsContentWeb, !IS_DARK && styles.detailsContentWebLight] : styles.detailsContentMobileOuter}>
         <View style={isWeb ? styles.detailsBodyWeb : styles.detailsBodyNative}>
-          <Section style={[styles.sectionHeaderCard, !IS_DARK && styles.sectionLight]}>
+          <Section style={[styles.sectionHeaderCard, !IS_DARK && styles.sectionHeaderCardLight]}>
             <View style={styles.headerRow}>
               <View style={{ flex: 1 }}>
+                <View style={styles.badgeRow}>
+                   <View style={[
+                    styles.statusBadge,
+                    booking.status === 'confirmed' && styles.statusBadgeConfirmed,
+                    booking.status === 'pending' && styles.statusBadgePending,
+                    (booking.status === 'cancelled' || booking.status === 'rejected') && styles.statusBadgeCancelled,
+                  ]}>
+                    <Text style={[
+                      styles.statusText,
+                      booking.status === 'confirmed' && (IS_DARK ? styles.statusTextConfirmed : styles.statusTextConfirmedLight),
+                      booking.status === 'pending' && styles.statusTextPending,
+                      (booking.status === 'cancelled' || booking.status === 'rejected') && styles.statusTextCancelled,
+                    ]}>
+                      {booking.status === 'confirmed' ? 'ACTIVE' : booking.status.toUpperCase()}
+                    </Text>
+                  </View>
+                  <Text style={[styles.bookingId, !IS_DARK && styles.bookingIdLight]}>ID: {id?.toString().substring(0,8).toUpperCase()}</Text>
+                </View>
+
                 <Text style={[styles.groundName, !IS_DARK && styles.groundNameLight]}>{booking.ground.name}</Text>
-                <View style={styles.locationRow}>
-                  <MapPin size={14} color={IS_DARK ? "#00ea6b" : "#10b981"} />
+                <View style={[styles.locationRow, { marginTop: 4 }]}>
+                  <MapPin size={16} color={IS_DARK ? "#00ea6b" : "#10b981"} />
                   <Text style={[styles.location, !IS_DARK && styles.locationLight]}>
-                    {booking.ground.city}, {booking.ground.state}
+                    {booking.ground.address}, {booking.ground.city}, {booking.ground.state}
                   </Text>
                 </View>
-              </View>
-              <View style={[
-                styles.statusBadge,
-                booking.status === 'confirmed' && styles.statusBadgeConfirmed,
-                booking.status === 'pending' && styles.statusBadgePending,
-                (booking.status === 'cancelled' || booking.status === 'rejected') && styles.statusBadgeCancelled,
-              ]}>
-                <Text style={[
-                  styles.statusText,
-                  booking.status === 'confirmed' && (IS_DARK ? styles.statusTextConfirmed : styles.statusTextConfirmedLight),
-                  booking.status === 'pending' && styles.statusTextPending,
-                  (booking.status === 'cancelled' || booking.status === 'rejected') && styles.statusTextCancelled,
-                ]}>
-                  {booking.status === 'confirmed' ? 'ACTIVE' : booking.status.toUpperCase()}
-                </Text>
               </View>
             </View>
           </Section>
 
-          <Section style={[styles.section, !IS_DARK && styles.sectionLight]}>
-            <Text style={[styles.sectionTitle, !IS_DARK && styles.sectionTitleLight]}>Booking Information</Text>
-            <View style={styles.infoRow}>
-              <Calendar size={18} color={IS_DARK ? "#00ea6b" : "#10b981"} />
+          <View style={[styles.infoGrid, !isNarrow && styles.infoGridDesktop]}>
+            <Section style={[styles.infoCard, !IS_DARK && styles.infoCardLight]}>
+              <View style={styles.infoIconBox}>
+                <Calendar size={20} color={IS_DARK ? "#00ea6b" : "#10b981"} />
+              </View>
               <View style={styles.infoContent}>
                 <Text style={[styles.infoLabel, !IS_DARK && styles.infoLabelLight]}>Date</Text>
                 <Text style={[styles.infoValue, !IS_DARK && styles.infoValueLight]}>{formatDate(booking.booking_date)}</Text>
               </View>
-            </View>
-            <View style={styles.infoRow}>
-              <Clock size={18} color={IS_DARK ? "#00ea6b" : "#10b981"} />
+            </Section>
+
+            <Section style={[styles.infoCard, !IS_DARK && styles.infoCardLight]}>
+              <View style={styles.infoIconBox}>
+                <Clock size={20} color={IS_DARK ? "#00ea6b" : "#10b981"} />
+              </View>
               <View style={styles.infoContent}>
-                <Text style={[styles.infoLabel, !IS_DARK && styles.infoLabelLight]}>Time</Text>
+                <Text style={[styles.infoLabel, !IS_DARK && styles.infoLabelLight]}>Time Slot</Text>
                 <Text style={[styles.infoValue, !IS_DARK && styles.infoValueLight]}>
                   {formatBookingSlotSummary(
                     booking.start_time,
@@ -158,31 +163,21 @@ export default function BookingDetailsScreen() {
                   )}
                 </Text>
               </View>
-            </View>
-            <View style={styles.infoRow}>
-              <Clock size={18} color={IS_DARK ? "#00ea6b" : "#10b981"} />
-              <View style={styles.infoContent}>
-                <Text style={[styles.infoLabel, !IS_DARK && styles.infoLabelLight]}>Duration</Text>
-                <Text style={[styles.infoValue, !IS_DARK && styles.infoValueLight]}>{durationHoursLabel} hours</Text>
-              </View>
-            </View>
-            {cricketTeamsLabel ? (
-              <View style={styles.infoRow}>
-                <Users size={18} color={IS_DARK ? "#00ea6b" : "#10b981"} />
-                <View style={styles.infoContent}>
-                  <Text style={[styles.infoLabel, !IS_DARK && styles.infoLabelLight]}>Teams</Text>
-                  <Text style={[styles.infoValue, !IS_DARK && styles.infoValueLight]}>{cricketTeamsLabel}</Text>
-                </View>
-              </View>
-            ) : null}
-          </Section>
-
-          {booking.notes && (
-            <Section style={[styles.section, !IS_DARK && styles.sectionLight]}>
-              <Text style={[styles.sectionTitle, !IS_DARK && styles.sectionTitleLight]}>Notes</Text>
-              <Text style={[styles.notes, !IS_DARK && styles.notesLight]}>{booking.notes}</Text>
             </Section>
-          )}
+
+
+          </View>
+
+
+
+          <Section style={[styles.section, !IS_DARK && styles.sectionLight, { marginTop: 16 }]}>
+             <Text style={[styles.sectionTitle, !IS_DARK && styles.sectionTitleLight]}>Venue Rules</Text>
+             <View style={styles.rulesList}>
+                <Text style={[styles.ruleItem, !IS_DARK && styles.ruleItemLight]}>• Please arrive 15 minutes before your slot.</Text>
+                <Text style={[styles.ruleItem, !IS_DARK && styles.ruleItemLight]}>• Proper footwear is mandatory for the pitch.</Text>
+                <Text style={[styles.ruleItem, !IS_DARK && styles.ruleItemLight]}>• Respect the ground staff and other players.</Text>
+             </View>
+          </Section>
         </View>
       </View>
     </View>
@@ -193,31 +188,38 @@ export default function BookingDetailsScreen() {
   const paymentSection = (
     <View style={isNarrow ? styles.paymentColumnNarrow : styles.paymentColumn}>
       <Section style={[styles.paymentCard, !IS_DARK && styles.paymentCardLight]}>
-        <Text style={[styles.sectionTitle, !IS_DARK && styles.sectionTitleLight]}>Payment Summary</Text>
-        <View style={[styles.paymentRow, styles.totalRow]}>
-          <Text style={[styles.totalLabel, !IS_DARK && styles.totalLabelLight]}>Total Amount</Text>
+        <Text style={[styles.paymentTitle, !IS_DARK && styles.paymentTitleLight]}>Payment Summary</Text>
+        
+        <View style={styles.priceBreakdown}>
+           <View style={styles.paymentRow}>
+              <Text style={[styles.paymentLabel, !IS_DARK && styles.paymentLabelLight]}>Base Price</Text>
+              <Text style={[styles.paymentValue, !IS_DARK && styles.paymentValueLight]}>{formatCurrency(booking.total_amount)}</Text>
+            </View>
+            <View style={styles.paymentRow}>
+              <Text style={[styles.paymentLabel, !IS_DARK && styles.paymentLabelLight]}>Taxes & Fees</Text>
+              <Text style={[styles.paymentValue, !IS_DARK && styles.paymentValueLight]}>₹0.00</Text>
+            </View>
+        </View>
+
+        <View style={[styles.paymentRow, styles.totalRow, !IS_DARK && styles.totalRowLight]}>
+          <Text style={[styles.totalLabel, !IS_DARK && styles.totalLabelLight]}>Grand Total</Text>
           <Text style={[styles.totalValue, !IS_DARK && styles.totalValueLight]}>{formatCurrency(booking.total_amount)}</Text>
         </View>
+
+        <View style={styles.paymentDivider} />
+
         {booking.payment_method && (
-          <View style={styles.paymentRow}>
-            <Text style={[styles.paymentLabel, !IS_DARK && styles.paymentLabelLight]}>Payment Method</Text>
-            <Text style={[styles.paymentValue, !IS_DARK && styles.paymentValueLight]}>
-              {booking.payment_method === 'cash' ? 'Cash Payment' : 'Paid Online'}
-            </Text>
+          <View style={styles.infoRow}>
+             <Clock size={16} color={IS_DARK ? "#9ca3af" : "#6B7280"} />
+             <View>
+                <Text style={[styles.infoLabel, !IS_DARK && styles.infoLabelLight]}>Payment Method</Text>
+                <Text style={[styles.paymentValue, !IS_DARK && styles.paymentValueLight]}>
+                  {booking.payment_method === 'cash' ? 'Cash at Ground' : 'Prepaid Online'}
+                </Text>
+             </View>
           </View>
         )}
       </Section>
-
-      <Text
-        style={[styles.backLink, !IS_DARK && styles.backLinkWeb]}
-        onPress={() => {
-          if (router.canGoBack?.()) router.back();
-          else router.push('/book-my-ground' as any);
-        }}
-      >
-        Go back
-      </Text>
-
 
     </View>
   );
@@ -225,20 +227,17 @@ export default function BookingDetailsScreen() {
   const content = (
     <ScrollView
       style={[styles.container, !IS_DARK && styles.webContainerRoot]}
-      contentContainerStyle={isNarrow ? styles.bodyColumn : styles.body}
+      contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator
     >
-      {isNarrow ? (
-        <>
-          <View style={styles.stackSection}>{detailsSection}</View>
-          <View style={styles.stackSection}>{paymentSection}</View>
-        </>
-      ) : (
-        <>
-          {detailsSection}
-          {paymentSection}
-        </>
-      )}
+      <View style={isNarrow ? styles.narrowWrapper : styles.wideWrapper}>
+         <Image source={{ uri: primaryImage }} style={[styles.image, !isWeb && styles.imageMobile, !IS_DARK && styles.imageWeb, { width: '100%' }]} />
+
+         <View style={isNarrow ? styles.bodyColumn : styles.body}>
+           {detailsSection}
+           {paymentSection}
+         </View>
+      </View>
     </ScrollView>
   );
 
@@ -256,343 +255,320 @@ const styles = StyleSheet.create({
     backgroundColor: '#043529',
   },
   webContainerRoot: {
-    backgroundColor: '#F5F5F5',
-    paddingTop: 24,
-    paddingHorizontal: 16,
-    paddingBottom: 24,
+    backgroundColor: '#F8F9FA',
+    paddingTop: 40,
+    paddingHorizontal: 24,
+    paddingBottom: 40,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    ...Platform.select({
-      web: { backgroundColor: '#043529' },
-      default: { backgroundColor: '#043529' },
-    }),
+    backgroundColor: '#043529',
   },
-  blockedTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#212121',
-    marginBottom: 8,
-    textAlign: 'center',
+  scrollContent: {
+    paddingBottom: 40,
   },
-  blockedSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 16,
+  wideWrapper: {
+     maxWidth: 1100,
+     width: '100%',
+     alignSelf: 'center',
   },
-  header: {
-    // removed header bar from payment page; keep styles in case re-used
+  narrowWrapper: {
+     width: '100%',
   },
   body: {
-    flex: 1,
     flexDirection: 'row',
-    maxWidth: 1200,
-    width: '100%',
-    alignSelf: 'center',
-    paddingHorizontal: 8,
-    gap: 16,
+    gap: 32,
+    marginTop: 24,
   },
   bodyColumn: {
-    flexGrow: 1,
-    ...Platform.select({
-      web: {
-        paddingHorizontal: 16,
-        paddingTop: 16,
-        paddingBottom: 32,
-      },
-      default: {
-        paddingHorizontal: 0,
-        paddingTop: 0,
-        paddingBottom: 16,
-      },
-    }),
+    paddingHorizontal: 16,
+    paddingBottom: 32,
   },
   detailsColumn: {
-    flex: 1.4,
-    minWidth: 0,
-    flexShrink: 1,
+    flex: 1.6,
   },
   detailsColumnNarrow: {
     width: '100%',
   },
   detailsContentWeb: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  detailsContentMobileOuter: {
     padding: 0,
   },
-  detailsBodyWeb: {
-    alignSelf: 'stretch',
-  },
-  detailsBodyNative: {
-    alignSelf: 'stretch',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 16,
-  },
-  paymentColumn: {
-    flex: 1,
-    padding: 16,
+  detailsContentWebLight: {
     backgroundColor: 'transparent',
-    borderLeftWidth: 0,
-    borderLeftColor: '#E5E7EB',
-    minWidth: 0,
-    flexShrink: 1,
-  },
-  paymentColumnNarrow: {
-    width: '100%',
-    marginTop: 16,
-    backgroundColor: 'transparent',
-    borderLeftWidth: 0,
-    ...Platform.select({
-      web: { padding: 0 },
-      default: { paddingHorizontal: 16, paddingBottom: 0 },
-    }),
-  },
-  stackSection: {
-    width: '100%',
   },
   image: {
     width: '100%',
-    height: 200,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 12,
-    marginBottom: 16,
+    height: 380,
+    borderRadius: 24,
+    marginBottom: 24,
   },
-  /** Native: full-bleed under stack header, no side padding / rounding */
-  section: {
-    marginBottom: 16,
-    backgroundColor: '#06392e',
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.12)',
-  },
-  sectionHeaderCard: {
-    marginBottom: 16,
-    backgroundColor: '#06392e',
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.2)',
-  },
-  sectionLight: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E5E7EB',
-    padding: 14,
-    marginBottom: 12,
+  imageWeb: {
+     height: 450,
+     shadowColor: '#000',
+     shadowOffset: { width: 0, height: 10 },
+     shadowOpacity: 0.1,
+     shadowRadius: 20,
   },
   imageMobile: {
     borderRadius: 0,
-    marginBottom: 0,
-    height: 200,
+    height: 250,
+  },
+  detailsBodyWeb: {
+    width: '100%',
+  },
+  detailsBodyNative: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  sectionHeaderCard: {
+    backgroundColor: '#06392e',
+    borderRadius: 24,
+    padding: 28,
+    borderWidth: 1,
+    borderColor: 'rgba(0,234,107,0.15)',
+    marginBottom: 24,
+  },
+  sectionHeaderCardLight: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  bookingId: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#9ca3af',
+    letterSpacing: 1,
+  },
+  bookingIdLight: {
+    color: '#6B7280',
   },
   groundName: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 32,
+    fontWeight: '800',
     color: '#FFFFFF',
-    marginBottom: 6,
+    letterSpacing: -0.5,
   },
   groundNameLight: {
     color: '#111827',
-    fontSize: 20,
-    marginBottom: 4,
+    fontSize: 28,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
   },
   location: {
-    fontSize: 13,
+    fontSize: 15,
     color: '#9ca3af',
+    lineHeight: 22,
   },
   locationLight: {
-    color: '#6B7280',
+    color: '#4B5563',
   },
   headerRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    gap: 12,
   },
   statusBadge: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 999,
+    borderRadius: 99,
     backgroundColor: 'rgba(156,163,175,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(156,163,175,0.2)',
   },
   statusBadgeConfirmed: {
     backgroundColor: 'rgba(0,234,107,0.12)',
-    borderColor: 'rgba(0,234,107,0.3)',
   },
   statusBadgePending: {
     backgroundColor: 'rgba(255,193,7,0.12)',
-    borderColor: 'rgba(255,193,7,0.3)',
   },
   statusBadgeCancelled: {
     backgroundColor: 'rgba(244,67,54,0.12)',
-    borderColor: 'rgba(244,67,54,0.3)',
   },
   statusText: {
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.8,
     color: '#9ca3af',
   },
-  statusTextConfirmed: {
-    color: '#00ea6b',
+  statusTextConfirmed: { color: '#00ea6b' },
+  statusTextConfirmedLight: { color: '#10b981' },
+  statusTextPending: { color: '#FFC107' },
+  statusTextCancelled: { color: '#F44336' },
+
+  infoGrid: {
+     flexDirection: 'row',
+     flexWrap: 'wrap',
+     gap: 16,
   },
-  statusTextConfirmedLight: {
-    color: '#10b981',
+  infoGridDesktop: {
+     flexWrap: 'nowrap',
   },
-  statusTextPending: {
-    color: '#FFC107',
+  infoCard: {
+     flex: 1,
+     minWidth: 150,
+     backgroundColor: '#06392e',
+     borderRadius: 20,
+     padding: 20,
+     flexDirection: 'row',
+     alignItems: 'center',
+     gap: 16,
+     borderWidth: 1,
+     borderColor: 'rgba(0,234,107,0.1)',
   },
-  statusTextCancelled: {
-    color: '#F44336',
+  infoCardLight: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E5E7EB',
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#00ea6b',
-    marginBottom: 16,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  sectionTitleLight: {
-    color: '#10b981',
-    fontSize: 14,
-    marginBottom: 10,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    marginBottom: 10,
+  infoIconBox: {
+     width: 44,
+     height: 44,
+     borderRadius: 12,
+     backgroundColor: 'rgba(0,234,107,0.08)',
+     alignItems: 'center',
+     justifyContent: 'center',
   },
   infoContent: {
     flex: 1,
   },
   infoLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#9ca3af',
-    marginBottom: 2,
-  },
-  infoLabelLight: {
-    color: '#6B7280',
-  },
-  infoValue: {
-    fontSize: 16,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  infoValueLight: {
-    color: '#111827',
-  },
-  paymentRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-  },
-  paymentLabel: {
-    fontSize: 14,
-    color: '#9ca3af',
-  },
-  paymentLabelLight: {
-    color: '#6B7280',
-  },
-  paymentValue: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
-  paymentValueLight: {
-    color: '#111827',
-  },
-  totalRow: {
-    marginTop: 8,
-    paddingTop: 8,
-  },
-  totalLabel: {
-    fontSize: 16,
     fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  infoLabelLight: { color: '#6B7280' },
+  infoValue: {
+    fontSize: 15,
     color: '#FFFFFF',
+    fontWeight: '700',
   },
-  totalLabelLight: {
-    color: '#111827',
+  infoValueLight: { color: '#111827' },
+
+  section: {
+    backgroundColor: '#06392e',
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(0,234,107,0.1)',
   },
-  totalValue: {
-    fontSize: 24,
+  sectionLight: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E5E7EB',
+  },
+  sectionTitle: {
+    fontSize: 14,
     fontWeight: '800',
     color: '#00ea6b',
+    marginBottom: 16,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
-  totalValueLight: {
-    fontSize: 20,
-    color: '#10b981',
-  },
+  sectionTitleLight: { color: '#10b981' },
+  
   notes: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    lineHeight: 22,
-    opacity: 0.9,
+    fontSize: 15,
+    color: '#e5e7eb',
+    lineHeight: 24,
   },
-  notesLight: {
-    color: '#374151',
-    opacity: 1,
+  notesLight: { color: '#374151' },
+
+  rulesList: { gap: 10 },
+  ruleItem: { fontSize: 14, color: '#9ca3af', lineHeight: 20 },
+  ruleItemLight: { color: '#4B5563' },
+
+  paymentColumn: {
+    flex: 1,
   },
   paymentCard: {
-    marginBottom: 16,
     backgroundColor: '#06392e',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 24,
+    padding: 24,
     borderWidth: 1,
     borderColor: 'rgba(0,234,107,0.15)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
   },
   paymentCardLight: {
     backgroundColor: '#FFFFFF',
     borderColor: '#E5E7EB',
-    padding: 14,
   },
-  backLink: {
-    marginTop: 24,
-    fontSize: 14,
-    fontWeight: '700',
-    textAlign: 'center',
-    paddingVertical: 14,
-    borderRadius: 12,
-    color: '#043529',
-    backgroundColor: '#00ea6b',
-    borderWidth: 1,
-    borderColor: '#00ea6b',
+  paymentTitle: {
+     fontSize: 18,
+     fontWeight: '800',
+     color: '#FFFFFF',
+     marginBottom: 20,
   },
-  backLinkWeb: {
-    backgroundColor: '#043529',
-    color: '#FFFFFF',
-    borderColor: '#043529',
+  paymentTitleLight: { color: '#111827' },
+  priceBreakdown: { marginBottom: 20 },
+  paymentRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
   },
-  cancelButton: {
-    marginTop: 12,
-    borderColor: '#F44336',
-    borderWidth: 1.5,
-    backgroundColor: 'transparent',
+  paymentLabel: { fontSize: 14, color: '#9ca3af' },
+  paymentLabelLight: { color: '#6B7280' },
+  paymentValue: { fontSize: 14, color: '#FFFFFF', fontWeight: '700' },
+  paymentValueLight: { color: '#111827' },
+  
+  totalRow: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
+    marginTop: 10,
+    paddingTop: 20,
   },
-  cancelButtonText: {
-    color: '#F44336',
-    fontWeight: '800',
-    fontSize: 13,
+  totalRowLight: { borderTopColor: '#F3F4F6' },
+  totalLabel: { fontSize: 16, fontWeight: '800', color: '#FFFFFF' },
+  totalLabelLight: { color: '#111827' },
+  totalValue: { fontSize: 28, fontWeight: '900', color: '#00ea6b' },
+  totalValueLight: { color: '#10b981' },
+  
+  paymentDivider: {
+     height: 1,
+     backgroundColor: 'rgba(255,255,255,0.05)',
+     marginVertical: 20,
   },
-  payNowButton: {
-    marginTop: 12,
-    backgroundColor: '#10b981',
-    borderColor: '#10b981',
+
+  backButtonLarge: {
+     marginTop: 24,
+     height: 56,
+     borderRadius: 16,
+     backgroundColor: '#111827',
+  },
+  backButtonTextLarge: {
+     fontSize: 14,
+     fontWeight: '800',
+     letterSpacing: 2,
+  },
+  detailsContentMobileOuter: {
+    padding: 0,
+  },
+  paymentColumnNarrow: {
+    width: '100%',
+    marginTop: 16,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  stackSection: {
+    width: '100%',
   },
 });

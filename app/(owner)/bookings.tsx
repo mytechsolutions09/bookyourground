@@ -22,6 +22,8 @@ export default function OwnerBookingsScreen() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'upcoming' | 'past'>('all');
   const [ownerScope, setOwnerScope] = useState<'all' | 'own' | 'other'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showDatePickerMobile, setShowDatePickerMobile] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -188,9 +190,17 @@ export default function OwnerBookingsScreen() {
             ? byDate.filter((b) => b.booking_date < todayIso && b.status === 'confirmed')
             : byDate.filter((b) => b.status === 'cancelled');
 
-      return byStatus;
+      if (!searchQuery.trim()) return byStatus;
+
+      const q = searchQuery.toLowerCase();
+      return byStatus.filter((b) => {
+        const gn = (b.ground?.name || '').toLowerCase();
+        const city = (b.ground?.city || '').toLowerCase();
+        const customer = (b.user?.full_name || '').toLowerCase();
+        return gn.includes(q) || city.includes(q) || customer.includes(q);
+      });
     },
-    [bookings, selectedDate, activeTab, ownerScope, user?.id],
+    [bookings, selectedDate, activeTab, ownerScope, user?.id, searchQuery],
   );
 
   const todayIsoForCounts = useMemo(() => {
@@ -246,7 +256,13 @@ export default function OwnerBookingsScreen() {
     <View style={styles.container}>
       {!isWeb && (
         <View style={styles.header}>
-          {isWeb && <Text style={styles.title}>Ground Bookings</Text>}
+          <TextInput
+            style={styles.searchBarMobile}
+            placeholder="Search bookings..."
+            placeholderTextColor="#9ca3af"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
           <ScrollView 
             horizontal 
             showsHorizontalScrollIndicator={false} 
@@ -366,6 +382,38 @@ export default function OwnerBookingsScreen() {
                 Other grounds
               </Text>
             </TouchableOpacity>
+          </ScrollView>
+
+          {/* Mobile Date Filter Row */}
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            contentContainerStyle={styles.dateRow}
+            style={styles.dateScrollWrap}
+          >
+            <TouchableOpacity
+              onPress={() => setSelectedDate(null)}
+              style={[
+                styles.tabChip,
+                !selectedDate && styles.tabChipActive,
+              ]}
+            >
+              <Text style={[styles.tabChipText, !selectedDate && styles.tabChipTextActive]}>Any Date</Text>
+            </TouchableOpacity>
+            {availableDates.map(date => (
+              <TouchableOpacity
+                key={date}
+                onPress={() => setSelectedDate(date)}
+                style={[
+                  styles.tabChip,
+                  selectedDate === date && styles.tabChipActive,
+                ]}
+              >
+                <Text style={[styles.tabChipText, selectedDate === date && styles.tabChipTextActive]}>
+                  {formatDateDDMMYY(date)}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </ScrollView>
         </View>
       )}
@@ -493,6 +541,16 @@ export default function OwnerBookingsScreen() {
               </TouchableOpacity>
             </View>
 
+            <View style={styles.searchFilterWrap}>
+              <TextInput
+                style={styles.searchBarWeb}
+                placeholder="Search ground, city or name..."
+                placeholderTextColor="#9ca3af"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+            </View>
+
             <View style={styles.dateFilterWrap}>
               <View 
                 style={[
@@ -532,6 +590,9 @@ export default function OwnerBookingsScreen() {
                       opacity: 0,
                       cursor: 'pointer',
                       width: '100%',
+                      height: '100%',
+                      zIndex: 1,
+                      border: 'none',
                     }}
                   />
                 )}
@@ -907,6 +968,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tabChip: {
+    position: 'relative',
     paddingHorizontal: IS_WEB ? 11 : 16,
     paddingVertical: IS_WEB ? 6 : 10,
     borderRadius: IS_WEB ? 8 : 10,
@@ -917,9 +979,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexDirection: 'row',
     gap: 6,
+    overflow: 'hidden',
   },
   tabChipActive: {
-    backgroundColor: IS_WEB ? '#043529' : '#00ea6b',
+    backgroundColor: IS_WEB ? 'transparent' : '#00ea6b',
     borderColor: IS_WEB ? '#01b854' : '#00ea6b',
   },
   tabChipText: {
@@ -942,19 +1005,6 @@ const styles = StyleSheet.create({
     position: 'relative',
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  dateClearBtn: {
-    position: 'absolute',
-    right: 8,
-    top: '50%',
-    marginTop: -8,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
   },
   paymentBadgeText: {
     fontSize: 10,
@@ -1015,5 +1065,52 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     color: '#166534',
+  },
+  searchBarWeb: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    height: 32,
+    fontSize: 13,
+    width: 200,
+    color: '#111827',
+  },
+  searchBarMobile: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(0,234,107,0.2)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 48,
+    color: '#FFFFFF',
+    marginBottom: 16,
+    fontSize: 14,
+  },
+  searchFilterWrap: {
+    marginRight: 12,
+  },
+  dateRow: {
+    paddingHorizontal: 0,
+    gap: 8,
+  },
+  dateScrollWrap: {
+    marginTop: 12,
+  },
+  dateClearBtn: {
+    position: 'absolute',
+    right: 8,
+    top: '50%',
+    marginTop: -10,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
 });

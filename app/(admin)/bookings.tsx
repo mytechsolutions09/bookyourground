@@ -624,7 +624,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   tabChipActive: {
-    backgroundColor: IS_WEB ? '#01b854' : '#00ea6b',
+    backgroundColor: IS_WEB ? 'transparent' : '#00ea6b',
     borderColor: IS_WEB ? '#01b854' : '#00ea6b',
   },
   tabChipText: {
@@ -634,7 +634,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   tabChipTextActive: {
-    color: IS_WEB ? '#FFFFFF' : '#043529',
+    color: IS_WEB ? '#01b854' : '#043529',
     fontWeight: '800',
   },
   dateFilterWrap: {
