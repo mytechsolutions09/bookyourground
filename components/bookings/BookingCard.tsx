@@ -13,6 +13,8 @@ interface BookingCardProps {
   onPress: () => void;
   showGroundDetails?: boolean;
   metaText?: string;
+  whoTitle?: string;
+  onCancel?: () => void;
 }
 
 const NATIVE_CARD_BG = '#043529';
@@ -24,6 +26,8 @@ export default function BookingCard({
   onPress,
   showGroundDetails = true,
   metaText,
+  whoTitle,
+  onCancel,
 }: BookingCardProps) {
   const { width } = useWindowDimensions();
   const isWeb = Platform.OS === 'web';
@@ -45,7 +49,7 @@ export default function BookingCard({
   const compactLocStyle = [styles.compactGroundLocation, IS_DARK && styles.compactGroundLocationNative];
   const amountStyle = [styles.amount, IS_DARK && styles.amountNative];
   const metaStyle = [styles.metaText, IS_DARK && styles.metaTextNative];
-  const badgeBg = IS_DARK ? NATIVE_ACCENT : '#10b981';
+  const badgeBg = getStatusColor(booking.status);
   const statusLabelStyle = styles.statusText;
 
   return (
@@ -106,15 +110,33 @@ export default function BookingCard({
               <Text style={amountStyle}>{formatCurrency(booking.total_amount)}</Text>
               {booking.payment_method && (
                 <Text style={[styles.paymentMethod, IS_DARK && styles.paymentMethodNative]}>
-                  Via {booking.payment_method === 'razorpay' ? 'Online' : 'Cash'}
+                  Via {booking.payment_method === 'cash' ? 'Cash' : 'Online'}
                 </Text>
               )}
             </View>
-            <View style={[styles.statusBadge, { backgroundColor: badgeBg }]}>
-              <Text style={statusLabelStyle}>{getStatusLabel(booking.status)}</Text>
+            <View style={styles.statusRow}>
+              {onCancel && (
+                <TouchableOpacity 
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    onCancel();
+                  }}
+                  style={[styles.cancelBtnSmall, !IS_DARK && styles.cancelBtnSmallWeb]}
+                >
+                  <Text style={styles.cancelBtnText}>CANCEL</Text>
+                </TouchableOpacity>
+              )}
+              <View style={[styles.statusBadge, { backgroundColor: badgeBg }]}>
+                <Text style={statusLabelStyle}>{getStatusLabel(booking.status)}</Text>
+              </View>
             </View>
           </View>
 
+          {whoTitle ? (
+            <Text style={[styles.whoTitleText, IS_DARK && styles.whoTitleTextNative]}>
+              Booked by: <Text style={{ fontWeight: '800' }}>{whoTitle}</Text>
+            </Text>
+          ) : null}
           {metaText ? <Text style={metaStyle}>{metaText}</Text> : null}
         </View>
       </Card>
@@ -279,4 +301,35 @@ const styles = StyleSheet.create({
     color: NATIVE_TEXT,
     opacity: 0.8,
   },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  cancelBtnSmall: {
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  cancelBtnSmallWeb: {
+    backgroundColor: 'transparent',
+  },
+  cancelBtnText: {
+    color: '#F44336',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  whoTitleText: {
+    fontSize: 13,
+    color: '#374151',
+    marginTop: 4,
+  },
+  whoTitleTextNative: {
+    color: NATIVE_TEXT,
+  },
 });
+
+

@@ -16,6 +16,9 @@ import { BookingWithDetails } from '@/types';
 import BookingCard from '@/components/bookings/BookingCard';
 import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '../../components/MobileAppNavbar';
+import Button from '@/components/ui/Button';
+import { Alert } from 'react-native';
+import Modal from '@/components/ui/Modal';
 
 export default function BookingsScreen() {
   const { user } = useAuth();
@@ -28,6 +31,11 @@ export default function BookingsScreen() {
   const isWideWeb = Platform.OS === 'web' && width >= 1100;
   const isExtraWideWeb = Platform.OS === 'web' && width >= 1350;
   const isMediumWeb = Platform.OS === 'web' && width >= 768 && width < 1100;
+
+  const [cancelModalVisible, setCancelModalVisible] = useState(false);
+  const [bookingToCancel, setBookingToCancel] = useState<BookingWithDetails | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelSuccess, setCancelSuccess] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -50,7 +58,7 @@ export default function BookingsScreen() {
           )
         `)
         .eq('user_id', user.id)
-        .eq('status', 'confirmed')
+        .in('status', ['confirmed', 'cancelled'])
         .order('booking_date', { ascending: false });
 
       if (error) throw error;
@@ -62,11 +70,68 @@ export default function BookingsScreen() {
     }
   };
 
+  const handleCancelBooking = async (booking: BookingWithDetails) => {
+    // 7-day restriction
+    const bDate = new Date(booking.booking_date);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const bDay = new Date(bDate.getFullYear(), bDate.getMonth(), bDate.getDate());
+    const diffDays = Math.ceil((bDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 7) {
+      const msg = 'Bookings can only be cancelled at least 7 days before the slot time. For urgent queries, please contact support.';
+      if (Platform.OS === 'web') alert(msg);
+      else Alert.alert('Cancellation Policy', msg);
+      return;
+    }
+
+    setBookingToCancel(booking);
+    setCancelSuccess(false);
+    setCancelModalVisible(true);
+  };
+
+  const confirmCancel = async () => {
+    if (!bookingToCancel) return;
+
+    try {
+      setCancelling(true);
+      const { error } = await supabase
+        .from('bookings')
+        .update({ status: 'cancelled' })
+        .eq('id', bookingToCancel.id);
+
+      if (error) throw error;
+      
+      setBookings(prev => prev.map(b => 
+        b.id === bookingToCancel.id ? { ...b, status: 'cancelled' as any } : b
+      ));
+      setCancelSuccess(true);
+    } catch (err: any) {
+      if (Platform.OS === 'web') alert(err.message || 'Failed to cancel');
+      else Alert.alert('Error', err.message || 'Failed to cancel');
+      setCancelModalVisible(false);
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+
+
   /** Compare YYYY-MM-DD only; handles DB values with time / timezone suffix. */
   const bookingDateOnly = (raw: string | null | undefined) =>
     String(raw ?? '')
       .trim()
       .slice(0, 10);
+
+  const isCancellable = (booking: BookingWithDetails) => {
+    if (booking.status !== 'confirmed') return false;
+    const bDate = new Date(booking.booking_date);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const bDay = new Date(bDate.getFullYear(), bDate.getMonth(), bDate.getDate());
+    const diffDays = Math.ceil((bDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    return diffDays >= 7;
+  };
 
   /** Only confirmed / paid bookings are fetched. */
   const listBookings = bookings;
@@ -157,8 +222,10 @@ export default function BookingsScreen() {
                 <BookingCard
                   booking={item}
                   onPress={() => router.push(`/bookings/${item.id}`)}
+                  onCancel={activeTab === 'upcoming' && isCancellable(item) ? () => handleCancelBooking(item) : undefined}
                 />
               </View>
+
             )}
             keyExtractor={item => item.id}
             key={
@@ -231,10 +298,14 @@ export default function BookingsScreen() {
           <FlatList
             data={visibleBookings}
             renderItem={({ item }) => (
-              <BookingCard
-                booking={item}
-                onPress={() => router.push(`/bookings/${item.id}`)}
-              />
+              <View style={styles.nativeItemContainer}>
+                <BookingCard
+                  booking={item}
+                  onPress={() => router.push(`/bookings/${item.id}`)}
+                  onCancel={activeTab === 'upcoming' && isCancellable(item) ? () => handleCancelBooking(item) : undefined}
+                />
+              </View>
+
             )}
             keyExtractor={item => item.id}
             key="bookings-1-col"
@@ -260,13 +331,110 @@ export default function BookingsScreen() {
   );
 
   if (Platform.OS === 'web') {
-    return <WebLayout>{content}</WebLayout>;
+    return (
+      <WebLayout>
+        {content}
+        <Modal
+          visible={cancelModalVisible}
+          onClose={() => !cancelling && setCancelModalVisible(false)}
+          title={cancelSuccess ? "Success" : "Cancel Booking"}
+          maxWidth={400}
+        >
+          <View style={styles.modalBody}>
+            {cancelSuccess ? (
+              <>
+                <Text style={styles.modalText}>
+                  Your booking has been cancelled successfully.
+                </Text>
+                <Button
+                  title="CLOSE"
+                  onPress={() => setCancelModalVisible(false)}
+                  variant="primary"
+                  style={styles.modalButton}
+                />
+              </>
+            ) : (
+              <>
+                <Text style={styles.modalText}>
+                  Are you sure you want to cancel this booking? This action cannot be undone.
+                </Text>
+                <View style={styles.modalActions}>
+                  <Button
+                    title="NO, KEEP IT"
+                    onPress={() => setCancelModalVisible(false)}
+                    variant="outline"
+                    disabled={cancelling}
+                    style={styles.modalButton}
+                  />
+                  <Button
+                    title={cancelling ? "CANCELLING..." : "YES, CANCEL"}
+                    onPress={confirmCancel}
+                    variant="primary"
+                    disabled={cancelling}
+                    style={[styles.modalButton, styles.cancelConfirmBtn]}
+                  />
+                </View>
+              </>
+            )}
+          </View>
+        </Modal>
+
+      </WebLayout>
+    );
   }
 
   return (
     <View style={styles.nativeScreen}>
       <MobileAppNavbar title="My bookings" titleColor="#00ea6b" />
-      <View style={styles.nativeBody}>{content}</View>
+      <View style={styles.nativeBody}>
+        {content}
+        
+        <Modal
+          visible={cancelModalVisible}
+          onClose={() => !cancelling && setCancelModalVisible(false)}
+          title={cancelSuccess ? "Success" : "Cancel Booking"}
+          maxWidth={400}
+        >
+          <View style={styles.modalBody}>
+            {cancelSuccess ? (
+              <>
+                <Text style={styles.modalText}>
+                  Your booking has been cancelled successfully.
+                </Text>
+                <Button
+                  title="CLOSE"
+                  onPress={() => setCancelModalVisible(false)}
+                  variant="primary"
+                  style={styles.modalButton}
+                />
+              </>
+            ) : (
+              <>
+                <Text style={styles.modalText}>
+                  Are you sure you want to cancel this booking? This action cannot be undone.
+                </Text>
+                <View style={styles.modalActions}>
+                  <Button
+                    title="NO, KEEP IT"
+                    onPress={() => setCancelModalVisible(false)}
+                    variant="outline"
+                    disabled={cancelling}
+                    style={styles.modalButton}
+                  />
+                  <Button
+                    title={cancelling ? "CANCELLING..." : "YES, CANCEL"}
+                    onPress={confirmCancel}
+                    variant="primary"
+                    disabled={cancelling}
+                    style={[styles.modalButton, styles.cancelConfirmBtn]}
+                  />
+                </View>
+              </>
+            )}
+          </View>
+        </Modal>
+
+      </View>
     </View>
   );
 }
@@ -464,4 +632,31 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
   },
+  nativeItemContainer: {
+    marginBottom: 0,
+  },
+  modalBody: {
+    gap: 20,
+  },
+  modalText: {
+    fontSize: 16,
+    color: '#4B5563',
+    lineHeight: 24,
+    textAlign: 'center',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    height: 48,
+  },
+  cancelConfirmBtn: {
+    backgroundColor: '#F44336',
+    borderColor: '#F44336',
+  },
 });
+
+
+

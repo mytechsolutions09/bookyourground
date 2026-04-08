@@ -15,12 +15,14 @@ import Button from '@/components/ui/Button';
 
 export default function BookingDetailsScreen() {
   const { id } = useLocalSearchParams();
-  const { user } = useAuth();
+  const { user, profile: userProfile } = useAuth();
+  
   const [booking, setBooking] = useState<BookingWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
-  const [cancelling, setCancelling] = useState(false);
+
   const { width } = useWindowDimensions();
   const Section = View;
+
 
   useEffect(() => {
     loadBooking();
@@ -64,72 +66,12 @@ export default function BookingDetailsScreen() {
     return String(booking.total_hours ?? '');
   }, [booking]);
 
-  const handleCancelBooking = async () => {
-    if (!booking || !user) return;
-    
-    // Only the customer can use this (Owners/Admins have other ways)
-    if (booking.user_id !== user.id) return;
-    
-    // 7-day restriction:
-    const bDate = new Date(booking.booking_date);
-    const now = new Date();
-    // Normalize to dates only for a cleaner day diff
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const bDay = new Date(bDate.getFullYear(), bDate.getMonth(), bDate.getDate());
-    const diffDays = Math.ceil((bDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    
-    if (diffDays < 7) {
-      Alert.alert(
-        'Cancellation Policy',
-        'Bookings can only be cancelled at least 7 days before the slot time. For urgent queries, please contact support.'
-      );
-      return;
-    }
 
-    Alert.alert(
-      'Cancel Booking',
-      'Are you sure you want to cancel this booking? This action cannot be undone.',
-      [
-        { text: 'No', style: 'cancel' },
-        { 
-          text: 'Yes, Cancel', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setCancelling(true);
-              const { error } = await supabase
-                .from('bookings')
-                .update({ status: 'cancelled' })
-                .eq('id', booking.id);
-              
-              if (error) throw error;
-              Alert.alert('Success', 'Booking cancelled successfully.');
-              loadBooking();
-            } catch (e: any) {
-              Alert.alert('Error', e.message || 'Failed to cancel booking.');
-            } finally {
-              setCancelling(false);
-            }
-          }
-        }
-      ]
-    );
-  };
 
-  const isOwner = booking?.user_id === user?.id;
-  
-  const daysUntilBooking = useMemo(() => {
-    if (!booking) return 0;
-    const bDate = new Date(booking.booking_date);
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const bDay = new Date(bDate.getFullYear(), bDate.getMonth(), bDate.getDate());
-    return Math.ceil((bDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-  }, [booking]);
 
-  const showCancelButton = isOwner && booking?.status === 'confirmed' && daysUntilBooking >= 7;
 
   if (loading || !booking) {
+
     const loadingContent = (
       <View style={styles.loadingContainer}>
         <Text>Loading...</Text>
@@ -189,7 +131,7 @@ export default function BookingDetailsScreen() {
                   booking.status === 'pending' && styles.statusTextPending,
                   (booking.status === 'cancelled' || booking.status === 'rejected') && styles.statusTextCancelled,
                 ]}>
-                  {booking.status.toUpperCase()}
+                  {booking.status === 'confirmed' ? 'ACTIVE' : booking.status.toUpperCase()}
                 </Text>
               </View>
             </View>
@@ -260,7 +202,7 @@ export default function BookingDetailsScreen() {
           <View style={styles.paymentRow}>
             <Text style={[styles.paymentLabel, !IS_DARK && styles.paymentLabelLight]}>Payment Method</Text>
             <Text style={[styles.paymentValue, !IS_DARK && styles.paymentValueLight]}>
-              {booking.payment_method === 'razorpay' ? 'Paid Online (Razorpay)' : 'Cash Payment'}
+              {booking.payment_method === 'cash' ? 'Cash Payment' : 'Paid Online'}
             </Text>
           </View>
         )}
@@ -276,16 +218,7 @@ export default function BookingDetailsScreen() {
         Go back
       </Text>
 
-      {showCancelButton && (
-        <Button
-          title={cancelling ? "CANCELLING..." : "CANCEL BOOKING"}
-          onPress={handleCancelBooking}
-          variant="outline"
-          disabled={cancelling}
-          style={styles.cancelButton}
-          textStyle={styles.cancelButtonText}
-        />
-      )}
+
     </View>
   );
 

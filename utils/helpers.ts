@@ -4,6 +4,14 @@ export const formatCurrency = (amount: number): string => {
   return `₹${amount.toFixed(2)}`;
 };
 
+export const formatDateDDMMYY = (date: string): string => {
+  const d = new Date(date);
+  const day = d.getDate().toString().padStart(2, '0');
+  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  const year = d.getFullYear().toString().slice(-2);
+  return `${day}/${month}/${year}`;
+};
+
 export const formatDate = (date: string): string => {
   return new Date(date).toLocaleDateString('en-IN', {
     year: 'numeric',
@@ -64,6 +72,7 @@ export const getStatusColor = (status: string): string => {
 };
 
 export const getStatusLabel = (status: string): string => {
+  if (status === 'confirmed') return 'Active';
   return status.charAt(0).toUpperCase() + status.slice(1);
 };
 

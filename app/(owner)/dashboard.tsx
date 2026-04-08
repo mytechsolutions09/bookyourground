@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, Platform, TouchableOpacity, useWindowDimensions, TextInput, ActivityIndicator } from 'react-native';
-import { Building2, Calendar, IndianRupee, Star, LayoutDashboard, User, Mail, Phone, ShieldCheck, Pencil, Check, X } from 'lucide-react-native';
+import { Building2, Calendar, IndianRupee, Star, LayoutDashboard, User, Mail, Phone, ShieldCheck, Pencil, Check, X, CalendarClock } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import Card from '@/components/ui/Card';
@@ -262,6 +262,17 @@ export default function OwnerDashboardScreen() {
                   <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Bookings on my grounds</Text>
                   <Text style={[styles.statsValue, IS_DARK && styles.statsValueDark]}>{stats.totalBookingsOnMyGrounds}</Text>
                   <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>Confirmed games</Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.statBoxWrapper} onPress={() => router.push('/(owner)/inventory' as any)}>
+                <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
+                  <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
+                    <CalendarClock size={24} color="#00ea6b" />
+                  </View>
+                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Manage Slots</Text>
+                  <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]}>Inventory</Text>
+                  <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>Check availability</Text>
                 </View>
               </TouchableOpacity>
 

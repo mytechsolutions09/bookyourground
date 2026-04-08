@@ -42,6 +42,8 @@ export default function SignupScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showStatePicker, setShowStatePicker] = useState(false);
+  const [playerType, setPlayerType] = useState('Player');
+  const [showPlayerTypePicker, setShowPlayerTypePicker] = useState(false);
 
   // Focus states
   const [focusedField, setFocusedField] = useState<string | null>(null);
@@ -67,7 +69,7 @@ export default function SignupScreen() {
 
     setLoading(true);
     const fullName = `${firstName} ${lastName}`.trim();
-    const { error } = await signUp(email, password, fullName, phone, 'user', undefined, address, stateName, teamName);
+    const { error } = await signUp(email, password, fullName, phone, 'user', undefined, address, stateName, teamName, playerType);
     setLoading(false);
 
     if (error) {
@@ -157,12 +159,24 @@ export default function SignupScreen() {
                     </View>
                   </View>
   
-                  <WebInput
-                    label="Team Name"
-                    value={teamName}
-                    onChangeText={setTeamName}
-                    placeholder="e.g. Real Madrid FC"
-                  />
+                  <View style={webStyles.row}>
+                    <View style={webStyles.col}>
+                      <WebInput
+                        label="Team Name"
+                        value={teamName}
+                        onChangeText={setTeamName}
+                        placeholder="e.g. Real Madrid FC"
+                      />
+                    </View>
+                    <View style={webStyles.col}>
+                      <WebGenericPicker
+                        label="I am a"
+                        value={playerType}
+                        onValueChange={setPlayerType}
+                        options={['Captain', 'Player']}
+                      />
+                    </View>
+                  </View>
 
                   <WebInput
                     label="Password"
@@ -312,19 +326,31 @@ export default function SignupScreen() {
             </View>
           </View>
 
-          <View style={styles.fieldWrap}>
-            <Text style={styles.fieldLabel}>Team Name (Squad)</Text>
-            <View style={[styles.inputRow, isFocused('teamName') && styles.inputRowFocused]}>
-              <Users size={15} color={isFocused('teamName') ? '#00ea6b' : '#6b7280'} strokeWidth={2} />
-              <TextInput
-                style={styles.textInput}
-                value={teamName}
-                onChangeText={setTeamName}
-                placeholder="Real Madrid FC"
-                placeholderTextColor="#4b5563"
-                onFocus={() => setFocusedField('teamName')}
-                onBlur={() => setFocusedField(null)}
-              />
+          <View style={styles.nameRow}>
+            <View style={[styles.fieldWrap, { flex: 1.5 }]}>
+              <Text style={styles.fieldLabel}>Team Name (Squad)</Text>
+              <View style={[styles.inputRow, isFocused('teamName') && styles.inputRowFocused]}>
+                <Users size={15} color={isFocused('teamName') ? '#00ea6b' : '#6b7280'} strokeWidth={2} />
+                <TextInput
+                  style={styles.textInput}
+                  value={teamName}
+                  onChangeText={setTeamName}
+                  placeholder="Real Madrid FC"
+                  placeholderTextColor="#4b5563"
+                  onFocus={() => setFocusedField('teamName')}
+                  onBlur={() => setFocusedField(null)}
+                />
+              </View>
+            </View>
+            <View style={[styles.fieldWrap, { flex: 1 }]}>
+               <Text style={styles.fieldLabel}>Role</Text>
+               <TouchableOpacity
+                 onPress={() => setShowPlayerTypePicker(true)}
+                 style={[styles.inputRow, isFocused('playerType') && styles.inputRowFocused]}
+               >
+                 <Text style={styles.textInput}>{playerType}</Text>
+                 <ChevronDown size={15} color="#6b7280" />
+               </TouchableOpacity>
             </View>
           </View>
 
@@ -422,6 +448,39 @@ export default function SignupScreen() {
         </View>
       </Modal>
 
+      {/* Player Type Picker Modal for Mobile */}
+      <Modal visible={showPlayerTypePicker} transparent animationType="slide">
+        <View style={modalStyles.overlay}>
+          <View style={[modalStyles.card, { padding: 0, maxHeight: '40%' }]}>
+            <View style={{ padding: 20, width: '100%', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={[modalStyles.title, { marginBottom: 0 }]}>Select Role</Text>
+              <TouchableOpacity onPress={() => setShowPlayerTypePicker(false)}>
+                <Text style={{ color: '#00ea6b', fontWeight: '700' }}>DONE</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ width: '100%' }}>
+              {['Captain', 'Player'].map((type) => (
+                <TouchableOpacity
+                  key={type}
+                  onPress={() => {
+                    setPlayerType(type);
+                    setShowPlayerTypePicker(false);
+                  }}
+                  style={{
+                    padding: 16,
+                    borderBottomWidth: 1,
+                    borderBottomColor: 'rgba(255,255,255,0.05)',
+                    backgroundColor: playerType === type ? 'rgba(0,234,107,0.1)' : 'transparent',
+                  }}
+                >
+                  <Text style={{ color: playerType === type ? '#00ea6b' : '#f9fafb', fontSize: 16 }}>{type}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
       {/* State Picker Modal for Mobile */}
       <Modal visible={showStatePicker} transparent animationType="slide">
         <View style={modalStyles.overlay}>
@@ -462,6 +521,19 @@ export default function SignupScreen() {
 function WebStatePicker(props: any) {
   const { label, value, onValueChange } = props;
   return (
+    <WebGenericPicker
+      label={label}
+      value={value}
+      onValueChange={onValueChange}
+      options={INDIAN_STATES}
+      placeholder="Select state"
+    />
+  );
+}
+
+function WebGenericPicker(props: any) {
+  const { label, value, onValueChange, options, placeholder = "Select option" } = props;
+  return (
     <View style={{ marginBottom: 10 }}>
       {label && <Text style={{ fontSize: 12, fontWeight: '600', color: '#E5E7EB', marginBottom: 4 }}>{label}</Text>}
       <div style={{ position: 'relative', width: '100%' }}>
@@ -481,10 +553,10 @@ function WebStatePicker(props: any) {
             cursor: 'pointer',
           }}
         >
-          <option value="" disabled hidden>Select state</option>
-          {INDIAN_STATES.map(state => (
-            <option key={state} value={state} style={{ backgroundColor: '#06392e', color: '#f9fafb' }}>
-              {state}
+          <option value="" disabled hidden>{placeholder}</option>
+          {options.map((opt: string) => (
+            <option key={opt} value={opt} style={{ backgroundColor: '#06392e', color: '#f9fafb' }}>
+              {opt}
             </option>
           ))}
         </select>

@@ -78,14 +78,20 @@ export default function MatchCard({ match, onJoin, buttonTitle = 'Join Match', t
             </View>
           </TouchableOpacity>
 
-          {match.user?.team_name && (
-            <View style={styles.teamRow}>
-              <Sword size={16} color={iconColor} />
-              <Text style={[styles.teamText, { color: textColor }]}>
-                Opponent: <Text style={styles.teamNameHighlight}>{match.user.team_name}</Text>
-              </Text>
-            </View>
-          )}
+          <View style={styles.opponentRow}>
+             <View style={styles.opponentAvatar}>
+                <Users size={14} color={iconColor} />
+             </View>
+             <View style={styles.opponentInfo}>
+                <Text style={[styles.opponentLabel, { color: isWeb && !IS_DARK ? '#9CA3AF' : textColor }]}>OPPONENT WAITING</Text>
+                <Text style={[styles.opponentName, { color: titleColor }]}>
+                   {(match.user?.full_name || 'Anonymous Player').toUpperCase()}
+                   {match.user?.team_name && (
+                      <Text style={styles.teamNameHighlight}> • {match.user.team_name.toUpperCase()}</Text>
+                   )}
+                </Text>
+             </View>
+          </View>
 
           <View style={styles.divider} />
 
@@ -293,19 +299,37 @@ const styles = StyleSheet.create({
     color: '#043529',
     fontWeight: '700',
   },
-  teamRow: {
+  opponentRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: 'rgba(0,234,107,0.05)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
+    gap: 10,
     marginTop: 4,
+    backgroundColor: 'rgba(0,234,107,0.03)',
+    padding: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0,234,107,0.08)',
   },
-  teamText: {
-    fontSize: 13,
-    fontWeight: '500',
+  opponentAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,234,107,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  opponentInfo: {
+    flex: 1,
+  },
+  opponentLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  opponentName: {
+    fontSize: 14,
+    fontWeight: '700',
   },
   teamNameHighlight: {
     fontWeight: '800',

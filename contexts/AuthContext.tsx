@@ -15,6 +15,7 @@ interface Profile {
   address: string | null;
   state: string | null;
   team_name: string | null;
+  player_type: string | null;
 }
 
 interface AuthContextType {
@@ -22,7 +23,7 @@ interface AuthContextType {
   profile: Profile | null;
   session: Session | null;
   loading: boolean;
-  signUp: (email: string, password: string, fullName: string, phone: string, role?: UserRole, businessName?: string, address?: string, state?: string, teamName?: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, fullName: string, phone: string, role?: UserRole, businessName?: string, address?: string, state?: string, teamName?: string, playerType?: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: any }>;
@@ -82,7 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string, fullName: string, phone: string, role: UserRole = 'user', businessName?: string, address?: string, state?: string, teamName?: string) => {
+  const signUp = async (email: string, password: string, fullName: string, phone: string, role: UserRole = 'user', businessName?: string, address?: string, state?: string, teamName?: string, playerType?: string) => {
     try {
       const { error } = await supabase.auth.signUp({
         email,
@@ -96,6 +97,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             address: address,
             state: state,
             team_name: teamName,
+            player_type: playerType,
           },
         },
       });

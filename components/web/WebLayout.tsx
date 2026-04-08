@@ -135,6 +135,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
     '/grounds',
     '/earnings',
     '/withdrawals',
+    '/inventory',
     '/locations',
     '/manage-ground-owners',
     '/manage-users',
@@ -565,6 +566,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                     <NavLink href="/(owner)/grounds" icon={MapPin} label="My grounds" />
                     <NavLink href="/(tabs)/matches" icon={CalendarClock} label="My Matches" />
                     <NavLink href="/(owner)/bookings" icon={Calendar} label="Bookings" />
+                    <NavLink href="/(owner)/inventory" icon={CalendarClock} label="Inventory Plan" />
                     <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
                     <NavLink href="/(owner)/earnings" icon={IndianRupee} label="Earnings" />
                     <NavLink href="/(owner)/add-ground" icon={PlusCircle} label="Add ground" />
@@ -591,7 +593,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                     <NavLink href="/(admin)/dashboard" icon={LayoutDashboard} label="Dashboard" />
                     <NavLink href="/(admin)/bookings" icon={Calendar} label="Bookings" />
                     <NavLink href="/(admin)/grounds" icon={MapPin} label="Grounds" />
-                    <NavLink href="/(owner)/add-ground" icon={PlusCircle} label="Add ground" />
+                    <NavLink href="/(admin)/inventory" icon={CalendarClock} label="Inventory" />
                     <NavLink href="/(admin)/earnings" icon={IndianRupee} label="Earnings" />
                     <NavLink href="/(admin)/withdrawals" icon={Wallet2} label="Withdraw" />
                     <NavLink
@@ -695,15 +697,15 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                           hideLabel={sidebarCollapsed}
                         />
                         <NavLink
-                          href="/(tabs)/matches"
+                          href="/(admin)/inventory"
                           icon={CalendarClock}
-                          label="My Matches"
+                          label="Inventory"
                           hideLabel={sidebarCollapsed}
                         />
                         <NavLink
-                          href="/(owner)/add-ground"
-                          icon={PlusCircle}
-                          label="Add ground"
+                          href="/(tabs)/matches"
+                          icon={CalendarClock}
+                          label="My Matches"
                           hideLabel={sidebarCollapsed}
                         />
                         <NavLink
@@ -763,6 +765,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                         <NavLink href="/(owner)/grounds" icon={MapPin} label="My grounds" />
                         <NavLink href="/(tabs)/matches" icon={CalendarClock} label="My Matches" />
                         <NavLink href="/(owner)/bookings" icon={Calendar} label="Bookings" />
+                        <NavLink href="/(owner)/inventory" icon={CalendarClock} label="Inventory Plan" />
                         <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
                         <NavLink href="/(owner)/earnings" icon={IndianRupee} label="Earnings" />
                         <NavLink href="/(owner)/add-ground" icon={PlusCircle} label="Add ground" />

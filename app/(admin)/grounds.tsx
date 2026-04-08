@@ -131,6 +131,8 @@ export default function GroundsAdminScreen() {
 
   const [editForm, setEditForm] = useState<any>(null);
   const availabilityRef = React.useRef<TimeSlotsEditorHandle | null>(null);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
+  const [allLocations, setAllLocations] = useState<any[]>([]);
   const [createForm, setCreateForm] = useState<any>({
     name: '',
     description: '',
@@ -176,11 +178,16 @@ export default function GroundsAdminScreen() {
       const matchesType = typeFilter === 'all' || g.pitch_type === typeFilter;
       
       const query = searchQuery.toLowerCase().trim();
+      const owner = (g as any).owner;
+      const ownerInfo = Array.isArray(owner) ? owner[0] : owner;
+      
       const matchesSearch = !query || 
         g.name?.toLowerCase().includes(query) || 
         g.city?.toLowerCase().includes(query) || 
-        (g as any).owner?.business_name?.toLowerCase().includes(query) ||
-        (g as any).owner?.full_name?.toLowerCase().includes(query);
+        g.address?.toLowerCase().includes(query) ||
+        ownerInfo?.business_name?.toLowerCase().includes(query) ||
+        ownerInfo?.full_name?.toLowerCase().includes(query) ||
+        ownerInfo?.phone?.toLowerCase().includes(query);
 
       return matchesLocation && matchesType && matchesSearch;
     });
@@ -188,8 +195,24 @@ export default function GroundsAdminScreen() {
 
   useEffect(() => {
     loadGrounds();
+    loadLocations();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ownerIdParam]);
+
+  const loadLocations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('locations')
+        .select('*')
+        .eq('active', true)
+        .order('sort_order', { ascending: true });
+      
+      if (error) throw error;
+      setAllLocations(data || []);
+    } catch (err) {
+      console.error('Error loading locations:', err);
+    }
+  };
 
   const loadGrounds = async () => {
     try {
@@ -603,6 +626,96 @@ export default function GroundsAdminScreen() {
     }
   };
 
+  const handleDuplicateGround = async (ground: GroundWithImages) => {
+    try {
+      setDuplicatingId(ground.id);
+      
+      // 1. Create Ground Copy
+      const groundPayload = {
+        owner_id: ground.owner_id,
+        name: `${ground.name} (Copy)`,
+        description: ground.description,
+        address: ground.address,
+        city: ground.city,
+        state: ground.state,
+        pincode: ground.pincode,
+        base_price_per_hour: ground.base_price_per_hour,
+        pitch_type: ground.pitch_type,
+        cricket_pitch_surface: (ground as any).cricket_pitch_surface,
+        ground_size: ground.ground_size,
+        capacity: ground.capacity,
+        has_floodlights: (ground as any).has_floodlights,
+        has_parking: (ground as any).has_parking,
+        has_changing_rooms: (ground as any).has_changing_rooms,
+        has_pavilion: (ground as any).has_pavilion,
+        verified: (ground as any).verified,
+        approved: (ground as any).approved,
+        active: (ground as any).active,
+        latitude: (ground as any).latitude,
+        longitude: (ground as any).longitude,
+      };
+
+      const { data: newGround, error: groundError } = await supabase
+        .from('grounds')
+        .insert(groundPayload)
+        .select('id')
+        .single();
+
+      if (groundError) throw groundError;
+
+      // 2. Copy Images
+      if (ground.ground_images && ground.ground_images.length > 0) {
+        const imageRows = ground.ground_images.map(img => ({
+          ground_id: newGround.id,
+          image_url: img.image_url,
+          is_primary: img.is_primary,
+          display_order: img.display_order,
+        }));
+        const { error: imageError } = await supabase.from('ground_images').insert(imageRows);
+        if (imageError) console.error('Error copying images:', imageError);
+      }
+
+      // 3. Copy Time Slots
+      const { data: oldSlots, error: slotsFetchError } = await supabase
+        .from('time_slots')
+        .select('*')
+        .eq('ground_id', ground.id);
+      
+      if (slotsFetchError) {
+        console.error('Error fetching old slots:', slotsFetchError);
+      } else if (oldSlots && oldSlots.length > 0) {
+        const newSlots = oldSlots.map(slot => ({
+          ground_id: newGround.id,
+          day_of_week: slot.day_of_week,
+          start_time: slot.start_time,
+          end_time: slot.end_time,
+          custom_price: slot.custom_price,
+          is_available: slot.is_available,
+        }));
+        const { error: slotsInsertError } = await supabase.from('time_slots').insert(newSlots);
+        if (slotsInsertError) console.error('Error copying slots:', slotsInsertError);
+      } else {
+        // Fallback to defaults if no slots found
+        await ensureDefaultTimeSlotsForGround({
+          groundId: newGround.id,
+          pitchType: ground.pitch_type,
+          supabaseClient: supabase,
+        });
+      }
+
+      if (Platform.OS === 'web') alert('Ground duplicated successfully!');
+      else Alert.alert('Success', 'Ground duplicated successfully!');
+      
+      loadGrounds();
+    } catch (e: any) {
+      console.error('Error duplicating ground:', e);
+      if (Platform.OS === 'web') alert(e?.message ?? 'Failed to duplicate ground');
+      else Alert.alert('Error', e?.message ?? 'Failed to duplicate ground');
+    } finally {
+      setDuplicatingId(null);
+    }
+  };
+
   const renderGroundActions = (ground: GroundWithImages, isApproved: boolean) => {
     const ownerName = (ground as any).owner?.business_name || (ground as any).owner?.full_name;
 
@@ -648,6 +761,15 @@ export default function GroundsAdminScreen() {
           />
 
           <Button
+            title={duplicatingId === ground.id ? "..." : "Duplicate"}
+            onPress={() => handleDuplicateGround(ground)}
+            variant="outline"
+            size="small"
+            style={{ flex: 1 }}
+            disabled={duplicatingId != null}
+          />
+
+          <Button
             title="Delete"
             onPress={() => handleDeleteGround(ground.id)}
             variant="danger"
@@ -676,19 +798,6 @@ export default function GroundsAdminScreen() {
             <Text style={styles.title}>Grounds</Text>
             <Text style={styles.subtitle}>{headerSubtitle}</Text>
           </View>
-          <Button
-            title={createOpen ? 'Cancel Add' : 'Add Ground'}
-            onPress={() => {
-              setCreateOpen((v) => !v);
-              setEditOpen(false);
-              setEditForm(null);
-              setSelectedGround(null);
-            }}
-            variant={createOpen ? 'outline' : 'primary'}
-            size="medium"
-            loading={createLoading}
-            style={styles.headerAddButton}
-          />
         </View>
 
         <View style={styles.controlsRow}>
@@ -797,18 +906,15 @@ export default function GroundsAdminScreen() {
                   placeholder="Address"
                 />
 
-                <View style={styles.formRow2}>
-                  <TextInput
-                    style={[styles.formInput, styles.formInputHalf]}
-                    value={String(createForm.city ?? '')}
-                    onChangeText={(t) => setCreateForm({ ...createForm, city: t })}
-                    placeholder="City"
-                  />
-                  <TextInput
-                    style={[styles.formInput, styles.formInputHalf]}
-                    value={String(createForm.state ?? '')}
-                    onChangeText={(t) => setCreateForm({ ...createForm, state: t })}
-                    placeholder="State"
+                <View style={[styles.formInput, { paddingHorizontal: 0, paddingVertical: 0, zIndex: 100, position: 'relative', overflow: 'visible' }]}>
+                  <FilterDropdown
+                    options={['Select Location', ...allLocations.map(loc => `${loc.city}, ${loc.state}`)]}
+                    value={createForm.city ? `${createForm.city}, ${createForm.state}` : 'Select Location'}
+                    onChange={(v) => {
+                      if (v === 'Select Location') return;
+                      const [city, state] = v.split(', ');
+                      setCreateForm({ ...createForm, city, state });
+                    }}
                   />
                 </View>
 
@@ -1030,6 +1136,15 @@ export default function GroundsAdminScreen() {
                         >
                             <Text style={{ color: '#4b5563', fontWeight: '800', fontSize: 10 }}>EDIT</Text>
                         </TouchableOpacity>
+                        <TouchableOpacity 
+                            style={[styles.iconButton, { backgroundColor: '#e0f2fe' }]}
+                            onPress={() => handleDuplicateGround(latestGround)}
+                            disabled={duplicatingId != null}
+                        >
+                            <Text style={{ color: '#0ea5e9', fontWeight: '800', fontSize: 10 }}>
+                              {duplicatingId === latestGround.id ? '...' : 'DUPLICATE'}
+                            </Text>
+                        </TouchableOpacity>
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -1070,6 +1185,14 @@ export default function GroundsAdminScreen() {
                                 variant="primary"
                                 size="small"
                                 style={{ marginBottom: 8 }}
+                            />
+                            <Button
+                                title={duplicatingId === latestGround.id ? "Duplicating..." : "Duplicate Ground"}
+                                onPress={() => handleDuplicateGround(latestGround)}
+                                variant="outline"
+                                size="small"
+                                style={{ marginBottom: 8 }}
+                                disabled={duplicatingId != null}
                             />
                             <Button
                                 title="Delete Ground"
@@ -1211,6 +1334,14 @@ export default function GroundsAdminScreen() {
                       style={{ flex: 1 }}
                     />
                     <Button
+                      title={duplicatingId === latestGround.id ? "..." : "Duplicate"}
+                      onPress={() => handleDuplicateGround(latestGround)}
+                      variant="outline"
+                      size="small"
+                      style={{ flex: 1 }}
+                      disabled={duplicatingId != null}
+                    />
+                    <Button
                       title="Delete"
                       onPress={() => handleDeleteGround(latestGround.id)}
                       variant="danger"
@@ -1275,18 +1406,15 @@ export default function GroundsAdminScreen() {
                 onChangeText={(t) => setEditForm((prev: any) => ({ ...prev, address: t }))}
                 placeholder="Address"
               />
-              <View style={styles.formRow2}>
-                <TextInput
-                  style={[styles.formInput, styles.formInputHalf]}
-                  value={String(editForm?.city ?? '')}
-                  onChangeText={(t) => setEditForm((prev: any) => ({ ...prev, city: t }))}
-                  placeholder="City"
-                />
-                <TextInput
-                  style={[styles.formInput, styles.formInputHalf]}
-                  value={String(editForm?.state ?? '')}
-                  onChangeText={(t) => setEditForm((prev: any) => ({ ...prev, state: t }))}
-                  placeholder="State"
+              <View style={[styles.formInput, { paddingHorizontal: 0, paddingVertical: 0, zIndex: 100, position: 'relative', overflow: 'visible' }]}>
+                <FilterDropdown
+                  options={['Select Location', ...allLocations.map(loc => `${loc.city}, ${loc.state}`)]}
+                  value={editForm?.city ? `${editForm.city}, ${editForm.state}` : 'Select Location'}
+                  onChange={(v) => {
+                    if (v === 'Select Location') return;
+                    const [city, state] = v.split(', ');
+                    setEditForm((prev: any) => ({ ...prev, city, state }));
+                  }}
                 />
               </View>
               <View style={styles.formRow2}>

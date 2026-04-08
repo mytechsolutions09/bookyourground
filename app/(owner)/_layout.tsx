@@ -62,6 +62,7 @@ export default function OwnerLayout() {
       <Stack.Screen name="bookings" />
       <Stack.Screen name="earnings" />
       <Stack.Screen name="settings" />
+      <Stack.Screen name="inventory" />
     </Stack>
   );
 }

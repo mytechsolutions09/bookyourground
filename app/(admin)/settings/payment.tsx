@@ -115,7 +115,7 @@ export default function AdminPaymentSettings() {
         <View style={styles.infoBox}>
           <Text style={styles.infoTitle}>Note on Secrets</Text>
           <Text style={styles.infoText}>
-            For security reasons, API Keys and Secrets (like Razorpay Secret or PayU Salt) must be set via Supabase CLI or Dashboard Secrets. 
+            For security reasons, API Keys and Secrets (like PayU Salt) must be set via Supabase CLI or Dashboard Secrets. 
             The toggles above control platform visibility.
           </Text>
         </View>

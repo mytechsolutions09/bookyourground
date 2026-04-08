@@ -8,20 +8,23 @@ import {
   ActivityIndicator,
   Alert,
   TouchableOpacity,
-  Image,
+  useWindowDimensions,
 } from 'react-native';
-import { useLocalSearchParams, router, Stack } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import WebLayout from '@/components/web/WebLayout';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import { formatCurrency } from '@/utils/helpers';
-import { CreditCard, ShieldCheck, Clock, Calendar, MapPin, ChevronLeft } from 'lucide-react-native';
+import { CreditCard, ShieldCheck, Clock, Calendar, MapPin, ChevronLeft, Wallet } from 'lucide-react-native';
 
 export default function CheckoutScreen() {
   const { id } = useLocalSearchParams();
   const { user, profile } = useAuth();
+  const { width } = useWindowDimensions();
+  const isDesktop = width > 768;
+  
   const [booking, setBooking] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
@@ -43,11 +46,8 @@ export default function CheckoutScreen() {
       if (error) throw error;
       setActiveGateways(data || []);
       
-      // Select first available (prefer Razorpay)
-      const rzp = data?.find(g => g.name === 'razorpay');
       const payu = data?.find(g => g.name === 'payu');
-      if (rzp) setSelectedGateway('razorpay');
-      else if (payu) setSelectedGateway('payu');
+      if (payu) setSelectedGateway('payu');
       else if (data?.length) setSelectedGateway(data[0].name);
     } catch (e) {
       console.error('Error fetching gateways:', e);
@@ -60,15 +60,7 @@ export default function CheckoutScreen() {
     } else {
       fetchExistingBooking();
     }
-    
-    if (selectedGateway === 'razorpay' && Platform.OS === 'web' && !document.getElementById('rzp-script')) {
-      const script = document.createElement('script');
-      script.id = 'rzp-script';
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.async = true;
-      document.body.appendChild(script);
-    }
-  }, [id, selectedGateway]);
+  }, [id]);
 
   const params = useLocalSearchParams();
 
@@ -78,7 +70,13 @@ export default function CheckoutScreen() {
     try {
       setProcessingCash(true);
 
-      const { data, error } = await supabase.functions.invoke('razorpay-payment', {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const { data, error } = await supabase.functions.invoke('payment-gateway', {
+        headers: {
+          'Authorization': `Bearer ${session?.access_token || ''}`,
+          'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '',
+        },
         body: {
           action: 'confirm-cash',
           bookingId: booking.isNew ? null : booking.id,
@@ -93,11 +91,24 @@ export default function CheckoutScreen() {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Functions error:', error);
+        let msg = error.message;
+        
+        if (error.context && typeof error.context.json === 'function') {
+           try {
+             const errBody = await error.context.json();
+             if (errBody && errBody.error) msg = errBody.error;
+           } catch (e) {}
+        }
+        throw new Error(msg || 'Edge Function call failed');
+      }
 
-      if (data.success) {
+      if (data && data.success) {
         Alert.alert('Success', 'Booking confirmed via Cash payment.');
         router.replace(`/bookings/${data.bookingId}` as any);
+      } else {
+        throw new Error(data?.error || 'The server could not confirm the cash payment.');
       }
     } catch (error: any) {
       console.error('Cash payment error:', error);
@@ -112,7 +123,6 @@ export default function CheckoutScreen() {
       setLoading(true);
       const { groundId, date, time, teamType, couponId, discount } = params;
       
-      // Fetch ground details
       const { data: ground, error: groundError } = await supabase
         .from('grounds')
         .select('*')
@@ -121,19 +131,13 @@ export default function CheckoutScreen() {
         
       if (groundError) throw groundError;
 
-      // Mock a booking object for the UI
-      // We'll calculate the end time based on the ground type
       const isBox = (ground.pitch_type ?? '').toLowerCase().includes('box');
-      const durationHours = 1; // Default
+      const durationHours = 1;
       const startTimeMinutes = parseTimeToMinutes(time as string) || 540;
       const endMinutes = startTimeMinutes + (durationHours * 60);
       const endTime = minutesToHHMM(endMinutes);
 
-      // We need to fetch the price for this slot if it's box cricket
-      let pricePerHour = ground.base_price_per_hour;
-      // In a real app, we'd call an RPC or function to get the exact slot price
-      // For now, use the base price or the discount passed from the form
-
+      const pricePerHour = ground.base_price_per_hour;
       const totalAmount = isBox 
         ? pricePerHour 
         : teamType === 'one' ? (pricePerHour / 2) : pricePerHour;
@@ -151,7 +155,7 @@ export default function CheckoutScreen() {
         team_type: teamType,
         coupon_id: couponId,
         grounds: ground,
-        isNew: true, // Flag to indicate we need to create booking on success
+        isNew: true,
       });
     } catch (error: any) {
       console.error('Error fetching new booking details:', error);
@@ -201,7 +205,12 @@ export default function CheckoutScreen() {
       const firstname = user?.user_metadata?.full_name || 'Guest';
       const email = user?.email || '';
 
-      const { data: hashData, error: hashError } = await supabase.functions.invoke('razorpay-payment', {
+      const { data: { session } } = await supabase.auth.getSession();
+      const { data: hashData, error: hashError } = await supabase.functions.invoke('payment-gateway', {
+        headers: {
+          'Authorization': `Bearer ${session?.access_token || ''}`,
+          'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '',
+        },
         body: {
           action: 'create-payu-hash',
           txnid,
@@ -214,9 +223,8 @@ export default function CheckoutScreen() {
 
       if (hashError) throw hashError;
 
-      // 2. Build form and submit (Web only for demo)
       if (Platform.OS === 'web') {
-        const isProduction = true; // Set to true for live payments
+        const isProduction = true;
         const payuUrl = isProduction 
           ? 'https://secure.payu.in/_payment' 
           : 'https://test.payu.in/_payment';
@@ -239,7 +247,6 @@ export default function CheckoutScreen() {
           furl: `${window.location.origin}/checkout/${id}`,
           hash: hashData.hash,
           service_provider: 'payu_paisa',
-          // Add UDF placeholders to match hash pipes
           udf1: '', udf2: '', udf3: '', udf4: '', udf5: '',
           udf6: '', udf7: '', udf8: '', udf9: '', udf10: '',
         };
@@ -271,103 +278,8 @@ export default function CheckoutScreen() {
     if (selectedGateway === 'payu') {
       return handlePayU();
     }
-    if (selectedGateway === 'razorpay') {
-      return handleRazorpay();
-    }
     if (selectedGateway === 'cash') {
       return handleCashPayment();
-    }
-  };
-
-  const handleRazorpay = async () => {
-    if (!booking) return;
-
-    try {
-      setProcessing(true);
-
-      // 1. Create Razorpay Order via Edge Function
-      const { data, error } = await supabase.functions.invoke('razorpay-payment', {
-        body: {
-          action: 'create-order',
-          bookingId: booking.isNew ? null : booking.id,
-          bookingDetails: booking.isNew ? {
-            ground_id: booking.ground_id,
-            booking_date: booking.booking_date,
-            start_time: booking.start_time,
-            end_time: booking.end_time,
-            team_type: booking.team_type,
-            coupon_id: booking.coupon_id,
-          } : null,
-        },
-      });
-
-      if (error) throw error;
-
-      const order = data;
-
-      if (Platform.OS === 'web') {
-        const options = {
-          key: process.env.EXPO_PUBLIC_RAZORPAY_KEY_ID || 'rzp_test_YOUR_KEY_HERE',
-          amount: order.amount,
-          currency: order.currency,
-          name: 'BookYourGround',
-          description: `Booking for ${booking.grounds.name}`,
-          order_id: order.id,
-          handler: async function (response: any) {
-            // 2. Verify Payment
-            const { data: verifyData, error: verifyError } = await supabase.functions.invoke('razorpay-payment', {
-              body: {
-                action: 'verify-payment',
-                bookingId: booking.isNew ? null : booking.id,
-                bookingDetails: booking.isNew ? {
-                    ground_id: booking.ground_id,
-                    booking_date: booking.booking_date,
-                    start_time: booking.start_time,
-                    end_time: booking.end_time,
-                    team_type: booking.team_type,
-                    coupon_id: booking.coupon_id,
-                  } : null,
-                paymentDetails: {
-                  razorpay_order_id: response.razorpay_order_id,
-                  razorpay_payment_id: response.razorpay_payment_id,
-                  razorpay_signature: response.razorpay_signature,
-                },
-              },
-            });
-
-            if (verifyError) {
-              Alert.alert('Payment Verification Failed', 'Please contact support if amount was deducted.');
-            } else {
-              const finalId = verifyData.bookingId || booking.id;
-              router.replace(`/bookings/${finalId}` as any);
-            }
-          },
-          prefill: {
-            name: user?.user_metadata?.full_name || '',
-            email: user?.email || '',
-            contact: user?.user_metadata?.phone || '',
-          },
-          theme: {
-            color: '#10b981',
-          },
-        };
-
-        const rzp = new (window as any).Razorpay(options);
-        rzp.open();
-      } else {
-        // For Native, we'd typically use react-native-razorpay
-        // Or redirect to a web-based checkout page
-        Alert.alert(
-          'Mobile Payment',
-          'For mobile, please use our web interface or ensure native Razorpay is configured.',
-          [{ text: 'OK' }]
-        );
-      }
-    } catch (error: any) {
-      console.error('Payment error:', error);
-      Alert.alert('Payment Error', error.message || 'Something went wrong.');
-    } finally {
-      setProcessing(false);
     }
   };
 
@@ -388,42 +300,43 @@ export default function CheckoutScreen() {
     );
   }
 
+  const isGroundOwnerOrAdmin = profile?.role === 'super_admin' || 
+    (profile?.role === 'ground_owner' && (booking?.grounds?.owner_id === user?.id || booking?.ground_id === user?.id));
+
   const content = (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <ChevronLeft size={24} color="#043529" />
+          <ChevronLeft size={20} color="#1F2937" />
         </TouchableOpacity>
-        <Text style={styles.title}>Secure Checkout</Text>
+        <Text style={styles.title}>Checkout</Text>
       </View>
 
-      <View style={styles.layout}>
+      <View style={[styles.layout, !isDesktop && styles.layoutMobile]}>
         {/* Left Column: Summary */}
         <View style={styles.mainColumn}>
           <Card style={styles.orderCard}>
+            <Text style={styles.sectionTitle}>Booking Summary</Text>
+            
             <View style={styles.groundInfo}>
-              <View style={styles.groundText}>
-                <Text style={styles.groundName}>{booking.grounds.name}</Text>
-                <View style={styles.locationRow}>
-                  <MapPin size={14} color="#6B7280" />
-                  <Text style={styles.locationText}>{booking.grounds.city}, {booking.grounds.state}</Text>
-                </View>
+              <Text style={styles.groundName}>{booking.grounds.name}</Text>
+              <View style={styles.locationRow}>
+                <MapPin size={12} color="#6B7280" />
+                <Text style={styles.locationText}>{booking.grounds.city}, {booking.grounds.state}</Text>
               </View>
             </View>
 
-            <View style={styles.divider} />
-
             <View style={styles.detailsGrid}>
               <View style={styles.detailItem}>
-                <Calendar size={18} color="#10b981" />
-                <View style={styles.detailText}>
+                <Calendar size={16} color="#10b981" />
+                <View>
                   <Text style={styles.detailLabel}>Date</Text>
                   <Text style={styles.detailValue}>{booking.booking_date}</Text>
                 </View>
               </View>
               <View style={styles.detailItem}>
-                <Clock size={18} color="#10b981" />
-                <View style={styles.detailText}>
+                <Clock size={16} color="#10b981" />
+                <View>
                   <Text style={styles.detailLabel}>Time</Text>
                   <Text style={styles.detailValue}>{booking.start_time.substring(0, 5)} - {booking.end_time.substring(0, 5)}</Text>
                 </View>
@@ -432,20 +345,23 @@ export default function CheckoutScreen() {
           </Card>
 
           <View style={styles.securityInfo}>
-            <ShieldCheck size={20} color="#065f46" />
+            <ShieldCheck size={16} color="#059669" />
             <Text style={styles.securityText}>
-              Your payment is secured with industry-standard encryption.
+              Encrypted secure checkout.
             </Text>
           </View>
         </View>
 
-        {/* Right Column: Payment Actions */}
+        {/* Right Column: Payment */}
         <View style={styles.sideColumn}>
           <Card style={styles.paymentCard}>
-            <Text style={styles.paymentTitle}>Select Payment Method</Text>
+            <Text style={styles.paymentTitle}>Payment Method</Text>
             
             <View style={styles.methodSelector}>
-              {activeGateways.filter(g => g.name !== 'cash').map(g => (
+              {activeGateways.filter(g => {
+                if (g.name === 'cash') return isGroundOwnerOrAdmin;
+                return true;
+              }).map(g => (
                 <TouchableOpacity 
                   key={g.name}
                   onPress={() => setSelectedGateway(g.name)}
@@ -455,7 +371,11 @@ export default function CheckoutScreen() {
                   ]}
                 >
                   <View style={[styles.methodCircle, selectedGateway === g.name && styles.methodCircleActive]}>
-                    <CreditCard size={14} color={selectedGateway === g.name ? '#FFF' : '#6B7280'} />
+                    {g.name === 'cash' ? (
+                      <Wallet size={14} color={selectedGateway === g.name ? '#FFF' : '#6B7280'} />
+                    ) : (
+                      <CreditCard size={14} color={selectedGateway === g.name ? '#FFF' : '#6B7280'} />
+                    )}
                   </View>
                   <Text style={[styles.methodLabel, selectedGateway === g.name && styles.methodLabelActive]}>
                     {g.label}
@@ -464,59 +384,55 @@ export default function CheckoutScreen() {
               ))}
             </View>
 
-            <View style={[styles.divider, { marginVertical: 16 }]} />
-
-            <View style={styles.priceRow}>
-              <Text style={styles.priceLabel}>Booking Amount</Text>
-              <Text style={styles.priceValue}>{formatCurrency(booking.total_amount + (booking.discount_amount || 0))}</Text>
-            </View>
-            
-            {booking.discount_amount > 0 && (
+            <View style={styles.priceContainer}>
               <View style={styles.priceRow}>
-                <Text style={styles.discountLabel}>Discount</Text>
-                <Text style={styles.discountValue}>-{formatCurrency(booking.discount_amount)}</Text>
+                <Text style={styles.priceLabel}>Subtotal</Text>
+                <Text style={styles.priceValue}>{formatCurrency(booking.total_amount + (booking.discount_amount || 0))}</Text>
               </View>
-            )}
+              
+              {booking.discount_amount > 0 && (
+                <View style={styles.priceRow}>
+                  <Text style={styles.discountLabel}>Coupon Discount</Text>
+                  <Text style={styles.discountValue}>-{formatCurrency(booking.discount_amount)}</Text>
+                </View>
+              )}
 
-            <View style={[styles.divider, { marginVertical: 16 }]} />
-
-            <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Total Payable</Text>
-              <Text style={styles.totalValue}>{formatCurrency(booking.total_amount)}</Text>
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Total</Text>
+                <Text style={styles.totalValue}>{formatCurrency(booking.total_amount)}</Text>
+              </View>
             </View>
 
-            <Button
-              title={processing ? 'Processing...' : `Pay via ${activeGateways.find(g => g.name === selectedGateway)?.label || 'Gateway'}`}
-              onPress={handlePayment}
-              disabled={processing || !selectedGateway}
-              loading={processing}
-              fullWidth
-              size="large"
-              style={styles.payButton}
-              icon={CreditCard}
-            />
-
-            {(profile?.role === 'ground_owner' || profile?.role === 'super_admin') && (
+            {selectedGateway === 'payu' ? (
               <Button
-                title={processingCash ? 'Confirming...' : 'Confirm (Cash Payment)'}
+                title={processing ? 'Processing...' : `Pay ${formatCurrency(booking.total_amount)}`}
+                onPress={handlePayment}
+                disabled={processing}
+                loading={processing}
+                fullWidth
+                style={styles.payButton}
+                icon={CreditCard}
+              />
+            ) : selectedGateway === 'cash' ? (
+              <Button
+                title={processingCash ? 'Confirming...' : 'Confirm Booking'}
                 onPress={handleCashPayment}
-                disabled={processing || processingCash}
+                disabled={processingCash}
                 loading={processingCash}
                 fullWidth
-                size="large"
-                variant="outline"
-                style={styles.cashButton}
+                style={styles.payButton}
+                icon={Wallet}
+              />
+            ) : (
+              <Button
+                title="Select Payment Method"
+                onPress={() => {}}
+                disabled={true}
+                fullWidth
+                style={styles.payButton}
               />
             )}
 
-            <View style={styles.razorpayBadge}>
-              <Text style={styles.poweredBy}>Powered by</Text>
-              <Image 
-                source={{ uri: 'https://cdn.razorpay.com/static/assets/logo/logo.png' }} 
-                style={styles.razorpayLogo}
-                resizeMode="contain"
-              />
-            </View>
           </Card>
         </View>
       </View>
@@ -524,7 +440,7 @@ export default function CheckoutScreen() {
   );
 
   if (Platform.OS === 'web') {
-    return <WebLayout>{content}</WebLayout>;
+    return <WebLayout noCard>{content}</WebLayout>;
   }
 
   return (content);
@@ -536,8 +452,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   content: {
-    padding: 20,
-    maxWidth: 1000,
+    padding: Platform.OS === 'web' ? 24 : 16,
+    maxWidth: 900,
     alignSelf: 'center',
     width: '100%',
   },
@@ -549,189 +465,126 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 30,
-    marginTop: Platform.OS === 'web' ? 20 : 40,
+    marginBottom: 20,
+    marginTop: Platform.OS === 'web' ? 0 : 40,
   },
   backButton: {
     padding: 8,
     marginRight: 12,
-    borderRadius: 12,
+    borderRadius: 10,
     backgroundColor: '#FFF',
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '800',
     color: '#111827',
   },
   layout: {
-    flexDirection: Platform.OS === 'web' ? 'row' : 'column',
-    gap: 24,
+    flexDirection: 'row',
+    gap: 16,
+  },
+  layoutMobile: {
+    flexDirection: 'column',
   },
   mainColumn: {
-    flex: 2,
+    flex: 1.5,
   },
   sideColumn: {
     flex: 1,
-    minWidth: Platform.OS === 'web' ? 350 : '100%',
+    minWidth: Platform.OS === 'web' ? 320 : '100%',
   },
   orderCard: {
-    padding: 24,
+    padding: 20,
+    marginBottom: 12,
+    borderRadius: 16,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#374151',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
     marginBottom: 16,
   },
   groundInfo: {
-    flexDirection: 'row',
-    marginBottom: 20,
-  },
-  groundText: {
-    flex: 1,
+    marginBottom: 16,
   },
   groundName: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '800',
     color: '#111827',
-    marginBottom: 4,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    marginTop: 2,
   },
   locationText: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#6B7280',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#E5E7EB',
-    marginVertical: 20,
   },
   detailsGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 24,
+    gap: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
   },
   detailItem: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    minWidth: 150,
-  },
-  detailText: {
-    flex: 1,
+    alignItems: 'flex-start',
+    gap: 8,
   },
   detailLabel: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#6B7280',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   detailValue: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
     color: '#111827',
   },
   securityInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    padding: 16,
+    gap: 8,
+    padding: 12,
     borderRadius: 12,
     backgroundColor: '#ECFDF5',
-    borderWidth: 1,
-    borderColor: '#A7F3D0',
   },
   securityText: {
-    fontSize: 14,
-    color: '#065f46',
-    flex: 1,
+    fontSize: 12,
+    color: '#059669',
+    fontWeight: '500',
   },
   paymentCard: {
-    padding: 24,
-    borderTopWidth: 4,
+    padding: 20,
+    borderRadius: 16,
+    borderTopWidth: 3,
     borderTopColor: '#10b981',
   },
   paymentTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 20,
-  },
-  priceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-  },
-  priceLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  priceValue: {
-    fontSize: 14,
-    color: '#111827',
-    fontWeight: '500',
-  },
-  discountLabel: {
-    fontSize: 14,
-    color: '#10b981',
-  },
-  discountValue: {
-    fontSize: 14,
-    color: '#10b981',
-    fontWeight: '500',
-  },
-  totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  totalLabel: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  totalValue: {
-    fontSize: 24,
     fontWeight: '800',
-    color: '#10b981',
-  },
-  payButton: {
-    backgroundColor: '#111827',
-    height: 56,
-  },
-  cashButton: {
-    marginTop: 12,
-    borderColor: '#059669',
-    height: 56,
-  },
-  razorpayBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 20,
-    gap: 8,
-  },
-  poweredBy: {
-    fontSize: 12,
-    color: '#9CA3AF',
-  },
-  razorpayLogo: {
-    width: 60,
-    height: 16,
+    color: '#111827',
+    marginBottom: 16,
   },
   methodSelector: {
-    gap: 10,
+    gap: 8,
+    marginBottom: 20,
   },
   methodOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
     padding: 12,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#E5E7EB',
+    borderColor: '#F3F4F6',
     backgroundColor: '#FFFFFF',
   },
   methodOptionActive: {
@@ -741,7 +594,7 @@ const styles = StyleSheet.create({
   methodCircle: {
     width: 28,
     height: 28,
-    borderRadius: 14,
+    borderRadius: 8,
     backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
@@ -751,10 +604,68 @@ const styles = StyleSheet.create({
   },
   methodLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#4B5563',
   },
   methodLabelActive: {
-    color: '#047857',
+    color: '#065F46',
+  },
+  priceContainer: {
+    marginBottom: 20,
+    backgroundColor: '#F9FAFB',
+    padding: 12,
+    borderRadius: 12,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  priceLabel: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  priceValue: {
+    fontSize: 13,
+    color: '#111827',
+    fontWeight: '600',
+  },
+  discountLabel: {
+    fontSize: 13,
+    color: '#10b981',
+  },
+  discountValue: {
+    fontSize: 13,
+    color: '#10b981',
+    fontWeight: '600',
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  totalLabel: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  totalValue: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#10b981',
+  },
+  payButton: {
+    height: 50,
+    borderRadius: 12,
+  },
+  cashButton: {
+    marginTop: 10,
+    height: 50,
+    borderRadius: 12,
+    borderColor: '#10b981',
   },
 });

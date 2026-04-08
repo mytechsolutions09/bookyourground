@@ -12,7 +12,7 @@ const IS_WEB = Platform.OS === 'web';
 
 function OwnerSettingsInner() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'payout' | 'bank' | 'coupons'>('payout');
+  const [activeTab, setActiveTab] = useState<'payout' | 'bank' | 'coupons' | 'help'>('payout');
   const [amount, setAmount] = useState('');
   const [accountDetails, setAccountDetails] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -157,6 +157,12 @@ function OwnerSettingsInner() {
             onPress={() => setActiveTab('coupons')}
           >
             <Text style={[styles.tabText, activeTab === 'coupons' && styles.activeTabText]}>Coupons</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.tabButton, activeTab === 'help' && styles.activeTabButton, IS_DARK && activeTab === 'help' && styles.activeTabButtonDark]} 
+            onPress={() => setActiveTab('help')}
+          >
+            <Text style={[styles.tabText, activeTab === 'help' && styles.activeTabText]}>Help</Text>
           </TouchableOpacity>
         </View>
 
@@ -444,6 +450,53 @@ function OwnerSettingsInner() {
             </View>
           </View>
         )}
+
+        {activeTab === 'help' && (
+          <View style={styles.tabContentGap}>
+            <Card style={styles.panel}>
+              <Text style={styles.sectionTitle}>Dashboard Guide</Text>
+              <Text style={styles.sectionSubtitle}>Understanding your bookings and occupancy diagnostics.</Text>
+              
+              <View style={styles.helpSection}>
+                <Text style={styles.helpHeader}>"WHO" Column Labels</Text>
+                
+                <View style={styles.helpItem}>
+                  <Text style={styles.helpTitle}>Self</Text>
+                  <Text style={styles.helpText}>Visible when you book a slot on your own ground. Typically used for personal practice or internal inventory management.</Text>
+                </View>
+
+                <View style={styles.helpItem}>
+                  <Text style={styles.helpTitle}>Another Ground</Text>
+                  <Text style={styles.helpText}>Visible when you book a slot as a player on a ground owned by someone else. These are your personal games.</Text>
+                </View>
+
+                <View style={styles.helpItem}>
+                  <Text style={styles.helpTitle}>Customer Name (e.g. Arpit)</Text>
+                  <Text style={styles.helpText}>Visible when an external player books your ground. This dynamically shows their full name for easy identification.</Text>
+                </View>
+              </View>
+
+              <View style={[styles.helpSection, { marginTop: 24 }]}>
+                <Text style={styles.helpHeader}>Occupancy status</Text>
+                
+                <View style={styles.helpItem}>
+                  <Text style={styles.helpTitle}>EMPTY</Text>
+                  <Text style={styles.helpText}>Indicates no confirmed bookings for that slot yet.</Text>
+                </View>
+
+                <View style={styles.helpItem}>
+                  <Text style={styles.helpTitle}>PARTIAL</Text>
+                  <Text style={styles.helpText}>Indicates 1 team is booked, but the ground is still available for another team to join (Matchmaking Mode).</Text>
+                </View>
+
+                <View style={styles.helpItem}>
+                  <Text style={styles.helpTitle}>FULL</Text>
+                  <Text style={styles.helpText}>The ground is fully occupied by two teams or a full-ground booking. No more slots available.</Text>
+                </View>
+              </View>
+            </Card>
+          </View>
+        )}
       </View>
     </ScrollView>
   );
@@ -723,6 +776,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 4,
+  },
+  helpSection: {
+    gap: 12,
+  },
+  helpHeader: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#01b854',
+    marginBottom: 4,
+  },
+  helpItem: {
+    backgroundColor: 'rgba(0,0,0,0.02)',
+    padding: 12,
+    borderRadius: 12,
+  },
+  helpTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: IS_WEB ? '#111827' : '#FFFFFF',
+    marginBottom: 4,
+  },
+  helpText: {
+    fontSize: 13,
+    color: IS_WEB ? '#6B7280' : '#9ca3af',
+    lineHeight: 18,
   },
 });
 

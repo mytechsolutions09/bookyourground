@@ -21,6 +21,7 @@ import MatchCard from '@/components/matches/MatchCard';
 import { Trophy, Swords, MapPin, Search, ChevronLeft } from 'lucide-react-native';
 import Button from '@/components/ui/Button';
 import { slugifyGroundSegment } from '@/utils/groundSlug';
+import MatchmakingSkeleton from '@/components/matches/MatchmakingSkeleton';
 
 export default function FindAnOpponentScreen() {
   const [matches, setMatches] = useState<BookingWithDetails[]>([]);
@@ -231,11 +232,15 @@ export default function FindAnOpponentScreen() {
               <RefreshControl refreshing={loading} onRefresh={loadOpenSlots} />
             }
             ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Trophy size={48} color="#E5E7EB" style={{ marginBottom: 16 }} />
-                <Text style={styles.emptyText}>No teams are looking for opponents right now</Text>
-                <Text style={styles.emptySubtext}>Maybe create your own match by booking a ground for 1 Team!</Text>
-              </View>
+              loading ? (
+                <MatchmakingSkeleton isWeb={true} IS_DARK={IS_DARK} />
+              ) : (
+                <View style={styles.emptyContainer}>
+                  <Trophy size={48} color="#E5E7EB" style={{ marginBottom: 16 }} />
+                  <Text style={styles.emptyText}>No teams are looking for opponents right now</Text>
+                  <Text style={styles.emptySubtext}>Maybe create your own match by booking a ground for 1 Team!</Text>
+                </View>
+              )
             }
           />
         </View>
@@ -298,9 +303,7 @@ export default function FindAnOpponentScreen() {
           )}
 
           {loading ? (
-            <View style={styles.loaderContainer}>
-              <ActivityIndicator size="large" color="#00ea6b" />
-            </View>
+            <MatchmakingSkeleton isWeb={false} IS_DARK={true} />
           ) : (
             <FlatList
               data={filteredMatches}

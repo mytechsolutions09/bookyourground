@@ -145,6 +145,17 @@ export default function AdminDashboardScreen() {
 
           <TouchableOpacity
             style={styles.actionItem}
+            onPress={() => router.push('/(admin)/inventory')}
+          >
+            <View style={styles.actionContent}>
+              <Calendar size={20} color="#6366F1" />
+              <Text style={styles.actionText}>Inventory & Occupancy</Text>
+            </View>
+            <ChevronRight size={20} color="#666" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionItem}
             onPress={() => router.push('/(admin)/messages' as any)}
           >
             <View style={styles.actionContent}>

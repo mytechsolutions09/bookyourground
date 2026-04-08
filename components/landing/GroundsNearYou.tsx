@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { MapPin, Navigation, Map as MapIcon, ChevronRight, Search, ExternalLink } from 'lucide-react-native';
-import { View, Text, StyleSheet, Platform, Pressable, ScrollView, ActivityIndicator, TextInput, Image, Linking, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Platform, Pressable, ScrollView, ActivityIndicator, TextInput, Image, Linking, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { GroundWithImages } from '@/types';
 import { router } from 'expo-router';
@@ -8,16 +8,53 @@ import { makeGroundPath } from '@/utils/groundSlug';
 import Card from '@/components/ui/Card';
 
 export default function GroundsNearYou() {
+  const { width } = useWindowDimensions();
   const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
   const [loading, setLoading] = useState(true);
   const [focusedGroundId, setFocusedGroundId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [nearMeActive, setNearMeActive] = useState(false);
+  const [locationFilter, setLocationFilter] = useState('all');
+  const [allLocations, setAllLocations] = useState<any[]>([]);
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+  const isSmallScreen = width < 1024;
+  const isWeb = Platform.OS === 'web';
 
   useEffect(() => {
     loadGrounds();
+    loadLocations();
+    getUserLocation();
   }, []);
+
+  const getUserLocation = () => {
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setUserLocation({
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude
+          });
+        },
+        (err) => {
+          console.log("Geolocation permission denied or error:", err);
+        }
+      );
+    }
+  };
+
+  const loadLocations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('locations')
+        .select('*')
+        .eq('active', true)
+        .order('sort_order', { ascending: true });
+      
+      if (error) throw error;
+      setAllLocations(data || []);
+    } catch (err) {
+      console.error('Error loading locations:', err);
+    }
+  };
 
   const loadGrounds = async () => {
     try {
@@ -46,24 +83,7 @@ export default function GroundsNearYou() {
     }
   };
 
-  useEffect(() => {
-    if (nearMeActive && !userLocation) {
-      if (typeof navigator !== 'undefined' && navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            setUserLocation({
-              lat: pos.coords.latitude,
-              lng: pos.coords.longitude
-            });
-          },
-          (err) => {
-            console.error("Geolocation error:", err);
-            setNearMeActive(false);
-          }
-        );
-      }
-    }
-  }, [nearMeActive, userLocation]);
+
 
   const filteredGrounds = useMemo(() => {
     let result = [...grounds];
@@ -75,8 +95,18 @@ export default function GroundsNearYou() {
         g.city.toLowerCase().includes(q)
       );
     }
-    
-    if (nearMeActive && userLocation) {
+
+    if (userLocation) {
+       // Filter and Sort by distance if location available
+       // 30km is roughly 0.27 degrees (very rough approximation for filtering)
+       const RADIUS_30KM = 0.27; 
+       
+       result = result.filter(g => {
+         if (!g.latitude || !g.longitude) return true; // keep if no coords for now
+         const dist = Math.sqrt(Math.pow(Number(g.latitude) - userLocation.lat, 2) + Math.pow(Number(g.longitude) - userLocation.lng, 2));
+         return dist <= RADIUS_30KM;
+       });
+
        result.sort((a, b) => {
          if (!a.latitude || !a.longitude || !b.latitude || !b.longitude) return 0;
          const distA = Math.sqrt(Math.pow(Number(a.latitude) - userLocation.lat, 2) + Math.pow(Number(a.longitude) - userLocation.lng, 2));
@@ -84,11 +114,13 @@ export default function GroundsNearYou() {
          return distA - distB;
        });
     }
+
+    if (locationFilter !== 'all') {
+      result = result.filter(g => g.city === locationFilter);
+    }
     
     return result.slice(0, 6);
-  }, [grounds, searchQuery, nearMeActive, userLocation]);
-
-  const isWeb = Platform.OS === 'web';
+  }, [grounds, searchQuery, locationFilter, userLocation]);
 
   const focusedGround = useMemo(() => 
     filteredGrounds.find(g => g.id === focusedGroundId) || filteredGrounds[0], 
@@ -96,11 +128,82 @@ export default function GroundsNearYou() {
 
   const freeMapEmbed = useMemo(() => {
     if (!focusedGround) {
+      if (userLocation) {
+        return `https://maps.google.com/maps?q=Cricket+grounds+near+${userLocation.lat},${userLocation.lng}&t=&z=12&ie=UTF8&iwloc=&output=embed`;
+      }
       return `https://maps.google.com/maps?q=${encodeURIComponent("Cricket grounds near me")}&t=&z=13&ie=UTF8&iwloc=&output=embed`;
     }
     const q = `${focusedGround.name}, ${focusedGround.address}, ${focusedGround.city}`;
     return `https://maps.google.com/maps?q=${encodeURIComponent(q)}&t=&z=15&ie=UTF8&iwloc=B&output=embed`;
-  }, [focusedGround]);
+  }, [focusedGround, userLocation]);
+
+  const locationOptions = useMemo(() => {
+    return ['all', ...allLocations.map(loc => loc.city)];
+  }, [allLocations]);
+
+  function LocalFilterDropdown({
+    options,
+    value,
+    onChange,
+  }: {
+    options: string[];
+    value: string;
+    onChange: (v: string) => void;
+  }) {
+    const [open, setOpen] = useState(false);
+    const display = (v: string) => (v === 'all' ? 'All Locations' : v);
+
+    return (
+      <View style={[styles.dropdownOuter, { zIndex: 100 }]}>
+        <Pressable
+          onPress={() => setOpen((v) => !v)}
+          style={[styles.dropdownButton, open && styles.dropdownButtonOpen]}
+        >
+          <Text style={styles.dropdownButtonText} numberOfLines={1}>{display(value)}</Text>
+          <ChevronRight 
+            size={14} 
+            color="#9CA3AF" 
+            style={{ transform: [{ rotate: open ? '270deg' : '90deg' }] }} 
+          />
+        </Pressable>
+
+        {open ? (
+          <>
+            <Pressable 
+              style={styles.dropdownBackdrop} 
+              onPress={() => setOpen(false)} 
+            />
+            <View style={styles.dropdownMenu}>
+              <ScrollView style={{ maxHeight: 200 }}>
+                {options.map((opt) => (
+                  <Pressable
+                    key={opt}
+                    onPress={() => {
+                      onChange(opt);
+                      setOpen(false);
+                    }}
+                    style={[
+                      styles.dropdownOption,
+                      opt === value && styles.dropdownOptionActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.dropdownOptionText,
+                        opt === value && styles.dropdownOptionTextActive,
+                      ]}
+                    >
+                      {display(opt)}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+          </>
+        ) : null}
+      </View>
+    );
+  }
 
   if (loading) {
      return (
@@ -113,40 +216,45 @@ export default function GroundsNearYou() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.headerTitleRow}>
-          <View style={styles.iconCircle}>
-            <MapIcon size={24} color="#00ea6b" />
+        <View style={[styles.headerContentRow, isSmallScreen && { flexDirection: 'column', alignItems: 'flex-start', gap: 16 }]}>
+          <View style={styles.titleSection}>
+            <View style={styles.iconCircle}>
+              <MapIcon size={20} color="#00ea6b" />
+            </View>
+            <View>
+              <Text style={styles.title}>Grounds Near You</Text>
+              <Text style={styles.subtitle}>Discover cricket grounds in your area</Text>
+            </View>
           </View>
-           <View>
-            <Text style={styles.title}>Grounds Near You</Text>
-            <Text style={styles.subtitle}>Discover and pinpoint cricket grounds in your area</Text>
-          </View>
-        </View>
 
-        <View style={styles.controlsRow}>
-          <View style={styles.searchBAR}>
-            <Search size={18} color="#9CA3AF" />
-            <TextInput
-              placeholder="Search grounds or cities..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              style={styles.searchINPUT}
-              placeholderTextColor="#9CA3AF"
-            />
+          <View style={[styles.headerControlsRow, isSmallScreen && { justifyContent: 'flex-start', width: '100%' }]}>
+            <View style={[styles.locationDropdownWrapper, isSmallScreen && { width: '48%', flex: 1 }]}>
+              <LocalFilterDropdown
+                options={locationOptions}
+                value={locationFilter}
+                onChange={setLocationFilter}
+              />
+            </View>
+
+            <View style={[styles.headerSearchWrapper, isSmallScreen && { width: '48%', flex: 1 }]}>
+              <View style={styles.searchBAR}>
+                <Search size={16} color="#9CA3AF" />
+                <TextInput
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  style={styles.searchINPUT}
+                  placeholderTextColor="#9CA3AF"
+                />
+              </View>
+            </View>
           </View>
-          <Pressable 
-            style={[styles.nearMeToggle, nearMeActive && styles.nearMeToggleActive]}
-            onPress={() => setNearMeActive(!nearMeActive)}
-          >
-            <Navigation size={18} color={nearMeActive ? "#043529" : "#00ea6b"} />
-            <Text style={[styles.nearMeText, nearMeActive && styles.nearMeTextActive]}>Near Me</Text>
-          </Pressable>
         </View>
       </View>
 
-      <View style={styles.content}>
+      <View style={[styles.content, (isSmallScreen || !isWeb) && { flexDirection: 'column' }]}>
         {/* Map Section */}
-        <View style={styles.mapCard}>
+        <View style={[styles.mapCard, isSmallScreen && { height: 350 }]}>
           {isWeb ? (
             <iframe
               width="100%"
@@ -261,6 +369,9 @@ const styles = StyleSheet.create({
     maxWidth: 1200,
     alignSelf: 'center',
     width: '100%',
+    zIndex: 50,
+    position: 'relative',
+    overflow: 'visible',
   },
   headerTitleRow: {
     flexDirection: 'row',
@@ -276,16 +387,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: '900',
     fontFamily: 'Inter',
     color: Platform.OS === 'web' ? '#111827' : '#00ea6b',
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 13,
     fontFamily: 'Inter',
     color: Platform.OS === 'web' ? '#6B7280' : '#9CA3AF',
-    marginTop: 4,
+    marginTop: 2,
   },
   content: {
     flexDirection: Platform.OS === 'web' ? 'row' : 'column',
@@ -428,53 +539,126 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 15,
   },
-  controlsRow: {
+  headerContentRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 20,
+    justifyContent: 'space-between',
+    gap: 20,
+    flexWrap: 'wrap',
+    zIndex: 60,
+    position: 'relative',
+    overflow: 'visible',
+  },
+  titleSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
+    flex: 1,
+    minWidth: 200,
+  },
+  headerControlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flexWrap: 'wrap',
+    zIndex: 200,
+    overflow: 'visible',
+    position: 'relative',
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  locationDropdownWrapper: {
+    width: Platform.OS === 'web' ? 180 : '100%',
+    zIndex: 300,
+  },
+  headerSearchWrapper: {
+    width: Platform.OS === 'web' ? 240 : '100%',
+    maxWidth: 400,
+    zIndex: 100,
+  },
+  dropdownOuter: {
+    position: 'relative',
+    width: '100%',
+    overflow: 'visible',
+  },
+  dropdownButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Platform.OS === 'web' ? '#FFF' : '#06392e',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 42,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 234, 107, 0.1)',
+  },
+  dropdownButtonOpen: {
+    borderColor: '#00ea6b',
+  },
+  dropdownButtonText: {
+    fontSize: 14,
+    color: Platform.OS === 'web' ? '#111827' : '#00ea6b',
+    fontWeight: '500',
+    flex: 1,
+    marginRight: 4,
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    top: 48,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+    zIndex: 1000,
+    overflow: 'hidden',
+  },
+  dropdownOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  dropdownOptionActive: {
+    backgroundColor: 'rgba(0, 234, 107, 0.05)',
+  },
+  dropdownOptionText: {
+    fontSize: 14,
+    color: '#374151',
+  },
+  dropdownOptionTextActive: {
+    color: '#00ea6b',
+    fontWeight: '700',
   },
   searchBAR: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Platform.OS === 'web' ? '#FFF' : '#06392e',
     borderRadius: 12,
     paddingHorizontal: 12,
-    height: 48,
+    height: 42,
     borderWidth: 1,
     borderColor: 'rgba(0, 234, 107, 0.1)',
   },
   searchINPUT: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 14,
     marginLeft: 8,
     color: Platform.OS === 'web' ? '#111827' : '#00ea6b',
     ...Platform.select({
       web: { outlineStyle: 'none' } as any,
     }),
   },
-  nearMeToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 234, 107, 0.05)',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    height: 48,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 234, 107, 0.2)',
-  },
-  nearMeToggleActive: {
-    backgroundColor: '#00ea6b',
-    borderColor: '#00ea6b',
-  },
-  nearMeText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#00ea6b',
-  },
-  nearMeTextActive: {
-    color: '#043529',
+  dropdownBackdrop: {
+    position: Platform.OS === 'web' ? 'fixed' as any : 'absolute',
+    top: Platform.OS === 'web' ? 0 : -1000,
+    left: Platform.OS === 'web' ? 0 : -1000,
+    right: Platform.OS === 'web' ? 0 : -1000,
+    bottom: Platform.OS === 'web' ? 0 : -1000,
+    backgroundColor: 'transparent',
+    zIndex: 999,
   },
 });

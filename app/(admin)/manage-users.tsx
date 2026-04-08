@@ -47,11 +47,13 @@ export default function ManageUsersScreen() {
       const email = u.email?.toLowerCase() || '';
       const phone = u.phone || '';
       const business = u.business_name?.toLowerCase() || '';
+      const team = u.team_name?.toLowerCase() || '';
       
       return name.includes(query) || 
              email.includes(query) || 
              phone.includes(query) || 
-             business.includes(query);
+             business.includes(query) ||
+             team.includes(query);
     });
   }, [users, searchQuery]);
 
@@ -125,6 +127,10 @@ export default function ManageUsersScreen() {
              <Text style={styles.contactText}>{item.email || '—'}</Text>
              <Text style={styles.subContactText}>{item.phone || 'No phone'}</Text>
           </View>
+          
+          <View style={[styles.cell, styles.colTeam]}>
+             <Text style={styles.teamText}>{item.team_name || 'Individual'}</Text>
+          </View>
 
           <View style={[styles.cell, styles.colRole]}>
              <View style={[styles.roleBadge, 
@@ -188,6 +194,7 @@ export default function ManageUsersScreen() {
           <View style={styles.userInfo}>
             <Text style={styles.userName}>{item.full_name}</Text>
             <Text style={styles.userEmail}>{item.email}</Text>
+            {item.team_name && <Text style={styles.mobileTeamText}>Team: {item.team_name}</Text>}
           </View>
           <View style={[styles.mobileRoleBadge, item.role === 'super_admin' ? styles.badgeAdmin : item.role === 'ground_owner' ? styles.badgeOwner : styles.badgePlayer]}>
              <Text style={[styles.mobileRoleText, item.role === 'super_admin' ? styles.textAdmin : item.role === 'ground_owner' ? styles.textOwner : styles.textPlayer]}>
@@ -248,6 +255,7 @@ export default function ManageUsersScreen() {
         <View style={styles.tableHeader}>
            <Text style={[styles.headerLabel, styles.colUser]}>User Profile</Text>
            <Text style={[styles.headerLabel, styles.colContact]}>Contact info</Text>
+           <Text style={[styles.headerLabel, styles.colTeam]}>Team</Text>
            <Text style={[styles.headerLabel, styles.colRole]}>System Role</Text>
            <Text style={[styles.headerLabel, styles.colActions, { textAlign: 'right' }]}>Manage</Text>
         </View>
@@ -356,6 +364,7 @@ const styles = StyleSheet.create({
   },
   colUser: { flex: 2 },
   colContact: { flex: 1.5 },
+  colTeam: { flex: 1 },
   colRole: { flex: 1, alignItems: 'center' },
   colActions: { flex: 1 },
   
@@ -416,6 +425,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
     marginTop: 2,
+  },
+  teamText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#10b981',
   },
   roleBadge: {
     paddingHorizontal: 10,
@@ -537,6 +551,12 @@ const styles = StyleSheet.create({
   userEmail: {
     fontSize: 12,
     color: '#6B7280',
+  },
+  mobileTeamText: {
+    fontSize: 12,
+    color: '#10b981',
+    fontWeight: '600',
+    marginTop: 2,
   },
   mobileRoleBadge: {
     width: 24,
