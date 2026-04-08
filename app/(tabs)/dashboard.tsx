@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import WebLayout from '@/components/web/WebLayout';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
-import { LayoutDashboard, Calendar, Star, Building2, ChevronRight } from 'lucide-react-native';
+import { LayoutDashboard, Calendar, Star, Users, IndianRupee, ChevronRight } from 'lucide-react-native';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import { formatBookingSlotSummary } from '@/utils/bookingSlotFormat';
 
@@ -35,6 +35,7 @@ function DashboardContent() {
             start_time,
             end_time,
             ground_id,
+            total_amount,
             status,
             ground:grounds(
               id,
@@ -45,6 +46,7 @@ function DashboardContent() {
             )
           `,
           )
+          .eq('status', 'confirmed')
           .eq('user_id', user.id)
           .order('booking_date', { ascending: true })
           .order('start_time', { ascending: true });
@@ -140,7 +142,7 @@ function DashboardContent() {
         </View>
         <TouchableOpacity
           style={[styles.primaryButton, IS_DARK && styles.primaryButtonDark]}
-          onPress={() => router.push('/(tabs)/grounds' as any)}
+          onPress={() => router.push('/book-my-ground' as any)}
         >
           <Text style={[styles.primaryButtonText, IS_DARK && styles.primaryButtonTextDark]}>Book a ground</Text>
         </TouchableOpacity>
@@ -149,12 +151,24 @@ function DashboardContent() {
       <View style={styles.grid}>
         <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
           <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
-            <Building2 size={20} color="#01b854" />
+            <Users size={20} color="#01b854" />
           </View>
           <View style={styles.statContent}>
-            <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Total grounds</Text>
+            <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Total Bookings</Text>
             <Text style={[styles.statsValue, IS_DARK && styles.statsValueDark]}>
-              {loading ? '—' : totalUniqueGrounds}
+              {loading ? '—' : bookings.length}
+            </Text>
+          </View>
+        </View>
+
+        <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
+          <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
+            <IndianRupee size={20} color="#01b854" />
+          </View>
+          <View style={styles.statContent}>
+            <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Total Spent</Text>
+            <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]}>
+              {loading ? '—' : `₹${bookings.reduce((sum, b) => sum + (b.total_amount || 0), 0).toLocaleString('en-IN')}`}
             </Text>
           </View>
         </View>

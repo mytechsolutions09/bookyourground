@@ -15,6 +15,7 @@ interface BookingCardProps {
   metaText?: string;
   whoTitle?: string;
   onCancel?: () => void;
+  onReview?: () => void;
 }
 
 const NATIVE_CARD_BG = '#043529';
@@ -28,6 +29,7 @@ export default function BookingCard({
   metaText,
   whoTitle,
   onCancel,
+  onReview,
 }: BookingCardProps) {
   const { width } = useWindowDimensions();
   const isWeb = Platform.OS === 'web';
@@ -115,6 +117,17 @@ export default function BookingCard({
               )}
             </View>
             <View style={styles.statusRow}>
+              {onReview && (
+                <TouchableOpacity 
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    onReview();
+                  }}
+                  style={[styles.reviewBtnSmall]}
+                >
+                  <Text style={styles.reviewBtnText}>RATE & REVIEW</Text>
+                </TouchableOpacity>
+              )}
               {onCancel && (
                 <TouchableOpacity 
                   onPress={(e) => {
@@ -126,9 +139,13 @@ export default function BookingCard({
                   <Text style={styles.cancelBtnText}>CANCEL</Text>
                 </TouchableOpacity>
               )}
-              <View style={[styles.statusBadge, { backgroundColor: badgeBg }]}>
-                <Text style={statusLabelStyle}>{getStatusLabel(booking.status)}</Text>
-              </View>
+              {!(booking.status === 'confirmed' && new Date(booking.booking_date) < new Date(new Date().setHours(0,0,0,0))) && (
+                <View style={[styles.statusBadge, { backgroundColor: badgeBg }]}>
+                  <Text style={statusLabelStyle}>
+                    {booking.status === 'confirmed' ? 'Active' : getStatusLabel(booking.status)}
+                  </Text>
+                </View>
+              )}
             </View>
           </View>
 
@@ -329,6 +346,22 @@ const styles = StyleSheet.create({
   },
   whoTitleTextNative: {
     color: NATIVE_TEXT,
+  },
+  reviewBtnSmall: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#00ea6b',
+    backgroundColor: 'rgba(0,234,107,0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reviewBtnText: {
+    color: '#00ea6b',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
 });
 

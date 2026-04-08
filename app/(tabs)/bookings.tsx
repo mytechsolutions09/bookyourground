@@ -19,10 +19,12 @@ import MobileAppNavbar from '../../components/MobileAppNavbar';
 import Button from '@/components/ui/Button';
 import { Alert } from 'react-native';
 import Modal from '@/components/ui/Modal';
+import { slugifyGroundSegment } from '@/utils/groundSlug';
 
 export default function BookingsScreen() {
   const { user } = useAuth();
   const [bookings, setBookings] = useState<BookingWithDetails[]>([]);
+  const [reviewedBookingIds, setReviewedBookingIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
   const { width } = useWindowDimensions();
@@ -63,6 +65,16 @@ export default function BookingsScreen() {
 
       if (error) throw error;
       setBookings(data || []);
+
+      // Fetch reviewed booking IDs
+      const { data: reviewsData, error: reviewsErr } = await supabase
+        .from('reviews')
+        .select('booking_id')
+        .eq('user_id', user.id);
+      
+      if (!reviewsErr && reviewsData) {
+        setReviewedBookingIds(reviewsData.map(r => r.booking_id));
+      }
     } catch (error) {
       console.error('Error loading bookings:', error);
     } finally {
@@ -223,6 +235,9 @@ export default function BookingsScreen() {
                   booking={item}
                   onPress={() => router.push(`/bookings/${item.id}`)}
                   onCancel={activeTab === 'upcoming' && isCancellable(item) ? () => handleCancelBooking(item) : undefined}
+                  onReview={activeTab === 'past' && (item.status === 'confirmed' || item.status === 'completed') && !reviewedBookingIds.includes(item.id) ? () => {
+                    router.push(`/bookings/${item.id}`);
+                  } : undefined}
                 />
               </View>
 
@@ -303,6 +318,9 @@ export default function BookingsScreen() {
                   booking={item}
                   onPress={() => router.push(`/bookings/${item.id}`)}
                   onCancel={activeTab === 'upcoming' && isCancellable(item) ? () => handleCancelBooking(item) : undefined}
+                  onReview={activeTab === 'past' && (item.status === 'confirmed' || item.status === 'completed') && !reviewedBookingIds.includes(item.id) ? () => {
+                    router.push(`/bookings/${item.id}`);
+                  } : undefined}
                 />
               </View>
 

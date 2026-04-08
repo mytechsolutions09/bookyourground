@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, Platform, TouchableOpacity, useWindowDimensions, TextInput, ActivityIndicator } from 'react-native';
-import { Building2, Calendar, IndianRupee, Star, LayoutDashboard, User, Mail, Phone, ShieldCheck, Pencil, Check, X, CalendarClock } from 'lucide-react-native';
+import { Building2, Calendar, IndianRupee, Star, LayoutDashboard, User, Mail, Phone, ShieldCheck, Pencil, Check, X, CalendarClock, Users } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import Card from '@/components/ui/Card';
@@ -329,11 +329,11 @@ export default function OwnerDashboardScreen() {
               <View style={styles.statBoxWrapper}>
                 <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
                   <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
-                    <Building2 size={24} color="#01b854" />
+                    <Users size={24} color="#01b854" />
                   </View>
-                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Total grounds</Text>
-                  <Text style={[styles.statsValue, IS_DARK && styles.statsValueDark]}>{stats.totalBookedGrounds}</Text>
-                  <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>{stats.totalBookedGrounds === 1 ? '1 ground visited' : `${stats.totalBookedGrounds} grounds visited`}</Text>
+                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Total Bookings</Text>
+                  <Text style={[styles.statsValue, IS_DARK && styles.statsValueDark]}>{stats.myOwnBookingsCount}</Text>
+                  <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>{stats.myOwnBookingsCount === 1 ? '1 booking made' : `${stats.myOwnBookingsCount} bookings made`}</Text>
                 </View>
               </View>
 

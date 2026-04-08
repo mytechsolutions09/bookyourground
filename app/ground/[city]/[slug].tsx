@@ -12,8 +12,9 @@ import {
   Linking,
 } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { MapPin, Star, ArrowLeft, Phone, Navigation2, CheckCircle2, Heart } from 'lucide-react-native';
+import { MapPin, Star, ArrowLeft, Phone, Navigation2, CheckCircle2, Heart, ChevronRight } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
+import { formatDate } from '@/utils/helpers';
 import { slugifyGroundSegment } from '@/utils/groundSlug';
 import { isCricketGroundType } from '@/utils/cricketGround';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,15 +28,10 @@ export default function GroundDetailsPrettyUrlScreen() {
   const { user } = useAuth();
   const [ground, setGround] = useState<GroundWithImages | null>(null);
   const [loading, setLoading] = useState(true);
-  const [submittingReview, setSubmittingReview] = useState(false);
-  const [canReview, setCanReview] = useState(false);
-  const [reviewBookingId, setReviewBookingId] = useState<string | null>(null);
-  const [existingReviewId, setExistingReviewId] = useState<string | null>(null);
-  const [reviewRating, setReviewRating] = useState<number>(5);
-  const [reviewComment, setReviewComment] = useState<string>('');
   const [heroImageIndex, setHeroImageIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const [reviewSortOrder, setReviewSortOrder] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>('newest');
 
   const slugParam = Array.isArray(slug) ? slug[0] : slug;
   const cityParam = Array.isArray(city) ? city[0] : city;
@@ -52,7 +48,7 @@ export default function GroundDetailsPrettyUrlScreen() {
       const select = `
           *,
           ground_images(*),
-          reviews(rating, comment, user:profiles(full_name))
+          reviews(rating, comment, created_at, user:profiles(full_name))
         `;
 
       // Narrow by city when possible; links use slugify(city), not "name with spaces" from the slug.
@@ -96,9 +92,7 @@ export default function GroundDetailsPrettyUrlScreen() {
       }
 
       setGround(match as GroundWithImages);
-      setExistingReviewId(null);
-      setReviewBookingId(null);
-      setCanReview(false);
+      setLoading(false);
     } catch (error) {
       console.error('Error loading ground (pretty URL):', error);
       Alert.alert('Error', 'Failed to load ground details');
@@ -177,14 +171,31 @@ export default function GroundDetailsPrettyUrlScreen() {
 
   const reviews = useMemo(() => {
     if (!ground) return [] as any[];
-    return ((ground as any).reviews || []) as {
+    const list = ((ground as any).reviews || []) as {
       id?: string;
       rating: number;
       comment?: string | null;
+      created_at?: string;
       user?: { full_name?: string | null };
       user_id?: string;
     }[];
-  }, [ground]);
+
+    return [...list].sort((a, b) => {
+      if (reviewSortOrder === 'newest') {
+        return (b.created_at || '').localeCompare(a.created_at || '');
+      }
+      if (reviewSortOrder === 'oldest') {
+        return (a.created_at || '').localeCompare(b.created_at || '');
+      }
+      if (reviewSortOrder === 'highest') {
+        return (b.rating || 0) - (a.rating || 0);
+      }
+      if (reviewSortOrder === 'lowest') {
+        return (a.rating || 0) - (b.rating || 0);
+      }
+      return 0;
+    });
+  }, [ground, reviewSortOrder]);
 
   const averageRating = useMemo(
     () =>
@@ -203,130 +214,6 @@ export default function GroundDetailsPrettyUrlScreen() {
     const query = encodeURIComponent(parts.join(', '));
     return `https://www.google.com/maps/search/?api=1&query=${query}`;
   }, [ground]);
-
-  useEffect(() => {
-    const checkEligibility = async () => {
-      if (!ground?.id || !user?.id) {
-        setCanReview(false);
-        setReviewBookingId(null);
-        setExistingReviewId(null);
-        return;
-      }
-
-      try {
-        const { data: existing, error: existingErr } = await supabase
-          .from('reviews')
-          .select('id, rating, comment, booking_id')
-          .eq('ground_id', ground.id)
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-        if (existingErr && existingErr.code !== 'PGRST116') {
-          console.warn('checkEligibility existing review error', existingErr);
-        }
-
-        if (existing) {
-          setExistingReviewId(existing.id);
-          setReviewRating(existing.rating ?? 5);
-          setReviewComment(existing.comment ?? '');
-          setReviewBookingId(existing.booking_id ?? null);
-          setCanReview(true);
-          return;
-        }
-
-        const { data: booking, error: bookingErr } = await supabase
-          .from('bookings')
-          .select('id')
-          .eq('ground_id', ground.id)
-          .eq('user_id', user.id)
-          .eq('status', 'completed')
-          .order('booking_date', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (bookingErr && bookingErr.code !== 'PGRST116') {
-          console.warn('checkEligibility booking error', bookingErr);
-          setCanReview(false);
-          setReviewBookingId(null);
-          return;
-        }
-
-        if (booking) {
-          setCanReview(true);
-          setReviewBookingId(booking.id);
-          setExistingReviewId(null);
-          setReviewRating(5);
-          setReviewComment('');
-        } else {
-          setCanReview(false);
-          setReviewBookingId(null);
-          setExistingReviewId(null);
-        }
-      } catch (e) {
-        console.warn('checkEligibility unexpected error', e);
-        setCanReview(false);
-        setReviewBookingId(null);
-        setExistingReviewId(null);
-      }
-    };
-
-    checkEligibility();
-  }, [ground?.id, user?.id]);
-
-  const handleSubmitReview = async () => {
-    if (!user) {
-      Alert.alert('Login required', 'Please sign in to add a review.');
-      router.push('/(auth)/login' as any);
-      return;
-    }
-    if (!ground?.id) return;
-    if (!reviewRating || reviewRating < 1 || reviewRating > 5) {
-      Alert.alert('Invalid rating', 'Please select a rating between 1 and 5 stars.');
-      return;
-    }
-
-    try {
-      setSubmittingReview(true);
-
-      if (existingReviewId) {
-        const { error } = await supabase
-          .from('reviews')
-          .update({
-            rating: reviewRating,
-            comment: reviewComment.trim() || null,
-          })
-          .eq('id', existingReviewId);
-
-        if (error) throw error;
-      } else {
-        if (!reviewBookingId) {
-          Alert.alert(
-            'Not eligible yet',
-            'You can review this ground after your booking is marked as completed.',
-          );
-          return;
-        }
-
-        const { error } = await supabase.from('reviews').insert({
-          user_id: user.id,
-          ground_id: ground.id,
-          booking_id: reviewBookingId,
-          rating: reviewRating,
-          comment: reviewComment.trim() || null,
-        });
-
-        if (error) throw error;
-      }
-
-      await loadGround();
-      Alert.alert('Thank you!', 'Your review has been saved.');
-    } catch (e: any) {
-      console.error('Error saving review:', e);
-      Alert.alert('Error', e?.message ?? 'Failed to save review. Please try again.');
-    } finally {
-      setSubmittingReview(false);
-    }
-  };
 
   const handleBookNow = () => {
     if (!user) {
@@ -473,10 +360,15 @@ export default function GroundDetailsPrettyUrlScreen() {
             {mapsUrl && (
               <Pressable
                 onPress={() => { void Linking.openURL(mapsUrl); }}
-                style={styles.mapsLinkWrap}
+                style={styles.mapsLinkBtn}
               >
-                <Navigation2 size={13} color="#00ea6b" strokeWidth={2} />
-                <Text style={styles.mapsLinkText}>View on Google Maps</Text>
+                <View style={styles.mapsLinkBtnContent}>
+                  <View style={styles.mapsIconCircle}>
+                    <Navigation2 size={14} color="#00ea6b" strokeWidth={2.5} />
+                  </View>
+                  <Text style={styles.mapsLinkText}>GET DIRECTIONS</Text>
+                </View>
+                <ChevronRight size={18} color="#00ea6b" opacity={0.6} />
               </Pressable>
             )}
 
@@ -589,106 +481,7 @@ export default function GroundDetailsPrettyUrlScreen() {
             })()}
           </Section>
 
-          {/* ── Reviews ── */}
-          <Section style={styles.section}>
-            <Text style={styles.sectionTitle}>Reviews</Text>
 
-            {reviews.length === 0 && (
-              <Text style={styles.noReviewsText}>
-                No reviews yet. Be the first to review this ground.
-              </Text>
-            )}
-
-            {reviews.length > 0 && (
-              <View style={styles.reviewsList}>
-                {reviews.map((r, idx) => (
-                  <View key={r.id ?? idx} style={styles.reviewItem}>
-                    <View style={styles.reviewHeader}>
-                      <View style={styles.reviewRatingRow}>
-                        {[1,2,3,4,5].map((s) => (
-                          <Star
-                            key={s}
-                            size={13}
-                            color={s <= r.rating ? '#dcc093' : '#374151'}
-                            fill={s <= r.rating ? '#dcc093' : 'none'}
-                          />
-                        ))}
-                        <Text style={styles.reviewRatingText}>{r.rating}/5</Text>
-                      </View>
-                      {r.user?.full_name && (
-                        <Text style={styles.reviewAuthorText}>{r.user.full_name}</Text>
-                      )}
-                    </View>
-                    {r.comment ? (
-                      <Text style={styles.reviewCommentText}>{r.comment}</Text>
-                    ) : null}
-                  </View>
-                ))}
-              </View>
-            )}
-
-            {user ? (
-              canReview ? (
-                <View style={styles.reviewForm}>
-                  <Text style={styles.reviewFormTitle}>
-                    {existingReviewId ? 'Update your review' : 'Add your review'}
-                  </Text>
-
-                  <View style={styles.reviewStarsRow}>
-                    {[1, 2, 3, 4, 5].map((star) => {
-                      const active = reviewRating >= star;
-                      return (
-                        <Pressable
-                          key={star}
-                          onPress={() => setReviewRating(star)}
-                          style={styles.reviewStarPressable}
-                        >
-                          <Star
-                            size={22}
-                            color={active ? '#dcc093' : '#374151'}
-                            fill={active ? '#dcc093' : 'none'}
-                          />
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-
-                  <TextInput
-                    style={styles.reviewInput}
-                    placeholder="Share your experience (optional)"
-                    placeholderTextColor="#6b7280"
-                    value={reviewComment}
-                    onChangeText={setReviewComment}
-                    multiline
-                    numberOfLines={3}
-                    editable={!submittingReview}
-                  />
-
-                  <Button
-                    title={
-                      submittingReview
-                        ? 'Saving...'
-                        : existingReviewId
-                        ? 'Update review'
-                        : 'Submit review'
-                    }
-                    onPress={handleSubmitReview}
-                    loading={submittingReview}
-                    disabled={submittingReview}
-                    style={styles.reviewSubmitButton}
-                  />
-                </View>
-              ) : (
-                <Text style={styles.reviewHintText}>
-                  You can review this ground after your booking is marked as completed.
-                </Text>
-              )
-            ) : (
-              <Text style={styles.reviewHintText}>
-                Sign in and complete a booking to leave a review.
-              </Text>
-            )}
-          </Section>
 
           {/* ── Booking form ── */}
           {ground.id ? (
@@ -725,6 +518,89 @@ export default function GroundDetailsPrettyUrlScreen() {
               </View>
             )
           ) : null}
+
+          {/* ── Reviews ── */}
+          <Section style={styles.section}>
+            <View style={styles.reviewHeaderMain}>
+              <Text style={styles.sectionTitle}>Customer Reviews</Text>
+              
+              <View style={styles.reviewStatsSummary}>
+                <View style={styles.avgRatingBadge}>
+                  <Text style={styles.avgRatingValue}>{averageRating.toFixed(1)}</Text>
+                  <Text style={styles.avgRatingText}> out of 5</Text>
+                </View>
+                <Text style={styles.reviewCountText}>({reviews.length} reviews)</Text>
+              </View>
+
+              <Pressable 
+                style={styles.writeReviewBtn}
+                onPress={() => router.push('/(tabs)/bookings' as any)}
+              >
+                <Star size={14} color="#6B7280" />
+                <Text style={styles.writeReviewText}>Write a Review</Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.sortContainer}>
+              <Text style={styles.sortByLabel}>Sort by:</Text>
+              <View style={styles.sortChipsRow}>
+                {[
+                  { id: 'newest', label: 'Most Recent' },
+                  { id: 'oldest', label: 'Oldest' },
+                  { id: 'highest', label: 'Highest Rated' },
+                  { id: 'lowest', label: 'Lowest Rated' },
+                ].map((opt) => (
+                  <Pressable 
+                    key={opt.id}
+                    onPress={() => setReviewSortOrder(opt.id as any)}
+                    style={[styles.sortChip, reviewSortOrder === opt.id && styles.sortChipActive]}
+                  >
+                    <Text style={[styles.sortChipText, reviewSortOrder === opt.id && styles.sortChipTextActive]}>
+                      {opt.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+
+            {reviews.length === 0 ? (
+              <Text style={styles.noReviewsText}>
+                No reviews yet. Go to your past bookings to leave a review.
+              </Text>
+            ) : (
+              <View style={styles.reviewsList}>
+                {reviews.map((r, idx) => (
+                  <View key={r.id ?? idx} style={styles.reviewItem}>
+                    <View style={styles.reviewHeader}>
+                      <View style={styles.reviewRatingRow}>
+                        {[1,2,3,4,5].map((s) => (
+                          <Star
+                            key={s}
+                            size={13}
+                            color={s <= r.rating ? '#dcc093' : '#374151'}
+                            fill={s <= r.rating ? '#dcc093' : 'none'}
+                          />
+                        ))}
+                        <Text style={styles.reviewRatingText}>{r.rating}/5</Text>
+                      </View>
+
+                      <View style={styles.reviewAuthorDateColumn}>
+                        {r.user?.full_name && (
+                          <Text style={styles.reviewAuthorText}>{r.user.full_name.toUpperCase()}</Text>
+                        )}
+                        {r.created_at && (
+                          <Text style={styles.reviewDateText}>{formatDate(r.created_at)}</Text>
+                        )}
+                      </View>
+                    </View>
+                    {r.comment ? (
+                      <Text style={styles.reviewCommentText}>{r.comment}</Text>
+                    ) : null}
+                  </View>
+                ))}
+              </View>
+            )}
+          </Section>
         </View>
       </ScrollView>
     </>
@@ -907,18 +783,43 @@ const styles = StyleSheet.create({
     color: IS_WEB ? '#666' : '#9ca3af',
     lineHeight: 20,
   },
-  mapsLinkWrap: {
+  mapsLinkBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    marginTop: 4,
-    marginBottom: 8,
+    justifyContent: 'space-between',
+    backgroundColor: IS_WEB ? '#F0FDF4' : 'rgba(0,234,107,0.06)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    marginTop: 10,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: IS_WEB ? '#DCFCE7' : 'rgba(0,234,107,0.12)',
+    ...Platform.select({
+      web: {
+        alignSelf: 'flex-start',
+        minWidth: 200,
+      },
+    }),
+  },
+  mapsLinkBtnContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  mapsIconCircle: {
+     width: 28,
+     height: 28,
+     borderRadius: 14,
+     backgroundColor: IS_WEB ? '#FFFFFF' : 'rgba(0,234,107,0.1)',
+     justifyContent: 'center',
+     alignItems: 'center',
   },
   mapsLinkText: {
     fontSize: 13,
-    color: IS_WEB ? '#2563EB' : '#00ea6b',
-    fontWeight: '600',
-    textDecorationLine: IS_WEB ? 'underline' : 'none',
+    color: IS_WEB ? '#166534' : '#00ea6b',
+    fontWeight: '700',
+    letterSpacing: 0.8,
   },
   starsSummaryRow: {
     flexDirection: 'row',
@@ -1129,6 +1030,103 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6b7280',
     lineHeight: 20,
+  },
+  reviewAuthorDateColumn: {
+    alignItems: 'flex-end',
+    gap: 2,
+  },
+  reviewDateText: {
+    fontSize: 11,
+    color: IS_WEB ? '#999' : '#9ca3af',
+    fontWeight: '500',
+  },
+  reviewHeaderMain: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    gap: 12,
+  },
+  reviewStatsSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: IS_WEB ? '#F9FAFB' : 'rgba(255,255,255,0.03)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  avgRatingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avgRatingValue: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: IS_WEB ? '#111827' : '#f9fafb',
+  },
+  avgRatingText: {
+    fontSize: 13,
+    color: '#6b7280',
+  },
+  reviewCountText: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginLeft: 8,
+  },
+  writeReviewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#FFF',
+  },
+  writeReviewText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  sortContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 20,
+  },
+  sortByLabel: {
+    fontSize: 13,
+    color: '#6b7280',
+    fontWeight: '500',
+  },
+  sortChipsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    flex: 1,
+  },
+  sortChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: IS_WEB ? '#F3F4F6' : 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.1)',
+  },
+  sortChipActive: {
+    backgroundColor: IS_WEB ? '#2563EB' : '#00ea6b',
+    borderColor: IS_WEB ? '#2563EB' : '#00ea6b',
+  },
+  sortChipText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: IS_WEB ? '#6B7280' : '#9ca3af',
+  },
+  sortChipTextActive: {
+    color: '#FFFFFF',
   },
 
   bookButton: {

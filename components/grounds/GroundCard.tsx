@@ -168,10 +168,12 @@ export default function GroundCard({
               </Text>
               {mapsUrl && (
                 <TouchableOpacity
+                  style={[styles.mapsBtn, !isWeb && styles.mapsBtnNative]}
                   onPress={() => {
                     void Linking.openURL(mapsUrl);
                   }}
                 >
+                  <MapPin size={11} color={isWeb ? '#6B7280' : NATIVE_BORDER} />
                   <Text style={mapsLinkStyle}>View on Google Maps</Text>
                 </TouchableOpacity>
               )}
@@ -354,15 +356,22 @@ const styles = StyleSheet.create({
   priceNative: {
     color: NATIVE_BORDER,
   },
+  mapsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
+  },
+  mapsBtnNative: {
+    gap: 6,
+  },
   mapsLink: {
-    marginTop: 2,
     fontSize: 12,
-    color: Platform.OS === 'web' ? '#2563EB' : '#1D4ED8',
-    textDecorationLine: 'underline',
+    color: Platform.OS === 'web' ? '#6B7280' : '#4B5563',
+    fontWeight: '600',
   },
   mapsLinkNative: {
     color: NATIVE_BORDER,
-    textDecorationLine: 'underline',
   },
   amenities: {
     flexDirection: 'row',

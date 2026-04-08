@@ -72,7 +72,7 @@ export const getStatusColor = (status: string): string => {
 };
 
 export const getStatusLabel = (status: string): string => {
-  if (status === 'confirmed') return 'Active';
+  if (status === 'confirmed') return 'Confirmed';
   return status.charAt(0).toUpperCase() + status.slice(1);
 };
 

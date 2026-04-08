@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, Alert, Platform, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, Alert, Platform, useWindowDimensions, TextInput, Pressable, Alert as RNAlert } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { MapPin, Calendar, Clock, User, Users } from 'lucide-react-native';
+import { MapPin, Calendar, Clock, User, Users, Star } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { BookingWithDetails } from '@/types';
 import { formatCurrency, formatDate } from '@/utils/helpers';
@@ -12,9 +12,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
 import Button from '@/components/ui/Button';
+import Modal from '@/components/ui/Modal';
 
 export default function BookingDetailsScreen() {
   const { id } = useLocalSearchParams();
+  const bookingId = Array.isArray(id) ? id[0] : id;
   const { user, profile: userProfile } = useAuth();
   
   const [booking, setBooking] = useState<BookingWithDetails | null>(null);
@@ -22,11 +24,102 @@ export default function BookingDetailsScreen() {
 
   const { width } = useWindowDimensions();
   const Section = View;
+  
+  const [reviewRating, setReviewRating] = useState<number>(5);
+  const [reviewComment, setReviewComment] = useState<string>('');
+  const [existingReviewId, setExistingReviewId] = useState<string | null>(null);
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewLoading, setReviewLoading] = useState(true);
+  const [successModalVisible, setSuccessModalVisible] = useState(false);
 
 
   useEffect(() => {
-    loadBooking();
-  }, [id]);
+    if (bookingId) {
+      loadBooking();
+      fetchReview();
+    }
+  }, [bookingId]);
+
+  const fetchReview = async () => {
+    if (!bookingId || !user) return;
+    try {
+      setReviewLoading(true);
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('id, rating, comment')
+        .eq('booking_id', bookingId)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      if (data) {
+        setExistingReviewId(data.id);
+        setReviewRating(data.rating || 5);
+        setReviewComment(data.comment || '');
+      }
+    } catch (e) {
+      console.warn('Error fetching review:', e);
+    } finally {
+      setReviewLoading(false);
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!user) {
+      const msg = 'Please log in to submit a review.';
+      if (Platform.OS === 'web') alert(msg);
+      else RNAlert.alert('Login Required', msg);
+      return;
+    }
+    if (!booking) return;
+
+    if (reviewRating < 1 || reviewRating > 5) {
+      RNAlert.alert('Invalid Rating', 'Please select 1-5 stars.');
+      return;
+    }
+
+    try {
+      setSubmittingReview(true);
+      console.log('Submitting review:', { 
+        rating: reviewRating, 
+        comment: reviewComment,
+        bookingId,
+        groundId: booking.ground_id,
+        existingReviewId
+      });
+
+      if (existingReviewId) {
+        const { error } = await supabase
+          .from('reviews')
+          .update({
+            rating: reviewRating,
+            comment: reviewComment.trim() || null,
+          })
+          .eq('id', existingReviewId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('reviews')
+          .insert({
+            user_id: user.id,
+            ground_id: booking.ground_id,
+            booking_id: bookingId,
+            rating: reviewRating,
+            comment: reviewComment.trim() || null,
+          });
+        if (error) throw error;
+      }
+      
+      setSuccessModalVisible(true);
+      await fetchReview();
+    } catch (e: any) {
+      console.error('Error saving review:', e);
+      const errMsg = e.message || 'Failed to save review';
+      if (Platform.OS === 'web') alert(errMsg);
+      else RNAlert.alert('Error', errMsg);
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   const loadBooking = async () => {
     try {
@@ -40,7 +133,7 @@ export default function BookingDetailsScreen() {
           ),
           user:profiles(full_name, phone)
         `)
-        .eq('id', id)
+        .eq('id', bookingId)
         .single();
 
       if (error) throw error;
@@ -67,7 +160,11 @@ export default function BookingDetailsScreen() {
   }, [booking]);
 
 
-
+  const isPastBooking = useMemo(() => {
+    if (!booking) return false;
+    const today = new Date().toISOString().split('T')[0];
+    return booking.booking_date < today;
+  }, [booking?.booking_date]);
 
 
   if (loading || !booking) {
@@ -121,7 +218,9 @@ export default function BookingDetailsScreen() {
                       booking.status === 'pending' && styles.statusTextPending,
                       (booking.status === 'cancelled' || booking.status === 'rejected') && styles.statusTextCancelled,
                     ]}>
-                      {booking.status === 'confirmed' ? 'ACTIVE' : booking.status.toUpperCase()}
+                      {booking.status === 'confirmed' 
+                        ? (new Date(booking.booking_date) < new Date(new Date().setHours(0,0,0,0)) ? '' : 'ACTIVE')
+                        : booking.status.toUpperCase()}
                     </Text>
                   </View>
                   <Text style={[styles.bookingId, !IS_DARK && styles.bookingIdLight]}>ID: {id?.toString().substring(0,8).toUpperCase()}</Text>
@@ -170,14 +269,46 @@ export default function BookingDetailsScreen() {
 
 
 
-          <Section style={[styles.section, !IS_DARK && styles.sectionLight, { marginTop: 16 }]}>
-             <Text style={[styles.sectionTitle, !IS_DARK && styles.sectionTitleLight]}>Venue Rules</Text>
-             <View style={styles.rulesList}>
-                <Text style={[styles.ruleItem, !IS_DARK && styles.ruleItemLight]}>• Please arrive 15 minutes before your slot.</Text>
-                <Text style={[styles.ruleItem, !IS_DARK && styles.ruleItemLight]}>• Proper footwear is mandatory for the pitch.</Text>
-                <Text style={[styles.ruleItem, !IS_DARK && styles.ruleItemLight]}>• Respect the ground staff and other players.</Text>
-             </View>
-          </Section>
+           <Section style={[styles.section, !IS_DARK && styles.sectionLight, { marginTop: 16 }]}>
+              <Text style={[styles.sectionTitle, !IS_DARK && styles.sectionTitleLight]}>Venue Rules</Text>
+              <View style={styles.rulesList}>
+                 <Text style={[styles.ruleItem, !IS_DARK && styles.ruleItemLight]}>• Please arrive 15 minutes before your slot.</Text>
+                 <Text style={[styles.ruleItem, !IS_DARK && styles.ruleItemLight]}>• Proper footwear is mandatory for the pitch.</Text>
+                 <Text style={[styles.ruleItem, !IS_DARK && styles.ruleItemLight]}>• Respect the ground staff and other players.</Text>
+              </View>
+           </Section>
+
+           {(isPastBooking && (booking?.status === 'confirmed' || booking?.status === 'completed')) && (
+             <Section style={[styles.section, !IS_DARK && styles.sectionLight, { marginTop: 16 }]}>
+               <Text style={[styles.sectionTitle, !IS_DARK && styles.sectionTitleLight]}>Rate your experience</Text>
+               <View style={styles.reviewStarsRow}>
+                 {[1, 2, 3, 4, 5].map((star) => (
+                   <Pressable key={star} onPress={() => setReviewRating(star)} style={{ padding: 4 }}>
+                     <Star
+                       size={28}
+                       color={reviewRating >= star ? (IS_DARK ? '#00ea6b' : '#10b981') : '#d1d5db'}
+                       fill={reviewRating >= star ? (IS_DARK ? '#00ea6b' : '#10b981') : 'none'}
+                     />
+                   </Pressable>
+                 ))}
+               </View>
+               <TextInput
+                 style={[styles.reviewInput, !IS_DARK && styles.reviewInputLight]}
+                 placeholder="Share your feedback..."
+                 placeholderTextColor={IS_DARK ? "#9ca3af" : "#6b7280"}
+                 value={reviewComment}
+                 onChangeText={setReviewComment}
+                 multiline
+                 numberOfLines={3}
+               />
+               <Button
+                 title={submittingReview ? "Submitting..." : (existingReviewId ? "Update Review" : "Submit Review")}
+                 onPress={handleSubmitReview}
+                 disabled={submittingReview}
+                 style={{ marginTop: 12 }}
+               />
+             </Section>
+           )}
         </View>
       </View>
     </View>
@@ -245,6 +376,23 @@ export default function BookingDetailsScreen() {
     <>
       <Stack.Screen options={{ title: booking.ground.name ?? 'Booking' }} />
       {Platform.OS === 'web' ? <WebLayout>{content}</WebLayout> : content}
+
+      <Modal
+        visible={successModalVisible}
+        onClose={() => setSuccessModalVisible(false)}
+        title="Success"
+        maxWidth={400}
+      >
+        <View style={styles.modalBody}>
+          <Text style={styles.modalText}>Thanks for the review!</Text>
+          <Button
+            title="CLOSE"
+            onPress={() => setSuccessModalVisible(false)}
+            variant="primary"
+            style={{ marginTop: 10 }}
+          />
+        </View>
+      </Modal>
     </>
   );
 }
@@ -570,5 +718,38 @@ const styles = StyleSheet.create({
   },
   stackSection: {
     width: '100%',
+  },
+  reviewStarsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  reviewInput: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 12,
+    padding: 16,
+    color: '#FFFFFF',
+    fontSize: 15,
+    minHeight: 100,
+    textAlignVertical: 'top',
+    borderWidth: 1,
+    borderColor: 'rgba(0,234,107,0.1)',
+  },
+  reviewInputLight: {
+    backgroundColor: '#F9FAFB',
+    color: '#111827',
+    borderColor: '#E5E7EB',
+  },
+  modalBody: {
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  modalText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 20,
+    textAlign: 'center',
   },
 });
