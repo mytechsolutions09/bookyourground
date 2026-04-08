@@ -123,6 +123,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
   const isGroundDetails =
     cleanPath.startsWith('/grounds/') || cleanPath.startsWith('/ground/');
   const isBookingDetails = cleanPath.startsWith('/bookings/');
+  const isCheckoutPage = cleanPath.startsWith('/checkout/');
   const isLegalOrInfoPage =
     cleanPath === '/terms' ||
     cleanPath === '/privacy' ||
@@ -169,7 +170,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
   // On ground info (/grounds/[id]) and booking info (/bookings/[id]) pages,
   // hide the left sidebar for all roles so the content can take full width.
   const isPublicNoSidebar =
-    isLanding || isMarketing || isGroundInfoPage || isBookingDetails || isLegalOrInfoPage || (cleanPath === '/find-an-opponent' && !isSuperAdmin);
+    isLanding || isMarketing || isGroundInfoPage || isBookingDetails || isCheckoutPage || isLegalOrInfoPage || (cleanPath === '/find-an-opponent' && !isSuperAdmin);
   // Treat the presence of a Supabase `user` as authenticated even if `profile`
   // hasn't loaded yet (prevents briefly showing "Sign In").
   const isAuthenticated = !!user || !!profile || isSuperAdmin;

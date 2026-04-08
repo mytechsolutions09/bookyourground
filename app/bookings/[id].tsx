@@ -117,7 +117,17 @@ export default function BookingDetailsScreen() {
   };
 
   const isOwner = booking?.user_id === user?.id;
-  const showCancelButton = isOwner && booking?.status === 'confirmed';
+  
+  const daysUntilBooking = useMemo(() => {
+    if (!booking) return 0;
+    const bDate = new Date(booking.booking_date);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const bDay = new Date(bDate.getFullYear(), bDate.getMonth(), bDate.getDate());
+    return Math.ceil((bDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  }, [booking]);
+
+  const showCancelButton = isOwner && booking?.status === 'confirmed' && daysUntilBooking >= 7;
 
   if (loading || !booking) {
     const loadingContent = (
@@ -246,6 +256,14 @@ export default function BookingDetailsScreen() {
           <Text style={[styles.totalLabel, !IS_DARK && styles.totalLabelLight]}>Total Amount</Text>
           <Text style={[styles.totalValue, !IS_DARK && styles.totalValueLight]}>{formatCurrency(booking.total_amount)}</Text>
         </View>
+        {booking.payment_method && (
+          <View style={styles.paymentRow}>
+            <Text style={[styles.paymentLabel, !IS_DARK && styles.paymentLabelLight]}>Payment Method</Text>
+            <Text style={[styles.paymentValue, !IS_DARK && styles.paymentValueLight]}>
+              {booking.payment_method === 'razorpay' ? 'Paid Online (Razorpay)' : 'Cash Payment'}
+            </Text>
+          </View>
+        )}
       </Section>
 
       <Text
@@ -638,5 +656,10 @@ const styles = StyleSheet.create({
     color: '#F44336',
     fontWeight: '800',
     fontSize: 13,
+  },
+  payNowButton: {
+    marginTop: 12,
+    backgroundColor: '#10b981',
+    borderColor: '#10b981',
   },
 });

@@ -104,6 +104,11 @@ export default function BookingCard({
           <View style={styles.footer}>
             <View style={styles.footerLeft}>
               <Text style={amountStyle}>{formatCurrency(booking.total_amount)}</Text>
+              {booking.payment_method && (
+                <Text style={[styles.paymentMethod, IS_DARK && styles.paymentMethodNative]}>
+                  Via {booking.payment_method === 'razorpay' ? 'Online' : 'Cash'}
+                </Text>
+              )}
             </View>
             <View style={[styles.statusBadge, { backgroundColor: badgeBg }]}>
               <Text style={statusLabelStyle}>{getStatusLabel(booking.status)}</Text>
@@ -262,5 +267,16 @@ const styles = StyleSheet.create({
   ownerAmountCol: {
     alignItems: 'flex-start',
     gap: 4,
+  },
+  paymentMethod: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 2,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+  },
+  paymentMethodNative: {
+    color: NATIVE_TEXT,
+    opacity: 0.8,
   },
 });

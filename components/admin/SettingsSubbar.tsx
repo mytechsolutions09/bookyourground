@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, ScrollView } from 'react-native';
 import { router, usePathname } from 'expo-router';
-import { Settings as SettingsIcon, MapPin, Tag, LifeBuoy, Ticket } from 'lucide-react-native';
+import { Settings as SettingsIcon, MapPin, Tag, LifeBuoy, Ticket, CreditCard } from 'lucide-react-native';
 
 const BASE = '/(admin)/settings';
 
@@ -14,6 +14,7 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
   const isGroundTypes = pathname.includes('/settings/ground-types');
   const isSupport = pathname.includes('/settings/support');
   const isCoupons = pathname.includes('/settings/coupons');
+  const isPayment = pathname.includes('/settings/payment');
 
   return (
     <View style={styles.shell}>
@@ -58,6 +59,16 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
             <Ticket size={16} color={isCoupons ? '#FFFFFF' : '#666'} />
             <Text style={[styles.subLinkText, isCoupons && styles.subLinkTextActive]}>
               Coupons
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.push((BASE + '/payment') as any)}
+            style={[styles.subLink, isPayment && styles.subLinkActive]}
+          >
+            <CreditCard size={16} color={isPayment ? '#FFFFFF' : '#666'} />
+            <Text style={[styles.subLinkText, isPayment && styles.subLinkTextActive]}>
+              Payment
             </Text>
           </Pressable>
 

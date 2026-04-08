@@ -278,6 +278,7 @@ export interface Database {
           cancellation_reason: string | null;
           created_at: string;
           updated_at: string;
+          payment_method: string | null;
         };
         Insert: {
           id?: string;
@@ -295,6 +296,7 @@ export interface Database {
           cancellation_reason?: string | null;
           created_at?: string;
           updated_at?: string;
+          payment_method?: string | null;
         };
         Update: {
           id?: string;
@@ -312,6 +314,7 @@ export interface Database {
           cancellation_reason?: string | null;
           created_at?: string;
           updated_at?: string;
+          payment_method?: string | null;
         };
       };
       reviews: {

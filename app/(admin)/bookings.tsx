@@ -221,6 +221,7 @@ export default function AdminBookingsScreen() {
             <Text style={[styles.tableHeaderCell, styles.colDateTime]}>Date & time</Text>
             <Text style={[styles.tableHeaderCell, styles.colTeams]}>Teams</Text>
             <Text style={[styles.tableHeaderCell, styles.colAmount]}>Amount & status</Text>
+            <Text style={[styles.tableHeaderCell, styles.colPayment]}>Payment</Text>
             <Text style={[styles.tableHeaderCell, styles.colWho]}>Customer</Text>
           </View>
         </View>
@@ -258,6 +259,12 @@ export default function AdminBookingsScreen() {
                 <View style={[styles.tableCell, styles.colAmount]}>
                   <Text style={styles.amount}>₹{item.total_amount}</Text>
                   <Text style={styles.statusTextInline}>{item.status}</Text>
+                </View>
+
+                <View style={[styles.tableCell, styles.colPayment]}>
+                   <Text style={[styles.paymentBadgeText, item.payment_method === 'cash' ? styles.paymentCash : styles.paymentOnline]}>
+                      {item.payment_method === 'cash' ? 'CASH' : 'ONLINE'}
+                   </Text>
                 </View>
 
                 <View style={[styles.tableCell, styles.colWho]}>
@@ -387,7 +394,10 @@ const styles = StyleSheet.create({
     width: 108,
   },
   colAmount: {
-    flex: 1.3,
+    flex: 1.2,
+  },
+  colPayment: {
+    width: 90,
   },
   colWho: {
     flex: 1.8,
@@ -491,5 +501,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 10,
+  },
+  paymentBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    textAlign: 'center',
+    overflow: 'hidden',
+  },
+  paymentCash: {
+    backgroundColor: '#FEF3C7',
+    color: '#92400E',
+  },
+  paymentOnline: {
+    backgroundColor: '#DBEAFE',
+    color: '#1E40AF',
   },
 });

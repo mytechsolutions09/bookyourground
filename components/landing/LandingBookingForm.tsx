@@ -1442,35 +1442,17 @@ export default function LandingBookingForm({
 
     try {
       setSubmitting(true);
-      const { data, error } = await supabase
-        .from('bookings')
-        .insert({
-          user_id: user.id,
-          ground_id: selectedGround.id,
-          booking_date: bookingDate,
-          start_time: startTime,
-          end_time: derivedEndTime!,
-          total_hours: computed.totalHours,
-          price_per_hour: pricePerHour,
-          total_amount: finalAmount, // Use final amount after discount
-          coupon_id: appliedCoupon?.id || null,
-          discount_amount: discountAmount,
-          notes: isBoxCricket
-            ? null
-            : teamType === 'one'
-              ? 'Teams: 1 Team'
-              : 'Teams: Both Teams',
-          status: 'confirmed',
-        })
-        .select('id')
-        .single();
+      const params = new URLSearchParams();
+      params.set('groundId', selectedGround.id);
+      params.set('date', bookingDate);
+      params.set('time', startTime);
+      params.set('teamType', teamType);
+      if (appliedCoupon) params.set('couponId', appliedCoupon.id);
+      if (discountAmount > 0) params.set('discount', discountAmount.toString());
 
-      if (error) throw error;
-
-      const bookingId = (data as { id: string }).id;
-      router.push(`/bookings/${bookingId}`);
+      router.push(`/checkout/new?${params.toString()}` as any);
     } catch (e: any) {
-      console.error('Error creating booking:', e);
+      console.error('Error initiating booking:', e);
       Alert.alert('Booking failed', e?.message ?? 'Please try again.');
     } finally {
       setSubmitting(false);
