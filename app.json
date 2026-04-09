@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "bolt-expo-nativewind",
+    "name": "Book Your Ground",
     "slug": "book-your-ground",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -12,7 +12,10 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.arpitkanotra.bookyourground",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "This app requires camera access to take photos of your sports ground.",
+        "NSPhotoLibraryUsageDescription": "This app requires access to your photo library to upload ground and profile images.",
+        "NSLocationWhenInUseUsageDescription": "This app requires access to your location to find nearby sports grounds."
       }
     },
     "android": {
