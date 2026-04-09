@@ -1,5 +1,7 @@
 import React from 'react';
-import { View, Image, Text, StyleSheet } from 'react-native';
+import { View, Image, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { router } from 'expo-router';
+import { ArrowLeft } from 'lucide-react-native';
 
 type MobileAppNavbarProps = {
   /** When set, shows this label instead of the logo (e.g. tab title). */
@@ -10,8 +12,20 @@ type MobileAppNavbarProps = {
 
 /** Green top bar with logo — use on native-only screens (not web). */
 export default function MobileAppNavbar({ title, titleColor = '#02c259', rightAction }: MobileAppNavbarProps) {
+  const canGoBack = router.canGoBack();
+
   return (
     <View style={styles.navbar} accessibilityRole="header">
+      {canGoBack && (
+        <TouchableOpacity 
+          onPress={() => router.back()} 
+          style={styles.backButton}
+          accessibilityLabel="Go back"
+          accessibilityRole="button"
+        >
+          <ArrowLeft size={24} color={titleColor} />
+        </TouchableOpacity>
+      )}
       {title ? (
         <Text style={[styles.titleText, { color: titleColor }]}>{title}</Text>
       ) : (
@@ -38,6 +52,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#043529',
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: 'rgba(0,0,0,0.2)',
+  },
+  backButton: {
+    position: 'absolute',
+    left: 16,
+    bottom: 12,
+    padding: 4,
   },
   logo: {
     marginTop: 8,

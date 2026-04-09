@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, Platform, TouchableOpacity, useWindowDimensions, TextInput, ActivityIndicator } from 'react-native';
-import { Building2, Calendar, IndianRupee, Star, LayoutDashboard, User, Mail, Phone, ShieldCheck, Pencil, Check, X, CalendarClock, Users } from 'lucide-react-native';
+import { Building2, Calendar, IndianRupee, Star, LayoutDashboard, User, Mail, Phone, ShieldCheck, Pencil, Check, X, CalendarClock, Users, Swords, PlusCircle, Settings, LifeBuoy } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import Card from '@/components/ui/Card';
@@ -319,6 +319,61 @@ export default function OwnerDashboardScreen() {
                   <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>On other grounds</Text>
                 </View>
               </View>
+
+              <TouchableOpacity style={styles.statBoxWrapper} onPress={() => router.push('/(tabs)/matches' as any)}>
+                <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
+                  <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
+                    <Swords size={24} color="#01b854" />
+                  </View>
+                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>My Matches</Text>
+                  <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]}>Matches</Text>
+                  <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>View your games</Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.statBoxWrapper} onPress={() => router.push('/(tabs)/bookings' as any)}>
+                <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
+                  <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
+                    <Calendar size={24} color="#01b854" />
+                  </View>
+                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>My Bookings</Text>
+                  <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]}>Player History</Text>
+                  <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>Your personal bookings</Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.statBoxWrapper} onPress={() => router.push('/(owner)/add-ground' as any)}>
+                <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
+                  <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
+                    <PlusCircle size={24} color="#01b854" />
+                  </View>
+                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Add Ground</Text>
+                  <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]}>Register</Text>
+                  <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>List new property</Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.statBoxWrapper} onPress={() => router.push('/(owner)/settings' as any)}>
+                <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
+                  <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
+                    <Settings size={24} color="#01b854" />
+                  </View>
+                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Settings</Text>
+                  <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]}>Account</Text>
+                  <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>Business settings</Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.statBoxWrapper} onPress={() => router.push('/(tabs)/support' as any)}>
+                <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
+                  <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
+                    <LifeBuoy size={24} color="#01b854" />
+                  </View>
+                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Support</Text>
+                  <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]}>Contact Us</Text>
+                  <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>Get help</Text>
+                </View>
+              </TouchableOpacity>
             </View>
           </>
         )}

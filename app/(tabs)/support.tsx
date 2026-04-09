@@ -38,6 +38,8 @@ interface Ticket {
   resolved: boolean;
 }
 
+import MobileAppNavbar from '../../components/MobileAppNavbar';
+
 export default function SupportScreen() {
   const { profile, user } = useAuth();
   const [activeTab, setActiveTab] = useState<ActiveTab>('new_ticket');
@@ -241,10 +243,19 @@ export default function SupportScreen() {
     </ScrollView>
   );
 
+  if (Platform.OS === 'web') {
+    return (
+      <WebLayout noCard>
+        {mainContent}
+      </WebLayout>
+    );
+  }
+
   return (
-    <WebLayout noCard>
-      {mainContent}
-    </WebLayout>
+    <View style={styles.nativeScreen}>
+      <MobileAppNavbar title="Contact Us" titleColor="#01b854" />
+      <View style={styles.nativeBody}>{mainContent}</View>
+    </View>
   );
 }
 
@@ -467,5 +478,12 @@ const styles = StyleSheet.create({
     color: '#111827',
     fontWeight: '700',
     marginTop: 2,
+  },
+  nativeScreen: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  nativeBody: {
+    flex: 1,
   },
 });

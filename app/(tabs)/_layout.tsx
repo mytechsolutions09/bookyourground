@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Redirect, Tabs, usePathname, useSegments } from 'expo-router';
+import { Redirect, Tabs, Stack, usePathname, useSegments } from 'expo-router';
 import {
   Hop as Home,
   Calendar,
@@ -117,6 +117,28 @@ export default function TabLayout() {
       </View>
     );
   };
+
+  if (Platform.OS !== 'web') {
+    return (
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          gestureEnabled: true,
+          contentStyle: { backgroundColor: '#043529' },
+        }}
+      >
+        <Stack.Screen name="index" />
+        <Stack.Screen name="grounds" />
+        <Stack.Screen name="matches" />
+        <Stack.Screen name="bookings" />
+        <Stack.Screen name="favorites" />
+        <Stack.Screen name="profile" />
+        <Stack.Screen name="support" />
+        <Stack.Screen name="logout" />
+        <Stack.Screen name="dashboard" options={{ href: null } as any} />
+      </Stack>
+    );
+  }
 
   return (
     <Tabs

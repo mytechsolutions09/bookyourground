@@ -10,6 +10,7 @@ import {
   LogIn,
   LogOut,
   Heart,
+  Swords,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -18,8 +19,9 @@ const INACTIVE = '#e5e7eb';
 
 function getActiveTab(
   segments: string[],
-): 'home' | 'grounds' | 'bookings' | 'favorites' | 'profile' | 'logout' {
+): 'home' | 'grounds' | 'bookings' | 'favorites' | 'profile' | 'logout' | 'find-opponent' {
   const root = segments[0];
+  if (root === 'find-an-opponent') return 'find-opponent';
   if (root === 'ground' || root === 'grounds' || root === 'book-my-ground') {
     return 'grounds';
   }
@@ -41,7 +43,8 @@ export default function MobileTabBar() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const segments = useSegments();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const isOwner = profile?.role === 'ground_owner';
 
   if (Platform.OS === 'web') return null;
 
@@ -71,15 +74,21 @@ export default function MobileTabBar() {
       >
         <House size={size} color={activeTab === 'home' ? ACTIVE : INACTIVE} />
       </Pressable>
+      
       <Pressable
         style={styles.item}
-        onPress={() => go('/(tabs)/grounds')}
+        onPress={() => go(isOwner ? '/find-an-opponent' : '/(tabs)/grounds')}
         accessibilityRole="button"
-        accessibilityLabel="Grounds"
-        accessibilityState={{ selected: activeTab === 'grounds' }}
+        accessibilityLabel={isOwner ? "Find Opponent" : "Grounds"}
+        accessibilityState={{ selected: isOwner ? activeTab === 'find-opponent' : activeTab === 'grounds' }}
       >
-        <LandPlot size={size} color={activeTab === 'grounds' ? ACTIVE : INACTIVE} />
+        {isOwner ? (
+          <Swords size={size} color={activeTab === 'find-opponent' ? ACTIVE : INACTIVE} />
+        ) : (
+          <LandPlot size={size} color={activeTab === 'grounds' ? ACTIVE : INACTIVE} />
+        )}
       </Pressable>
+
       <Pressable
         style={styles.item}
         onPress={() => go('/(tabs)/bookings')}

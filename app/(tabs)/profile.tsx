@@ -13,6 +13,8 @@ import {
   Settings,
   Bell,
   Swords,
+  CalendarClock,
+  LifeBuoy,
 } from 'lucide-react-native';
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -176,11 +178,41 @@ export default function ProfileScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.menuItem}
+            onPress={() => router.push('/(tabs)/matches' as any)}
+          >
+            <View style={styles.menuItemLeft}>
+              <Swords size={20} color={themeAccent} />
+              <Text style={[styles.menuItemText, { color: themeText }]}>My Matches</Text>
+            </View>
+            <ChevronRight size={20} color={chevronColor} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.menuItem}
             onPress={() => router.push('/(owner)/bookings' as any)}
           >
             <View style={styles.menuItemLeft}>
               <Calendar size={20} color={themeAccent} />
               <Text style={[styles.menuItemText, { color: themeText }]}>Bookings</Text>
+            </View>
+            <ChevronRight size={20} color={chevronColor} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => router.push('/(owner)/inventory' as any)}
+          >
+            <View style={styles.menuItemLeft}>
+              <CalendarClock size={20} color={themeAccent} />
+              <Text style={[styles.menuItemText, { color: themeText }]}>Inventory Plan</Text>
+            </View>
+            <ChevronRight size={20} color={chevronColor} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => router.push('/(tabs)/bookings' as any)}
+          >
+            <View style={styles.menuItemLeft}>
+              <Calendar size={20} color={themeAccent} />
+              <Text style={[styles.menuItemText, { color: themeText }]}>My Bookings</Text>
             </View>
             <ChevronRight size={20} color={chevronColor} />
           </TouchableOpacity>
@@ -211,6 +243,16 @@ export default function ProfileScreen() {
             <View style={styles.menuItemLeft}>
               <Settings size={20} color={themeAccent} />
               <Text style={[styles.menuItemText, { color: themeText }]}>Settings</Text>
+            </View>
+            <ChevronRight size={20} color={chevronColor} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => router.push('/(tabs)/support' as any)}
+          >
+            <View style={styles.menuItemLeft}>
+              <LifeBuoy size={20} color={themeAccent} />
+              <Text style={[styles.menuItemText, { color: themeText }]}>Contact Us</Text>
             </View>
             <ChevronRight size={20} color={chevronColor} />
           </TouchableOpacity>
