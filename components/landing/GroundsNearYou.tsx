@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { MapPin, Navigation, Map as MapIcon, ChevronRight, Search, ExternalLink } from 'lucide-react-native';
+import { MapPin, Navigation, Map as MapIcon, ChevronRight, Search, ExternalLink, Star } from 'lucide-react-native';
 import { View, Text, StyleSheet, Platform, Pressable, ScrollView, ActivityIndicator, TextInput, Image, Linking, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { GroundWithImages } from '@/types';
@@ -63,7 +63,8 @@ export default function GroundsNearYou() {
         .from('grounds')
         .select(`
           *,
-          ground_images(*)
+          ground_images(*),
+          reviews(rating)
         `)
         .eq('active', true)
         .eq('approved', true)
@@ -71,10 +72,17 @@ export default function GroundsNearYou() {
         .limit(20);
 
       if (error) throw error;
-      const sorted = (data as GroundWithImages[]) || [];
-      setGrounds(sorted);
-      if (sorted.length > 0) {
-        setFocusedGroundId(sorted[0].id);
+      const sorted = (data as any[]) || [];
+      const withReviews = sorted.map(g => {
+        const reviews = (g.reviews || []) as { rating: number }[];
+        const avg = reviews.length > 0
+          ? reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length
+          : 0;
+        return { ...g, _avgRating: avg, _reviewsCount: reviews.length };
+      });
+      setGrounds(withReviews);
+      if (withReviews.length > 0) {
+        setFocusedGroundId(withReviews[0].id);
       }
     } catch (err) {
       console.error('Error loading nearby grounds:', err);
@@ -312,7 +320,7 @@ export default function GroundsNearYou() {
                       />
                       <View style={styles.itemDetails}>
                         <Text style={styles.itemName} numberOfLines={1}>{ground.name}</Text>
-                        <Text style={styles.itemCity}>{ground.city}</Text>
+                        <Text style={styles.itemCity}>{ground.city} • {ground.pitch_type || 'Standard'}</Text>
                         
                         <TouchableOpacity 
                           style={styles.locationLink}
@@ -325,6 +333,15 @@ export default function GroundsNearYou() {
                           <MapPin size={12} color="#10b981" />
                           <Text style={styles.locationLinkText}>View on Map</Text>
                         </TouchableOpacity>
+
+                        <View style={styles.ratingRow}>
+                          <Star size={10} color="#FFA000" fill="#FFA000" />
+                          <Text style={styles.ratingText}>
+                            {ground._avgRating > 0 
+                              ? `${ground._avgRating.toFixed(1)} (${ground._reviewsCount})`
+                              : 'New'}
+                          </Text>
+                        </View>
                       </View>
                       <Pressable 
                         onPress={() => router.push(makeGroundPath(ground) as any)}
@@ -473,6 +490,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#10b981',
     textDecorationLine: 'underline',
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  ratingText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#9CA3AF',
   },
   itemRow: {
     flexDirection: 'row',

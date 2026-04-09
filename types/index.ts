@@ -23,6 +23,7 @@ export type GroundWithImages = Ground & {
 export type BookingWithDetails = Booking & {
   ground: Ground & {
     ground_images: GroundImage[];
+    reviews?: Review[];
   };
   user?: Profile;
 };

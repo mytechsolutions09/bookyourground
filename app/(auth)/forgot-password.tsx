@@ -134,7 +134,10 @@ export default function ForgotPasswordScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => {
+          if (router.canGoBack()) router.back();
+          else router.replace('/(auth)/login');
+        }}>
           <ArrowLeft size={20} color="#f9fafb" />
         </TouchableOpacity>
 

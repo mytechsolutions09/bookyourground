@@ -1117,8 +1117,8 @@ const styles = StyleSheet.create({
     borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.1)',
   },
   sortChipActive: {
-    backgroundColor: IS_WEB ? '#2563EB' : '#00ea6b',
-    borderColor: IS_WEB ? '#2563EB' : '#00ea6b',
+    backgroundColor: '#043529',
+    borderColor: '#043529',
   },
   sortChipText: {
     fontSize: 11,

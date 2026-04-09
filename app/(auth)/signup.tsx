@@ -201,7 +201,10 @@ export default function SignupScreen() {
   
                     <TouchableOpacity
                       style={webStyles.outlineButton}
-                      onPress={() => router.back()}
+                      onPress={() => {
+                        if (router.canGoBack()) router.back();
+                        else router.replace('/(auth)/login');
+                      }}
                     >
                       <Text style={webStyles.outlineButtonText}>SIGN IN</Text>
                     </TouchableOpacity>
@@ -241,7 +244,10 @@ export default function SignupScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Pressable style={styles.backBtn} onPress={() => router.back()}>
+        <Pressable style={styles.backBtn} onPress={() => {
+          if (router.canGoBack()) router.back();
+          else router.replace('/(auth)/login');
+        }}>
           <ArrowLeft size={20} color="#f9fafb" strokeWidth={2.5} />
         </Pressable>
 
@@ -420,7 +426,10 @@ export default function SignupScreen() {
                 <Text style={styles.signUpBtnText}>SIGN UP</Text>
               )}
             </Pressable>
-            <Pressable style={styles.outlineBtn} onPress={() => router.back()}>
+            <Pressable style={styles.outlineBtn} onPress={() => {
+              if (router.canGoBack()) router.back();
+              else router.replace('/(auth)/login');
+            }}>
               <Text style={styles.outlineBtnText}>SIGN IN</Text>
             </Pressable>
           </View>

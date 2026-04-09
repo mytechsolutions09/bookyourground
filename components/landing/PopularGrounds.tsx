@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Platform, ActivityIndicator, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { Star } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { GroundWithImages } from '@/types';
 import GroundCard from '@/components/grounds/GroundCard';
@@ -93,6 +94,8 @@ export default function PopularGrounds() {
 
     const isPopularBadge = index < 3;
     const href = makeGroundPath(g);
+    const avgRating = g._avgRating ?? 0;
+    const reviewCount = g._reviewsCount ?? 0;
 
     return (
       <TouchableOpacity
@@ -110,9 +113,17 @@ export default function PopularGrounds() {
             </View>
           )}
           <View style={styles.imageContent}>
-            <Text style={styles.cardTitleText} numberOfLines={1}>
-              {g.name}
-            </Text>
+            <View style={styles.titleRatingRow}>
+              <Text style={styles.cardTitleText} numberOfLines={1}>
+                {g.name}
+              </Text>
+              {reviewCount > 0 && (
+                <View style={styles.ratingBadge}>
+                  <Star size={10} color="#FFA000" fill="#FFA000" />
+                  <Text style={styles.ratingBadgeText}>{avgRating.toFixed(1)}</Text>
+                </View>
+              )}
+            </View>
             <Text style={styles.cardLocationText} numberOfLines={1}>
               {g.city}, {g.state}
             </Text>
@@ -124,12 +135,12 @@ export default function PopularGrounds() {
             <Text style={styles.metaLabel}>Type</Text>
             <Text style={styles.metaValue}>{g.pitch_type || 'Standard ground'}</Text>
           </View>
-          {g.capacity ? (
-            <View style={styles.metaRow}>
-              <Text style={styles.metaLabel}>Max players</Text>
-              <Text style={styles.metaValue}>{g.capacity}</Text>
-            </View>
-          ) : null}
+          <View style={styles.metaRow}>
+            <Text style={styles.metaLabel}>Reviews</Text>
+            <Text style={styles.metaValue}>
+              {reviewCount > 0 ? `${reviewCount} reviews` : 'No reviews yet'}
+            </Text>
+          </View>
           <View style={styles.metaRow}>
             <Text style={styles.metaLabel}>Facilities</Text>
             <Text style={styles.metaValue} numberOfLines={1}>
@@ -300,6 +311,26 @@ const styles = StyleSheet.create({
     bottom: 12,
     left: 14,
     right: 14,
+  },
+  titleRatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  ratingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255,160,0,0.15)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  ratingBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFA000',
   },
   cardTitleText: {
     fontSize: 18,

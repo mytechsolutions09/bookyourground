@@ -295,7 +295,10 @@ export default function CheckoutScreen() {
     return (
       <View style={styles.centered}>
         <Text>Booking not found.</Text>
-        <Button title="Go Back" onPress={() => router.back()} />
+        <Button title="Go Back" onPress={() => {
+          if (router.canGoBack()) router.back();
+          else router.replace('/(tabs)');
+        }} />
       </View>
     );
   }
@@ -306,7 +309,10 @@ export default function CheckoutScreen() {
   const content = (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => {
+          if (router.canGoBack()) router.back();
+          else router.replace('/(tabs)');
+        }} style={styles.backButton}>
           <ChevronLeft size={20} color="#1F2937" />
         </TouchableOpacity>
         <Text style={styles.title}>Checkout</Text>

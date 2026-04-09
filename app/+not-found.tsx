@@ -64,7 +64,10 @@ export default function NotFoundScreen() {
 
             <TouchableOpacity 
               style={styles.backLink}
-              onPress={() => router.back()}
+              onPress={() => {
+                if (router.canGoBack()) router.back();
+                else router.replace('/');
+              }}
             >
               <ArrowLeft size={16} color="#9ca3af" />
               <Text style={styles.backLinkText}>Go back</Text>

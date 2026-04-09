@@ -228,7 +228,10 @@ export default function LoginScreen() {
         {/* Back button */}
         <Pressable
           style={styles.backBtn}
-          onPress={() => router.back()}
+          onPress={() => {
+            if (router.canGoBack()) router.back();
+            else router.replace('/');
+          }}
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >

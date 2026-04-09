@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, useWindowDimensions, Platform, Linking } from 'react-native';
-import { Calendar, Clock, MapPin, Users, Sword, Map as MapIcon } from 'lucide-react-native';
+import { Calendar, Clock, MapPin, Users, Sword, Map as MapIcon, Star } from 'lucide-react-native';
 import { BookingWithDetails } from '@/types';
 import { formatCurrency, formatDate } from '@/utils/helpers';
 import { formatBookingSlotSummary } from '@/utils/bookingSlotFormat';
@@ -30,6 +30,13 @@ export default function MatchCard({ match, onJoin, buttonTitle = 'Join Match', t
   const textColor = IS_DARK ? NATIVE_TEXT : '#4B5563';
   const titleColor = IS_DARK ? NATIVE_TEXT : '#111827';
 
+  // Calculate rating
+  const reviews = (match.ground as any).reviews || [];
+  const reviewCount = reviews.length;
+  const avgRating = reviewCount > 0
+    ? reviews.reduce((sum: number, r: any) => sum + (r.rating || 0), 0) / reviewCount
+    : 0;
+
   return (
     <Card
       style={[
@@ -54,6 +61,26 @@ export default function MatchCard({ match, onJoin, buttonTitle = 'Join Match', t
               <Users size={12} color={IS_DARK ? '#fff' : '#6B7280'} />
               <Text style={[styles.statusText, !IS_DARK && styles.statusTextWeb]}>{teamsCount}</Text>
             </View>
+          </View>
+
+          {/* New Rating Row */}
+          <View style={styles.ratingRow}>
+            {[1, 2, 3, 4, 5].map((i) => {
+              const filled = reviewCount > 0 && i <= Math.round(avgRating);
+              return (
+                <Star
+                  key={i}
+                  size={12}
+                  color={filled ? '#FFA000' : (IS_DARK ? '#374151' : '#D1D5DB')}
+                  fill={filled ? '#FFA000' : 'none'}
+                />
+              );
+            })}
+            <Text style={[styles.ratingText, { color: IS_DARK ? '#9CA3AF' : '#6B7280' }]}>
+              {reviewCount > 0
+                ? `${avgRating.toFixed(1)} (${reviewCount} reviews)`
+                : 'No reviews yet'}
+            </Text>
           </View>
           
           <TouchableOpacity 
@@ -211,6 +238,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    marginBottom: 4,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 6,
+    marginTop: -2,
+  },
+  ratingText: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginLeft: 2,
   },
   location: {
     ...Platform.select({

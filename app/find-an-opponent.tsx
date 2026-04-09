@@ -59,7 +59,8 @@ export default function FindAnOpponentScreen() {
           *,
           ground:grounds(
             *,
-            ground_images(*)
+            ground_images(*),
+            reviews(rating)
           ),
           user:profiles(*)
         `)
