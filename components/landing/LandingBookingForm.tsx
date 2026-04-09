@@ -215,8 +215,8 @@ export default function LandingBookingForm({
   const handleSearchRef = useRef<() => Promise<void>>(async () => { });
   const loadMoreSentinelRef = useRef<any>(null);
 
-  const [locationKey, setLocationKey] = useState<string>('');
-  const [typeKey, setTypeKey] = useState<string>('');
+  const [locationKey, setLocationKey] = useState<string>('New Gurugram__Haryana');
+  const [typeKey, setTypeKey] = useState<string>('Cricket Ground');
   const [locationRows, setLocationRows] = useState<Location[]>([]);
   const [groundTypeRows, setGroundTypeRows] = useState<GroundType[]>([]);
 
@@ -352,7 +352,8 @@ export default function LandingBookingForm({
       const key = locationKeyForGround(g);
       if (!map.has(key)) map.set(key, `${g.city}, ${g.state}`);
     });
-    return Array.from(map.entries()).map(([key, label]) => ({ key, label }));
+    const options = Array.from(map.entries()).map(([key, label]) => ({ key, label }));
+    return [{ key: '', label: 'All Locations' }, ...options];
   }, [locationRows, grounds]);
 
   const typeOptions = useMemo(() => {
@@ -364,7 +365,8 @@ export default function LandingBookingForm({
       const p = g.pitch_type;
       if (p && !map.has(p)) map.set(p, p);
     });
-    return Array.from(map.entries()).map(([key, label]) => ({ key, label }));
+    const options = Array.from(map.entries()).map(([key, label]) => ({ key, label }));
+    return [{ key: '', label: 'All Types' }, ...options];
   }, [groundTypeRows, grounds]);
 
   useEffect(() => {
