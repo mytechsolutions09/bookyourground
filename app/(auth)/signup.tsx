@@ -125,7 +125,7 @@ export default function SignupScreen() {
                         label="Mobile Number"
                         value={phone}
                         onChangeText={setPhone}
-                        placeholder="+91..."
+                        placeholder="..."
                         keyboardType="phone-pad"
                       />
                     </View>
@@ -165,7 +165,7 @@ export default function SignupScreen() {
                         label="Team Name"
                         value={teamName}
                         onChangeText={setTeamName}
-                        placeholder="e.g. Real Madrid FC"
+                        placeholder="e.g. Yankees XI"
                       />
                     </View>
                     <View style={webStyles.col}>
@@ -323,7 +323,7 @@ export default function SignupScreen() {
                 style={styles.textInput}
                 value={phone}
                 onChangeText={setPhone}
-                placeholder="+91..."
+                placeholder="..."
                 placeholderTextColor="#4b5563"
                 keyboardType="phone-pad"
                 onFocus={() => setFocusedField('phone')}
@@ -341,7 +341,7 @@ export default function SignupScreen() {
                   style={styles.textInput}
                   value={teamName}
                   onChangeText={setTeamName}
-                  placeholder="Real Madrid FC"
+                  placeholder="Yankees XI"
                   placeholderTextColor="#4b5563"
                   onFocus={() => setFocusedField('teamName')}
                   onBlur={() => setFocusedField(null)}
@@ -552,7 +552,7 @@ function WebGenericPicker(props: any) {
           style={{
             width: '100%',
             appearance: 'none',
-            border: '1px solid #00ea6b',
+            border: '1px solid rgba(0, 234, 107, 0.12)',
             borderRadius: '8px',
             padding: '8px 10px',
             fontSize: '14px',
@@ -585,7 +585,7 @@ function WebInput(props: any) {
       <TextInput
         style={{
           borderWidth: 1,
-          borderColor: '#00ea6b',
+          borderColor: 'rgba(0, 234, 107, 0.12)',
           borderRadius: 8,
           paddingHorizontal: 10,
           paddingVertical: 8,
@@ -613,7 +613,7 @@ const styles = StyleSheet.create({
   nameRow: { flexDirection: 'row', gap: 10 },
   fieldWrap: { marginBottom: 14 },
   fieldLabel: { fontSize: 12, fontWeight: '600', color: '#e5e7eb', marginBottom: 6, letterSpacing: 0.2 },
-  inputRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#043529', borderRadius: 12, borderWidth: 1.5, borderColor: 'rgba(0,234,107,0.18)', paddingHorizontal: 12, paddingVertical: 11, gap: 8 },
+  inputRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#043529', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(0,234,107,0.18)', paddingHorizontal: 12, paddingVertical: 11, gap: 8 },
   inputRowFocused: { borderColor: '#00ea6b' },
   textInput: { flex: 1, fontSize: 14, color: '#f9fafb', paddingVertical: 0 },
   buttonRow: { flexDirection: 'row', gap: 12, marginTop: 16 },

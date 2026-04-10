@@ -19,6 +19,15 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, CheckCircle, Send } from 'lucide-react-native';
 
+let Turnstile: any = null;
+if (Platform.OS === 'web') {
+  try {
+    Turnstile = require('@marsidev/react-turnstile').Turnstile;
+  } catch (e) {
+    console.warn('Turnstile not available');
+  }
+}
+
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -28,6 +37,7 @@ export default function LoginScreen() {
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   const { signIn, profile, user, resetPassword } = useAuth();
   const os = Platform.OS as string;
@@ -47,7 +57,7 @@ export default function LoginScreen() {
     }
 
     setLoading(true);
-    const { error } = await signIn(email, password);
+    const { error } = await signIn(email, password, turnstileToken || undefined);
     setLoading(false);
 
     if (error) {
@@ -157,6 +167,7 @@ export default function LoginScreen() {
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoComplete="email"
+                    onSubmitEditing={handleLogin}
                   />
   
                   <WebInput
@@ -166,7 +177,22 @@ export default function LoginScreen() {
                     placeholder="Enter your password"
                     secureTextEntry
                     autoComplete="password"
+                    onSubmitEditing={handleLogin}
                   />
+
+                  {Platform.OS === 'web' && Turnstile && (
+                    <View style={{ marginBottom: 16, alignItems: 'center' }}>
+                      <Turnstile
+                        siteKey={process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY || '0x4AAAAAAA4N2_8m7n6b5v4c'} 
+                        onSuccess={(token: string) => setTurnstileToken(token)}
+                        onExpire={() => setTurnstileToken(null)}
+                        onError={() => setTurnstileToken(null)}
+                        options={{
+                          theme: 'dark',
+                        }}
+                      />
+                    </View>
+                  )}
   
                   <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')} style={webStyles.forgotWrap}>
                     <Text style={webStyles.forgotText}>Forgot password?</Text>
@@ -403,7 +429,7 @@ function WebInput(props: any) {
       <TextInput
         style={{
           borderWidth: 1,
-          borderColor: '#00ea6b',
+          borderColor: 'rgba(0, 234, 107, 0.12)',
           borderRadius: 8,
           paddingHorizontal: 10,
           paddingVertical: 8,

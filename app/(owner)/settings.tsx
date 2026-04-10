@@ -8,11 +8,14 @@ import { supabase } from '@/lib/supabase';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import { Tag, Percent, Scissors, Trash2 } from 'lucide-react-native';
 
+import { useLocalSearchParams } from 'expo-router';
+
 const IS_WEB = Platform.OS === 'web';
 
 function OwnerSettingsInner() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'payout' | 'bank' | 'coupons' | 'help'>('payout');
+  const { tab } = useLocalSearchParams<{ tab: string }>();
+  const [activeTab, setActiveTab] = useState<'payout' | 'bank' | 'coupons' | 'help'>((tab as any) || 'payout');
   const [amount, setAmount] = useState('');
   const [accountDetails, setAccountDetails] = useState('');
   const [submitting, setSubmitting] = useState(false);

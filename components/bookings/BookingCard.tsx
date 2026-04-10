@@ -3,7 +3,7 @@ import { View, Text, Image, TouchableOpacity, StyleSheet, useWindowDimensions } 
 import { Calendar, Clock, MapPin, Users } from 'lucide-react-native';
 import { Platform } from 'react-native';
 import { BookingWithDetails } from '@/types';
-import { formatCurrency, formatDate, getStatusColor, getStatusLabel } from '@/utils/helpers';
+import { formatCurrency, formatDate, getStatusColor, getStatusLabel, isDateInPast } from '@/utils/helpers';
 import { formatBookingSlotSummary } from '@/utils/bookingSlotFormat';
 import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
 import Card from '@/components/ui/Card';
@@ -142,7 +142,7 @@ export default function BookingCard({
               {!(booking.status === 'confirmed' && new Date(booking.booking_date) < new Date(new Date().setHours(0,0,0,0))) && (
                 <View style={[styles.statusBadge, { backgroundColor: badgeBg }]}>
                   <Text style={statusLabelStyle}>
-                    {booking.status === 'confirmed' ? 'Active' : getStatusLabel(booking.status)}
+                    {booking.status === 'confirmed' ? (isDateInPast(booking.booking_date) ? 'Done' : 'Active') : getStatusLabel(booking.status)}
                   </Text>
                 </View>
               )}

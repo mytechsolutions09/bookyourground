@@ -12,7 +12,7 @@ import { router } from 'expo-router';
 import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
 import { normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
-import { formatCurrency, formatDate, formatDateDDMMYY, getStatusColor } from '@/utils/helpers';
+import { formatCurrency, formatDate, formatDateDDMMYY, getStatusColor, isDateInPast } from '@/utils/helpers';
 
 export default function OwnerBookingsScreen() {
   const { user } = useAuth();
@@ -687,20 +687,28 @@ export default function OwnerBookingsScreen() {
 
                   return (
                     <View style={[styles.tableCell, styles.colTeams]}>
-                      {!isTrulyFull ? (
-                        <TouchableOpacity 
-                          onPress={(e) => {
-                            e.stopPropagation();
-                            router.push(`/grounds/${item.ground.id}?date=${item.booking_date}&time=${item.start_time}&teams=one`);
-                          }}
-                          style={styles.partialBadge}
-                        >
-                          <Text style={styles.partialBadgeText}>PARTIAL (NEED 1 MORE)</Text>
-                        </TouchableOpacity>
+                      {isOwnGround ? (
+                        <>
+                          {!isTrulyFull ? (
+                            <TouchableOpacity 
+                              onPress={(e) => {
+                                e.stopPropagation();
+                                router.push(`/grounds/${item.ground.id}?date=${item.booking_date}&time=${item.start_time}&teams=one`);
+                              }}
+                              style={styles.partialBadge}
+                            >
+                              <Text style={styles.partialBadgeText}>PARTIAL (NEED 1 MORE)</Text>
+                            </TouchableOpacity>
+                          ) : (
+                            <View style={styles.fullMatchBadge}>
+                              <Text style={styles.fullMatchBadgeText}>FULL (MATCH READY)</Text>
+                            </View>
+                          )}
+                        </>
                       ) : (
-                        <View style={styles.fullMatchBadge}>
-                          <Text style={styles.fullMatchBadgeText}>FULL (MATCH READY)</Text>
-                        </View>
+                        <Text style={styles.teamsText}>
+                          {(cricketTeamsLabelFromBooking(item.ground.pitch_type, item.notes) || '1 Team').toUpperCase()}
+                        </Text>
                       )}
                     </View>
                   );
@@ -715,7 +723,7 @@ export default function OwnerBookingsScreen() {
                        styles.statusBadgeText,
                        item.status === 'confirmed' ? styles.statusConfirmed : styles.statusCancelled
                      ]}>
-                       {item.status === 'confirmed' ? 'ACTIVE' : item.status.toUpperCase()}
+                       {item.status === 'confirmed' ? (isDateInPast(item.booking_date) ? 'DONE' : 'ACTIVE') : item.status.toUpperCase()}
                      </Text>
                    </TouchableOpacity>
                 </View>

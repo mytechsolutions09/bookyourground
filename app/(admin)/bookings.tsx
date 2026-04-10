@@ -12,7 +12,7 @@ import { router } from 'expo-router';
 import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
 import { normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
-import { formatDateDDMMYY } from '@/utils/helpers';
+import { formatDateDDMMYY, isDateInPast } from '@/utils/helpers';
 
 export default function AdminBookingsScreen() {
   const { user } = useAuth();
@@ -383,7 +383,7 @@ export default function AdminBookingsScreen() {
                        styles.statusBadgeText,
                        item.status === 'confirmed' ? styles.statusConfirmed : styles.statusCancelled
                      ]}>
-                       {item.status === 'confirmed' ? 'ACTIVE' : item.status.toUpperCase()}
+                       {item.status === 'confirmed' ? (isDateInPast(item.booking_date) ? 'DONE' : 'ACTIVE') : item.status.toUpperCase()}
                      </Text>
 
                    </TouchableOpacity>

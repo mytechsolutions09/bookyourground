@@ -8,6 +8,8 @@ import {
   Platform,
   useWindowDimensions,
   Pressable,
+  TextInput,
+  ScrollView,
 } from 'react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -17,16 +19,24 @@ import BookingCard from '@/components/bookings/BookingCard';
 import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '../../components/MobileAppNavbar';
 import Button from '@/components/ui/Button';
-import { Alert } from 'react-native';
+import { Alert, TouchableOpacity } from 'react-native';
+import { formatDateDDMMYY, formatCurrency, isDateInPast } from '@/utils/helpers';
+import { normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
 import Modal from '@/components/ui/Modal';
 import { slugifyGroundSegment } from '@/utils/groundSlug';
+import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
+import { Calendar, X } from 'lucide-react-native';
 
 export default function BookingsScreen() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [bookings, setBookings] = useState<BookingWithDetails[]>([]);
   const [reviewedBookingIds, setReviewedBookingIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
+  const [activeTab, setActiveTab] = useState<'all' | 'upcoming' | 'past' | 'cancelled'>('upcoming');
+  const [ownerScope, setOwnerScope] = useState<'all' | 'own' | 'other'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  
   const { width } = useWindowDimensions();
   const isWeb = Platform.OS === 'web';
   const IS_DARK = !isWeb || (width < 900);
@@ -148,33 +158,50 @@ export default function BookingsScreen() {
   /** Only confirmed / paid bookings are fetched. */
   const listBookings = bookings;
 
-  const upcomingBookings = useMemo(() => {
+  const filteredBookings = useMemo(() => {
     const d = new Date();
     const yyyy = d.getFullYear();
     const mm = `${d.getMonth() + 1}`.padStart(2, '0');
     const dd = `${d.getDate()}`.padStart(2, '0');
     const today = `${yyyy}-${mm}-${dd}`;
-    return listBookings.filter((b) => {
-      const bd = bookingDateOnly(b.booking_date as string);
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(bd)) return false;
-      return bd >= today;
-    });
-  }, [listBookings]);
 
-  const pastBookings = useMemo(() => {
-    const d = new Date();
-    const yyyy = d.getFullYear();
-    const mm = `${d.getMonth() + 1}`.padStart(2, '0');
-    const dd = `${d.getDate()}`.padStart(2, '0');
-    const today = `${yyyy}-${mm}-${dd}`;
-    return listBookings.filter((b) => {
-      const bd = bookingDateOnly(b.booking_date as string);
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(bd)) return false;
-      return bd < today;
-    });
-  }, [listBookings]);
+    let result = bookings;
 
-  const visibleBookings = activeTab === 'upcoming' ? upcomingBookings : pastBookings;
+    // Status Filter
+    if (activeTab === 'upcoming') {
+      result = result.filter(b => bookingDateOnly(b.booking_date) >= today && b.status === 'confirmed');
+    } else if (activeTab === 'past') {
+      result = result.filter(b => bookingDateOnly(b.booking_date) < today && b.status === 'confirmed');
+    } else if (activeTab === 'cancelled') {
+      result = result.filter(b => b.status === 'cancelled');
+    }
+
+    // Scope Filter (for owners)
+    if (profile?.role === 'ground_owner' && ownerScope !== 'all') {
+      result = result.filter(b => 
+        ownerScope === 'own' ? b.ground.owner_id === user?.id : b.ground.owner_id !== user?.id
+      );
+    }
+
+    // Date Filter
+    if (selectedDate) {
+      result = result.filter(b => bookingDateOnly(b.booking_date) === selectedDate);
+    }
+
+    // Search Filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(b => 
+        (b.ground?.name || '').toLowerCase().includes(q) ||
+        (b.ground?.city || '').toLowerCase().includes(q) ||
+        (b.booked_for_name || '').toLowerCase().includes(q)
+      );
+    }
+
+    return result;
+  }, [bookings, activeTab, ownerScope, selectedDate, searchQuery, user?.id, profile?.role]);
+
+  const visibleBookings = filteredBookings;
 
   const content = (
     <View style={[styles.container, isWeb && !IS_DARK && styles.webContainerRoot]}>
@@ -182,80 +209,233 @@ export default function BookingsScreen() {
         <View style={styles.webCard}>
           <View style={[styles.header, styles.webHeader]}>
             <View>
-              <Text style={styles.title}>My Bookings</Text>
-              <Text style={styles.subtitle}>
-                Track upcoming games, past sessions, and booking details in one place.
-              </Text>
               <View style={styles.tabRow}>
-                <View
-                  style={[
-                    styles.tabChip,
-                    activeTab === 'upcoming' && styles.tabChipActive,
-                  ]}
+                <TouchableOpacity
+                  onPress={() => setActiveTab('all' as any)}
+                  style={[styles.tabChip, activeTab === 'all' && styles.tabChipActive]}
                 >
-                  <Text
-                    style={[
-                      styles.tabChipText,
-                      activeTab === 'upcoming' && styles.tabChipTextActive,
-                    ]}
-                    onPress={() => setActiveTab('upcoming')}
-                  >
-                    {`Upcoming (${upcomingBookings.length})`}
+                  <Text style={[styles.tabChipText, activeTab === 'all' && styles.tabChipTextActive]}>
+                    {`All (${bookings.length})`}
                   </Text>
-                </View>
-                <View
-                  style={[
-                    styles.tabChip,
-                    activeTab === 'past' && styles.tabChipActive,
-                  ]}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setActiveTab('upcoming')}
+                  style={[styles.tabChip, activeTab === 'upcoming' && styles.tabChipActive]}
                 >
-                  <Text
-                    style={[
-                      styles.tabChipText,
-                      activeTab === 'past' && styles.tabChipTextActive,
-                    ]}
-                    onPress={() => setActiveTab('past')}
-                  >
-                    {`Past (${pastBookings.length})`}
+                  <Text style={[styles.tabChipText, activeTab === 'upcoming' && styles.tabChipTextActive]}>
+                    Upcoming
                   </Text>
-                </View>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setActiveTab('past')}
+                  style={[styles.tabChip, activeTab === 'past' && styles.tabChipActive]}
+                >
+                  <Text style={[styles.tabChipText, activeTab === 'past' && styles.tabChipTextActive]}>
+                    Past
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setActiveTab('cancelled')}
+                  style={[styles.tabChip, activeTab === 'cancelled' && styles.tabChipActive]}
+                >
+                  <Text style={[styles.tabChipText, activeTab === 'cancelled' && styles.tabChipTextActive]}>
+                    Cancelled
+                  </Text>
+                </TouchableOpacity>
+
+                {profile?.role === 'ground_owner' && (
+                  <>
+                    <View style={styles.verticalDivider} />
+                    <TouchableOpacity
+                      onPress={() => setOwnerScope('all')}
+                      style={[styles.tabChip, ownerScope === 'all' && styles.tabChipActive]}
+                    >
+                      <Text style={[styles.tabChipText, ownerScope === 'all' && styles.tabChipTextActive]}>
+                        All grounds
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => setOwnerScope('own')}
+                      style={[styles.tabChip, ownerScope === 'own' && styles.tabChipActive]}
+                    >
+                      <Text style={[styles.tabChipText, ownerScope === 'own' && styles.tabChipTextActive]}>
+                        Own grounds
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => setOwnerScope('other')}
+                      style={[styles.tabChip, ownerScope === 'other' && styles.tabChipActive]}
+                    >
+                      <Text style={[styles.tabChipText, ownerScope === 'other' && styles.tabChipTextActive]}>
+                        Other grounds
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                )}
               </View>
             </View>
-            <View style={styles.badgePill}>
-              <Text style={styles.badgePillNumber}>{listBookings.length}</Text>
-              <Text style={styles.badgePillLabel}>total bookings</Text>
-            </View>
-          </View>
 
-          <FlatList
-            data={visibleBookings}
-            renderItem={({ item }) => (
-              <View style={styles.webItem}>
-                <BookingCard
-                  booking={item}
-                  onPress={() => router.push(`/bookings/${item.id}`)}
-                  onCancel={activeTab === 'upcoming' && isCancellable(item) ? () => handleCancelBooking(item) : undefined}
-                  onReview={activeTab === 'past' && (item.status === 'confirmed' || item.status === 'completed') && !reviewedBookingIds.includes(item.id) ? () => {
-                    router.push(`/bookings/${item.id}`);
-                  } : undefined}
+            <View style={styles.webHeaderRight}>
+              <View style={styles.searchFilterWrap}>
+                <TextInput
+                  style={styles.searchBarWeb}
+                  placeholder="Search ground, city or name..."
+                  placeholderTextColor="#9ca3af"
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
                 />
               </View>
 
-            )}
+              <View style={styles.dateFilterWrap}>
+                <View 
+                  style={[
+                    styles.tabChip, 
+                    selectedDate && styles.tabChipActive,
+                    { paddingRight: selectedDate ? 32 : 12 }
+                  ]}
+                >
+                  <Calendar size={14} color={selectedDate ? '#01b854' : '#6B7280'} />
+                  <Text style={[styles.tabChipText, selectedDate && styles.tabChipTextActive]}>
+                    {selectedDate ? selectedDate : 'Filter by Date'}
+                  </Text>
+                  
+                  {Platform.OS === 'web' && (
+                    // @ts-ignore
+                    <input
+                      type="date"
+                      value={selectedDate ?? ''}
+                      onChange={(e: any) => setSelectedDate(e.target.value || null)}
+                      style={styles.webDatePicker}
+                    />
+                  )}
+                </View>
+                {selectedDate && (
+                  <TouchableOpacity onPress={() => setSelectedDate(null)} style={styles.dateClearBtn}>
+                    <X size={12} color="#6B7280" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          </View>
+
+          {visibleBookings.length > 0 && (
+            <View style={styles.tableHeaderContainer}>
+              <View style={styles.tableHeaderRow}>
+                <Text style={[styles.tableHeaderCell, styles.colBookedAt]}>Booked at</Text>
+                <Text style={[styles.tableHeaderCell, styles.colGround]}>Ground</Text>
+                <Text style={[styles.tableHeaderCell, styles.colDateTime]}>Slot Date & time</Text>
+                <Text style={[styles.tableHeaderCell, styles.colTeams]}>Teams</Text>
+                <Text style={[styles.tableHeaderCell, styles.colStatus]}>Status</Text>
+                <Text style={[styles.tableHeaderCell, styles.colAmount]}>Amount</Text>
+                <Text style={[styles.tableHeaderCell, styles.colPayment]}>Payment</Text>
+                {profile?.role === 'ground_owner' && <Text style={[styles.tableHeaderCell, styles.colBookedFor]}>Booked For</Text>}
+              </View>
+            </View>
+          )}
+
+          <FlatList
+            data={visibleBookings}
+            renderItem={({ item }) => {
+              if (Platform.OS === 'web') {
+                return (
+                  <View style={styles.tableRow}>
+                    <TouchableOpacity
+                      onPress={() => router.push(`/bookings/${item.id}`)}
+                      activeOpacity={0.7}
+                      style={styles.clickableRowSection}
+                    >
+                      <View style={[styles.tableCell, styles.colBookedAt]}>
+                        <Text style={styles.bookedDateText}>
+                          {new Date(item.created_at).toLocaleDateString()}
+                        </Text>
+                        <Text style={styles.bookedTimeText}>
+                          {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </Text>
+                      </View>
+
+                      <View style={[styles.tableCell, styles.colGround]}>
+                        <Text style={styles.groundName}>{item.ground.name}</Text>
+                        <Text style={styles.groundLocation}>
+                          {item.ground.city}, {item.ground.state}
+                        </Text>
+                      </View>
+
+                      <View style={[styles.tableCell, styles.colDateTime]}>
+                        <Text style={styles.dateText}>{formatDateDDMMYY(item.booking_date)}</Text>
+                        <Text style={styles.timeText}>
+                          {`${normalizeDbTimeToHHMM(item.start_time)} – ${normalizeDbTimeToHHMM(item.end_time)}`}
+                        </Text>
+                      </View>
+
+                      <View style={[styles.tableCell, styles.colTeams]}>
+                        <Text style={styles.teamsText}>
+                          {cricketTeamsLabelFromBooking(item.ground.pitch_type, item.notes)?.toUpperCase() || 'FULL SLOT'}
+                        </Text>
+                      </View>
+
+                      <View style={[styles.tableCell, styles.colStatus]}>
+                        <Text style={[
+                          styles.statusBadgeText,
+                          item.status === 'confirmed' ? styles.statusConfirmed : styles.statusCancelled
+                        ]}>
+                          {item.status === 'confirmed' ? (isDateInPast(item.booking_date) ? 'DONE' : 'ACTIVE') : item.status.toUpperCase()}
+                        </Text>
+                      </View>
+
+                      <View style={[styles.tableCell, styles.colAmount]}>
+                        <Text style={styles.amount}>{formatCurrency(item.total_amount)}</Text>
+                      </View>
+
+                      <View style={[styles.tableCell, styles.colPayment]}>
+                        <Text style={[styles.paymentBadgeText, item.payment_method === 'cash' ? styles.paymentCash : styles.paymentOnline]}>
+                            {item.payment_method === 'cash' ? 'CASH' : 'ONLINE'}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+
+                    {profile?.role === 'ground_owner' && (
+                      <View style={[styles.tableCell, styles.colBookedFor]}>
+                        <TextInput
+                          style={styles.bookedForInput}
+                          value={item.booked_for_name || ''}
+                          placeholder="Player Name"
+                          placeholderTextColor="#9ca3af"
+                          onChangeText={(val) => {
+                            setBookings(prev => prev.map(b => b.id === item.id ? { ...b, booked_for_name: val } : b));
+                          }}
+                          onBlur={async () => {
+                            try {
+                              const { error } = await supabase
+                                .from('bookings')
+                                .update({ booked_for_name: item.booked_for_name })
+                                .eq('id', item.id);
+                              if (error) throw error;
+                            } catch (err: any) {
+                              console.error('Error saving booked_for_name:', err);
+                            }
+                          }}
+                        />
+                      </View>
+                    )}
+                  </View>
+                );
+              }
+
+              return (
+                <View style={styles.webItem}>
+                  <BookingCard
+                    booking={item}
+                    onPress={() => router.push(`/bookings/${item.id}`)}
+                    onCancel={activeTab === 'upcoming' && isCancellable(item) ? () => handleCancelBooking(item) : undefined}
+                    onReview={activeTab === 'past' && (item.status === 'confirmed' || item.status === 'completed') && !reviewedBookingIds.includes(item.id) ? () => {
+                      router.push(`/bookings/${item.id}`);
+                    } : undefined}
+                  />
+                </View>
+              );
+            }}
             keyExtractor={item => item.id}
-            key={
-              isExtraWideWeb
-                ? 'bookings-4-cols'
-                : isWideWeb
-                ? 'bookings-3-cols'
-                : isMediumWeb
-                ? 'bookings-2-cols'
-                : 'bookings-1-col'
-            }
-            numColumns={isExtraWideWeb ? 4 : isWideWeb ? 3 : isMediumWeb ? 2 : 1}
-            columnWrapperStyle={
-              isExtraWideWeb || isWideWeb || isMediumWeb ? styles.webColumnWrapper : undefined
-            }
+            numColumns={1}
             style={styles.webFlatList}
             contentContainerStyle={styles.webList}
             showsVerticalScrollIndicator
@@ -272,13 +452,23 @@ export default function BookingsScreen() {
       ) : (
         <>
           <View style={styles.nativeFilterBar}>
-            <View style={styles.nativeTabRow}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.nativeTabRow}>
+              <Pressable
+                onPress={() => setActiveTab('all' as any)}
+                style={[
+                  styles.nativeTabChip,
+                  activeTab === 'all' && styles.nativeTabChipActive,
+                ]}
+              >
+                <Text style={[styles.nativeTabChipText, activeTab === 'all' && styles.nativeTabChipTextActive]}>
+                  {`All (${bookings.length})`}
+                </Text>
+              </Pressable>
               <Pressable
                 onPress={() => setActiveTab('upcoming')}
-                style={({ pressed }) => [
+                style={[
                   styles.nativeTabChip,
                   activeTab === 'upcoming' && styles.nativeTabChipActive,
-                  pressed && styles.nativeTabChipPressed,
                 ]}
               >
                 <Text
@@ -287,15 +477,14 @@ export default function BookingsScreen() {
                     activeTab === 'upcoming' && styles.nativeTabChipTextActive,
                   ]}
                 >
-                  {`Upcoming (${upcomingBookings.length})`}
+                  Upcoming
                 </Text>
               </Pressable>
               <Pressable
                 onPress={() => setActiveTab('past')}
-                style={({ pressed }) => [
+                style={[
                   styles.nativeTabChip,
                   activeTab === 'past' && styles.nativeTabChipActive,
-                  pressed && styles.nativeTabChipPressed,
                 ]}
               >
                 <Text
@@ -304,10 +493,21 @@ export default function BookingsScreen() {
                     activeTab === 'past' && styles.nativeTabChipTextActive,
                   ]}
                 >
-                  {`Past (${pastBookings.length})`}
+                  Past
                 </Text>
               </Pressable>
-            </View>
+              <Pressable
+                onPress={() => setActiveTab('cancelled')}
+                style={[
+                  styles.nativeTabChip,
+                  activeTab === 'cancelled' && styles.nativeTabChipActive,
+                ]}
+              >
+                <Text style={[styles.nativeTabChipText, activeTab === 'cancelled' && styles.nativeTabChipTextActive]}>
+                  Cancelled
+                </Text>
+              </Pressable>
+            </ScrollView>
           </View>
 
           <FlatList
@@ -673,6 +873,208 @@ const styles = StyleSheet.create({
   cancelConfirmBtn: {
     backgroundColor: '#F44336',
     borderColor: '#F44336',
+  },
+  webHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  searchFilterWrap: {
+    width: 200,
+  },
+  searchBarWeb: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    height: 36,
+    fontSize: 13,
+    color: '#111827',
+  },
+  dateFilterWrap: {
+    position: 'relative',
+  },
+  webDatePicker: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    opacity: 0,
+    cursor: 'pointer',
+    width: '100%',
+    height: '100%',
+    zIndex: 1,
+  },
+  dateClearBtn: {
+    position: 'absolute',
+    right: 8,
+    top: '50%',
+    marginTop: -10,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  verticalDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: '#E5E7EB',
+    marginHorizontal: 4,
+  },
+  tableHeaderContainer: {
+    marginHorizontal: 24,
+    marginBottom: 4,
+    marginTop: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  tableHeaderRow: {
+    flexDirection: 'row',
+  },
+  tableHeaderCell: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    shadowColor: '#000',
+    shadowOpacity: 0.02,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  clickableRowSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  tableCell: {
+    paddingRight: 16,
+  },
+  colBookedAt: {
+    width: 140,
+  },
+  colGround: {
+    flex: 2,
+  },
+  colDateTime: {
+    width: 180,
+  },
+  colTeams: {
+    width: 120,
+  },
+  colStatus: {
+    width: 110,
+  },
+  colAmount: {
+    width: 100,
+  },
+  colPayment: {
+    width: 90,
+  },
+  colBookedFor: {
+    width: 150,
+  },
+  bookedForInput: {
+    fontSize: 12,
+    color: '#111827',
+    padding: 6,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 6,
+    backgroundColor: '#F9FAFB',
+  },
+  bookedDateText: {
+    fontSize: 13,
+    color: '#111827',
+    fontWeight: '600',
+  },
+  bookedTimeText: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 1,
+  },
+  groundName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  groundLocation: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  dateText: {
+    fontSize: 13,
+    color: '#111827',
+    fontWeight: '600',
+  },
+  timeText: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  amount: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  statusBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    textAlign: 'center',
+    width: 'fit-content' as any,
+  },
+  statusConfirmed: {
+    backgroundColor: '#DEF7EC',
+    color: '#03543F',
+  },
+  statusCancelled: {
+    backgroundColor: '#FDE8E8',
+    color: '#9B1C1C',
+  },
+  teamsText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  paymentBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    textAlign: 'center',
+    width: 'fit-content' as any,
+  },
+  paymentCash: {
+    backgroundColor: '#FEF3C7',
+    color: '#92400E',
+  },
+  paymentOnline: {
+    backgroundColor: '#DBEAFE',
+    color: '#1E40AF',
   },
 });
 

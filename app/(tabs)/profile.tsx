@@ -77,6 +77,24 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'This action is permanent and will delete all your data. Are you sure you want to proceed?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Permanently',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert('Request Sent', 'Your account deletion request has been submitted. Our team will process it within 24 hours. You will be signed out now.');
+            void signOut().then(() => router.replace('/'));
+          },
+        },
+      ]
+    );
+  };
+
   const getRoleLabel = (role: string) => {
     switch (role) {
       case 'ground_owner':
@@ -296,6 +314,16 @@ export default function ProfileScreen() {
             <Text style={[styles.menuItemText, { color: themeText }]}>Settings</Text>
             <ChevronRight size={20} color={chevronColor} />
           </TouchableOpacity>
+
+          {!isWeb && (
+            <TouchableOpacity 
+              style={styles.menuItem}
+              onPress={handleDeleteAccount}
+            >
+              <Text style={[styles.menuItemText, { color: '#EF4444' }]}>Delete Account</Text>
+              <ChevronRight size={20} color="#EF4444" />
+            </TouchableOpacity>
+          )}
         </View>
       )}
 

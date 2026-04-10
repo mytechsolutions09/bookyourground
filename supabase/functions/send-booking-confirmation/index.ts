@@ -82,8 +82,8 @@ serve(async (req) => {
                     <!-- Header -->
                     <tr>
                       <td align="center" style="background-color: #043529; padding: 40px 20px;">
-                        <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700;">Book your ground</h1>
-                        <p style="color: #02c259; margin: 8px 0 0 0; font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Booking Confirmed</p>
+                        <img src="https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/assets/logo.png" alt="BookYourGround" style="width: 200px; height: auto; display: block; margin: 0 auto;">
+                        <p style="color: #02c259; margin: 16px 0 0 0; font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Booking Confirmed</p>
                       </td>
                     </tr>
                     

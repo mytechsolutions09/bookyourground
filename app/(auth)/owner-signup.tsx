@@ -414,7 +414,7 @@ function WebStatePicker(props: any) {
           style={{
             width: '100%',
             appearance: 'none',
-            border: '1px solid #00ea6b',
+            border: '1px solid rgba(0, 234, 107, 0.12)',
             borderRadius: '8px',
             padding: '10px 12px',
             fontSize: '14px',
@@ -503,7 +503,7 @@ function WebInput(props: any) {
       <TextInput
         style={{
           borderWidth: 1,
-          borderColor: '#00ea6b',
+          borderColor: 'rgba(0, 234, 107, 0.12)',
           borderRadius: 8,
           paddingHorizontal: 12,
           paddingVertical: 10,

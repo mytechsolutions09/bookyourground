@@ -33,6 +33,7 @@ import {
   Star,
   Mail,
   LifeBuoy,
+  Ticket,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -54,7 +55,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
     { id: string; name: string; city: string | null; state: string | null }[]
   >([]);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [searchFocused, setSearchFocused] = useState(false);
 
   if (Platform.OS !== 'web') {
@@ -141,6 +142,11 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
     '/manage-users',
     '/messages',
     '/settings',
+    '/settings/coupons',
+    '/settings/locations',
+    '/settings/ground-types',
+    '/settings/payment',
+    '/settings/support',
   ];
   const isAdminRoute =
     adminPathnames.includes(cleanPath) ||
@@ -243,18 +249,19 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
           setMenuOpen(false);
         }}
       >
-        <Icon size={20} color={iconColor} />
-        {!hideLabel && (
-          <Text
-            style={[
-              styles.navLinkText,
-              isCompact && styles.navLinkTextMobile,
-              isActive && (isCompact ? styles.navLinkTextActiveMobile : styles.navLinkTextActive),
-            ]}
-          >
-            {label}
-          </Text>
-        )}
+        <Icon size={18} color={iconColor} />
+        <Text
+          numberOfLines={1}
+          style={[
+            styles.navLinkText,
+            isCompact && styles.navLinkTextMobile,
+            isActive && (isCompact ? styles.navLinkTextActiveMobile : styles.navLinkTextActive),
+            !isCompact && hideLabel && { opacity: 0, width: 0, marginLeft: 0 } as any,
+            !isCompact && { transition: 'all 0.3s ease-in-out' } as any,
+          ]}
+        >
+          {label}
+        </Text>
       </TouchableOpacity>
     );
   };
@@ -647,12 +654,19 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
           )}
 
         {showMenuPanel ? (
-          <View style={isAdminLayout ? styles.sidebarContainerAdmin : styles.sidebarContainer}>
+          <View 
+            style={isAdminLayout ? styles.sidebarContainerAdmin : styles.sidebarContainer}
+            {...(isAdminLayout ? {
+              onMouseEnter: () => setSidebarCollapsed(false),
+              onMouseLeave: () => setSidebarCollapsed(true)
+            } : {})}
+          >
             <View
               style={[
                 styles.sidebar,
                 isLanding && styles.sidebarHeaderOffset,
                 isSuperAdmin && isAdminRoute && sidebarCollapsed && styles.sidebarCollapsed,
+                isAdminRoute && { transition: 'width 0.3s ease-in-out' } as any,
               ]}
             >
               <ScrollView
@@ -1052,14 +1066,16 @@ const styles = StyleSheet.create({
     ...Platform.select({
       web: {
         position: 'sticky' as any,
-        top: 64, // Closer to top
+        top: 64, 
         alignSelf: 'flex-start',
         maxHeight: 'calc(100vh - 80px)' as any,
+        transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
+        overflow: 'hidden',
       },
     }),
   },
   sidebarCollapsed: {
-    width: 72,
+    width: 68,
     paddingHorizontal: 8,
   },
   sidebarMobile: {
@@ -1089,6 +1105,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     marginBottom: 2,
+    transition: 'all 0.3s ease-in-out',
   },
   navLinkCollapsed: {
     justifyContent: 'center',

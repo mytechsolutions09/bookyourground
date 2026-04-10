@@ -219,7 +219,7 @@ export default function BookingDetailsScreen() {
                       (booking.status === 'cancelled' || booking.status === 'rejected') && styles.statusTextCancelled,
                     ]}>
                       {booking.status === 'confirmed' 
-                        ? (new Date(booking.booking_date) < new Date(new Date().setHours(0,0,0,0)) ? '' : 'ACTIVE')
+                        ? (isPastBooking ? 'DONE' : 'ACTIVE')
                         : booking.status.toUpperCase()}
                     </Text>
                   </View>
