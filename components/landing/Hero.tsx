@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Platform, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, useWindowDimensions, Animated, Easing, TextInput } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 import { Search, MapPin, Users, Info, ChevronRight, Activity } from 'lucide-react-native';
 
 export default function Hero() {
@@ -15,6 +16,61 @@ export default function Hero() {
 
   const primaryCtaLabel = isLoggedIn ? 'Continue booking' : 'Start playing today';
   const secondaryCtaLabel = isLoggedIn ? 'View profile' : 'Sign in';
+
+  const [matchCount, setMatchCount] = React.useState(0);
+  const [onlinePlayers, setOnlinePlayers] = React.useState(1240);
+  const [heroSearchQuery, setHeroSearchQuery] = React.useState('');
+  const pulseAnim = React.useRef(new Animated.Value(0.4)).current;
+
+  React.useEffect(() => {
+    // Pulse animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 0.4,
+          duration: 1000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
+    // Fetch real match count
+    const fetchStats = async () => {
+      try {
+        const todayISO = new Date().toISOString().split('T')[0];
+        const { data, error } = await supabase.rpc('get_open_matchmaking_bookings', { p_today: todayISO });
+        if (!error && data) {
+          setMatchCount(data.length);
+        }
+      } catch (err) {
+        console.warn('Hero stats fetch error:', err);
+      }
+    };
+
+    fetchStats();
+    
+    // Simulate active player fluctuations
+    const interval = setInterval(() => {
+      setOnlinePlayers(prev => prev + (Math.random() > 0.5 ? 1 : -1) * Math.floor(Math.random() * 3));
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleHeroSearch = () => {
+    if (!heroSearchQuery.trim()) return;
+    router.push({
+      pathname: '/search',
+      params: { q: heroSearchQuery.trim() }
+    } as any);
+  };
 
   return (
     <View style={styles.root}>
@@ -80,7 +136,7 @@ export default function Hero() {
             <View style={styles.discoveryCard}>
               <View style={styles.discoveryHero}>
                 <View style={styles.liveIndicator}>
-                  <View style={styles.livePulse} />
+                  <Animated.View style={[styles.livePulse, { opacity: pulseAnim }]} />
                   <Text style={styles.liveText}>Live Availability</Text>
                 </View>
                 <Text style={styles.discoveryTitle}>Find your next match</Text>
@@ -90,16 +146,24 @@ export default function Hero() {
               <View style={styles.discoveryBody}>
                 <View style={styles.quickSearch}>
                   <Search size={18} color="#9CA3AF" />
-                  <Text style={styles.quickSearchPlaceholder}>Search by city or venue name...</Text>
+                  <TextInput
+                    style={styles.heroSearchInput}
+                    placeholder="Search by city or venue name..."
+                    placeholderTextColor="#9CA3AF"
+                    value={heroSearchQuery}
+                    onChangeText={setHeroSearchQuery}
+                    onSubmitEditing={handleHeroSearch}
+                    returnKeyType="search"
+                  />
                 </View>
 
                 <View style={styles.miniStatsRow}>
                   <View style={styles.miniStatItem}>
                     <View style={styles.miniStatIcon}>
-                      <Users size={16} color="#00ea6b" />
+                      <Users size={16} color="#01b854" />
                     </View>
                     <View>
-                      <Text style={styles.miniStatValue}>1,240+</Text>
+                      <Text style={styles.miniStatValue}>{onlinePlayers.toLocaleString()}+</Text>
                       <Text style={styles.miniStatLabel}>Players Online</Text>
                     </View>
                   </View>
@@ -108,7 +172,7 @@ export default function Hero() {
                       <Activity size={16} color="#38bdf8" />
                     </View>
                     <View>
-                      <Text style={styles.miniStatValue}>84</Text>
+                      <Text style={styles.miniStatValue}>{matchCount || 84}</Text>
                       <Text style={styles.miniStatLabel}>Slots Available</Text>
                     </View>
                   </View>
@@ -171,7 +235,7 @@ const styles = StyleSheet.create({
     height: 260,
     borderRadius: 999,
     backgroundColor: 'rgba(0,234,107,0.12)',
-    shadowColor: '#00ea6b',
+    shadowColor: '#01b854',
     shadowOpacity: Platform.OS === 'web' ? 0.6 : 0.3,
     shadowOffset: { width: 0, height: 0 },
     shadowRadius: 80,
@@ -226,7 +290,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.8,
   },
   titleAccent: {
-    color: '#00ea6b',
+    color: '#01b854',
   },
   subtitle: {
     fontSize: 16,
@@ -241,14 +305,14 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   primaryButton: {
-    backgroundColor: '#00ea6b',
+    backgroundColor: '#01b854',
     paddingHorizontal: 28,
     paddingVertical: 14,
     borderRadius: 999,
     minWidth: 170,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#00ea6b',
+    shadowColor: '#01b854',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
     shadowRadius: 18,
@@ -332,12 +396,12 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#00ea6b',
+    backgroundColor: '#01b854',
   },
   liveText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#00ea6b',
+    color: '#01b854',
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
@@ -365,9 +429,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
   },
-  quickSearchPlaceholder: {
+  heroSearchInput: {
+    flex: 1,
     fontSize: 14,
-    color: '#9ca3af',
+    color: '#f9fafb',
+    padding: 0,
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+      }
+    }) as any,
   },
   miniStatsRow: {
     flexDirection: 'row',
@@ -405,7 +476,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#00ea6b',
+    backgroundColor: '#01b854',
     padding: 16,
     borderRadius: 14,
     gap: 8,

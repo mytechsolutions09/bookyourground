@@ -19,6 +19,16 @@ import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, User, Mail, Lock, Phone, MapPin, Eye, EyeOff, CheckCircle, ChevronDown, Users } from 'lucide-react-native';
 
+let TurnstileComponent: any = null;
+if (Platform.OS === 'web') {
+  try {
+    const TurnstileModule = require('@marsidev/react-turnstile');
+    TurnstileComponent = TurnstileModule.Turnstile;
+  } catch (e) {
+    console.warn('Turnstile module could not be loaded:', e);
+  }
+}
+
 const INDIAN_STATES = [
   "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", 
   "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", 
@@ -44,6 +54,7 @@ export default function SignupScreen() {
   const [showStatePicker, setShowStatePicker] = useState(false);
   const [playerType, setPlayerType] = useState('Player');
   const [showPlayerTypePicker, setShowPlayerTypePicker] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   // Focus states
   const [focusedField, setFocusedField] = useState<string | null>(null);
@@ -69,7 +80,7 @@ export default function SignupScreen() {
 
     setLoading(true);
     const fullName = `${firstName} ${lastName}`.trim();
-    const { error } = await signUp(email, password, fullName, phone, 'user', undefined, address, stateName, teamName, playerType);
+    const { error } = await signUp(email, password, fullName, phone, 'user', undefined, address, stateName, teamName, playerType, turnstileToken || undefined);
     setLoading(false);
 
     if (error) {
@@ -185,6 +196,21 @@ export default function SignupScreen() {
                     placeholder="Min 6 characters"
                     secureTextEntry
                   />
+
+                  {Platform.OS === 'web' && TurnstileComponent && (
+                    <View style={{ marginBottom: 16, alignItems: 'center', minHeight: 65 }}>
+                      <TurnstileComponent
+                        siteKey={process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY || '0x4AAAAAAA4N2_8m7n6b5v4c'} 
+                        onSuccess={(token: string) => setTurnstileToken(token)}
+                        onExpire={() => setTurnstileToken(null)}
+                        onError={() => setTurnstileToken(null)}
+                        options={{
+                          theme: 'dark',
+                          size: 'normal',
+                        }}
+                      />
+                    </View>
+                  )}
   
                   <View style={webStyles.buttonRow}>
                     <TouchableOpacity
@@ -269,7 +295,7 @@ export default function SignupScreen() {
             <View style={[styles.fieldWrap, { flex: 1 }]}>
               <Text style={styles.fieldLabel}>First Name</Text>
               <View style={[styles.inputRow, isFocused('firstName') && styles.inputRowFocused]}>
-                <User size={15} color={isFocused('firstName') ? '#00ea6b' : '#6b7280'} strokeWidth={2} />
+                <User size={15} color={isFocused('firstName') ? '#01b854' : '#6b7280'} strokeWidth={2} />
                 <TextInput
                   style={styles.textInput}
                   value={firstName}
@@ -300,7 +326,7 @@ export default function SignupScreen() {
           <View style={styles.fieldWrap}>
             <Text style={styles.fieldLabel}>Email</Text>
             <View style={[styles.inputRow, isFocused('email') && styles.inputRowFocused]}>
-              <Mail size={17} color={isFocused('email') ? '#00ea6b' : '#6b7280'} strokeWidth={2} />
+              <Mail size={17} color={isFocused('email') ? '#01b854' : '#6b7280'} strokeWidth={2} />
               <TextInput
                 style={styles.textInput}
                 value={email}
@@ -318,7 +344,7 @@ export default function SignupScreen() {
           <View style={styles.fieldWrap}>
             <Text style={styles.fieldLabel}>Mobile</Text>
             <View style={[styles.inputRow, isFocused('phone') && styles.inputRowFocused]}>
-              <Phone size={15} color={isFocused('phone') ? '#00ea6b' : '#6b7280'} strokeWidth={2} />
+              <Phone size={15} color={isFocused('phone') ? '#01b854' : '#6b7280'} strokeWidth={2} />
               <TextInput
                 style={styles.textInput}
                 value={phone}
@@ -336,7 +362,7 @@ export default function SignupScreen() {
             <View style={[styles.fieldWrap, { flex: 1.5 }]}>
               <Text style={styles.fieldLabel}>Team Name (Squad)</Text>
               <View style={[styles.inputRow, isFocused('teamName') && styles.inputRowFocused]}>
-                <Users size={15} color={isFocused('teamName') ? '#00ea6b' : '#6b7280'} strokeWidth={2} />
+                <Users size={15} color={isFocused('teamName') ? '#01b854' : '#6b7280'} strokeWidth={2} />
                 <TextInput
                   style={styles.textInput}
                   value={teamName}
@@ -364,7 +390,7 @@ export default function SignupScreen() {
             <View style={[styles.fieldWrap, { flex: 1.5 }]}>
               <Text style={styles.fieldLabel}>Address</Text>
               <View style={[styles.inputRow, isFocused('address') && styles.inputRowFocused]}>
-                <MapPin size={15} color={isFocused('address') ? '#00ea6b' : '#6b7280'} strokeWidth={2} />
+                <MapPin size={15} color={isFocused('address') ? '#01b854' : '#6b7280'} strokeWidth={2} />
                 <TextInput
                   style={styles.textInput}
                   value={address}
@@ -393,7 +419,7 @@ export default function SignupScreen() {
           <View style={styles.fieldWrap}>
             <Text style={styles.fieldLabel}>Password</Text>
             <View style={[styles.inputRow, isFocused('password') && styles.inputRowFocused]}>
-              <Lock size={17} color={isFocused('password') ? '#00ea6b' : '#6b7280'} strokeWidth={2} />
+              <Lock size={17} color={isFocused('password') ? '#01b854' : '#6b7280'} strokeWidth={2} />
               <TextInput
                 style={styles.textInput}
                 value={password}
@@ -440,7 +466,7 @@ export default function SignupScreen() {
         <View style={modalStyles.overlay}>
           <View style={modalStyles.card}>
             <View style={modalStyles.iconBg}>
-              <CheckCircle size={40} color="#00ea6b" strokeWidth={2.5} />
+              <CheckCircle size={40} color="#01b854" strokeWidth={2.5} />
             </View>
             <Text style={modalStyles.title}>Success!</Text>
             <Text style={modalStyles.message}>Your account has been created successfully. Welcome to BookYourGround!</Text>
@@ -464,7 +490,7 @@ export default function SignupScreen() {
             <View style={{ padding: 20, width: '100%', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Text style={[modalStyles.title, { marginBottom: 0 }]}>Select Role</Text>
               <TouchableOpacity onPress={() => setShowPlayerTypePicker(false)}>
-                <Text style={{ color: '#00ea6b', fontWeight: '700' }}>DONE</Text>
+                <Text style={{ color: '#01b854', fontWeight: '700' }}>DONE</Text>
               </TouchableOpacity>
             </View>
             <ScrollView style={{ width: '100%' }}>
@@ -482,7 +508,7 @@ export default function SignupScreen() {
                     backgroundColor: playerType === type ? 'rgba(0,234,107,0.1)' : 'transparent',
                   }}
                 >
-                  <Text style={{ color: playerType === type ? '#00ea6b' : '#f9fafb', fontSize: 16 }}>{type}</Text>
+                  <Text style={{ color: playerType === type ? '#01b854' : '#f9fafb', fontSize: 16 }}>{type}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -497,7 +523,7 @@ export default function SignupScreen() {
             <View style={{ padding: 20, width: '100%', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
               <Text style={[modalStyles.title, { marginBottom: 0 }]}>Select State</Text>
               <TouchableOpacity onPress={() => setShowStatePicker(false)}>
-                <Text style={{ color: '#00ea6b', fontWeight: '700' }}>DONE</Text>
+                <Text style={{ color: '#01b854', fontWeight: '700' }}>DONE</Text>
               </TouchableOpacity>
             </View>
             <ScrollView style={{ width: '100%' }}>
@@ -515,7 +541,7 @@ export default function SignupScreen() {
                     backgroundColor: stateName === state ? 'rgba(0,234,107,0.1)' : 'transparent',
                   }}
                 >
-                  <Text style={{ color: stateName === state ? '#00ea6b' : '#f9fafb', fontSize: 16 }}>{state}</Text>
+                  <Text style={{ color: stateName === state ? '#01b854' : '#f9fafb', fontSize: 16 }}>{state}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -614,13 +640,13 @@ const styles = StyleSheet.create({
   fieldWrap: { marginBottom: 14 },
   fieldLabel: { fontSize: 12, fontWeight: '600', color: '#e5e7eb', marginBottom: 6, letterSpacing: 0.2 },
   inputRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#043529', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(0,234,107,0.18)', paddingHorizontal: 12, paddingVertical: 11, gap: 8 },
-  inputRowFocused: { borderColor: '#00ea6b' },
+  inputRowFocused: { borderColor: '#01b854' },
   textInput: { flex: 1, fontSize: 14, color: '#f9fafb', paddingVertical: 0 },
   buttonRow: { flexDirection: 'row', gap: 12, marginTop: 16 },
-  signUpBtn: { flex: 1, backgroundColor: '#00ea6b', borderRadius: 12, height: 48, alignItems: 'center', justifyContent: 'center' },
+  signUpBtn: { flex: 1, backgroundColor: '#01b854', borderRadius: 12, height: 48, alignItems: 'center', justifyContent: 'center' },
   signUpBtnText: { fontSize: 15, fontWeight: '700', color: '#043529', letterSpacing: 0.5 },
-  outlineBtn: { flex: 1, borderRadius: 12, height: 48, borderWidth: 1.5, borderColor: '#00ea6b', alignItems: 'center', justifyContent: 'center' },
-  outlineBtnText: { fontSize: 15, fontWeight: '700', color: '#00ea6b', letterSpacing: 0.5 },
+  outlineBtn: { flex: 1, borderRadius: 12, height: 48, borderWidth: 1.5, borderColor: '#01b854', alignItems: 'center', justifyContent: 'center' },
+  outlineBtnText: { fontSize: 15, fontWeight: '700', color: '#01b854', letterSpacing: 0.5 },
 });
 
 const webStyles = StyleSheet.create({
@@ -637,10 +663,10 @@ const webStyles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 12, marginBottom: 0 },
   col: { flex: 1 },
   buttonRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  button: { flex: 1, backgroundColor: '#10b981', borderRadius: 8, height: 40, alignItems: 'center', justifyContent: 'center' },
+  button: { flex: 1, backgroundColor: '#01b854', borderRadius: 8, height: 40, alignItems: 'center', justifyContent: 'center' },
   buttonText: { fontSize: 13, fontWeight: '700', color: '#043529', letterSpacing: 0.5 },
-  outlineButton: { flex: 1, borderRadius: 8, height: 40, borderWidth: 1.5, borderColor: '#10b981', alignItems: 'center', justifyContent: 'center' },
-  outlineButtonText: { fontSize: 13, fontWeight: '700', color: '#10b981', textTransform: 'uppercase' as any },
+  outlineButton: { flex: 1, borderRadius: 8, height: 40, borderWidth: 1.5, borderColor: '#01b854', alignItems: 'center', justifyContent: 'center' },
+  outlineButtonText: { fontSize: 13, fontWeight: '700', color: '#01b854', textTransform: 'uppercase' as any },
 });
 
 const modalStyles = StyleSheet.create({
@@ -649,6 +675,6 @@ const modalStyles = StyleSheet.create({
   iconBg: { width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(0,234,107,0.1)', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
   title: { fontSize: 24, fontWeight: '800', color: '#f9fafb', marginBottom: 12 },
   message: { fontSize: 15, color: '#9ca3af', textAlign: 'center', lineHeight: 22, marginBottom: 28 },
-  button: { backgroundColor: '#00ea6b', paddingVertical: 14, paddingHorizontal: 40, borderRadius: 14, width: '100%', alignItems: 'center', shadowColor: '#00ea6b', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10 },
+  button: { backgroundColor: '#01b854', paddingVertical: 14, paddingHorizontal: 40, borderRadius: 14, width: '100%', alignItems: 'center', shadowColor: '#01b854', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10 },
   buttonText: { fontSize: 15, fontWeight: '800', color: '#043529', letterSpacing: 1 },
 });

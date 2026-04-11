@@ -239,8 +239,8 @@ export default function HomeScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#00ea6b"
-            colors={['#00ea6b']}
+            tintColor="#01b854"
+            colors={['#01b854']}
           />
         }
       >
@@ -299,12 +299,12 @@ export default function HomeScreen() {
               onPress={() => router.push('/(tabs)/grounds' as any)}
             >
               <Text style={styles.seeAllText}>See all</Text>
-              <ChevronRight size={14} color="#00ea6b" strokeWidth={2.5} />
+              <ChevronRight size={14} color="#01b854" strokeWidth={2.5} />
             </Pressable>
           </View>
 
           {loading ? (
-            <ActivityIndicator color="#00ea6b" style={{ marginTop: 24, marginBottom: 8 }} />
+            <ActivityIndicator color="#01b854" style={{ marginTop: 24, marginBottom: 8 }} />
           ) : popularGrounds.length === 0 ? (
             <Text style={styles.emptyText}>No grounds found</Text>
           ) : (
@@ -379,7 +379,7 @@ export default function HomeScreen() {
             </View>
 
             {loading ? (
-              <ActivityIndicator color="#00ea6b" style={{ marginTop: 16 }} />
+              <ActivityIndicator color="#01b854" style={{ marginTop: 16 }} />
             ) : filteredGrounds.length === 0 ? (
               <Text style={styles.emptyText}>No grounds match your search.</Text>
             ) : (
@@ -437,7 +437,7 @@ export default function HomeScreen() {
               return (
                 <View key={i} style={styles.featureCard}>
                   <View style={styles.featureIconWrap}>
-                    <Icon size={22} color="#00ea6b" strokeWidth={2} />
+                    <Icon size={22} color="#01b854" strokeWidth={2} />
                   </View>
                   <Text style={styles.featureLabel}>{f.label}</Text>
                   <Text style={styles.featureDesc}>{f.desc}</Text>

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -33,10 +33,12 @@ import {
   Star,
   Mail,
   LifeBuoy,
+  Search,
   Ticket,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { makeGroundPath } from '@/utils/groundSlug';
 
 interface WebLayoutProps {
   children: React.ReactNode;
@@ -51,12 +53,109 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<
-    { id: string; name: string; city: string | null; state: string | null }[]
-  >([]);
-  const [searchLoading, setSearchLoading] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [searchFocused, setSearchFocused] = useState(false);
+  const [searchResults, setSearchResults] = useState<{ grounds: any[], matches: any[] }>({ grounds: [], matches: [] });
+  const [isSearching, setIsSearching] = useState(false);
+
+  const performSearch = useCallback(async (query: string) => {
+    if (query.length < 2) {
+      setSearchResults({ grounds: [], matches: [] });
+      return;
+    }
+    
+    setIsSearching(true);
+    try {
+      const q = `%${query}%`;
+      
+      // 1. Search Grounds
+      const { data: groundsData } = await supabase
+        .from('grounds')
+        .select('*, ground_images(*)')
+        .or(`name.ilike.${q},city.ilike.${q},state.ilike.${q}`)
+        .eq('active', true)
+        .eq('approved', true)
+        .limit(5);
+
+      // 2. Search Matches (Matchmaking)
+      // Note: We search profiles (full_name, team_name) and grounds (name, city) for the matches
+      const { data: matchesData } = await supabase
+        .from('bookings')
+        .select(`
+          *,
+          ground:grounds(*, ground_images(*)),
+          user:profiles(*)
+        `)
+        .eq('status', 'confirmed') // Assume matchmaking is only for confirmed slots
+        .or(`notes.ilike.${q},opponent_team_name.ilike.${q}`) // Basic filter on booking notes/team_name if exists
+        // Since we can't easily join-filter across tables in a single .or() call without complex RPCs,
+        // we'll primarily search on the user's team/name in the profile join if possible, 
+        // or just depend on the ground info which is already covered by the grounds search.
+        .limit(5);
+
+      // Advanced matchmaking search: include captain/team name from profiles
+      const { data: profilesWithMatch } = await supabase
+        .from('profiles')
+        .select(`
+          team_name,
+          full_name,
+          bookings!user_id(
+            *,
+            ground:grounds(*, ground_images(*))
+          )
+        `)
+        .or(`team_name.ilike.${q},full_name.ilike.${q}`)
+        .limit(5);
+
+      // Flatten and filter profilesWithMatch into matches if the booking is active
+      const additionalMatches = (profilesWithMatch || [])
+        .flatMap(p => (p.bookings || []).map(b => ({ ...b, user: { team_name: p.team_name, full_name: p.full_name } })))
+        .filter(b => b.ground); // Ensure ground data exists
+
+      setSearchResults({
+        grounds: groundsData || [],
+        matches: matchesData || additionalMatches
+      });
+    } catch (err) {
+      console.error('Global search error:', err);
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery.trim()) {
+        performSearch(searchQuery.trim());
+      } else {
+        setSearchResults({ grounds: [], matches: [] });
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery, performSearch]);
+
+  const handleResultPress = (type: 'ground' | 'match', item: any) => {
+    setSearchQuery('');
+    setSearchFocused(false);
+    
+    if (type === 'ground') {
+      router.push(makeGroundPath(item) as any);
+    } else {
+      // Direct join for Matches found in search
+      const citySlug = (item.ground?.city || 'city').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const nameSlug = (item.ground?.name || 'ground').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      
+      router.push({
+        pathname: `/ground/${citySlug}/${nameSlug}`,
+        params: {
+          date: item.booking_date,
+          time: item.start_time?.slice(0, 5),
+          teams: 'one',
+          lock: 'true'
+        }
+      } as any);
+    }
+  };
 
   if (Platform.OS !== 'web') {
     return <>{children}</>;
@@ -74,45 +173,6 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
   }, []);
 
   // Navbar search: fetch ground suggestions as user types on landing pages.
-  useEffect(() => {
-    if (!searchQuery || searchQuery.trim().length < 2) {
-      setSearchResults([]);
-      setSearchLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setSearchLoading(true);
-
-    const timeout = setTimeout(async () => {
-      try {
-        const { data, error } = await supabase
-          .from('grounds')
-          .select('id, name, city, state')
-          .eq('active', true)
-          .eq('approved', true)
-          .ilike('name', `%${searchQuery.trim()}%`)
-          .limit(6);
-
-        if (cancelled) return;
-        if (error) {
-          console.warn('Navbar search error:', error);
-          setSearchResults([]);
-        } else {
-          setSearchResults(
-            (data || []) as { id: string; name: string; city: string | null; state: string | null }[],
-          );
-        }
-      } finally {
-        if (!cancelled) setSearchLoading(false);
-      }
-    }, 250); // simple debounce
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timeout);
-    };
-  }, [searchQuery]);
 
   const isCompact = useMemo(() => width < 900, [width]);
   const groundsHref = isCompact ? '/(tabs)/grounds' : '/book-my-ground';
@@ -177,7 +237,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
   // On ground info (/grounds/[id]) and booking info (/bookings/[id]) pages,
   // hide the left sidebar for all roles so the content can take full width.
   const isPublicNoSidebar =
-    isLanding || isMarketing || isGroundInfoPage || isBookingDetails || isCheckoutPage || isLegalOrInfoPage || (cleanPath === '/find-an-opponent' && !isSuperAdmin) || cleanPath === '/(tabs)/grounds';
+    isLanding || isMarketing || isGroundInfoPage || isBookingDetails || isCheckoutPage || isLegalOrInfoPage || (cleanPath === '/find-an-opponent' && !isSuperAdmin) || cleanPath === '/(tabs)/grounds' || cleanPath === '/search';
   // Treat the presence of a Supabase `user` as authenticated even if `profile`
   // hasn't loaded yet (prevents briefly showing "Sign In").
   const isAuthenticated = !!user || !!profile || isSuperAdmin;
@@ -322,60 +382,87 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                 <>
                   {!isCompact && (
                     <View style={styles.headerSearch}>
+                      <Search size={16} color="#9CA3AF" style={styles.headerSearchIcon} />
                       <TextInput
-                        placeholder="SEARCH GROUNDS"
-                        placeholderTextColor="#dcc093"
+                        placeholder="Search by city or venue name..."
+                        placeholderTextColor="#9CA3AF"
                         value={searchQuery}
                         onChangeText={setSearchQuery}
                         onFocus={() => setSearchFocused(true)}
-                        onBlur={() => setSearchFocused(false)}
+                        onBlur={() => {
+                          // Small delay to allow result clicks to register before unmounting
+                          setTimeout(() => setSearchFocused(false), 200);
+                        }}
+                        onSubmitEditing={() => {
+                          if (searchQuery.trim().length >= 2) {
+                            setSearchFocused(false);
+                            router.push({
+                              pathname: '/search',
+                              params: { q: searchQuery.trim() }
+                            } as any);
+                          }
+                        }}
+                        returnKeyType="search"
                         style={[
                           styles.headerSearchInput,
-                          searchFocused && { borderColor: '#dcc093', outlineColor: '#dcc093' } as any,
-                          !searchFocused && { outlineColor: 'transparent' } as any,
+                          searchFocused && { borderColor: 'rgba(0,234,107,0.3)' } as any,
                         ]}
                       />
 
-                      {searchQuery.trim().length >= 2 && (
+                      {searchFocused && (searchQuery.length >= 2) && (
                         <View style={styles.searchDropdown}>
-                          {searchLoading && searchResults.length === 0 ? (
-                            <Text style={styles.searchDropdownText}>Searching…</Text>
-                          ) : searchResults.length === 0 ? (
-                            <Text style={styles.searchDropdownText}>No grounds found</Text>
+                          {isSearching ? (
+                            <Text style={styles.searchDropdownText}>Searching...</Text>
+                          ) : (searchResults.grounds.length === 0 && searchResults.matches.length === 0) ? (
+                            <Text style={styles.searchDropdownText}>No results found for "{searchQuery}"</Text>
                           ) : (
-                            searchResults.map((g) => {
-                              const slugify = (value: string) =>
-                                (value || 'ground')
-                                  .toLowerCase()
-                                  .trim()
-                                  .replace(/[^a-z0-9]+/g, '-')
-                                  .replace(/^-+/, '')
-                                  .replace(/-+$/, '');
-                              const citySlug = slugify(String(g.city ?? '') || 'city');
-                              const nameSlug = slugify(String(g.name ?? 'ground'));
-                              const href = `/ground/${encodeURIComponent(
-                                citySlug,
-                              )}/${encodeURIComponent(nameSlug)}`;
-
-                              return (
-                                <TouchableOpacity
-                                  key={g.id}
-                                  style={styles.searchDropdownItem}
-                                  onPress={() => {
-                                    setSearchQuery('');
-                                    setSearchResults([]);
-                                    router.push(href as any);
-                                  }}
-                                >
-                                  <Text style={styles.searchDropdownItemTitle}>{g.name}</Text>
-                                  {!!(g.city || g.state) && (
-                                    <Text style={styles.searchDropdownItemSubtitle}>
-                                      {[g.city, g.state].filter(Boolean).join(', ')}
-                                    </Text>
-                                  )}
-                                </TouchableOpacity>
-                              );
-                            })
+                            <ScrollView style={styles.searchDropdownScroll} keyboardShouldPersistTaps="handled">
+                              {searchResults.grounds.length > 0 && (
+                                <View style={styles.searchSection}>
+                                  <Text style={styles.searchSectionTitle}>VENUES</Text>
+                                  {searchResults.grounds.map(g => (
+                                    <TouchableOpacity 
+                                      key={g.id} 
+                                      style={styles.searchItem}
+                                      onPress={() => handleResultPress('ground', g)}
+                                    >
+                                      <View style={styles.searchItemIcon}>
+                                        <Building2 size={14} color="#01b854" />
+                                      </View>
+                                      <View style={styles.searchItemInfo}>
+                                        <Text style={styles.searchItemName}>{g.name}</Text>
+                                        <Text style={styles.searchItemMeta}>{g.city}, {g.state}</Text>
+                                      </View>
+                                    </TouchableOpacity>
+                                  ))}
+                                </View>
+                              )}
+                              
+                              {searchResults.matches.length > 0 && (
+                                <View style={styles.searchSection}>
+                                  <Text style={styles.searchSectionTitle}>AVAILABLE MATCHES</Text>
+                                  {searchResults.matches.map(m => (
+                                    <TouchableOpacity 
+                                      key={m.id} 
+                                      style={styles.searchItem}
+                                      onPress={() => handleResultPress('match', m)}
+                                    >
+                                      <View style={[styles.searchItemIcon, { backgroundColor: 'rgba(0,234,107,0.1)' }]}>
+                                        <Swords size={14} color="#01b854" />
+                                      </View>
+                                      <View style={styles.searchItemInfo}>
+                                        <Text style={styles.searchItemName}>
+                                          {m.user?.team_name || m.user?.full_name || 'Anonymous Match'}
+                                        </Text>
+                                        <Text style={styles.searchItemMeta}>
+                                          {m.ground?.name} • {m.ground?.city}
+                                        </Text>
+                                      </View>
+                                    </TouchableOpacity>
+                                  ))}
+                                </View>
+                              )}
+                            </ScrollView>
                           )}
                         </View>
                       )}
@@ -516,6 +603,25 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                 {noCard ? children : <View style={styles.mainAppCard}>{children}</View>}
               </View>
               <View style={styles.sidebarMobile}>
+                <View style={styles.mobileSidebarSearch}>
+                  <Search size={18} color="#dcc093" />
+                  <TextInput
+                    style={styles.mobileSidebarSearchInput}
+                    placeholder="Search venues or matches..."
+                    placeholderTextColor="rgba(220, 192, 147, 0.5)"
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    onSubmitEditing={() => {
+                      if (searchQuery.trim().length >= 2) {
+                        setMenuOpen(false);
+                        router.push({
+                          pathname: '/search',
+                          params: { q: searchQuery.trim() }
+                        } as any);
+                      }
+                    }}
+                  />
+                </View>
                 {showLandingMobileMenu &&
                   !showOwnerMobileMenu &&
                   !showAdminMobileMenu &&
@@ -936,57 +1042,102 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   headerSearch: {
-    minWidth: 220,
-    maxWidth: 320,
+    minWidth: 260,
+    maxWidth: 360,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#06392e',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    paddingHorizontal: 12,
     position: 'relative',
   },
+  headerSearchIcon: {
+    marginRight: 8,
+  },
   headerSearchInput: {
-    borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.45)', // #00ea6b
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    color: '#dcc093',
+    flex: 1,
+    height: 40,
+    color: '#f9fafb',
     fontSize: 14,
     fontFamily: 'Inter',
     backgroundColor: 'transparent',
+    borderWidth: 0,
+    padding: 0,
+    paddingVertical: 8,
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+      }
+    }) as any,
   },
   searchDropdown: {
     position: 'absolute' as any,
-    top: 40,
+    top: 50,
     left: 0,
     right: 0,
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    marginTop: 6,
-    paddingVertical: 6,
     shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
-    zIndex: 2500,
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    zIndex: 5000,
+    overflow: 'hidden',
+    maxHeight: 450,
+  },
+  searchDropdownScroll: {
+    paddingVertical: 8,
   },
   searchDropdownText: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#6B7280',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    padding: 20,
+    textAlign: 'center',
   },
-  searchDropdownItem: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+  searchSection: {
+    paddingBottom: 8,
   },
-  searchDropdownItemTitle: {
+  searchSectionTitle: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#9CA3AF',
+    marginLeft: 16,
+    marginTop: 8,
+    marginBottom: 4,
+    letterSpacing: 0.8,
+  },
+  searchItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 12,
+    transition: 'background-color 0.2s',
+  },
+  searchItemIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchItemInfo: {
+    flex: 1,
+  },
+  searchItemName: {
     fontSize: 14,
     fontWeight: '600',
     color: '#111827',
   },
-  searchDropdownItemSubtitle: {
+  searchItemMeta: {
     fontSize: 12,
     color: '#6B7280',
-    marginTop: 2,
+    marginTop: 1,
   },
   userName: {
     fontSize: 14,
@@ -1283,5 +1434,24 @@ const styles = StyleSheet.create({
     color: '#dcc093',
     textAlign: 'center',
     fontFamily: 'Inter',
+  },
+  mobileSidebarSearch: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(220,192,147,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 24,
+    gap: 10,
+  },
+  mobileSidebarSearchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#dcc093',
+    fontFamily: 'Inter',
+    outlineStyle: 'none' as any,
   },
 });

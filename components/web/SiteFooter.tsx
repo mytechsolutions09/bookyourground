@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
   footerBrandTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#02c259',
+    color: '#01b854',
   },
   footerBrandSubtitle: {
     marginTop: 6,

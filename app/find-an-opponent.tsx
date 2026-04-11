@@ -12,7 +12,7 @@ import {
   ScrollView,
   TextInput,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { BookingWithDetails } from '@/types';
 import MobileAppNavbar from '../components/MobileAppNavbar';
@@ -34,7 +34,8 @@ export default function FindAnOpponentScreen() {
   const isMediumWeb = Platform.OS === 'web' && width >= 768 && width < 1100;
 
   // Filters
-  const [searchQuery, setSearchQuery] = useState('');
+  const params = useLocalSearchParams();
+  const [searchQuery, setSearchQuery] = useState((params.q as string) || '');
   const [selectedCity, setSelectedCity] = useState('All');
   const [selectedPitch, setSelectedPitch] = useState('All');
   const [selectedDateFilter, setSelectedDateFilter] = useState('All');

@@ -233,7 +233,7 @@ function WebInput(props: any) {
       <TextInput
         style={{
           borderWidth: 1,
-          borderColor: '#00ea6b',
+          borderColor: '#01b854',
           borderRadius: 8,
           paddingHorizontal: 10,
           paddingVertical: 8,
@@ -261,10 +261,10 @@ const styles = StyleSheet.create({
   fieldLabel: { fontSize: 13, fontWeight: '600', color: '#e5e7eb', marginBottom: 8 },
   inputRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#043529', borderRadius: 14, borderWidth: 1.5, borderColor: 'rgba(0,234,107,0.18)', paddingHorizontal: 14, paddingVertical: 12, gap: 10 },
   textInput: { flex: 1, fontSize: 15, color: '#f9fafb' },
-  resetBtn: { marginTop: 8, backgroundColor: '#00ea6b', borderRadius: 14, paddingVertical: 15, alignItems: 'center' },
+  resetBtn: { marginTop: 8, backgroundColor: '#01b854', borderRadius: 14, paddingVertical: 15, alignItems: 'center' },
   resetBtnText: { fontSize: 16, fontWeight: '700', color: '#043529' },
   loginLink: { marginTop: 30, alignItems: 'center' },
-  loginLinkText: { fontSize: 14, fontWeight: '700', color: '#00ea6b' },
+  loginLinkText: { fontSize: 14, fontWeight: '700', color: '#01b854' },
 });
 
 const webStyles = StyleSheet.create({
@@ -279,8 +279,8 @@ const webStyles = StyleSheet.create({
   formTitle: { fontSize: 22, fontWeight: '800', color: '#f9fafb', marginTop: 4, marginBottom: 4 },
   formSubtitle: { fontSize: 14, color: '#9ca3af', marginBottom: 12, textAlign: 'center' },
   heroImage: { flex: 1, width: '50%' as any, overflow: 'hidden' },
-  button: { marginTop: 8, backgroundColor: '#10b981', borderRadius: 8, height: 40, alignItems: 'center', justifyContent: 'center', width: '100%' },
+  button: { marginTop: 8, backgroundColor: '#01b854', borderRadius: 8, height: 40, alignItems: 'center', justifyContent: 'center', width: '100%' },
   buttonText: { fontSize: 14, fontWeight: '700', color: '#043529', letterSpacing: 0.5 },
-  outlineButton: { marginTop: 8, borderRadius: 8, height: 40, borderWidth: 1.5, borderColor: '#10b981', alignItems: 'center', justifyContent: 'center', width: '100%' },
-  outlineButtonText: { fontSize: 14, fontWeight: '700', color: '#10b981', textTransform: 'uppercase' as any },
+  outlineButton: { marginTop: 8, borderRadius: 8, height: 40, borderWidth: 1.5, borderColor: '#01b854', alignItems: 'center', justifyContent: 'center', width: '100%' },
+  outlineButtonText: { fontSize: 14, fontWeight: '700', color: '#01b854', textTransform: 'uppercase' as any },
 });

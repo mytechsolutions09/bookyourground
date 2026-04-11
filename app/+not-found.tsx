@@ -57,7 +57,7 @@ export default function NotFoundScreen() {
                 onPress={() => router.replace('/book-my-ground' as any)}
                 activeOpacity={0.7}
               >
-                <Search size={20} color="#00ea6b" strokeWidth={2} />
+                <Search size={20} color="#01b854" strokeWidth={2} />
                 <Text style={styles.secondaryBtnText}>Book Grounds</Text>
               </TouchableOpacity>
             </View>
@@ -80,13 +80,13 @@ export default function NotFoundScreen() {
               <Text style={styles.linksTitle}>Popular Destinations</Text>
               <View style={styles.linkGrid}>
                 <QuickLink 
-                  icon={<MapPin size={18} color="#00ea6b" />}
+                  icon={<MapPin size={18} color="#01b854" />}
                   title="Venues"
                   subtitle="Find nearby grounds"
                   onPress={() => router.replace('/book-my-ground' as any)}
                 />
                 <QuickLink 
-                  icon={<Search size={18} color="#00ea6b" />}
+                  icon={<Search size={18} color="#01b854" />}
                   title="Matchmaking"
                   subtitle="Join existing games"
                   onPress={() => router.replace('/find-an-opponent' as any)}
@@ -97,7 +97,6 @@ export default function NotFoundScreen() {
         </View>
       </ScrollView>
 
-      {Platform.OS === 'web' && <SiteFooter />}
     </View>
   );
 
@@ -137,6 +136,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#043529',
+    borderRadius: 20,
+    overflow: 'hidden',
   },
   bgImage: {
     width: '100%',
@@ -144,104 +145,104 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingVertical: 60,
+    paddingVertical: 32,
     justifyContent: 'center',
     alignItems: 'center',
   },
   mainGroup: {
     width: '100%',
-    maxWidth: 640,
+    maxWidth: 480,
     alignItems: 'center',
   },
   errorCard: {
     width: '100%',
     backgroundColor: '#06392e',
-    borderRadius: 32,
-    padding: 40,
+    borderRadius: 24,
+    padding: 24,
     borderWidth: 1,
     borderColor: 'rgba(0,234,107,0.15)',
     alignItems: 'center',
     ...Platform.select({
       web: {
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 20 },
-        shadowOpacity: 0.3,
-        shadowRadius: 40,
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.2,
+        shadowRadius: 20,
         elevation: 10,
       }
     })
   },
   badge: {
     backgroundColor: 'rgba(0,234,107,0.1)',
-    paddingHorizontal: 16,
-    paddingVertical: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
     borderRadius: 99,
-    marginBottom: 24,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: 'rgba(0,234,107,0.3)',
   },
   badgeText: {
-    color: '#00ea6b',
+    color: '#01b854',
     fontSize: 12,
     fontWeight: '800',
     letterSpacing: 2,
   },
   title: {
-    fontSize: 36,
+    fontSize: 28,
     fontWeight: '900',
     color: '#f9fafb',
     textAlign: 'center',
-    letterSpacing: -1,
-    marginBottom: 16,
+    letterSpacing: -0.6,
+    marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#9ca3af',
     textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 32,
-    maxWidth: 400,
+    lineHeight: 20,
+    marginBottom: 24,
+    maxWidth: 340,
   },
   buttonGroup: {
     width: '100%',
     flexDirection: Platform.OS === 'web' ? 'row' : 'column',
     gap: 12,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   primaryBtn: {
     flex: 1,
-    backgroundColor: '#00ea6b',
-    height: 52,
-    borderRadius: 14,
+    backgroundColor: '#01b854',
+    height: 44,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
-    shadowColor: '#00ea6b',
+    gap: 8,
+    shadowColor: '#01b854',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
   },
   primaryBtnText: {
     color: '#043529',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '800',
   },
   secondaryBtn: {
     flex: 1,
-    height: 52,
-    borderRadius: 14,
+    height: 44,
+    borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#00ea6b',
+    borderColor: '#01b854',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
+    gap: 8,
   },
   secondaryBtnText: {
-    color: '#00ea6b',
-    fontSize: 16,
+    color: '#01b854',
+    fontSize: 14,
     fontWeight: '800',
   },
   backLink: {
@@ -256,13 +257,13 @@ const styles = StyleSheet.create({
   },
   quickLinks: {
     width: '100%',
-    marginTop: 40,
+    marginTop: 24,
   },
   linksTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800',
     color: '#f9fafb',
-    marginBottom: 20,
+    marginBottom: 12,
     paddingLeft: 4,
   },
   linkGrid: {

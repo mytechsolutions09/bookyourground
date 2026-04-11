@@ -18,6 +18,16 @@ import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { Mail, Lock, User, Phone, MapPin, Building2, ChevronDown } from 'lucide-react-native';
 
+let TurnstileComponent: any = null;
+if (Platform.OS === 'web') {
+  try {
+    const TurnstileModule = require('@marsidev/react-turnstile');
+    TurnstileComponent = TurnstileModule.Turnstile;
+  } catch (e) {
+    console.warn('Turnstile module could not be loaded:', e);
+  }
+}
+
 const INDIAN_STATES = [
   "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", 
   "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", 
@@ -38,6 +48,7 @@ export default function OwnerSignupScreen() {
   const [businessName, setBusinessName] = useState('');
   const [loading, setLoading] = useState(false);
   const [showStatePicker, setShowStatePicker] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   const { signUp } = useAuth();
   const { width } = useWindowDimensions();
@@ -59,7 +70,7 @@ export default function OwnerSignupScreen() {
     }
 
     setLoading(true);
-    const { error } = await signUp(email, password, fullName, phone, 'ground_owner', businessName, address, state);
+    const { error } = await signUp(email, password, fullName, phone, 'ground_owner', businessName, address, state, undefined, undefined, turnstileToken || undefined);
     setLoading(false);
 
     if (error) {
@@ -147,6 +158,21 @@ export default function OwnerSignupScreen() {
                     placeholder="Create a strong password"
                     secureTextEntry
                   />
+
+                  {Platform.OS === 'web' && TurnstileComponent && (
+                    <View style={{ marginBottom: 16, alignItems: 'center', minHeight: 65 }}>
+                      <TurnstileComponent
+                        siteKey={process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY || '0x4AAAAAAA4N2_8m7n6b5v4c'} 
+                        onSuccess={(token: string) => setTurnstileToken(token)}
+                        onExpire={() => setTurnstileToken(null)}
+                        onError={() => setTurnstileToken(null)}
+                        options={{
+                          theme: 'dark',
+                          size: 'normal',
+                        }}
+                      />
+                    </View>
+                  )}
 
                   <View style={webStyles.row}>
                     <View style={webStyles.col}>
@@ -470,7 +496,7 @@ const mobilePickerStyles = StyleSheet.create({
     color: '#f9fafb',
   },
   doneText: {
-    color: '#00ea6b',
+    color: '#01b854',
     fontWeight: '700',
   },
   item: {
@@ -486,7 +512,7 @@ const mobilePickerStyles = StyleSheet.create({
     fontSize: 16,
   },
   itemTextActive: {
-    color: '#00ea6b',
+    color: '#01b854',
     fontWeight: '600',
   },
 });
@@ -532,12 +558,12 @@ const styles = StyleSheet.create({
   inputRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#043529', borderRadius: 12, borderWidth: 1.5, borderColor: 'rgba(0,234,107,0.18)', paddingHorizontal: 14, paddingVertical: 12, gap: 10 },
   textInput: { flex: 1, fontSize: 15, color: '#f9fafb' },
   buttonRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  signupBtn: { flex: 1, backgroundColor: '#00ea6b', borderRadius: 12, height: 48, alignItems: 'center', justifyContent: 'center' },
+  signupBtn: { flex: 1, backgroundColor: '#01b854', borderRadius: 12, height: 48, alignItems: 'center', justifyContent: 'center' },
   signupBtnText: { fontSize: 15, fontWeight: '700', color: '#043529' },
-  outlineBtn: { flex: 1, borderRadius: 12, height: 48, borderWidth: 1.5, borderColor: '#00ea6b', alignItems: 'center', justifyContent: 'center' },
-  outlineBtnText: { fontSize: 15, fontWeight: '700', color: '#00ea6b' },
+  outlineBtn: { flex: 1, borderRadius: 12, height: 48, borderWidth: 1.5, borderColor: '#01b854', alignItems: 'center', justifyContent: 'center' },
+  outlineBtnText: { fontSize: 15, fontWeight: '700', color: '#01b854' },
   homeLink: { marginTop: 24, alignItems: 'center' },
-  homeLinkText: { fontSize: 14, fontWeight: '700', color: '#00ea6b' },
+  homeLinkText: { fontSize: 14, fontWeight: '700', color: '#01b854' },
 });
 
 const webStyles = StyleSheet.create({
@@ -558,8 +584,8 @@ const webStyles = StyleSheet.create({
   row: { flexDirection: 'row', gap: 16 },
   col: { flex: 1 },
   buttonRow: { flexDirection: 'row', gap: 16, marginTop: 12 },
-  button: { flex: 1, backgroundColor: '#10b981', borderRadius: 10, height: 48, alignItems: 'center', justifyContent: 'center' },
+  button: { flex: 1, backgroundColor: '#01b854', borderRadius: 10, height: 48, alignItems: 'center', justifyContent: 'center' },
   buttonText: { fontSize: 15, fontWeight: '700', color: '#043529', letterSpacing: 0.5 },
-  outlineButton: { flex: 1, borderRadius: 10, height: 48, borderWidth: 1.5, borderColor: '#10b981', alignItems: 'center', justifyContent: 'center' },
-  outlineButtonText: { fontSize: 15, fontWeight: '700', color: '#10b981', textTransform: 'uppercase' as any },
+  outlineButton: { flex: 1, borderRadius: 10, height: 48, borderWidth: 1.5, borderColor: '#01b854', alignItems: 'center', justifyContent: 'center' },
+  outlineButtonText: { fontSize: 15, fontWeight: '700', color: '#01b854', textTransform: 'uppercase' as any },
 });

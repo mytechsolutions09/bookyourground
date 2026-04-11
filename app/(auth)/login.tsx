@@ -19,12 +19,14 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, CheckCircle, Send } from 'lucide-react-native';
 
-let Turnstile: any = null;
+let TurnstileComponent: any = null;
 if (Platform.OS === 'web') {
   try {
-    Turnstile = require('@marsidev/react-turnstile').Turnstile;
+    // We use a local variable to avoid naming conflicts and ensure clean conditional loading
+    const TurnstileModule = require('@marsidev/react-turnstile');
+    TurnstileComponent = TurnstileModule.Turnstile;
   } catch (e) {
-    console.warn('Turnstile not available');
+    console.warn('Turnstile module could not be loaded:', e);
   }
 }
 
@@ -180,15 +182,25 @@ export default function LoginScreen() {
                     onSubmitEditing={handleLogin}
                   />
 
-                  {Platform.OS === 'web' && Turnstile && (
-                    <View style={{ marginBottom: 16, alignItems: 'center' }}>
-                      <Turnstile
+                  {Platform.OS === 'web' && TurnstileComponent && (
+                    <View style={{ marginBottom: 16, alignItems: 'center', minHeight: 65 }}>
+                      <TurnstileComponent
                         siteKey={process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY || '0x4AAAAAAA4N2_8m7n6b5v4c'} 
-                        onSuccess={(token: string) => setTurnstileToken(token)}
-                        onExpire={() => setTurnstileToken(null)}
-                        onError={() => setTurnstileToken(null)}
+                        onSuccess={(token: string) => {
+                          console.log('Turnstile success');
+                          setTurnstileToken(token);
+                        }}
+                        onExpire={() => {
+                          console.warn('Turnstile expired');
+                          setTurnstileToken(null);
+                        }}
+                        onError={(error: any) => {
+                          console.error('Turnstile error:', error);
+                          setTurnstileToken(null);
+                        }}
                         options={{
                           theme: 'dark',
+                          size: 'normal',
                         }}
                       />
                     </View>
@@ -291,7 +303,7 @@ export default function LoginScreen() {
                 emailFocused && styles.inputRowFocused,
               ]}
             >
-              <Mail size={17} color={emailFocused ? '#00ea6b' : '#6b7280'} strokeWidth={2} />
+              <Mail size={17} color={emailFocused ? '#01b854' : '#6b7280'} strokeWidth={2} />
               <TextInput
                 style={styles.textInput}
                 value={email}
@@ -316,7 +328,7 @@ export default function LoginScreen() {
                 passwordFocused && styles.inputRowFocused,
               ]}
             >
-              <Lock size={17} color={passwordFocused ? '#00ea6b' : '#6b7280'} strokeWidth={2} />
+              <Lock size={17} color={passwordFocused ? '#01b854' : '#6b7280'} strokeWidth={2} />
               <TextInput
                 style={styles.textInput}
                 value={password}
@@ -382,7 +394,7 @@ export default function LoginScreen() {
         <View style={modalStyles.overlay}>
           <View style={modalStyles.card}>
             <View style={[modalStyles.iconBg, { backgroundColor: 'rgba(0,234,107,0.1)' }]}>
-              <CheckCircle size={40} color="#00ea6b" strokeWidth={2.5} />
+              <CheckCircle size={40} color="#01b854" strokeWidth={2.5} />
             </View>
             <Text style={modalStyles.title}>Welcome Back!</Text>
             <Text style={modalStyles.message}>Signed in successfully. redirecting you...</Text>
@@ -399,7 +411,7 @@ export default function LoginScreen() {
         <View style={modalStyles.overlay}>
           <View style={modalStyles.card}>
             <View style={[modalStyles.iconBg, { backgroundColor: 'rgba(16,185,129,0.1)' }]}>
-              <Send size={40} color="#10b981" strokeWidth={2.5} />
+              <Send size={40} color="#01b854" strokeWidth={2.5} />
             </View>
             <Text style={modalStyles.title}>Email Sent!</Text>
             <Text style={modalStyles.message}>A password reset link has been sent to your email address.</Text>
@@ -526,7 +538,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   inputRowFocused: {
-    borderColor: '#00ea6b',
+    borderColor: '#01b854',
     backgroundColor: 'rgba(4,53,41,0.9)',
   },
   textInput: {
@@ -542,12 +554,12 @@ const styles = StyleSheet.create({
   },
   signInBtn: {
     flex: 1,
-    backgroundColor: '#00ea6b',
+    backgroundColor: '#01b854',
     borderRadius: 12,
     height: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#00ea6b',
+    shadowColor: '#01b854',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
@@ -564,14 +576,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     height: 48,
     borderWidth: 1.5,
-    borderColor: '#00ea6b',
+    borderColor: '#01b854',
     alignItems: 'center',
     justifyContent: 'center',
   },
   outlineBtnText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#00ea6b',
+    color: '#01b854',
     letterSpacing: 0.5,
   },
   forgotWrap: {
@@ -582,7 +594,7 @@ const styles = StyleSheet.create({
   forgotText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#00ea6b',
+    color: '#01b854',
   },
 });
 
@@ -662,7 +674,7 @@ const webStyles = StyleSheet.create({
   },
   button: {
     flex: 1,
-    backgroundColor: '#10b981',
+    backgroundColor: '#01b854',
     borderRadius: 8,
     height: 40,
     alignItems: 'center',
@@ -679,14 +691,14 @@ const webStyles = StyleSheet.create({
     borderRadius: 8,
     height: 40,
     borderWidth: 1.5,
-    borderColor: '#10b981',
+    borderColor: '#01b854',
     alignItems: 'center',
     justifyContent: 'center',
   },
   outlineButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#10b981',
+    color: '#01b854',
     textTransform: 'uppercase' as any,
   },
   forgotWrap: {
@@ -696,7 +708,7 @@ const webStyles = StyleSheet.create({
   forgotText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#10b981',
+    color: '#01b854',
   },
 });
 
@@ -745,13 +757,13 @@ const modalStyles = StyleSheet.create({
     marginBottom: 28,
   },
   button: {
-    backgroundColor: '#00ea6b',
+    backgroundColor: '#01b854',
     paddingVertical: 14,
     paddingHorizontal: 40,
     borderRadius: 14,
     width: '100%',
     alignItems: 'center',
-    shadowColor: '#00ea6b',
+    shadowColor: '#01b854',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,

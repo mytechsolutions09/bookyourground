@@ -11,6 +11,7 @@ export default function LandingScrollContent({ variant }: { variant: Variant }) 
     <ScrollView
       style={landingScrollStyles.container}
       contentContainerStyle={landingScrollStyles.scrollContent}
+      showsVerticalScrollIndicator={false}
     >
       <LandingPageSections variant={variant} />
     </ScrollView>
