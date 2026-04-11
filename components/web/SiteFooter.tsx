@@ -36,6 +36,12 @@ export default function SiteFooter() {
             >
               My profile
             </Text>
+            <Text
+              style={styles.footerLink}
+              onPress={() => router.push('/match-strategies' as any)}
+            >
+              Match strategies
+            </Text>
           </View>
 
           <View style={styles.footerColumn}>

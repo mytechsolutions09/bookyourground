@@ -189,7 +189,8 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
     cleanPath === '/terms' ||
     cleanPath === '/privacy' ||
     cleanPath === '/refund-policy' ||
-    cleanPath === '/contact';
+    cleanPath === '/contact' ||
+    cleanPath === '/match-strategies';
   const adminPathnames = [
     '/dashboard',
     '/bookings',
