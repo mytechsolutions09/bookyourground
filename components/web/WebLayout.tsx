@@ -577,7 +577,14 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                     >
                       Grounds
                     </Text>
-                    {isAuthenticated && (
+                    {!isAuthenticated ? (
+                      <Text
+                        style={styles.headerSecondaryButtonText}
+                        onPress={() => router.push('/(auth)/login' as any)}
+                      >
+                        Sign in
+                      </Text>
+                    ) : (
                       <Text
                         style={styles.headerPrimaryButtonText}
                         onPress={() => {
