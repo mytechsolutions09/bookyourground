@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { View, Text, ScrollView, Platform, StyleSheet, TouchableOpacity, useWindowDimensions, Dimensions, Image, Share } from 'react-native';
 import { 
   Shield, 
@@ -24,6 +24,9 @@ import {
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS } from 'react-native-reanimated';
 import Svg, { Circle, Ellipse, Line, Rect, G } from 'react-native-svg';
+import * as Sharing from 'expo-sharing';
+import * as Print from 'expo-print';
+import { captureRef } from 'react-native-view-shot';
 import WebLayout from '@/components/web/WebLayout';
 
 
@@ -288,6 +291,7 @@ export default function MatchStrategiesScreen() {
 
   const [activeSection, setActiveSection] = useState('fielding');
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const fieldRef = useRef<View>(null);
   const [batsman, setBatsman] = useState<BatsmanType>('LH');
   const [bowler, setBowler] = useState<BowlerType>('LA_Fast');
   const [overs, setOvers] = useState<OversType>('1-6');
@@ -397,16 +401,70 @@ export default function MatchStrategiesScreen() {
     }
   };
 
-  const handleShareImage = () => {
-    // Mock functionality for Image capture
-    console.log('Generating tactical image...');
-    alert('Generating high-resolution tactical image for sharing...');
+  const handleShareImage = async () => {
+    try {
+      if (!fieldRef.current) return;
+      
+      const uri = await captureRef(fieldRef.current, {
+        format: 'png',
+        quality: 0.9,
+      });
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri);
+      } else {
+        alert('Sharing is not available on this platform. URI: ' + uri);
+      }
+    } catch (error) {
+      console.error('Error generating strategy image:', error);
+      alert('Failed to generate tactical image.');
+    }
   };
 
-  const handleExportPDF = () => {
-    // Mock functionality for PDF export
-    console.log('Generating PDF report...');
-    alert('Generating professional tactical PDF report...');
+  const handleExportPDF = async () => {
+    try {
+      const fieldData = fielders.map(f => {
+        const side = isOutsideInnerCircle(f.x, f.y) ? 'Deep' : 'Inner';
+        return `<li><strong>${f.name}</strong>: ${side} Field</li>`;
+      }).join('');
+
+      const html = `
+        <html>
+          <head>
+            <style>
+              body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 40px; color: #111827; }
+              h1 { color: #01b854; border-bottom: 2px solid #01b854; padding-bottom: 10px; }
+              .scenario { background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; }
+              .footer { margin-top: 50px; font-size: 12px; color: #6b7280; text-align: center; }
+            </style>
+          </head>
+          <body>
+            <h1>Cricket Tactical Strategy</h1>
+            <div class="scenario">
+              <p><strong>Batsman Stance:</strong> ${batsman}</p>
+              <p><strong>Bowler Style:</strong> ${bowler.replace('_', ' ')}</p>
+              <p><strong>Game Phase:</strong> ${overs}</p>
+            </div>
+            <h2>Fielding Placements</h2>
+            <ul>${fieldData}</ul>
+            <p style="margin-top: 30px;"><em>Generated via BookYourGround Match Strategies</em></p>
+            <div class="footer">
+              &copy; 2026 BookYourGround Tactical Command
+            </div>
+          </body>
+        </html>
+      `;
+
+      const { uri } = await Print.printToFileAsync({ html });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri);
+      } else {
+        alert('PDF generated at: ' + uri);
+      }
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF report.');
+    }
   };
 
   const STRATEGIES = [
@@ -576,7 +634,9 @@ export default function MatchStrategiesScreen() {
               {activeSection === 'fielding' ? (
                 <View style={[styles.designerCard, isMobile && { padding: 12, borderRadius: 16 }]}>
                   {/* Field Visualizer */}
-                  <View style={[
+                  <View 
+                    ref={fieldRef}
+                    style={[
                     styles.fieldWrapper, 
                     { 
                       width: fieldBaseWidth * fieldScale, 

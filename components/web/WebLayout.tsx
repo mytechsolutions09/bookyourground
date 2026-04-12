@@ -190,7 +190,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
     cleanPath === '/privacy' ||
     cleanPath === '/refund-policy' ||
     cleanPath === '/contact' ||
-    cleanPath === '/match-strategies';
+    cleanPath === '/cricket';
   const adminPathnames = [
     '/dashboard',
     '/bookings',
@@ -472,6 +472,13 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
 
                   <Text
                     style={styles.headerPrimaryButtonText}
+                    onPress={() => router.push('/cricket' as any)}
+                  >
+                    Cricket
+                  </Text>
+
+                  <Text
+                    style={styles.headerPrimaryButtonText}
                     onPress={() => router.push('/find-an-opponent' as any)}
                   >
                     Find Match
@@ -552,6 +559,12 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
               ) : (
                 !isCompact && (
                   <View style={{ flexDirection: 'row', gap: 24 }}>
+                      <Text
+                        style={styles.headerPrimaryButtonText}
+                        onPress={() => router.push('/cricket' as any)}
+                      >
+                        Cricket
+                      </Text>
                     <Text
                       style={styles.headerPrimaryButtonText}
                       onPress={() => router.push('/find-an-opponent' as any)}
@@ -633,6 +646,16 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                         style={styles.mobilePrimaryButton}
                         onPress={() => {
                           setMenuOpen(false);
+                          router.push('/cricket' as any);
+                        }}
+                      >
+                        <Text style={styles.mobilePrimaryButtonText}>Cricket Hub</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.mobilePrimaryButton}
+                        onPress={() => {
+                          setMenuOpen(false);
                           router.push('/find-an-opponent' as any);
                         }}
                       >
@@ -678,6 +701,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                     <Text style={styles.sidebarTitle}>Ground owner</Text>
                     <NavLink href="/(owner)/dashboard" icon={LayoutDashboard} label="Dashboard" />
                     <NavLink href="/(owner)/grounds" icon={MapPin} label="My grounds" />
+                    <NavLink href="/cricket" icon={Swords} label="Cricket Hub" />
                     <NavLink href="/(tabs)/matches" icon={CalendarClock} label="My Matches" />
                     <NavLink href="/(owner)/bookings" icon={Calendar} label="Bookings" />
                     <NavLink href="/(owner)/inventory" icon={CalendarClock} label="Inventory Plan" />
@@ -737,6 +761,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                   <>
                     <Text style={styles.sidebarTitle}>My Account</Text>
                     <NavLink href="/(tabs)/dashboard" icon={LayoutDashboard} label="Dashboard" />
+                    <NavLink href="/cricket" icon={Swords} label="Cricket Hub" />
                     <NavLink href="/(tabs)/matches" icon={CalendarClock} label="My Matches" />
                     <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
                     <NavLink href="/(tabs)/favorites" icon={Star} label="Favorites" />
@@ -1061,7 +1086,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 40,
     color: '#f9fafb',
-    fontSize: 16,
+    fontSize: 13,
     fontFamily: 'Inter',
     backgroundColor: 'transparent',
     borderWidth: 0,
@@ -1384,7 +1409,7 @@ const styles = StyleSheet.create({
   },
   headerPrimaryButtonText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '400',
     color: '#dcc093',
     fontFamily: 'Inter',
     textTransform: 'uppercase' as any,
@@ -1399,7 +1424,7 @@ const styles = StyleSheet.create({
   },
   headerSecondaryButtonText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '400',
     color: '#dcc093',
     fontFamily: 'Inter',
     textTransform: 'uppercase' as any,

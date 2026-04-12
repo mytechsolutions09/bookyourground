@@ -38,6 +38,12 @@ export default function SiteFooter() {
             </Text>
             <Text
               style={styles.footerLink}
+              onPress={() => router.push('/cricket' as any)}
+            >
+              Cricket
+            </Text>
+            <Text
+              style={styles.footerLink}
               onPress={() => router.push('/match-strategies' as any)}
             >
               Match strategies
