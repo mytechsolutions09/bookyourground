@@ -605,7 +605,7 @@ const styles = StyleSheet.create({
   sidebarSearchInput: {
     flex: 1,
     color: '#111827',
-    fontSize: 14,
+    fontSize: 16,
     ...Platform.select({
       web: { outlineStyle: 'none' }
     }) as any,

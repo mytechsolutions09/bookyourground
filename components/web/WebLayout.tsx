@@ -1061,7 +1061,7 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 40,
     color: '#f9fafb',
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'Inter',
     backgroundColor: 'transparent',
     borderWidth: 0,
@@ -1450,7 +1450,7 @@ const styles = StyleSheet.create({
   },
   mobileSidebarSearchInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 16,
     color: '#dcc093',
     fontFamily: 'Inter',
     outlineStyle: 'none' as any,

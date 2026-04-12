@@ -23,7 +23,25 @@ export default function RootLayout() {
       document.head.appendChild(link);
     }
 
-    document.body.style.fontFamily = '"Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    const styleId = 'global-app-font';
+    if (!document.getElementById(styleId)) {
+      const style = document.createElement('style');
+      style.id = styleId;
+      style.innerHTML = `
+        html, body, #root, [data-reactroot], div, span, p, h1, h2, h3, h4, h5, h6, a, label {
+          font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+        }
+        input, select, textarea, button {
+          font-family: "Inter", system-ui, sans-serif !important;
+        }
+        /* Ensure Lucide icons (SVG) don't get affected by font-family if they wrap text, 
+           though they usually don't. This is just for safety. */
+        .lucide {
+          font-family: inherit !important;
+        }
+      `;
+      document.head.appendChild(style);
+    }
   }, []);
 
   return (
