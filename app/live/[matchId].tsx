@@ -13,8 +13,14 @@ const fmtOvers = (legalBalls: number, total: number) =>
 const srColor = (sr: number) =>
   sr >= 150 ? '#1D9E75' : sr >= 100 ? '#BA7517' : '#E24B4A';
 
-const generateScorecard = (logs: any[], inningsNum: number) => {
-  const innLogs = logs.filter(l => l.innings_number === inningsNum || !l.innings_number); // Fallback for old logs
+const generateScorecard = (logs: any[], inningsNum: number, inningsList: any[]) => {
+  const inn = inningsList?.find(i => i.innings_number === inningsNum);
+  const innLogs = logs.filter(l => {
+     if (inn && l.innings_id) return l.innings_id === inn.id;
+     // Fallback for old balls without innings_id (assume they belong to innings 1)
+     if (!l.innings_id && inningsNum === 1) return true;
+     return false;
+  });
   const batters: Record<string, any> = {};
   const bowlers: Record<string, any> = {};
   let extras = { wide: 0, noball: 0, bye: 0, legbye: 0, penalty: 0, total: 0 };
@@ -119,6 +125,7 @@ export default function LiveScorecard() {
   const [squadB, setSquadB] = useState<any[]>([]);
   const [ballLogs, setBallLogs] = useState<any[]>([]);
   const [matchImages, setMatchImages] = useState<any[]>([]);
+  const [inningsList, setInningsList] = useState<any[]>([]);
   const [isUploading, setIsUploading] = useState(false);
 
   const handlePickImage = async () => {
@@ -250,6 +257,9 @@ export default function LiveScorecard() {
         if (sqA.data) setSquadA(sqA.data);
         if (sqB.data) setSquadB(sqB.data);
 
+        const { data: inns } = await supabase.from('innings').select('*').eq('match_id', matchId);
+        if (inns) setInningsList(inns);
+
         // Fetch Ball Logs
         const { data: logs } = await supabase
           .from('ball_log')
@@ -278,19 +288,23 @@ export default function LiveScorecard() {
       .channel(`live-score-${matchId}-${Math.random()}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'match_live_state', filter: `match_id=eq.${matchId}` },
+        { event: '*', schema: 'public', table: 'match_live_state' },
         (payload) => {
-          setLive(payload.new);
-          setLastUpdated(new Date());
-          setBlink(true);
-          setTimeout(() => setBlink(false), 600);
+          if (payload.new && payload.new.match_id === matchId) {
+             setLive(payload.new);
+             setLastUpdated(new Date());
+             setBlink(true);
+             setTimeout(() => setBlink(false), 600);
+          }
         }
       )
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'ball_log', filter: `match_id=eq.${matchId}` },
+        { event: 'INSERT', schema: 'public', table: 'ball_log' },
         (payload) => {
-          setBallLogs(prev => [payload.new, ...prev]);
+          if (payload.new && payload.new.match_id === matchId) {
+             setBallLogs(prev => [payload.new, ...prev]);
+          }
         }
       )
       .subscribe();
@@ -313,7 +327,7 @@ export default function LiveScorecard() {
   const oversStr = fmtOvers(live.legal_balls, live.overs_total);
 
   const renderInningsScorecard = (innNum: number) => {
-    const sc = generateScorecard(ballLogs, innNum);
+    const sc = generateScorecard(ballLogs, innNum, inningsList);
     if (!sc.batters.length && !sc.bowlers.length) return null;
 
     const teamName = innNum === 1 ? match.team_a : match.team_b;

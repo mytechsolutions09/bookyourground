@@ -14,7 +14,7 @@ import {
   Modal,
   Animated,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import WebLayout from '@/components/web/WebLayout';
 import { 
   Swords, 
@@ -412,7 +412,18 @@ export default function CricketScreen() {
 
   const [fetchedMatches, setFetchedMatches] = useState<any[]>([]);
 
+  const { matchId: urlMatchId, live } = useLocalSearchParams();
+
   useEffect(() => {
+    if (urlMatchId) {
+      resumeMatch(urlMatchId as string).then(success => {
+        if (success) setIsScoring(true);
+      });
+    }
+    if (live === 'true') {
+      setIsLiveSession(true);
+      setIsSelectingTeams(true);
+    }
     fetchTeams();
     fetchMatches();
 
@@ -3426,120 +3437,49 @@ export default function CricketScreen() {
     }
   };
 
-  const renderActionModal = () => (
-    <Modal
-      animationType="fade"
-      transparent={true}
-      visible={isActionModalVisible}
-      onRequestClose={() => setIsActionModalVisible(false)}
-    >
-      <TouchableOpacity 
-        style={styles.modalOverlay}
-        activeOpacity={1}
-        onPress={() => setIsActionModalVisible(false)}
-      >
-        <View style={styles.actionModalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>What would you like to do?</Text>
-            <TouchableOpacity onPress={() => setIsActionModalVisible(false)}>
-              <X size={24} color="#6B7280" />
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.modalOptions}>
-            <TouchableOpacity 
-              style={styles.modalOption} 
-              onPress={() => {
-                setIsSelectingTeams(true);
-                setIsActionModalVisible(false);
-              }}
-            >
-              <View style={[styles.optionIcon, { backgroundColor: '#F0FDF4' }]}>
-                <Swords size={20} color="#01b854" />
-              </View>
-              <Text style={styles.optionText}>Start a match</Text>
-            </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.modalOption} 
-              onPress={() => {
-                setIsLiveSession(true);
-                setIsSelectingTeams(true);
-                setIsActionModalVisible(false);
-              }}
-            >
-              <View style={[styles.optionIcon, { backgroundColor: '#FEF2F2' }]}>
-                <Radio size={20} color="#EF4444" />
-              </View>
-              <Text style={styles.optionText}>Go live</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.modalOption} onPress={() => setIsActionModalVisible(false)}>
-              <View style={[styles.optionIcon, { backgroundColor: '#FFF7ED' }]}>
-                <Trophy size={20} color="#F97316" />
-              </View>
-              <Text style={styles.optionText}>Start a tournament/Series</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.modalOption} 
-              onPress={() => {
-                setActiveTab('teams');
-                setIsActionModalVisible(false);
-                setTimeout(() => setIsCreateTeamModalVisible(true), 100);
-              }}
-            >
-              <View style={[styles.optionIcon, { backgroundColor: '#EFF6FF' }]}>
-                <Users size={20} color="#3B82F6" />
-              </View>
-              <Text style={styles.optionText}>Add a team</Text>
-            </TouchableOpacity>
-
-            <View style={styles.modalDivider} />
-
-            <TouchableOpacity style={styles.modalOption} onPress={() => setIsActionModalVisible(false)}>
-              <View style={[styles.optionIcon, { backgroundColor: '#F3F4F6' }]}>
-                <HelpCircle size={20} color="#6B7280" />
-              </View>
-              <Text style={styles.optionText}>Get help</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </TouchableOpacity>
-    </Modal>
-  );
 
   const content = (
-    <View style={styles.container}>
-      {!isScoring && (
-        <View style={styles.tabsStickyWrapper}>
-          <View style={styles.tabsInnerRow}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsScroll} style={{ flex: 1 }}>
-            {TABS.map((tab) => (
-              <TouchableOpacity key={tab.id} style={[styles.tab, activeTab === tab.id && styles.tabActive]} onPress={() => { setActiveTab(tab.id); setSubTab(tab.id === 'stats' ? 'batting' : tab.id === 'teams' ? 'your' : 'all'); }}>
-                <Text style={[styles.tabText, activeTab === tab.id && styles.tabTextActive]}>{tab.label}</Text>
-              </TouchableOpacity>
-            ))}
-            </ScrollView>
+    <View style={{ flex: 1 }}>
+      <View style={styles.scoringTopNav}>
+        <TouchableOpacity 
+          style={styles.backNavBtn}
+          onPress={() => router.push('/cricket/matches')}
+        >
+          <ChevronLeft size={20} color="#6B7280" />
+          <Text style={styles.backNavBtnText}>Back to Matches</Text>
+        </TouchableOpacity>
+      </View>
+      {isScoring ? renderLiveScoring() : (isSearchingOfficial ? renderOfficialSearch() : (isConfiguringOfficials ? renderMatchOfficials() : (isSelectingOpeners ? renderOpeningSelection() : (isConfiguringToss ? renderTossConfiguration() : (isConfiguringMatch ? renderMatchConfiguration() : (isSelectingTeams ? (isSelectingPlayers ? renderPlayerSelection() : renderTeamSelection()) : (
+        urlMatchId ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <Text style={{ color: '#6B7280', fontSize: 16, fontWeight: '600' }}>Loading match data...</Text>
+          </View>
+        ) : (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
             <TouchableOpacity 
-              style={styles.plusIconWrapper}
-              onPress={() => setIsActionModalVisible(true)}
+              style={{ backgroundColor: '#01b854', paddingHorizontal: 24, paddingVertical: 14, borderRadius: 8 }}
+              onPress={() => setIsSelectingTeams(true)}
             >
-              <Plus size={24} color="#01b854" strokeWidth={3} />
+              <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 16 }}>Start New Match</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      )}
-      <ScrollView style={styles.mainScroll} contentContainerStyle={styles.mainScrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.contentContainer}>
-          {isScoring ? renderLiveScoring() : (isSearchingOfficial ? renderOfficialSearch() : (isConfiguringOfficials ? renderMatchOfficials() : (isSelectingOpeners ? renderOpeningSelection() : (isConfiguringToss ? renderTossConfiguration() : (isConfiguringMatch ? renderMatchConfiguration() : (isSelectingTeams ? (isSelectingPlayers ? renderPlayerSelection() : renderTeamSelection()) : renderContent()))))))}
-        </View>
-      </ScrollView>
+        )
+      )))))))}
     </View>
   );
 
-  if (Platform.OS === 'web') { return <WebLayout noCard>{content}{renderActionModal()}{renderCreateTeamModal()}{renderQrModal()}{renderSuccessModal()}{renderAddPlayerView()}{renderAddMemberModal()}{renderContactPicker()}</WebLayout>; }
-  return <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>{content}{renderActionModal()}{renderCreateTeamModal()}{renderQrModal()}{renderSuccessModal()}{renderAddPlayerView()}{renderAddMemberModal()}{renderContactPicker()}</View>;
+  return (
+    <View style={{ flex: 1 }}>
+      {content}
+      {renderCreateTeamModal()}
+      {renderQrModal()}
+      {renderSuccessModal()}
+      {renderAddPlayerView()}
+      {renderAddMemberModal()}
+      {renderContactPicker()}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -3552,6 +3492,23 @@ const styles = StyleSheet.create({
   tab: { paddingHorizontal: 16, paddingVertical: 12, marginRight: 16, borderBottomWidth: 2, borderBottomColor: 'transparent' },
   tabActive: { borderBottomColor: '#B91C1C' },
   tabText: { fontSize: 15, fontWeight: '600', color: '#6B7280' },
+  scoringTopNav: {
+    flexDirection: 'row',
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 8,
+    backgroundColor: '#FFFFFF',
+  },
+  backNavBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  backNavBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
   tabTextActive: { color: '#111827', fontWeight: '800' },
   mainScroll: { flex: 1 },
   mainScrollContent: { paddingBottom: 60 },
@@ -4867,17 +4824,10 @@ const styles = StyleSheet.create({
   },
   scoringContainer: {
     flex: 1,
-    padding: 16,
   },
   mainScoreboard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
     padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
+    paddingTop: 12,
   },
   scoringTeamName: {
     fontSize: 14,
