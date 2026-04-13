@@ -275,7 +275,7 @@ export default function LiveScorecard() {
   useEffect(() => {
     if (!matchId) return;
     const channel = supabase
-      .channel(`live-score-${matchId}`)
+      .channel(`live-score-${matchId}-${Math.random()}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'match_live_state', filter: `match_id=eq.${matchId}` },
@@ -320,7 +320,7 @@ export default function LiveScorecard() {
     const bowlingName = innNum === 1 ? match.team_b : match.team_a;
 
     return (
-      <View style={styles.scWrapper}>
+      <View style={[styles.scWrapper, { marginHorizontal: 12, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB', marginBottom: 16 }]}>
         <View style={styles.scHeader}><Text style={styles.scHeaderText}>{teamName} Innings</Text></View>
         
         {/* Batting Table */}
@@ -383,7 +383,7 @@ export default function LiveScorecard() {
     switch (activeTab) {
       case 'scoreboard':
         return (
-          <ScrollView style={{ flex: 1 }}>
+          <ScrollView style={{ flex: 1, backgroundColor: '#F6F4F0' }} contentContainerStyle={{ paddingVertical: 12 }}>
             {/* Main Score Display in Scoreboard Tab */}
             <View style={[styles.scoreCard, { backgroundColor: isCompleted ? '#2C2C2A' : '#0F6E56', margin: 12, borderRadius: 12 }]}>
               {isCompleted && live.result_text && (
@@ -428,40 +428,43 @@ export default function LiveScorecard() {
         );
       case 'info':
         return (
-          <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-            <TouchableOpacity 
-              style={styles.squadsShortcut}
-              onPress={() => setActiveTab('squads')}
-            >
-               <Text style={styles.squadsShortcutText}>Squads</Text>
-               <ChevronRight size={20} color="#0D9488" />
-            </TouchableOpacity>
-
-            <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
-              <Text style={styles.infoHeading}>Info</Text>
-              
-              <View style={styles.infoRow}><Text style={styles.infoLabel}>Teams</Text><Text style={styles.infoValue}>{match.team_a} vs {match.team_b}</Text></View>
-              <View style={styles.infoRow}><Text style={styles.infoLabel}>Tournament</Text><Text style={styles.infoValue}>{match.title || 'Individual match'}</Text></View>
-              <View style={styles.infoRow}><Text style={styles.infoLabel}>Match Type</Text><Text style={styles.infoValue}>{match.match_type || 'Limited Overs'}</Text></View>
-              <View style={styles.infoRow}><Text style={styles.infoLabel}>Overs</Text><Text style={styles.infoValue}>{match.overs}</Text></View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Date & Time</Text>
-                <Text style={styles.infoValue}>{new Date(match.created_at).toLocaleString()}</Text>
-              </View>
-              <TouchableOpacity style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Venue</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
-                  <Text style={[styles.infoValue, { color: '#0D9488', flex: 0 }]}>{match.venue || 'Standard Ground'}</Text>
-                  <ChevronRight size={16} color="#4B5563" />
-                </View>
+          <View style={{ flex: 1, backgroundColor: '#F6F4F0', padding: 12 }}>
+            {/* Main Info Card */}
+            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB' }}>
+              <TouchableOpacity 
+                style={[styles.squadsShortcut, { borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }]}
+                onPress={() => setActiveTab('squads')}
+              >
+                 <Text style={styles.squadsShortcutText}>Squads</Text>
+                 <ChevronRight size={20} color="#0D9488" />
               </TouchableOpacity>
-              <View style={styles.infoRow}><Text style={styles.infoLabel}>Toss</Text><Text style={styles.infoValue}>{match.toss_winner} won toss, opted to {match.toss_choice}</Text></View>
-              <View style={styles.infoRow}><Text style={styles.infoLabel}>Ball Type</Text><Text style={styles.infoValue}>LEATHER</Text></View>
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Match Id</Text>
-                <Text style={styles.infoValue}>
-                  {match.display_id ? match.display_id.toString().padStart(3, '0') : match.id.substring(0, 8)}
-                </Text>
+
+              <View style={{ padding: 16 }}>
+                <Text style={styles.infoHeading}>Info</Text>
+                
+                <View style={styles.infoRow}><Text style={styles.infoLabel}>Teams</Text><Text style={styles.infoValue}>{match.team_a} vs {match.team_b}</Text></View>
+                <View style={styles.infoRow}><Text style={styles.infoLabel}>Tournament</Text><Text style={styles.infoValue}>{match.title || 'Individual match'}</Text></View>
+                <View style={styles.infoRow}><Text style={styles.infoLabel}>Match Type</Text><Text style={styles.infoValue}>{match.match_type || 'Limited Overs'}</Text></View>
+                <View style={styles.infoRow}><Text style={styles.infoLabel}>Overs</Text><Text style={styles.infoValue}>{match.overs}</Text></View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Date & Time</Text>
+                  <Text style={styles.infoValue}>{new Date(match.created_at).toLocaleString()}</Text>
+                </View>
+                <TouchableOpacity style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Venue</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, justifyContent: 'flex-end' }}>
+                    <Text style={[styles.infoValue, { color: '#0D9488', flex: 0 }]}>{match.venue || 'Standard Ground'}</Text>
+                    <ChevronRight size={16} color="#4B5563" />
+                  </View>
+                </TouchableOpacity>
+                <View style={styles.infoRow}><Text style={styles.infoLabel}>Toss</Text><Text style={styles.infoValue}>{match.toss_winner} won toss, opted to {match.toss_choice}</Text></View>
+                <View style={styles.infoRow}><Text style={styles.infoLabel}>Ball Type</Text><Text style={styles.infoValue}>LEATHER</Text></View>
+                <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
+                  <Text style={styles.infoLabel}>Match Id</Text>
+                  <Text style={styles.infoValue}>
+                    {match.display_id ? match.display_id.toString().padStart(3, '0') : match.id.substring(0, 8)}
+                  </Text>
+                </View>
               </View>
             </View>
 
@@ -484,9 +487,9 @@ export default function LiveScorecard() {
         );
       case 'summary':
         return (
-          <View style={{ flex: 1, backgroundColor: '#F3F4F6' }}>
+          <View style={{ flex: 1, backgroundColor: '#F6F4F0', padding: 12 }}>
              {/* Poll/Interactive Bar */}
-             <View style={styles.pollBar}>
+             <View style={[styles.pollBar, { borderRadius: 12, marginBottom: 12 }]}>
                 <View style={styles.pollIcon}><BarChart3 size={16} color="#B91C1C" /></View>
                 <Text style={styles.pollText}>
                   Which team has scored more boundaries? <Text style={{ fontWeight: 'bold' }}>{match.team_a}</Text> or <Text style={{ fontWeight: 'bold' }}>{match.team_b}</Text>?
@@ -494,7 +497,7 @@ export default function LiveScorecard() {
              </View>
 
              {/* Score Summary Card */}
-             <View style={styles.summaryScoresCard}>
+             <View style={[styles.summaryScoresCard, { borderRadius: 16, borderWidth: 1, borderColor: '#E5E7EB', padding: 16 }]}>
                 <View style={styles.summaryTeamRow}>
                    <View style={{ flex: 1 }}>
                       <Text style={styles.summaryTeamName}>{match.team_a}</Text>
@@ -561,9 +564,9 @@ export default function LiveScorecard() {
         );
       case 'comms':
         return (
-          <View style={{ flex: 1, backgroundColor: '#F9FAF7' }}>
+          <View style={{ flex: 1, backgroundColor: '#F6F4F0', padding: 12 }}>
              {/* Filter Bar */}
-             <View style={styles.commsFilterBar}>
+             <View style={[styles.commsFilterBar, { backgroundColor: 'transparent', padding: 0, borderBottomWidth: 0, marginBottom: 12 }]}>
                 <View style={[styles.commsFilterBtn, { flex: 1 }]}>
                    <Text style={styles.commsFilterText}>{live.batting_team}</Text>
                    <ChevronDown size={16} color="#4B5563" />
@@ -574,64 +577,63 @@ export default function LiveScorecard() {
                 </View>
              </View>
 
-             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 10 }}>
-                {ballLogs.map((ball, idx) => {
-                  const isNewOver = idx > 0 && ball.over_number !== ballLogs[idx-1].over_number;
-                  const isOverStart = idx === ballLogs.length - 1 || ball.over_number !== ballLogs[idx+1].over_number;
-                  
-                  return (
-                    <View key={ball.id}>
-                       <View style={styles.commsBallRow}>
-                          <View style={styles.commsBallLeft}>
-                             <Text style={styles.commsOverNum}>{ball.over_number}.{ball.ball_number}</Text>
-                             <View style={[
-                                styles.commsResultCircle, 
-                                ball.is_wicket && styles.bgWicket,
-                                (ball.runs === 4 || ball.runs === 6) && styles.bgBoundary,
-                                ball.extra_type && styles.bgExtra
-                             ]}>
-                                <Text style={[
-                                   styles.commsResultText,
-                                   (ball.is_wicket || ball.runs === 4 || ball.runs === 6 || ball.extra_type) && { color: '#FFFFFF' }
-                                ]}>
-                                   {ball.label}
-                                </Text>
-                             </View>
-                          </View>
-                          <View style={styles.commsBallRight}>
-                             <Text style={[styles.commsDescText, ball.is_wicket && { fontWeight: '700' }]}>{formatBallDescription(ball)}</Text>
-                             {ball.is_wicket && (
-                               <View style={styles.wicketDetailBox}>
-                                  <Text style={styles.wicketDetailText}>{ball.batter_name} {ball.dismissal_type} {ball.fielder_name ? `c ${ball.fielder_name}` : ''} b {ball.bowler_name}</Text>
+             <View style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB' }}>
+               <ScrollView style={{ flex: 1 }}>
+                  {ballLogs.map((ball, idx) => {
+                    return (
+                      <View key={ball.id}>
+                         <View style={styles.commsBallRow}>
+                            <View style={styles.commsBallLeft}>
+                               <Text style={styles.commsOverNum}>{ball.over_number}.{ball.ball_number}</Text>
+                               <View style={[
+                                  styles.commsResultCircle, 
+                                  ball.is_wicket && styles.bgWicket,
+                                  (ball.runs === 4 || ball.runs === 6) && styles.bgBoundary,
+                                  ball.extra_type && styles.bgExtra
+                               ]}>
+                                  <Text style={[
+                                     styles.commsResultText,
+                                     (ball.is_wicket || ball.runs === 4 || ball.runs === 6 || ball.extra_type) && { color: '#FFFFFF' }
+                                  ]}>
+                                     {ball.label}
+                                  </Text>
                                </View>
-                             )}
-                          </View>
-                       </View>
-                       
-                       {/* Over Summary - Simplified logic for demonstration */}
-                       {ball.ball_number === 6 && (
-                         <View style={styles.overSummaryBlock}>
-                            <View style={styles.overBadge}><Text style={styles.overBadgeText}>OVER {ball.over_number + 1}</Text></View>
-                            <Text style={styles.overSummaryRuns}>8 Runs | 1 Wkt</Text>
-                            <Text style={styles.overSummaryScore}>{live.runs}/{live.wickets}</Text>
+                            </View>
+                            <View style={styles.commsBallRight}>
+                               <Text style={[styles.commsDescText, ball.is_wicket && { fontWeight: '700' }]}>{formatBallDescription(ball)}</Text>
+                               {ball.is_wicket && (
+                                 <View style={styles.wicketDetailBox}>
+                                    <Text style={styles.wicketDetailText}>{ball.batter_name} {ball.dismissal_type} {ball.fielder_name ? `c ${ball.fielder_name}` : ''} b {ball.bowler_name}</Text>
+                                 </View>
+                               )}
+                            </View>
                          </View>
-                       )}
-                    </View>
-                  );
-                })}
-                {ballLogs.length === 0 && (
-                   <View style={{ padding: 40, alignItems: 'center' }}>
-                      <Text style={{ color: '#9CA3AF' }}>Waiting for first ball...</Text>
-                   </View>
-                )}
-             </ScrollView>
+                         
+                         {/* Over Summary */}
+                         {ball.ball_number === 6 && (
+                           <View style={styles.overSummaryBlock}>
+                              <View style={styles.overBadge}><Text style={styles.overBadgeText}>OVER {ball.over_number + 1}</Text></View>
+                              <Text style={styles.overSummaryRuns}>8 Runs | 1 Wkt</Text>
+                              <Text style={styles.overSummaryScore}>{live.runs}/{live.wickets}</Text>
+                           </View>
+                         )}
+                      </View>
+                    );
+                  })}
+                  {ballLogs.length === 0 && (
+                     <View style={{ padding: 60, alignItems: 'center' }}>
+                        <Text style={{ color: '#9CA3AF' }}>Waiting for first ball...</Text>
+                     </View>
+                  )}
+               </ScrollView>
+             </View>
           </View>
         );
       case 'analysis':
         return (
-          <View style={{ flex: 1, backgroundColor: '#F9FAF7' }}>
+          <ScrollView style={{ flex: 1, backgroundColor: '#F6F4F0' }} contentContainerStyle={{ padding: 12 }}>
              {/* Insights Banner */}
-             <View style={styles.insightsBanner}>
+             <View style={[styles.insightsBanner, { borderRadius: 12, marginBottom: 12, borderBottomWidth: 0 }]}>
                 <Text style={styles.insightsMsg}>Analyse this match in-depth with</Text>
                 <TouchableOpacity style={styles.insightsBtnMain}>
                    <BarChart3 size={16} color="#FFFFFF" />
@@ -639,7 +641,7 @@ export default function LiveScorecard() {
                 </TouchableOpacity>
              </View>
 
-             <View style={styles.analysisCard}>
+             <View style={[styles.analysisCard, { margin: 0, marginBottom: 16, backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E5E7EB' }]}>
                 <View style={styles.cardHeaderRow}>
                    <Text style={styles.cardTitle}>Manhattan</Text>
                    <View style={styles.cardHeaderIcons}>
@@ -682,7 +684,7 @@ export default function LiveScorecard() {
                 </View>
              </View>
 
-             <View style={styles.analysisCard}>
+             <View style={[styles.analysisCard, { margin: 0, backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E5E7EB' }]}>
                 <View style={styles.cardHeaderRow}>
                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <Text style={styles.cardTitle}>Wagon Wheel</Text>
@@ -706,51 +708,57 @@ export default function LiveScorecard() {
                    </View>
                 </View>
              </View>
-          </View>
+          </ScrollView>
         );
       case 'mvp':
         const mvpData = getMVPList();
         return (
-          <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-             <View style={styles.mvpHeader}>
-                <TouchableOpacity style={styles.calcTrigger}>
-                   <Text style={styles.calcTriggerText}>How is Most Valuable Players Calculated?</Text>
+          <View style={{ flex: 1, backgroundColor: '#F6F4F0', padding: 12 }}>
+             {/* MVP Explanation Banner */}
+             <View style={[styles.mvpHeader, { backgroundColor: '#FFFFFF', borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: '#E5E7EB', alignItems: 'center' }]}>
+                <TouchableOpacity 
+                   style={styles.calcTrigger}
+                   onPress={() => router.push('/blog/mvp-calculation')}
+                >
+                   <Text style={[styles.calcTriggerText, { color: '#01b854' }]}>How is Most Valuable Players Calculated?</Text>
                 </TouchableOpacity>
              </View>
 
-             <ScrollView style={{ flex: 1 }}>
-                {mvpData.map((player, idx) => (
-                  <View key={idx} style={styles.mvpPlayerRow}>
-                     <View style={styles.mvpRankBox}>
-                        <Text style={styles.mvpRankText}>{idx + 1}</Text>
-                     </View>
-                     <View style={styles.mvpAvatarContainer}>
-                        <Image source={{ uri: `https://i.pravatar.cc/100?u=${player.name}` }} style={styles.mvpAvatar} />
-                        {(idx < 3 || Math.random() > 0.6) && <View style={styles.mvpProBadge}><Text style={styles.mvpProText}>PRO</Text></View>}
-                     </View>
-                     <View style={styles.mvpInfoBody}>
-                        <Text style={styles.mvpPlayerName}>{player.name}</Text>
-                        <Text style={styles.mvpTeamName}>Phoenix Risers.</Text>
-                     </View>
-                     <View style={styles.mvpScoreBox}>
-                        <Text style={styles.mvpScoreVal}>{player.points.toFixed(3)}</Text>
-                     </View>
-                  </View>
-                ))}
-                {mvpData.length === 0 && (
-                  <View style={{ padding: 60, alignItems: 'center' }}>
-                     <Trophy size={48} color="#E5E7EB" />
-                     <Text style={{ color: '#9CA3AF', marginTop: 12 }}>Match points will appear as game progresses.</Text>
-                  </View>
-                )}
-             </ScrollView>
+             <View style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB' }}>
+               <ScrollView style={{ flex: 1 }}>
+                  {mvpData.map((player, idx) => (
+                    <View key={idx} style={styles.mvpPlayerRow}>
+                       <View style={styles.mvpRankBox}>
+                          <Text style={styles.mvpRankText}>{idx + 1}</Text>
+                       </View>
+                       <View style={styles.mvpAvatarContainer}>
+                          <Image source={{ uri: `https://i.pravatar.cc/100?u=${player.name}` }} style={styles.mvpAvatar} />
+                          {(idx < 3) && <View style={styles.mvpProBadge}><Text style={styles.mvpProText}>PRO</Text></View>}
+                       </View>
+                       <View style={styles.mvpInfoBody}>
+                          <Text style={styles.mvpPlayerName}>{player.name}</Text>
+                          <Text style={styles.mvpTeamName}>{idx % 2 === 0 ? match.team_a : match.team_b}</Text>
+                       </View>
+                       <View style={styles.mvpScoreBox}>
+                          <Text style={styles.mvpScoreVal}>{player.points.toFixed(1)}</Text>
+                       </View>
+                    </View>
+                  ))}
+                  {mvpData.length === 0 && (
+                    <View style={{ padding: 60, alignItems: 'center' }}>
+                       <Trophy size={48} color="#E5E7EB" />
+                       <Text style={{ color: '#9CA3AF', marginTop: 12, textAlign: 'center' }}>Match points will appear as game progresses.</Text>
+                    </View>
+                  )}
+               </ScrollView>
+             </View>
           </View>
         );
       case 'gallery':
         return (
-          <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+          <View style={{ flex: 1, backgroundColor: '#F6F4F0', padding: 12 }}>
              {matchImages.length === 0 ? (
-               <View style={styles.emptyGalleryContainer}>
+               <View style={[styles.emptyGalleryContainer, { backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E5E7EB' }]}>
                   <View style={styles.emptyGalleryIconBox}>
                      <ImagePlus size={64} color="#D1D5DB" />
                   </View>
@@ -773,89 +781,94 @@ export default function LiveScorecard() {
                   </TouchableOpacity>
                </View>
              ) : (
-               <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.galleryGrid}>
-                  {matchImages.map((img, idx) => (
-                    <View key={img.id || idx} style={styles.galleryItem}>
-                       <Image source={{ uri: img.url }} style={styles.galleryImage} />
-                    </View>
-                  ))}
-                  {matchImages.length < 4 && (
-                    <TouchableOpacity 
-                      style={styles.galleryAddMore}
-                      onPress={handlePickImage}
-                      disabled={isUploading}
-                    >
-                       <ImagePlus size={32} color="#0D9488" />
-                       <Text style={styles.galleryAddMoreText}>Add More</Text>
-                    </TouchableOpacity>
-                  )}
-               </ScrollView>
+               <View style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB' }}>
+                 <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.galleryGrid}>
+                    {matchImages.map((img, idx) => (
+                      <View key={img.id || idx} style={styles.galleryItem}>
+                         <Image source={{ uri: img.url }} style={styles.galleryImage} />
+                      </View>
+                    ))}
+                    {matchImages.length < 4 && (
+                      <TouchableOpacity 
+                        style={styles.galleryAddMore}
+                        onPress={handlePickImage}
+                        disabled={isUploading}
+                      >
+                         <ImagePlus size={32} color="#0D9488" />
+                         <Text style={styles.galleryAddMoreText}>Add More</Text>
+                      </TouchableOpacity>
+                    )}
+                 </ScrollView>
+               </View>
              )}
           </View>
         );
       case 'squads':
         return (
-          <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-             <View style={styles.squadTeamsHeader}>
-                <View style={styles.squadTeamInfo}>
-                   <Image source={{ uri: `https://ui-avatars.com/api/?name=${match.team_a}&background=0D9488&color=fff` }} style={styles.squadTeamLogo} />
-                   <Text style={styles.squadTeamName}>{match.team_a}</Text>
-                </View>
-                <View style={[styles.squadTeamInfo, { justifyContent: 'flex-end', borderLeftWidth: 1, borderLeftColor: '#F3F4F6' }]}>
-                   <View style={{ alignItems: 'flex-end' }}>
-                      <Text style={styles.squadTeamName}>{match.team_b}</Text>
-                      <View style={styles.squadBannerBtn}><Text style={styles.squadBannerBtnText}>Get Squad Banner</Text></View>
-                   </View>
-                   <Image source={{ uri: `https://ui-avatars.com/api/?name=${match.team_b}&background=DC2626&color=fff` }} style={styles.squadTeamLogo} />
-                </View>
-             </View>
+          <View style={{ flex: 1, backgroundColor: '#F6F4F0', padding: 12 }}>
+             {/* Squad Card */}
+             <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB' }}>
+               <View style={styles.squadTeamsHeader}>
+                  <View style={styles.squadTeamInfo}>
+                     <Image source={{ uri: `https://ui-avatars.com/api/?name=${match.team_a}&background=0D9488&color=fff` }} style={styles.squadTeamLogo} />
+                     <Text style={styles.squadTeamName}>{match.team_a}</Text>
+                  </View>
+                  <View style={[styles.squadTeamInfo, { justifyContent: 'flex-end', borderLeftWidth: 1, borderLeftColor: '#F3F4F6' }]}>
+                     <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={styles.squadTeamName}>{match.team_b}</Text>
+                        <View style={styles.squadBannerBtn}><Text style={styles.squadBannerBtnText}>Get Squad Banner</Text></View>
+                     </View>
+                     <Image source={{ uri: `https://ui-avatars.com/api/?name=${match.team_b}&background=DC2626&color=fff` }} style={styles.squadTeamLogo} />
+                  </View>
+               </View>
 
-             <View style={styles.playingSquadDivider}>
-                <Text style={styles.playingSquadText}>Playing Squad</Text>
-             </View>
+               <View style={styles.playingSquadDivider}>
+                  <Text style={styles.playingSquadText}>Playing Squad</Text>
+               </View>
 
-             <View style={{ flexDirection: 'row' }}>
-                {/* Team A Squad */}
-                <View style={{ flex: 1, borderRightWidth: 0.5, borderRightColor: '#F3F4F6' }}>
-                   {squadA.map((m, idx) => (
-                      <View key={m.id} style={styles.squadPlayerRow}>
-                         <View style={styles.playerAvatarContainer}>
-                            <Image 
-                              source={{ uri: m.profiles?.avatar_url || `https://i.pravatar.cc/150?u=${m.id}` }} 
-                              style={styles.playerAvatar} 
-                            />
-                            {m.profiles?.player_type === 'pro' && <View style={styles.proMiniBadge}><Text style={styles.proMiniText}>PRO</Text></View>}
-                            {m.role === 'captain' && <View style={styles.captMiniBadge}><Text style={styles.captMiniText}>C</Text></View>}
-                         </View>
-                         <View style={{ marginLeft: 8 }}>
-                            <Text style={styles.playerNameText}>{m.player_name || m.profiles?.full_name || 'Player'}</Text>
-                            <Text style={styles.playerRoleText}>{m.profiles?.player_type || 'Player'} • {m.role}</Text>
-                         </View>
-                      </View>
-                   ))}
-                   {squadA.length === 0 && <Text style={{ padding: 20, color: '#9CA3AF', textAlign: 'center' }}>No members found</Text>}
-                </View>
+               <View style={{ flexDirection: 'row' }}>
+                  {/* Team A Squad */}
+                  <View style={{ flex: 1, borderRightWidth: 0.5, borderRightColor: '#F3F4F6' }}>
+                     {squadA.map((m, idx) => (
+                        <View key={m.id} style={styles.squadPlayerRow}>
+                           <View style={styles.playerAvatarContainer}>
+                              <Image 
+                                source={{ uri: m.profiles?.avatar_url || `https://i.pravatar.cc/150?u=${m.id}` }} 
+                                style={styles.playerAvatar} 
+                              />
+                              {m.profiles?.player_type === 'pro' && <View style={styles.proMiniBadge}><Text style={styles.proMiniText}>PRO</Text></View>}
+                              {m.role === 'captain' && <View style={styles.captMiniBadge}><Text style={styles.captMiniText}>C</Text></View>}
+                           </View>
+                           <View style={{ marginLeft: 8 }}>
+                              <Text style={styles.playerNameText}>{m.player_name || m.profiles?.full_name || 'Player'}</Text>
+                              <Text style={styles.playerRoleText}>{m.profiles?.player_type || 'Player'} • {m.role}</Text>
+                           </View>
+                        </View>
+                     ))}
+                     {squadA.length === 0 && <Text style={{ padding: 20, color: '#9CA3AF', textAlign: 'center' }}>No members found</Text>}
+                  </View>
 
-                {/* Team B Squad */}
-                <View style={{ flex: 1 }}>
-                   {squadB.map((m, idx) => (
-                      <View key={m.id} style={[styles.squadPlayerRow, { flexDirection: 'row-reverse' }]}>
-                         <View style={styles.playerAvatarContainer}>
-                            <Image 
-                              source={{ uri: m.profiles?.avatar_url || `https://i.pravatar.cc/150?u=${m.id}b` }} 
-                              style={styles.playerAvatar} 
-                            />
-                            {m.profiles?.player_type === 'pro' && <View style={styles.proMiniBadge}><Text style={styles.proMiniText}>PRO</Text></View>}
-                            {m.role === 'captain' && <View style={styles.captMiniBadge}><Text style={styles.captMiniText}>C</Text></View>}
-                         </View>
-                         <View style={{ marginRight: 8, alignItems: 'flex-end' }}>
-                            <Text style={styles.playerNameText}>{m.player_name || m.profiles?.full_name || 'Player'}</Text>
-                            <Text style={styles.playerRoleText}>{m.profiles?.player_type || 'Player'} • {m.role}</Text>
-                         </View>
-                      </View>
-                   ))}
-                   {squadB.length === 0 && <Text style={{ padding: 20, color: '#9CA3AF', textAlign: 'center' }}>No members found</Text>}
-                </View>
+                  {/* Team B Squad */}
+                  <View style={{ flex: 1 }}>
+                     {squadB.map((m, idx) => (
+                        <View key={m.id} style={[styles.squadPlayerRow, { flexDirection: 'row-reverse' }]}>
+                           <View style={styles.playerAvatarContainer}>
+                              <Image 
+                                source={{ uri: m.profiles?.avatar_url || `https://i.pravatar.cc/150?u=${m.id}b` }} 
+                                style={styles.playerAvatar} 
+                              />
+                              {m.profiles?.player_type === 'pro' && <View style={styles.proMiniBadge}><Text style={styles.proMiniText}>PRO</Text></View>}
+                              {m.role === 'captain' && <View style={styles.captMiniBadge}><Text style={styles.captMiniText}>C</Text></View>}
+                           </View>
+                           <View style={{ marginRight: 8, alignItems: 'flex-end' }}>
+                              <Text style={styles.playerNameText}>{m.player_name || m.profiles?.full_name || 'Player'}</Text>
+                              <Text style={styles.playerRoleText}>{m.profiles?.player_type || 'Player'} • {m.role}</Text>
+                           </View>
+                        </View>
+                     ))}
+                     {squadB.length === 0 && <Text style={{ padding: 20, color: '#9CA3AF', textAlign: 'center' }}>No members found</Text>}
+                  </View>
+               </View>
              </View>
           </View>
         );
@@ -868,7 +881,12 @@ export default function LiveScorecard() {
       <Stack.Screen options={{ title: `${match.team_a} vs ${match.team_b} - Live Score` }} />
       <View style={styles.topHeader}>
         <View style={styles.headerLeft}>
-           <TouchableOpacity onPress={() => router.back()}><ChevronLeft size={24} color="#111827" /></TouchableOpacity>
+           <TouchableOpacity 
+             onPress={() => router.canGoBack() ? router.back() : router.push('/cricket')}
+             style={{ padding: 8, marginLeft: -8 }}
+           >
+             <ChevronLeft size={24} color="#111827" />
+           </TouchableOpacity>
            <Text style={styles.headerMainTitle}>{match.title || 'Individual Match'}</Text>
         </View>
         <View style={styles.headerRight}>

@@ -58,6 +58,8 @@ CREATE TABLE IF NOT EXISTS public.innings (
   wickets INT DEFAULT 0,
   legal_balls INT DEFAULT 0,
   status TEXT DEFAULT 'in_progress',
+  batting_players JSONB DEFAULT '[]',
+  bowling_players JSONB DEFAULT '[]',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -156,6 +158,12 @@ DROP POLICY IF EXISTS "ball_log_permissive_update" ON public.ball_log;
 DROP POLICY IF EXISTS "live_permissive_select" ON public.match_live_state;
 DROP POLICY IF EXISTS "live_permissive_insert" ON public.match_live_state;
 DROP POLICY IF EXISTS "live_permissive_update" ON public.match_live_state;
+DROP POLICY IF EXISTS "match_images_permissive_select" ON public.match_images;
+DROP POLICY IF EXISTS "match_images_permissive_insert" ON public.match_images;
+DROP POLICY IF EXISTS "match_images_permissive_delete" ON public.match_images;
+DROP POLICY IF EXISTS "match_gallery_view" ON storage.objects;
+DROP POLICY IF EXISTS "match_gallery_insert" ON storage.objects;
+DROP POLICY IF EXISTS "match_gallery_delete" ON storage.objects;
 
 -- Global Permissive Policies
 ALTER TABLE matches ENABLE ROW LEVEL SECURITY;

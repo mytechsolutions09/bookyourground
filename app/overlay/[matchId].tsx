@@ -52,7 +52,7 @@ export default function OBSOverlay() {
   useEffect(() => {
     if (!matchId) return;
     const channel = supabase
-      .channel(`obs-overlay-${matchId}`)
+      .channel(`obs-overlay-${matchId}-${Math.random()}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'match_live_state', filter: `match_id=eq.${matchId}` },
