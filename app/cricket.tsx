@@ -61,6 +61,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCricketScoring } from '@/hooks/useCricketScoring';
 import * as FileSystem from 'expo-file-system';
 import { decode } from 'base64-arraybuffer';
 
@@ -296,15 +297,6 @@ export default function CricketScreen() {
   const [activeOfficialSlot, setActiveOfficialSlot] = useState<{ category: string, index?: number } | null>(null);
   const [tossResult, setTossResult] = useState<{ winner: any, decision: 'bat' | 'bowl' | null }>({ winner: null, decision: null });
   const [matchState, setMatchState] = useState<{ striker: any, nonStriker: any, bowler: any }>({ striker: null, nonStriker: null, bowler: null });
-  const [inningData, setInningData] = useState({
-    runs: 0,
-    wickets: 0,
-    balls: 0,
-    extras: { wd: 0, nb: 0, b: 0, lb: 0 },
-    timeline: [] as string[],
-    battingStats: {} as Record<string, { runs: number, balls: number, fours: number, sixes: number }>,
-    bowlingStats: {} as Record<string, { runs: number, balls: number, wickets: number, maidens: number }>
-  });
   const [matchConfig, setMatchConfig] = useState({
     type: 'limited overs',
     totalOvers: '20',
@@ -324,6 +316,40 @@ export default function CricketScreen() {
       commentators: ['', '']
     }
   });
+
+  const {
+    matchId: liveMatchId, phase: matchPhase, inn, striker, nonStriker, bowler, crr, rrr, yetToBat, formatOvers,
+    startMatch, addBall, addExtra, addWicket, changeBowler, undoLastBall, startSecondInnings
+  } = useCricketScoring();
+  
+  const [isLiveSession, setIsLiveSession] = useState(false);
+  const [isSelectingNextBowler, setIsSelectingNextBowler] = useState(false);
+  const [lastBowlerId, setLastBowlerId] = useState<string | null>(null);
+
+  const handleAddBall = async (runs: number) => {
+    const next = await addBall(runs);
+    if (next && next.legalBalls > 0 && next.legalBalls % 6 === 0) {
+      setLastBowlerId(bowler?.name); // Using name since IDs might be messy in this mock-up
+      setTimeout(() => setIsSelectingNextBowler(true), 1000);
+    }
+  };
+
+  const handleAddExtra = async (type: string) => {
+    await addExtra(type);
+    // Extras might complete an over if it's not a Wide/No-ball
+    if (inn && (inn.legalBalls + 1) % 6 === 0 && type !== 'wide' && type !== 'noball') {
+       setLastBowlerId(bowler?.name);
+       setTimeout(() => setIsSelectingNextBowler(true), 1000);
+    }
+  };
+
+  const handleAddWicket = async (data: any) => {
+    await addWicket(data);
+    if (inn && (inn.legalBalls + 1) % 6 === 0) {
+       setLastBowlerId(bowler?.name);
+       setTimeout(() => setIsSelectingNextBowler(true), 1000);
+    }
+  };
   const [teams, setTeams] = useState(INITIAL_TEAMS_DATA);
   const [selectedTeamA, setSelectedTeamA] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -331,9 +357,38 @@ export default function CricketScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
 
+  const [fetchedMatches, setFetchedMatches] = useState<any[]>([]);
+
   useEffect(() => {
     fetchTeams();
+    fetchMatches();
   }, [session]);
+
+  const fetchMatches = async () => {
+    const { data, error } = await supabase
+      .from('matches')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      // Map DB matches to UI format
+      const dbMatches = data.map(m => ({
+        id: m.id,
+        type: m.match_type || 'Match',
+        tournament: 'Live Match',
+        status: m.status === 'live' ? 'Ongoing' : (m.status === 'completed' ? 'Result' : 'Scheduled'),
+        date: new Date(m.created_at).toLocaleDateString(),
+        overs: `${m.overs} Ov.`,
+        location: m.venue || 'Various Locations',
+        team1: m.team_a,
+        team2: m.team_b,
+        team1Score: m.status === 'completed' ? '...' : undefined, // We'd need to fetch innings for full summary
+        isLive: m.status === 'live',
+        match_id: m.id
+      }));
+      setFetchedMatches(dbMatches);
+    }
+  };
 
   const fetchTeams = async () => {
     const { data, error } = await supabase
@@ -350,7 +405,7 @@ export default function CricketScreen() {
         bgColor: '#0D9488',
         image: t.image_url 
       }));
-      setTeams([...dbTeams, ...INITIAL_TEAMS_DATA]);
+      setTeams([...dbTeams, ...INITIAL_TEAMS_DATA.filter(it => !dbTeams.some(dt => dt.id === it.id))]);
     }
   };
 
@@ -563,42 +618,59 @@ export default function CricketScreen() {
         </View>
         <View style={[
           styles.statusBadge, 
-          match.status === 'Result' ? styles.statusBadgeResult : styles.statusBadgeUpcoming
+          match.status === 'Result' ? styles.statusBadgeResult : 
+          (match.status === 'Ongoing' ? styles.statusBadgeLive : styles.statusBadgeUpcoming)
         ]}>
+          {match.status === 'Ongoing' && <View style={styles.pulseDot} />}
           <Text style={[
             styles.statusBadgeText,
-            match.status === 'Result' ? styles.statusBadgeTextResult : styles.statusBadgeTextUpcoming
+            match.status === 'Result' ? styles.statusBadgeTextResult : 
+            (match.status === 'Ongoing' ? styles.statusBadgeTextLive : styles.statusBadgeTextUpcoming)
           ]}>{match.status}</Text>
         </View>
       </View>
 
       <View style={styles.matchTeams}>
-        <View style={styles.teamRow}>
-          <Text style={[styles.teamName, match.status === 'Result' && styles.teamNameBold]}>{match.team1}</Text>
-          {match.team1Score && (
-            <Text style={styles.teamScore}>
-              <Text style={styles.teamScoreBold}>{match.team1Score}</Text> {match.team1Overs}
-            </Text>
-          )}
+        <View style={styles.matchTeamRow}>
+          <View style={styles.teamInfo}>
+            <View style={[styles.miniAvatar, { width: 32, height: 32, backgroundColor: '#F1F5F9' }]}>
+               <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#64748B' }}>{match.team1[0]}</Text>
+            </View>
+            <Text style={styles.teamNameText} numberOfLines={1}>{match.team1}</Text>
+          </View>
+          {match.team1Score && <Text style={styles.teamScoreText}>{match.team1Score} <Text style={styles.teamOversText}>{match.team1Overs}</Text></Text>}
         </View>
-        <View style={styles.teamRow}>
-          <Text style={[styles.teamName, match.status === 'Result' && styles.teamNameBold]}>{match.team2}</Text>
-          {match.team2Score && (
-            <Text style={styles.teamScore}>
-              <Text style={styles.teamScoreBold}>{match.team2Score}</Text> {match.team2Overs}
-            </Text>
-          )}
+
+        <View style={styles.matchTeamRow}>
+          <View style={styles.teamInfo}>
+            <View style={[styles.miniAvatar, { width: 32, height: 32, backgroundColor: '#F1F5F9' }]}>
+               <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#64748B' }}>{match.team2[0]}</Text>
+            </View>
+            <Text style={styles.teamNameText} numberOfLines={1}>{match.team2}</Text>
+          </View>
+          {match.team2Score && <Text style={styles.teamScoreText}>{match.team2Score} <Text style={styles.teamOversText}>{match.team2Overs}</Text></Text>}
         </View>
       </View>
 
-      {match.message && <Text style={styles.matchMessage}>{match.message}</Text>}
-      {match.result && <Text style={styles.matchResultText}>{match.result}</Text>}
-
-      <View style={styles.matchFooter}>
-        <TouchableOpacity><Text style={styles.footerLink}>Insights</Text></TouchableOpacity>
-        <TouchableOpacity><Text style={styles.footerLink}>Table</Text></TouchableOpacity>
-        <TouchableOpacity><Text style={styles.footerLink}>Leaderboard</Text></TouchableOpacity>
-      </View>
+      {match.status === 'Ongoing' ? (
+        <TouchableOpacity 
+          style={styles.liveActionBtn}
+          onPress={() => router.push(`/live/${match.match_id}`)}
+        >
+          <Text style={styles.liveActionBtnText}>View Live Scorecard</Text>
+          <ChevronRight size={16} color="#0D9488" />
+        </TouchableOpacity>
+      ) : (
+        match.result ? (
+          <View style={styles.matchFooter}>
+            <Text style={styles.resultText}>{match.result}</Text>
+          </View>
+        ) : (
+          <View style={styles.matchFooter}>
+            <Text style={styles.messageText}>{match.message}</Text>
+          </View>
+        )
+      )}
     </View>
   );
 
@@ -1282,103 +1354,32 @@ export default function CricketScreen() {
   };
 
   const renderLiveScoring = () => {
-    const battingTeam = tossResult.decision === 'bat' ? tossResult.winner : (tossResult.winner?.id === selectedTeamA?.id ? selectedTeamB : selectedTeamA);
-    const bowlingTeam = battingTeam?.id === selectedTeamA?.id ? selectedTeamB : selectedTeamA;
+    if (!inn) return null;
     
-    const overs = Math.floor(inningData.balls / 6);
-    const remainingBalls = inningData.balls % 6;
+    const oversStr = formatOvers(inn.legalBalls);
     
-    const handleBallEffect = (type: string, runs = 0) => {
-      let newInning = { ...inningData };
-      const strikerId = matchState.striker?.id;
-      const nonStrikerId = matchState.nonStriker?.id;
-      const bowlerId = matchState.bowler?.id;
-
-      if (!strikerId || !bowlerId) return;
-
-      const bStats = { ...newInning.battingStats };
-      const blStats = { ...newInning.bowlingStats };
-
-      if (!bStats[strikerId]) bStats[strikerId] = { runs: 0, balls: 0, fours: 0, sixes: 0 };
-      if (!bStats[nonStrikerId]) bStats[nonStrikerId] = { runs: 0, balls: 0, fours: 0, sixes: 0 };
-      if (!blStats[bowlerId]) blStats[bowlerId] = { runs: 0, balls: 0, wickets: 0, maidens: 0 };
-
-      if (type === 'run') {
-        newInning.runs += runs;
-        newInning.balls += 1;
-        newInning.timeline = [...newInning.timeline, runs.toString()];
-
-        bStats[strikerId].runs += runs;
-        bStats[strikerId].balls += 1;
-        if (runs === 4) bStats[strikerId].fours += 1;
-        if (runs === 6) bStats[strikerId].sixes += 1;
-
-        blStats[bowlerId].runs += runs;
-        blStats[bowlerId].balls += 1;
-
-        if (runs % 2 !== 0) {
-          const temp = matchState.striker;
-          setMatchState({ ...matchState, striker: matchState.nonStriker, nonStriker: temp });
-        }
-      } else if (type === 'wd') {
-        newInning.runs += 1;
-        newInning.extras.wd += 1;
-        newInning.timeline = [...newInning.timeline, 'Wd'];
-        blStats[bowlerId].runs += 1;
-      } else if (type === 'nb') {
-        newInning.runs += 1 + runs;
-        newInning.extras.nb += 1;
-        newInning.timeline = [...newInning.timeline, 'Nb'];
-        blStats[bowlerId].runs += 1 + runs;
-        bStats[strikerId].runs += runs;
-        if (runs === 4) bStats[strikerId].fours += 1;
-        if (runs === 6) bStats[strikerId].sixes += 1;
-        if (runs % 2 !== 0) {
-          const temp = matchState.striker;
-          setMatchState({ ...matchState, striker: matchState.nonStriker, nonStriker: temp });
-        }
-      } else if (type === 'wicket') {
-        newInning.wickets += 1;
-        newInning.balls += 1;
-        newInning.timeline = [...newInning.timeline, 'W'];
-        blStats[bowlerId].wickets += 1;
-        blStats[bowlerId].balls += 1;
-        bStats[strikerId].balls += 1;
-      }
-
-      newInning.battingStats = bStats;
-      newInning.bowlingStats = blStats;
-      setInningData(newInning);
-
-      // Over completion strike rotation
-      if (newInning.balls % 6 === 0 && type !== 'wd' && type !== 'nb') {
-         // This will happen AFTER the ball is added
-         // Strike rotates at end of over
-         const temp = matchState.striker;
-         setMatchState({ ...matchState, striker: matchState.nonStriker, nonStriker: temp });
-      }
-    };
-
     return (
       <View style={styles.scoringContainer}>
          {/* Top Scoreboard */}
          <View style={styles.mainScoreboard}>
             <View style={styles.scoreRow}>
                <View>
-                  <Text style={styles.scoringTeamName}>{battingTeam?.name}</Text>
+                  <Text style={styles.scoringTeamName}>{inn.battingTeam}</Text>
                   <View style={styles.scoreNumberRow}>
-                     <Text style={styles.bigRuns}>{inningData.runs}-{inningData.wickets}</Text>
-                     <Text style={styles.overText}>({overs}.{remainingBalls})</Text>
+                     <Text style={styles.bigRuns}>{inn.runs}-{inn.wickets}</Text>
+                     <Text style={styles.overText}>({oversStr})</Text>
                   </View>
                </View>
                <View style={styles.crrBadge}>
                   <Text style={styles.crrLabel}>CRR</Text>
-                  <Text style={styles.crrValue}>{(inningData.runs / (inningData.balls / 6 || 1)).toFixed(2)}</Text>
+                  <Text style={styles.crrValue}>{crr}</Text>
                </View>
             </View>
             
             <View style={styles.targetRow}>
-               <Text style={styles.targetText}>{bowlingTeam?.name} opted to {tossResult.decision === 'bowl' ? 'bowl' : 'bat'}</Text>
+               <Text style={styles.targetText}>
+                 {inn.target ? `Target: ${inn.target} | Need ${inn.target - inn.runs} from ${parseInt(matchConfig.totalOvers) * 6 - inn.legalBalls} balls` : `${inn.bowlingTeam} opted to ${tossResult.decision === 'bowl' ? 'bowl' : 'bat'}`}
+               </Text>
             </View>
 
             {/* In-Play Tables */}
@@ -1389,17 +1390,17 @@ export default function CricketScreen() {
                      <View style={styles.statsHeadValues}><Text style={styles.statsHeaderText}>R</Text><Text style={styles.statsHeaderText}>B</Text></View>
                   </View>
                   <View style={styles.statsRow}>
-                      <Text style={[styles.playerName, { color: '#0D9488' }]}>{matchState.striker?.player_name}*</Text>
+                      <Text style={[styles.playerName, { color: '#0D9488' }]}>{striker?.name}*</Text>
                       <View style={styles.statsValues}>
-                        <Text style={styles.statsValueText}>{inningData.battingStats[matchState.striker?.id]?.runs || 0}</Text>
-                        <Text style={styles.statsValueText}>{inningData.battingStats[matchState.striker?.id]?.balls || 0}</Text>
+                        <Text style={styles.statsValueText}>{striker?.runs || 0}</Text>
+                        <Text style={styles.statsValueText}>{striker?.balls || 0}</Text>
                       </View>
                    </View>
                    <View style={styles.statsRow}>
-                      <Text style={styles.playerName}>{matchState.nonStriker?.player_name}</Text>
+                      <Text style={styles.playerName}>{nonStriker?.name}</Text>
                       <View style={styles.statsValues}>
-                        <Text style={styles.statsValueText}>{inningData.battingStats[matchState.nonStriker?.id]?.runs || 0}</Text>
-                        <Text style={styles.statsValueText}>{inningData.battingStats[matchState.nonStriker?.id]?.balls || 0}</Text>
+                        <Text style={styles.statsValueText}>{nonStriker?.runs || 0}</Text>
+                        <Text style={styles.statsValueText}>{nonStriker?.balls || 0}</Text>
                       </View>
                    </View>
                </View>
@@ -1409,11 +1410,11 @@ export default function CricketScreen() {
                      <View style={styles.statsHeadValues}><Text style={styles.statsHeaderText}>O</Text><Text style={styles.statsHeaderText}>R</Text><Text style={styles.statsHeaderText}>W</Text></View>
                   </View>
                   <View style={styles.statsRow}>
-                      <Text style={styles.playerName}>{matchState.bowler?.player_name}</Text>
+                      <Text style={styles.playerName}>{bowler?.name}</Text>
                       <View style={styles.statsValues}>
-                        <Text style={styles.statsValueText}>{Math.floor((inningData.bowlingStats[matchState.bowler?.id]?.balls || 0) / 6)}.{ (inningData.bowlingStats[matchState.bowler?.id]?.balls || 0) % 6}</Text>
-                        <Text style={styles.statsValueText}>{inningData.bowlingStats[matchState.bowler?.id]?.runs || 0}</Text>
-                        <Text style={styles.statsValueText}>{inningData.bowlingStats[matchState.bowler?.id]?.wickets || 0}</Text>
+                        <Text style={styles.statsValueText}>{bowler?.overs ?? 0}.{bowler?.balls ?? 0}</Text>
+                        <Text style={styles.statsValueText}>{bowler?.runs ?? 0}</Text>
+                        <Text style={styles.statsValueText}>{bowler?.wickets ?? 0}</Text>
                       </View>
                    </View>
                </View>
@@ -1422,12 +1423,12 @@ export default function CricketScreen() {
             {/* Ball Timeline */}
             <View style={styles.timelineContainer}>
                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                  {inningData.timeline.slice(-12).map((b, i) => (
-                    <View key={i} style={[styles.ballCircle, b === 'W' && styles.ballWicket, (b === '4' || b === '6') && styles.ballBoundary]}>
-                       <Text style={[styles.ballLabel, (b === 'W' || b === '4' || b === '6') && { color: '#FFFFFF' }]}>{b}</Text>
+                  {inn.overBalls.slice(-12).map((b, i) => (
+                    <View key={i} style={[styles.ballCircle, b.label === 'W' && styles.ballWicket, (b.label === '4' || b.label === '6') && styles.ballBoundary]}>
+                       <Text style={[styles.ballLabel, (b.label === 'W' || b.label === '4' || b.label === '6') && { color: '#FFFFFF' }]}>{b.label}</Text>
                     </View>
                   ))}
-                  {inningData.timeline.length === 0 && <Text style={styles.statsHeaderText}>Start the over...</Text>}
+                  {inn.overBalls.length === 0 && <Text style={styles.statsHeaderText}>Start the over...</Text>}
                </ScrollView>
             </View>
          </View>
@@ -1436,36 +1437,126 @@ export default function CricketScreen() {
          <View style={styles.scoringWheel}>
             <View style={styles.wheelRow}>
                {[0, 1, 2, 3].map(n => (
-                 <TouchableOpacity key={n} style={styles.runBtn} onPress={() => handleBallEffect('run', n)}>
+                 <TouchableOpacity key={n} style={styles.runBtn} onPress={() => handleAddBall(n)}>
                     <Text style={styles.runBtnText}>{n}</Text>
                  </TouchableOpacity>
                ))}
             </View>
             <View style={styles.wheelRow}>
                {[4, 6].map(n => (
-                 <TouchableOpacity key={n} style={[styles.runBtn, styles.boundaryBtn]} onPress={() => handleBallEffect('run', n)}>
+                 <TouchableOpacity key={n} style={[styles.runBtn, styles.boundaryBtn]} onPress={() => handleAddBall(n)}>
                     <Text style={styles.boundaryBtnText}>{n}</Text>
                  </TouchableOpacity>
                ))}
-               <TouchableOpacity style={[styles.runBtn, styles.wicketBtn]} onPress={() => handleBallEffect('wicket')}>
+               <TouchableOpacity 
+                 style={[styles.runBtn, styles.wicketBtn]} 
+                 onPress={() => {
+                   const nextBatter = yetToBat[0]?.name;
+                   if (!nextBatter) {
+                     alert('All out!');
+                   }
+                   handleAddWicket({ dismissedName: striker?.name, dismissalType: 'Bowled', newBatterName: nextBatter });
+                 }}
+                >
                   <Text style={styles.runBtnText}>W</Text>
                </TouchableOpacity>
             </View>
             <View style={styles.extraRow}>
-               <TouchableOpacity style={styles.extraBtn} onPress={() => handleBallEffect('wd')}><Text style={styles.extraBtnText}>WD</Text></TouchableOpacity>
-               <TouchableOpacity style={styles.extraBtn} onPress={() => handleBallEffect('nb')}><Text style={styles.extraBtnText}>NB</Text></TouchableOpacity>
-               <TouchableOpacity style={styles.extraBtn}><Text style={styles.extraBtnText}>BYE</Text></TouchableOpacity>
-               <TouchableOpacity style={styles.extraBtn}><Text style={styles.extraBtnText}>LB</Text></TouchableOpacity>
+               <TouchableOpacity style={styles.extraBtn} onPress={() => handleAddExtra('wide')}><Text style={styles.extraBtnText}>WD</Text></TouchableOpacity>
+               <TouchableOpacity style={styles.extraBtn} onPress={() => handleAddExtra('noball')}><Text style={styles.extraBtnText}>NB</Text></TouchableOpacity>
+               <TouchableOpacity style={styles.extraBtn} onPress={() => handleAddExtra('bye')}><Text style={styles.extraBtnText}>BYE</Text></TouchableOpacity>
+               <TouchableOpacity style={styles.extraBtn} onPress={() => handleAddExtra('legbye')}><Text style={styles.extraBtnText}>LB</Text></TouchableOpacity>
             </View>
          </View>
 
          {/* Bottom Actions */}
          <View style={styles.scoringActions}>
-            <TouchableOpacity style={styles.actionIconBtn}><RotateCcw size={20} color="#6B7280" /><Text style={styles.actionIconText}>Undo</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.actionIconBtn}><MoreHorizontal size={20} color="#6B7280" /><Text style={styles.actionIconText}>Extras</Text></TouchableOpacity>
-            <TouchableOpacity style={styles.actionIconBtn}><UserMinus size={20} color="#6B7280" /><Text style={styles.actionIconText}>Retire</Text></TouchableOpacity>
-            <TouchableOpacity style={[styles.actionIconBtn, { backgroundColor: '#F0FDF4' }]}><LayoutGrid size={20} color="#0D9488" /><Text style={[styles.actionIconText, { color: '#0D9488' }]}>Wheel</Text></TouchableOpacity>
+            <TouchableOpacity style={styles.actionIconBtn} onPress={() => undoLastBall()}>
+              <RotateCcw size={20} color="#6B7280" />
+              <Text style={styles.actionIconText}>Undo</Text>
+            </TouchableOpacity>
+            {liveMatchId && (
+              <TouchableOpacity 
+                style={[styles.actionIconBtn, { backgroundColor: '#F0FDF4' }]}
+                onPress={() => {
+                  const url = `https://bookyourground.com/live/${liveMatchId}`;
+                  alert(`Live Link: ${url}`);
+                }}
+              >
+                <Share2 size={20} color="#0D9488" />
+                <Text style={[styles.actionIconText, { color: '#0D9488' }]}>Share</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={styles.actionIconBtn} onPress={() => {
+                // Change bowler implementation
+                setActiveTab('fielding'); // Just a shortcut
+            }}>
+              <MoreHorizontal size={20} color="#6B7280" />
+              <Text style={styles.actionIconText}>Change</Text>
+            </TouchableOpacity>
+            
+            {matchPhase === 'innings_break' && (
+              <TouchableOpacity 
+                style={[styles.actionIconBtn, { backgroundColor: '#FFF7ED', width: '30%' }]}
+                onPress={() => startSecondInnings()}
+              >
+                <ChevronRight size={20} color="#F97316" />
+                <Text style={[styles.actionIconText, { color: '#F97316' }]}>2nd Inning</Text>
+              </TouchableOpacity>
+            )}
          </View>
+      </View>
+    );
+  };
+
+  const renderBowlerSelection = () => {
+    if (!inn) return null;
+    const battingTeam = tossResult.decision === 'bat' ? tossResult.winner : (tossResult.winner?.id === selectedTeamA?.id ? selectedTeamB : selectedTeamA);
+    const bowlingTeam = battingTeam?.id === selectedTeamA?.id ? selectedTeamB : selectedTeamA;
+    const bowlingPlayers = bowlingTeam?.id === selectedTeamA?.id ? playingXiA : playingXiB;
+
+    return (
+      <View style={styles.selectionView}>
+         <View style={styles.selectionHeader}>
+            <View style={{ width: 40 }} />
+            <Text style={styles.selectionTitle}>Select Next Bowler</Text>
+            <View style={{ width: 40 }} />
+         </View>
+
+         <View style={styles.overSummaryBanner}>
+            <Text style={styles.overSummaryText}>Over {Math.floor(inn.balls / 6)} Completed</Text>
+            <Text style={styles.scoreSummaryText}>{inn.runs}/{inn.wickets}</Text>
+         </View>
+
+         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
+            <Text style={styles.configLabel}>Choose Bowler for Over {Math.floor(inn.balls / 6) + 1}</Text>
+            <View style={styles.playerGrid}>
+               {bowlingPlayers.map(p => (
+                 <TouchableOpacity 
+                   key={p.id} 
+                   style={[
+                     styles.playerGridTile, 
+                     lastBowlerId === p.player_name && { opacity: 0.4, backgroundColor: '#F3F4F6' }
+                   ]}
+                   onPress={() => {
+                     if (lastBowlerId === p.player_name) {
+                       alert('A bowler cannot bowl two consecutive overs.');
+                       return;
+                     }
+                     const idx = bowlingPlayers.findIndex(bp => bp.id === p.id);
+                     changeBowler(idx);
+                     setIsSelectingNextBowler(false);
+                   }}
+                 >
+                    <View style={[styles.miniAvatar, { width: 40, height: 40, backgroundColor: lastBowlerId === p.player_name ? '#9CA3AF' : '#0D9488' }]}>
+                       <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>{p.player_name[0]}</Text>
+                    </View>
+                    <Text style={styles.playerGridName} numberOfLines={1}>{p.player_name}</Text>
+                    {lastBowlerId === p.id && <Text style={{ fontSize: 9, color: '#EF4444', fontWeight: 'bold' }}>PREV BOWLER</Text>}
+                 </TouchableOpacity>
+               ))}
+            </View>
+         </ScrollView>
       </View>
     );
   };
@@ -1590,33 +1681,46 @@ export default function CricketScreen() {
 
          <View style={styles.configFooter}>
             <TouchableOpacity 
-              style={[styles.startMatchMainBtn, (!matchState.striker || !matchState.nonStriker || !matchState.bowler) && { opacity: 0.5 }]}
-              disabled={!matchState.striker || !matchState.nonStriker || !matchState.bowler}
-              onPress={() => {
-                // Initialize stats for openers
-                const initialBatting = {
-                  [matchState.striker.id]: { runs: 0, balls: 0, fours: 0, sixes: 0 },
-                  [matchState.nonStriker.id]: { runs: 0, balls: 0, fours: 0, sixes: 0 }
-                };
-                const initialBowling = {
-                  [matchState.bowler.id]: { runs: 0, balls: 0, wickets: 0, maidens: 0 }
-                };
-                
-                setInningData({
-                  runs: 0,
-                  wickets: 0,
-                  balls: 0,
-                  extras: { wd: 0, nb: 0, b: 0, lb: 0 },
-                  timeline: [],
-                  battingStats: initialBatting,
-                  bowlingStats: initialBowling
-                });
-                setIsSelectingOpeners(false);
-                setIsScoring(true);
-              }}
-            >
-               <Text style={styles.startMatchMainBtnText}>Start Inning</Text>
-            </TouchableOpacity>
+               style={[styles.startMatchMainBtn, (!matchState.striker || !matchState.nonStriker || !matchState.bowler) && { opacity: 0.5 }]}
+               disabled={!matchState.striker || !matchState.nonStriker || !matchState.bowler}
+               onPress={async () => {
+                  const battingFirstTeam = tossResult.decision === 'bat' 
+                    ? tossResult.winner 
+                    : (tossResult.winner?.id === selectedTeamA?.id ? selectedTeamB : selectedTeamA);
+                  
+                  const isTeamAFirst = battingFirstTeam?.id === selectedTeamA?.id;
+                  let bPlayers = (isTeamAFirst ? playingXiA : playingXiB).map(p => p.player_name);
+                  let blPlayers = (isTeamAFirst ? playingXiB : playingXiA).map(p => p.player_name);
+
+                  // Reorder to ensure strikers and first bowler are at the front
+                  const sName = matchState.striker.player_name;
+                  const nsName = matchState.nonStriker.player_name;
+                  const bwrName = matchState.bowler.player_name;
+
+                  bPlayers = [sName, nsName, ...bPlayers.filter(p => p !== sName && p !== nsName)];
+                  blPlayers = [bwrName, ...blPlayers.filter(p => p !== bwrName)];
+
+                  const config = {
+                    teamA: selectedTeamA?.name,
+                    teamB: selectedTeamB?.name,
+                    teamAId: selectedTeamA?.id,
+                    teamBId: selectedTeamB?.id,
+                    teamAPlayers: isTeamAFirst ? bPlayers : blPlayers,
+                    teamBPlayers: isTeamAFirst ? blPlayers : bPlayers,
+                    overs: parseInt(matchConfig.totalOvers),
+                    players: playingXiA.length,
+                    venue: matchConfig.ground || 'Standard Ground',
+                    matchType: matchConfig.type
+                  };
+
+                  await startMatch(config, tossResult.winner?.name, tossResult.decision as 'bat' | 'bowl');
+                  
+                  setIsSelectingOpeners(false);
+                  setIsScoring(true);
+               }}
+             >
+                <Text style={styles.startMatchMainBtnText}>Start Inning</Text>
+             </TouchableOpacity>
          </View>
       </View>
     );
@@ -2485,17 +2589,28 @@ export default function CricketScreen() {
         return (
           <View style={{ flex: 1 }}>
             <View style={styles.subTabContainer}>
-              <TouchableOpacity style={[styles.subTab, subTab === 'all' && styles.subTabActive]} onPress={() => setSubTab('all')}>
-                <Text style={[styles.subTabText, subTab === 'all' && styles.subTabTextActive]}>All</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.subTab, subTab === 'played' && styles.subTabActive]} onPress={() => setSubTab('played')}>
-                <Text style={[styles.subTabText, subTab === 'played' && styles.subTabTextActive]}>Played</Text>
-              </TouchableOpacity>
+              {['All', 'Ongoing', 'Upcoming', 'Result'].map((label) => (
+                <TouchableOpacity
+                  key={label}
+                  style={[styles.subTab, subTab === label.toLowerCase() && styles.subTabActive]}
+                  onPress={() => setSubTab(label.toLowerCase())}
+                >
+                  <Text style={[styles.subTabText, subTab === label.toLowerCase() && styles.subTabTextActive]}>
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
             <View style={styles.matchesList}>
-               {MATCHES_DATA.filter(m => subTab === 'all' || (subTab === 'played' && m.status === 'Result')).map(match => (
-                 <MatchCard key={match.id} match={match} />
-               ))}
+              {[...fetchedMatches, ...MATCHES_DATA]
+                .filter(m => {
+                  if (subTab === 'all') return true;
+                  return m.status.toLowerCase() === subTab.toLowerCase();
+                })
+                .map(match => (
+                  <MatchCard key={match.id} match={match} />
+                ))
+              }
             </View>
           </View>
         );
@@ -2689,7 +2804,14 @@ export default function CricketScreen() {
               <Text style={styles.optionText}>Start a match</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.modalOption} onPress={() => setIsActionModalVisible(false)}>
+            <TouchableOpacity 
+              style={styles.modalOption} 
+              onPress={() => {
+                setIsLiveSession(true);
+                setIsSelectingTeams(true);
+                setIsActionModalVisible(false);
+              }}
+            >
               <View style={[styles.optionIcon, { backgroundColor: '#FEF2F2' }]}>
                 <Radio size={20} color="#EF4444" />
               </View>
@@ -2742,19 +2864,17 @@ export default function CricketScreen() {
             </TouchableOpacity>
           ))}
           </ScrollView>
-          {session && (
-            <TouchableOpacity 
-              style={styles.plusIconWrapper}
-              onPress={() => setIsActionModalVisible(true)}
-            >
-              <Plus size={24} color="#01b854" strokeWidth={3} />
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity 
+            style={styles.plusIconWrapper}
+            onPress={() => setIsActionModalVisible(true)}
+          >
+            <Plus size={24} color="#01b854" strokeWidth={3} />
+          </TouchableOpacity>
         </View>
       </View>
       <ScrollView style={styles.mainScroll} contentContainerStyle={styles.mainScrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.contentContainer}>
-          {isScoring ? renderLiveScoring() : (isSearchingOfficial ? renderOfficialSearch() : (isConfiguringOfficials ? renderMatchOfficials() : (isSelectingOpeners ? renderOpeningSelection() : (isConfiguringToss ? renderTossConfiguration() : (isConfiguringMatch ? renderMatchConfiguration() : (isSelectingTeams ? (isSelectingPlayers ? renderPlayerSelection() : renderTeamSelection()) : renderContent()))))))}
+          {isScoring ? (isSelectingNextBowler ? renderBowlerSelection() : renderLiveScoring()) : (isSearchingOfficial ? renderOfficialSearch() : (isConfiguringOfficials ? renderMatchOfficials() : (isSelectingOpeners ? renderOpeningSelection() : (isConfiguringToss ? renderTossConfiguration() : (isConfiguringMatch ? renderMatchConfiguration() : (isSelectingTeams ? (isSelectingPlayers ? renderPlayerSelection() : renderTeamSelection()) : renderContent()))))))}
         </View>
       </ScrollView>
     </View>
@@ -2789,13 +2909,42 @@ const styles = StyleSheet.create({
   matchType: { fontSize: 14, fontWeight: '600', color: '#374151' },
   matchTournament: { color: '#9CA3AF', fontWeight: '400' },
   matchMeta: { fontSize: 12, color: '#6B7280', marginTop: 4 },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 99 },
-  statusBadgeUpcoming: { backgroundColor: '#FFF7ED' },
-  statusBadgeResult: { backgroundColor: '#111827' },
-  statusBadgeText: { fontSize: 10, fontWeight: '700', color: '#000000' },
-  statusBadgeTextResult: { color: '#FFFFFF' },
-  statusBadgeTextUpcoming: { color: '#EA580C' },
-  matchTeams: { gap: 12, marginBottom: 16 },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
+  statusBadgeUpcoming: { backgroundColor: '#F1F5F9' },
+  statusBadgeLive: { backgroundColor: '#F0FDF4', flexDirection: 'row', alignItems: 'center', gap: 6 },
+  statusBadgeResult: { backgroundColor: '#F0F9FF' },
+  statusBadgeText: { fontSize: 11, fontWeight: '700' },
+  statusBadgeTextResult: { color: '#0369A1' },
+  statusBadgeTextUpcoming: { color: '#64748B' },
+  statusBadgeTextLive: { color: '#15803D' },
+  matchTeams: { marginTop: 16, marginBottom: 8 },
+  matchTeamRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  teamInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  teamNameText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  teamScoreText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  teamOversText: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '400',
+  },
   teamRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   teamName: { fontSize: 15, color: '#111827' },
   teamNameBold: { fontWeight: '700', fontSize: 16 },
@@ -2805,6 +2954,22 @@ const styles = StyleSheet.create({
   matchResultText: { fontSize: 13, color: '#059669', fontWeight: '600', marginBottom: 12 },
   matchFooter: { flexDirection: 'row', gap: 20, borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 12 },
   footerLink: { fontSize: 13, color: '#0D9488', fontWeight: '600' },
+  pulseDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#4ADE80' },
+  liveActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    marginTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  liveActionBtnText: {
+    color: '#0D9488',
+    fontSize: 14,
+    fontWeight: '600',
+  },
   tournamentCard: { backgroundColor: '#FFFFFF', borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB' },
   imageContainer: { height: 160, position: 'relative' },
   tournamentImage: { width: '100%', height: '100%' },
@@ -4714,6 +4879,52 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   decisionTextActive: {
+    color: '#FFFFFF',
+  },
+  overSummaryBanner: {
+    backgroundColor: '#111827',
+    padding: 20,
+    marginHorizontal: 16,
+    borderRadius: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  overSummaryText: {
+    color: '#9CA3AF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  scoreSummaryText: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '900',
+  },
+  filterBar: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    flexDirection: 'row',
+  },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+    marginRight: 8,
+  },
+  filterChipActive: {
+    backgroundColor: '#111827',
+  },
+  filterChipText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  filterChipTextActive: {
     color: '#FFFFFF',
   },
 });

@@ -82,6 +82,12 @@ export default function SiteFooter() {
             </Text>
             <Text
               style={styles.footerLink}
+              onPress={() => router.push('/blog' as any)}
+            >
+              Blog
+            </Text>
+            <Text
+              style={styles.footerLink}
               onPress={() => router.push('/faq' as any)}
             >
               FAQ
