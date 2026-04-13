@@ -284,8 +284,14 @@ const styles = StyleSheet.create({
   matchCard: {
     backgroundColor: '#FFFFFF',
     padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
   },
   matchHeader: {
     flexDirection: 'row',

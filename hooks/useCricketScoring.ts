@@ -53,6 +53,7 @@ interface InningState {
   allOvers: Ball[][];
   target: number | null;
   inningsId: string | null;
+  lastBowlerName?: string | null;
 }
 
 const formatOvers = (legalBalls: number) =>
@@ -69,7 +70,6 @@ const calcRRR = (target: number, runs: number, legalBalls: number, totalOvers: n
 };
 
 function initInning(battingTeam: string, bowlingTeam: string, battingPlayers: string[], bowlingPlayers: string[], target: number | null = null): InningState {
-  const now = Date.now();
   return {
     battingTeam,
     bowlingTeam,
@@ -103,6 +103,14 @@ function initInning(battingTeam: string, bowlingTeam: string, battingPlayers: st
 }
 
 export function useCricketScoring() {
+  const savePlayingXi = useCallback(async (mid: string, teamId: string, players: any[]) => {
+    console.log('[useCricketScoring] Saving Playing XI for match:', mid, 'team:', teamId, 'players:', players.length);
+    await supabase.from('match_playing_xi').delete().eq('match_id', mid).eq('team_id', teamId);
+    const rows = players.map(p => ({ match_id: mid, team_id: teamId, player_id: p.id }));
+    if (rows.length > 0) {
+      await supabase.from('match_playing_xi').insert(rows);
+    }
+  }, []);
   const { session } = useAuth();
   const [matchId, setMatchId] = useState<string | null>(null);
   const [matchConfig, setConfig] = useState<any>(null);
@@ -218,6 +226,8 @@ export function useCricketScoring() {
     if (error) { console.error('createMatch error', error); return null; }
     setMatchId(data.id);
     setConfig(config);
+    console.log('[useCricketScoring] Match created:', data.id);
+
     return data.id;
   }, [session]);
 
@@ -235,31 +245,83 @@ export function useCricketScoring() {
       })
       .select()
       .single();
-    if (error) { console.error('createInningsRow error', error); return null; }
+    if (error) { console.error('[useCricketScoring] createInningsRow error:', error, 'Params:', { mid, innNum, batting }); return null; }
     return data.id;
   }, []);
 
-  const startMatch = useCallback(async (config: any, tossWinner: string, tossChoice: 'bat' | 'bowl') => {
+  const startMatch = useCallback(async (config: any, tossWinner: string, tossChoice: 'bat' | 'bowl', openers?: { striker: string, nonStriker: string, bowler: string }, existingMatchId?: string) => {
+    console.log('[useCricketScoring] startMatch called. existingMatchId:', existingMatchId);
     const battingFirst = tossChoice === 'bat';
     const battingTeam = tossWinner === config.teamA
       ? (battingFirst ? config.teamA : config.teamB)
       : (battingFirst ? config.teamB : config.teamA);
     const bowlingTeam = battingTeam === config.teamA ? config.teamB : config.teamA;
-    const battingPlayers = battingTeam === config.teamA ? config.teamAPlayers : config.teamBPlayers;
-    const bowlingPlayers = bowlingTeam === config.teamA ? config.teamAPlayers : config.teamBPlayers;
 
-    const mid = await createMatch(config);
+    // Use existing ID if provided, otherwise create new match
+    let mid = existingMatchId;
+    if (!mid) {
+      mid = await createMatch(config);
+    } else {
+      // If using existing, at least update it with current config
+      await supabase.from('matches').update({
+        title: `${config.teamA} vs ${config.teamB}`,
+        team_a: config.teamA,
+        team_b: config.teamB,
+        overs: config.overs,
+        venue: config.venue,
+        match_type: config.matchType
+      }).eq('id', mid);
+    }
+
     if (!mid) return;
-    const innId = await createInningsRow(mid, 1, config.teamA, config.teamB, config.teamAPlayers, config.teamBPlayers);
-    const innObj = initInning(config.teamA, config.teamB, config.teamAPlayers, config.teamBPlayers);
+    
+    // Check if inning 1 already exists for this match
+    const { data: existingInnings } = await supabase.from('innings').select('*').eq('match_id', mid).eq('innings_number', 1).maybeSingle();
+    
+    let innId;
+    if (existingInnings) {
+      innId = existingInnings.id;
+    } else {
+      innId = await createInningsRow(mid, 1, battingTeam, bowlingTeam, 
+        battingTeam === config.teamA ? config.teamAPlayers : config.teamBPlayers,
+        bowlingTeam === config.teamA ? config.teamAPlayers : config.teamBPlayers
+      );
+    }
+    
+    const innObj = initInning(battingTeam, bowlingTeam, 
+      battingTeam === config.teamA ? config.teamAPlayers : config.teamBPlayers,
+      bowlingTeam === config.teamA ? config.teamAPlayers : config.teamBPlayers
+    );
     innObj.inningsId = innId;
+
+    // Apply openers directly so they appear immediately on the scoring screen
+    if (openers) {
+      innObj.batters = innObj.batters.map(b => {
+        if (b.name === openers.striker) return {
+    ...b, status: 'batting' as const, onStrike: true, startTime: Date.now() };
+        if (b.name === openers.nonStriker) return {
+    ...b, status: 'batting' as const, onStrike: false, startTime: Date.now() };
+        return b;
+      });
+      if (!innObj.batters.find(b => b.name === openers.striker)) {
+        innObj.batters.push({ name: openers.striker, runs: 0, balls: 0, dots: 0, fours: 0, sixes: 0, onStrike: true, status: 'batting', out: false, dismissal: '', startTime: Date.now() });
+      }
+      if (!innObj.batters.find(b => b.name === openers.nonStriker)) {
+        innObj.batters.push({ name: openers.nonStriker, runs: 0, balls: 0, dots: 0, fours: 0, sixes: 0, onStrike: false, status: 'batting', out: false, dismissal: '', startTime: Date.now() });
+      }
+      const newBowler: Bowler = { name: openers.bowler, overs: 0, balls: 0, runs: 0, wickets: 0, maidens: 0, overRuns: 0, dots: 0, fours: 0, sixes: 0 };
+      innObj.bowlers = [newBowler];
+      innObj.currentBowlerIdx = 0;
+    }
 
     await supabase.from('matches').update({ status: 'live', toss_winner: tossWinner, toss_choice: tossChoice }).eq('id', mid);
 
     setInningsList([innObj, null]);
     setCurrentIdx(0);
-    setPhase('live');
-    return { matchId: mid, inn: innObj };
+          await pushLiveState(innObj, config, mid);
+      setPhase('live');
+    return {
+    matchId: mid, inn: innObj };
   }, [createMatch, createInningsRow]);
 
   const rotateStrike = (batters: Batter[]) => {
@@ -271,7 +333,8 @@ export function useCricketScoring() {
     // Exactly 2 active: flip them
     return batters.map(b => {
       if (b.status === 'batting' && !b.out) {
-        return { ...b, onStrike: !b.onStrike };
+        return {
+    ...b, onStrike: !b.onStrike };
       }
       return b;
     });
@@ -326,7 +389,13 @@ export function useCricketScoring() {
       i === innState.currentBowlerIdx ? bowler : b
     );
     const allOvers = [...(innState.allOvers || []), [...innState.overBalls]];
-    return { ...innState, bowlers: newBowlers, allOvers, overBalls: [] };
+    return {
+      ...innState, 
+      bowlers: newBowlers, 
+      allOvers, 
+      overBalls: [],
+      lastBowlerName: bowler.name
+    };
   }, []);
 
   const addBall = useCallback(async (runs: number) => {
@@ -509,15 +578,26 @@ export function useCricketScoring() {
 
   const addNewBowler = useCallback((name: string) => {
     setInn(prev => {
+      if (prev.lastBowlerName && prev.lastBowlerName.toLowerCase() === name.toLowerCase()) {
+        if (typeof window !== 'undefined') alert('Same bowler cannot bowl consecutive overs!');
+        return prev;
+      }
       const exists = prev.bowlers.find(b => b.name.toLowerCase() === name.toLowerCase());
       if (exists) {
-        return { ...prev, currentBowlerIdx: prev.bowlers.indexOf(exists) };
+        const limit = parseInt(matchConfig?.oversPerBowler || '0');
+        if (limit > 0 && exists.overs >= limit) {
+          if (typeof window !== 'undefined') alert(`Bowler ${name} already bowled their limit of ${limit} overs!`);
+          return prev;
+        }
+        return {
+    ...prev, currentBowlerIdx: prev.bowlers.indexOf(exists) };
       }
       const newBowler: Bowler = {
         name, overs: 0, balls: 0, runs: 0, wickets: 0, maidens: 0, overRuns: 0
       };
       const nextBowlers = [...prev.bowlers, newBowler];
-      return { ...prev, bowlers: nextBowlers, currentBowlerIdx: nextBowlers.length - 1 };
+      return {
+    ...prev, bowlers: nextBowlers, currentBowlerIdx: nextBowlers.length - 1 };
     });
   }, []);
 
@@ -526,10 +606,30 @@ export function useCricketScoring() {
   }, []);
 
   const undoLastBall = useCallback(async () => {
-    if (historyRef.current.length === 0) return false;
+    if (historyRef.current.length === 0) {
+      console.log('[useCricketScoring] Undo failed: No history available');
+      return false;
+    }
     const prev = historyRef.current.pop()!;
+    console.log('[useCricketScoring] Undoing to state:', prev.runs, '-', prev.wickets);
     setInn(prev);
+    
+    // 1. Sync live state back to previous
     await pushLiveState(prev, matchConfig, matchId!);
+    
+    // 2. Delete the last ball from Supabase
+    const { data: lastBalls } = await supabase
+      .from('ball_log')
+      .select('id')
+      .eq('match_id', matchId!)
+      .order('created_at', { ascending: false })
+      .limit(1);
+      
+    if (lastBalls && lastBalls[0]) {
+      console.log('[useCricketScoring] Deleting ball ID:', lastBalls[0].id);
+      await supabase.from('ball_log').delete().eq('id', lastBalls[0].id);
+    }
+    
     return true;
   }, [matchId, matchConfig, pushLiveState]);
 
@@ -550,7 +650,8 @@ export function useCricketScoring() {
 
     setInningsList([inningsList[0], inn2]);
     setCurrentIdx(1);
-    setPhase('live');
+          await pushLiveState(innObj, config, mid);
+      setPhase('live');
     historyRef.current = [];
   }, [inningsList, matchConfig, matchId, createInningsRow]);
 
@@ -586,83 +687,144 @@ export function useCricketScoring() {
     });
   }, [inn]);
 
-  const resumeMatch = useCallback(async (mid: string) => {
+    const resumeMatch = useCallback(async (mid: string, isRecovery = false) => {
     try {
-      // 1. Fetch match and live state
-      const [{ data: m }, { data: live }] = await Promise.all([
-        supabase.from('matches').select('*').eq('id', mid).single(),
-        supabase.from('match_live_state').select('*').eq('match_id', mid).single(),
-      ]);
+      console.log('[useCricketScoring] Attempting resume for:', mid);
+      
+      const { data: m, error: mErr } = await supabase.from('matches').select('*').eq('id', mid).maybeSingle();
+      if (mErr) {
+        console.error('[useCricketScoring] Error fetching match:', mErr);
+        return false;
+      }
+      if (!m) {
+        console.warn('[useCricketScoring] No match found for ID:', mid);
+        return false;
+      }
+      console.log('[useCricketScoring] Match data loaded:', m.title);
 
-      if (!m || !live) throw new Error('Match not found');
+      const { data: live, error: liveErr } = await supabase.from('match_live_state').select('*').eq('match_id', mid).maybeSingle();
+      if (liveErr) console.error('[useCricketScoring] Error fetching live state (non-fatal):', liveErr);
+      console.log('[useCricketScoring] Live state:', live ? 'present' : 'absent');
 
-      // 2. Fetch all innings for this match
-      const { data: allInnings } = await supabase.from('innings').select('*').eq('match_id', mid).order('innings_number', { ascending: true });
-      if (!allInnings) throw new Error('Innings not found');
-
-      const currentInnNum = live.innings_number || 1;
-      const currentInnRow = allInnings.find(i => i.innings_number === currentInnNum);
-      if (!currentInnRow) throw new Error('Current inning row not found');
-
-      // 3. Construct Config
-      const config = {
+            // 2. Fetch Playing XI (joined with team_members for names)
+      const { data: xiRows } = await supabase
+        .from('match_playing_xi')
+        .select(`
+          *,
+          team_members:player_id (
+            player_name
+          )
+        `)
+        .eq('match_id', mid);
+      
+      const { data: allInnings, error: innErr } = await supabase.from('innings').select('*').eq('match_id', mid).order('innings_number', { ascending: true });
+      if (innErr) {
+        console.error('[useCricketScoring] Error fetching innings:', innErr);
+        return {
+    status: 'error' };
+      }
+      // 3. Construct Config early so it's available even if innings are missing
+            const config = {
         teamA: m.team_a,
         teamB: m.team_b,
         teamAId: m.team_a_id,
         teamBId: m.team_b_id,
-        // We'll try to get these if they exist, or fallback
-        teamAPlayers: [], 
-        teamBPlayers: [],
-        overs: m.overs,
-        players: m.players,
-        venue: m.venue,
+        teamAPlayers: (xiRows && xiRows.length > 0)
+          ? xiRows.filter(r => r.team_id === m.team_a_id).map(r => r.team_members?.player_name || 'Player').filter(Boolean)
+          : (allInnings && allInnings.length > 0) ? (allInnings[0].batting_team === m.team_a ? allInnings[0].batting_players : allInnings[0].bowling_players) : [],
+        teamBPlayers: (xiRows && xiRows.length > 0)
+          ? xiRows.filter(r => r.team_id === m.team_b_id).map(r => r.team_members?.player_name || 'Player').filter(Boolean)
+          : (allInnings && allInnings.length > 0) ? (allInnings[0].batting_team === m.team_a ? allInnings[0].bowling_players : allInnings[0].batting_players) : [],
+        overs: m.overs || 20,
+        players: m.players || 11,
+        venue: m.venue || 'Standard Ground',
         matchType: m.match_type
       };
+
+      // If no innings yet, set config but return 'needs_setup' so UI can continue setup flow
+      if (!allInnings || allInnings.length === 0) {
+        if (m.status === 'live' || m.status === 'innings_break' || (live && live.innings_number)) {
+           console.log('[useCricketScoring] Match is live but innings missing, attempting recovery...');
+           // Create a default inning row to avoid setup loop
+           const recoveryInnId = await createInningsRow(mid, 1, m.team_a, m.team_b, config.teamAPlayers, config.teamBPlayers);
+           // Re-trigger resume would be complex, so let's just proceed with this fake row for now
+           if (isRecovery) {
+               console.error('[useCricketScoring] Recovery failed to create innings, aborting to avoid loop');
+               return { status: 'error' };
+           }
+           return resumeMatch(mid, true);
+        }
+        console.warn('[useCricketScoring] No innings found and match not live, returning needs_setup');
+        setMatchId(mid);
+        setConfig(config);
+      console.log('[DEBUG-SQUAD] Config Players A:', config.teamAPlayers?.length);
+      console.log('[DEBUG-SQUAD] Config Players B:', config.teamBPlayers?.length);
+      console.log('[DEBUG-SQUAD] XI Rows Found:', xiRows?.length);
+
+        setPhase(xiRows?.length > 0 ? 'toss' : 'setup');
+        return { status: 'needs_setup', config, xiData: xiRows };
+      }
+      console.log('[useCricketScoring] Found innings:', allInnings.length);
+
+      const currentInnNum = live?.innings_number || 1;
+      const currentInnRow = allInnings.find((i: any) => i.innings_number === currentInnNum) || allInnings[0];
+      if (!currentInnRow) throw new Error('Current inning row not found');
+
+      // Update config with actual players from innings
+      config.teamAPlayers = currentInnRow.batting_team === m.team_a ? currentInnRow.batting_players : currentInnRow.bowling_players;
+      config.teamBPlayers = currentInnRow.batting_team === m.team_a ? currentInnRow.bowling_players : currentInnRow.batting_players;
 
       // 4. Fetch ball logs to reconstruct batters/bowlers stats
       const { data: logs } = await supabase.from('ball_log').select('*').eq('match_id', mid).order('created_at', { ascending: true });
       
       const constructInning = (innNum: number, innRow: any) => {
-        const innLogs = logs?.filter(l => l.innings_id === innRow.id) || [];
+        const innLogs = logs?.filter((l: any) => l.innings_id === innRow.id) || [];
+        let calcLegal = 0;
+        let lastBowlerInLog = null;
         
-        // Re-construct batters from team members if possible, otherwise from logs
-        // For simplicity in resume, we start with players from logs + teams
-        // This is complex, but let's at least restore the basics
         const battingTeam = innRow.batting_team;
         const bowlingTeam = innRow.bowling_team;
 
-        // Basic reconstruction logic
+
         const state: InningState = {
           battingTeam,
           bowlingTeam,
           battingPlayers: (innRow.batting_players && innRow.batting_players.length > 0) 
             ? innRow.batting_players 
-            : [...new Set(logs?.filter(l => l.innings_id === innRow.id).map(l => l.batter_name).filter(Boolean))],
+            : [...new Set(innLogs.map((l: any) => l.batter_name).filter(Boolean))] as string[],
           bowlingPlayers: (innRow.bowling_players && innRow.bowling_players.length > 0) 
             ? innRow.bowling_players 
-            : [...new Set(logs?.filter(l => l.innings_id === innRow.id).map(l => l.bowler_name).filter(Boolean))],
-          runs: innRow.runs || 0,
-          wickets: innRow.wickets || 0,
+            : [...new Set(innLogs.map((l: any) => l.bowler_name).filter(Boolean))] as string[],
+          runs: Math.max(innRow.runs || 0, innLogs.reduce((acc: number, b: any) => acc + (b.runs || 0) + (b.extras || 0), 0)),
+          wickets: Math.max(innRow.wickets || 0, innLogs.filter((b: any) => b.is_wicket).length),
           balls: innLogs.length, 
-          legalBalls: innRow.legal_balls || 0,
+          legalBalls: 0, // Calculated below
           extras: { wide: 0, noball: 0, bye: 0, legbye: 0, penalty: 0 },
           batters: [],
           bowlers: [],
           currentBowlerIdx: 0,
-          overBalls: JSON.parse(live.current_over_balls || '[]'),
+          overBalls: typeof live?.current_over_balls === 'string' 
+            ? JSON.parse(live.current_over_balls) 
+            : (live?.current_over_balls || []),
           allOvers: [],
           target: innRow.target,
-          inningsId: innRow.id
+          inningsId: innRow.id,
+          lastBowlerName: lastBowlerInLog
         };
+        console.log('[DEBUG-SQUAD] Inning', innNum, 'Batting Team:', battingTeam, 'Squad Size:', state.battingPlayers.length);
 
-        // Reconstruct batters/bowlers from logs
         const battersMap: Record<string, Batter> = {};
         const bowlersMap: Record<string, Bowler> = {};
 
-        innLogs.forEach(ball => {
+
+        innLogs.forEach((ball: any) => {
+          if (ball.bowler_name) lastBowlerInLog = ball.bowler_name;
+          if (!ball.extra_type || (ball.extra_type !== 'wide' && ball.extra_type !== 'noball')) {
+            calcLegal++;
+          }
           if (ball.batter_name) {
             if (!battersMap[ball.batter_name]) {
-              battersMap[ball.batter_name] = { name: ball.batter_name, runs: 0, balls: 0, fours: 0, sixes: 0, onStrike: false, status: 'yet', out: false, dismissal: '' };
+              battersMap[ball.batter_name] = { name: ball.batter_name, runs: 0, balls: 0, fours: 0, sixes: 0, dots: 0, onStrike: false, status: 'yet', out: false, dismissal: '' };
             }
             battersMap[ball.batter_name].runs += (ball.runs || 0);
             if (!ball.extra_type || ball.extra_type === 'noball') battersMap[ball.batter_name].balls++;
@@ -676,14 +838,14 @@ export function useCricketScoring() {
           }
           if (ball.bowler_name) {
             if (!bowlersMap[ball.bowler_name]) {
-              bowlersMap[ball.bowler_name] = { name: ball.bowler_name, overs: 0, balls: 0, runs: 0, wickets: 0, maidens: 0, overRuns: 0 };
+              bowlersMap[ball.bowler_name] = { name: ball.bowler_name, overs: 0, balls: 0, runs: 0, wickets: 0, maidens: 0, overRuns: 0, dots: 0, fours: 0, sixes: 0 };
             }
             bowlersMap[ball.bowler_name].runs += (ball.runs || 0) + (ball.extras || 0);
             if (!ball.extra_type || (ball.extra_type !== 'wide' && ball.extra_type !== 'noball')) {
               bowlersMap[ball.bowler_name].balls++;
               if (bowlersMap[ball.bowler_name].balls === 6) {
                 bowlersMap[ball.bowler_name].overs++;
-                 bowlersMap[ball.bowler_name].balls = 0;
+                bowlersMap[ball.bowler_name].balls = 0;
               }
             }
             if (ball.is_wicket && ball.dismissal_type !== 'run out') bowlersMap[ball.bowler_name].wickets++;
@@ -693,18 +855,36 @@ export function useCricketScoring() {
           }
         });
 
+        
+        state.legalBalls = Math.max(innRow.legal_balls || 0, calcLegal);
+
+        if (live) {
+          // Ensure striker and non-striker are in the batters list
+          [live.striker_name, live.nonstriker_name].forEach(name => {
+            if (name && !battersMap[name]) {
+              battersMap[name] = { name, runs: 0, balls: 0, fours: 0, sixes: 0, dots: 0, onStrike: false, status: 'batting', out: false, dismissal: '', startTime: Date.now() };
+            }
+          });
+
+          Object.values(battersMap).forEach(b => {
+            if (b.name === live.striker_name) { b.onStrike = true; b.status = 'batting'; }
+            if (b.name === live.nonstriker_name) { b.onStrike = false; b.status = 'batting'; }
+          });
+          
+          state.currentBowlerIdx = state.bowlers.findIndex(b => b.name === live.bowler_name);
+          if (state.currentBowlerIdx === -1) {
+             if (live.bowler_name) {
+                const newBowler = { name: live.bowler_name, overs: 0, balls: 0, runs: 0, wickets: 0, maidens: 0, overRuns: 0 };
+                state.bowlers.push(newBowler);
+                state.currentBowlerIdx = state.bowlers.length - 1;
+             } else {
+                state.currentBowlerIdx = 0;
+             }
+          }
+        }
+
         state.batters = Object.values(battersMap);
         state.bowlers = Object.values(bowlersMap);
-
-        // Restore striker/non-striker from live state
-        state.batters.forEach(b => {
-          if (b.name === live.striker_name) { b.onStrike = true; b.status = 'batting'; }
-          if (b.name === live.nonstriker_name) { b.onStrike = false; b.status = 'batting'; }
-        });
-
-        state.currentBowlerIdx = state.bowlers.findIndex(b => b.name === live.bowler_name);
-        if (state.currentBowlerIdx === -1) state.currentBowlerIdx = 0;
-
         return state;
       };
 
@@ -713,16 +893,29 @@ export function useCricketScoring() {
 
       setMatchId(mid);
       setConfig(config);
+      console.log('[DEBUG-SQUAD] Config Players A:', config.teamAPlayers?.length);
+      console.log('[DEBUG-SQUAD] Config Players B:', config.teamBPlayers?.length);
+      console.log('[DEBUG-SQUAD] XI Rows Found:', xiRows?.length);
+
       setInningsList([inn1State, inn2State]);
       setCurrentIdx(currentInnNum - 1);
-      setPhase('live');
       
-      return true;
+      const currentInningToSync = currentInnNum === 1 ? inn1State : (inn2State || inn1State);
+      await pushLiveState(currentInningToSync, config, mid);
+      
+      setPhase('live');
+      const finalXi = (xiRows && xiRows.length > 0) ? xiRows : 
+        [
+          ...(config.teamAPlayers || []).map(name => ({ team_id: m.team_a_id, player_id: name, team_members: { player_name: name } })),
+          ...(config.teamBPlayers || []).map(name => ({ team_id: m.team_b_id, player_id: name, team_members: { player_name: name } }))
+        ];
+      return { status: 'success', config, xiData: finalXi, lastBowlerName: currentInningToSync.lastBowlerName, tossWinnerId: m.toss_winner_id, tossDecision: m.toss_decision };
     } catch (err) {
       console.error('Resume match failed:', err);
-      return false;
+      return {
+    status: 'error' };
     }
-  }, []);
+    }, []);
 
   const striker = useMemo(() => {
     if (!inn) return undefined;
@@ -747,6 +940,7 @@ export function useCricketScoring() {
   const yetToBat = inn?.batters.filter(b => b.status === 'yet') ?? [];
 
   return {
+    savePlayingXi,
     matchId, phase, result,
     inn, inn1: inningsList[0], inn2: inningsList[1],
     matchConfig,

@@ -114,7 +114,7 @@ export default function CricketLayout() {
 
   return (
     <WebLayout noCard>
-      <View style={[styles.container, (pathname === '/cricket/matches' || pathname.includes('/scoring')) && { backgroundColor: '#FFFFFF' }]}>
+      <View style={styles.container}>
         {!pathname.includes('/scoring') && (
           <View style={styles.tabsStickyWrapper}>
           <View style={styles.tabsInnerRow}>
@@ -141,10 +141,7 @@ export default function CricketLayout() {
       )}
 
         <ScrollView style={styles.mainScroll} contentContainerStyle={styles.mainScrollContent} showsVerticalScrollIndicator={false}>
-          <View style={[
-            styles.contentContainer, 
-            (pathname === '/cricket/matches' || pathname.includes('/scoring')) && { maxWidth: '100%', paddingHorizontal: 0, paddingTop: 0 }
-          ]}>
+          <View style={styles.contentContainer}>
              <Slot />
           </View>
         </ScrollView>

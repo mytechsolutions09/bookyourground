@@ -71,6 +71,7 @@ const generateScorecard = (logs: any[], inningsNum: number, inningsList: any[]) 
   });
 
   return {
+    inn,
     batters: Object.values(batters),
     bowlers: Object.values(bowlers).map(b => ({
       ...b,
@@ -144,7 +145,7 @@ export default function LiveScorecard() {
     if (!result.canceled && result.assets && result.assets.length > 0) {
       setIsUploading(true);
       try {
-        const publicUrl = result.assets[0].uri; // In production, upload to storage
+        const publicUrl = result.assets[0].uri; 
         const { data, error } = await supabase
           .from('match_images')
           .insert({ match_id: matchId, url: publicUrl })
@@ -161,29 +162,14 @@ export default function LiveScorecard() {
     }
   };
 
-  // MVP Logic
   const getMVPList = () => {
     const players: Record<string, any> = {};
-
     const ensurePlayer = (name: string) => {
       if (!players[name]) {
-        players[name] = { 
-          name, 
-          points: 0, 
-          runs: 0, 
-          balls: 0, 
-          wickets: 0, 
-          dots: 0, 
-          catches: 0, 
-          fours: 0, 
-          sixes: 0,
-          team: ''
-        };
+        players[name] = { name, points: 0, runs: 0, balls: 0, wickets: 0, dots: 0, catches: 0, fours: 0, sixes: 0, team: '' };
       }
     };
-
     ballLogs.forEach(ball => {
-      // Striker points
       if (ball.batter_name) {
         ensurePlayer(ball.batter_name);
         players[ball.batter_name].runs += (ball.runs || 0);
@@ -192,40 +178,22 @@ export default function LiveScorecard() {
         if (ball.runs === 4) { players[ball.batter_name].points += 1; players[ball.batter_name].fours += 1; }
         if (ball.runs === 6) { players[ball.batter_name].points += 2; players[ball.batter_name].sixes += 1; }
       }
-
-      // Bowler points
       if (ball.bowler_name) {
         ensurePlayer(ball.bowler_name);
-        if (ball.is_wicket) {
-          players[ball.bowler_name].wickets += 1;
-          players[ball.bowler_name].points += 20;
-        }
-        if (ball.runs === 0 && !ball.extra_type) {
-          players[ball.bowler_name].dots += 1;
-          players[ball.bowler_name].points += 1;
-        }
+        if (ball.is_wicket) { players[ball.bowler_name].wickets += 1; players[ball.bowler_name].points += 20; }
+        if (ball.runs === 0 && !ball.extra_type) { players[ball.bowler_name].dots += 1; players[ball.bowler_name].points += 1; }
       }
-
-      // Fielder points
-      if (ball.fielder_name) {
-        ensurePlayer(ball.fielder_name);
-        players[ball.fielder_name].catches += 1;
-        players[ball.fielder_name].points += 10;
-      }
+      if (ball.fielder_name) { ensurePlayer(ball.fielder_name); players[ball.fielder_name].catches += 1; players[ball.fielder_name].points += 10; }
     });
-
-    // Milestone bonuses
     Object.values(players).forEach(p => {
       if (p.runs >= 50) p.points += 5;
       if (p.runs >= 100) p.points += 10;
       if (p.wickets >= 3) p.points += 10;
       if (p.wickets >= 5) p.points += 20;
     });
-
     return Object.values(players).sort((a, b) => b.points - a.points);
   };
 
-  // Fetch initial state
   useEffect(() => {
     if (!matchId) return;
     const load = async () => {
@@ -233,47 +201,22 @@ export default function LiveScorecard() {
         supabase.from('matches').select('*').eq('id', matchId).single(),
         supabase.from('match_live_state').select('*').eq('match_id', matchId).single(),
       ]);
-      
       if (m) {
         setMatch(m);
-        // Fetch Squads (Team A & B)
-        let idA = m.team_a_id;
-        let idB = m.team_b_id;
-
-        // Fallback: If IDs are missing, try to find team by name
-        if (!idA && m.team_a) {
-          const { data: tA } = await supabase.from('teams').select('id').eq('name', m.team_a).limit(1).single();
-          if (tA) idA = tA.id;
-        }
-        if (!idB && m.team_b) {
-          const { data: tB } = await supabase.from('teams').select('id').eq('name', m.team_b).limit(1).single();
-          if (tB) idB = tB.id;
-        }
-
+        let idA = m.team_a_id; let idB = m.team_b_id;
+        if (!idA && m.team_a) { const { data: tA } = await supabase.from('teams').select('id').eq('name', m.team_a).limit(1).single(); if (tA) idA = tA.id; }
+        if (!idB && m.team_b) { const { data: tB } = await supabase.from('teams').select('id').eq('name', m.team_b).limit(1).single(); if (tB) idB = tB.id; }
         const [sqA, sqB] = await Promise.all([
           idA ? supabase.from('team_members').select('*, profiles(*)').eq('team_id', idA) : Promise.resolve({ data: [] }),
           idB ? supabase.from('team_members').select('*, profiles(*)').eq('team_id', idB) : Promise.resolve({ data: [] })
         ]);
         if (sqA.data) setSquadA(sqA.data);
         if (sqB.data) setSquadB(sqB.data);
-
         const { data: inns } = await supabase.from('innings').select('*').eq('match_id', matchId);
         if (inns) setInningsList(inns);
-
-        // Fetch Ball Logs
-        const { data: logs } = await supabase
-          .from('ball_log')
-          .select('*')
-          .eq('match_id', matchId)
-          .order('over_number', { ascending: false })
-          .order('ball_number', { ascending: false });
+        const { data: logs } = await supabase.from('ball_log').select('*').eq('match_id', matchId).order('over_number', { ascending: false }).order('ball_number', { ascending: false });
         if (logs) setBallLogs(logs || []);
-
-        const { data: imgs } = await supabase
-          .from('match_images')
-          .select('*')
-          .eq('match_id', matchId)
-          .order('created_at', { ascending: false });
+        const { data: imgs } = await supabase.from('match_images').select('*').eq('match_id', matchId).order('created_at', { ascending: false });
         if (imgs) setMatchImages(imgs);
       }
       if (l) setLive(l);
@@ -281,45 +224,26 @@ export default function LiveScorecard() {
     load();
   }, [matchId]);
 
-  // Subscribe to realtime updates
   useEffect(() => {
     if (!matchId) return;
-    const channel = supabase
-      .channel(`live-score-${matchId}-${Math.random()}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'match_live_state' },
-        (payload) => {
-          if (payload.new && payload.new.match_id === matchId) {
-             setLive(payload.new);
-             setLastUpdated(new Date());
-             setBlink(true);
-             setTimeout(() => setBlink(false), 600);
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'ball_log' },
-        (payload) => {
-          if (payload.new && payload.new.match_id === matchId) {
-             setBallLogs(prev => [payload.new, ...prev]);
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    const channel = supabase.channel(`live-score-${matchId}-${Math.random()}`).on('postgres_changes', { event: '*', schema: 'public', table: 'match_live_state' }, (payload) => {
+      if (payload.new && payload.new.match_id === matchId) { setLive(payload.new); setLastUpdated(new Date()); setBlink(true); setTimeout(() => setBlink(false), 600); }
+    }).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'ball_log' }, (payload) => {
+      if (payload.new && payload.new.match_id === matchId) { setBallLogs(prev => [payload.new, ...prev]); }
+    }).subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [matchId]);
 
   const [activeTab, setActiveTab] = useState('info');
 
   if (!live || !match) return (
     <View style={styles.loadingContainer}>
-      <ActivityIndicator size="large" color="#0D9488" />
-      <Text style={{ color: '#6B7280', marginTop: 16 }}>Loading match...</Text>
+      <Trophy size={48} color="#0D9488" style={{ marginBottom: 20 }} />
+      <ActivityIndicator size="small" color="#0D9488" />
+      <Text style={{ color: '#111827', marginTop: 16, fontWeight: '700', fontSize: 18, textAlign: 'center', paddingHorizontal: 40 }}>
+        {["Third Umpire is checking the ultra-edge...", "Waiting for the heavy roller to finish...", "Groundsman is painting the creases...", "The ball is being returned from the parking lot..."][Math.floor(Date.now() / 2000) % 4]}
+      </Text>
+      <Text style={{ color: '#6B7280', marginTop: 8 }}>Loading match data...</Text>
     </View>
   );
 
@@ -329,63 +253,34 @@ export default function LiveScorecard() {
   const renderInningsScorecard = (innNum: number) => {
     const sc = generateScorecard(ballLogs, innNum, inningsList);
     if (!sc.batters.length && !sc.bowlers.length) return null;
-
-    const teamName = innNum === 1 ? match.team_a : match.team_b;
-    const bowlingName = innNum === 1 ? match.team_b : match.team_a;
-
+    const teamName = sc.inn?.batting_team || (innNum === 1 ? match.team_a : match.team_b);
+    const bowlingName = sc.inn?.bowling_team || (innNum === 1 ? match.team_b : match.team_a);
     return (
       <View style={[styles.scWrapper, { marginHorizontal: 12, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB', marginBottom: 16 }]}>
         <View style={styles.scHeader}><Text style={styles.scHeaderText}>{teamName} Innings</Text></View>
-        
-        {/* Batting Table */}
         <View style={styles.scTable}>
           <View style={styles.scRowHead}>
             <Text style={[styles.scCol, { flex: 4 }]}>Batter</Text>
-            <Text style={styles.scCol}>R</Text>
-            <Text style={styles.scCol}>B</Text>
-            <Text style={styles.scCol}>4s</Text>
-            <Text style={styles.scCol}>6s</Text>
-            <Text style={styles.scCol}>SR</Text>
+            <Text style={styles.scCol}>R</Text><Text style={styles.scCol}>B</Text><Text style={styles.scCol}>4s</Text><Text style={styles.scCol}>6s</Text><Text style={styles.scCol}>SR</Text>
           </View>
           {sc.batters.map((b: any, i: number) => (
             <View key={i} style={styles.scRow}>
-              <View style={{ flex: 4 }}>
-                <Text style={styles.scPlayerName}>{b.name}</Text>
-                <Text style={styles.scDismissal}>{b.dismissal}</Text>
-              </View>
-              <Text style={[styles.scVal, { fontWeight: '700' }]}>{b.runs}</Text>
-              <Text style={styles.scVal}>{b.balls}</Text>
-              <Text style={styles.scVal}>{b.fours}</Text>
-              <Text style={styles.scVal}>{b.sixes}</Text>
-              <Text style={styles.scVal}>{b.balls > 0 ? ((b.runs / b.balls) * 100).toFixed(1) : '-'}</Text>
+              <View style={{ flex: 4 }}><Text style={styles.scPlayerName}>{b.name}</Text><Text style={styles.scDismissal}>{b.dismissal}</Text></View>
+              <Text style={[styles.scVal, { fontWeight: '700' }]}>{b.runs}</Text><Text style={styles.scVal}>{b.balls}</Text><Text style={styles.scVal}>{b.fours}</Text><Text style={styles.scVal}>{b.sixes}</Text><Text style={styles.scVal}>{b.balls > 0 ? ((b.runs / b.balls) * 100).toFixed(1) : '-'}</Text>
             </View>
           ))}
           <View style={styles.scExtrasRow}>
-            <Text style={styles.scExtrasLabel}>Extras</Text>
-            <Text style={styles.scExtrasVal}>(w {sc.extras.wide}, nb {sc.extras.noball}, b {sc.extras.bye}, lb {sc.extras.legbye})</Text>
-            <Text style={styles.scExtrasTotal}>{sc.extras.total}</Text>
+            <Text style={styles.scExtrasLabel}>Extras</Text><Text style={styles.scExtrasVal}>(w {sc.extras.wide}, nb {sc.extras.noball}, b {sc.extras.bye}, lb {sc.extras.legbye})</Text><Text style={styles.scExtrasTotal}>{sc.extras.total}</Text>
           </View>
         </View>
-
-        {/* Bowling Table */}
-        <View style={[styles.scHeader, { marginTop: 16, backgroundColor: '#F3F4F6' }]}><Text style={[styles.scHeaderText, { color: '#4B5563' }]}>{bowlingName} Bowling</Text></View>
+        <View style={[styles.scHeader, { marginTop: 16, backgroundColor: '#F3F4F6' }]}><Text style={[styles.scHeaderText, { color: '#4B5553' }]}>{bowlingName} Bowling</Text></View>
         <View style={styles.scTable}>
           <View style={styles.scRowHead}>
-            <Text style={[styles.scCol, { flex: 4 }]}>Bowler</Text>
-            <Text style={styles.scCol}>O</Text>
-            <Text style={styles.scCol}>M</Text>
-            <Text style={styles.scCol}>R</Text>
-            <Text style={styles.scCol}>W</Text>
-            <Text style={styles.scCol}>Eco</Text>
+            <Text style={[styles.scCol, { flex: 4 }]}>Bowler</Text><Text style={styles.scCol}>O</Text><Text style={styles.scCol}>M</Text><Text style={styles.scCol}>R</Text><Text style={styles.scCol}>W</Text><Text style={styles.scCol}>Eco</Text>
           </View>
           {sc.bowlers.map((b: any, i: number) => (
             <View key={i} style={styles.scRow}>
-              <Text style={[styles.scPlayerName, { flex: 4 }]}>{b.name}</Text>
-              <Text style={styles.scVal}>{b.overs}</Text>
-              <Text style={styles.scVal}>{b.maidens}</Text>
-              <Text style={styles.scVal}>{b.runs}</Text>
-              <Text style={[styles.scVal, { fontWeight: '700' }]}>{b.wickets}</Text>
-              <Text style={styles.scVal}>{b.eco}</Text>
+              <Text style={[styles.scPlayerName, { flex: 4 }]}>{b.name}</Text><Text style={styles.scVal}>{b.overs}</Text><Text style={styles.scVal}>{b.maidens}</Text><Text style={styles.scVal}>{b.runs}</Text><Text style={[styles.scVal, { fontWeight: '700' }]}>{b.wickets}</Text><Text style={styles.scVal}>{b.eco}</Text>
             </View>
           ))}
         </View>
@@ -475,8 +370,8 @@ export default function LiveScorecard() {
                 <View style={styles.infoRow}><Text style={styles.infoLabel}>Ball Type</Text><Text style={styles.infoValue}>LEATHER</Text></View>
                 <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
                   <Text style={styles.infoLabel}>Match Id</Text>
-                  <Text style={styles.infoValue}>
-                    {match.display_id ? match.display_id.toString().padStart(3, '0') : match.id.substring(0, 8)}
+                  <Text style={styles.infoValue} selectable={true}>
+                    {match.display_id ? match.display_id.toString().padStart(3, '0') : match.id}
                   </Text>
                 </View>
               </View>
@@ -500,6 +395,8 @@ export default function LiveScorecard() {
           </View>
         );
       case 'summary':
+        const inn1sum = inningsList.find(i => i.innings_number === 1);
+        const inn2sum = inningsList.find(i => i.innings_number === 2);
         return (
           <View style={{ flex: 1, backgroundColor: '#F6F4F0', padding: 12 }}>
              {/* Poll/Interactive Bar */}
@@ -514,9 +411,9 @@ export default function LiveScorecard() {
              <View style={[styles.summaryScoresCard, { borderRadius: 16, borderWidth: 1, borderColor: '#E5E7EB', padding: 16 }]}>
                 <View style={styles.summaryTeamRow}>
                    <View style={{ flex: 1 }}>
-                      <Text style={styles.summaryTeamName}>{match.team_a}</Text>
+                      <Text style={styles.summaryTeamName}>{inningsList.find(i => i.innings_number === 1)?.batting_team || match.team_a}</Text>
                       <Text style={styles.summaryMainScore}>
-                        {live.innings_number === 1 ? `${live.runs}/${live.wickets}` : '...'} 
+                        {live.innings_number === 1 ? `${live.runs}/${live.wickets}` : (inn1sum ? `${inn1sum.runs}/${inn1sum.wickets}` : '...') } 
                         <Text style={styles.summaryOvers}> ({match.overs})</Text>
                       </Text>
                    </View>
@@ -525,9 +422,9 @@ export default function LiveScorecard() {
 
                 <View style={[styles.summaryTeamRow, { marginTop: 12 }]}>
                    <View style={{ flex: 1 }}>
-                      <Text style={styles.summaryTeamName}>{match.team_b}</Text>
+                      <Text style={styles.summaryTeamName}>{inningsList.find(i => i.innings_number === 1)?.bowling_team || match.team_b}</Text>
                       <Text style={styles.summaryMainScore}>
-                        {live.innings_number === 2 ? `${live.runs}/${live.wickets}` : '...'}
+                        {live.innings_number === 2 ? `${live.runs}/${live.wickets}` : (inn2sum ? `${inn2sum.runs}/${inn2sum.wickets}` : '...') }
                         <Text style={styles.summaryOvers}> ({oversStr})</Text>
                       </Text>
                    </View>
@@ -904,7 +801,22 @@ export default function LiveScorecard() {
            <Text style={styles.headerMainTitle}>{match.title || 'Individual Match'}</Text>
         </View>
         <View style={styles.headerRight}>
-           <TouchableOpacity style={styles.headerAction}><Share2 size={20} color="#111827" /></TouchableOpacity>
+           <TouchableOpacity 
+             style={styles.headerAction}
+             onPress={async () => {
+               try {
+                 await Share.share({
+                   url: `https://bookyourground.com/live/${match.id}`,
+                   message: `Follow ${match.team_a} vs ${match.team_b} LIVE on Book My Ground!\nhttps://bookyourground.com/live/${match.id}`,
+                   title: `${match.team_a} vs ${match.team_b} Live Score`
+                 });
+               } catch (e) {
+                 console.log(e);
+               }
+             }}
+           >
+             <Share2 size={20} color="#111827" />
+           </TouchableOpacity>
            <TouchableOpacity style={styles.headerAction}><Settings size={20} color="#111827" /></TouchableOpacity>
         </View>
       </View>

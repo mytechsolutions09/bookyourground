@@ -12,9 +12,10 @@ import {
   Share,
   Pressable,
   Modal,
+  SafeAreaView,
   Animated,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import WebLayout from '@/components/web/WebLayout';
 import { 
   Swords, 
@@ -268,3219 +269,6 @@ const CAPTAIN_STATS = [
   { label: 'Win %', value: '32.65%' },
   { label: 'Loss %', value: '67.35%' },
 ];
-
-export default function CricketScreen() {
-  const [activeTab, setActiveTab] = useState('matches');
-  const [subTab, setSubTab] = useState('all'); 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isActionModalVisible, setIsActionModalVisible] = useState(false);
-  const [isCreateTeamModalVisible, setIsCreateTeamModalVisible] = useState(false);
-  const [showStateDropdown, setShowStateDropdown] = useState(false);
-  const [isSelectingTeams, setIsSelectingTeams] = useState(false);
-  const [isQrModalVisible, setIsQrModalVisible] = useState(false);
-  const [isSuccessModalVisible, setIsSuccessModalVisible] = useState(false);
-  const [isAddPlayerViewVisible, setIsAddPlayerViewVisible] = useState(false);
-  const [activeTeamForPlayers, setActiveTeamForPlayers] = useState<any>(null);
-  const [activeTeamForQr, setActiveTeamForQr] = useState<any>(null);
-  const [isAddMemberModalVisible, setIsAddMemberModalVisible] = useState(false);
-  const [isContactPickerVisible, setIsContactPickerVisible] = useState(false);
-  const [realContacts, setRealContacts] = useState<any[]>([]);
-  const [teamMembers, setTeamMembers] = useState<any[]>([]);
-  const [memberForm, setMemberForm] = useState({ name: '', phone: '' });
-  const [managementTab, setManagementTab] = useState<'squad' | 'profile'>('squad');
-  const [profileSubTab, setProfileSubTab] = useState('matches');
-  const [leaderboardSubTab, setLeaderboardSubTab] = useState('bat');
-  const [teamForm, setTeamForm] = useState({ name: '', location: '', captain: '', image: '' });
-  const [isSelectingPlayers, setIsSelectingPlayers] = useState(false);
-  const [currentPickingSide, setCurrentPickingSide] = useState<'A' | 'B'>('A');
-  const [playingXiA, setPlayingXiA] = useState<any[]>([]);
-  const [playingXiB, setPlayingXiB] = useState<any[]>([]);
-  const [isConfiguringMatch, setIsConfiguringMatch] = useState(false);
-  const [isConfiguringToss, setIsConfiguringToss] = useState(false);
-  const [isSelectingOpeners, setIsSelectingOpeners] = useState(false);
-  const [isScoring, setIsScoring] = useState(false);
-  const [isSearchingOfficial, setIsSearchingOfficial] = useState(false);
-  const [isFlipping, setIsFlipping] = useState(false);
-  const [isAddOfficialModalVisible, setIsAddOfficialModalVisible] = useState(false);
-  const [newOfficialForm, setNewOfficialForm] = useState({ name: '', phone: '' });
-  const [activeOfficialSlot, setActiveOfficialSlot] = useState<{ category: string, index?: number } | null>(null);
-  const [tossResult, setTossResult] = useState<{ winner: any, decision: 'bat' | 'bowl' | null }>({ winner: null, decision: null });
-  const [matchState, setMatchState] = useState<{ striker: any, nonStriker: any, bowler: any }>({ striker: null, nonStriker: null, bowler: null });
-  const [matchConfig, setMatchConfig] = useState({
-    type: 'limited overs',
-    totalOvers: '20',
-    oversPerBowler: '4',
-    ballType: 'leather',
-    wagonWheel: true,
-    pitchType: 'matting',
-    state: 'Delhi',
-    city: '',
-    ground: '',
-    dateTime: new Date().toLocaleString(),
-    officials: {
-      umpires: ['', '', '', ''],
-      scorers: ['', ''],
-      streamer: '',
-      referee: '',
-      commentators: ['', '']
-    }
-  });
-
-  const {
-    matchId: liveMatchId, phase: matchPhase, inn, striker, nonStriker, bowler, crr, rrr, yetToBat, formatOvers,
-    battingPlayers: squadBatting, bowlingPlayers: squadBowling,
-    startMatch, resumeMatch, addBall, addExtra, addWicket, changeBowler, addNewBowler, undoLastBall, startSecondInnings, setOpeners
-  } = useCricketScoring();
-  
-  const [isLiveSession, setIsLiveSession] = useState(false);
-  const [isScoringSettingsVisible, setIsScoringSettingsVisible] = useState(false);
-  const [isMoreSheetVisible, setIsMoreSheetVisible] = useState(false);
-  const [isExtraRunsSelectorVisible, setIsExtraRunsSelectorVisible] = useState(false);
-  const [activeExtraType, setActiveExtraType] = useState<'wide' | 'noball' | 'bye' | 'legbye' | null>(null);
-  const [expandedSettingSection, setExpandedSettingSection] = useState<string | null>('Match Settings');
-  const drawerAnim = useRef(new Animated.Value(400)).current;
-
-  useEffect(() => {
-    if (isScoringSettingsVisible) {
-      Animated.timing(drawerAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      Animated.timing(drawerAnim, {
-        toValue: 400,
-        duration: 250,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [isScoringSettingsVisible]);
-  const [isSelectingNextBowler, setIsSelectingNextBowler] = useState(false);
-  const [isSelectingNewBatter, setIsSelectingNewBatter] = useState(false);
-  const [pendingWicketData, setPendingWicketData] = useState<{ dismissedName: string } | null>(null);
-  const [lastBowlerId, setLastBowlerId] = useState<string | null>(null);
-
-  const [playerSearchQuery, setPlayerSearchQuery] = useState('');
-  const [isAddingNewPlayerManually, setIsAddingNewPlayerManually] = useState(false);
-  const [manualPlayerName, setManualPlayerName] = useState('');
-  const [manualPlayerPhone, setManualPlayerPhone] = useState('');
-
-  useEffect(() => {
-    if (matchPhase === 'innings_break') {
-      // Auto-start second innings
-      const timer = setTimeout(async () => {
-        await startSecondInnings();
-        setMatchState({ striker: null, nonStriker: null, bowler: null });
-        setIsSelectingOpeners(true);
-        setIsScoring(false); // Move out of live scoring to selection view
-      }, 500); // Small delay for user to see the all-out/innings-end state
-      return () => clearTimeout(timer);
-    }
-  }, [matchPhase]);
-
-  const handleAddBall = async (runs: number) => {
-    const next = await addBall(runs);
-    if (next && next.legalBalls > 0 && next.legalBalls % 6 === 0) {
-      setLastBowlerId(bowler?.name);
-      setIsSelectingNextBowler(true);
-    }
-  };
-
-  const handleAddExtra = async (type: string, additionalRuns: number = 0) => {
-    await addExtra(type, additionalRuns);
-    // Extras might complete an over if it's not a Wide/No-ball
-    if (inn && (inn.legalBalls + 1) % 6 === 0 && type !== 'wide' && type !== 'noball') {
-       setLastBowlerId(bowler?.name);
-       setIsSelectingNextBowler(true);
-    }
-  };
-
-  const handleAddWicket = async (data: any) => {
-    await addWicket(data);
-    // Only prompt for next bowler if it was an over-ending wicket AND match is still live
-    if (matchPhase === 'live' && inn && (inn.legalBalls + 1) % 6 === 0) {
-       setLastBowlerId(bowler?.name);
-       setIsSelectingNextBowler(true);
-    }
-  };
-  const [teams, setTeams] = useState(INITIAL_TEAMS_DATA);
-  const [selectedTeamA, setSelectedTeamA] = useState<any>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { session } = useAuth();
-  const router = useRouter();
-  const { width } = useWindowDimensions();
-
-  const [fetchedMatches, setFetchedMatches] = useState<any[]>([]);
-
-  const { matchId: urlMatchId, live } = useLocalSearchParams();
-
-  useEffect(() => {
-    if (urlMatchId) {
-      resumeMatch(urlMatchId as string).then(success => {
-        if (success) setIsScoring(true);
-      });
-    }
-    if (live === 'true') {
-      setIsLiveSession(true);
-      setIsSelectingTeams(true);
-    }
-    fetchTeams();
-    fetchMatches();
-
-    const channel = supabase
-      .channel(`live-hub-scores-${Math.random()}`)
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'match_live_state' 
-      }, () => {
-        fetchMatches();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [session]);
-
-  const fetchMatches = async () => {
-    const { data, error } = await supabase
-      .from('matches')
-      .select('*, match_live_state(*), innings(*)')
-      .order('created_at', { ascending: false });
-
-    if (!error && data) {
-      // Map DB matches to UI format
-      const dbMatches = data.map(m => {
-        const live = m.match_live_state;
-        // Robust check: if match is tagged 'live' OR has any live score state, it's 'Live'
-        const status = (m.status === 'live' || !!live) ? 'Live' : (m.status === 'completed' ? 'Result' : 'Upcoming');
-        
-        let team1Score = undefined;
-        let team1Overs = undefined;
-        let team2Score = undefined;
-        let team2Overs = undefined;
-
-        if (live) {
-          // Determine which team is batting based on the live state
-          const isTeamABatting = live.batting_team === m.team_a;
-          const currentScore = `${live.runs}/${live.wickets}`;
-          const currentOvers = `(${Math.floor(live.legal_balls / 6)}.${live.legal_balls % 6} Ov)`;
-
-          if (isTeamABatting) {
-            team1Score = currentScore;
-            team1Overs = currentOvers;
-          } else {
-            team2Score = currentScore;
-            team2Overs = currentOvers;
-          }
-
-          // If it's 2nd innings, try to find 1st innings score for the other team
-          if (m.innings && m.innings.length > 0) {
-            const firstInn = m.innings.find((i: any) => i.innings_number === 1);
-            if (firstInn) {
-              const inn1Score = `${firstInn.runs}/${firstInn.wickets}`;
-              const inn1Overs = `(${Math.floor(firstInn.legal_balls / 6)}.${firstInn.legal_balls % 6} Ov)`;
-              
-              if (firstInn.batting_team === m.team_a) {
-                team1Score = inn1Score;
-                team1Overs = inn1Overs;
-              } else {
-                team2Score = inn1Score;
-                team2Overs = inn1Overs;
-              }
-            }
-          }
-        } else if (m.innings && m.innings.length > 0) {
-          // If not live but has innings (completed match)
-          const inn1 = m.innings.find((i: any) => i.innings_number === 1);
-          const inn2 = m.innings.find((i: any) => i.innings_number === 2);
-          
-          if (inn1) {
-            if (inn1.batting_team === m.team_a) {
-              team1Score = `${inn1.runs}/${inn1.wickets}`;
-              team1Overs = `(${Math.floor(inn1.legal_balls / 6)}.${inn1.legal_balls % 6} Ov)`;
-            } else {
-              team2Score = `${inn1.runs}/${inn1.wickets}`;
-              team2Overs = `(${Math.floor(inn1.legal_balls / 6)}.${inn1.legal_balls % 6} Ov)`;
-            }
-          }
-          if (inn2) {
-            if (inn2.batting_team === m.team_a) {
-              team1Score = `${inn2.runs}/${inn2.wickets}`;
-              team1Overs = `(${Math.floor(inn2.legal_balls / 6)}.${inn2.legal_balls % 6} Ov)`;
-            } else {
-              team2Score = `${inn2.runs}/${inn2.wickets}`;
-              team2Overs = `(${Math.floor(inn2.legal_balls / 6)}.${inn2.legal_balls % 6} Ov)`;
-            }
-          }
-        }
-
-        return {
-          id: m.id,
-          type: m.match_type || 'Match',
-          tournament: 'Live Match',
-          status,
-          date: new Date(m.created_at).toLocaleDateString(),
-          overs: `${m.overs} Ov.`,
-          location: m.venue || 'Various Locations',
-          team1: m.team_a,
-          team2: m.team_b,
-          team1Score,
-          team1Overs,
-          team2Score,
-          team2Overs,
-          result: live?.result_text,
-          isLive: m.status === 'live',
-          match_id: m.id,
-          batting_team: live?.batting_team
-        };
-      });
-      setFetchedMatches(dbMatches);
-    }
-  };
-
-  const fetchTeams = async () => {
-    const { data, error } = await supabase
-      .from('teams')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (!error && data) {
-      // Map DB teams to UI format
-      const dbTeams = data.map(t => ({
-        ...t,
-        isUserTeam: t.owner_id === session?.user?.id,
-        initials: t.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2),
-        bgColor: '#0D9488',
-        image: t.image_url 
-      }));
-      setTeams([...dbTeams, ...INITIAL_TEAMS_DATA.filter(it => !dbTeams.some(dt => dt.id === it.id))]);
-    }
-  };
-
-  const uploadLogo = async (uri: string) => {
-    try {
-      if (!session?.user?.id) throw new Error('User not logged in');
-      
-      const fileName = `${Date.now()}.png`;
-      const filePath = `${session.user.id}/${fileName}`;
-      
-      // On web, uri is often a blob or blob URL
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      const arrayBuffer = await new Response(blob).arrayBuffer();
-
-      const { data, error } = await supabase.storage
-        .from('team-logos')
-        .upload(filePath, arrayBuffer, {
-          contentType: 'image/png',
-          upsert: true
-        });
-
-      if (error) throw error;
-      
-      const { data: { publicUrl } } = supabase.storage
-        .from('team-logos')
-        .getPublicUrl(filePath);
-        
-      return publicUrl;
-    } catch (err) {
-      console.error('Logo upload failed:', err);
-      return null;
-    }
-  };
-
-  const handleCreateTeam = async () => {
-    if (!session?.user?.id) {
-       alert('Please login to create a team');
-       return;
-    }
-
-    if (!teamForm.name || !teamForm.location || !teamForm.captain) {
-      alert('Please fill all fields');
-      return;
-    }
-
-    setIsSubmitting(true);
-    let publicImageUrl = null;
-
-    try {
-      if (teamForm.image) {
-      publicImageUrl = await uploadLogo(teamForm.image);
-    }
-
-    const { data, error } = await supabase
-      .from('teams')
-      .insert([{
-        name: teamForm.name,
-        location: teamForm.location,
-        captain: teamForm.captain,
-        image_url: publicImageUrl,
-        owner_id: session.user.id
-      }])
-      .select();
-
-      if (error) {
-        alert('Error creating team: ' + error.message);
-      } else {
-        setIsCreateTeamModalVisible(false);
-        setTeamForm({ name: '', location: '', captain: '', image: '' });
-        fetchTeams();
-        setIsSuccessModalVisible(true);
-      }
-    } catch (error) {
-       alert('Something went wrong. Please try again.');
-    } finally {
-       setIsSubmitting(false);
-    }
-  };
-
-  const handleShareTeam = async (team: any) => {
-    try {
-      const result = await Share.share({
-        message: `Join our team "${team.name}" on Book My Ground! Click the link to join: https://bookyourground.com/invite-team/${team.id}`,
-        url: `https://bookyourground.com/invite-team/${team.id}`,
-        title: `Join ${team.name}`,
-      });
-    } catch (error: any) {
-      alert(error.message);
-    }
-  };
-
-  const handleAddMember = async () => {
-    if (!memberForm.name || !memberForm.phone) {
-      alert('Please fill name and phone');
-      return;
-    }
-
-    setIsSubmitting(true);
-      const { data, error } = await supabase
-        .from('team_members')
-        .insert([{
-          team_id: activeTeamForPlayers.id,
-          player_name: memberForm.name,
-          player_phone: memberForm.phone,
-          status: 'accepted'
-        }])
-        .select();
-
-    setIsSubmitting(false);
-
-    if (error) {
-      alert('Error adding member: ' + error.message);
-    } else {
-      setIsAddMemberModalVisible(false);
-      setMemberForm({ name: '', phone: '' });
-      fetchTeamMembers(activeTeamForPlayers.id);
-      
-      // Auto-add to Playing XI if in match setup
-      if (isSelectingOpeners || isSelectingPlayers) {
-        if (activeTeamForPlayers.id === selectedTeamA?.id) {
-          setPlayingXiA(prev => [...prev, data[0]]);
-        } else if (activeTeamForPlayers.id === selectedTeamB?.id) {
-          setPlayingXiB(prev => [...prev, data[0]]);
-        }
-      }
-      
-      alert('Player added to your squad!');
-    }
-  };
-
-  const fetchTeamMembers = async (teamId: string) => {
-    setTeamMembers([]); // Clear previous team data
-    const { data, error } = await supabase
-      .from('team_members')
-      .select('*')
-      .eq('team_id', teamId);
-    
-    if (data) setTeamMembers(data);
-  };
-
-  const handleCreateOfficial = async () => {
-    if (!newOfficialForm.name || !newOfficialForm.phone) {
-      alert('Please enter name and phone number');
-      return;
-    }
-
-    setIsSubmitting(true);
-    const { data, error } = await supabase
-      .from('match_officials')
-      .insert([
-        { 
-          name: newOfficialForm.name, 
-          phone: newOfficialForm.phone,
-          role: activeOfficialSlot?.category === 'umpires' ? 'Umpire' : 
-                activeOfficialSlot?.category === 'scorers' ? 'Scorer' : 'Official'
-        }
-      ])
-      .select()
-      .single();
-
-    setIsSubmitting(false);
-
-    if (error) {
-      if (error.code === '23505') {
-        alert('This mobile number is already registered.');
-      } else {
-        alert('Error saving official: ' + error.message);
-      }
-    } else if (data) {
-      // Direct select the newly created official
-      const { category, index } = activeOfficialSlot!;
-      const newOfficials = { ...matchConfig.officials };
-      
-      if (typeof index === 'number') {
-        const arr = [...(newOfficials as any)[category]];
-        arr[index] = data.name;
-        (newOfficials as any)[category] = arr;
-      } else {
-        (newOfficials as any)[category] = data.name;
-      }
-
-      setMatchConfig({ ...matchConfig, officials: newOfficials });
-      setIsAddOfficialModalVisible(false);
-      setIsSearchingOfficial(false);
-      setNewOfficialForm({ name: '', phone: '' });
-      setSearchQuery('');
-      alert('New official registered and assigned!');
-    }
-  };
-
-  useEffect(() => {
-    if (isAddPlayerViewVisible && activeTeamForPlayers) {
-      fetchTeamMembers(activeTeamForPlayers.id);
-    }
-  }, [isAddPlayerViewVisible, activeTeamForPlayers]);
-
-  const [selectedTeamB, setSelectedTeamB] = useState<any>(null);
-  const [pickingFor, setPickingFor] = useState<'A' | 'B' | null>(null);
-  const isCompact = width < 900;
-
-  const MatchCard = ({ match }: { match: any }) => (
-    <View style={styles.matchCard}>
-      <View style={styles.matchHeader}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.matchType}>
-            {match.type}, <Text style={styles.matchTournament}>{match.tournament}</Text>
-          </Text>
-          <Text style={styles.matchMeta}>{match.date} | {match.overs} | {match.location}</Text>
-        </View>
-        <View style={[
-          styles.statusBadge, 
-          match.status === 'Result' ? styles.statusBadgeResult : 
-          (match.status === 'Live' ? styles.statusBadgeLive : styles.statusBadgeUpcoming)
-        ]}>
-          {match.status === 'Live' && <View style={styles.pulseDot} />}
-          <Text style={[
-            styles.statusBadgeText,
-            match.status === 'Result' ? styles.statusBadgeTextResult : 
-            (match.status === 'Live' ? styles.statusBadgeTextLive : styles.statusBadgeTextUpcoming)
-          ]}>{match.status === 'Live' ? 'LIVE' : match.status}</Text>
-        </View>
-      </View>
-
-      <View style={styles.matchTeams}>
-        <View style={styles.matchTeamRow}>
-          <View style={styles.teamInfo}>
-            <View style={[styles.miniAvatar, { width: 32, height: 32, backgroundColor: '#F1F5F9' }]}>
-               <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#64748B' }}>{match.team1[0]}</Text>
-            </View>
-            <Text style={styles.teamNameText} numberOfLines={1}>{match.team1}</Text>
-          </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            {match.status === 'Live' && match.batting_team === match.team1 && <View style={styles.liveIndicatorDot} />}
-            {match.team1Score && <Text style={styles.teamScoreText}>{match.team1Score} <Text style={styles.teamOversText}>{match.team1Overs}</Text></Text>}
-          </View>
-        </View>
-
-        <View style={styles.matchTeamRow}>
-          <View style={styles.teamInfo}>
-            <View style={[styles.miniAvatar, { width: 32, height: 32, backgroundColor: '#F1F5F9' }]}>
-               <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#64748B' }}>{match.team2[0]}</Text>
-            </View>
-            <Text style={styles.teamNameText} numberOfLines={1}>{match.team2}</Text>
-          </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            {match.status === 'Live' && match.batting_team === match.team2 && <View style={styles.liveIndicatorDot} />}
-            {match.team2Score && <Text style={styles.teamScoreText}>{match.team2Score} <Text style={styles.teamOversText}>{match.team2Overs}</Text></Text>}
-          </View>
-        </View>
-      </View>
-
-      {match.status === 'Live' ? (
-        <View style={{ flexDirection: 'row', gap: 10, marginTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 12 }}>
-          <TouchableOpacity 
-            style={[styles.liveActionBtn, { borderTopWidth: 0, marginTop: 0, flex: 1, backgroundColor: '#F0FDF4', borderRadius: 8 }]}
-            onPress={() => router.push(`/live/${match.match_id}`)}
-          >
-            <Text style={styles.liveActionBtnText}>View</Text>
-            <ChevronRight size={14} color="#0D9488" />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.liveActionBtn, { borderTopWidth: 0, marginTop: 0, flex: 1.5, backgroundColor: '#0D9488', borderRadius: 8 }]}
-            onPress={async () => {
-              const success = await resumeMatch(match.match_id);
-              if (success) {
-                setIsScoring(true);
-              } else {
-                alert('Could not resume match scoring.');
-              }
-            }}
-          >
-            <Text style={[styles.liveActionBtnText, { color: '#FFFFFF' }]}>Resume Scoring</Text>
-            <History size={14} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-      ) : (
-        match.result ? (
-          <View style={styles.matchFooter}>
-            <Text style={styles.resultText}>{match.result}</Text>
-          </View>
-        ) : (
-          <View style={styles.matchFooter}>
-            <Text style={styles.messageText}>{match.message}</Text>
-          </View>
-        )
-      )}
-    </View>
-  );
-
-  const TournamentCard = ({ tournament }: { tournament: any }) => (
-    <View style={styles.tournamentCard}>
-       <View style={styles.imageContainer}>
-          <Image source={{ uri: tournament.image }} style={styles.tournamentImage} />
-          <View style={styles.imageOverlay} />
-          {tournament.hasCrown && (
-            <View style={styles.crownBadge}>
-               <Crown size={12} color="#FFFFFF" fill="#FFFFFF" />
-            </View>
-          )}
-          <View style={styles.ongoingBadge}>
-             <Text style={styles.ongoingBadgeText}>{tournament.status}</Text>
-          </View>
-          <Text style={styles.tournamentTitleOverlay}>{tournament.title}</Text>
-       </View>
-       <View style={styles.tournamentInfo}>
-          <View style={{ flex: 1 }}>
-             <Text style={styles.tournamentMeta}>Date: {tournament.dateRange}</Text>
-             <Text style={styles.tournamentMeta}>{tournament.location}</Text>
-          </View>
-          <TouchableOpacity>
-             <Text style={styles.followLink}>Follow</Text>
-          </TouchableOpacity>
-       </View>
-    </View>
-  );
-
-  const TeamCard = ({ team, onSelect }: { team: any; onSelect?: (team: any) => void }) => (
-    <TouchableOpacity 
-      style={styles.teamCard}
-      onPress={() => {
-        if (onSelect) onSelect(team);
-        else if (team.isUserTeam) {
-          setActiveTeamForPlayers(team);
-          setIsAddPlayerViewVisible(true);
-        }
-      }}
-    >
-       <View style={[styles.teamAvatar, team.bgColor && { backgroundColor: team.bgColor }]}>
-          {team.image ? (
-            <Image source={{ uri: team.image }} style={styles.teamImage} />
-          ) : (
-            <Text style={styles.teamInitials}>{team.initials}</Text>
-          )}
-       </View>
-       <View style={styles.teamContent}>
-          <View style={{ flex: 1 }}>
-             <Text style={styles.teamTitle}>{team.name}</Text>
-             <View style={styles.teamMetaRow}>
-                <View style={[styles.metaItem, { marginRight: 16 }]}>
-                   <MapPin size={12} color="#9CA3AF" />
-                   <Text style={styles.metaLabel}>{team.location}</Text>
-                </View>
-                <View style={styles.metaItem}>
-                   <View style={styles.captainIcon}><Text style={styles.captainIconText}>C</Text></View>
-                   <Text style={styles.metaLabel}>{team.captain}</Text>
-                </View>
-             </View>
-          </View>
-          {onSelect ? (
-            <TouchableOpacity style={styles.selectBtn} onPress={() => onSelect(team)}>
-               <Text style={styles.selectBtnText}>Select</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity onPress={() => { setActiveTeamForQr(team); setIsQrModalVisible(true); }}>
-              <QrCode size={20} color="#0D9488" strokeWidth={1.5} />
-            </TouchableOpacity>
-          )}
-       </View>
-    </TouchableOpacity>
-  );
-
-  const CreateTeamCard = () => (
-    <TouchableOpacity 
-      style={[styles.teamCard, styles.createTeamCard]}
-      onPress={() => setIsCreateTeamModalVisible(true)}
-    >
-       <View style={styles.createTeamIcon}>
-          <Plus size={24} color="#0D9488" />
-       </View>
-       <View style={styles.teamContent}>
-          <Text style={styles.createTeamText}>Create New Team</Text>
-          <Text style={styles.createTeamSubtext}>Build your squad from scratch</Text>
-       </View>
-    </TouchableOpacity>
-  );
-
-  const pickImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
-    });
-
-    if (!result.canceled) {
-      setTeamForm({ ...teamForm, image: result.assets[0].uri });
-    }
-  };
-
-  const renderCreateTeamModal = () => (
-    <Modal
-      animationType="slide"
-      transparent={true}
-      visible={isCreateTeamModalVisible}
-      onRequestClose={() => setIsCreateTeamModalVisible(false)}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.createTeamModalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Create New Team</Text>
-            <TouchableOpacity onPress={() => setIsCreateTeamModalVisible(false)}>
-              <X size={24} color="#6B7280" />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Team Name</Text>
-            <TextInput 
-              style={styles.formInput} 
-              placeholder="e.g. Royal Challengers" 
-              value={teamForm.name}
-              onChangeText={(t) => setTeamForm({...teamForm, name: t})}
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Location (State)</Text>
-            <TouchableOpacity 
-              style={styles.dropdownTrigger}
-              onPress={() => setShowStateDropdown(!showStateDropdown)}
-            >
-              <Text style={[styles.dropdownValue, !teamForm.location && styles.dropdownPlaceholder]}>
-                {teamForm.location || 'Select State'}
-              </Text>
-              <ChevronRight 
-                size={20} 
-                color="#9CA3AF" 
-                style={{ transform: [{ rotate: showStateDropdown ? '90deg' : '0deg' }] }} 
-              />
-            </TouchableOpacity>
-
-            {showStateDropdown && (
-              <View style={styles.statesDropdown}>
-                <ScrollView nestedScrollEnabled style={{ maxHeight: 200 }}>
-                  {INDIAN_STATES.map((state) => (
-                    <TouchableOpacity 
-                      key={state}
-                      style={styles.stateItem}
-                      onPress={() => {
-                        setTeamForm({ ...teamForm, location: state });
-                        setShowStateDropdown(false);
-                      }}
-                    >
-                      <Text style={styles.stateItemText}>{state}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Captain Name</Text>
-            <TextInput 
-              style={styles.formInput} 
-              placeholder="e.g. Virat Kohli" 
-              value={teamForm.captain}
-              onChangeText={(t) => setTeamForm({...teamForm, captain: t})}
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.formLabel}>Team Logo</Text>
-            <View style={styles.imagePickerContainer}>
-              <TouchableOpacity style={styles.imagePickerBtn} onPress={pickImage}>
-                {teamForm.image ? (
-                  <Image source={{ uri: teamForm.image }} style={styles.imagePickerPreview} />
-                ) : (
-                  <View style={styles.imagePickerPlaceholder}>
-                    <Camera size={24} color="#9CA3AF" />
-                    <Text style={styles.imagePickerText}>Choose Photo</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
-              {teamForm.image && (
-                <TouchableOpacity 
-                   style={styles.removeImageBtn}
-                   onPress={() => setTeamForm({...teamForm, image: ''})}
-                >
-                  <Text style={styles.removeImageText}>Remove</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-
-          <TouchableOpacity 
-            style={[styles.submitBtn, isSubmitting && { opacity: 0.7 }]} 
-            onPress={handleCreateTeam}
-            disabled={isSubmitting}
-          >
-            <Text style={styles.submitBtnText}>{isSubmitting ? 'Creating...' : 'Create Team'}</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
-  );
-
-  const handleTeamSelect = (team: any) => {
-    if (pickingFor === 'A') {
-      setSelectedTeamA(team);
-      setCurrentPickingSide('A');
-      fetchTeamMembers(team.id);
-      setIsSelectingPlayers(true);
-    } else if (pickingFor === 'B') {
-      setSelectedTeamB(team);
-      setCurrentPickingSide('B');
-      fetchTeamMembers(team.id);
-      setIsSelectingPlayers(true);
-    }
-    setPickingFor(null);
-    setIsSelectingTeams(true);
-  };
-
-  const renderTeamSelection = () => (
-    <View style={styles.selectionView}>
-      <View style={styles.selectionHeader}>
-        <TouchableOpacity onPress={() => { setIsSelectingTeams(false); setSelectedTeamA(null); setSelectedTeamB(null); }}>
-          <Text style={styles.cancelText}>Cancel</Text>
-        </TouchableOpacity>
-        <Text style={styles.selectionTitle}>Match Setup</Text>
-        <View style={{ width: 40 }} />
-      </View>
-
-      <View style={styles.teamSelectionRow}>
-        <TouchableOpacity 
-          style={[styles.teamSlot, selectedTeamA && styles.teamSlotFilled]}
-          onPress={() => { setPickingFor('A'); setActiveTab('teams'); setIsSelectingTeams(false); }}
-        >
-          {selectedTeamA ? (
-            <>
-               <View style={styles.slotAvatar}>
-                  {selectedTeamA.image ? <Image source={{ uri: selectedTeamA.image }} style={styles.slotImage} /> : <Text style={styles.slotInitials}>{selectedTeamA.initials}</Text>}
-               </View>
-               <Text style={styles.slotName}>{selectedTeamA.name}</Text>
-            </>
-          ) : (
-            <View style={styles.emptySlot}>
-               <Users2 size={32} color="#9CA3AF" />
-               <Text style={styles.slotAction}>Select Team A</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-
-        <View style={styles.vsContainer}>
-          <Text style={styles.vsText}>VS</Text>
-        </View>
-
-        <TouchableOpacity 
-          style={[styles.teamSlot, selectedTeamB && styles.teamSlotFilled]}
-          onPress={() => { setPickingFor('B'); setActiveTab('teams'); setIsSelectingTeams(false); }}
-        >
-          {selectedTeamB ? (
-            <>
-               <View style={styles.slotAvatar}>
-                  {selectedTeamB.image ? <Image source={{ uri: selectedTeamB.image }} style={styles.slotImage} /> : <Text style={styles.slotInitials}>{selectedTeamB.initials}</Text>}
-               </View>
-               <Text style={styles.slotName}>{selectedTeamB.name}</Text>
-            </>
-          ) : (
-            <View style={styles.emptySlot}>
-               <Users2 size={32} color="#9CA3AF" />
-               <Text style={styles.slotAction}>Select Team B</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      </View>
-
-      {selectedTeamA && selectedTeamB && (
-        <TouchableOpacity 
-          style={styles.startMatchBtn}
-          onPress={() => setIsSelectingPlayers(true)}
-        >
-           <Text style={styles.startMatchBtnText}>Select Playing XI</Text>
-        </TouchableOpacity>
-      )}
-
-      {pickingFor && (
-        <View style={styles.pickingBanner}>
-          <Text style={styles.pickingText}>Choose a team from the list below</Text>
-        </View>
-      )}
-    </View>
-  );
-
-  const renderQrModal = () => (
-    <Modal
-      animationType="fade"
-      transparent={true}
-      visible={isQrModalVisible}
-      onRequestClose={() => setIsQrModalVisible(false)}
-    >
-      <TouchableOpacity 
-        style={styles.modalOverlay}
-        activeOpacity={1}
-        onPress={() => setIsQrModalVisible(false)}
-      >
-        <View style={styles.qrModalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Team QR Code</Text>
-            <TouchableOpacity onPress={() => setIsQrModalVisible(false)}>
-              <X size={24} color="#6B7280" />
-            </TouchableOpacity>
-          </View>
-
-          {activeTeamForQr && (
-            <View style={styles.qrBody}>
-              <View style={styles.qrCard}>
-                <View style={styles.qrHeader}>
-                   <View style={[styles.teamAvatarQr, activeTeamForQr.bgColor && { backgroundColor: activeTeamForQr.bgColor }]}>
-                      {activeTeamForQr.image ? <Image source={{ uri: activeTeamForQr.image }} style={styles.teamImage} /> : <Text style={styles.teamInitialsQr}>{activeTeamForQr.initials}</Text>}
-                   </View>
-                   <View>
-                      <Text style={styles.qrTeamName}>{activeTeamForQr.name}</Text>
-                      <Text style={styles.qrTeamMeta}>{activeTeamForQr.location} • Captain: {activeTeamForQr.captain}</Text>
-                   </View>
-                </View>
-
-                <View style={styles.qrContainer}>
-                  <Image 
-                    source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=team_${activeTeamForQr.id}` }} 
-                    style={styles.qrImage} 
-                  />
-                </View>
-                
-                <Text style={styles.qrFooterText}>Scan to follow this team or invite to match</Text>
-              </View>
-
-              <TouchableOpacity style={styles.downloadBtn}>
-                <Text style={styles.downloadBtnText}>Download QR Code</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-      </TouchableOpacity>
-    </Modal>
-  );
-
-  const renderSuccessModal = () => (
-    <Modal
-      animationType="fade"
-      transparent={true}
-      visible={isSuccessModalVisible}
-      onRequestClose={() => setIsSuccessModalVisible(false)}
-    >
-      <TouchableOpacity 
-        style={styles.modalOverlay}
-        activeOpacity={1}
-        onPress={() => setIsSuccessModalVisible(false)}
-      >
-        <View style={styles.successModalContent}>
-          <View style={styles.successIconWrapper}>
-             <Plus size={32} color="#FFFFFF" />
-          </View>
-          <Text style={styles.successTitle}>Hooray!</Text>
-          <Text style={styles.successMessage}>Your team has been created and saved successfully.</Text>
-          
-          <TouchableOpacity 
-            style={styles.successCloseBtn}
-            onPress={() => setIsSuccessModalVisible(false)}
-          >
-            <Text style={styles.successCloseBtnText}>Great, thanks!</Text>
-          </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
-    </Modal>
-    );
-  
-  const renderPlayerSelection = () => {
-    const currentTeam = currentPickingSide === 'A' ? selectedTeamA : selectedTeamB;
-    const currentXi = currentPickingSide === 'A' ? playingXiA : playingXiB;
-    const setXi = currentPickingSide === 'A' ? setPlayingXiA : setPlayingXiB;
-
-    const togglePlayer = (player: any) => {
-      const exists = currentXi.find(p => p.id === player.id);
-      if (exists) {
-        setXi(currentXi.filter(p => p.id !== player.id));
-      } else {
-        setXi([...currentXi, player]);
-      }
-    };
-
-    return (
-      <View style={styles.selectionView}>
-        <View style={styles.selectionHeader}>
-          <TouchableOpacity onPress={() => setIsSelectingPlayers(false)}>
-            <ChevronRight size={28} color="#0D9488" style={{ transform: [{ rotate: '180deg' }] }} />
-          </TouchableOpacity>
-          <View style={{ alignItems: 'center' }}>
-            <Text style={styles.selectionTitle}>Select Playing XI</Text>
-            <Text style={styles.selectionSubTitle}>{currentTeam?.name} ({currentXi.length} selected)</Text>
-          </View>
-          <View style={{ width: 40 }} />
-        </View>
-
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
-           {teamMembers.length === 0 ? (
-             <View style={styles.noResultArea}>
-                <Users size={48} color="#E5E7EB" />
-                <Text style={styles.noResultTitle}>No Players Found</Text>
-                <Text style={styles.noResultSub}>Add players to your team squad first</Text>
-                <TouchableOpacity 
-                  style={styles.addNewOfficialBtn}
-                  onPress={() => {
-                    setActiveTeamForPlayers(currentTeam);
-                    setIsAddMemberModalVisible(true);
-                  }}
-                >
-                   <Plus size={20} color="#0D9488" />
-                   <Text style={styles.addNewOfficialText}>Add Player to Squad</Text>
-                </TouchableOpacity>
-             </View>
-           ) : (
-             teamMembers.map((member, idx) => (
-               <TouchableOpacity 
-                 key={idx} 
-                 style={[styles.playerSelectRow, currentXi.find(p => p.id === member.id) && styles.playerSelectRowActive]}
-                 onPress={() => togglePlayer(member)}
-               >
-                  <View style={styles.avatarCircle}>
-                     <User size={24} color="#6B7280" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                     <Text style={[styles.playerNameText, currentXi.find(p => p.id === member.id) && { color: '#0D9488' }]}>{member.player_name}</Text>
-                     <Text style={{ fontSize: 12, color: '#6B7280' }}>All-rounder</Text>
-                  </View>
-                  <View style={[styles.checkBox, currentXi.find(p => p.id === member.id) && styles.checkBoxActive]}>
-                     {currentXi.find(p => p.id === member.id) && <Plus size={14} color="#FFFFFF" style={{ transform: [{ rotate: '45deg' }] }} />}
-                  </View>
-               </TouchableOpacity>
-             ))
-           )}
-        </ScrollView>
-
-        <View style={styles.selectionFooter}>
-           {currentPickingSide === 'A' ? (
-             <TouchableOpacity 
-               style={[styles.startMatchBtn, { marginTop: 0 }, currentXi.length === 0 && { opacity: 0.5 }]}
-               onPress={() => {
-                 if (currentXi.length === 0) {
-                   alert('Please select at least 1 player for Team A');
-                   return;
-                 }
-                 setIsSelectingPlayers(false);
-                 // We don't change currentPickingSide here because they need to click Team B slot next
-               }}
-             >
-                <Text style={styles.startMatchBtnText}>Confirm Team A Playing XI ({currentXi.length})</Text>
-             </TouchableOpacity>
-           ) : (
-             <TouchableOpacity 
-               style={[styles.startMatchBtn, { marginTop: 0 }, currentXi.length === 0 && { opacity: 0.5 }]}
-               onPress={() => {
-                 if (currentXi.length === 0) {
-                   alert('Please select at least 1 player for Team B');
-                   return;
-                 }
-                 setIsSelectingPlayers(false);
-                 setIsConfiguringMatch(true);
-               }}
-             >
-                <Text style={styles.startMatchBtnText}>Confirm Team B Playing XI ({currentXi.length})</Text>
-             </TouchableOpacity>
-           )}
-        </View>
-      </View>
-    );
-  };
-
-  const renderMatchConfiguration = () => {
-    const types = [
-      { id: 'limited overs', label: 'Limited Overs' },
-      { id: 'box cricket', label: 'Box Cricket' },
-      { id: 'pair cricket', label: 'Pair Cricket' },
-      { id: 'test match', label: 'Test Match' },
-      { id: 'the hundred', label: 'The Hundred' }
-    ];
-
-    return (
-      <View style={styles.selectionView}>
-         <View style={styles.selectionHeader}>
-            <TouchableOpacity onPress={() => setIsConfiguringMatch(false)}>
-               <ChevronRight size={28} color="#0D9488" style={{ transform: [{ rotate: '180deg' }] }} />
-            </TouchableOpacity>
-            <Text style={styles.selectionTitle}>Match Details</Text>
-            <View style={{ width: 40 }} />
-         </View>
-
-         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
-            <View style={styles.vsDisplay}>
-               <View style={styles.vsTeam}>
-                  <Text style={styles.vsName}>{selectedTeamA?.name}</Text>
-                  <Text style={styles.vsPlayers}>{playingXiA.length} Players</Text>
-               </View>
-               <View style={styles.vsBadge}><Text style={styles.vsBadgeText}>VS</Text></View>
-               <View style={styles.vsTeam}>
-                  <Text style={styles.vsName}>{selectedTeamB?.name}</Text>
-                  <Text style={styles.vsPlayers}>{playingXiB.length} Players</Text>
-               </View>
-            </View>
-
-            <Text style={styles.configLabel}>Match Type</Text>
-            <View style={styles.typeGrid}>
-               {types.map(t => (
-                 <TouchableOpacity 
-                   key={t.id} 
-                   style={[styles.typePill, matchConfig.type === t.id && styles.typePillActive]}
-                   onPress={() => setMatchConfig({ ...matchConfig, type: t.id })}
-                 >
-                    <Text style={[styles.typePillText, matchConfig.type === t.id && styles.typePillTextActive]}>{t.label}</Text>
-                 </TouchableOpacity>
-               ))}
-            </View>
-
-            {matchConfig.type !== 'test match' && (
-              <View style={{ marginTop: 24 }}>
-                 {matchConfig.type === 'the hundred' ? (
-                   <View style={styles.hundredInfo}>
-                      <Text style={styles.hundredText}>Fixed Format: 100 Balls Match</Text>
-                   </View>
-                 ) : (
-                   <View style={{ gap: 20 }}>
-                      <View>
-                         <Text style={styles.configLabel}>No. of Overs</Text>
-                         <TextInput 
-                           style={styles.configInput} 
-                           keyboardType="numeric" 
-                           value={matchConfig.totalOvers}
-                           onChangeText={(val) => setMatchConfig({ ...matchConfig, totalOvers: val })}
-                         />
-                      </View>
-                      <View>
-                         <Text style={styles.configLabel}>Overs per Bowler</Text>
-                         <TextInput 
-                           style={styles.configInput} 
-                           keyboardType="numeric" 
-                           value={matchConfig.oversPerBowler}
-                           onChangeText={(val) => setMatchConfig({ ...matchConfig, oversPerBowler: val })}
-                         />
-                      </View>
-                   </View>
-                 )}
-              </View>
-            )}
-
-            <View style={{ marginTop: 32 }}>
-               <Text style={styles.configLabel}>Ball Type</Text>
-               <View style={styles.ballTypes}>
-                  {['Leather', 'Tennis', 'Other'].map(b => (
-                    <TouchableOpacity 
-                      key={b} 
-                      style={[styles.ballTypeBtn, matchConfig.ballType === b.toLowerCase() && styles.ballTypeBtnActive]}
-                      onPress={() => setMatchConfig({ ...matchConfig, ballType: b.toLowerCase() })}
-                    >
-                       <Text style={[styles.ballText, matchConfig.ballType === b.toLowerCase() && styles.ballTextActive]}>{b}</Text>
-                    </TouchableOpacity>
-                  ))}
-               </View>
-            </View>
-
-            <View style={{ marginTop: 32 }}>
-               <Text style={styles.configLabel}>Wagon Wheel</Text>
-               <View style={styles.wagonWheelRow}>
-                  <Text style={styles.wagonWheelDesc}>Track scoring areas for each ball</Text>
-                  <TouchableOpacity 
-                    style={[styles.toggleBg, matchConfig.wagonWheel && styles.toggleBgActive]}
-                    onPress={() => setMatchConfig({ ...matchConfig, wagonWheel: !matchConfig.wagonWheel })}
-                  >
-                     <View style={[styles.toggleCircle, matchConfig.wagonWheel && styles.toggleCircleActive]} />
-                  </TouchableOpacity>
-               </View>
-            </View>
-
-            <View style={{ marginTop: 32 }}>
-               <Text style={styles.configLabel}>Pitch Type</Text>
-               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
-                  {['Rough', 'Cement Turf', 'Astroturf', 'Matting'].map(p => (
-                    <TouchableOpacity 
-                      key={p} 
-                      style={[styles.pitchBtn, matchConfig.pitchType === p.toLowerCase() && styles.pitchBtnActive]}
-                      onPress={() => setMatchConfig({ ...matchConfig, pitchType: p.toLowerCase() })}
-                    >
-                       <Text style={[styles.pitchText, matchConfig.pitchType === p.toLowerCase() && styles.pitchTextActive]}>{p}</Text>
-                    </TouchableOpacity>
-                  ))}
-               </ScrollView>
-            </View>
-
-            <View style={{ marginTop: 32, gap: 20 }}>
-               <View>
-                  <Text style={styles.configLabel}>State</Text>
-                  <View style={styles.pickerWrapper}>
-                     <TextInput 
-                       style={styles.configInput} 
-                       placeholder="Select State"
-                       value={matchConfig.state}
-                       editable={false} // Would normally be a picker
-                     />
-                     <ChevronDown size={20} color="#6B7280" style={styles.pickerIcon} />
-                  </View>
-               </View>
-
-               <View>
-                  <Text style={styles.configLabel}>City</Text>
-                  <TextInput 
-                    style={styles.configInput} 
-                    placeholder="Enter City"
-                    placeholderTextColor="#9CA3AF"
-                    value={matchConfig.city}
-                    onChangeText={(val) => setMatchConfig({ ...matchConfig, city: val })}
-                  />
-               </View>
-
-               <View>
-                  <Text style={styles.configLabel}>Ground</Text>
-                  <TextInput 
-                    style={styles.configInput} 
-                    placeholder="Search or Enter Ground"
-                    placeholderTextColor="#9CA3AF"
-                    value={matchConfig.ground}
-                    onChangeText={(val) => setMatchConfig({ ...matchConfig, ground: val })}
-                  />
-               </View>
-
-               <View>
-                  <Text style={styles.configLabel}>Date & Time</Text>
-                  <View style={styles.pickerWrapper}>
-                     <TextInput 
-                       style={styles.configInput} 
-                       value={matchConfig.dateTime}
-                       onChangeText={(val) => setMatchConfig({ ...matchConfig, dateTime: val })}
-                     />
-                     <Calendar size={20} color="#6B7280" style={styles.pickerIcon} />
-                  </View>
-               </View>
-            </View>
-
-            <TouchableOpacity 
-              style={styles.officialsTrigger}
-              onPress={() => setIsConfiguringOfficials(true)}
-            >
-               <View style={styles.officialsTriggerLeft}>
-                  <View style={styles.officialIconBox}>
-                     <IdCard size={20} color="#0D9488" />
-                  </View>
-                  <View>
-                     <Text style={styles.officialsTitle}>Match Officials</Text>
-                     <Text style={styles.officialsSub}>Umpires, Scorers, Commentators...</Text>
-                  </View>
-               </View>
-               <ChevronRight size={20} color="#9CA3AF" />
-            </TouchableOpacity>
-         </ScrollView>
-
-         <View style={styles.configFooter}>
-            <TouchableOpacity 
-              style={styles.startMatchMainBtn}
-              onPress={() => {
-                setIsConfiguringMatch(false);
-                setIsConfiguringToss(true);
-              }}
-            >
-               <Text style={styles.startMatchMainBtnText}>Next: Configure Toss</Text>
-            </TouchableOpacity>
-         </View>
-      </View>
-    );
-  };
-
-  const renderBowlerSelectionModal = () => {
-    if (!isSelectingNextBowler || !inn) return null;
-
-    const filteredSquad = squadBowling.filter(name => 
-      name.toLowerCase().includes(playerSearchQuery.toLowerCase())
-    ).map(name => ({ id: name, player_name: name }));
-
-    return (
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={isSelectingNextBowler}
-        onRequestClose={() => {
-          setIsSelectingNextBowler(false);
-          setPlayerSearchQuery('');
-          setIsAddingNewPlayerManually(false);
-        }}
-      >
-        <View style={styles.sheetOverlay}>
-          <View style={[styles.sheetContent, { height: '80%' }]}>
-             <View style={styles.sheetHandle} />
-             <View style={{ paddingHorizontal: 24, paddingBottom: 16 }}>
-                <View style={styles.modalHeaderRow}>
-                   <View>
-                      <Text style={styles.sheetTitle}>Next Over: Choose Bowler</Text>
-                      <Text style={styles.sheetSubtitle}>Pick a bowler from {inn.bowlingTeam}</Text>
-                   </View>
-                   <TouchableOpacity onPress={() => { setIsSelectingNextBowler(false); setPlayerSearchQuery(''); setIsAddingNewPlayerManually(false); }}>
-                      <X size={24} color="#6B7280" />
-                   </TouchableOpacity>
-                </View>
-
-                {!isAddingNewPlayerManually && (
-                  <View style={styles.modalSearchContainer}>
-                     <Search size={18} color="#9CA3AF" />
-                     <TextInput 
-                        style={styles.modalSearchInput}
-                        placeholder="Search by name or number..."
-                        value={playerSearchQuery}
-                        onChangeText={setPlayerSearchQuery}
-                     />
-                  </View>
-                )}
-             </View>
-
-             <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}>
-                <View style={styles.playerGrid}>
-                    {filteredSquad.map(p => (
-                     <TouchableOpacity 
-                       key={p.id} 
-                       style={[
-                         styles.playerGridTile, 
-                         lastBowlerId === p.player_name && { opacity: 0.5, backgroundColor: '#F3F4F6' }
-                       ]}
-                       disabled={lastBowlerId === p.player_name}
-                       onPress={() => {
-                          addNewBowler(p.player_name);
-                          setIsSelectingNextBowler(false);
-                       }}
-                     >
-                        <View style={[styles.miniAvatar, { width: 44, height: 44 }]}>
-                           <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 16 }}>{p.player_name[0]}</Text>
-                        </View>
-                        <Text style={styles.playerGridName} numberOfLines={1}>{p.player_name}</Text>
-                        {lastBowlerId === p.player_name && (
-                           <Text style={{ fontSize: 9, color: '#9CA3AF' }}>Just Bowled</Text>
-                        )}
-                     </TouchableOpacity>
-                   ))}
-                </View>
-
-                <TouchableOpacity 
-                  style={styles.addPlayerMiniBtn}
-                  onPress={() => {
-                     const name = prompt('New Bowler Name:');
-                     if (name) {
-                        addNewBowler(name);
-                        setIsSelectingNextBowler(false);
-                     }
-                  }}
-                >
-                   <Plus size={18} color="#0D9488" />
-                   <Text style={styles.addPlayerMiniText}>Add New Bowler</Text>
-                </TouchableOpacity>
-             </ScrollView>
-          </View>
-        </View>
-      </Modal>
-    );
-  };
-
-  const renderNewBatterSelectionModal = () => {
-    if (!isSelectingNewBatter || !inn) return null;
-
-    // Use current 'yet to bat' list from hook
-    // Fallback to the full battingPlayers list (also from hook) if needed
-    const alreadyOnFieldOrOut = new Set(inn.batters.map(b => b.name.toLowerCase()));
-    
-    const filteredSquad = squadBatting
-      .filter(name => !alreadyOnFieldOrOut.has(name.toLowerCase()))
-      .filter(name => name.toLowerCase().includes(playerSearchQuery.toLowerCase()))
-      .map(name => ({ id: name, player_name: name }));
-
-    return (
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={isSelectingNewBatter}
-        onRequestClose={() => {
-          setIsSelectingNewBatter(false);
-          setPlayerSearchQuery('');
-          setIsAddingNewPlayerManually(false);
-        }}
-      >
-        <View style={styles.sheetOverlay}>
-          <View style={[styles.sheetContent, { height: '80%' }]}>
-             <View style={styles.sheetHandle} />
-             <View style={{ paddingHorizontal: 24, paddingBottom: 16 }}>
-                <View style={styles.modalHeaderRow}>
-                   <View>
-                      <Text style={styles.sheetTitle}>New Batter</Text>
-                      <Text style={styles.sheetSubtitle}>Pick the next batter for {inn.battingTeam}</Text>
-                   </View>
-                   <TouchableOpacity onPress={() => { setIsSelectingNewBatter(false); setPlayerSearchQuery(''); setIsAddingNewPlayerManually(false); }}>
-                      <X size={24} color="#6B7280" />
-                   </TouchableOpacity>
-                </View>
-
-                {!isAddingNewPlayerManually && (
-                  <View style={styles.modalSearchContainer}>
-                     <Search size={18} color="#9CA3AF" />
-                     <TextInput 
-                        style={styles.modalSearchInput}
-                        placeholder="Search by name or number..."
-                        value={playerSearchQuery}
-                        onChangeText={setPlayerSearchQuery}
-                     />
-                  </View>
-                )}
-             </View>
-
-             <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}>
-                {filteredSquad.length > 0 ? (
-                  <View style={styles.playerGrid}>
-                    {filteredSquad.map(p => (
-                      <TouchableOpacity 
-                        key={p.id} 
-                        style={styles.playerGridTile}
-                        onPress={() => {
-                           handleAddWicket({ 
-                             dismissedName: pendingWicketData?.dismissedName, 
-                             dismissalType: 'Out', 
-                             newBatterName: p.player_name 
-                           });
-                           setIsSelectingNewBatter(false);
-                           setPendingWicketData(null);
-                        }}
-                      >
-                         <View style={[styles.miniAvatar, { width: 44, height: 44, backgroundColor: '#FEF3C7' }]}>
-                            <Text style={{ color: '#D97706', fontWeight: 'bold', fontSize: 16 }}>{p.player_name[0]}</Text>
-                         </View>
-                         <Text style={styles.playerGridName} numberOfLines={1}>{p.player_name}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                ) : (
-                  <View style={{ alignItems: 'center', marginTop: 40 }}>
-                     <Text style={styles.sheetSubtitle}>No more players available in squad.</Text>
-                  </View>
-                )}
-
-                <TouchableOpacity 
-                  style={styles.addPlayerMiniBtn}
-                  onPress={() => {
-                     const name = prompt('New Batter Name:');
-                     if (name) {
-                        handleAddWicket({ 
-                          dismissedName: pendingWicketData?.dismissedName, 
-                          dismissalType: 'Out', 
-                          newBatterName: name 
-                        });
-                        setIsSelectingNewBatter(false);
-                        setPendingWicketData(null);
-                     }
-                  }}
-                >
-                   <Plus size={18} color="#0D9488" />
-                   <Text style={styles.addPlayerMiniText}>Add New Batter</Text>
-                </TouchableOpacity>
-             </ScrollView>
-          </View>
-        </View>
-      </Modal>
-    );
-  };
-
-  const renderLiveScoring = () => {
-    if (!inn) return null;
-    
-    const oversStr = formatOvers(inn.legalBalls);
-    
-    // Helper to calculate Strike Rate and Minutes in real-time
-    const calcSR = (r: number, b: number) => b === 0 ? '0.0' : ((r / b) * 100).toFixed(1);
-    const calcMins = (start?: number) => start ? Math.floor((Date.now() - start) / 60000) : 0;
-    const calcEco = (r: number, b: number, o: number) => {
-       const totalBalls = (o * 6) + b;
-       return totalBalls === 0 ? '0.0' : (r / (totalBalls / 6)).toFixed(1);
-    };
-    
-    return (
-      <View style={styles.scoringContainer}>
-         {/* Top Scoreboard */}
-         <View style={styles.mainScoreboard}>
-            <View style={styles.scoreRow}>
-               <View>
-                  <Text style={styles.scoringTeamName}>{inn.battingTeam}</Text>
-                  <View style={styles.scoreNumberRow}>
-                     <Text style={styles.bigRuns}>{inn.runs}-{inn.wickets}</Text>
-                     <Text style={styles.overText}>({oversStr})</Text>
-                  </View>
-               </View>
-               <View style={styles.crrBadge}>
-                  <Text style={styles.crrLabel}>CRR</Text>
-                  <Text style={styles.crrValue}>{crr}</Text>
-               </View>
-            </View>
-            
-            {renderScoringSettingsSidebar()}
-            {renderMoreActionsSheet()}
-            {renderExtraRunsSelector()}
-            {renderBowlerSelectionModal()}
-            {renderNewBatterSelectionModal()}
-
-            <View style={styles.targetRow}>
-               <Text style={styles.targetText}>
-                 {inn.target ? `Target: ${inn.target} | Need ${inn.target - inn.runs} from ${parseInt(matchConfig.totalOvers) * 6 - inn.legalBalls} balls` : `${inn.bowlingTeam} opted to ${tossResult.decision === 'bowl' ? 'bowl' : 'bat'}`}
-               </Text>
-            </View>
-
-            {/* In-Play Tables */}            <View style={[styles.playerStatsRow, { gap: 24 }]}>
-               <View style={[styles.batsmanCol, { flex: 3 }]}>
-                  <View style={styles.statsHeader}>
-                     <Text style={[styles.statsHeaderText, { flex: 2 }]}>Batsman</Text>
-                     <View style={[styles.statsHeadValues, { gap: 10 }]}>
-                        <Text style={styles.statsHeaderTextFixed}>R</Text>
-                        <Text style={styles.statsHeaderTextFixed}>B</Text>
-                        <Text style={styles.statsHeaderTextFixed}>0s</Text>
-                        <Text style={styles.statsHeaderTextFixed}>4s</Text>
-                        <Text style={styles.statsHeaderTextFixed}>6s</Text>
-                        <Text style={[styles.statsHeaderTextFixed, { width: 38 }]}>SR</Text>
-                        <Text style={styles.statsHeaderTextFixed}>M</Text>
-                     </View>
-                  </View>
-                  {[striker, nonStriker].map((b, idx) => (
-                    <TouchableOpacity 
-                       key={idx} 
-                       style={styles.statsRow}
-                       onPress={() => {
-                          if (!b?.name || b.name === '--') {
-                             setIsSelectingNewBatter(true);
-                          }
-                       }}
-                    >
-                       <Text style={[styles.playerName, b?.onStrike && { color: '#0D9488' }, { flex: 2 }]} numberOfLines={1}>
-                          {b?.name || 'Select Batter...'}{b?.onStrike ? '*' : ''}
-                       </Text>
-                       <View style={[styles.statsValues, { gap: 10 }]}>
-                          <Text style={styles.statsValueTextFixed}>{b?.runs || 0}</Text>
-                          <Text style={styles.statsValueTextFixed}>{b?.balls || 0}</Text>
-                          <Text style={styles.statsValueTextFixed}>{b?.dots || 0}</Text>
-                          <Text style={styles.statsValueTextFixed}>{b?.fours || 0}</Text>
-                          <Text style={styles.statsValueTextFixed}>{b?.sixes || 0}</Text>
-                          <Text style={[styles.statsValueTextFixed, { width: 38 }]}>{calcSR(b?.runs || 0, b?.balls || 0)}</Text>
-                          <Text style={styles.statsValueTextFixed}>{calcMins(b?.startTime)}</Text>
-                       </View>
-                    </TouchableOpacity>
-                  ))}
-
-               </View>
-               <View style={[styles.bowlerCol, { flex: 3 }]}>
-                  <View style={styles.statsHeader}>
-                     <Text style={[styles.statsHeaderText, { flex: 2 }]}>Bowler</Text>
-                     <View style={[styles.statsHeadValues, { gap: 10 }]}>
-                        <Text style={styles.statsHeaderTextFixed}>O</Text>
-                        <Text style={styles.statsHeaderTextFixed}>M</Text>
-                        <Text style={styles.statsHeaderTextFixed}>R</Text>
-                        <Text style={styles.statsHeaderTextFixed}>W</Text>
-                        <Text style={[styles.statsHeaderTextFixed, { width: 32 }]}>Eco</Text>
-                        <Text style={styles.statsHeaderTextFixed}>0s</Text>
-                        <Text style={styles.statsHeaderTextFixed}>4s</Text>
-                        <Text style={styles.statsHeaderTextFixed}>6s</Text>
-                     </View>
-                  </View>
-                  <TouchableOpacity 
-                    style={styles.statsRow}
-                    onPress={() => setIsSelectingNextBowler(true)}
-                  >
-                       <Text style={[styles.playerName, { flex: 2 }]} numberOfLines={1}>
-                          {bowler?.name || 'Tap to select Bowler...'}
-                       </Text>
-                       <View style={[styles.statsValues, { gap: 10 }]}>
-                          <Text style={styles.statsValueTextFixed}>{bowler?.overs ?? 0}.{bowler?.balls ?? 0}</Text>
-                          <Text style={styles.statsValueTextFixed}>{bowler?.maidens || 0}</Text>
-                          <Text style={styles.statsValueTextFixed}>{bowler?.runs || 0}</Text>
-                          <Text style={styles.statsValueTextFixed}>{bowler?.wickets || 0}</Text>
-                          <Text style={[styles.statsValueTextFixed, { width: 32 }]}>{calcEco(bowler?.runs || 0, bowler?.balls || 0, bowler?.overs || 0)}</Text>
-                          <Text style={styles.statsValueTextFixed}>{bowler?.dots || 0}</Text>
-                          <Text style={styles.statsValueTextFixed}>{bowler?.fours || 0}</Text>
-                          <Text style={styles.statsValueTextFixed}>{bowler?.sixes || 0}</Text>
-                       </View>
-                    </TouchableOpacity>
-               </View>
-            </View>
-
-
-            {/* Ball Timeline */}
-            <View style={styles.timelineContainer}>
-               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                  {inn.overBalls.slice(-12).map((b, i) => (
-                    <View key={i} style={[styles.ballCircle, b.label === 'W' && styles.ballWicket, (b.label === '4' || b.label === '6') && styles.ballBoundary]}>
-                       <Text style={[styles.ballLabel, (b.label === 'W' || b.label === '4' || b.label === '6') && { color: '#FFFFFF' }]}>{b.label}</Text>
-                    </View>
-                  ))}
-                  {inn.overBalls.length === 0 && <Text style={styles.statsHeaderText}>Start the over...</Text>}
-               </ScrollView>
-            </View>
-         </View>
-
-         {/* Scoring Wheel */}
-         <View style={styles.scoringWheel}>
-            <View style={styles.wheelRow}>
-               {[0, 1, 2, 3].map(n => (
-                 <TouchableOpacity key={n} style={styles.runBtn} onPress={() => handleAddBall(n)}>
-                    <Text style={styles.runBtnText}>{n}</Text>
-                 </TouchableOpacity>
-               ))}
-            </View>
-            <View style={styles.wheelRow}>
-               {[4, 6].map(n => (
-                 <TouchableOpacity key={n} style={[styles.runBtn, styles.boundaryBtn]} onPress={() => handleAddBall(n)}>
-                    <Text style={styles.boundaryBtnText}>{n}</Text>
-                 </TouchableOpacity>
-               ))}
-               <TouchableOpacity 
-                 style={[styles.runBtn, styles.wicketBtn]} 
-                 onPress={() => {
-                   if (striker) {
-                     setPendingWicketData({ dismissedName: striker.name });
-                     setIsSelectingNewBatter(true);
-                   } else {
-                     const anyActive = inn.batters.filter(b => b.status === 'batting' && !b.out);
-                     if (anyActive.length > 0) {
-                        setPendingWicketData({ dismissedName: anyActive[0].name });
-                        setIsSelectingNewBatter(true);
-                     } else {
-                        alert('No active batter found to dismiss.');
-                     }
-                   }
-                 }}
-                >
-                  <Text style={styles.runBtnText}>W</Text>
-               </TouchableOpacity>
-            </View>
-             <View style={styles.extraRow}>
-                <TouchableOpacity style={styles.extraBtn} onPress={() => { setActiveExtraType('wide'); setIsExtraRunsSelectorVisible(true); }}><Text style={styles.extraBtnText}>WD</Text></TouchableOpacity>
-                <TouchableOpacity style={styles.extraBtn} onPress={() => { setActiveExtraType('noball'); setIsExtraRunsSelectorVisible(true); }}><Text style={styles.extraBtnText}>NB</Text></TouchableOpacity>
-                <TouchableOpacity style={styles.extraBtn} onPress={() => { setActiveExtraType('bye'); setIsExtraRunsSelectorVisible(true); }}><Text style={styles.extraBtnText}>BYE</Text></TouchableOpacity>
-                <TouchableOpacity style={styles.extraBtn} onPress={() => { setActiveExtraType('legbye'); setIsExtraRunsSelectorVisible(true); }}><Text style={styles.extraBtnText}>LB</Text></TouchableOpacity>
-             </View>
-         </View>
-
-         {/* Bottom Actions */}
-         <View style={styles.scoringActions}>
-            <TouchableOpacity style={styles.actionIconBtn} onPress={() => undoLastBall()}>
-              <RotateCcw size={20} color="#6B7280" />
-              <Text style={styles.actionIconText}>Undo</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.actionIconBtn}
-              onPress={() => setIsMoreSheetVisible(true)}
-            >
-              <MoreHorizontal size={20} color="#6B7280" />
-              <Text style={styles.actionIconText}>More</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.actionIconBtn} 
-              onPress={() => setIsScoringSettingsVisible(true)}
-            >
-              <Settings size={20} color="#6B7280" />
-              <Text style={styles.actionIconText}>Settings</Text>
-            </TouchableOpacity>
-            
-            {matchPhase === 'innings_break' && (
-              <TouchableOpacity 
-                style={[styles.actionIconBtn, { backgroundColor: '#FFF7ED', width: '30%' }]}
-                onPress={async () => {
-                  await startSecondInnings();
-                  setMatchState({ striker: null, nonStriker: null, bowler: null });
-                  setIsSelectingOpeners(true);
-                }}
-              >
-                <ChevronRight size={20} color="#F97316" />
-                <Text style={[styles.actionIconText, { color: '#F97316' }]}>2nd Inning</Text>
-              </TouchableOpacity>
-            )}
-         </View>
-      </View>
-    );
-  };
-
-  const renderBowlerSelection = () => {
-    if (!inn) return null;
-    const battingTeam = tossResult.decision === 'bat' ? tossResult.winner : (tossResult.winner?.id === selectedTeamA?.id ? selectedTeamB : selectedTeamA);
-    const bowlingTeam = battingTeam?.id === selectedTeamA?.id ? selectedTeamB : selectedTeamA;
-    const bowlingPlayers = bowlingTeam?.id === selectedTeamA?.id ? playingXiA : playingXiB;
-
-    return (
-      <View style={styles.selectionView}>
-         <View style={styles.selectionHeader}>
-            <View style={{ width: 40 }} />
-            <Text style={styles.selectionTitle}>Select Next Bowler</Text>
-            <View style={{ width: 40 }} />
-         </View>
-
-         <View style={styles.overSummaryBanner}>
-            <Text style={styles.overSummaryText}>Over {Math.floor(inn.balls / 6)} Completed</Text>
-            <Text style={styles.scoreSummaryText}>{inn.runs}/{inn.wickets}</Text>
-         </View>
-
-         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
-            <Text style={styles.configLabel}>Choose Bowler for Over {Math.floor(inn.balls / 6) + 1}</Text>
-            <View style={styles.playerGrid}>
-               {bowlingPlayers.map(p => (
-                 <TouchableOpacity 
-                   key={p.id} 
-                   style={[
-                     styles.playerGridTile, 
-                     lastBowlerId === p.player_name && { opacity: 0.4, backgroundColor: '#F3F4F6' }
-                   ]}
-                   onPress={() => {
-                     if (lastBowlerId === p.player_name) {
-                       alert('A bowler cannot bowl two consecutive overs.');
-                       return;
-                     }
-                     const idx = bowlingPlayers.findIndex(bp => bp.id === p.id);
-                     changeBowler(idx);
-                     setIsSelectingNextBowler(false);
-                   }}
-                 >
-                    <View style={[styles.miniAvatar, { width: 40, height: 40, backgroundColor: lastBowlerId === p.player_name ? '#9CA3AF' : '#0D9488' }]}>
-                       <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>{p.player_name[0]}</Text>
-                    </View>
-                    <Text style={styles.playerGridName} numberOfLines={1}>{p.player_name}</Text>
-                    {lastBowlerId === p.id && <Text style={{ fontSize: 9, color: '#EF4444', fontWeight: 'bold' }}>PREV BOWLER</Text>}
-                 </TouchableOpacity>
-               ))}
-               <TouchableOpacity 
-                 style={[styles.playerGridTile, { borderStyle: 'dashed', borderColor: '#0D9488' }]}
-                 onPress={() => {
-                   const name = prompt('Enter New Bowler Name:');
-                   if (name) {
-                     addNewBowler(name);
-                     setIsSelectingNextBowler(false);
-                   }
-                 }}
-               >
-                  <Plus size={24} color="#0D9488" />
-                  <Text style={[styles.playerGridName, { color: '#0D9488' }]}>Add New</Text>
-               </TouchableOpacity>
-            </View>
-         </ScrollView>
-      </View>
-    );
-  };
-
-  const renderOpeningSelection = () => {
-    const battingTeam = tossResult.decision === 'bat' ? tossResult.winner : (tossResult.winner?.id === selectedTeamA?.id ? selectedTeamB : selectedTeamA);
-    const bowlingTeam = battingTeam?.id === selectedTeamA?.id ? selectedTeamB : selectedTeamA;
-    const battingPlayers = battingTeam?.id === selectedTeamA?.id ? playingXiA : playingXiB;
-    const bowlingPlayers = bowlingTeam?.id === selectedTeamA?.id ? playingXiA : playingXiB;
-
-    return (
-      <View style={styles.selectionView}>
-         <View style={styles.selectionHeader}>
-            <TouchableOpacity onPress={() => setIsSelectingOpeners(false)}>
-               <ChevronLeft size={28} color="#0D9488" />
-            </TouchableOpacity>
-            <Text style={styles.selectionTitle}>Select Openers</Text>
-            <View style={{ width: 40 }} />
-         </View>
-
-         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
-            {battingPlayers.length === 0 || bowlingPlayers.length === 0 ? (
-               <View style={styles.noResultArea}>
-                  <AlertCircle size={48} color="#EF4444" />
-                  <Text style={styles.noResultTitle}>Preparation Incomplete</Text>
-                  <Text style={styles.noResultSub}>You must select a Playing XI for both teams before picking openers.</Text>
-                  <TouchableOpacity 
-                    style={[styles.addNewOfficialBtn, { borderColor: '#FECACA', backgroundColor: '#FEF2F2' }]}
-                    onPress={() => {
-                      setIsSelectingOpeners(false);
-                      setIsConfiguringMatch(false);
-                      setIsSelectingPlayers(true);
-                      setCurrentPickingSide('A');
-                    }}
-                  >
-                     <ChevronLeft size={20} color="#B91C1C" />
-                     <Text style={[styles.addNewOfficialText, { color: '#B91C1C' }]}>Go Back to Player Selection</Text>
-                  </TouchableOpacity>
-               </View>
-            ) : (
-              <>
-                <View style={styles.openerSection}>
-                   <View style={styles.openerLabelRow}>
-                      <Text style={styles.configLabel}>Striker</Text>
-                      <Text style={styles.playingXiLabel}>{battingTeam?.name} Squad</Text>
-                   </View>
-                   {battingPlayers.length < 2 && (
-                     <Text style={styles.warningText}>⚠️ Add at least 2 players to {battingTeam?.name} to select both openers.</Text>
-                   )}
-                   <View style={styles.playerGrid}>
-                      {battingPlayers.map(p => (
-                        <TouchableOpacity 
-                          key={p.id} 
-                          style={[styles.playerGridTile, matchState.striker?.id === p.id && styles.playerGridTileActive, matchState.nonStriker?.id === p.id && { opacity: 0.5 }]}
-                          onPress={() => setMatchState({ ...matchState, striker: p })}
-                          disabled={matchState.nonStriker?.id === p.id}
-                        >
-                           <View style={[styles.miniAvatar, { width: 36, height: 36 }]}>
-                              <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>{p.player_name[0]}</Text>
-                           </View>
-                           <Text style={[styles.playerGridName, matchState.striker?.id === p.id && styles.playerGridNameActive]} numberOfLines={1}>{p.player_name}</Text>
-                        </TouchableOpacity>
-                      ))}
-                      <TouchableOpacity 
-                        style={[styles.playerGridTile, { borderStyle: 'dashed', borderColor: '#0D9488' }]}
-                        onPress={() => {
-                          setActiveTeamForPlayers(battingTeam);
-                          setIsAddMemberModalVisible(true);
-                        }}
-                      >
-                         <Plus size={20} color="#0D9488" />
-                         <Text style={[styles.playerGridName, { color: '#0D9488' }]}>Add</Text>
-                      </TouchableOpacity>
-                   </View>
-                </View>
-
-                <View style={styles.openerSection}>
-                   <View style={styles.openerLabelRow}>
-                      <Text style={styles.configLabel}>Non-Striker</Text>
-                      <Text style={styles.playingXiLabel}>{battingTeam?.name} Squad</Text>
-                   </View>
-                   <View style={styles.playerGrid}>
-                      {battingPlayers.map(p => (
-                        <TouchableOpacity 
-                          key={p.id} 
-                          style={[styles.playerGridTile, matchState.nonStriker?.id === p.id && styles.playerGridTileActive, matchState.striker?.id === p.id && { opacity: 0.5 }]}
-                          onPress={() => setMatchState({ ...matchState, nonStriker: p })}
-                          disabled={matchState.striker?.id === p.id}
-                        >
-                           <View style={[styles.miniAvatar, { width: 36, height: 36 }]}>
-                              <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>{p.player_name[0]}</Text>
-                           </View>
-                           <Text style={[styles.playerGridName, matchState.nonStriker?.id === p.id && styles.playerGridNameActive]} numberOfLines={1}>{p.player_name}</Text>
-                        </TouchableOpacity>
-                      ))}
-                   </View>
-                </View>
-
-                <View style={styles.openerSection}>
-                   <View style={styles.openerLabelRow}>
-                      <Text style={styles.configLabel}>Opening Bowler</Text>
-                      <Text style={styles.playingXiLabel}>{bowlingTeam?.name} Squad</Text>
-                   </View>
-                   <View style={styles.playerGrid}>
-                      {bowlingPlayers.map(p => (
-                        <TouchableOpacity 
-                          key={p.id} 
-                          style={[styles.playerGridTile, matchState.bowler?.id === p.id && styles.playerGridTileActive]}
-                          onPress={() => setMatchState({ ...matchState, bowler: p })}
-                        >
-                           <View style={[styles.miniAvatar, { width: 36, height: 36 }]}>
-                              <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>{p.player_name[0]}</Text>
-                           </View>
-                           <Text style={[styles.playerGridName, matchState.bowler?.id === p.id && styles.playerGridNameActive]} numberOfLines={1}>{p.player_name}</Text>
-                        </TouchableOpacity>
-                      ))}
-                   </View>
-                </View>
-              </>
-            )}
-         </ScrollView>
-
-         <View style={styles.configFooter}>
-            <TouchableOpacity 
-               style={[styles.startMatchMainBtn, (!matchState.striker || !matchState.nonStriker || !matchState.bowler) && { opacity: 0.5 }]}
-               disabled={!matchState.striker || !matchState.nonStriker || !matchState.bowler}
-               onPress={async () => {
-                  const sName = matchState.striker.player_name;
-                  const nsName = matchState.nonStriker.player_name;
-                  const bwrName = matchState.bowler.player_name;
-
-                  if (inn && (inn.target !== undefined && inn.target !== null)) {
-                     // Second Innings: Just set openers for the already created inning
-                     await setOpeners(sName, nsName, bwrName);
-                  } else {
-                     // First Innings
-                     const battingFirstTeam = tossResult.decision === 'bat' 
-                       ? tossResult.winner 
-                       : (tossResult.winner?.id === selectedTeamA?.id ? selectedTeamB : selectedTeamA);
-                     
-                     const isTeamAFirst = battingFirstTeam?.id === selectedTeamA?.id;
-                     let bPlayers = (isTeamAFirst ? playingXiA : playingXiB).map(p => p.player_name);
-                     let blPlayers = (isTeamAFirst ? playingXiB : playingXiA).map(p => p.player_name);
-
-                     bPlayers = [sName, nsName, ...bPlayers.filter(p => p !== sName && p !== nsName)];
-                     blPlayers = [bwrName, ...blPlayers.filter(p => p !== bwrName)];
-
-                     const config = {
-                       teamA: selectedTeamA?.name,
-                       teamB: selectedTeamB?.name,
-                       teamAId: selectedTeamA?.id,
-                       teamBId: selectedTeamB?.id,
-                       teamAPlayers: isTeamAFirst ? bPlayers : blPlayers,
-                       teamBPlayers: isTeamAFirst ? blPlayers : bPlayers,
-                       overs: parseInt(matchConfig.totalOvers),
-                       players: playingXiA.length,
-                       venue: matchConfig.ground || 'Standard Ground',
-                       matchType: matchConfig.type
-                     };
-
-                     await startMatch(config, tossResult.winner?.name, tossResult.decision as 'bat' | 'bowl');
-                  }
-                  
-                  setIsSelectingOpeners(false);
-                  setIsScoring(true);
-               }}
-             >
-                <Text style={styles.startMatchMainBtnText}>Start Inning</Text>
-             </TouchableOpacity>
-         </View>
-      </View>
-    );
-  };
-
-  const renderTossConfiguration = () => {
-    const handleFlip = () => {
-      setIsFlipping(true);
-      setTimeout(() => {
-        setIsFlipping(false);
-        const randomWinner = Math.random() > 0.5 ? selectedTeamA : selectedTeamB;
-        setTossResult({ ...tossResult, winner: randomWinner });
-      }, 1500);
-    };
-
-    return (
-      <View style={styles.selectionView}>
-         <View style={styles.selectionHeader}>
-            <TouchableOpacity onPress={() => setIsConfiguringToss(false)}>
-               <ChevronLeft size={28} color="#0D9488" />
-            </TouchableOpacity>
-            <Text style={styles.selectionTitle}>Toss Details</Text>
-            <View style={{ width: 40 }} />
-         </View>
-
-         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 24, alignItems: 'center' }}>
-            <Text style={styles.configLabel}>Flip the Coin</Text>
-            <TouchableOpacity 
-              style={[styles.coin, isFlipping && styles.coinFlipping]} 
-              onPress={handleFlip}
-              disabled={isFlipping}
-            >
-               <View style={styles.coinInner}>
-                  <Text style={styles.coinText}>{isFlipping ? '?' : '₹'}</Text>
-               </View>
-            </TouchableOpacity>
-            <Text style={styles.tapToFlipText}>{isFlipping ? 'Flipping...' : 'Tap for randomized result'}</Text>
-
-            <View style={{ width: '100%', marginTop: 40 }}>
-               <Text style={styles.configLabel}>Who won the toss?</Text>
-               <View style={styles.tossWinnerSelection}>
-                  {[selectedTeamA, selectedTeamB].map(team => (
-                    <TouchableOpacity 
-                      key={team?.id} 
-                      style={[styles.tossTeamBtn, tossResult.winner?.id === team?.id && styles.tossTeamBtnActive]}
-                      onPress={() => setTossResult({ ...tossResult, winner: team })}
-                    >
-                       <View style={[styles.miniAvatar, { backgroundColor: team?.bgColor || '#3B82F6', marginBottom: 8 }]}>
-                          <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>{team?.initials}</Text>
-                       </View>
-                       <Text style={[styles.tossTeamName, tossResult.winner?.id === team?.id && styles.tossTeamNameActive]}>{team?.name}</Text>
-                    </TouchableOpacity>
-                  ))}
-               </View>
-            </View>
-
-            {tossResult.winner && (
-              <View style={{ width: '100%', marginTop: 32 }}>
-                 <Text style={styles.configLabel}>{tossResult.winner.name} won and elected to:</Text>
-                 <View style={styles.decisionRow}>
-                    {['Bat', 'Bowl'].map(d => (
-                      <TouchableOpacity 
-                        key={d} 
-                        style={[styles.decisionBtn, tossResult.decision === d.toLowerCase() && styles.decisionBtnActive]}
-                        onPress={() => setTossResult({ ...tossResult, decision: d.toLowerCase() as any })}
-                      >
-                         <Text style={[styles.decisionText, tossResult.decision === d.toLowerCase() && styles.decisionTextActive]}>{d}</Text>
-                      </TouchableOpacity>
-                    ))}
-                 </View>
-              </View>
-            )}
-         </ScrollView>
-
-         <View style={styles.configFooter}>
-            <TouchableOpacity 
-              style={[styles.startMatchMainBtn, (!tossResult.winner || !tossResult.decision) && { opacity: 0.5 }]}
-              disabled={!tossResult.winner || !tossResult.decision}
-              onPress={() => {
-                setIsConfiguringToss(false);
-                setIsSelectingOpeners(true);
-              }}
-            >
-               <Text style={styles.startMatchMainBtnText}>Ready to Play</Text>
-            </TouchableOpacity>
-         </View>
-      </View>
-    );
-  };
-
-  const renderMatchOfficials = () => (
-    <View style={styles.selectionView}>
-       <View style={styles.selectionHeader}>
-          <TouchableOpacity onPress={() => setIsConfiguringOfficials(false)}>
-             <ChevronRight size={28} color="#0D9488" style={{ transform: [{ rotate: '180deg' }] }} />
-          </TouchableOpacity>
-          <Text style={styles.selectionTitle}>Match Officials</Text>
-          <View style={{ width: 40 }} />
-       </View>
-
-       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
-          <View style={{ gap: 24 }}>
-             <View>
-                <Text style={styles.officialGroupTitle}>Umpires</Text>
-                {[0, 1, 2, 3].map(i => (
-                  <TouchableOpacity 
-                    key={i} 
-                    style={styles.officialInputRow}
-                    onPress={() => {
-                      setActiveOfficialSlot({ category: 'umpires', index: i });
-                      setIsSearchingOfficial(true);
-                    }}
-                  >
-                     <User size={18} color="#9CA3AF" />
-                     <Text style={[styles.officialValueText, !matchConfig.officials.umpires[i] && styles.officialPlaceholderText]}>
-                        {matchConfig.officials.umpires[i] || `Select Umpire ${i + 1}`}
-                     </Text>
-                  </TouchableOpacity>
-                ))}
-             </View>
-
-             <View>
-                <Text style={styles.officialGroupTitle}>Scorers</Text>
-                {[0, 1].map(i => (
-                  <TouchableOpacity 
-                    key={i} 
-                    style={styles.officialInputRow}
-                    onPress={() => {
-                      setActiveOfficialSlot({ category: 'scorers', index: i });
-                      setIsSearchingOfficial(true);
-                    }}
-                  >
-                     <Menu size={18} color="#9CA3AF" />
-                     <Text style={[styles.officialValueText, !matchConfig.officials.scorers[i] && styles.officialPlaceholderText]}>
-                        {matchConfig.officials.scorers[i] || `Select Scorer ${i + 1}`}
-                     </Text>
-                  </TouchableOpacity>
-                ))}
-             </View>
-
-             <View>
-                <Text style={styles.officialGroupTitle}>Match Referee</Text>
-                <TouchableOpacity 
-                  style={styles.officialInputRow}
-                  onPress={() => {
-                    setActiveOfficialSlot({ category: 'referee' });
-                    setIsSearchingOfficial(true);
-                  }}
-                >
-                   <UserSquare2 size={18} color="#9CA3AF" />
-                   <Text style={[styles.officialValueText, !matchConfig.officials.referee && styles.officialPlaceholderText]}>
-                      {matchConfig.officials.referee || "Select Match Referee"}
-                   </Text>
-                </TouchableOpacity>
-             </View>
-
-             <View>
-                <Text style={styles.officialGroupTitle}>Live Streamer</Text>
-                <TouchableOpacity 
-                  style={styles.officialInputRow}
-                  onPress={() => {
-                    setActiveOfficialSlot({ category: 'streamer' });
-                    setIsSearchingOfficial(true);
-                  }}
-                >
-                   <Video size={18} color="#9CA3AF" />
-                   <Text style={[styles.officialValueText, !matchConfig.officials.streamer && styles.officialPlaceholderText]}>
-                      {matchConfig.officials.streamer || "Select Live Streamer"}
-                   </Text>
-                </TouchableOpacity>
-             </View>
-
-             <View>
-                <Text style={styles.officialGroupTitle}>Commentators</Text>
-                {[0, 1].map(i => (
-                  <TouchableOpacity 
-                    key={i} 
-                    style={styles.officialInputRow}
-                    onPress={() => {
-                      setActiveOfficialSlot({ category: 'commentators', index: i });
-                      setIsSearchingOfficial(true);
-                    }}
-                  >
-                     <Mic2 size={18} color="#9CA3AF" />
-                     <Text style={[styles.officialValueText, !matchConfig.officials.commentators[i] && styles.officialPlaceholderText]}>
-                        {matchConfig.officials.commentators[i] || `Select Commentator ${i + 1}`}
-                     </Text>
-                  </TouchableOpacity>
-                ))}
-             </View>
-          </View>
-       </ScrollView>
-
-       <View style={styles.configFooter}>
-          <TouchableOpacity 
-            style={styles.startMatchMainBtn}
-            onPress={() => setIsConfiguringOfficials(false)}
-          >
-             <Text style={styles.startMatchMainBtnText}>Save Officials</Text>
-          </TouchableOpacity>
-       </View>
-    </View>
-  );
-
-  const renderOfficialSearch = () => {
-    const mockOfficials = [
-      { name: 'Nitin Menon', phone: '9876543210', role: 'Umpire' },
-      { name: 'Richard Kettleborough', phone: '8765432109', role: 'Umpire' },
-      { name: 'Harsha Bhogle', phone: '7654321098', role: 'Commentator' }
-    ];
-
-    const filtered = mockOfficials.filter(o => o.phone.includes(searchQuery) || o.name.toLowerCase().includes(searchQuery.toLowerCase()));
-
-    const handleSelect = (official: any) => {
-      if (!activeOfficialSlot) return;
-      const { category, index } = activeOfficialSlot;
-      const newOfficials = { ...matchConfig.officials };
-      
-      if (typeof index === 'number') {
-        const arr = [...(newOfficials as any)[category]];
-        arr[index] = official.name;
-        (newOfficials as any)[category] = arr;
-      } else {
-        (newOfficials as any)[category] = official.name;
-      }
-
-      setMatchConfig({ ...matchConfig, officials: newOfficials });
-      setIsSearchingOfficial(false);
-      setSearchQuery('');
-    };
-
-    return (
-      <View style={styles.selectionView}>
-         <View style={styles.selectionHeader}>
-            <TouchableOpacity onPress={() => setIsSearchingOfficial(false)}>
-               <ChevronRight size={28} color="#0D9488" style={{ transform: [{ rotate: '180deg' }] }} />
-            </TouchableOpacity>
-            <Text style={styles.selectionTitle}>Search Official</Text>
-            <View style={{ width: 40 }} />
-         </View>
-
-         <View style={[styles.searchBarContainer, { marginHorizontal: 20 }]}>
-            <Search size={18} color="#9CA3AF" />
-            <TextInput 
-              placeholder="Search by name or priority phone..."
-              placeholderTextColor="#9CA3AF"
-              style={styles.searchInput}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              keyboardType="number-pad"
-            />
-         </View>
-
-         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
-            {filtered.length > 0 ? (
-              filtered.map((o, idx) => (
-                <TouchableOpacity key={idx} style={styles.officialResultCard} onPress={() => handleSelect(o)}>
-                   <View style={styles.miniAvatar}><Text style={{ color: '#FFFFFF' }}>{o.name[0]}</Text></View>
-                   <View style={{ flex: 1 }}>
-                      <Text style={styles.resultName}>{o.name}</Text>
-                      <Text style={styles.resultPhone}>{o.phone}</Text>
-                   </View>
-                   <Text style={styles.resultRole}>{o.role}</Text>
-                </TouchableOpacity>
-              ))
-            ) : (
-              <View style={styles.noResultArea}>
-                 <Search size={48} color="#E5E7EB" />
-                 <Text style={styles.noResultTitle}>No official found</Text>
-                 <Text style={styles.noResultSub}>Try searching with a full mobile number</Text>
-                 
-                 <TouchableOpacity 
-                   style={styles.addNewOfficialBtn}
-                   onPress={() => {
-                     setNewOfficialForm({ name: '', phone: searchQuery });
-                     setIsAddOfficialModalVisible(true);
-                   }}
-                 >
-                    <Plus size={20} color="#0D9488" />
-                    <Text style={styles.addNewOfficialText}>Add & Register "{searchQuery || 'New Official'}"</Text>
-                 </TouchableOpacity>
-              </View>
-            )}
-         </ScrollView>
-
-         {/* Add Official Modal */}
-         <Modal
-           animationType="slide"
-           transparent={true}
-           visible={isAddOfficialModalVisible}
-           onRequestClose={() => setIsAddOfficialModalVisible(false)}
-         >
-           <TouchableOpacity 
-              style={styles.modalOverlay}
-              activeOpacity={1}
-              onPress={() => setIsAddOfficialModalVisible(false)}
-           >
-              <Pressable 
-                style={styles.modalContent} 
-                onPress={e => Platform.OS === 'web' && (e as any).stopPropagation()}
-              >
-                 <View style={styles.modalHeader}>
-                    <Text style={styles.modalTitle}>Register New Official</Text>
-                    <TouchableOpacity onPress={() => setIsAddOfficialModalVisible(false)}>
-                       <X size={24} color="#6B7280" />
-                    </TouchableOpacity>
-                 </View>
-
-                 <View style={styles.formGroup}>
-                    <Text style={styles.label}>Official Name</Text>
-                    <TextInput 
-                      style={styles.formInput}
-                      placeholder="e.g. Richard Illingworth"
-                      value={newOfficialForm.name}
-                      onChangeText={val => setNewOfficialForm({ ...newOfficialForm, name: val })}
-                    />
-                 </View>
-
-                 <View style={styles.formGroup}>
-                    <Text style={styles.label}>Mobile Number</Text>
-                    <TextInput 
-                      style={styles.formInput}
-                      placeholder="+91 00000 00000"
-                      keyboardType="number-pad"
-                      value={newOfficialForm.phone}
-                      onChangeText={val => setNewOfficialForm({ ...newOfficialForm, phone: val })}
-                    />
-                 </View>
-
-                 <TouchableOpacity 
-                   style={[styles.submitBtn, isSubmitting && { opacity: 0.7 }]}
-                   onPress={handleCreateOfficial}
-                   disabled={isSubmitting}
-                 >
-                    <Text style={styles.submitBtnText}>{isSubmitting ? 'Registering...' : 'Register & Select Official'}</Text>
-                 </TouchableOpacity>
-              </Pressable>
-           </TouchableOpacity>
-         </Modal>
-      </View>
-    );
-  };
-
-  const [isConfiguringOfficials, setIsConfiguringOfficials] = useState(false);
-
-  const renderMoreActionsSheet = () => {
-    const gridItems = [
-      { id: 'help', label: 'Need Help', icon: HelpCircle },
-      { id: 'rules', label: 'Match Rules', icon: Settings },
-      { id: 'scorer', label: 'Change Scorer', icon: UserSquare2 },
-      { id: 'squad', label: 'Change Squad', icon: Users },
-      { id: 'scorecard', label: 'Full Scorecard', icon: LayoutGrid },
-      { id: 'overs', label: 'Match Overs', icon: Clock },
-      { id: 'replace', label: 'Replace Batters', icon: RotateCcw },
-      { id: 'bonus', label: 'Bonus Runs', icon: PlusCircle },
-      { id: 'dropped', label: 'Dropped Catch', icon: Hand },
-      { id: 'saved', label: 'Runs Saved/Missed', icon: TrendingUp },
-      { id: 'keeper', label: 'Change Keeper', icon: UserSquare2 },
-      { id: 'breaks', label: 'Match Breaks', icon: Coffee },
-      { id: 'powerplay', label: 'Power Play', icon: Zap },
-      { id: 'target', label: 'Revise Target', icon: Target },
-      { id: 'bowler', label: 'Change Bowler', icon: RefreshCw },
-      { id: 'hurt', label: 'Retired Hurt (Batter)', icon: UserMinus },
-    ];
-
-    return (
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={isMoreSheetVisible}
-        onRequestClose={() => setIsMoreSheetVisible(false)}
-      >
-        <TouchableOpacity 
-          style={styles.sheetOverlay} 
-          activeOpacity={1} 
-          onPress={() => setIsMoreSheetVisible(false)}
-        >
-          <View style={styles.sheetContent}>
-             <View style={styles.sheetHandle} />
-             <ScrollView contentContainerStyle={styles.sheetGrid}>
-                {gridItems.map(item => (
-                  <TouchableOpacity 
-                    key={item.id} 
-                    style={styles.sheetGridItem}
-                    onPress={() => {
-                       alert(`Action: ${item.label}`);
-                       setIsMoreSheetVisible(false);
-                    }}
-                  >
-                     <View style={styles.sheetIconBox}>
-                        <item.icon size={26} color="#111827" strokeWidth={1.5} />
-                     </View>
-                     <Text style={styles.sheetItemLabel}>{item.label}</Text>
-                  </TouchableOpacity>
-                ))}
-             </ScrollView>
-             <TouchableOpacity 
-               style={styles.showLessBtn}
-               onPress={() => setIsMoreSheetVisible(false)}
-             >
-                <Text style={styles.showLessText}>Show less</Text>
-             </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-    );
-  };
-  
-  const renderExtraRunsSelector = () => {
-    if (!isExtraRunsSelectorVisible || !activeExtraType) return null;
-
-    const runOptions = [0, 1, 2, 3, 4, 5, 6, 7, 8];
-    const typeLabel = activeExtraType === 'wide' ? 'WIDE' : activeExtraType === 'noball' ? 'NO BALL' : activeExtraType === 'bye' ? 'BYE' : 'LEG BYE';
-
-    return (
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={isExtraRunsSelectorVisible}
-        onRequestClose={() => setIsExtraRunsSelectorVisible(false)}
-      >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
-          onPress={() => setIsExtraRunsSelectorVisible(false)}
-        >
-          <View style={styles.extraSelectorContent}>
-             <Text style={styles.extraSelectorTitle}>Extras: {typeLabel}</Text>
-             <Text style={styles.extraSelectorDesc}>Select additional runs (if any)</Text>
-             <View style={styles.extraRunsGrid}>
-                {runOptions.map(runs => (
-                  <TouchableOpacity 
-                    key={runs} 
-                    style={styles.extraRunTile}
-                    onPress={() => {
-                       handleAddExtra(activeExtraType, runs);
-                       setIsExtraRunsSelectorVisible(false);
-                       setActiveExtraType(null);
-                    }}
-                  >
-                     <Text style={styles.extraRunTileText}>+{runs}</Text>
-                  </TouchableOpacity>
-                ))}
-             </View>
-             <TouchableOpacity 
-               style={styles.cancelExtraBtn}
-               onPress={() => setIsExtraRunsSelectorVisible(false)}
-             >
-                <Text style={styles.cancelExtraText}>Cancel</Text>
-             </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-    );
-  };
-
-  const renderScoringSettingsSidebar = () => {
-    const sections = [
-      {
-        title: 'Match Settings',
-        options: [
-          'Change Match Overs', 
-          'Match Rules (WD, NB, WW)', 
-          'Revise Target (DLS/VJD)',
-          'Add Bonus Runs',
-          'Give Penalty Runs',
-          'End / Declare Innings',
-          'End Match'
-        ]
-      },
-      {
-        title: 'Players Settings',
-        options: [
-          'Change Playing Squad',
-          'Change Bowler',
-          'Replace Batters',
-          'Retired Hurt (Batter)'
-        ]
-      },
-      {
-        title: 'Scorer Settings',
-        options: [
-          'Change Scorer',
-          'Add Match Officials/Streamer',
-          'Select Power Play Overs',
-          'Set Match Breaks (Lunch, Drinks, etc.)',
-          'Add Scorer Notes'
-        ]
-      },
-      {
-        title: 'Other Options',
-        options: ['Scoring Help']
-      }
-    ];
-
-    const closeDrawer = () => {
-      Animated.timing(drawerAnim, {
-        toValue: 400,
-        duration: 250,
-        useNativeDriver: true,
-      }).start(() => {
-        setIsScoringSettingsVisible(false);
-      });
-    };
-
-    return (
-      <Modal
-        animationType="fade"
-        transparent={true}
-        visible={isScoringSettingsVisible}
-        onRequestClose={closeDrawer}
-      >
-        <TouchableOpacity 
-          style={styles.drawerOverlay} 
-          activeOpacity={1} 
-          onPress={closeDrawer}
-        >
-          <Animated.View 
-            style={[
-              styles.drawerContent,
-              { transform: [{ translateX: drawerAnim }] }
-            ]}
-          >
-             <View style={styles.drawerHeader}>
-                <Text style={styles.drawerTitle}>Settings</Text>
-                <TouchableOpacity onPress={closeDrawer}>
-                   <X size={24} color="#111827" />
-                </TouchableOpacity>
-             </View>
-
-             <ScrollView style={{ flex: 1 }}>
-                {sections.map(section => (
-                  <View key={section.title} style={styles.settingSection}>
-                     <TouchableOpacity 
-                       style={styles.sectionHeaderRow}
-                       onPress={() => setExpandedSettingSection(expandedSettingSection === section.title ? null : section.title)}
-                     >
-                        <Text style={styles.sectionHeaderTextMenu}>{section.title}</Text>
-                        {expandedSettingSection === section.title ? <ChevronDown size={20} color="#6B7280" /> : <ChevronRight size={20} color="#6B7280" />}
-                     </TouchableOpacity>
-
-                     {expandedSettingSection === section.title && (
-                       <View style={styles.sectionOptionsList}>
-                          {section.options.map(opt => (
-                            <TouchableOpacity 
-                              key={opt} 
-                              style={styles.settingOptionRow}
-                              onPress={() => {
-                                // Implement handlers here
-                                alert(`Opening: ${opt}`);
-                              }}
-                            >
-                               <Text style={styles.settingOptionText}>{opt}</Text>
-                            </TouchableOpacity>
-                          ))}
-                       </View>
-                     )}
-                  </View>
-                ))}
-             </ScrollView>
-          </Animated.View>
-        </TouchableOpacity>
-      </Modal>
-    );
-  };
-
-  const renderTeamProfileView = () => (
-    <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-      <View style={styles.profileHeader}>
-        <View style={styles.profileHeaderTop}>
-          <TouchableOpacity onPress={() => setIsAddPlayerViewVisible(false)}>
-            <ChevronRight size={28} color="#FFFFFF" style={{ transform: [{ rotate: '180deg' }] }} />
-          </TouchableOpacity>
-          <View style={styles.headerIcons}>
-            <TouchableOpacity onPress={() => {
-              setActiveTeamForQr(activeTeamForPlayers);
-              setIsQrModalVisible(true);
-            }}>
-              <QrCode size={22} color="#FFFFFF" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setProfileSubTab('stats')}>
-              <Sliders size={22} color="#FFFFFF" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleShareTeam(activeTeamForPlayers)}>
-              <Share2 size={22} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={styles.profileInfoRow}>
-          <View style={[styles.profileAvatar, { backgroundColor: activeTeamForPlayers?.bgColor || '#3B82F6' }]}>
-            <Text style={styles.profileAvatarText}>{activeTeamForPlayers?.initials || 'T'}</Text>
-          </View>
-          <View>
-            <Text style={styles.profileNameText}>{activeTeamForPlayers?.name}</Text>
-            <Text style={styles.profileMetaText}>Since 2026 • {activeTeamForPlayers?.location}</Text>
-          </View>
-        </View>
-
-        <View style={styles.profileActionsRow}>
-          <TouchableOpacity style={styles.rankBtn}>
-             <Trophy size={18} color="#FFFFFF" />
-             <Text style={styles.rankBtnText}>Team Rank</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.insightsBtn}>
-             <BarChart3 size={18} color="#FFFFFF" />
-             <Text style={styles.insightsBtnText}>Insights</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={styles.profileTabsFixed}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 24 }}>
-          {['Matches', 'Leaderboard', 'Stats', 'Members', 'Trophies', 'Photos', 'Profile'].map(tab => (
-            <TouchableOpacity 
-              key={tab} 
-              onPress={() => setProfileSubTab(tab.toLowerCase())}
-              style={[styles.profileSubTab, profileSubTab === tab.toLowerCase() && styles.profileSubTabActive]}
-            >
-               <Text style={[styles.profileSubTabText, profileSubTab === tab.toLowerCase() && styles.profileSubTabTextActive]}>{tab}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
-         {renderProfileSubContent()}
-      </ScrollView>
-    </View>
-  );
-
-  const renderProfileSubContent = () => {
-    switch (profileSubTab) {
-      case 'matches':
-        return (
-          <View style={{ gap: 12 }}>
-            <Text style={styles.sectionHeading}>Upcoming Matches</Text>
-            {MATCHES_DATA.slice(0, 1).map(match => <MatchCard key={match.id} match={match} />)}
-            <Text style={[styles.sectionHeading, { marginTop: 20 }]}>Past Matches</Text>
-            <View style={styles.profilePlaceholder}>
-               <History size={48} color="#E5E7EB" />
-               <Text style={styles.placeholderTitle}>No past matches</Text>
-            </View>
-          </View>
-        );
-      case 'members':
-        return (
-          <View>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-               <Text style={styles.sectionHeading}>{teamMembers.length} Members</Text>
-               <TouchableOpacity style={styles.addMemberSmallBtn} onPress={() => setManagementTab('squad')}>
-                  <Plus size={16} color="#0D9488" />
-                  <Text style={styles.addMemberSmallText}>Add New</Text>
-               </TouchableOpacity>
-            </View>
-            {teamMembers.map((member, idx) => (
-              <View key={idx} style={[styles.playerCardRow, { borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: '#F3F4F6' }]}>
-                 <View style={styles.avatarCircle}>
-                    <User size={24} color="#6B7280" />
-                 </View>
-                 <View>
-                    <Text style={styles.playerNameText}>{member.player_name}</Text>
-                    <Text style={{ fontSize: 12, color: '#6B7280' }}>All-rounder</Text>
-                 </View>
-              </View>
-            ))}
-          </View>
-        );
-      case 'stats':
-        return (
-          <View style={{ gap: 16 }}>
-             <View style={styles.statsSummaryGrid}>
-                {[
-                  { label: 'Matches', value: '12', color: '#3B82F6' },
-                  { label: 'Won', value: '8', color: '#10B981' },
-                  { label: 'Lost', value: '4', color: '#EF4444' },
-                  { label: 'Win %', value: '66%', color: '#F59E0B' }
-                ].map((stat, i) => (
-                  <View key={i} style={styles.statBox}>
-                     <Text style={[styles.statBoxValue, { color: stat.color }]}>{stat.value}</Text>
-                     <Text style={styles.statBoxLabel}>{stat.label}</Text>
-                  </View>
-                ))}
-             </View>
-             <View style={styles.performanceChart}>
-                <Text style={styles.sectionHeading}>Team Form</Text>
-                <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-                   {['W', 'W', 'L', 'W', 'W'].map((r, i) => (
-                     <View key={i} style={[styles.formCircle, { backgroundColor: r === 'W' ? '#10B981' : '#EF4444' }]}>
-                        <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 12 }}>{r}</Text>
-                     </View>
-                   ))}
-                </View>
-             </View>
-          </View>
-        );
-      case 'trophies':
-        return (
-          <View style={styles.trophyGrid}>
-             <View style={styles.trophyBox}>
-                <Trophy size={40} color="#F59E0B" />
-                <Text style={styles.trophyYear}>2025</Text>
-                <Text style={styles.trophyEvent}>City Premier League</Text>
-             </View>
-             <View style={[styles.trophyBox, { opacity: 0.3, borderStyle: 'dashed' }]}>
-                <Trophy size={40} color="#9CA3AF" />
-                <Text style={{ color: '#9CA3AF', fontSize: 12, marginTop: 8 }}>Next Trophy?</Text>
-             </View>
-          </View>
-        );
-      case 'leaderboard':
-        return (
-          <View style={{ gap: 12 }}>
-             <View style={styles.leaderboardSubTabs}>
-                {['Bat', 'Bowl', 'Field', 'Partnership'].map(st => (
-                  <TouchableOpacity 
-                    key={st} 
-                    style={[styles.lbSubTab, leaderboardSubTab === st.toLowerCase() && styles.lbSubTabActive]}
-                    onPress={() => setLeaderboardSubTab(st.toLowerCase())}
-                  >
-                     <Text style={[styles.lbSubTabText, leaderboardSubTab === st.toLowerCase() && styles.lbSubTabTextActive]}>{st}</Text>
-                  </TouchableOpacity>
-                ))}
-             </View>
-             
-             <Text style={styles.sectionHeading}>Top {leaderboardSubTab} ranking</Text>
-             {teamMembers.length > 0 ? teamMembers.slice(0, 3).map((m, i) => (
-               <View key={i} style={styles.leaderboardRow}>
-                  <Text style={styles.rankNum}>{i+1}</Text>
-                  <View style={[styles.miniAvatar, { backgroundColor: i === 0 ? '#F59E0B' : '#3B82F6' }]}><Text style={{ color: '#FFFFFF', fontSize: 10 }}>{m.player_name[0]}</Text></View>
-                  <View style={{ flex: 1 }}>
-                     <Text style={{ fontWeight: '700' }}>{m.player_name}</Text>
-                     <Text style={{ fontSize: 11, color: '#6B7280' }}>8 matches played</Text>
-                  </View>
-                  <View style={{ alignItems: 'flex-end' }}>
-                     <Text style={{ color: '#0D9488', fontWeight: '800' }}>{400 + (100 - i * 20)} pts</Text>
-                     <Text style={{ fontSize: 10, color: '#9CA3AF' }}>Avg: {45 - i*5}.2</Text>
-                  </View>
-               </View>
-             )) : (
-                <View style={[styles.profilePlaceholder, { paddingTop: 20 }]}>
-                   <BarChart3 size={40} color="#E5E7EB" />
-                   <Text style={styles.placeholderTitle}>No stats yet</Text>
-                </View>
-             )}
-          </View>
-        );
-      default:
-        return (
-          <View style={styles.profilePlaceholder}>
-            <Image source={{ uri: 'https://images.pexels.com/photos/3628912/pexels-photo-3628912.jpeg' }} style={styles.placeholderImg} />
-            <Text style={styles.placeholderTitle}>No {profileSubTab} yet</Text>
-            <Text style={styles.placeholderDesc}>Start playing matches to see your {profileSubTab} here.</Text>
-          </View>
-        );
-    }
-  };
-
-  const renderAddPlayerView = () => (
-    <Modal
-      animationType="fade"
-      transparent={true}
-      visible={isAddPlayerViewVisible}
-      onRequestClose={() => setIsAddPlayerViewVisible(false)}
-    >
-      <TouchableOpacity 
-        style={styles.modalOverlay}
-        activeOpacity={1}
-        onPress={() => setIsAddPlayerViewVisible(false)}
-      >
-        <Pressable 
-          style={[styles.addPlayerModalContent, managementTab === 'profile' && { height: '95%', padding: 0 }]} 
-          onPress={(e) => {
-            if (Platform.OS === 'web') {
-              (e as any).stopPropagation();
-            }
-          }}
-        >
-          {managementTab === 'profile' ? renderTeamProfileView() : (
-          <View style={{ flex: 1 }}>
-          <View style={styles.addPlayerHeader}>
-            <TouchableOpacity onPress={() => setIsAddPlayerViewVisible(false)}>
-               <X size={24} color="#6B7280" />
-            </TouchableOpacity>
-            <Text style={styles.addPlayerTitle}>Add Player</Text>
-            <View style={{ width: 24 }} />
-          </View>
-
-          <ScrollView style={styles.addPlayerScroll} showsVerticalScrollIndicator={false}>
-            <View style={styles.activeTeamInfo}>
-               <View style={[styles.teamAvatarLarge, activeTeamForPlayers?.bgColor && { backgroundColor: activeTeamForPlayers.bgColor }]}>
-                  {activeTeamForPlayers?.image ? <Image source={{ uri: activeTeamForPlayers.image }} style={styles.teamImage} /> : <Text style={styles.teamInitialsLarge}>{activeTeamForPlayers?.initials}</Text>}
-               </View>
-               <Text style={styles.activeTeamName}>{activeTeamForPlayers?.name}</Text>
-               <Text style={styles.activeTeamMeta}>{activeTeamForPlayers?.location}</Text>
-            </View>
-
-            <View style={styles.assignAdminBanner}>
-               <View style={styles.adminBadge}>
-                  <Text style={styles.adminBadgeText}>A</Text>
-               </View>
-               <Text style={styles.adminBannerText}>Assign Admin of the Team</Text>
-            </View>
-
-            <TouchableOpacity style={styles.promoBanner}>
-               <View style={styles.promoContent}>
-                  <View style={styles.promoIconPlaceholder} />
-                  <Text style={styles.promoText}>Get Squad Banners</Text>
-               </View>
-               <ChevronRight size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-
-            <View style={styles.squadSection}>
-               {teamMembers.length > 0 ? (
-                 teamMembers.map((member, idx) => (
-                   <View key={idx} style={styles.playerCardRow}>
-                      <View style={styles.playerAvatar}>
-                         {/* Placeholder image or initial */}
-                         <View style={styles.avatarCircle}>
-                            <Users size={24} color="#6B7280" />
-                         </View>
-                         <View style={styles.onlineDot} />
-                      </View>
-                      <Text style={styles.playerNameText}>{member.player_name}</Text>
-                   </View>
-                 ))
-               ) : (
-                 <View style={{ paddingTop: 20 }}>
-                    <Text style={styles.sectionHeading}>Invite players via</Text>
-                    
-                    <View style={styles.inviteContainer}>
-                       <View style={styles.inviteLabelRow}>
-                          <Text style={styles.inviteLabel}>Team Link</Text>
-                          <Share2 size={20} color="#0D9488" />
-                       </View>
-                       
-                       <View style={styles.linkBox}>
-                          <View style={styles.linkIconWrapper}>
-                             <Link size={20} color="#0D9488" />
-                          </View>
-                          <Text style={styles.linkText} numberOfLines={2}>
-                            https://bookyourground.com/invite-team/{activeTeamForPlayers?.id}
-                          </Text>
-                       </View>
-
-                       <TouchableOpacity 
-                         style={styles.shareBtn}
-                         onPress={() => handleShareTeam(activeTeamForPlayers)}
-                       >
-                          <Text style={styles.shareBtnText}>Share With Captain/players</Text>
-                       </TouchableOpacity>
-                    </View>
-
-                    <Text style={[styles.sectionHeading, { marginTop: 32 }]}>Manually add players via</Text>
-                    
-                    <TouchableOpacity 
-                      style={styles.manualOption}
-                      onPress={() => setIsAddMemberModalVisible(true)}
-                    >
-                       <View style={styles.optionCircle}>
-                          <Smartphone size={24} color="#0D9488" />
-                       </View>
-                       <View style={styles.optionContent}>
-                          <Text style={styles.optionTitle}>Add via Phone Number</Text>
-                          <Text style={styles.optionSubtext}>Best for adding multiple players quickly.</Text>
-                       </View>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity 
-                      style={styles.manualOption}
-                      onPress={() => setIsContactPickerVisible(true)}
-                    >
-                       <View style={styles.optionCircle}>
-                          <UserPlus size={24} color="#0D9488" />
-                       </View>
-                       <View style={styles.optionContent}>
-                          <Text style={styles.optionTitle}>Add from Contacts</Text>
-                          <Text style={styles.optionSubtext}>Best if players are already in your contacts.</Text>
-                       </View>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity 
-                      style={styles.manualOption}
-                      onPress={() => {
-                        setActiveTeamForQr(activeTeamForPlayers);
-                        setIsQrModalVisible(true);
-                      }}
-                    >
-                       <View style={styles.optionCircle}>
-                          <QrCode size={24} color="#0D9488" />
-                       </View>
-                       <View style={styles.optionContent}>
-                          <Text style={styles.optionTitle}>Team QR code</Text>
-                          <Text style={styles.optionSubtext}>Scan and add players directly in team via QR code.</Text>
-                       </View>
-                    </TouchableOpacity>
-                 </View>
-               )}
-            </View>
-          </ScrollView>
-          </View>
-          )}
-
-          <View style={styles.squadFooter}>
-             <TouchableOpacity 
-               style={[styles.footerTab, managementTab === 'profile' && styles.footerTabActive]}
-               onPress={() => setManagementTab('profile')}
-             >
-                <Text style={[styles.footerTabText, managementTab === 'profile' && styles.footerTabTextActive]}>Team Profile</Text>
-             </TouchableOpacity>
-             <TouchableOpacity 
-               style={[styles.footerTab, managementTab === 'squad' && styles.footerTabActive]}
-               onPress={() => setManagementTab('squad')}
-             >
-                <Text style={[styles.footerTabText, managementTab === 'squad' && styles.footerTabTextActive]}>Add Player</Text>
-             </TouchableOpacity>
-          </View>
-        </Pressable>
-    </TouchableOpacity>
-  </Modal>
-  );
-
-  const renderAddMemberModal = () => (
-    <Modal
-      animationType="fade"
-      transparent={true}
-      visible={isAddMemberModalVisible}
-      onRequestClose={() => setIsAddMemberModalVisible(false)}
-    >
-      <TouchableOpacity 
-        style={styles.modalOverlay}
-        activeOpacity={1}
-        onPress={() => setIsAddMemberModalVisible(false)}
-      >
-        <Pressable 
-          style={styles.modalContent} 
-          onPress={(e) => {
-            if (Platform.OS === 'web') {
-              (e as any).stopPropagation();
-            }
-          }}
-        >
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Add Player Manually</Text>
-            <TouchableOpacity onPress={() => setIsAddMemberModalVisible(false)}>
-              <X size={24} color="#6B7280" />
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Player Name</Text>
-            <TextInput
-              style={styles.formInput}
-              placeholder="e.g. MS Dhoni"
-              placeholderTextColor="#9CA3AF"
-              value={memberForm.name}
-              onChangeText={(text) => setMemberForm({ ...memberForm, name: text })}
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Phone Number</Text>
-            <TextInput
-              style={styles.formInput}
-              placeholder="+91 99999 00000"
-              placeholderTextColor="#9CA3AF"
-              keyboardType="number-pad"
-              value={memberForm.phone}
-              onChangeText={(text) => {
-                const digits = text.replace(/[^0-9]/g, '');
-                setMemberForm({ ...memberForm, phone: digits });
-              }}
-            />
-          </View>
-
-          <TouchableOpacity 
-            style={[styles.submitBtn, isSubmitting && { opacity: 0.7 }]} 
-            onPress={handleAddMember}
-            disabled={isSubmitting}
-          >
-            <Text style={styles.submitBtnText}>{isSubmitting ? 'Adding...' : 'Add Player to Squad'}</Text>
-          </TouchableOpacity>
-        </Pressable>
-      </TouchableOpacity>
-    </Modal>
-  );
-
-  const renderContactPicker = () => {
-    const mockContacts = [
-      { name: 'Arjun Sharma', phone: '+91 98765 43210', initials: 'AS' },
-      { name: 'Rohit Verma', phone: '+91 87654 32109', initials: 'RV' },
-      { name: 'Rahul Singh', phone: '+91 76543 21098', initials: 'RS' },
-      { name: 'Sandeep Mani', phone: '+91 65432 10987', initials: 'SM' },
-      { name: 'Vikram Batra', phone: '+91 54321 09876', initials: 'VB' },
-    ];
-
-    const filteredContacts = mockContacts.filter(c => 
-      c.name?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-
-    return (
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={isContactPickerVisible}
-        onRequestClose={() => setIsContactPickerVisible(false)}
-      >
-        <TouchableOpacity 
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={() => setIsContactPickerVisible(false)}
-        >
-          <Pressable 
-            style={[styles.modalContent, { height: '80%', paddingBottom: 0 }]} 
-            onPress={(e) => {
-              if (Platform.OS === 'web') {
-                (e as any).stopPropagation();
-              }
-            }}
-          >
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Contact</Text>
-              <TouchableOpacity onPress={() => setIsContactPickerVisible(false)}>
-                <X size={24} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={[styles.searchBarContainer, { marginHorizontal: 0, marginBottom: 16 }]}>
-              <Search size={16} color="#9CA3AF" />
-              <TextInput 
-                 placeholder="Search recent contacts..." 
-                 style={styles.searchInput}
-                 value={searchQuery}
-                 onChangeText={setSearchQuery}
-                 placeholderTextColor="#9CA3AF"
-              />
-            </View>
-
-            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
-              <Text style={[styles.label, { marginBottom: 12 }]}>Recent Selections</Text>
-              {filteredContacts.length > 0 ? filteredContacts.map((contact, idx) => (
-                <TouchableOpacity 
-                  key={idx} 
-                  style={styles.contactItem}
-                  onPress={() => {
-                    setMemberForm({ name: contact.name, phone: contact.phone });
-                    setIsContactPickerVisible(false);
-                    setIsAddMemberModalVisible(true);
-                  }}
-                >
-                  <View style={styles.contactAvatar}>
-                     <Text style={styles.contactInitial}>{contact.initials}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                     <Text style={styles.contactName}>{contact.name}</Text>
-                     <Text style={styles.contactPhone}>{contact.phone}</Text>
-                  </View>
-                  <ChevronRight size={18} color="#9CA3AF" />
-                </TouchableOpacity>
-              )) : (
-                <View style={{ padding: 40, alignItems: 'center' }}>
-                  <Users size={48} color="#E5E7EB" />
-                  <Text style={{ marginTop: 12, color: '#9CA3AF' }}>No contacts found</Text>
-                </View>
-              )}
-            </ScrollView>
-            
-            <View style={{ padding: 20, borderTopWidth: 1, borderTopColor: '#F3F4F6' }}>
-               <TouchableOpacity 
-                 style={[styles.submitBtn, { backgroundColor: '#F3F4F6', marginTop: 0 }]}
-                 onPress={() => {
-                   setIsContactPickerVisible(false);
-                   setIsAddMemberModalVisible(true);
-                 }}
-               >
-                  <Text style={[styles.submitBtnText, { color: '#374151' }]}>Don't see them? Add manually</Text>
-               </TouchableOpacity>
-            </View>
-          </Pressable>
-        </TouchableOpacity>
-      </Modal>
-    );
-  };
-
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'matches':
-        return (
-          <View style={{ flex: 1 }}>
-            <View style={styles.subTabContainer}>
-              {['All', 'Ongoing', 'Upcoming', 'Result'].map((label) => (
-                <TouchableOpacity
-                  key={label}
-                  style={[styles.subTab, subTab === label.toLowerCase() && styles.subTabActive]}
-                  onPress={() => setSubTab(label.toLowerCase())}
-                >
-                  <Text style={[styles.subTabText, subTab === label.toLowerCase() && styles.subTabTextActive]}>
-                    {label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <View style={styles.matchesList}>
-              {[...fetchedMatches, ...MATCHES_DATA]
-                .filter(m => {
-                  if (subTab === 'all') return true;
-                  if (subTab === 'ongoing') return m.status === 'Live';
-                  return m.status.toLowerCase() === subTab.toLowerCase();
-                })
-                .map(match => (
-                  <MatchCard key={match.id} match={match} />
-                ))
-              }
-            </View>
-          </View>
-        );
-      case 'tournaments':
-        return (
-          <View style={{ flex: 1 }}>
-            <View style={styles.subTabContainer}>
-              {['All', 'Participate', 'Network', 'Nearby'].map((label) => (
-                <TouchableOpacity key={label} style={[styles.subTab, subTab === label.toLowerCase() && styles.subTabActive]} onPress={() => setSubTab(label.toLowerCase())}>
-                  <Text style={[styles.subTabText, subTab === label.toLowerCase() && styles.subTabTextActive]}>{label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <View style={styles.matchesList}>
-               {TOURNAMENTS_DATA.map(tournament => (
-                 <TournamentCard key={tournament.id} tournament={tournament} />
-               ))}
-               <View style={styles.adBanner}>
-                  <Image source={{ uri: 'https://images.pexels.com/photos/1103970/pexels-photo-1103970.jpeg' }} style={styles.adImage} />
-                  <View style={styles.adOverlay}>
-                     <Text style={styles.adTitle}>Don't let good{'\n'}<Text style={styles.adTitleBold}>cricket go unseen</Text></Text>
-                     <TouchableOpacity style={styles.adBtn}><Text style={styles.adBtnText}>Stream now</Text></TouchableOpacity>
-                  </View>
-               </View>
-            </View>
-          </View>
-        );
-      case 'teams':
-        return (
-          <View style={{ flex: 1 }}>
-            <View style={styles.subTabContainer}>
-              {['Your', 'Opponents', 'Following'].map((label) => (
-                <TouchableOpacity key={label} style={[styles.subTab, subTab === label.toLowerCase() && styles.subTabActive]} onPress={() => setSubTab(label.toLowerCase())}>
-                  <Text style={[styles.subTabText, subTab === label.toLowerCase() && styles.subTabTextActive]}>{label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <View style={styles.searchBarContainer}>
-               <Search size={16} color="#9CA3AF" />
-               <TextInput placeholder="Quick search" placeholderTextColor="#9CA3AF" style={styles.searchInput} value={searchQuery} onChangeText={setSearchQuery} />
-            </View>
-            <View style={styles.matchesList}>
-               <CreateTeamCard />
-               {teams
-                 .filter(team => {
-                   const matchesSearch = team.name.toLowerCase().includes(searchQuery.toLowerCase());
-                   if (subTab === 'your') return team.isUserTeam && matchesSearch;
-                   return matchesSearch;
-                 })
-                 .map(team => (
-                 <TeamCard 
-                   key={team.id} 
-                   team={team} 
-                   onSelect={pickingFor ? handleTeamSelect : undefined}
-                 />
-               ))}
-               <View style={styles.adBanner}>
-                  <Image source={{ uri: 'https://images.pexels.com/photos/3771811/pexels-photo-3771811.jpeg' }} style={styles.adImage} />
-                  <View style={styles.adOverlay}>
-                     <Text style={styles.adTitle}>Find a more fulfilling job.{'\n'}<Text style={styles.adTitleBold}>LinkedIn</Text></Text>
-                     <TouchableOpacity style={styles.adBtn}><Text style={styles.adBtnText}>Get the app</Text></TouchableOpacity>
-                  </View>
-               </View>
-            </View>
-          </View>
-        );
-      case 'stats':
-        let currentStats = BATTING_STATS;
-        if (subTab === 'bowling') currentStats = BOWLING_STATS;
-        if (subTab === 'fielding') currentStats = FIELDING_STATS;
-        if (subTab === 'captain') currentStats = CAPTAIN_STATS;
-
-        return (
-          <View style={{ flex: 1 }}>
-            <View style={styles.statsPromoHeader}>
-               <Text style={styles.statsPromoText}>Want to improve your stats?</Text>
-               <TouchableOpacity style={styles.analyzeBtn}><Text style={styles.analyzeBtnText}>Analyze</Text></TouchableOpacity>
-            </View>
-
-            <View style={styles.statsFilterBar}>
-              {['Batting', 'Bowling', 'Fielding', 'Captain'].map((label) => (
-                <TouchableOpacity 
-                  key={label}
-                  style={[styles.statPill, subTab === label.toLowerCase() && styles.statPillActive]} 
-                  onPress={() => setSubTab(label.toLowerCase())}
-                >
-                  <Text style={[styles.statPillText, subTab === label.toLowerCase() && styles.statPillTextActive]}>{label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <View style={styles.statsContent}>
-               <View style={styles.statsSectionHeader}>
-                  <Text style={styles.statsSectionTitle}>Overall</Text>
-                  <TouchableOpacity style={styles.compareBtn}>
-                     <Users2 size={14} color="#FFFFFF" strokeWidth={2.5} />
-                     <Text style={styles.compareBtnText}>Compare</Text>
-                  </TouchableOpacity>
-               </View>
-
-               <View style={styles.statsGrid}>
-                  {currentStats.map((stat, idx) => (
-                    <View key={idx} style={[styles.statTile, subTab === 'captain' && { width: '23.5%' }]}>
-                       <Text style={styles.statValue}>{stat.value}</Text>
-                       <Text style={styles.statLabel}>{stat.label}</Text>
-                    </View>
-                  ))}
-               </View>
-
-               {/* Add dedicated Banner for Fielding/Captain selection */}
-               {(subTab === 'fielding' || subTab === 'captain') && (
-                 <View style={[styles.adBanner, { backgroundColor: '#E0F2FE' }]}>
-                    <Image source={{ uri: 'https://images.pexels.com/photos/356056/pexels-photo-356056.jpeg' }} style={styles.adImage} />
-                    <View style={styles.adOverlay}>
-                       <Text style={styles.adTitle}>Find products from the{'\n'}<Text style={styles.adTitleBold}>Best Collection</Text></Text>
-                       <TouchableOpacity style={[styles.adBtn, { backgroundColor: '#2563EB' }]}><Text style={styles.adBtnText}>Shop now</Text></TouchableOpacity>
-                    </View>
-                 </View>
-               )}
-
-               {subTab === 'captain' && (
-                 <View style={styles.captainFooter}>
-                    <Text style={styles.ballTypeLabel}>Leather ball 🎾</Text>
-                    
-                    <View style={styles.adBanner}>
-                        <Image source={{ uri: 'https://images.pexels.com/photos/159443/pexels-photo-159443.jpeg' }} style={styles.adImage} />
-                        <View style={styles.adOverlay}>
-                          <Text style={styles.adTitle}>Beat the summer!{'\n'}<Text style={styles.adTitleBold}>Blinkit</Text></Text>
-                          <TouchableOpacity style={[styles.adBtn, { backgroundColor: '#111827' }]}><Text style={styles.adBtnText}>Order Now</Text></TouchableOpacity>
-                        </View>
-                    </View>
-                 </View>
-               )}
-
-               {(subTab !== 'fielding' && subTab !== 'captain') && (
-                 <View style={styles.adBanner}>
-                    <Image source={{ uri: 'https://images.pexels.com/photos/1595385/pexels-photo-1595385.jpeg' }} style={styles.adImage} />
-                    <View style={styles.adOverlay}>
-                       <Text style={styles.adTitle}>Amazon Prime{'\n'}<Text style={styles.adTitleBold}>Join Prime at ₹125/month*</Text></Text>
-                       <TouchableOpacity style={styles.adBtn}><Text style={styles.adBtnText}>Install now</Text></TouchableOpacity>
-                    </View>
-                 </View>
-               )}
-            </View>
-          </View>
-        );
-      case 'highlights':
-        return (
-          <View style={styles.tabContent}>
-             <View style={styles.placeholderIconArea}><PlayCircle size={48} color="#01b854" /></View>
-            <Text style={styles.placeholderTitle}>Match Highlights</Text>
-            <Text style={styles.placeholderDesc}>Relive the best moments from recent matches. Watch videos and view gallery of top plays.</Text>
-          </View>
-        );
-      default:
-        return null;
-    }
-  };
-
-
-
-  const content = (
-    <View style={{ flex: 1 }}>
-      <View style={styles.scoringTopNav}>
-        <TouchableOpacity 
-          style={styles.backNavBtn}
-          onPress={() => router.push('/cricket/matches')}
-        >
-          <ChevronLeft size={20} color="#6B7280" />
-          <Text style={styles.backNavBtnText}>Back to Matches</Text>
-        </TouchableOpacity>
-      </View>
-      {isScoring ? renderLiveScoring() : (isSearchingOfficial ? renderOfficialSearch() : (isConfiguringOfficials ? renderMatchOfficials() : (isSelectingOpeners ? renderOpeningSelection() : (isConfiguringToss ? renderTossConfiguration() : (isConfiguringMatch ? renderMatchConfiguration() : (isSelectingTeams ? (isSelectingPlayers ? renderPlayerSelection() : renderTeamSelection()) : (
-        urlMatchId ? (
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <Text style={{ color: '#6B7280', fontSize: 16, fontWeight: '600' }}>Loading match data...</Text>
-          </View>
-        ) : (
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <TouchableOpacity 
-              style={{ backgroundColor: '#01b854', paddingHorizontal: 24, paddingVertical: 14, borderRadius: 8 }}
-              onPress={() => setIsSelectingTeams(true)}
-            >
-              <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 16 }}>Start New Match</Text>
-            </TouchableOpacity>
-          </View>
-        )
-      )))))))}
-    </View>
-  );
-
-  return (
-    <View style={{ flex: 1 }}>
-      {content}
-      {renderCreateTeamModal()}
-      {renderQrModal()}
-      {renderSuccessModal()}
-      {renderAddPlayerView()}
-      {renderAddMemberModal()}
-      {renderContactPicker()}
-    </View>
-  );
-}
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F3F4F6' },
@@ -5815,3 +2603,3466 @@ const styles = StyleSheet.create({
     color: '#0D9488',
   },
 });
+
+export default function CricketScreen() {
+  const [activeTab, setActiveTab] = useState('matches');
+  const [subTab, setSubTab] = useState('all'); 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isActionModalVisible, setIsActionModalVisible] = useState(false);
+  const [isCreateTeamModalVisible, setIsCreateTeamModalVisible] = useState(false);
+  const [showStateDropdown, setShowStateDropdown] = useState(false);
+  const [isSelectingTeams, setIsSelectingTeams] = useState(false);
+  const [isQrModalVisible, setIsQrModalVisible] = useState(false);
+  const [isSuccessModalVisible, setIsSuccessModalVisible] = useState(false);
+  const [isAddPlayerViewVisible, setIsAddPlayerViewVisible] = useState(false);
+  const [activeTeamForPlayers, setActiveTeamForPlayers] = useState<any>(null);
+  const [activeTeamForQr, setActiveTeamForQr] = useState<any>(null);
+  const [isAddMemberModalVisible, setIsAddMemberModalVisible] = useState(false);
+  const [isContactPickerVisible, setIsContactPickerVisible] = useState(false);
+  const [realContacts, setRealContacts] = useState<any[]>([]);
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
+  const [memberForm, setMemberForm] = useState({ name: '', phone: '' });
+  
+  const [managementTab, setManagementTab] = useState<'squad' | 'profile'>('squad');
+  const [profileSubTab, setProfileSubTab] = useState('matches');
+  const [leaderboardSubTab, setLeaderboardSubTab] = useState('bat');
+  const [teamForm, setTeamForm] = useState({ name: '', location: '', captain: '', image: '' });
+  const [isSelectingPlayers, setIsSelectingPlayers] = useState(false);
+  const [currentPickingSide, setCurrentPickingSide] = useState<'A' | 'B'>('A');
+  const [playingXiA, setPlayingXiA] = useState<any[]>([]);
+  const [playingXiB, setPlayingXiB] = useState<any[]>([]);
+  const [isConfiguringMatch, setIsConfiguringMatch] = useState(false);
+  const [isConfiguringToss, setIsConfiguringToss] = useState(false);
+  const [isSelectingOpeners, setIsSelectingOpeners] = useState(false);
+  const [isScoring, setIsScoring] = useState(false);
+  const [isSearchingOfficial, setIsSearchingOfficial] = useState(false);
+  const [isFlipping, setIsFlipping] = useState(false);
+  const [isConfiguringDismissal, setIsConfiguringDismissal] = useState(false);
+  const [dismissalState, setDismissalState] = useState<{
+    type: string,
+    fielder: any | null,
+    runOutBatter: 'Striker' | 'Non-Striker' | null
+  }>({ type: '', fielder: null, runOutBatter: null,
+});
+  const [isAddOfficialModalVisible, setIsAddOfficialModalVisible] = useState(false);
+  const [newOfficialForm, setNewOfficialForm] = useState({ name: '', phone: '',
+});
+  const [activeOfficialSlot, setActiveOfficialSlot] = useState<{ category: string, index?: number } | null>(null);
+  const [tossResult, setTossResult] = useState<{ winner: any, decision: 'bat' | 'bowl' | null }>({ winner: null, decision: null,
+});
+  const [matchState, setMatchState] = useState<{ striker: any, nonStriker: any, bowler: any }>({ striker: null, nonStriker: null, bowler: null,
+});
+  const [matchConfig, setMatchConfig] = useState({
+    type: 'limited overs',
+    totalOvers: '20',
+    oversPerBowler: '4',
+    ballType: 'leather',
+    wagonWheel: true,
+    pitchType: 'matting',
+    state: 'Delhi',
+    city: '',
+    ground: '',
+    dateTime: new Date().toLocaleString(),
+    officials: {
+      umpires: ['', '', '', ''],
+      scorers: ['', ''],
+      streamer: '',
+      referee: '',
+      commentators: ['', '']
+    },
+});
+
+  const {
+    matchId: liveMatchId, phase: matchPhase, inn, striker, nonStriker, bowler, crr, rrr, yetToBat, formatOvers,
+    battingPlayers: squadBatting, bowlingPlayers: squadBowling,
+    startMatch, resumeMatch, addBall, addExtra, addWicket, savePlayingXi, changeBowler, addNewBowler, undoLastBall, startSecondInnings, setOpeners
+  } = useCricketScoring();
+  
+  const [isLiveSession, setIsLiveSession] = useState(false);
+  const [isScoringSettingsVisible, setIsScoringSettingsVisible] = useState(false);
+  const [isMoreSheetVisible, setIsMoreSheetVisible] = useState(false);
+  const [isExtraRunsSelectorVisible, setIsExtraRunsSelectorVisible] = useState(false);
+  const [activeExtraType, setActiveExtraType] = useState<'wide' | 'noball' | 'bye' | 'legbye' | null>(null);
+  const [expandedSettingSection, setExpandedSettingSection] = useState<string | null>('Match Settings');
+  const drawerAnim = useRef(new Animated.Value(400)).current;
+
+  useEffect(() => {
+    if (isScoringSettingsVisible) {
+      Animated.timing(drawerAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(drawerAnim, {
+        toValue: 400,
+        duration: 250,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [isScoringSettingsVisible]);
+  const [isSelectingNextBowler, setIsSelectingNextBowler] = useState(false);
+  const [isSelectingNewBatter, setIsSelectingNewBatter] = useState(false);
+  const [pendingWicketData, setPendingWicketData] = useState<{ dismissedName: string } | null>(null);
+  const [lastBowlerId, setLastBowlerId] = useState<string | null>(null);
+
+  const [playerSearchQuery, setPlayerSearchQuery] = useState('');
+  const [isAddingNewPlayerManually, setIsAddingNewPlayerManually] = useState(false);
+  const [manualPlayerName, setManualPlayerName] = useState('');
+  const [manualPlayerPhone, setManualPlayerPhone] = useState('');
+
+  useEffect(() => {
+    if (matchPhase === 'innings_break') {
+      // Auto-start second innings
+      const timer = setTimeout(async () => {
+        await startSecondInnings();
+        setMatchState({ striker: null, nonStriker: null, bowler: null,
+});
+        setIsSelectingOpeners(true);
+        setIsScoring(false); // Move out of live scoring to selection view
+      }, 500); // Small delay for user to see the all-out/innings-end state
+      return () => clearTimeout(timer);
+    }
+  }, [matchPhase]);
+
+  const handleAddBall = async (runs: number) => {
+    const next = await addBall(runs);
+    if (next && next.legalBalls > 0 && next.legalBalls % 6 === 0) {
+      setLastBowlerId(bowler?.name);
+      setIsSelectingNextBowler(true);
+    }
+  };
+
+  const handleAddExtra = async (type: string, additionalRuns: number = 0) => {
+    await addExtra(type, additionalRuns);
+    // Extras might complete an over if it's not a Wide/No-ball
+    if (inn && (inn.legalBalls + 1) % 6 === 0 && type !== 'wide' && type !== 'noball') {
+       setLastBowlerId(bowler?.name);
+       setIsSelectingNextBowler(true);
+    }
+  };
+
+  const handleAddWicket = async (data: any) => {
+    await addWicket(data);
+    // Only prompt for next bowler if it was an over-ending wicket AND match is still live
+    if (matchPhase === 'live' && inn && (inn.legalBalls + 1) % 6 === 0) {
+       setLastBowlerId(bowler?.name);
+       setIsSelectingNextBowler(true);
+    }
+  };
+  const [teams, setTeams] = useState(INITIAL_TEAMS_DATA);
+  const [selectedTeamA, setSelectedTeamA] = useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { session } = useAuth();
+  const router = useRouter();
+  const { width } = useWindowDimensions();
+
+  const [fetchedMatches, setFetchedMatches] = useState<any[]>([]);
+
+  const { matchId: urlMatchId, live } = useLocalSearchParams();
+  const [resumeFailed, setResumeFailed] = useState(false);
+
+  useEffect(() => {
+    if (urlMatchId) {
+      console.log('[Scoring] urlMatchId found, attempting resume:', urlMatchId);
+      resumeMatch(urlMatchId as string).then(async res => {
+        console.log('[Scoring] Resume result:', res);
+        if (res.status === 'success' || res.status === 'needs_setup') {
+          const config = res.config;
+          const xiData = (res as any).xiData || [];
+          
+          if (config) {
+             console.log('[Scoring] Pre-filling from config:', config.teamA, 'vs', config.teamB);
+             
+             // 1. Fetch team objects
+             const [{ data: tA }, { data: tB }] = await Promise.all([
+               supabase.from('teams').select('*').eq('id', config.teamAId).maybeSingle(),
+               supabase.from('teams').select('*').eq('id', config.teamBId).maybeSingle()
+             ]);
+
+             if (tA) setSelectedTeamA(tA);
+             if (tB) setSelectedTeamB(tB);
+             
+             // 2. Map XI Data back to local state
+            if (xiData.length > 0 && tA && tB) {
+              console.log('[Scoring] Resuming XI data found:', xiData.length, 'rows');
+              const xiA = xiData.filter((r: any) => r.team_id === tA.id).map((r: any) => ({
+                ...r.team_members,
+                id: r.player_id // Ensure ID is preserved
+              }));
+              const xiB = xiData.filter((r: any) => r.team_id === tB.id).map((r: any) => ({
+                ...r.team_members,
+                id: r.player_id
+              }));
+              console.log('[Scoring] Restored squads:', xiA.length, 'and', xiB.length);
+              setPlayingXiA(xiA.filter(p => !!p.id));
+              setPlayingXiB(xiB.filter(p => !!p.id));
+            }
+             
+            if (res.status === 'success') {
+              setIsScoring(true);
+              if (res.lastBowlerName) setLastBowlerId(res.lastBowlerName);
+              if (res.tossWinnerId) {
+                setTossResult({ 
+                  winner: res.tossWinnerId === config.teamAId ? 'A' : 'B', 
+                  decision: res.tossDecision || 'bat' 
+                });
+              }
+            } else {
+              setIsConfiguringMatch(true); 
+            }
+          }
+        } else {
+          setResumeFailed(true);
+        }
+      });
+    } else {
+      console.log('[Scoring] No urlMatchId found');
+    }
+    if (live === 'true') {
+      setIsLiveSession(true);
+      setIsSelectingTeams(true);
+    }
+    fetchTeams();
+    fetchMatches();
+
+    const channel = supabase
+      .channel(`live-hub-scores-${Math.random()}`)
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'match_live_state' 
+      }, () => {
+        fetchMatches();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session]);
+
+  const fetchMatches = async () => {
+    const { data, error } = await supabase
+      .from('matches')
+      .select('*, match_live_state(*), innings(*)')
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      // Map DB matches to UI format
+      const dbMatches = data.map(m => {
+        const live = m.match_live_state;
+        // Robust check: if match is tagged 'live' OR has any live score state, it's 'Live'
+        const status = (m.status === 'live' || !!live) ? 'Live' : (m.status === 'completed' ? 'Result' : 'Upcoming');
+        
+        let team1Score = undefined;
+        let team1Overs = undefined;
+        let team2Score = undefined;
+        let team2Overs = undefined;
+
+        if (live) {
+          // Determine which team is batting based on the live state
+          const isTeamABatting = live.batting_team === m.team_a;
+          const currentScore = `${live.runs}/${live.wickets}`;
+          const currentOvers = `(${Math.floor(live.legal_balls / 6)}.${live.legal_balls % 6} Ov)`;
+
+          if (isTeamABatting) {
+            team1Score = currentScore;
+            team1Overs = currentOvers;
+          } else {
+            team2Score = currentScore;
+            team2Overs = currentOvers;
+          }
+
+          // If it's 2nd innings, try to find 1st innings score for the other team
+          if (m.innings && m.innings.length > 0) {
+            const firstInn = m.innings.find((i: any) => i.innings_number === 1);
+            if (firstInn) {
+              const inn1Score = `${firstInn.runs}/${firstInn.wickets}`;
+              const inn1Overs = `(${Math.floor(firstInn.legal_balls / 6)}.${firstInn.legal_balls % 6} Ov)`;
+              
+              if (firstInn.batting_team === m.team_a) {
+                team1Score = inn1Score;
+                team1Overs = inn1Overs;
+              } else {
+                team2Score = inn1Score;
+                team2Overs = inn1Overs;
+              }
+            }
+          }
+        } else if (m.innings && m.innings.length > 0) {
+          // If not live but has innings (completed match)
+          const inn1 = m.innings.find((i: any) => i.innings_number === 1);
+          const inn2 = m.innings.find((i: any) => i.innings_number === 2);
+          
+          if (inn1) {
+            if (inn1.batting_team === m.team_a) {
+              team1Score = `${inn1.runs}/${inn1.wickets}`;
+              team1Overs = `(${Math.floor(inn1.legal_balls / 6)}.${inn1.legal_balls % 6} Ov)`;
+            } else {
+              team2Score = `${inn1.runs}/${inn1.wickets}`;
+              team2Overs = `(${Math.floor(inn1.legal_balls / 6)}.${inn1.legal_balls % 6} Ov)`;
+            }
+          }
+          if (inn2) {
+            if (inn2.batting_team === m.team_a) {
+              team1Score = `${inn2.runs}/${inn2.wickets}`;
+              team1Overs = `(${Math.floor(inn2.legal_balls / 6)}.${inn2.legal_balls % 6} Ov)`;
+            } else {
+              team2Score = `${inn2.runs}/${inn2.wickets}`;
+              team2Overs = `(${Math.floor(inn2.legal_balls / 6)}.${inn2.legal_balls % 6} Ov)`;
+            }
+          }
+        }
+
+        return {
+          id: m.id,
+          type: m.match_type || 'Match',
+          tournament: 'Live Match',
+          status,
+          date: new Date(m.created_at).toLocaleDateString(),
+          overs: `${m.overs} Ov.`,
+          location: m.venue || 'Various Locations',
+          team1: m.team_a,
+          team2: m.team_b,
+          team1Score,
+          team1Overs,
+          team2Score,
+          team2Overs,
+          result: live?.result_text,
+          isLive: m.status === 'live',
+          match_id: m.id,
+          batting_team: live?.batting_team
+                };
+      });
+      setFetchedMatches(dbMatches);
+    }
+  };
+
+  const fetchTeams = async () => {
+    const { data, error } = await supabase
+      .from('teams')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      // Map DB teams to UI format
+      const dbTeams = data.map(t => ({
+        ...t,
+        isUserTeam: t.owner_id === session?.user?.id,
+        initials: t.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2),
+        bgColor: '#0D9488',
+        image: t.image_url 
+      }));
+      setTeams([...dbTeams, ...INITIAL_TEAMS_DATA.filter(it => !dbTeams.some(dt => dt.id === it.id))]);
+    }
+  };
+
+  const uploadLogo = async (uri: string) => {
+    try {
+      if (!session?.user?.id) throw new Error('User not logged in');
+      
+      const fileName = `${Date.now()}.png`;
+      const filePath = `${session.user.id}/${fileName}`;
+      
+      // On web, uri is often a blob or blob URL
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const arrayBuffer = await new Response(blob).arrayBuffer();
+
+      const { data, error } = await supabase.storage
+        .from('team-logos')
+        .upload(filePath, arrayBuffer, {
+          contentType: 'image/png',
+          upsert: true,
+});
+
+      if (error) throw error;
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('team-logos')
+        .getPublicUrl(filePath);
+        
+      return publicUrl;
+    } catch (err) {
+      console.error('Logo upload failed:', err);
+      return null;
+    }
+  };
+
+  const handleCreateTeam = async () => {
+    if (!session?.user?.id) {
+       alert('Please login to create a team');
+       return;
+    }
+
+    if (!teamForm.name || !teamForm.location || !teamForm.captain) {
+      alert('Please fill all fields');
+      return;
+    }
+
+    setIsSubmitting(true);
+    let publicImageUrl = null;
+
+    try {
+      if (teamForm.image) {
+      publicImageUrl = await uploadLogo(teamForm.image);
+    }
+
+    const { data, error } = await supabase
+      .from('teams')
+      .insert([{
+        name: teamForm.name,
+        location: teamForm.location,
+        captain: teamForm.captain,
+        image_url: publicImageUrl,
+        owner_id: session.user.id
+      }])
+      .select();
+
+      if (error) {
+        alert('Error creating team: ' + error.message);
+      } else {
+        setIsCreateTeamModalVisible(false);
+        setTeamForm({ name: '', location: '', captain: '', image: '',
+});
+        fetchTeams();
+        setIsSuccessModalVisible(true);
+      }
+    } catch (error) {
+       alert('Something went wrong. Please try again.');
+    } finally {
+       setIsSubmitting(false);
+    }
+  };
+
+  const handleShareTeam = async (team: any) => {
+    try {
+      const result = await Share.share({
+        message: `Join our team "${team.name}" on Book My Ground! Click the link to join: https://bookyourground.com/invite-team/${team.id}`,
+        url: `https://bookyourground.com/invite-team/${team.id}`,
+        title: `Join ${team.name}`
+      });
+    } catch (error: any) {
+      alert(error.message);
+    }
+  };
+
+  const handleAddMember = async () => {
+    if (!memberForm.name || !memberForm.phone) {
+      alert('Please fill name and phone');
+      return;
+    }
+
+    setIsSubmitting(true);
+      const { data, error } = await supabase
+        .from('team_members')
+        .insert([{
+          team_id: activeTeamForPlayers.id,
+          player_name: memberForm.name,
+          player_phone: memberForm.phone,
+          status: 'accepted'
+        }])
+        .select();
+
+    setIsSubmitting(false);
+
+    if (error) {
+      alert('Error adding member: ' + error.message);
+    } else {
+      setIsAddMemberModalVisible(false);
+      setMemberForm({ name: '', phone: '',
+});
+      fetchTeamMembers(activeTeamForPlayers.id);
+      
+      // Auto-add to Playing XI if in match setup
+      if (isSelectingOpeners || isSelectingPlayers) {
+        if (activeTeamForPlayers.id === selectedTeamA?.id) {
+          setPlayingXiA(prev => [...prev, data[0]]);
+        } else if (activeTeamForPlayers.id === selectedTeamB?.id) {
+          setPlayingXiB(prev => [...prev, data[0]]);
+        }
+      }
+      
+      alert('Player added to your squad!');
+    }
+  };
+
+  const fetchTeamMembers = async (teamId: string) => {
+    setTeamMembers([]); // Clear previous team data
+    const { data, error } = await supabase
+      .from('team_members')
+      .select('*')
+      .eq('team_id', teamId);
+    
+    if (data) setTeamMembers(data);
+  };
+
+  const handleCreateOfficial = async () => {
+    if (!newOfficialForm.name || !newOfficialForm.phone) {
+      alert('Please enter name and phone number');
+      return;
+    }
+
+    setIsSubmitting(true);
+    const { data, error } = await supabase
+      .from('match_officials')
+      .insert([
+        { 
+          name: newOfficialForm.name, 
+          phone: newOfficialForm.phone,
+          role: activeOfficialSlot?.category === 'umpires' ? 'Umpire' : 
+                activeOfficialSlot?.category === 'scorers' ? 'Scorer' : 'Official'
+        }
+      ])
+      .select()
+      .single();
+
+    setIsSubmitting(false);
+
+    if (error) {
+      if (error.code === '23505') {
+        alert('This mobile number is already registered.');
+      } else {
+        alert('Error saving official: ' + error.message);
+      }
+    } else if (data) {
+      // Direct select the newly created official
+      const { category, index } = activeOfficialSlot!;
+      const newOfficials = { ...matchConfig.officials };
+      
+      if (typeof index === 'number') {
+        const arr = [...(newOfficials as any)[category]];
+        arr[index] = data.name;
+        (newOfficials as any)[category] = arr;
+      } else {
+        (newOfficials as any)[category] = data.name;
+      }
+
+      setMatchConfig({ ...matchConfig, officials: newOfficials,
+});
+      setIsAddOfficialModalVisible(false);
+      setIsSearchingOfficial(false);
+      setNewOfficialForm({ name: '', phone: '',
+});
+      setSearchQuery('');
+      alert('New official registered and assigned!');
+    }
+  };
+
+  useEffect(() => {
+    if (isAddPlayerViewVisible && activeTeamForPlayers) {
+      fetchTeamMembers(activeTeamForPlayers.id);
+    }
+  }, [isAddPlayerViewVisible, activeTeamForPlayers]);
+
+  const [selectedTeamB, setSelectedTeamB] = useState<any>(null);
+  const [pickingFor, setPickingFor] = useState<'A' | 'B' | null>(null);
+  const isCompact = width < 900;
+
+  const MatchCard = ({ match }: { match: any }) => (
+    <View style={styles.matchCard}>
+      <View style={styles.matchHeader}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.matchType}>
+            {match.type}, <Text style={styles.matchTournament}>{match.tournament}</Text>
+          </Text>
+          <Text style={styles.matchMeta}>{match.date} | {match.overs} | {match.location}</Text>
+        </View>
+        <View style={[
+          styles.statusBadge, 
+          match.status === 'Result' ? styles.statusBadgeResult : 
+          (match.status === 'Live' ? styles.statusBadgeLive : styles.statusBadgeUpcoming)
+        ]}>
+          {match.status === 'Live' && <View style={styles.pulseDot} />}
+          <Text style={[
+            styles.statusBadgeText,
+            match.status === 'Result' ? styles.statusBadgeTextResult : 
+            (match.status === 'Live' ? styles.statusBadgeTextLive : styles.statusBadgeTextUpcoming)
+          ]}>{match.status === 'Live' ? 'LIVE' : match.status}</Text>
+        </View>
+      </View>
+
+      <View style={styles.matchTeams}>
+        <View style={styles.matchTeamRow}>
+          <View style={styles.teamInfo}>
+            <View style={[styles.miniAvatar, { width: 32, height: 32, backgroundColor: '#F1F5F9' }]}>
+               <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#64748B' }}>{match.team1[0]}</Text>
+            </View>
+            <Text style={styles.teamNameText} numberOfLines={1}>{match.team1}</Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            {match.status === 'Live' && match.batting_team === match.team1 && <View style={styles.liveIndicatorDot} />}
+            {match.team1Score && <Text style={styles.teamScoreText}>{match.team1Score} <Text style={styles.teamOversText}>{match.team1Overs}</Text></Text>}
+          </View>
+        </View>
+
+        <View style={styles.matchTeamRow}>
+          <View style={styles.teamInfo}>
+            <View style={[styles.miniAvatar, { width: 32, height: 32, backgroundColor: '#F1F5F9' }]}>
+               <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#64748B' }}>{match.team2[0]}</Text>
+            </View>
+            <Text style={styles.teamNameText} numberOfLines={1}>{match.team2}</Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            {match.status === 'Live' && match.batting_team === match.team2 && <View style={styles.liveIndicatorDot} />}
+            {match.team2Score && <Text style={styles.teamScoreText}>{match.team2Score} <Text style={styles.teamOversText}>{match.team2Overs}</Text></Text>}
+          </View>
+        </View>
+      </View>
+
+      {match.status === 'Live' ? (
+        <View style={{ flexDirection: 'row', gap: 10, marginTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 12 }}>
+          <TouchableOpacity 
+            style={[styles.liveActionBtn, { borderTopWidth: 0, marginTop: 0, flex: 1, backgroundColor: '#F0FDF4', borderRadius: 8 }]}
+            onPress={() => router.push(`/live/${match.match_id}`)}
+          >
+            <Text style={styles.liveActionBtnText}>View</Text>
+            <ChevronRight size={14} color="#0D9488" />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.liveActionBtn, { borderTopWidth: 0, marginTop: 0, flex: 1.5, backgroundColor: '#0D9488', borderRadius: 8 }]}
+            onPress={() => router.push(`/cricket/scoring?matchId=${match.match_id}`)}
+          >
+            <Text style={[styles.liveActionBtnText, { color: '#FFFFFF' }]}>Resume Scoring</Text>
+            <History size={14} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+      ) : (
+        match.result ? (
+          <View style={styles.matchFooter}>
+            <Text style={styles.resultText}>{match.result}</Text>
+          </View>
+        ) : (
+          <View style={styles.matchFooter}>
+            <Text style={styles.messageText}>{match.message}</Text>
+          </View>
+        )
+      )}
+    </View>
+  );
+
+  const TournamentCard = ({ tournament }: { tournament: any }) => (
+    <View style={styles.tournamentCard}>
+       <View style={styles.imageContainer}>
+          <Image source={{ uri: tournament.image }} style={styles.tournamentImage} />
+          <View style={styles.imageOverlay} />
+          {tournament.hasCrown && (
+            <View style={styles.crownBadge}>
+               <Crown size={12} color="#FFFFFF" fill="#FFFFFF" />
+            </View>
+          )}
+          <View style={styles.ongoingBadge}>
+             <Text style={styles.ongoingBadgeText}>{tournament.status}</Text>
+          </View>
+          <Text style={styles.tournamentTitleOverlay}>{tournament.title}</Text>
+       </View>
+       <View style={styles.tournamentInfo}>
+          <View style={{ flex: 1 }}>
+             <Text style={styles.tournamentMeta}>Date: {tournament.dateRange}</Text>
+             <Text style={styles.tournamentMeta}>{tournament.location}</Text>
+          </View>
+          <TouchableOpacity>
+             <Text style={styles.followLink}>Follow</Text>
+          </TouchableOpacity>
+       </View>
+    </View>
+  );
+
+  const TeamCard = ({ team, onSelect }: { team: any; onSelect?: (team: any) => void }) => (
+    <TouchableOpacity 
+      style={styles.teamCard}
+      onPress={() => {
+        if (onSelect) onSelect(team);
+        else if (team.isUserTeam) {
+          setActiveTeamForPlayers(team);
+          setIsAddPlayerViewVisible(true);
+        }
+      }}
+    >
+       <View style={[styles.teamAvatar, team.bgColor && { backgroundColor: team.bgColor }]}>
+          {team.image ? (
+            <Image source={{ uri: team.image }} style={styles.teamImage} />
+          ) : (
+            <Text style={styles.teamInitials}>{team.initials}</Text>
+          )}
+       </View>
+       <View style={styles.teamContent}>
+          <View style={{ flex: 1 }}>
+             <Text style={styles.teamTitle}>{team.name}</Text>
+             <View style={styles.teamMetaRow}>
+                <View style={[styles.metaItem, { marginRight: 16 }]}>
+                   <MapPin size={12} color="#9CA3AF" />
+                   <Text style={styles.metaLabel}>{team.location}</Text>
+                </View>
+                <View style={styles.metaItem}>
+                   <View style={styles.captainIcon}><Text style={styles.captainIconText}>C</Text></View>
+                   <Text style={styles.metaLabel}>{team.captain}</Text>
+                </View>
+             </View>
+          </View>
+          {onSelect ? (
+            <TouchableOpacity style={styles.selectBtn} onPress={() => onSelect(team)}>
+               <Text style={styles.selectBtnText}>Select</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity onPress={() => { setActiveTeamForQr(team); setIsQrModalVisible(true); }}>
+              <QrCode size={20} color="#0D9488" strokeWidth={1.5} />
+            </TouchableOpacity>
+          )}
+       </View>
+    </TouchableOpacity>
+  );
+
+  const CreateTeamCard = () => (
+    <TouchableOpacity 
+      style={[styles.teamCard, styles.createTeamCard]}
+      onPress={() => setIsCreateTeamModalVisible(true)}
+    >
+       <View style={styles.createTeamIcon}>
+          <Plus size={24} color="#0D9488" />
+       </View>
+       <View style={styles.teamContent}>
+          <Text style={styles.createTeamText}>Create New Team</Text>
+          <Text style={styles.createTeamSubtext}>Build your squad from scratch</Text>
+       </View>
+    </TouchableOpacity>
+  );
+
+  const pickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1
+      });
+
+    if (!result.canceled) {
+      setTeamForm({ ...teamForm, image: result.assets[0].uri,
+});
+    }
+  };
+
+  const renderCreateTeamModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={isCreateTeamModalVisible}
+      onRequestClose={() => setIsCreateTeamModalVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.createTeamModalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Create New Team</Text>
+            <TouchableOpacity onPress={() => setIsCreateTeamModalVisible(false)}>
+              <X size={24} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Team Name</Text>
+            <TextInput 
+              style={styles.formInput} 
+              placeholder="e.g. Royal Challengers" 
+              value={teamForm.name}
+              onChangeText={(t) => setTeamForm({...teamForm, name: t})}
+            />
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Location (State)</Text>
+            <TouchableOpacity 
+              style={styles.dropdownTrigger}
+              onPress={() => setShowStateDropdown(!showStateDropdown)}
+            >
+              <Text style={[styles.dropdownValue, !teamForm.location && styles.dropdownPlaceholder]}>
+                {teamForm.location || 'Select State'}
+              </Text>
+              <ChevronRight 
+                size={20} 
+                color="#9CA3AF" 
+                style={{ transform: [{ rotate: showStateDropdown ? '90deg' : '0deg' }] }} 
+              />
+            </TouchableOpacity>
+
+            {showStateDropdown && (
+              <View style={styles.statesDropdown}>
+                <ScrollView nestedScrollEnabled style={{ maxHeight: 200 }}>
+                  {INDIAN_STATES.map((state) => (
+                    <TouchableOpacity 
+                      key={state}
+                      style={styles.stateItem}
+                      onPress={() => {
+                        setTeamForm({ ...teamForm, location: state,
+});
+                        setShowStateDropdown(false);
+                      }}
+                    >
+                      <Text style={styles.stateItemText}>{state}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Captain Name</Text>
+            <TextInput 
+              style={styles.formInput} 
+              placeholder="e.g. Virat Kohli" 
+              value={teamForm.captain}
+              onChangeText={(t) => setTeamForm({...teamForm, captain: t})}
+            />
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Team Logo</Text>
+            <View style={styles.imagePickerContainer}>
+              <TouchableOpacity style={styles.imagePickerBtn} onPress={pickImage}>
+                {teamForm.image ? (
+                  <Image source={{ uri: teamForm.image }} style={styles.imagePickerPreview} />
+                ) : (
+                  <View style={styles.imagePickerPlaceholder}>
+                    <Camera size={24} color="#9CA3AF" />
+                    <Text style={styles.imagePickerText}>Choose Photo</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              {teamForm.image && (
+                <TouchableOpacity 
+                   style={styles.removeImageBtn}
+                   onPress={() => setTeamForm({...teamForm, image: ''})}
+                >
+                  <Text style={styles.removeImageText}>Remove</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          <TouchableOpacity 
+            style={[styles.submitBtn, isSubmitting && { opacity: 0.7 }]} 
+            onPress={handleCreateTeam}
+            disabled={isSubmitting}
+          >
+            <Text style={styles.submitBtnText}>{isSubmitting ? 'Creating...' : 'Create Team'}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  const handleTeamSelect = (team: any) => {
+    if (pickingFor === 'A') {
+      setSelectedTeamA(team);
+      setCurrentPickingSide('A');
+      fetchTeamMembers(team.id);
+      setIsSelectingPlayers(true);
+    } else if (pickingFor === 'B') {
+      setSelectedTeamB(team);
+      setCurrentPickingSide('B');
+      fetchTeamMembers(team.id);
+      setIsSelectingPlayers(true);
+    }
+    setPickingFor(null);
+    setIsSelectingTeams(true);
+  };
+
+  const renderTeamSelection = () => (
+    <View style={styles.selectionView}>
+      <View style={styles.selectionHeader}>
+        <TouchableOpacity onPress={() => { setIsSelectingTeams(false); setSelectedTeamA(null); setSelectedTeamB(null); setPickingFor(null); }}>
+          <Text style={styles.cancelText}>Cancel</Text>
+        </TouchableOpacity>
+        <Text style={styles.selectionTitle}>Match Setup</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
+      <View style={styles.teamSelectionRow}>
+        <TouchableOpacity 
+          style={[styles.teamSlot, selectedTeamA && styles.teamSlotFilled, pickingFor === 'A' && { borderColor: '#0D9488', borderWidth: 2 }]}
+          onPress={() => { setPickingFor(pickingFor === 'A' ? null : 'A'); setSearchQuery(''); }}
+        >
+          {selectedTeamA ? (
+            <>
+               <View style={styles.slotAvatar}>
+                  {selectedTeamA.image ? <Image source={{ uri: selectedTeamA.image }} style={styles.slotImage} /> : <Text style={styles.slotInitials}>{selectedTeamA.initials}</Text>}
+               </View>
+               <Text style={styles.slotName}>{selectedTeamA.name}</Text>
+            </>
+          ) : (
+            <View style={styles.emptySlot}>
+               <Users2 size={32} color={pickingFor === 'A' ? '#0D9488' : '#9CA3AF'} />
+               <Text style={[styles.slotAction, pickingFor === 'A' && { color: '#0D9488' }]}>Select Team A</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+
+        <View style={styles.vsContainer}>
+          <Text style={styles.vsText}>VS</Text>
+        </View>
+
+        <TouchableOpacity 
+          style={[styles.teamSlot, selectedTeamB && styles.teamSlotFilled, pickingFor === 'B' && { borderColor: '#0D9488', borderWidth: 2 }]}
+          onPress={() => { setPickingFor(pickingFor === 'B' ? null : 'B'); setSearchQuery(''); }}
+        >
+          {selectedTeamB ? (
+            <>
+               <View style={styles.slotAvatar}>
+                  {selectedTeamB.image ? <Image source={{ uri: selectedTeamB.image }} style={styles.slotImage} /> : <Text style={styles.slotInitials}>{selectedTeamB.initials}</Text>}
+               </View>
+               <Text style={styles.slotName}>{selectedTeamB.name}</Text>
+            </>
+          ) : (
+            <View style={styles.emptySlot}>
+               <Users2 size={32} color={pickingFor === 'B' ? '#0D9488' : '#9CA3AF'} />
+               <Text style={[styles.slotAction, pickingFor === 'B' && { color: '#0D9488' }]}>Select Team B</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {selectedTeamA && selectedTeamB && !pickingFor && (
+        <TouchableOpacity 
+          style={styles.startMatchBtn}
+          onPress={() => setIsSelectingPlayers(true)}
+        >
+           <Text style={styles.startMatchBtnText}>Select Playing XI</Text>
+        </TouchableOpacity>
+      )}
+
+      {pickingFor ? (
+        <View style={{ flex: 1, marginTop: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, marginBottom: 12 }}>
+            <Text style={styles.pickingText}>
+              Selecting Team {pickingFor} — tap a team below
+            </Text>
+            <TouchableOpacity onPress={() => setPickingFor(null)}>
+              <X size={20} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.searchBarContainer}>
+            <Search size={16} color="#9CA3AF" />
+            <TextInput 
+              placeholder="Search teams..." 
+              placeholderTextColor="#9CA3AF" 
+              style={styles.searchInput} 
+              value={searchQuery} 
+              onChangeText={setSearchQuery} 
+            />
+          </View>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }}>
+            {teams
+              .filter(team => team.name.toLowerCase().includes(searchQuery.toLowerCase()))
+              .map(team => (
+                <TeamCard 
+                  key={team.id} 
+                  team={team} 
+                  onSelect={handleTeamSelect}
+                />
+              ))
+            }
+          </ScrollView>
+        </View>
+      ) : null}
+    </View>
+  );
+
+  const renderQrModal = () => (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={isQrModalVisible}
+      onRequestClose={() => setIsQrModalVisible(false)}
+    >
+      <TouchableOpacity 
+        style={styles.modalOverlay}
+        activeOpacity={1}
+        onPress={() => setIsQrModalVisible(false)}
+      >
+        <View style={styles.qrModalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Team QR Code</Text>
+            <TouchableOpacity onPress={() => setIsQrModalVisible(false)}>
+              <X size={24} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+
+          {activeTeamForQr && (
+            <View style={styles.qrBody}>
+              <View style={styles.qrCard}>
+                <View style={styles.qrHeader}>
+                   <View style={[styles.teamAvatarQr, activeTeamForQr.bgColor && { backgroundColor: activeTeamForQr.bgColor }]}>
+                      {activeTeamForQr.image ? <Image source={{ uri: activeTeamForQr.image }} style={styles.teamImage} /> : <Text style={styles.teamInitialsQr}>{activeTeamForQr.initials}</Text>}
+                   </View>
+                   <View>
+                      <Text style={styles.qrTeamName}>{activeTeamForQr.name}</Text>
+                      <Text style={styles.qrTeamMeta}>{activeTeamForQr.location} • Captain: {activeTeamForQr.captain}</Text>
+                   </View>
+                </View>
+
+                <View style={styles.qrContainer}>
+                  <Image 
+                    source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=team_${activeTeamForQr.id}` }} 
+                    style={styles.qrImage} 
+                  />
+                </View>
+                
+                <Text style={styles.qrFooterText}>Scan to follow this team or invite to match</Text>
+              </View>
+
+              <TouchableOpacity style={styles.downloadBtn}>
+                <Text style={styles.downloadBtnText}>Download QR Code</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+
+  const renderSuccessModal = () => (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={isSuccessModalVisible}
+      onRequestClose={() => setIsSuccessModalVisible(false)}
+    >
+      <TouchableOpacity 
+        style={styles.modalOverlay}
+        activeOpacity={1}
+        onPress={() => setIsSuccessModalVisible(false)}
+      >
+        <View style={styles.successModalContent}>
+          <View style={styles.successIconWrapper}>
+             <Plus size={32} color="#FFFFFF" />
+          </View>
+          <Text style={styles.successTitle}>Hooray!</Text>
+          <Text style={styles.successMessage}>Your team has been created and saved successfully.</Text>
+          
+          <TouchableOpacity 
+            style={styles.successCloseBtn}
+            onPress={() => setIsSuccessModalVisible(false)}
+          >
+            <Text style={styles.successCloseBtnText}>Great, thanks!</Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+    );
+  
+  const renderPlayerSelection = () => {
+    const currentTeam = currentPickingSide === 'A' ? selectedTeamA : selectedTeamB;
+    const currentXi = currentPickingSide === 'A' ? playingXiA : playingXiB;
+    const setXi = currentPickingSide === 'A' ? setPlayingXiA : setPlayingXiB;
+
+    const togglePlayer = (player: any) => {
+      const exists = currentXi.find(p => p.id === player.id);
+      if (exists) {
+        setXi(currentXi.filter(p => p.id !== player.id));
+      } else {
+        setXi([...currentXi, player]);
+      }
+    };
+
+    return (
+      <View style={styles.selectionView}>
+        <View style={styles.selectionHeader}>
+          <TouchableOpacity onPress={() => setIsSelectingPlayers(false)}>
+            <ChevronRight size={28} color="#0D9488" style={{ transform: [{ rotate: '180deg' }] }} />
+          </TouchableOpacity>
+          <View style={{ alignItems: 'center' }}>
+            <Text style={styles.selectionTitle}>Select Playing XI</Text>
+            <Text style={styles.selectionSubTitle}>{currentTeam?.name} ({currentXi.length} selected)</Text>
+          </View>
+          <View style={{ width: 40 }} />
+        </View>
+
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
+           {teamMembers.length === 0 ? (
+             <View style={styles.noResultArea}>
+                <Users size={48} color="#E5E7EB" />
+                <Text style={styles.noResultTitle}>No Players Found</Text>
+                <Text style={styles.noResultSub}>Add players to your team squad first</Text>
+                <TouchableOpacity 
+                  style={styles.addNewOfficialBtn}
+                  onPress={() => {
+                    setActiveTeamForPlayers(currentTeam);
+                    setIsAddMemberModalVisible(true);
+                  }}
+                >
+                   <Plus size={20} color="#0D9488" />
+                   <Text style={styles.addNewOfficialText}>Add Player to Squad</Text>
+                </TouchableOpacity>
+             </View>
+           ) : (
+             teamMembers.map((member, idx) => (
+               <TouchableOpacity 
+                 key={idx} 
+                 style={[styles.playerSelectRow, currentXi.find(p => p.id === member.id) && styles.playerSelectRowActive]}
+                 onPress={() => togglePlayer(member)}
+               >
+                  <View style={styles.avatarCircle}>
+                     <User size={24} color="#6B7280" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                     <Text style={[styles.playerNameText, currentXi.find(p => p.id === member.id) && { color: '#0D9488' }]}>{member.player_name}</Text>
+                     <Text style={{ fontSize: 12, color: '#6B7280' }}>All-rounder</Text>
+                  </View>
+                  <View style={[styles.checkBox, currentXi.find(p => p.id === member.id) && styles.checkBoxActive]}>
+                     {currentXi.find(p => p.id === member.id) && <Plus size={14} color="#FFFFFF" style={{ transform: [{ rotate: '45deg' }] }} />}
+                  </View>
+               </TouchableOpacity>
+             ))
+           )}
+        </ScrollView>
+
+        <View style={styles.selectionFooter}>
+           {currentPickingSide === 'A' ? (
+             <TouchableOpacity 
+               style={[styles.startMatchBtn, { marginTop: 0 }, currentXi.length === 0 && { opacity: 0.5 }]}
+               onPress={() => {
+                  if (currentXi.length === 0) {
+                    alert('Please select at least 1 player for Team A');
+                    return;
+                  }
+                  setIsSelectingPlayers(false);
+                  if (urlMatchId && selectedTeamA) {
+                    savePlayingXi(urlMatchId as string, selectedTeamA.id, currentXi);
+                  }
+                }}
+             >
+                <Text style={styles.startMatchBtnText}>Confirm Team A Playing XI ({currentXi.length})</Text>
+             </TouchableOpacity>
+           ) : (
+             <TouchableOpacity 
+               style={[styles.startMatchBtn, { marginTop: 0 }, currentXi.length === 0 && { opacity: 0.5 }]}
+               onPress={() => {
+                  if (currentXi.length === 0) {
+                    alert('Please select at least 1 player for Team B');
+                    return;
+                  }
+                  setIsSelectingPlayers(false);
+                  setIsConfiguringMatch(true);
+                  if (urlMatchId && selectedTeamB) {
+                    savePlayingXi(urlMatchId as string, selectedTeamB.id, currentXi);
+                  }
+                }}
+             >
+                <Text style={styles.startMatchBtnText}>Confirm Team B Playing XI ({currentXi.length})</Text>
+             </TouchableOpacity>
+           )}
+        </View>
+      </View>
+    );
+  };
+
+  const renderMatchConfiguration = () => {
+    const types = [
+      { id: 'limited overs', label: 'Limited Overs' },
+      { id: 'box cricket', label: 'Box Cricket' },
+      { id: 'pair cricket', label: 'Pair Cricket' },
+      { id: 'test match', label: 'Test Match' },
+      { id: 'the hundred', label: 'The Hundred' }
+    ];
+
+    return (
+      <View style={styles.selectionView}>
+         <View style={styles.selectionHeader}>
+            <TouchableOpacity onPress={() => setIsConfiguringMatch(false)}>
+               <ChevronRight size={28} color="#0D9488" style={{ transform: [{ rotate: '180deg' }] }} />
+            </TouchableOpacity>
+            <Text style={styles.selectionTitle}>Match Details</Text>
+            <View style={{ width: 40 }} />
+         </View>
+
+         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
+                        <View style={styles.vsDisplay}>
+               <TouchableOpacity 
+                 style={styles.vsTeam}
+                 onPress={() => {
+                   setCurrentPickingSide('A');
+                   setIsSelectingPlayers(true);
+                   setIsConfiguringMatch(false);
+                 }}
+               >
+                  <Text style={styles.vsName}>{selectedTeamA?.name}</Text>
+                  <Text style={styles.vsPlayers}>{playingXiA.length} Players</Text>
+               </TouchableOpacity>
+               <View style={styles.vsBadge}><Text style={styles.vsBadgeText}>VS</Text></View>
+               <TouchableOpacity 
+                 style={styles.vsTeam}
+                 onPress={() => {
+                   setCurrentPickingSide('B');
+                   setIsSelectingPlayers(true);
+                   setIsConfiguringMatch(false);
+                 }}
+               >
+                  <Text style={styles.vsName}>{selectedTeamB?.name}</Text>
+                  <Text style={styles.vsPlayers}>{playingXiB.length} Players</Text>
+               </TouchableOpacity>
+            </View>
+
+            <Text style={styles.configLabel}>Match Type</Text>
+            <View style={styles.typeGrid}>
+               {types.map(t => (
+                 <TouchableOpacity 
+                   key={t.id} 
+                   style={[styles.typePill, matchConfig.type === t.id && styles.typePillActive]}
+                   onPress={() => setMatchConfig({ ...matchConfig, type: t.id })}
+                 >
+                    <Text style={[styles.typePillText, matchConfig.type === t.id && styles.typePillTextActive]}>{t.label}</Text>
+                 </TouchableOpacity>
+               ))}
+            </View>
+
+            {matchConfig.type !== 'test match' && (
+              <View style={{ marginTop: 24 }}>
+                 {matchConfig.type === 'the hundred' ? (
+                   <View style={styles.hundredInfo}>
+                      <Text style={styles.hundredText}>Fixed Format: 100 Balls Match</Text>
+                   </View>
+                 ) : (
+                   <View style={{ gap: 20 }}>
+                      <View>
+                         <Text style={styles.configLabel}>No. of Overs</Text>
+                         <TextInput 
+                           style={styles.configInput} 
+                           keyboardType="numeric" 
+                           value={matchConfig.totalOvers}
+                           onChangeText={(val) => setMatchConfig({ ...matchConfig, totalOvers: val })}
+                         />
+                      </View>
+                      <View>
+                         <Text style={styles.configLabel}>Overs per Bowler</Text>
+                         <TextInput 
+                           style={styles.configInput} 
+                           keyboardType="numeric" 
+                           value={matchConfig.oversPerBowler}
+                           onChangeText={(val) => setMatchConfig({ ...matchConfig, oversPerBowler: val })}
+                         />
+                      </View>
+                   </View>
+                 )}
+              </View>
+            )}
+
+            <View style={{ marginTop: 32 }}>
+               <Text style={styles.configLabel}>Ball Type</Text>
+               <View style={styles.ballTypes}>
+                  {['Leather', 'Tennis', 'Other'].map(b => (
+                    <TouchableOpacity 
+                      key={b} 
+                      style={[styles.ballTypeBtn, matchConfig.ballType === b.toLowerCase() && styles.ballTypeBtnActive]}
+                      onPress={() => setMatchConfig({ ...matchConfig, ballType: b.toLowerCase() })}
+                    >
+                       <Text style={[styles.ballText, matchConfig.ballType === b.toLowerCase() && styles.ballTextActive]}>{b}</Text>
+                    </TouchableOpacity>
+                  ))}
+               </View>
+            </View>
+
+            <View style={{ marginTop: 32 }}>
+               <Text style={styles.configLabel}>Wagon Wheel</Text>
+               <View style={styles.wagonWheelRow}>
+                  <Text style={styles.wagonWheelDesc}>Track scoring areas for each ball</Text>
+                  <TouchableOpacity 
+                    style={[styles.toggleBg, matchConfig.wagonWheel && styles.toggleBgActive]}
+                    onPress={() => setMatchConfig({ ...matchConfig, wagonWheel: !matchConfig.wagonWheel })}
+                  >
+                     <View style={[styles.toggleCircle, matchConfig.wagonWheel && styles.toggleCircleActive]} />
+                  </TouchableOpacity>
+               </View>
+            </View>
+
+            <View style={{ marginTop: 32 }}>
+               <Text style={styles.configLabel}>Pitch Type</Text>
+               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+                  {['Rough', 'Cement Turf', 'Astroturf', 'Matting'].map(p => (
+                    <TouchableOpacity 
+                      key={p} 
+                      style={[styles.pitchBtn, matchConfig.pitchType === p.toLowerCase() && styles.pitchBtnActive]}
+                      onPress={() => setMatchConfig({ ...matchConfig, pitchType: p.toLowerCase() })}
+                    >
+                       <Text style={[styles.pitchText, matchConfig.pitchType === p.toLowerCase() && styles.pitchTextActive]}>{p}</Text>
+                    </TouchableOpacity>
+                  ))}
+               </ScrollView>
+            </View>
+
+            <View style={{ marginTop: 32, gap: 20 }}>
+               <View>
+                  <Text style={styles.configLabel}>State</Text>
+                  <View style={styles.pickerWrapper}>
+                     <TextInput 
+                       style={styles.configInput} 
+                       placeholder="Select State"
+                       value={matchConfig.state}
+                       editable={false} // Would normally be a picker
+                     />
+                     <ChevronDown size={20} color="#6B7280" style={styles.pickerIcon} />
+                  </View>
+               </View>
+
+               <View>
+                  <Text style={styles.configLabel}>City</Text>
+                  <TextInput 
+                    style={styles.configInput} 
+                    placeholder="Enter City"
+                    placeholderTextColor="#9CA3AF"
+                    value={matchConfig.city}
+                    onChangeText={(val) => setMatchConfig({ ...matchConfig, city: val })}
+                  />
+               </View>
+
+               <View>
+                  <Text style={styles.configLabel}>Ground</Text>
+                  <TextInput 
+                    style={styles.configInput} 
+                    placeholder="Search or Enter Ground"
+                    placeholderTextColor="#9CA3AF"
+                    value={matchConfig.ground}
+                    onChangeText={(val) => setMatchConfig({ ...matchConfig, ground: val })}
+                  />
+               </View>
+
+               <View>
+                  <Text style={styles.configLabel}>Date & Time</Text>
+                  <View style={styles.pickerWrapper}>
+                     <TextInput 
+                       style={styles.configInput} 
+                       value={matchConfig.dateTime}
+                       onChangeText={(val) => setMatchConfig({ ...matchConfig, dateTime: val })}
+                     />
+                     <Calendar size={20} color="#6B7280" style={styles.pickerIcon} />
+                  </View>
+               </View>
+            </View>
+
+            <TouchableOpacity 
+              style={styles.officialsTrigger}
+              onPress={() => setIsConfiguringOfficials(true)}
+            >
+               <View style={styles.officialsTriggerLeft}>
+                  <View style={styles.officialIconBox}>
+                     <IdCard size={20} color="#0D9488" />
+                  </View>
+                  <View>
+                     <Text style={styles.officialsTitle}>Match Officials</Text>
+                     <Text style={styles.officialsSub}>Umpires, Scorers, Commentators...</Text>
+                  </View>
+               </View>
+               <ChevronRight size={20} color="#9CA3AF" />
+            </TouchableOpacity>
+         </ScrollView>
+
+         <View style={styles.configFooter}>
+            <TouchableOpacity 
+              style={styles.startMatchMainBtn}
+              onPress={() => {
+                setIsConfiguringMatch(false);
+                setIsConfiguringToss(true);
+              }}
+            >
+               <Text style={styles.startMatchMainBtnText}>Next: Configure Toss</Text>
+            </TouchableOpacity>
+         </View>
+      </View>
+    );
+  };
+
+  const renderBowlerSelectionModal = () => {
+    if (!isSelectingNextBowler || !inn) return null;
+
+    const filteredSquad = squadBowling.filter(name => 
+      name.toLowerCase().includes(playerSearchQuery.toLowerCase())
+    ).map(name => ({ id: name, player_name: name }));
+
+    return (
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isSelectingNextBowler}
+        onRequestClose={() => {
+          setIsSelectingNextBowler(false);
+          setPlayerSearchQuery('');
+          setIsAddingNewPlayerManually(false);
+        }}
+      >
+        <View style={styles.sheetOverlay}>
+          <View style={[styles.sheetContent, { height: '80%' }]}>
+             <View style={styles.sheetHandle} />
+             <View style={{ paddingHorizontal: 24, paddingBottom: 16 }}>
+                <View style={styles.modalHeaderRow}>
+                   <View>
+                      <Text style={styles.sheetTitle}>Next Over: Choose Bowler</Text>
+                      <Text style={styles.sheetSubtitle}>Pick a bowler from {inn.bowlingTeam}</Text>
+                   </View>
+                   <TouchableOpacity onPress={() => { setIsSelectingNextBowler(false); setPlayerSearchQuery(''); setIsAddingNewPlayerManually(false); }}>
+                      <X size={24} color="#6B7280" />
+                   </TouchableOpacity>
+                </View>
+
+                {!isAddingNewPlayerManually && (
+                  <View style={styles.modalSearchContainer}>
+                     <Search size={18} color="#9CA3AF" />
+                     <TextInput 
+                        style={styles.modalSearchInput}
+                        placeholder="Search by name or number..."
+                        value={playerSearchQuery}
+                        onChangeText={setPlayerSearchQuery}
+                     />
+                  </View>
+                )}
+             </View>
+
+             <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}>
+                <View style={styles.playerGrid}>
+                    {filteredSquad.map(p => {
+                      const bStats = inn?.bowlers.find(b => b.name === p.player_name);
+                      const currentOv = bStats ? bStats.overs : 0;
+                      const limitVal = parseInt(matchConfig?.oversPerBowler || '0');
+                      const reachesLimit = limitVal > 0 && currentOv >= limitVal;
+                      const isPrev = lastBowlerId === p.player_name;
+                      
+                      return (
+                        <TouchableOpacity 
+                          key={p.id} 
+                          style={[
+                            styles.playerGridTile, 
+                            (isPrev || reachesLimit) && { opacity: 0.5, backgroundColor: '#F3F4F6' }
+                          ]}
+                          disabled={isPrev || reachesLimit}
+                          onPress={() => {
+                             addNewBowler(p.player_name);
+                             setIsSelectingNextBowler(false);
+                          }}
+                        >
+                           <View style={[styles.miniAvatar, { width: 44, height: 44, backgroundColor: reachesLimit ? '#EF4444' : '#6B7280' }]}>
+                              <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 16 }}>{p.player_name[0] || '?'}</Text>
+                           </View>
+                           <Text style={[styles.playerGridName, (isPrev || reachesLimit) && { color: '#9CA3AF' }]} numberOfLines={1}>{p.player_name}</Text>
+                           <View style={{ marginTop: 2, alignItems: 'center' }}>
+                             {isPrev && <Text style={{ fontSize: 9, color: '#9CA3AF', fontWeight: '700' }}>LAST OVER</Text>}
+                             {reachesLimit && <Text style={{ fontSize: 9, color: '#EF4444', fontWeight: '900' }}>LIMIT REACHED</Text>}
+                             {bStats && !reachesLimit && !isPrev && (
+                               <Text style={{ fontSize: 9, color: '#6B7280' }}>
+                                 {bStats.overs}.{bStats.balls} Ov
+                               </Text>
+                             )}
+                           </View>
+                        </TouchableOpacity>
+                      );
+                    })}
+                </View>
+
+                <TouchableOpacity 
+                  style={styles.addPlayerMiniBtn}
+                  onPress={() => {
+                     const name = prompt('New Bowler Name:');
+                     if (name) {
+                        addNewBowler(name);
+                        setIsSelectingNextBowler(false);
+                     }
+                  }}
+                >
+                   <Plus size={18} color="#0D9488" />
+                   <Text style={styles.addPlayerMiniText}>Add New Bowler</Text>
+                </TouchableOpacity>
+             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
+  const renderNewBatterSelectionModal = () => {
+    if (!isSelectingNewBatter || !inn) return null;
+
+    // Use current 'yet to bat' list from hook
+    // Fallback to the full battingPlayers list (also from hook) if needed
+    const alreadyOnFieldOrOut = new Set(inn.batters.map(b => b.name.toLowerCase()));
+    
+    const filteredSquad = squadBatting
+      .filter(name => !alreadyOnFieldOrOut.has(name.toLowerCase()))
+      .filter(name => name.toLowerCase().includes(playerSearchQuery.toLowerCase()))
+      .map(name => ({ id: name, player_name: name }));
+
+    return (
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isSelectingNewBatter}
+        onRequestClose={() => {
+          setIsSelectingNewBatter(false);
+          setPlayerSearchQuery('');
+          setIsAddingNewPlayerManually(false);
+        }}
+      >
+        <View style={styles.sheetOverlay}>
+          <View style={[styles.sheetContent, { height: '80%' }]}>
+             <View style={styles.sheetHandle} />
+             <View style={{ paddingHorizontal: 24, paddingBottom: 16 }}>
+                <View style={styles.modalHeaderRow}>
+                   <View>
+                      <Text style={styles.sheetTitle}>New Batter</Text>
+                      <Text style={styles.sheetSubtitle}>Pick the next batter for {inn.battingTeam}</Text>
+                   </View>
+                   <TouchableOpacity onPress={() => { setIsSelectingNewBatter(false); setPlayerSearchQuery(''); setIsAddingNewPlayerManually(false); }}>
+                      <X size={24} color="#6B7280" />
+                   </TouchableOpacity>
+                </View>
+
+                {!isAddingNewPlayerManually && (
+                  <View style={styles.modalSearchContainer}>
+                     <Search size={18} color="#9CA3AF" />
+                     <TextInput 
+                        style={styles.modalSearchInput}
+                        placeholder="Search by name or number..."
+                        value={playerSearchQuery}
+                        onChangeText={setPlayerSearchQuery}
+                     />
+                  </View>
+                )}
+             </View>
+
+             <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}>
+                {filteredSquad.length > 0 ? (
+                  <View style={styles.playerGrid}>
+                    {filteredSquad.map(p => (
+                      <TouchableOpacity 
+                        key={p.id} 
+                        style={styles.playerGridTile}
+                        onPress={() => {
+                           handleAddWicket({ 
+                             dismissedName: pendingWicketData?.dismissedName, 
+                             dismissalType: 'Out', 
+                             newBatterName: p.player_name,
+});
+                           setIsSelectingNewBatter(false);
+                           setPendingWicketData(null);
+                        }}
+                      >
+                         <View style={[styles.miniAvatar, { width: 44, height: 44, backgroundColor: '#FEF3C7' }]}>
+                            <Text style={{ color: '#D97706', fontWeight: 'bold', fontSize: 16 }}>{p.player_name[0]}</Text>
+                         </View>
+                         <Text style={styles.playerGridName} numberOfLines={1}>{p.player_name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ) : (
+                  <View style={{ alignItems: 'center', marginTop: 40 }}>
+                     <Text style={styles.sheetSubtitle}>No more players available in squad.</Text>
+                  </View>
+                )}
+
+                <TouchableOpacity 
+                  style={styles.addPlayerMiniBtn}
+                  onPress={() => {
+                     const name = prompt('New Batter Name:');
+                     if (name) {
+                        handleAddWicket({ 
+                          dismissedName: pendingWicketData?.dismissedName, 
+                          dismissalType: 'Out', 
+                          newBatterName: name,
+});
+                        setIsSelectingNewBatter(false);
+                        setPendingWicketData(null);
+                     }
+                  }}
+                >
+                   <Plus size={18} color="#0D9488" />
+                   <Text style={styles.addPlayerMiniText}>Add New Batter</Text>
+                </TouchableOpacity>
+             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
+  const renderLiveScoring = () => {
+    if (!inn) return null;
+    
+    const oversStr = formatOvers(inn.legalBalls);
+    
+    // Helper to calculate Strike Rate and Minutes in real-time
+    const calcSR = (r: number, b: number) => b === 0 ? '0.0' : ((r / b) * 100).toFixed(1);
+    const calcMins = (start?: number) => start ? Math.floor((Date.now() - start) / 60000) : 0;
+    const calcEco = (r: number, b: number, o: number) => {
+       const totalBalls = (o * 6) + b;
+       return totalBalls === 0 ? '0.0' : (r / (totalBalls / 6)).toFixed(1);
+    };
+    
+    return (
+      <View style={styles.scoringContainer}>
+         {/* Top Scoreboard */}
+         <View style={styles.mainScoreboard}>
+            <View style={styles.scoreRow}>
+               <View>
+                  <Text style={styles.scoringTeamName}>{inn.battingTeam}</Text>
+                  <View style={styles.scoreNumberRow}>
+                     <Text style={styles.bigRuns}>{inn.runs}-{inn.wickets}</Text>
+                     <Text style={styles.overText}>({oversStr})</Text>
+                  </View>
+               </View>
+               <View style={styles.crrBadge}>
+                  <Text style={styles.crrLabel}>CRR</Text>
+                  <Text style={styles.crrValue}>{crr}</Text>
+               </View>
+            </View>
+            
+            {renderScoringSettingsSidebar()}
+            {renderMoreActionsSheet()}
+            {renderExtraRunsSelector()}
+            {renderBowlerSelectionModal()}
+            {renderNewBatterSelectionModal()}
+
+             <View style={styles.targetRow}>
+                <Text style={styles.targetText}>
+                  {inn.target 
+                    ? `Target: ${inn.target} | Need ${inn.target - inn.runs} from ${parseInt(matchConfig.totalOvers || '20') * 6 - inn.legalBalls} balls` 
+                    : `${tossResult.winner === 'A' ? selectedTeamA?.name : selectedTeamB?.name} won the toss and opted to ${tossResult.decision === 'bowl' ? 'bowl' : 'bat'}`}
+                </Text>
+             </View>
+
+            {/* In-Play Tables */}            <View style={[styles.playerStatsRow, { gap: 24 }]}>
+               <View style={[styles.batsmanCol, { flex: 3 }]}>
+                  <View style={styles.statsHeader}>
+                     <Text style={[styles.statsHeaderText, { flex: 2 }]}>Batsman</Text>
+                     <View style={[styles.statsHeadValues, { gap: 10 }]}>
+                        <Text style={styles.statsHeaderTextFixed}>R</Text>
+                        <Text style={styles.statsHeaderTextFixed}>B</Text>
+                        <Text style={styles.statsHeaderTextFixed}>0s</Text>
+                        <Text style={styles.statsHeaderTextFixed}>4s</Text>
+                        <Text style={styles.statsHeaderTextFixed}>6s</Text>
+                        <Text style={[styles.statsHeaderTextFixed, { width: 38 }]}>SR</Text>
+                        <Text style={styles.statsHeaderTextFixed}>M</Text>
+                     </View>
+                  </View>
+                  {[striker, nonStriker].map((b, idx) => (
+                    <TouchableOpacity 
+                       key={idx} 
+                       style={styles.statsRow}
+                       onPress={() => {
+                          if (!b?.name || b.name === '--') {
+                             setIsSelectingNewBatter(true);
+                          }
+                       }}
+                    >
+                       <Text style={[styles.playerName, b?.onStrike && { color: '#0D9488' }, { flex: 2 }]} numberOfLines={1}>
+                          {b?.name || 'Select Batter...'}{b?.onStrike ? '*' : ''}
+                       </Text>
+                       <View style={[styles.statsValues, { gap: 10 }]}>
+                          <Text style={styles.statsValueTextFixed}>{b?.runs || 0}</Text>
+                          <Text style={styles.statsValueTextFixed}>{b?.balls || 0}</Text>
+                          <Text style={styles.statsValueTextFixed}>{b?.dots || 0}</Text>
+                          <Text style={styles.statsValueTextFixed}>{b?.fours || 0}</Text>
+                          <Text style={styles.statsValueTextFixed}>{b?.sixes || 0}</Text>
+                          <Text style={[styles.statsValueTextFixed, { width: 38 }]}>{calcSR(b?.runs || 0, b?.balls || 0)}</Text>
+                          <Text style={styles.statsValueTextFixed}>{calcMins(b?.startTime)}</Text>
+                       </View>
+                    </TouchableOpacity>
+                  ))}
+
+               </View>
+               <View style={[styles.bowlerCol, { flex: 3 }]}>
+                  <View style={styles.statsHeader}>
+                     <Text style={[styles.statsHeaderText, { flex: 2 }]}>Bowler</Text>
+                     <View style={[styles.statsHeadValues, { gap: 10 }]}>
+                        <Text style={styles.statsHeaderTextFixed}>O</Text>
+                        <Text style={styles.statsHeaderTextFixed}>M</Text>
+                        <Text style={styles.statsHeaderTextFixed}>R</Text>
+                        <Text style={styles.statsHeaderTextFixed}>W</Text>
+                        <Text style={[styles.statsHeaderTextFixed, { width: 32 }]}>Eco</Text>
+                        <Text style={styles.statsHeaderTextFixed}>0s</Text>
+                        <Text style={styles.statsHeaderTextFixed}>4s</Text>
+                        <Text style={styles.statsHeaderTextFixed}>6s</Text>
+                     </View>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.statsRow}
+                    onPress={() => setIsSelectingNextBowler(true)}
+                  >
+                       <Text style={[styles.playerName, { flex: 2 }]} numberOfLines={1}>
+                          {bowler?.name || 'Tap to select Bowler...'}
+                       </Text>
+                       <View style={[styles.statsValues, { gap: 10 }]}>
+                          <Text style={styles.statsValueTextFixed}>{bowler?.overs ?? 0}.{bowler?.balls ?? 0}</Text>
+                          <Text style={styles.statsValueTextFixed}>{bowler?.maidens || 0}</Text>
+                          <Text style={styles.statsValueTextFixed}>{bowler?.runs || 0}</Text>
+                          <Text style={styles.statsValueTextFixed}>{bowler?.wickets || 0}</Text>
+                          <Text style={[styles.statsValueTextFixed, { width: 32 }]}>{calcEco(bowler?.runs || 0, bowler?.balls || 0, bowler?.overs || 0)}</Text>
+                          <Text style={styles.statsValueTextFixed}>{bowler?.dots || 0}</Text>
+                          <Text style={styles.statsValueTextFixed}>{bowler?.fours || 0}</Text>
+                          <Text style={styles.statsValueTextFixed}>{bowler?.sixes || 0}</Text>
+                       </View>
+                    </TouchableOpacity>
+               </View>
+            </View>
+
+
+            {/* Ball Timeline */}
+            <View style={styles.timelineContainer}>
+               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                  {inn.overBalls.slice(-12).map((b, i) => (
+                    <View key={i} style={[styles.ballCircle, b.label === 'W' && styles.ballWicket, (b.label === '4' || b.label === '6') && styles.ballBoundary]}>
+                       <Text style={[styles.ballLabel, (b.label === 'W' || b.label === '4' || b.label === '6') && { color: '#FFFFFF' }]}>{b.label}</Text>
+                    </View>
+                  ))}
+                  {inn.overBalls.length === 0 && <Text style={styles.statsHeaderText}>Start the over...</Text>}
+               </ScrollView>
+            </View>
+         </View>
+
+         {/* Scoring Wheel */}
+         <View style={styles.scoringWheel}>
+            <View style={styles.wheelRow}>
+               {[0, 1, 2, 3].map(n => (
+                 <TouchableOpacity key={n} style={styles.runBtn} onPress={() => handleAddBall(n)}>
+                    <Text style={styles.runBtnText}>{n}</Text>
+                 </TouchableOpacity>
+               ))}
+            </View>
+            <View style={styles.wheelRow}>
+               {[4, 6].map(n => (
+                 <TouchableOpacity key={n} style={[styles.runBtn, styles.boundaryBtn]} onPress={() => handleAddBall(n)}>
+                    <Text style={styles.boundaryBtnText}>{n}</Text>
+                 </TouchableOpacity>
+               ))}
+                <TouchableOpacity 
+                  style={[styles.runBtn, styles.wicketBtn]} 
+                  onPress={() => {
+                    setDismissalState({ type: '', fielder: null, runOutBatter: null,
+});
+                    setIsConfiguringDismissal(true);
+                  }}
+                 >
+                   <Text style={styles.runBtnText}>W</Text>
+                </TouchableOpacity>
+            </View>
+             <View style={styles.extraRow}>
+                <TouchableOpacity style={styles.extraBtn} onPress={() => { setActiveExtraType('wide'); setIsExtraRunsSelectorVisible(true); }}><Text style={styles.extraBtnText}>WD</Text></TouchableOpacity>
+                <TouchableOpacity style={styles.extraBtn} onPress={() => { setActiveExtraType('noball'); setIsExtraRunsSelectorVisible(true); }}><Text style={styles.extraBtnText}>NB</Text></TouchableOpacity>
+                <TouchableOpacity style={styles.extraBtn} onPress={() => { setActiveExtraType('bye'); setIsExtraRunsSelectorVisible(true); }}><Text style={styles.extraBtnText}>BYE</Text></TouchableOpacity>
+                <TouchableOpacity style={styles.extraBtn} onPress={() => { setActiveExtraType('legbye'); setIsExtraRunsSelectorVisible(true); }}><Text style={styles.extraBtnText}>LB</Text></TouchableOpacity>
+             </View>
+         </View>
+
+         {/* Bottom Actions */}
+         <View style={styles.scoringActions}>
+            <TouchableOpacity 
+              style={styles.actionIconBtn}
+              onPress={async () => {
+                const success = await undoLastBall();
+                if (!success && typeof window !== 'undefined') {
+                   alert('Nothing to undo in this session.');
+                }
+              }}
+            >
+              <RotateCcw size={20} color="#6B7280" />
+              <Text style={styles.actionIconText}>Undo</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.actionIconBtn}
+              onPress={() => setIsMoreSheetVisible(true)}
+            >
+              <MoreHorizontal size={20} color="#6B7280" />
+              <Text style={styles.actionIconText}>More</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.actionIconBtn} 
+              onPress={() => setIsScoringSettingsVisible(true)}
+            >
+              <Settings size={20} color="#6B7280" />
+              <Text style={styles.actionIconText}>Settings</Text>
+            </TouchableOpacity>
+            
+            {matchPhase === 'innings_break' && (
+              <TouchableOpacity 
+                style={[styles.actionIconBtn, { backgroundColor: '#FFF7ED', width: '30%' }]}
+                onPress={async () => {
+                  await startSecondInnings();
+                  setMatchState({ striker: null, nonStriker: null, bowler: null,
+});
+                  setIsSelectingOpeners(true);
+                }}
+              >
+                <ChevronRight size={20} color="#F97316" />
+                <Text style={[styles.actionIconText, { color: '#F97316' }]}>2nd Inning</Text>
+              </TouchableOpacity>
+            )}
+         </View>
+      </View>
+    );
+  };
+
+  const renderBowlerSelection = () => {
+    if (!inn) return null;
+    const battingTeam = tossResult.decision === 'bat' ? tossResult.winner : (tossResult.winner?.id === selectedTeamA?.id ? selectedTeamB : selectedTeamA);
+    const bowlingTeam = battingTeam?.id === selectedTeamA?.id ? selectedTeamB : selectedTeamA;
+    const bowlingPlayers = bowlingTeam?.id === selectedTeamA?.id ? playingXiA : playingXiB;
+
+    return (
+      <View style={styles.selectionView}>
+         <View style={styles.selectionHeader}>
+            <View style={{ width: 40 }} />
+            <Text style={styles.selectionTitle}>Select Next Bowler</Text>
+            <View style={{ width: 40 }} />
+         </View>
+
+         <View style={styles.overSummaryBanner}>
+            <Text style={styles.overSummaryText}>Over {Math.floor(inn.balls / 6)} Completed</Text>
+            <Text style={styles.scoreSummaryText}>{inn.runs}/{inn.wickets}</Text>
+         </View>
+
+         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
+            <Text style={styles.configLabel}>Choose Bowler for Over {Math.floor(inn.balls / 6) + 1}</Text>
+            <View style={styles.playerGrid}>
+               {bowlingPlayers.map(p => (
+                 <TouchableOpacity 
+                   key={p.id} 
+                   style={[
+                     styles.playerGridTile, 
+                     lastBowlerId === p.player_name && { opacity: 0.4, backgroundColor: '#F3F4F6' }
+                   ]}
+                   onPress={() => {
+                     if (lastBowlerId === p.player_name) {
+                       alert('A bowler cannot bowl two consecutive overs.');
+                       return;
+                     }
+                     const idx = bowlingPlayers.findIndex(bp => bp.id === p.id);
+                     changeBowler(idx);
+                     setIsSelectingNextBowler(false);
+                   }}
+                 >
+                    <View style={[styles.miniAvatar, { width: 40, height: 40, backgroundColor: lastBowlerId === p.player_name ? '#9CA3AF' : '#0D9488' }]}>
+                       <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>{p.player_name[0]}</Text>
+                    </View>
+                    <Text style={styles.playerGridName} numberOfLines={1}>{p.player_name}</Text>
+                    {lastBowlerId === p.id && <Text style={{ fontSize: 9, color: '#EF4444', fontWeight: 'bold' }}>PREV BOWLER</Text>}
+                 </TouchableOpacity>
+               ))}
+               <TouchableOpacity 
+                 style={[styles.playerGridTile, { borderStyle: 'dashed', borderColor: '#0D9488' }]}
+                 onPress={() => {
+                   const name = prompt('Enter New Bowler Name:');
+                   if (name) {
+                     addNewBowler(name);
+                     setIsSelectingNextBowler(false);
+                   }
+                 }}
+               >
+                  <Plus size={24} color="#0D9488" />
+                                    <Text style={[styles.playerGridName, { color: '#0D9488' }]}>Add New</Text>
+               </TouchableOpacity>
+            </View>
+         </ScrollView>
+      </View>
+    );
+  };
+
+  const renderDismissalConfiguration = () => {
+    if (!inn) return null;
+    const dismissalTypes = [
+      { id: 'bowled', label: 'Bowled' },
+      { id: 'caught', label: 'Caught' },
+      { id: 'lbw', label: 'LBW' },
+      { id: 'run_out', label: 'Run Out' },
+      { id: 'stumped', label: 'Stumped' },
+      { id: 'hit_wicket', label: 'Hit Wicket' },
+      { id: 'retired', label: 'Retired' }
+    ];
+
+    const battingTeam = tossResult.decision === 'bat' ? tossResult.winner : (tossResult.winner?.id === selectedTeamA?.id ? selectedTeamB : selectedTeamA);
+    const bowlingTeam = battingTeam?.id === selectedTeamA?.id ? selectedTeamB : selectedTeamA;
+    const bowlingPlayers = bowlingTeam?.id === selectedTeamA?.id ? playingXiA : playingXiB;
+
+    const needsFielder = dismissalState.type === 'caught' || dismissalState.type === 'run_out' || dismissalState.type === 'stumped';
+    const isRunOut = dismissalState.type === 'run_out';
+
+    return (
+      <View style={styles.selectionView}>
+         <View style={[styles.selectionHeader, { backgroundColor: '#F0FDF4', padding: 20, borderRadius: 24, marginBottom: 20 }]}>
+            <TouchableOpacity onPress={() => setIsConfiguringDismissal(false)} style={{ backgroundColor: '#FFFFFF', padding: 8, borderRadius: 12 }}>
+               <ChevronLeft size={24} color="#01b854" />
+            </TouchableOpacity>
+            <Text style={[styles.selectionTitle, { color: '#01b854' }]}>Wicket Setup</Text>
+            <View style={{ width: 40 }} />
+         </View>
+
+         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
+            <View style={styles.dismissalGrid}>
+               {dismissalTypes.map(d => (
+                 <TouchableOpacity 
+key={d.id} 
+                   style={[styles.dismissalTile, dismissalState.type === d.id && styles.dismissalTileActive]}
+                   onPress={() => setDismissalState({ ...dismissalState, type: d.id, fielder: null, runOutBatter: d.id === 'run_out' ? 'Striker' : null })}
+                 >
+                   <Text style={[styles.dismissalText, dismissalState.type === d.id && styles.dismissalTextActive]}>{d.label}</Text>
+                 </TouchableOpacity>
+               ))}
+            </View>
+
+            {isRunOut && (
+              <View style={{ marginTop: 24 }}>
+                 <Text style={styles.configLabel}>Which batter is out?</Text>
+                 <View style={{ flexDirection: 'row', gap: 16, marginTop: 12 }}>
+                    {[
+                      { type: 'Striker', player: striker },
+                      { type: 'Non-Striker', player: nonStriker }
+                    ].map(b => (
+                      <TouchableOpacity 
+                        key={b.type}
+                        style={[styles.batterSelectionTile, dismissalState.runOutBatter === b.type && styles.batterSelectionTileActive]}
+                        onPress={() => setDismissalState({ ...dismissalState, runOutBatter: b.type as any })}
+                      >
+                         <View style={[styles.miniAvatar, { backgroundColor: dismissalState.runOutBatter === b.type ? '#0D9488' : '#6B7280', width: 44, height: 44 }]}>
+                            <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 18 }}>{b.player?.name?.[0] || '?'}</Text>
+                         </View>
+                         <Text style={[styles.batterSelectionName, dismissalState.runOutBatter === b.type && { color: '#065F46' }]}>{b.player?.name || b.type}</Text>
+                         <Text style={styles.batterSelectionRole}>{b.type}</Text>
+                      </TouchableOpacity>
+                    ))}
+                 </View>
+              </View>
+            )}
+
+            {needsFielder && (
+              <View style={{ marginTop: 24 }}>
+                 <Text style={styles.configLabel}>{isRunOut ? 'Run out by' : (dismissalState.type === 'stumped' ? 'Stumped by' : 'Caught by')}</Text>
+                 <View style={[styles.playerGrid, { marginTop: 8 }]}>
+                    {bowlingPlayers.map(p => (
+                      <TouchableOpacity 
+                        key={p.id} 
+                        style={[styles.playerGridTile, dismissalState.fielder?.id === p.id && styles.playerGridTileActive]}
+                        onPress={() => setDismissalState({ ...dismissalState, fielder: p })}
+                      >
+                         <View style={styles.miniAvatar}>
+                            <Text style={{ color: '#FFFFFF' }}>{p.player_name[0]}</Text>
+                         </View>
+                         <Text style={styles.playerGridName} numberOfLines={1}>{p.player_name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                 </View>
+              </View>
+            )}
+         </ScrollView>
+
+         <View style={styles.configFooter}>
+            <TouchableOpacity 
+               style={[styles.startMatchMainBtn, !dismissalState.type && { opacity: 0.5 }, (needsFielder && !dismissalState.fielder) && { opacity: 0.5 }]}
+               disabled={!dismissalState.type || (needsFielder && !dismissalState.fielder)}
+               onPress={() => {
+                  let dismissedName = striker?.name;
+                  if (isRunOut) {
+                    dismissedName = dismissalState.runOutBatter === 'Striker' ? striker?.name : nonStriker?.name;
+                  }
+                  
+                  if (!dismissedName || dismissedName === '--') {
+                    alert('Dismissed batter not found');
+                    return;
+                  }
+
+                  setPendingWicketData({ 
+                    dismissedName,
+                    dismissalType: dismissalState.type,
+                    fielderName: dismissalState.fielder?.player_name,
+});
+                  setIsConfiguringDismissal(false);
+                  setIsSelectingNewBatter(true);
+               }}
+            >
+               <Text style={styles.startMatchMainBtnText}>Confirm Wicket</Text>
+            </TouchableOpacity>
+         </View>
+      </View>
+    );
+  };
+
+  const renderOpeningSelection = () => {
+    const battingTeam = tossResult.decision === 'bat' ? tossResult.winner : (tossResult.winner?.id === selectedTeamA?.id ? selectedTeamB : selectedTeamA);
+    const bowlingTeam = battingTeam?.id === selectedTeamA?.id ? selectedTeamB : selectedTeamA;
+    const battingPlayers = battingTeam?.id === selectedTeamA?.id ? playingXiA : playingXiB;
+    const bowlingPlayers = bowlingTeam?.id === selectedTeamA?.id ? playingXiA : playingXiB;
+
+    return (
+      <View style={styles.selectionView}>
+         <View style={styles.selectionHeader}>
+            <TouchableOpacity onPress={() => setIsSelectingOpeners(false)}>
+               <ChevronLeft size={28} color="#0D9488" />
+            </TouchableOpacity>
+            <Text style={styles.selectionTitle}>Select Openers</Text>
+            <View style={{ width: 40 }} />
+         </View>
+
+         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
+            {battingPlayers.length === 0 || bowlingPlayers.length === 0 ? (
+               <View style={styles.noResultArea}>
+                  <AlertCircle size={48} color="#EF4444" />
+                  <Text style={styles.noResultTitle}>Preparation Incomplete</Text>
+                  <Text style={styles.noResultSub}>You must select a Playing XI for both teams before picking openers.</Text>
+                  <TouchableOpacity 
+                    style={[styles.addNewOfficialBtn, { borderColor: '#FECACA', backgroundColor: '#FEF2F2' }]}
+                    onPress={() => {
+                      setIsSelectingOpeners(false);
+                      setIsConfiguringMatch(false);
+                      setIsSelectingPlayers(true);
+                      setCurrentPickingSide('A');
+                    }}
+                  >
+                     <ChevronLeft size={20} color="#B91C1C" />
+                     <Text style={[styles.addNewOfficialText, { color: '#B91C1C' }]}>Go Back to Player Selection</Text>
+                  </TouchableOpacity>
+               </View>
+            ) : (
+              <>
+                <View style={styles.openerSection}>
+                   <View style={styles.openerLabelRow}>
+                      <Text style={styles.configLabel}>Striker</Text>
+                      <Text style={styles.playingXiLabel}>{battingTeam?.name} Squad</Text>
+                   </View>
+                   {battingPlayers.length < 2 && (
+                     <Text style={styles.warningText}>⚠️ Add at least 2 players to {battingTeam?.name} to select both openers.</Text>
+                   )}
+                   <View style={styles.playerGrid}>
+                      {battingPlayers.map(p => (
+                        <TouchableOpacity 
+                          key={p.id} 
+                          style={[styles.playerGridTile, matchState.striker?.id === p.id && styles.playerGridTileActive, matchState.nonStriker?.id === p.id && { opacity: 0.5 }]}
+                          onPress={() => setMatchState({ ...matchState, striker: p })}
+                          disabled={matchState.nonStriker?.id === p.id}
+                        >
+                           <View style={[styles.miniAvatar, { width: 36, height: 36 }]}>
+                              <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>{p.player_name[0]}</Text>
+                           </View>
+                           <Text style={[styles.playerGridName, matchState.striker?.id === p.id && styles.playerGridNameActive]} numberOfLines={1}>{p.player_name}</Text>
+                        </TouchableOpacity>
+                      ))}
+                      <TouchableOpacity 
+                        style={[styles.playerGridTile, { borderStyle: 'dashed', borderColor: '#0D9488' }]}
+                        onPress={() => {
+                          setActiveTeamForPlayers(battingTeam);
+                          setIsAddMemberModalVisible(true);
+                        }}
+                      >
+                         <Plus size={20} color="#0D9488" />
+                         <Text style={[styles.playerGridName, { color: '#0D9488' }]}>Add</Text>
+                      </TouchableOpacity>
+                   </View>
+                </View>
+
+                <View style={styles.openerSection}>
+                   <View style={styles.openerLabelRow}>
+                      <Text style={styles.configLabel}>Non-Striker</Text>
+                      <Text style={styles.playingXiLabel}>{battingTeam?.name} Squad</Text>
+                   </View>
+                   <View style={styles.playerGrid}>
+                      {battingPlayers.map(p => (
+                        <TouchableOpacity 
+                          key={p.id} 
+                          style={[styles.playerGridTile, matchState.nonStriker?.id === p.id && styles.playerGridTileActive, matchState.striker?.id === p.id && { opacity: 0.5 }]}
+                          onPress={() => setMatchState({ ...matchState, nonStriker: p })}
+                          disabled={matchState.striker?.id === p.id}
+                        >
+                           <View style={[styles.miniAvatar, { width: 36, height: 36 }]}>
+                              <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>{p.player_name[0]}</Text>
+                           </View>
+                           <Text style={[styles.playerGridName, matchState.nonStriker?.id === p.id && styles.playerGridNameActive]} numberOfLines={1}>{p.player_name}</Text>
+                        </TouchableOpacity>
+                      ))}
+                   </View>
+                </View>
+
+                <View style={styles.openerSection}>
+                   <View style={styles.openerLabelRow}>
+                      <Text style={styles.configLabel}>Opening Bowler</Text>
+                      <Text style={styles.playingXiLabel}>{bowlingTeam?.name} Squad</Text>
+                   </View>
+                   <View style={styles.playerGrid}>
+                      {bowlingPlayers.map(p => (
+                        <TouchableOpacity 
+                          key={p.id} 
+                          style={[styles.playerGridTile, matchState.bowler?.id === p.id && styles.playerGridTileActive]}
+                          onPress={() => setMatchState({ ...matchState, bowler: p })}
+                        >
+                           <View style={[styles.miniAvatar, { width: 36, height: 36 }]}>
+                              <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>{p.player_name[0]}</Text>
+                           </View>
+                           <Text style={[styles.playerGridName, matchState.bowler?.id === p.id && styles.playerGridNameActive]} numberOfLines={1}>{p.player_name}</Text>
+                        </TouchableOpacity>
+                      ))}
+                   </View>
+                </View>
+              </>
+            )}
+         </ScrollView>
+
+         <View style={styles.configFooter}>
+            <TouchableOpacity 
+               style={[styles.startMatchMainBtn, (!matchState.striker || !matchState.nonStriker || !matchState.bowler) && { opacity: 0.5 }]}
+               disabled={!matchState.striker || !matchState.nonStriker || !matchState.bowler}
+               onPress={async () => {
+                  const sName = matchState.striker.player_name;
+                  const nsName = matchState.nonStriker.player_name;
+                  const bwrName = matchState.bowler.player_name;
+
+                  if (inn && (inn.target !== undefined && inn.target !== null)) {
+                     // Second Innings: Just set openers for the already created inning
+                     await setOpeners(sName, nsName, bwrName);
+                  } else {
+                     // First Innings
+                     const battingFirstTeam = tossResult.decision === 'bat' 
+                       ? tossResult.winner 
+                       : (tossResult.winner?.id === selectedTeamA?.id ? selectedTeamB : selectedTeamA);
+                     
+                     const isTeamAFirst = battingFirstTeam?.id === selectedTeamA?.id;
+                     let bPlayers = (isTeamAFirst ? playingXiA : playingXiB).map(p => p.player_name);
+                     let blPlayers = (isTeamAFirst ? playingXiB : playingXiA).map(p => p.player_name);
+
+                     bPlayers = [sName, nsName, ...bPlayers.filter(p => p !== sName && p !== nsName)];
+                     blPlayers = [bwrName, ...blPlayers.filter(p => p !== bwrName)];
+
+                     const config = {
+                       teamA: selectedTeamA?.name,
+                       teamB: selectedTeamB?.name,
+                       teamAId: selectedTeamA?.id,
+                       teamBId: selectedTeamB?.id,
+                       teamAPlayers: isTeamAFirst ? bPlayers : blPlayers,
+                       teamBPlayers: isTeamAFirst ? blPlayers : bPlayers,
+                       overs: parseInt(matchConfig.totalOvers),
+                       players: playingXiA.length,
+                       venue: matchConfig.ground || 'Standard Ground',
+                       matchType: matchConfig.type
+                     };
+
+                     await startMatch(config, tossResult.winner?.name, tossResult.decision as 'bat' | 'bowl', { striker: sName, nonStriker: nsName, bowler: bwrName }, (urlMatchId as string) || undefined);
+                  }
+                  
+                  setIsSelectingOpeners(false);
+                  setIsScoring(true);
+               }}
+             >
+                <Text style={styles.startMatchMainBtnText}>Start Inning</Text>
+             </TouchableOpacity>
+         </View>
+      </View>
+    );
+  };
+
+  const renderTossConfiguration = () => {
+    const handleFlip = () => {
+      setIsFlipping(true);
+      setTimeout(() => {
+        setIsFlipping(false);
+        const randomWinner = Math.random() > 0.5 ? selectedTeamA : selectedTeamB;
+        setTossResult({ ...tossResult, winner: randomWinner,
+});
+      }, 1500);
+    };
+
+    return (
+      <View style={styles.selectionView}>
+         <View style={styles.selectionHeader}>
+            <TouchableOpacity onPress={() => setIsConfiguringToss(false)}>
+               <ChevronLeft size={28} color="#0D9488" />
+            </TouchableOpacity>
+            <Text style={styles.selectionTitle}>Toss Details</Text>
+            <View style={{ width: 40 }} />
+         </View>
+
+         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 24, alignItems: 'center' }}>
+            <Text style={styles.configLabel}>Flip the Coin</Text>
+            <TouchableOpacity 
+              style={[styles.coin, isFlipping && styles.coinFlipping]} 
+              onPress={handleFlip}
+              disabled={isFlipping}
+            >
+               <View style={styles.coinInner}>
+                  <Text style={styles.coinText}>{isFlipping ? '?' : '₹'}</Text>
+               </View>
+            </TouchableOpacity>
+            <Text style={styles.tapToFlipText}>{isFlipping ? 'Flipping...' : 'Tap for randomized result'}</Text>
+
+            <View style={{ width: '100%', marginTop: 40 }}>
+               <Text style={styles.configLabel}>Who won the toss?</Text>
+               <View style={styles.tossWinnerSelection}>
+                  {[selectedTeamA, selectedTeamB].map(team => (
+                    <TouchableOpacity 
+                      key={team?.id} 
+                      style={[styles.tossTeamBtn, tossResult.winner?.id === team?.id && styles.tossTeamBtnActive]}
+                      onPress={() => setTossResult({ ...tossResult, winner: team })}
+                    >
+                       <View style={[styles.miniAvatar, { backgroundColor: team?.bgColor || '#3B82F6', marginBottom: 8 }]}>
+                          <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>{team?.initials}</Text>
+                       </View>
+                       <Text style={[styles.tossTeamName, tossResult.winner?.id === team?.id && styles.tossTeamNameActive]}>{team?.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+               </View>
+            </View>
+
+            {tossResult.winner && (
+              <View style={{ width: '100%', marginTop: 32 }}>
+                 <Text style={styles.configLabel}>{tossResult.winner.name} won and elected to:</Text>
+                 <View style={styles.decisionRow}>
+                    {['Bat', 'Bowl'].map(d => (
+                      <TouchableOpacity 
+                        key={d} 
+                        style={[styles.decisionBtn, tossResult.decision === d.toLowerCase() && styles.decisionBtnActive]}
+                        onPress={() => setTossResult({ ...tossResult, decision: d.toLowerCase() as any })}
+                      >
+                         <Text style={[styles.decisionText, tossResult.decision === d.toLowerCase() && styles.decisionTextActive]}>{d}</Text>
+                      </TouchableOpacity>
+                    ))}
+                 </View>
+              </View>
+            )}
+         </ScrollView>
+
+         <View style={styles.configFooter}>
+            <TouchableOpacity 
+              style={[styles.startMatchMainBtn, (!tossResult.winner || !tossResult.decision) && { opacity: 0.5 }]}
+              disabled={!tossResult.winner || !tossResult.decision}
+              onPress={() => {
+                setIsConfiguringToss(false);
+                setIsSelectingOpeners(true);
+              }}
+            >
+               <Text style={styles.startMatchMainBtnText}>Ready to Play</Text>
+            </TouchableOpacity>
+         </View>
+      </View>
+    );
+  };
+
+  const renderMatchOfficials = () => (
+    <View style={styles.selectionView}>
+       <View style={styles.selectionHeader}>
+          <TouchableOpacity onPress={() => setIsConfiguringOfficials(false)}>
+             <ChevronRight size={28} color="#0D9488" style={{ transform: [{ rotate: '180deg' }] }} />
+          </TouchableOpacity>
+          <Text style={styles.selectionTitle}>Match Officials</Text>
+          <View style={{ width: 40 }} />
+       </View>
+
+       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
+          <View style={{ gap: 24 }}>
+             <View>
+                <Text style={styles.officialGroupTitle}>Umpires</Text>
+                {[0, 1, 2, 3].map(i => (
+                  <TouchableOpacity 
+                    key={i} 
+                    style={styles.officialInputRow}
+                    onPress={() => {
+                      setActiveOfficialSlot({ category: 'umpires', index: i,
+});
+                      setIsSearchingOfficial(true);
+                    }}
+                  >
+                     <User size={18} color="#9CA3AF" />
+                     <Text style={[styles.officialValueText, !matchConfig.officials.umpires[i] && styles.officialPlaceholderText]}>
+                        {matchConfig.officials.umpires[i] || `Select Umpire ${i + 1}`}
+                     </Text>
+                  </TouchableOpacity>
+                ))}
+             </View>
+
+             <View>
+                <Text style={styles.officialGroupTitle}>Scorers</Text>
+                {[0, 1].map(i => (
+                  <TouchableOpacity 
+                    key={i} 
+                    style={styles.officialInputRow}
+                    onPress={() => {
+                      setActiveOfficialSlot({ category: 'scorers', index: i,
+});
+                      setIsSearchingOfficial(true);
+                    }}
+                  >
+                     <Menu size={18} color="#9CA3AF" />
+                     <Text style={[styles.officialValueText, !matchConfig.officials.scorers[i] && styles.officialPlaceholderText]}>
+                        {matchConfig.officials.scorers[i] || `Select Scorer ${i + 1}`}
+                     </Text>
+                  </TouchableOpacity>
+                ))}
+             </View>
+
+             <View>
+                <Text style={styles.officialGroupTitle}>Match Referee</Text>
+                <TouchableOpacity 
+                  style={styles.officialInputRow}
+                  onPress={() => {
+                    setActiveOfficialSlot({ category: 'referee',
+});
+                    setIsSearchingOfficial(true);
+                  }}
+                >
+                   <UserSquare2 size={18} color="#9CA3AF" />
+                   <Text style={[styles.officialValueText, !matchConfig.officials.referee && styles.officialPlaceholderText]}>
+                      {matchConfig.officials.referee || "Select Match Referee"}
+                   </Text>
+                </TouchableOpacity>
+             </View>
+
+             <View>
+                <Text style={styles.officialGroupTitle}>Live Streamer</Text>
+                <TouchableOpacity 
+                  style={styles.officialInputRow}
+                  onPress={() => {
+                    setActiveOfficialSlot({ category: 'streamer',
+});
+                    setIsSearchingOfficial(true);
+                  }}
+                >
+                   <Video size={18} color="#9CA3AF" />
+                   <Text style={[styles.officialValueText, !matchConfig.officials.streamer && styles.officialPlaceholderText]}>
+                      {matchConfig.officials.streamer || "Select Live Streamer"}
+                   </Text>
+                </TouchableOpacity>
+             </View>
+
+             <View>
+                <Text style={styles.officialGroupTitle}>Commentators</Text>
+                {[0, 1].map(i => (
+                  <TouchableOpacity 
+                    key={i} 
+                    style={styles.officialInputRow}
+                    onPress={() => {
+                      setActiveOfficialSlot({ category: 'commentators', index: i,
+});
+                      setIsSearchingOfficial(true);
+                    }}
+                  >
+                     <Mic2 size={18} color="#9CA3AF" />
+                     <Text style={[styles.officialValueText, !matchConfig.officials.commentators[i] && styles.officialPlaceholderText]}>
+                        {matchConfig.officials.commentators[i] || `Select Commentator ${i + 1}`}
+                     </Text>
+                  </TouchableOpacity>
+                ))}
+             </View>
+          </View>
+       </ScrollView>
+
+       <View style={styles.configFooter}>
+          <TouchableOpacity 
+            style={styles.startMatchMainBtn}
+            onPress={() => setIsConfiguringOfficials(false)}
+          >
+             <Text style={styles.startMatchMainBtnText}>Save Officials</Text>
+          </TouchableOpacity>
+       </View>
+    </View>
+  );
+
+  const renderOfficialSearch = () => {
+    const mockOfficials = [
+      { name: 'Nitin Menon', phone: '9876543210', role: 'Umpire' },
+      { name: 'Richard Kettleborough', phone: '8765432109', role: 'Umpire' },
+      { name: 'Harsha Bhogle', phone: '7654321098', role: 'Commentator' }
+    ];
+
+    const filtered = mockOfficials.filter(o => o.phone.includes(searchQuery) || o.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    const handleSelect = (official: any) => {
+      if (!activeOfficialSlot) return;
+      const { category, index } = activeOfficialSlot;
+      const newOfficials = { ...matchConfig.officials };
+      
+      if (typeof index === 'number') {
+        const arr = [...(newOfficials as any)[category]];
+        arr[index] = official.name;
+        (newOfficials as any)[category] = arr;
+      } else {
+        (newOfficials as any)[category] = official.name;
+      }
+
+      setMatchConfig({ ...matchConfig, officials: newOfficials,
+});
+      setIsSearchingOfficial(false);
+      setSearchQuery('');
+    };
+
+    return (
+      <View style={styles.selectionView}>
+         <View style={styles.selectionHeader}>
+            <TouchableOpacity onPress={() => setIsSearchingOfficial(false)}>
+               <ChevronRight size={28} color="#0D9488" style={{ transform: [{ rotate: '180deg' }] }} />
+            </TouchableOpacity>
+            <Text style={styles.selectionTitle}>Search Official</Text>
+            <View style={{ width: 40 }} />
+         </View>
+
+         <View style={[styles.searchBarContainer, { marginHorizontal: 20 }]}>
+            <Search size={18} color="#9CA3AF" />
+            <TextInput 
+              placeholder="Search by name or priority phone..."
+              placeholderTextColor="#9CA3AF"
+              style={styles.searchInput}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              keyboardType="number-pad"
+            />
+         </View>
+
+         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
+            {filtered.length > 0 ? (
+              filtered.map((o, idx) => (
+                <TouchableOpacity key={idx} style={styles.officialResultCard} onPress={() => handleSelect(o)}>
+                   <View style={styles.miniAvatar}><Text style={{ color: '#FFFFFF' }}>{o.name[0]}</Text></View>
+                   <View style={{ flex: 1 }}>
+                      <Text style={styles.resultName}>{o.name}</Text>
+                      <Text style={styles.resultPhone}>{o.phone}</Text>
+                   </View>
+                   <Text style={styles.resultRole}>{o.role}</Text>
+                </TouchableOpacity>
+              ))
+            ) : (
+              <View style={styles.noResultArea}>
+                 <Search size={48} color="#E5E7EB" />
+                 <Text style={styles.noResultTitle}>No official found</Text>
+                 <Text style={styles.noResultSub}>Try searching with a full mobile number</Text>
+                 
+                 <TouchableOpacity 
+                   style={styles.addNewOfficialBtn}
+                   onPress={() => {
+                     setNewOfficialForm({ name: '', phone: searchQuery,
+});
+                     setIsAddOfficialModalVisible(true);
+                   }}
+                 >
+                    <Plus size={20} color="#0D9488" />
+                    <Text style={styles.addNewOfficialText}>Add & Register "{searchQuery || 'New Official'}"</Text>
+                 </TouchableOpacity>
+              </View>
+            )}
+         </ScrollView>
+
+         {/* Add Official Modal */}
+         <Modal
+           animationType="slide"
+           transparent={true}
+           visible={isAddOfficialModalVisible}
+           onRequestClose={() => setIsAddOfficialModalVisible(false)}
+         >
+           <TouchableOpacity 
+              style={styles.modalOverlay}
+              activeOpacity={1}
+              onPress={() => setIsAddOfficialModalVisible(false)}
+           >
+              <Pressable 
+                style={styles.modalContent} 
+                onPress={e => Platform.OS === 'web' && (e as any).stopPropagation()}
+              >
+                 <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Register New Official</Text>
+                    <TouchableOpacity onPress={() => setIsAddOfficialModalVisible(false)}>
+                       <X size={24} color="#6B7280" />
+                    </TouchableOpacity>
+                 </View>
+
+                 <View style={styles.formGroup}>
+                    <Text style={styles.label}>Official Name</Text>
+                    <TextInput 
+                      style={styles.formInput}
+                      placeholder="e.g. Richard Illingworth"
+                      value={newOfficialForm.name}
+                      onChangeText={val => setNewOfficialForm({ ...newOfficialForm, name: val })}
+                    />
+                 </View>
+
+                 <View style={styles.formGroup}>
+                    <Text style={styles.label}>Mobile Number</Text>
+                    <TextInput 
+                      style={styles.formInput}
+                      placeholder="+91 00000 00000"
+                      keyboardType="number-pad"
+                      value={newOfficialForm.phone}
+                      onChangeText={val => setNewOfficialForm({ ...newOfficialForm, phone: val })}
+                    />
+                 </View>
+
+                 <TouchableOpacity 
+                   style={[styles.submitBtn, isSubmitting && { opacity: 0.7 }]}
+                   onPress={handleCreateOfficial}
+                   disabled={isSubmitting}
+                 >
+                    <Text style={styles.submitBtnText}>{isSubmitting ? 'Registering...' : 'Register & Select Official'}</Text>
+                 </TouchableOpacity>
+              </Pressable>
+           </TouchableOpacity>
+         </Modal>
+      </View>
+    );
+  };
+
+  const [isConfiguringOfficials, setIsConfiguringOfficials] = useState(false);
+
+  const renderMoreActionsSheet = () => {
+    const gridItems = [
+      { id: 'help', label: 'Need Help', icon: HelpCircle },
+      { id: 'rules', label: 'Match Rules', icon: Settings },
+      { id: 'scorer', label: 'Change Scorer', icon: UserSquare2 },
+      { id: 'squad', label: 'Change Squad', icon: Users },
+      { id: 'scorecard', label: 'Full Scorecard', icon: LayoutGrid },
+      { id: 'overs', label: 'Match Overs', icon: Clock },
+      { id: 'replace', label: 'Replace Batters', icon: RotateCcw },
+      { id: 'bonus', label: 'Bonus Runs', icon: PlusCircle },
+      { id: 'dropped', label: 'Dropped Catch', icon: Hand },
+      { id: 'saved', label: 'Runs Saved/Missed', icon: TrendingUp },
+      { id: 'keeper', label: 'Change Keeper', icon: UserSquare2 },
+      { id: 'breaks', label: 'Match Breaks', icon: Coffee },
+      { id: 'powerplay', label: 'Power Play', icon: Zap },
+      { id: 'target', label: 'Revise Target', icon: Target },
+      { id: 'bowler', label: 'Change Bowler', icon: RefreshCw },
+      { id: 'hurt', label: 'Retired Hurt (Batter)', icon: UserMinus },
+    ];
+
+    return (
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isMoreSheetVisible}
+        onRequestClose={() => setIsMoreSheetVisible(false)}
+      >
+        <TouchableOpacity 
+          style={styles.sheetOverlay} 
+          activeOpacity={1} 
+          onPress={() => setIsMoreSheetVisible(false)}
+        >
+          <View style={styles.sheetContent}>
+             <View style={styles.sheetHandle} />
+             <ScrollView contentContainerStyle={styles.sheetGrid}>
+                {gridItems.map(item => (
+                  <TouchableOpacity 
+                    key={item.id} 
+                    style={styles.sheetGridItem}
+                    onPress={() => {
+                       alert(`Action: ${item.label}`);
+                       setIsMoreSheetVisible(false);
+                    }}
+                  >
+                     <View style={styles.sheetIconBox}>
+                        <item.icon size={26} color="#111827" strokeWidth={1.5} />
+                     </View>
+                     <Text style={styles.sheetItemLabel}>{item.label}</Text>
+                  </TouchableOpacity>
+                ))}
+             </ScrollView>
+             <TouchableOpacity 
+               style={styles.showLessBtn}
+               onPress={() => setIsMoreSheetVisible(false)}
+             >
+                <Text style={styles.showLessText}>Show less</Text>
+             </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    );
+  };
+  
+  const renderExtraRunsSelector = () => {
+    if (!isExtraRunsSelectorVisible || !activeExtraType) return null;
+
+    const runOptions = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+    const typeLabel = activeExtraType === 'wide' ? 'WIDE' : activeExtraType === 'noball' ? 'NO BALL' : activeExtraType === 'bye' ? 'BYE' : 'LEG BYE';
+
+    return (
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={isExtraRunsSelectorVisible}
+        onRequestClose={() => setIsExtraRunsSelectorVisible(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setIsExtraRunsSelectorVisible(false)}
+        >
+          <View style={styles.extraSelectorContent}>
+             <Text style={styles.extraSelectorTitle}>Extras: {typeLabel}</Text>
+             <Text style={styles.extraSelectorDesc}>Select additional runs (if any)</Text>
+             <View style={styles.extraRunsGrid}>
+                {runOptions.map(runs => (
+                  <TouchableOpacity 
+                    key={runs} 
+                    style={styles.extraRunTile}
+                    onPress={() => {
+                       handleAddExtra(activeExtraType, runs);
+                       setIsExtraRunsSelectorVisible(false);
+                       setActiveExtraType(null);
+                    }}
+                  >
+                     <Text style={styles.extraRunTileText}>+{runs}</Text>
+                  </TouchableOpacity>
+                ))}
+             </View>
+             <TouchableOpacity 
+               style={styles.cancelExtraBtn}
+               onPress={() => setIsExtraRunsSelectorVisible(false)}
+             >
+                <Text style={styles.cancelExtraText}>Cancel</Text>
+             </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    );
+  };
+
+  const renderScoringSettingsSidebar = () => {
+    const sections = [
+      {
+        title: 'Match Settings',
+        options: [
+          'Change Match Overs', 
+          'Match Rules (WD, NB, WW)', 
+          'Revise Target (DLS/VJD)',
+          'Add Bonus Runs',
+          'Give Penalty Runs',
+          'End / Declare Innings',
+          'End Match'
+        ]
+      },
+      {
+        title: 'Players Settings',
+        options: [
+          'Change Playing Squad',
+          'Change Bowler',
+          'Replace Batters',
+          'Retired Hurt (Batter)'
+        ]
+      },
+      {
+        title: 'Scorer Settings',
+        options: [
+          'Change Scorer',
+          'Add Match Officials/Streamer',
+          'Select Power Play Overs',
+          'Set Match Breaks (Lunch, Drinks, etc.)',
+          'Add Scorer Notes'
+        ]
+      },
+      {
+        title: 'Other Options',
+        options: ['Scoring Help']
+      }
+    ];
+
+    const closeDrawer = () => {
+      Animated.timing(drawerAnim, {
+        toValue: 400,
+        duration: 250,
+        useNativeDriver: true,
+      }).start(() => {
+        setIsScoringSettingsVisible(false);
+      });
+    };
+
+    return (
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={isScoringSettingsVisible}
+        onRequestClose={closeDrawer}
+      >
+        <TouchableOpacity 
+          style={styles.drawerOverlay} 
+          activeOpacity={1} 
+          onPress={closeDrawer}
+        >
+          <Animated.View 
+            style={[
+              styles.drawerContent,
+              { transform: [{ translateX: drawerAnim }] }
+            ]}
+          >
+             <View style={styles.drawerHeader}>
+                <Text style={styles.drawerTitle}>Settings</Text>
+                <TouchableOpacity onPress={closeDrawer}>
+                   <X size={24} color="#111827" />
+                </TouchableOpacity>
+             </View>
+
+             <ScrollView style={{ flex: 1 }}>
+                {sections.map(section => (
+                  <View key={section.title} style={styles.settingSection}>
+                     <TouchableOpacity 
+                       style={styles.sectionHeaderRow}
+                       onPress={() => setExpandedSettingSection(expandedSettingSection === section.title ? null : section.title)}
+                     >
+                        <Text style={styles.sectionHeaderTextMenu}>{section.title}</Text>
+                        {expandedSettingSection === section.title ? <ChevronDown size={20} color="#6B7280" /> : <ChevronRight size={20} color="#6B7280" />}
+                     </TouchableOpacity>
+
+                     {expandedSettingSection === section.title && (
+                       <View style={styles.sectionOptionsList}>
+                          {section.options.map(opt => (
+                            <TouchableOpacity 
+                              key={opt} 
+                              style={styles.settingOptionRow}
+                              onPress={() => {
+                                // Implement handlers here
+                                alert(`Opening: ${opt}`);
+                              }}
+                            >
+                               <Text style={styles.settingOptionText}>{opt}</Text>
+                            </TouchableOpacity>
+                          ))}
+                       </View>
+                     )}
+                  </View>
+                ))}
+             </ScrollView>
+          </Animated.View>
+        </TouchableOpacity>
+      </Modal>
+    );
+  };
+
+  const renderTeamProfileView = () => (
+    <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+      <View style={styles.profileHeader}>
+        <View style={styles.profileHeaderTop}>
+          <TouchableOpacity onPress={() => setIsAddPlayerViewVisible(false)}>
+            <ChevronRight size={28} color="#FFFFFF" style={{ transform: [{ rotate: '180deg' }] }} />
+          </TouchableOpacity>
+          <View style={styles.headerIcons}>
+            <TouchableOpacity onPress={() => {
+              setActiveTeamForQr(activeTeamForPlayers);
+              setIsQrModalVisible(true);
+            }}>
+              <QrCode size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setProfileSubTab('stats')}>
+              <Sliders size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => handleShareTeam(activeTeamForPlayers)}>
+              <Share2 size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.profileInfoRow}>
+          <View style={[styles.profileAvatar, { backgroundColor: activeTeamForPlayers?.bgColor || '#3B82F6' }]}>
+            <Text style={styles.profileAvatarText}>{activeTeamForPlayers?.initials || 'T'}</Text>
+          </View>
+          <View>
+            <Text style={styles.profileNameText}>{activeTeamForPlayers?.name}</Text>
+            <Text style={styles.profileMetaText}>Since 2026 • {activeTeamForPlayers?.location}</Text>
+          </View>
+        </View>
+
+        <View style={styles.profileActionsRow}>
+          <TouchableOpacity style={styles.rankBtn}>
+             <Trophy size={18} color="#FFFFFF" />
+             <Text style={styles.rankBtnText}>Team Rank</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.insightsBtn}>
+             <BarChart3 size={18} color="#FFFFFF" />
+             <Text style={styles.insightsBtnText}>Insights</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.profileTabsFixed}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, gap: 24 }}>
+          {['Matches', 'Leaderboard', 'Stats', 'Members', 'Trophies', 'Photos', 'Profile'].map(tab => (
+            <TouchableOpacity 
+              key={tab} 
+              onPress={() => setProfileSubTab(tab.toLowerCase())}
+              style={[styles.profileSubTab, profileSubTab === tab.toLowerCase() && styles.profileSubTabActive]}
+            >
+               <Text style={[styles.profileSubTabText, profileSubTab === tab.toLowerCase() && styles.profileSubTabTextActive]}>{tab}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
+         {renderProfileSubContent()}
+      </ScrollView>
+    </View>
+  );
+
+  const renderProfileSubContent = () => {
+    switch (profileSubTab) {
+      case 'matches':
+        return (
+          <View style={{ gap: 12 }}>
+            <Text style={styles.sectionHeading}>Upcoming Matches</Text>
+            {MATCHES_DATA.slice(0, 1).map(match => <MatchCard key={match.id} match={match} />)}
+            <Text style={[styles.sectionHeading, { marginTop: 20 }]}>Past Matches</Text>
+            <View style={styles.profilePlaceholder}>
+               <History size={48} color="#E5E7EB" />
+               <Text style={styles.placeholderTitle}>No past matches</Text>
+            </View>
+          </View>
+        );
+      case 'members':
+        return (
+          <View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+               <Text style={styles.sectionHeading}>{teamMembers.length} Members</Text>
+               <TouchableOpacity style={styles.addMemberSmallBtn} onPress={() => setManagementTab('squad')}>
+                  <Plus size={16} color="#0D9488" />
+                  <Text style={styles.addMemberSmallText}>Add New</Text>
+               </TouchableOpacity>
+            </View>
+            {teamMembers.map((member, idx) => (
+              <View key={idx} style={[styles.playerCardRow, { borderRadius: 12, marginBottom: 10, borderWidth: 1, borderColor: '#F3F4F6' }]}>
+                 <View style={styles.avatarCircle}>
+                    <User size={24} color="#6B7280" />
+                 </View>
+                 <View>
+                    <Text style={styles.playerNameText}>{member.player_name}</Text>
+                    <Text style={{ fontSize: 12, color: '#6B7280' }}>All-rounder</Text>
+                 </View>
+              </View>
+            ))}
+          </View>
+        );
+      case 'stats':
+        return (
+          <View style={{ gap: 16 }}>
+             <View style={styles.statsSummaryGrid}>
+                {[
+                  { label: 'Matches', value: '12', color: '#3B82F6' },
+                  { label: 'Won', value: '8', color: '#10B981' },
+                  { label: 'Lost', value: '4', color: '#EF4444' },
+                  { label: 'Win %', value: '66%', color: '#F59E0B' }
+                ].map((stat, i) => (
+                  <View key={i} style={styles.statBox}>
+                     <Text style={[styles.statBoxValue, { color: stat.color }]}>{stat.value}</Text>
+                     <Text style={styles.statBoxLabel}>{stat.label}</Text>
+                  </View>
+                ))}
+             </View>
+             <View style={styles.performanceChart}>
+                <Text style={styles.sectionHeading}>Team Form</Text>
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+                   {['W', 'W', 'L', 'W', 'W'].map((r, i) => (
+                     <View key={i} style={[styles.formCircle, { backgroundColor: r === 'W' ? '#10B981' : '#EF4444' }]}>
+                        <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 12 }}>{r}</Text>
+                     </View>
+                   ))}
+                </View>
+             </View>
+          </View>
+        );
+      case 'trophies':
+        return (
+          <View style={styles.trophyGrid}>
+             <View style={styles.trophyBox}>
+                <Trophy size={40} color="#F59E0B" />
+                <Text style={styles.trophyYear}>2025</Text>
+                <Text style={styles.trophyEvent}>City Premier League</Text>
+             </View>
+             <View style={[styles.trophyBox, { opacity: 0.3, borderStyle: 'dashed' }]}>
+                <Trophy size={40} color="#9CA3AF" />
+                <Text style={{ color: '#9CA3AF', fontSize: 12, marginTop: 8 }}>Next Trophy?</Text>
+             </View>
+          </View>
+        );
+      case 'leaderboard':
+        return (
+          <View style={{ gap: 12 }}>
+             <View style={styles.leaderboardSubTabs}>
+                {['Bat', 'Bowl', 'Field', 'Partnership'].map(st => (
+                  <TouchableOpacity 
+                    key={st} 
+                    style={[styles.lbSubTab, leaderboardSubTab === st.toLowerCase() && styles.lbSubTabActive]}
+                    onPress={() => setLeaderboardSubTab(st.toLowerCase())}
+                  >
+                     <Text style={[styles.lbSubTabText, leaderboardSubTab === st.toLowerCase() && styles.lbSubTabTextActive]}>{st}</Text>
+                  </TouchableOpacity>
+                ))}
+             </View>
+             
+             <Text style={styles.sectionHeading}>Top {leaderboardSubTab} ranking</Text>
+             {teamMembers.length > 0 ? teamMembers.slice(0, 3).map((m, i) => (
+               <View key={i} style={styles.leaderboardRow}>
+                  <Text style={styles.rankNum}>{i+1}</Text>
+                  <View style={[styles.miniAvatar, { backgroundColor: i === 0 ? '#F59E0B' : '#3B82F6' }]}><Text style={{ color: '#FFFFFF', fontSize: 10 }}>{m.player_name[0]}</Text></View>
+                  <View style={{ flex: 1 }}>
+                     <Text style={{ fontWeight: '700' }}>{m.player_name}</Text>
+                     <Text style={{ fontSize: 11, color: '#6B7280' }}>8 matches played</Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end' }}>
+                     <Text style={{ color: '#0D9488', fontWeight: '800' }}>{400 + (100 - i * 20)} pts</Text>
+                     <Text style={{ fontSize: 10, color: '#9CA3AF' }}>Avg: {45 - i*5}.2</Text>
+                  </View>
+               </View>
+             )) : (
+                <View style={[styles.profilePlaceholder, { paddingTop: 20 }]}>
+                   <BarChart3 size={40} color="#E5E7EB" />
+                   <Text style={styles.placeholderTitle}>No stats yet</Text>
+                </View>
+             )}
+          </View>
+        );
+      default:
+        return (
+          <View style={styles.profilePlaceholder}>
+            <Image source={{ uri: 'https://images.pexels.com/photos/3628912/pexels-photo-3628912.jpeg' }} style={styles.placeholderImg} />
+            <Text style={styles.placeholderTitle}>No {profileSubTab} yet</Text>
+            <Text style={styles.placeholderDesc}>Start playing matches to see your {profileSubTab} here.</Text>
+          </View>
+        );
+    }
+  };
+
+  const renderAddPlayerView = () => (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={isAddPlayerViewVisible}
+      onRequestClose={() => setIsAddPlayerViewVisible(false)}
+    >
+      <TouchableOpacity 
+        style={styles.modalOverlay}
+        activeOpacity={1}
+        onPress={() => setIsAddPlayerViewVisible(false)}
+      >
+        <Pressable 
+          style={[styles.addPlayerModalContent, managementTab === 'profile' && { height: '95%', padding: 0 }]} 
+          onPress={(e) => {
+            if (Platform.OS === 'web') {
+              (e as any).stopPropagation();
+            }
+          }}
+        >
+          {managementTab === 'profile' ? renderTeamProfileView() : (
+          <View style={{ flex: 1 }}>
+          <View style={styles.addPlayerHeader}>
+            <TouchableOpacity onPress={() => setIsAddPlayerViewVisible(false)}>
+               <X size={24} color="#6B7280" />
+            </TouchableOpacity>
+            <Text style={styles.addPlayerTitle}>Add Player</Text>
+            <View style={{ width: 24 }} />
+          </View>
+
+          <ScrollView style={styles.addPlayerScroll} showsVerticalScrollIndicator={false}>
+            <View style={styles.activeTeamInfo}>
+               <View style={[styles.teamAvatarLarge, activeTeamForPlayers?.bgColor && { backgroundColor: activeTeamForPlayers.bgColor }]}>
+                  {activeTeamForPlayers?.image ? <Image source={{ uri: activeTeamForPlayers.image }} style={styles.teamImage} /> : <Text style={styles.teamInitialsLarge}>{activeTeamForPlayers?.initials}</Text>}
+               </View>
+               <Text style={styles.activeTeamName}>{activeTeamForPlayers?.name}</Text>
+               <Text style={styles.activeTeamMeta}>{activeTeamForPlayers?.location}</Text>
+            </View>
+
+            <View style={styles.assignAdminBanner}>
+               <View style={styles.adminBadge}>
+                  <Text style={styles.adminBadgeText}>A</Text>
+               </View>
+               <Text style={styles.adminBannerText}>Assign Admin of the Team</Text>
+            </View>
+
+            <TouchableOpacity style={styles.promoBanner}>
+               <View style={styles.promoContent}>
+                  <View style={styles.promoIconPlaceholder} />
+                  <Text style={styles.promoText}>Get Squad Banners</Text>
+               </View>
+               <ChevronRight size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+
+            <View style={styles.squadSection}>
+               {teamMembers.length > 0 ? (
+                 teamMembers.map((member, idx) => (
+                   <View key={idx} style={styles.playerCardRow}>
+                      <View style={styles.playerAvatar}>
+                         {/* Placeholder image or initial */}
+                         <View style={styles.avatarCircle}>
+                            <Users size={24} color="#6B7280" />
+                         </View>
+                         <View style={styles.onlineDot} />
+                      </View>
+                      <Text style={styles.playerNameText}>{member.player_name}</Text>
+                   </View>
+                 ))
+               ) : (
+                 <View style={{ paddingTop: 20 }}>
+                    <Text style={styles.sectionHeading}>Invite players via</Text>
+                    
+                    <View style={styles.inviteContainer}>
+                       <View style={styles.inviteLabelRow}>
+                          <Text style={styles.inviteLabel}>Team Link</Text>
+                          <Share2 size={20} color="#0D9488" />
+                       </View>
+                       
+                       <View style={styles.linkBox}>
+                          <View style={styles.linkIconWrapper}>
+                             <Link size={20} color="#0D9488" />
+                          </View>
+                          <Text style={styles.linkText} numberOfLines={2}>
+                            https://bookyourground.com/invite-team/{activeTeamForPlayers?.id}
+                          </Text>
+                       </View>
+
+                       <TouchableOpacity 
+                         style={styles.shareBtn}
+                         onPress={() => handleShareTeam(activeTeamForPlayers)}
+                       >
+                          <Text style={styles.shareBtnText}>Share With Captain/players</Text>
+                       </TouchableOpacity>
+                    </View>
+
+                    <Text style={[styles.sectionHeading, { marginTop: 32 }]}>Manually add players via</Text>
+                    
+                    <TouchableOpacity 
+                      style={styles.manualOption}
+                      onPress={() => setIsAddMemberModalVisible(true)}
+                    >
+                       <View style={styles.optionCircle}>
+                          <Smartphone size={24} color="#0D9488" />
+                       </View>
+                       <View style={styles.optionContent}>
+                          <Text style={styles.optionTitle}>Add via Phone Number</Text>
+                          <Text style={styles.optionSubtext}>Best for adding multiple players quickly.</Text>
+                       </View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity 
+                      style={styles.manualOption}
+                      onPress={() => setIsContactPickerVisible(true)}
+                    >
+                       <View style={styles.optionCircle}>
+                          <UserPlus size={24} color="#0D9488" />
+                       </View>
+                       <View style={styles.optionContent}>
+                          <Text style={styles.optionTitle}>Add from Contacts</Text>
+                          <Text style={styles.optionSubtext}>Best if players are already in your contacts.</Text>
+                       </View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity 
+                      style={styles.manualOption}
+                      onPress={() => {
+                        setActiveTeamForQr(activeTeamForPlayers);
+                        setIsQrModalVisible(true);
+                      }}
+                    >
+                       <View style={styles.optionCircle}>
+                          <QrCode size={24} color="#0D9488" />
+                       </View>
+                       <View style={styles.optionContent}>
+                          <Text style={styles.optionTitle}>Team QR code</Text>
+                          <Text style={styles.optionSubtext}>Scan and add players directly in team via QR code.</Text>
+                       </View>
+                    </TouchableOpacity>
+                 </View>
+               )}
+            </View>
+          </ScrollView>
+          </View>
+          )}
+
+          <View style={styles.squadFooter}>
+             <TouchableOpacity 
+               style={[styles.footerTab, managementTab === 'profile' && styles.footerTabActive]}
+               onPress={() => setManagementTab('profile')}
+             >
+                <Text style={[styles.footerTabText, managementTab === 'profile' && styles.footerTabTextActive]}>Team Profile</Text>
+             </TouchableOpacity>
+             <TouchableOpacity 
+               style={[styles.footerTab, managementTab === 'squad' && styles.footerTabActive]}
+               onPress={() => setManagementTab('squad')}
+             >
+                <Text style={[styles.footerTabText, managementTab === 'squad' && styles.footerTabTextActive]}>Add Player</Text>
+             </TouchableOpacity>
+          </View>
+        </Pressable>
+    </TouchableOpacity>
+  </Modal>
+  );
+
+  const renderAddMemberModal = () => (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={isAddMemberModalVisible}
+      onRequestClose={() => setIsAddMemberModalVisible(false)}
+    >
+      <TouchableOpacity 
+        style={styles.modalOverlay}
+        activeOpacity={1}
+        onPress={() => setIsAddMemberModalVisible(false)}
+      >
+        <Pressable 
+          style={styles.modalContent} 
+          onPress={(e) => {
+            if (Platform.OS === 'web') {
+              (e as any).stopPropagation();
+            }
+          }}
+        >
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Add Player Manually</Text>
+            <TouchableOpacity onPress={() => setIsAddMemberModalVisible(false)}>
+              <X size={24} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Player Name</Text>
+            <TextInput
+              style={styles.formInput}
+              placeholder="e.g. MS Dhoni"
+              placeholderTextColor="#9CA3AF"
+              value={memberForm.name}
+              onChangeText={(text) => setMemberForm({ ...memberForm, name: text })}
+            />
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Phone Number</Text>
+            <TextInput
+              style={styles.formInput}
+              placeholder="+91 99999 00000"
+              placeholderTextColor="#9CA3AF"
+              keyboardType="number-pad"
+              value={memberForm.phone}
+              onChangeText={(text) => {
+                const digits = text.replace(/[^0-9]/g, '');
+                setMemberForm({ ...memberForm, phone: digits,
+});
+              }}
+            />
+          </View>
+
+          <TouchableOpacity 
+            style={[styles.submitBtn, isSubmitting && { opacity: 0.7 }]} 
+            onPress={handleAddMember}
+            disabled={isSubmitting}
+          >
+            <Text style={styles.submitBtnText}>{isSubmitting ? 'Adding...' : 'Add Player to Squad'}</Text>
+          </TouchableOpacity>
+        </Pressable>
+      </TouchableOpacity>
+    </Modal>
+  );
+
+  const renderContactPicker = () => {
+    const mockContacts = [
+      { name: 'Arjun Sharma', phone: '+91 98765 43210', initials: 'AS' },
+      { name: 'Rohit Verma', phone: '+91 87654 32109', initials: 'RV' },
+      { name: 'Rahul Singh', phone: '+91 76543 21098', initials: 'RS' },
+      { name: 'Sandeep Mani', phone: '+91 65432 10987', initials: 'SM' },
+      { name: 'Vikram Batra', phone: '+91 54321 09876', initials: 'VB' },
+    ];
+
+    const filteredContacts = mockContacts.filter(c => 
+      c.name?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    return (
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isContactPickerVisible}
+        onRequestClose={() => setIsContactPickerVisible(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setIsContactPickerVisible(false)}
+        >
+          <Pressable 
+            style={[styles.modalContent, { height: '80%', paddingBottom: 0 }]} 
+            onPress={(e) => {
+              if (Platform.OS === 'web') {
+                (e as any).stopPropagation();
+              }
+            }}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Contact</Text>
+              <TouchableOpacity onPress={() => setIsContactPickerVisible(false)}>
+                <X size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={[styles.searchBarContainer, { marginHorizontal: 0, marginBottom: 16 }]}>
+              <Search size={16} color="#9CA3AF" />
+              <TextInput 
+                 placeholder="Search recent contacts..." 
+                 style={styles.searchInput}
+                 value={searchQuery}
+                 onChangeText={setSearchQuery}
+                 placeholderTextColor="#9CA3AF"
+              />
+            </View>
+
+            <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+              <Text style={[styles.label, { marginBottom: 12 }]}>Recent Selections</Text>
+              {filteredContacts.length > 0 ? filteredContacts.map((contact, idx) => (
+                <TouchableOpacity 
+                  key={idx} 
+                  style={styles.contactItem}
+                  onPress={() => {
+                    setMemberForm({ name: contact.name, phone: contact.phone,
+});
+                    setIsContactPickerVisible(false);
+                    setIsAddMemberModalVisible(true);
+                  }}
+                >
+                  <View style={styles.contactAvatar}>
+                     <Text style={styles.contactInitial}>{contact.initials}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                     <Text style={styles.contactName}>{contact.name}</Text>
+                     <Text style={styles.contactPhone}>{contact.phone}</Text>
+                  </View>
+                  <ChevronRight size={18} color="#9CA3AF" />
+                </TouchableOpacity>
+              )) : (
+                <View style={{ padding: 40, alignItems: 'center' }}>
+                  <Users size={48} color="#E5E7EB" />
+                  <Text style={{ marginTop: 12, color: '#9CA3AF' }}>No contacts found</Text>
+                </View>
+              )}
+            </ScrollView>
+            
+            <View style={{ padding: 20, borderTopWidth: 1, borderTopColor: '#F3F4F6' }}>
+               <TouchableOpacity 
+                 style={[styles.submitBtn, { backgroundColor: '#F3F4F6', marginTop: 0 }]}
+                 onPress={() => {
+                   setIsContactPickerVisible(false);
+                   setIsAddMemberModalVisible(true);
+                 }}
+               >
+                  <Text style={[styles.submitBtnText, { color: '#374151' }]}>Don't see them? Add manually</Text>
+               </TouchableOpacity>
+            </View>
+          </Pressable>
+        </TouchableOpacity>
+      </Modal>
+    );
+  };
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'matches':
+        return (
+          <View style={{ flex: 1 }}>
+            <View style={styles.subTabContainer}>
+              {['All', 'Ongoing', 'Upcoming', 'Result'].map((label) => (
+                <TouchableOpacity
+                  key={label}
+                  style={[styles.subTab, subTab === label.toLowerCase() && styles.subTabActive]}
+                  onPress={() => setSubTab(label.toLowerCase())}
+                >
+                  <Text style={[styles.subTabText, subTab === label.toLowerCase() && styles.subTabTextActive]}>
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={styles.matchesList}>
+              {[...fetchedMatches, ...MATCHES_DATA]
+                .filter(m => {
+                  if (subTab === 'all') return true;
+                  if (subTab === 'ongoing') return m.status === 'Live';
+                  return m.status.toLowerCase() === subTab.toLowerCase();
+                })
+                .map(match => (
+                  <MatchCard key={match.id} match={match} />
+                ))
+              }
+            </View>
+          </View>
+        );
+      case 'tournaments':
+        return (
+          <View style={{ flex: 1 }}>
+            <View style={styles.subTabContainer}>
+              {['All', 'Participate', 'Network', 'Nearby'].map((label) => (
+                <TouchableOpacity key={label} style={[styles.subTab, subTab === label.toLowerCase() && styles.subTabActive]} onPress={() => setSubTab(label.toLowerCase())}>
+                  <Text style={[styles.subTabText, subTab === label.toLowerCase() && styles.subTabTextActive]}>{label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={styles.matchesList}>
+               {TOURNAMENTS_DATA.map(tournament => (
+                 <TournamentCard key={tournament.id} tournament={tournament} />
+               ))}
+               <View style={styles.adBanner}>
+                  <Image source={{ uri: 'https://images.pexels.com/photos/1103970/pexels-photo-1103970.jpeg' }} style={styles.adImage} />
+                  <View style={styles.adOverlay}>
+                     <Text style={styles.adTitle}>Don't let good{'\n'}<Text style={styles.adTitleBold}>cricket go unseen</Text></Text>
+                     <TouchableOpacity style={styles.adBtn}><Text style={styles.adBtnText}>Stream now</Text></TouchableOpacity>
+                  </View>
+               </View>
+            </View>
+          </View>
+        );
+      case 'teams':
+        return (
+          <View style={{ flex: 1 }}>
+            <View style={styles.subTabContainer}>
+              {['Your', 'Opponents', 'Following'].map((label) => (
+                <TouchableOpacity key={label} style={[styles.subTab, subTab === label.toLowerCase() && styles.subTabActive]} onPress={() => setSubTab(label.toLowerCase())}>
+                  <Text style={[styles.subTabText, subTab === label.toLowerCase() && styles.subTabTextActive]}>{label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={styles.searchBarContainer}>
+               <Search size={16} color="#9CA3AF" />
+               <TextInput placeholder="Quick search" placeholderTextColor="#9CA3AF" style={styles.searchInput} value={searchQuery} onChangeText={setSearchQuery} />
+            </View>
+            <View style={styles.matchesList}>
+               <CreateTeamCard />
+               {teams
+                 .filter(team => {
+                   const matchesSearch = team.name.toLowerCase().includes(searchQuery.toLowerCase());
+                   if (subTab === 'your') return team.isUserTeam && matchesSearch;
+                   return matchesSearch;
+                 })
+                 .map(team => (
+                 <TeamCard 
+                   key={team.id} 
+                   team={team} 
+                   onSelect={pickingFor ? handleTeamSelect : undefined}
+                 />
+               ))}
+               <View style={styles.adBanner}>
+                  <Image source={{ uri: 'https://images.pexels.com/photos/3771811/pexels-photo-3771811.jpeg' }} style={styles.adImage} />
+                  <View style={styles.adOverlay}>
+                     <Text style={styles.adTitle}>Find a more fulfilling job.{'\n'}<Text style={styles.adTitleBold}>LinkedIn</Text></Text>
+                     <TouchableOpacity style={styles.adBtn}><Text style={styles.adBtnText}>Get the app</Text></TouchableOpacity>
+                  </View>
+               </View>
+            </View>
+          </View>
+        );
+      case 'stats':
+        let currentStats = BATTING_STATS;
+        if (subTab === 'bowling') currentStats = BOWLING_STATS;
+        if (subTab === 'fielding') currentStats = FIELDING_STATS;
+        if (subTab === 'captain') currentStats = CAPTAIN_STATS;
+
+        return (
+          <View style={{ flex: 1 }}>
+            <View style={styles.statsPromoHeader}>
+               <Text style={styles.statsPromoText}>Want to improve your stats?</Text>
+               <TouchableOpacity style={styles.analyzeBtn}><Text style={styles.analyzeBtnText}>Analyze</Text></TouchableOpacity>
+            </View>
+
+            <View style={styles.statsFilterBar}>
+              {['Batting', 'Bowling', 'Fielding', 'Captain'].map((label) => (
+                <TouchableOpacity 
+                  key={label}
+                  style={[styles.statPill, subTab === label.toLowerCase() && styles.statPillActive]} 
+                  onPress={() => setSubTab(label.toLowerCase())}
+                >
+                  <Text style={[styles.statPillText, subTab === label.toLowerCase() && styles.statPillTextActive]}>{label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.statsContent}>
+               <View style={styles.statsSectionHeader}>
+                  <Text style={styles.statsSectionTitle}>Overall</Text>
+                  <TouchableOpacity style={styles.compareBtn}>
+                     <Users2 size={14} color="#FFFFFF" strokeWidth={2.5} />
+                     <Text style={styles.compareBtnText}>Compare</Text>
+                  </TouchableOpacity>
+               </View>
+
+               <View style={styles.statsGrid}>
+                  {currentStats.map((stat, idx) => (
+                    <View key={idx} style={[styles.statTile, subTab === 'captain' && { width: '23.5%' }]}>
+                       <Text style={styles.statValue}>{stat.value}</Text>
+                       <Text style={styles.statLabel}>{stat.label}</Text>
+                    </View>
+                  ))}
+               </View>
+
+               {/* Add dedicated Banner for Fielding/Captain selection */}
+               {(subTab === 'fielding' || subTab === 'captain') && (
+                 <View style={[styles.adBanner, { backgroundColor: '#E0F2FE' }]}>
+                    <Image source={{ uri: 'https://images.pexels.com/photos/356056/pexels-photo-356056.jpeg' }} style={styles.adImage} />
+                    <View style={styles.adOverlay}>
+                       <Text style={styles.adTitle}>Find products from the{'\n'}<Text style={styles.adTitleBold}>Best Collection</Text></Text>
+                       <TouchableOpacity style={[styles.adBtn, { backgroundColor: '#2563EB' }]}><Text style={styles.adBtnText}>Shop now</Text></TouchableOpacity>
+                    </View>
+                 </View>
+               )}
+
+               {subTab === 'captain' && (
+                 <View style={styles.captainFooter}>
+                    <Text style={styles.ballTypeLabel}>Leather ball 🎾</Text>
+                    
+                    <View style={styles.adBanner}>
+                        <Image source={{ uri: 'https://images.pexels.com/photos/159443/pexels-photo-159443.jpeg' }} style={styles.adImage} />
+                        <View style={styles.adOverlay}>
+                          <Text style={styles.adTitle}>Beat the summer!{'\n'}<Text style={styles.adTitleBold}>Blinkit</Text></Text>
+                          <TouchableOpacity style={[styles.adBtn, { backgroundColor: '#111827' }]}><Text style={styles.adBtnText}>Order Now</Text></TouchableOpacity>
+                        </View>
+                    </View>
+                 </View>
+               )}
+
+               {(subTab !== 'fielding' && subTab !== 'captain') && (
+                 <View style={styles.adBanner}>
+                    <Image source={{ uri: 'https://images.pexels.com/photos/1595385/pexels-photo-1595385.jpeg' }} style={styles.adImage} />
+                    <View style={styles.adOverlay}>
+                       <Text style={styles.adTitle}>Amazon Prime{'\n'}<Text style={styles.adTitleBold}>Join Prime at ₹125/month*</Text></Text>
+                       <TouchableOpacity style={styles.adBtn}><Text style={styles.adBtnText}>Install now</Text></TouchableOpacity>
+                    </View>
+                 </View>
+               )}
+            </View>
+          </View>
+        );
+      case 'highlights':
+        return (
+          <View style={styles.tabContent}>
+             <View style={styles.placeholderIconArea}><PlayCircle size={48} color="#01b854" /></View>
+            <Text style={styles.placeholderTitle}>Match Highlights</Text>
+            <Text style={styles.placeholderDesc}>Relive the best moments from recent matches. Watch videos and view gallery of top plays.</Text>
+          </View>
+        );
+      default:
+        return null;
+    }
+  };
+
+
+
+  const content = (
+    <View style={{ flex: 1 }}>
+      <View style={styles.scoringTopNav}>
+        <TouchableOpacity 
+          style={styles.backNavBtn}
+          onPress={() => router.push('/cricket/matches')}
+        >
+          <ChevronLeft size={20} color="#6B7280" />
+          <Text style={styles.backNavBtnText}>Back to Matches</Text>
+        </TouchableOpacity>
+      </View>
+      {isConfiguringDismissal ? renderDismissalConfiguration() : (isScoring ? renderLiveScoring() : (isSearchingOfficial ? renderOfficialSearch() : (isConfiguringOfficials ? renderMatchOfficials() : (isSelectingOpeners ? renderOpeningSelection() : (isConfiguringToss ? renderTossConfiguration() : (isConfiguringMatch ? renderMatchConfiguration() : (isSelectingTeams ? (isSelectingPlayers ? renderPlayerSelection() : renderTeamSelection()) : (
+        (urlMatchId && !resumeFailed) ? (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
+            <Trophy size={64} color="#0D9488" style={{ marginBottom: 24 }} />
+            <Text style={{ color: '#111827', fontSize: 20, fontWeight: '800', textAlign: 'center', marginBottom: 12 }}>
+            {["Umpire is deciding whether to call for tea...", "The batsman is complaining about the sight-screen...", "Groundsman is fixing the landing area...", "Waiting for the sightscreen to be moved..."][Math.floor(Date.now() / 2500) % 4]}
+            </Text>
+            <Text style={{ color: '#6B7280', fontSize: 14 }}>Initializing your match...</Text>
+          </View>
+        ) : (
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <Text>Match not found or failed to resume.</Text>
+          </View>
+        )))))))))}
+      </View>
+  );
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+      <Stack.Screen options={{ headerShown: false }} />
+      {content}
+    </SafeAreaView>
+  );
+}
+
+
