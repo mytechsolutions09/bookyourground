@@ -23,5 +23,14 @@ This commit stabilizes the cricket scoring engine, fixes data persistence issues
 - **Migration & Cleanup**: Moved `live_schema.sql` to the migrations directory and added a new migration to handle innings column fixes.
 - **Component Repair**: Fixed several critical syntax errors (mismatched JSX tags, double imports) that were breaking the web build.
 
+### 5. Advanced Match Management (More Actions)
+- **Activated All Tabs**: Fully implemented logic for the "More" management sheet, moving away from simple alerts to functional match tools.
+- **Dynamic Scoring Features**:
+    - **Full Scorecard**: Real-time modal for exhaustive innings statistics.
+    - **Retired Hurt**: Automated handling for retiring batters and substitute entry.
+    - **Revise Target**: Dynamic adjustment of 2nd innings goals.
+    - **Match Breaks**: State management for Rain delays, Lunch, Tea, and Drinks.
+    - **Rule Consistency**: Integrated total over adjustments and rule summaries into the active scoring flow.
+
 ---
-*Committed and Pushed on April 14, 2026*
+*Last Updated and Pushed on April 14, 2026*

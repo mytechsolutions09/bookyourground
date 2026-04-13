@@ -2675,14 +2675,24 @@ export default function CricketScreen() {
   const {
     matchId: liveMatchId, phase: matchPhase, inn, striker, nonStriker, bowler, crr, rrr, yetToBat, formatOvers,
     battingPlayers: squadBatting, bowlingPlayers: squadBowling,
-    startMatch, resumeMatch, addBall, addExtra, addWicket, savePlayingXi, changeBowler, addNewBowler, undoLastBall, startSecondInnings, setOpeners
+    startMatch, resumeMatch, addBall, addExtra, addWicket, savePlayingXi, changeBowler, addNewBowler, undoLastBall, startSecondInnings, setOpeners, swapBatters, markRetiredHurt, reviseTarget, updateMatchConfig, changeSquad
   } = useCricketScoring();
   
   const [isLiveSession, setIsLiveSession] = useState(false);
   const [isScoringSettingsVisible, setIsScoringSettingsVisible] = useState(false);
   const [isMoreSheetVisible, setIsMoreSheetVisible] = useState(false);
   const [isExtraRunsSelectorVisible, setIsExtraRunsSelectorVisible] = useState(false);
-  const [activeExtraType, setActiveExtraType] = useState<'wide' | 'noball' | 'bye' | 'legbye' | null>(null);
+  const [activeExtraType, setActiveExtraType] = useState<'wide' | 'noball' | 'bye' | 'legbye' | 'penalty' | null>(null);
+  const [isFullScorecardVisible, setIsFullScorecardVisible] = useState(false);
+  const [isRetiredHurtModalVisible, setIsRetiredHurtModalVisible] = useState(false);
+  const [isReviseTargetModalVisible, setIsReviseTargetModalVisible] = useState(false);
+  const [newTargetValue, setNewTargetValue] = useState('');
+  const [isHelpModalVisible, setIsHelpModalVisible] = useState(false);
+  const [isRulesModalVisible, setIsRulesModalVisible] = useState(false);
+  const [isChangeOversModalVisible, setIsChangeOversModalVisible] = useState(false);
+  const [newOversValue, setNewOversValue] = useState('');
+  const [isBreakModalVisible, setIsBreakModalVisible] = useState(false);
+  const [activeBreakType, setActiveBreakType] = useState('');
   const [expandedSettingSection, setExpandedSettingSection] = useState<string | null>('Match Settings');
   const drawerAnim = useRef(new Animated.Value(400)).current;
 
@@ -3757,6 +3767,225 @@ export default function CricketScreen() {
     );
   };
 
+
+  const renderFullScorecardModal = () => (
+    <Modal
+      animationType="slide"
+      visible={isFullScorecardVisible}
+      onRequestClose={() => setIsFullScorecardVisible(false)}
+    >
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+        <View style={[styles.modalHeader, { paddingHorizontal: 20 }]}>
+          <Text style={styles.modalTitle}>Full Scorecard</Text>
+          <TouchableOpacity onPress={() => setIsFullScorecardVisible(false)}><X size={24} color="#111827" /></TouchableOpacity>
+        </View>
+        <ScrollView style={{ flex: 1, padding: 20 }}>
+           <Text style={{ fontSize: 18, fontWeight: '800', color: '#111827', marginBottom: 12 }}>{inn.battingTeam} Batting</Text>
+           {inn.batters.filter(b => b.status !== 'yet').map((b, i) => (
+              <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }}>
+                 <View style={{ flex: 2 }}>
+                    <Text style={{ fontWeight: '700', color: '#111827' }}>{b.name}{b.onStrike ? '*' : ''}</Text>
+                    <Text style={{ fontSize: 12, color: '#6B7280' }}>{b.dismissal || (b.status === 'batting' ? 'not out' : 'yet to bat')}</Text>
+                 </View>
+                 <View style={{ flexDirection: 'row', gap: 15 }}>
+                    <Text style={{ fontWeight: '700' }}>{b.runs}</Text>
+                    <Text style={{ color: '#6B7280' }}>{b.balls}</Text>
+                    <Text style={{ color: '#6B7280' }}>{b.fours}x4</Text>
+                    <Text style={{ color: '#6B7280' }}>{b.sixes}x6</Text>
+                 </View>
+              </View>
+           ))}
+           <View style={{ marginTop: 20 }}>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: '#111827', marginBottom: 12 }}>{inn.bowlingTeam} Bowling</Text>
+              {inn.bowlers.map((b, i) => (
+                <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }}>
+                   <Text style={{ flex: 2, fontWeight: '700' }}>{b.name}</Text>
+                   <View style={{ flexDirection: 'row', gap: 15 }}>
+                      <Text style={{ fontWeight: '700' }}>{b.wickets}-{b.runs}</Text>
+                      <Text style={{ color: '#6B7280' }}>({b.overs}.{b.balls})</Text>
+                   </View>
+                </View>
+              ))}
+           </View>
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>
+  );
+
+  const renderRetiredHurtSelectionModal = () => {
+    const activeBatters = inn.batters.filter(b => b.status === 'batting' && !b.out);
+    return (
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={isRetiredHurtModalVisible}
+        onRequestClose={() => setIsRetiredHurtModalVisible(false)}
+      >
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsRetiredHurtModalVisible(false)}>
+           <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Select Player to Retire</Text>
+              <View style={{ gap: 12, marginTop: 20 }}>
+                 {activeBatters.map(b => (
+                    <TouchableOpacity 
+                      key={b.name} 
+                      style={{ padding: 16, backgroundColor: '#F9FAF7', borderRadius: 12 }}
+                      onPress={() => {
+                        markRetiredHurt(b.name);
+                        setIsRetiredHurtModalVisible(false);
+                      }}
+                    >
+                       <Text style={{ fontWeight: '700', color: '#111827' }}>{b.name}</Text>
+                    </TouchableOpacity>
+                 ))}
+              </View>
+           </View>
+        </TouchableOpacity>
+      </Modal>
+    );
+  };
+
+  const renderReviseTargetModal = () => (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={isReviseTargetModalVisible}
+      onRequestClose={() => setIsReviseTargetModalVisible(false)}
+    >
+      <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsReviseTargetModalVisible(false)}>
+        <View style={styles.modalContent}>
+           <Text style={styles.modalTitle}>Revise Target</Text>
+           <Text style={{ color: '#6B7280', marginTop: 8 }}>Enter the new target runs for the second innings.</Text>
+           <TextInput 
+             style={[styles.formInput, { marginTop: 20 }]}
+             placeholder="New Target"
+             keyboardType="numeric"
+             value={newTargetValue}
+             onChangeText={setNewTargetValue}
+             autoFocus
+           />
+           <TouchableOpacity 
+             style={[styles.startMatchBtn, { marginTop: 20 }]}
+             onPress={() => {
+                const nt = parseInt(newTargetValue);
+                if (!isNaN(nt)) {
+                   reviseTarget(nt);
+                   setIsReviseTargetModalVisible(false);
+                   setNewTargetValue('');
+                }
+             }}
+           >
+              <Text style={styles.startMatchBtnText}>Update Target</Text>
+           </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+
+  const renderHelpModal = () => (
+    <Modal animationType="fade" transparent={true} visible={isHelpModalVisible} onRequestClose={() => setIsHelpModalVisible(false)}>
+      <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsHelpModalVisible(false)}>
+        <View style={styles.modalContent}>
+           <Text style={styles.modalTitle}>Scoring Help</Text>
+           <View style={{ gap: 12, marginTop: 16 }}>
+              <Text style={{ color: '#4B5563' }}>• Use the numeric keypad for runs.</Text>
+              <Text style={{ color: '#4B5563' }}>• Tap 'WD' for Wide, 'NB' for No Ball.</Text>
+              <Text style={{ color: '#4B5563' }}>• Tap 'W' to record a wicket and select dismissal.</Text>
+              <Text style={{ color: '#4B5563' }}>• Use 'Undo' to revert the last ball.</Text>
+              <Text style={{ color: '#4B5563' }}>• Access 'More' for advanced match management.</Text>
+           </View>
+           <TouchableOpacity style={[styles.startMatchBtn, { marginTop: 20 }]} onPress={() => setIsHelpModalVisible(false)}>
+              <Text style={styles.startMatchBtnText}>Got it!</Text>
+           </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+
+  const renderRulesModal = () => (
+    <Modal animationType="fade" transparent={true} visible={isRulesModalVisible} onRequestClose={() => setIsRulesModalVisible(false)}>
+      <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsRulesModalVisible(false)}>
+        <View style={styles.modalContent}>
+           <Text style={styles.modalTitle}>Match Rules</Text>
+           <View style={{ gap: 16, marginTop: 20 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                 <Text style={{ color: '#6B7280' }}>Total Overs:</Text>
+                 <Text style={{ fontWeight: '700' }}>{matchConfig?.overs || '20'}</Text>
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                 <Text style={{ color: '#6B7280' }}>Overs per Bowler:</Text>
+                 <Text style={{ fontWeight: '700' }}>{matchConfig?.oversPerBowler || '4'}</Text>
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                 <Text style={{ color: '#6B7280' }}>Wide Runs:</Text>
+                 <Text style={{ fontWeight: '700' }}>1</Text>
+              </View>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                 <Text style={{ color: '#6B7280' }}>No Ball Runs:</Text>
+                 <Text style={{ fontWeight: '700' }}>1 + Free Hit</Text>
+              </View>
+           </View>
+           <TouchableOpacity style={[styles.startMatchBtn, { marginTop: 20 }]} onPress={() => setIsRulesModalVisible(false)}>
+              <Text style={styles.startMatchBtnText}>Close</Text>
+           </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+
+  const renderChangeOversModal = () => (
+    <Modal animationType="fade" transparent={true} visible={isChangeOversModalVisible} onRequestClose={() => setIsChangeOversModalVisible(false)}>
+      <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsChangeOversModalVisible(false)}>
+        <View style={styles.modalContent}>
+           <Text style={styles.modalTitle}>Set Match Overs</Text>
+           <TextInput 
+             style={[styles.formInput, { marginTop: 20 }]}
+             placeholder="e.g. 20"
+             keyboardType="numeric"
+             value={newOversValue}
+             onChangeText={setNewOversValue}
+           />
+           <TouchableOpacity 
+             style={[styles.startMatchBtn, { marginTop: 20 }]}
+             onPress={() => {
+                const ov = parseInt(newOversValue);
+                if (!isNaN(ov)) {
+                   updateMatchConfig({ overs: ov.toString() });
+                   setIsChangeOversModalVisible(false);
+                }
+             }}
+           >
+              <Text style={styles.startMatchBtnText}>Update Overs</Text>
+           </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+
+  const renderBreakModal = () => (
+    <Modal animationType="fade" transparent={true} visible={isBreakModalVisible} onRequestClose={() => setIsBreakModalVisible(false)}>
+      <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsBreakModalVisible(false)}>
+        <View style={styles.modalContent}>
+           <Text style={styles.modalTitle}>Match Interrupted</Text>
+           <View style={{ gap: 12, marginTop: 20 }}>
+              {['Drinks Break', 'Lunch', 'Tea', 'Rain Delay', 'Bad Light'].map(type => (
+                <TouchableOpacity 
+                   key={type} 
+                   style={{ padding: 16, backgroundColor: '#F9FAF7', borderRadius: 12 }}
+                   onPress={() => {
+                      setActiveBreakType(type);
+                      setIsBreakModalVisible(false);
+                      alert(`Match is now in ${type}. Stop the clock!`);
+                   }}
+                >
+                   <Text style={{ fontWeight: '700', color: '#111827' }}>{type}</Text>
+                </TouchableOpacity>
+              ))}
+           </View>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+
   const renderMatchConfiguration = () => {
     const types = [
       { id: 'limited overs', label: 'Limited Overs' },
@@ -4214,6 +4443,13 @@ export default function CricketScreen() {
             
             {renderScoringSettingsSidebar()}
             {renderMoreActionsSheet()}
+            {renderFullScorecardModal()}
+            {renderRetiredHurtSelectionModal()}
+            {renderReviseTargetModal()}
+            {renderHelpModal()}
+            {renderRulesModal()}
+            {renderChangeOversModal()}
+            {renderBreakModal()}
             {renderExtraRunsSelector()}
             {renderBowlerSelectionModal()}
             {renderNewBatterSelectionModal()}
@@ -5138,8 +5374,35 @@ key={d.id}
                     key={item.id} 
                     style={styles.sheetGridItem}
                     onPress={() => {
-                       alert(`Action: ${item.label}`);
                        setIsMoreSheetVisible(false);
+                       if (item.id === 'scorecard') {
+                          setIsFullScorecardVisible(true);
+                       } else if (item.id === 'replace') {
+                          swapBatters();
+                       } else if (item.id === 'bowler') {
+                          setIsSelectingNextBowler(true);
+                       } else if (item.id === 'hurt') {
+                          setIsRetiredHurtModalVisible(true);
+                       } else if (item.id === 'target') {
+                          setIsReviseTargetModalVisible(true);
+                       } else if (item.id === 'help') {
+                          setIsHelpModalVisible(true);
+                       } else if (item.id === 'rules') {
+                          setIsRulesModalVisible(true);
+                       } else if (item.id === 'overs') {
+                          setIsChangeOversModalVisible(true);
+                       } else if (item.id === 'squad') {
+                          setIsSelectingPlayers(true);
+                       } else if (item.id === 'breaks') {
+                          setIsBreakModalVisible(true);
+                       } else if (item.id === 'dropped' || item.id === 'saved') {
+                          alert(`${item.label} recorded!`);
+                       } else if (item.id === 'bonus') {
+                          setActiveExtraType('penalty');
+                          setIsExtraRunsSelectorVisible(true);
+                       } else {
+                          alert(`${item.label} coming soon!`);
+                       }
                     }}
                   >
                      <View style={styles.sheetIconBox}>
