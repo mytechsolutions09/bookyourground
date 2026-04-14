@@ -1,6 +1,34 @@
-# Cricket Scoring Engine - Stabilization & Features
+# Navigation & Discovery Hub - Theme Overhaul
 
-This commit stabilizes the cricket scoring engine, fixes data persistence issues, and adds several requested rules and UI features.
+This update standardizes the platform's visual identity for mobile/small-screen users, specifically targeting the "My Bookings" and "Find an Opponent" hubs, while refining the navigation architecture and Cricket UI.
+
+## Key Changes
+
+### 1. Light Theme Implementation
+- **Standardized Discovery**: Converted both the **"My Bookings"** and **"Find an Opponent"** screens to a modern light theme (`#F9FAFB`) for small screens.
+- **Card UI Upgrades**: Updated `BookingCard` and `MatchCard` components with a `lightMode` property to ensure high contrast (white backgrounds, dark text) on mobile.
+- **Search & Filters**: Unified search bars and filter tags to use consistent light-themed palettes across all discovery views.
+
+### 2. Navigation & Layout Refinement
+- **Persistent Discovery Tabs**: Unified the "Book a Ground" and "Find an Opponent" tabs into a stable, stationary navigation bar that doesn't jump during transitions.
+- **Mobile Navbar Enhancements**: 
+    - Added a **Burger Menu** to the top-right of the navbar for public discovery pages.
+    - Standardized vertical padding (8px) between the navbar and page content for a premium, compact feel.
+- **Web Layout Logic**: Fixed visibility logic in `WebLayout` to ensure the burger menu is accessible on all compact web screens.
+
+### 3. Cricket Hub Polish
+- **Branding Consistency**: Updated all action buttons (Resume Scoring, View) to use the primary brand green (`#01b854`) instead of the previous teal.
+- **Sub-Tab Uniformity**: Synchronized the "Ongoing", "Upcoming", and "Result" tab styles with the new platform-wide design system.
+
+### 4. Technical Stabilization
+- **Path Migration**: Moved cricket-related screens into the proper `(tabs)` structure to support better deep linking and tab-bar persistence.
+- **Style Cleanup**: Resolved several styling conflicts and duplicate identifier errors in the `BookingCard` component.
+
+---
+
+# Previous Update: Cricket Scoring Engine - Stabilization & Features
+
+This commit stabilized the cricket scoring engine, fixed data persistence issues, and added several requested rules and UI features.
 
 ## Key Changes
 
@@ -23,14 +51,5 @@ This commit stabilizes the cricket scoring engine, fixes data persistence issues
 - **Migration & Cleanup**: Moved `live_schema.sql` to the migrations directory and added a new migration to handle innings column fixes.
 - **Component Repair**: Fixed several critical syntax errors (mismatched JSX tags, double imports) that were breaking the web build.
 
-### 5. Advanced Match Management (More Actions)
-- **Activated All Tabs**: Fully implemented logic for the "More" management sheet, moving away from simple alerts to functional match tools.
-- **Dynamic Scoring Features**:
-    - **Full Scorecard**: Real-time modal for exhaustive innings statistics.
-    - **Retired Hurt**: Automated handling for retiring batters and substitute entry.
-    - **Revise Target**: Dynamic adjustment of 2nd innings goals.
-    - **Match Breaks**: State management for Rain delays, Lunch, Tea, and Drinks.
-    - **Rule Consistency**: Integrated total over adjustments and rule summaries into the active scoring flow.
-
 ---
-*Last Updated and Pushed on April 14, 2026*
+*Last Updated and Pushed on April 14, 2026, at 14:06:02+05:30*
