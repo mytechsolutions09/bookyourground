@@ -12,23 +12,27 @@ interface MatchCardProps {
   onJoin: () => void;
   buttonTitle?: string;
   teamsCount?: string;
+  lightMode?: boolean;
 }
 
 const NATIVE_CARD_BG = '#043529';
 const NATIVE_ACCENT = '#00ea6b';
 const NATIVE_TEXT = '#dcc093';
 
-export default function MatchCard({ match, onJoin, buttonTitle = 'Join Match', teamsCount = '1/2 Teams' }: MatchCardProps) {
+export default function MatchCard({ match, onJoin, buttonTitle = 'Join Match', teamsCount = '1/2 Teams', lightMode }: MatchCardProps) {
   const { width } = useWindowDimensions();
   const isWeb = Platform.OS === 'web';
   const IS_DARK = !isWeb || (width < 900);
+  const isLight = lightMode || (!isWeb && !IS_DARK) || (isWeb && !IS_DARK);
   
   const primaryImage = match.ground.ground_images?.[0]?.image_url ||
     'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
 
-  const iconColor = IS_DARK ? NATIVE_ACCENT : '#10b981';
-  const textColor = IS_DARK ? NATIVE_TEXT : '#4B5563';
-  const titleColor = IS_DARK ? NATIVE_TEXT : '#111827';
+  const iconColor = isLight ? '#10b981' : NATIVE_ACCENT;
+  const textColor = isLight ? '#4B5563' : NATIVE_TEXT;
+  const titleColor = isLight ? '#111827' : NATIVE_TEXT;
+  const pinColor = isLight ? '#666' : NATIVE_TEXT;
+  const subtleTextColor = isLight ? '#9CA3AF' : NATIVE_TEXT;
 
   // Calculate rating
   const reviews = (match.ground as any).reviews || [];
@@ -41,8 +45,9 @@ export default function MatchCard({ match, onJoin, buttonTitle = 'Join Match', t
     <Card
       style={[
         styles.card,
-        !IS_DARK && styles.cardWeb,
-        IS_DARK && styles.cardNative,
+        isWeb && !IS_DARK && styles.cardWeb,
+        !isWeb && IS_DARK && !isLight && styles.cardNative,
+        isLight && styles.cardLight,
       ]}
     >
       <View style={styles.content}>
@@ -71,12 +76,12 @@ export default function MatchCard({ match, onJoin, buttonTitle = 'Join Match', t
                 <Star
                   key={i}
                   size={12}
-                  color={filled ? '#FFA000' : (IS_DARK ? '#374151' : '#D1D5DB')}
+                  color={filled ? '#FFA000' : (isLight ? '#E5E7EB' : '#374151')}
                   fill={filled ? '#FFA000' : 'none'}
                 />
               );
             })}
-            <Text style={[styles.ratingText, { color: IS_DARK ? '#9CA3AF' : '#6B7280' }]}>
+            <Text style={[styles.ratingText, { color: isLight ? '#6B7280' : '#9CA3AF' }]}>
               {reviewCount > 0
                 ? `${avgRating.toFixed(1)} (${reviewCount} reviews)`
                 : 'No reviews yet'}
@@ -95,8 +100,8 @@ export default function MatchCard({ match, onJoin, buttonTitle = 'Join Match', t
               Linking.openURL(url);
             }}
           >
-            <MapPin size={14} color={IS_DARK ? NATIVE_TEXT : '#6B7280'} />
-            <Text style={[styles.location, { color: IS_DARK ? NATIVE_TEXT : '#6B7280' }]}>
+            <MapPin size={14} color={pinColor} />
+            <Text style={[styles.location, { color: pinColor }]}>
               {match.ground.city}, {match.ground.state}
             </Text>
             <View style={styles.mapLink}>
@@ -142,7 +147,7 @@ export default function MatchCard({ match, onJoin, buttonTitle = 'Join Match', t
           <View style={styles.footer}>
             <View style={styles.priceContainer}>
               <Text style={styles.priceLabel}>{teamsCount === '2/2 Teams' ? 'Total Paid' : 'Price to join'}</Text>
-              <Text style={styles.priceValue}>{formatCurrency(Number(match.total_amount))}</Text>
+              <Text style={[styles.priceValue, isLight && styles.priceValueLight]}>{formatCurrency(Number(match.total_amount))}</Text>
             </View>
             
             <Button
@@ -179,6 +184,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#06392e',
     borderColor: 'rgba(0,234,107,0.15)',
     borderWidth: 1,
+  },
+  cardLight: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
   content: {
     flexDirection: 'column',
@@ -326,6 +341,9 @@ const styles = StyleSheet.create({
     }),
     fontWeight: '900',
     color: '#00ea6b',
+  },
+  priceValueLight: {
+    color: '#02c259',
   },
   joinButton: {
     borderRadius: 10,

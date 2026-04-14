@@ -11,14 +11,15 @@ import {
   ActivityIndicator,
   ScrollView,
   TextInput,
+  TouchableOpacity,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { BookingWithDetails } from '@/types';
-import MobileAppNavbar from '../components/MobileAppNavbar';
+import MobileAppNavbar from '../../components/MobileAppNavbar';
 import WebLayout from '@/components/web/WebLayout';
 import MatchCard from '@/components/matches/MatchCard';
-import { Trophy, Swords, MapPin, Search, ChevronLeft } from 'lucide-react-native';
+import { Trophy, Swords, MapPin, Search, ChevronLeft, Menu } from 'lucide-react-native';
 import Button from '@/components/ui/Button';
 import { slugifyGroundSegment } from '@/utils/groundSlug';
 import MatchmakingSkeleton from '@/components/matches/MatchmakingSkeleton';
@@ -32,6 +33,7 @@ export default function FindAnOpponentScreen() {
   const isWideWeb = Platform.OS === 'web' && width >= 1100;
   const isExtraWideWeb = Platform.OS === 'web' && width >= 1350;
   const isMediumWeb = Platform.OS === 'web' && width >= 768 && width < 1100;
+  const isSmall = width < 900;
 
   // Filters
   const params = useLocalSearchParams();
@@ -133,6 +135,23 @@ export default function FindAnOpponentScreen() {
 
   const content = (
     <View style={[styles.container, isWeb && !IS_DARK && styles.webContainerRoot]}>
+      {isWeb && isSmall && (
+        <View style={styles.webTabContainer}>
+          <TouchableOpacity 
+            style={styles.tab}
+            onPress={() => router.push('/(tabs)/grounds')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.tabText}>Book a Ground</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.tab, styles.activeTab]}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.activeTabText}>Find an Opponent</Text>
+          </TouchableOpacity>
+        </View>
+      )}
       {isWeb && !IS_DARK ? (
         <View style={styles.webCard}>
           <View style={[styles.header, styles.webHeader]}>
@@ -219,6 +238,7 @@ export default function FindAnOpponentScreen() {
                   onJoin={() => handleJoinMatch(item)}
                   buttonTitle="Join Match"
                   teamsCount="1/2 Teams"
+                  lightMode={isWeb && !IS_DARK}
                 />
               </View>
             )}
@@ -248,15 +268,7 @@ export default function FindAnOpponentScreen() {
         </View>
       ) : (
         <>
-          <View style={styles.nativeHero}>
-            <View style={styles.heroText}>
-              <Text style={styles.heroTitle}>Find an Opponent</Text>
-              <Text style={styles.heroSubtitle}>Find teams looking for opponents</Text>
-            </View>
-            <View style={styles.heroBadge}>
-              <Swords size={24} color="#00ea6b" />
-            </View>
-          </View>
+
 
           <View style={styles.nativeSearchContainer}>
             <View style={styles.nativeSearchWrapper}>
@@ -273,7 +285,7 @@ export default function FindAnOpponentScreen() {
               onPress={() => setShowFilters(!showFilters)}
               style={[styles.nativeFilterButton, showFilters && styles.nativeFilterButtonActive]}
             >
-              <MapPin size={20} color={showFilters ? "#043529" : "#00ea6b"} />
+              <MapPin size={20} color={showFilters ? "#FFFFFF" : "#6B7280"} />
             </Pressable>
           </View>
 
@@ -316,6 +328,7 @@ export default function FindAnOpponentScreen() {
                     onJoin={() => handleJoinMatch(item)}
                     buttonTitle="Join Match"
                     teamsCount="1/2 Teams"
+                    lightMode={true}
                   />
                 </View>
               )}
@@ -349,7 +362,33 @@ export default function FindAnOpponentScreen() {
 
   return (
     <View style={styles.nativeScreen}>
-      <MobileAppNavbar title="Find an Opponent" titleColor="#00ea6b" />
+      <MobileAppNavbar 
+        title="Find an Opponent" 
+        titleColor="#043529" 
+        lightBg 
+        rightAction={
+          <TouchableOpacity onPress={() => {}}>
+            <Menu size={24} color="#043529" />
+          </TouchableOpacity>
+        }
+      />
+
+      <View style={styles.tabContainer}>
+        <TouchableOpacity 
+          style={styles.tab}
+          onPress={() => router.push('/(tabs)/grounds')}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.tabText}>Book a Ground</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.tab, styles.activeTab]}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.activeTabText}>Find an Opponent</Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.nativeBody}>{content}</View>
     </View>
   );
@@ -358,14 +397,14 @@ export default function FindAnOpponentScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#043529',
+    backgroundColor: '#F9FAFB',
   },
   webContainerRoot: {
     backgroundColor: '#F9FAFB',
   },
   nativeScreen: {
     flex: 1,
-    backgroundColor: '#043529',
+    backgroundColor: '#F9FAFB',
   },
   nativeBody: {
     flex: 1,
@@ -383,10 +422,12 @@ const styles = StyleSheet.create({
   },
   nativeHero: {
     padding: 20,
-    backgroundColor: '#043529',
+    backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
   heroText: {
     gap: 4,
@@ -394,7 +435,7 @@ const styles = StyleSheet.create({
   heroTitle: {
     fontSize: 28,
     fontWeight: '900',
-    color: '#00ea6b',
+    color: '#111827',
   },
   heroSubtitle: {
     fontSize: 14,
@@ -411,44 +452,50 @@ const styles = StyleSheet.create({
   nativeSearchContainer: {
     flexDirection: 'row',
     paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingTop: 8,
+    paddingBottom: 8,
     gap: 8,
-    backgroundColor: '#043529',
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
   nativeSearchWrapper: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#06392e',
+    backgroundColor: '#F3F4F6',
     borderRadius: 12,
     paddingHorizontal: 12,
     gap: 8,
     height: 48,
     borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.1)',
+    borderColor: '#E2E8F0',
   },
   nativeSearchInput: {
     flex: 1,
-    color: '#fff',
+    color: '#111827',
     fontSize: 15,
   },
   nativeFilterButton: {
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: '#06392e',
+    backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.1)',
+    borderColor: '#E2E8F0',
   },
   nativeFilterButtonActive: {
     backgroundColor: '#00ea6b',
+    borderColor: '#00ea6b',
   },
   nativeFiltersDrawer: {
     paddingVertical: 8,
-    backgroundColor: '#043529',
+    backgroundColor: '#FFFFFF',
     gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
   nativeFilterScroll: {
     paddingHorizontal: 16,
@@ -458,9 +505,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 16,
-    backgroundColor: '#06392e',
+    backgroundColor: '#F3F4F6',
     borderWidth: 1,
-    borderColor: 'rgba(220,192,147,0.1)',
+    borderColor: '#E2E8F0',
   },
   nativeFilterTagActive: {
     backgroundColor: '#00ea6b',
@@ -472,7 +519,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   nativeFilterTagTextActive: {
-    color: '#043529',
+    color: '#FFFFFF',
   },
   webCard: {
     backgroundColor: '#FFFFFF',
@@ -634,12 +681,56 @@ const styles = StyleSheet.create({
   emptyTextNative: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#00ea6b',
+    color: '#374151',
   },
   emptySubtextNative: {
     fontSize: 14,
-    color: '#9CA3AF',
+    color: '#6B7280',
     marginTop: 8,
     textAlign: 'center',
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 8,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  activeTab: {
+    backgroundColor: '#043529',
+    borderColor: '#043529',
+  },
+  tabText: {
+    color: '#6B7280',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  activeTabText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  webTabContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 20,
+    gap: 12,
+    maxWidth: 800,
+    alignSelf: 'center',
+    width: '100%',
   },
 });

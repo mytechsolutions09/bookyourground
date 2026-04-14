@@ -25,7 +25,7 @@ import { normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
 import Modal from '@/components/ui/Modal';
 import { slugifyGroundSegment } from '@/utils/groundSlug';
 import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
-import { Calendar, X } from 'lucide-react-native';
+import { Calendar, X, Swords } from 'lucide-react-native';
 
 export default function BookingsScreen() {
   const { user, profile } = useAuth();
@@ -451,6 +451,20 @@ export default function BookingsScreen() {
         </View>
       ) : (
         <>
+          <View style={styles.nativeActionHeader}>
+            <View>
+              <Text style={styles.nativeActionTitle}>Plan your next game</Text>
+              <Text style={styles.nativeActionSubtitle}>Join a match or find an opponent</Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.nativeActionButton}
+              onPress={() => router.push('/find-an-opponent')}
+            >
+              <Swords size={18} color="#043529" />
+              <Text style={styles.nativeActionButtonText}>Find Opponent</Text>
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.nativeFilterBar}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.nativeTabRow}>
               <Pressable
@@ -516,6 +530,7 @@ export default function BookingsScreen() {
               <View style={styles.nativeItemContainer}>
                 <BookingCard
                   booking={item}
+                  lightMode={true}
                   onPress={() => router.push(`/bookings/${item.id}`)}
                   onCancel={activeTab === 'upcoming' && isCancellable(item) ? () => handleCancelBooking(item) : undefined}
                   onReview={activeTab === 'past' && (item.status === 'confirmed' || item.status === 'completed') && !reviewedBookingIds.includes(item.id) ? () => {
@@ -603,7 +618,7 @@ export default function BookingsScreen() {
 
   return (
     <View style={styles.nativeScreen}>
-      <MobileAppNavbar title="My bookings" titleColor="#00ea6b" />
+      <MobileAppNavbar title="My bookings" titleColor="#043529" lightBg />
       <View style={styles.nativeBody}>
         {content}
         
@@ -660,24 +675,64 @@ export default function BookingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#043529',
+    backgroundColor: '#F9FAFB',
   },
   webContainerRoot: {
     backgroundColor: '#F5F5F5',
   },
   nativeScreen: {
     flex: 1,
-    backgroundColor: '#043529',
+    backgroundColor: '#F9FAFB',
   },
   nativeBody: {
     flex: 1,
-    backgroundColor: '#043529',
+    backgroundColor: '#F9FAFB',
   },
   nativeFilterBar: {
-    backgroundColor: '#043529',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 12,
+    paddingTop: 4,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  nativeActionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  nativeActionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  nativeActionSubtitle: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  nativeActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#00ea6b',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    gap: 8,
+    shadowColor: '#00ea6b',
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  nativeActionButtonText: {
+    color: '#043529',
+    fontWeight: '700',
+    fontSize: 13,
   },
   nativeTabRow: {
     flexDirection: 'row',
@@ -689,13 +744,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#00ea6b',
-    backgroundColor: 'transparent',
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
   nativeTabChipActive: {
     backgroundColor: '#00ea6b',
+    borderColor: '#00ea6b',
   },
   nativeTabChipPressed: {
     opacity: 0.85,
@@ -703,7 +759,7 @@ const styles = StyleSheet.create({
   nativeTabChipText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#00ea6b',
+    color: '#4B5563',
   },
   nativeTabChipTextActive: {
     color: '#043529',

@@ -35,6 +35,8 @@ import {
   LifeBuoy,
   Search,
   Ticket,
+  Package,
+  Users,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -57,6 +59,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchResults, setSearchResults] = useState<{ grounds: any[], matches: any[] }>({ grounds: [], matches: [] });
   const [isSearching, setIsSearching] = useState(false);
+  const [signOutHovered, setSignOutHovered] = useState(false);
 
   const performSearch = useCallback(async (query: string) => {
     if (query.length < 2) {
@@ -272,6 +275,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
     label: string;
     hideLabel?: boolean;
   }) => {
+    const [hovered, setHovered] = useState(false);
     const normalize = (value: string) => {
       if (value.length > 1 && value.endsWith('/')) {
         return value.slice(0, -1);
@@ -309,8 +313,17 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
           }
           setMenuOpen(false);
         }}
+        {...(Platform.OS === 'web' ? {
+          onMouseEnter: () => setHovered(true),
+          onMouseLeave: () => setHovered(false),
+        } : {})}
       >
         <Icon size={18} color={iconColor} />
+        {!isCompact && hideLabel && hovered && Platform.OS === 'web' && (
+          <View style={styles.tooltip}>
+            <Text style={styles.tooltipText}>{label}</Text>
+          </View>
+        )}
         <Text
           numberOfLines={1}
           style={[
@@ -545,7 +558,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
             </TouchableOpacity>
 
             <View style={styles.headerRight}>
-              {(isCompact && isAuthenticated && !isPublicNoSidebar) ? (
+              {(isCompact && (isAuthenticated || isPublicNoSidebar)) ? (
                 <TouchableOpacity
                   style={styles.burgerButton}
                   onPress={() => setMenuOpen((prev) => !prev)}
@@ -795,10 +808,6 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
         {showMenuPanel ? (
           <View 
             style={isAdminLayout ? styles.sidebarContainerAdmin : styles.sidebarContainer}
-            {...(isAdminLayout ? {
-              onMouseEnter: () => setSidebarCollapsed(false),
-              onMouseLeave: () => setSidebarCollapsed(true)
-            } : {})}
           >
             <View
               style={[
@@ -845,22 +854,17 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                         />
                         <NavLink
                           href="/(admin)/grounds"
-                          icon={MapPin}
+                          icon={Building2}
                           label="Grounds"
                           hideLabel={sidebarCollapsed}
                         />
                         <NavLink
                           href="/(admin)/inventory"
-                          icon={CalendarClock}
+                          icon={Package}
                           label="Inventory"
                           hideLabel={sidebarCollapsed}
                         />
-                        <NavLink
-                          href="/(tabs)/matches"
-                          icon={CalendarClock}
-                          label="My Matches"
-                          hideLabel={sidebarCollapsed}
-                        />
+
                         <NavLink
                           href="/(admin)/earnings"
                           icon={IndianRupee}
@@ -881,7 +885,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                         />
                         <NavLink
                           href="/(admin)/manage-users"
-                          icon={User}
+                          icon={Users}
                           label="Users"
                           hideLabel={sidebarCollapsed}
                         />
@@ -906,9 +910,18 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                             sidebarCollapsed && styles.signOutButtonCollapsed,
                           ]}
                           onPress={handleSignOut}
+                          {...(Platform.OS === 'web' ? {
+                            onMouseEnter: () => setSignOutHovered(true),
+                            onMouseLeave: () => setSignOutHovered(false),
+                          } : {})}
                         >
                           <LogOut size={18} color="#01b854" />
                           {!sidebarCollapsed && <Text style={styles.signOutText}>Sign out</Text>}
+                          {sidebarCollapsed && signOutHovered && Platform.OS === 'web' && (
+                            <View style={styles.tooltip}>
+                              <Text style={styles.tooltipText}>Sign out</Text>
+                            </View>
+                          )}
                         </TouchableOpacity>
                       </>
                     ) : isGroundOwner ? (
@@ -916,7 +929,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                         <Text style={styles.sidebarSectionTitle}>Ground owner</Text>
                         <NavLink href="/(owner)/dashboard" icon={LayoutDashboard} label="Dashboard" />
                         <NavLink href="/(owner)/grounds" icon={MapPin} label="My grounds" />
-                        <NavLink href="/(tabs)/matches" icon={CalendarClock} label="My Matches" />
+
                         <NavLink href="/(owner)/bookings" icon={Calendar} label="Bookings" />
                         <NavLink href="/(owner)/inventory" icon={CalendarClock} label="Inventory Plan" />
                         <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
@@ -942,7 +955,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                           icon={LayoutDashboard}
                           label="Dashboard"
                         />
-                        <NavLink href="/(tabs)/matches" icon={CalendarClock} label="My Matches" />
+
                         <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
                         <NavLink href="/(tabs)/favorites" icon={Star} label="Favorites" />
                         <NavLink href="/(tabs)/profile" icon={User} label="Profile" />
@@ -1261,6 +1274,7 @@ const styles = StyleSheet.create({
   sidebarCollapsed: {
     width: 68,
     paddingHorizontal: 8,
+    overflow: 'visible',
   },
   sidebarMobile: {
     position: 'absolute' as any,
@@ -1407,6 +1421,35 @@ const styles = StyleSheet.create({
     height: 1,
     backgroundColor: 'rgba(220,192,147,0.15)',
     marginVertical: 12,
+  },
+  tooltip: {
+    position: 'absolute' as any,
+    left: 54,
+    backgroundColor: '#111827',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    zIndex: 10000,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    shadowOffset: { width: 4, height: 0 },
+    ...Platform.select({
+      web: {
+        pointerEvents: 'none',
+      }
+    }) as any,
+  },
+  tooltipText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: 'Inter',
+    ...Platform.select({
+      web: {
+        whiteSpace: 'nowrap',
+      }
+    }) as any,
   },
   headerPrimaryButton: {
     paddingHorizontal: 20,

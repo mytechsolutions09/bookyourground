@@ -14,6 +14,7 @@ import {
   Heart,
   Swords,
   CalendarClock,
+  Trophy,
 } from 'lucide-react-native';
 import { ActivityIndicator, Platform, useWindowDimensions, View, Pressable, StyleSheet } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
@@ -77,7 +78,8 @@ export default function TabLayout() {
     const insets = useSafeAreaInsets();
     if (hideTabBarOnBigScreens) return null;
 
-    const visibleTabNames = ['index', 'grounds', 'matches', 'bookings', 'favorites', 'profile', 'logout'];
+    const visibleTabNames = ['index', 'grounds', 'cricket', 'bookings', 'favorites', 'profile'];
+    if (!user) visibleTabNames.push('logout');
 
     const visibleRoutes = state.routes.filter((route: any) => {
       const { options } = descriptors[route.key];
@@ -135,6 +137,8 @@ export default function TabLayout() {
         <Stack.Screen name="profile" />
         <Stack.Screen name="support" />
         <Stack.Screen name="logout" />
+        <Stack.Screen name="cricket" />
+        <Stack.Screen name="find-an-opponent" />
         <Stack.Screen name="dashboard" options={{ href: null } as any} />
       </Stack>
     );
@@ -170,14 +174,20 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="matches"
+        name="cricket"
         options={{
-          title: 'My Matches',
-          tabBarIcon: ({ color, size }) => (
-            <CalendarClock size={size} color={color} />
-          ),
+          title: 'Cricket Hub',
+          tabBarIcon: ({ color, size }) => <Trophy size={size} color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="find-an-opponent"
+        options={{
+          href: null,
+          title: 'Find an Opponent',
+        }}
+      />
+
       <Tabs.Screen
         name="bookings"
         options={{
@@ -201,19 +211,16 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => <CircleUser size={size} color={color} />,
         }}
       />
-      <Tabs.Screen
-        name="logout"
-        options={{
-          title: user ? 'Logout' : 'Login',
-          href: user ? undefined : '/(auth)/login',
-          tabBarIcon: ({ color, size }) =>
-            user ? (
-              <LogOut size={size} color={color} />
-            ) : (
-              <LogIn size={size} color={color} />
-            ),
-        }}
-      />
+      {!user && (
+        <Tabs.Screen
+          name="logout"
+          options={{
+            title: 'Login',
+            href: '/(auth)/login',
+            tabBarIcon: ({ color, size }) => <LogIn size={size} color={color} />,
+          }}
+        />
+      )}
       <Tabs.Screen
         name="dashboard"
         options={{

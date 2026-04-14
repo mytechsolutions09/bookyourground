@@ -320,16 +320,7 @@ export default function OwnerDashboardScreen() {
                 </View>
               </View>
 
-              <TouchableOpacity style={styles.statBoxWrapper} onPress={() => router.push('/(tabs)/matches' as any)}>
-                <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
-                  <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
-                    <Swords size={24} color="#01b854" />
-                  </View>
-                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>My Matches</Text>
-                  <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]}>Matches</Text>
-                  <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>View your games</Text>
-                </View>
-              </TouchableOpacity>
+
 
               <TouchableOpacity style={styles.statBoxWrapper} onPress={() => router.push('/(tabs)/bookings' as any)}>
                 <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>

@@ -11,6 +11,7 @@ import {
   LogOut,
   Heart,
   Swords,
+  Trophy,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -19,18 +20,20 @@ const INACTIVE = '#e5e7eb';
 
 function getActiveTab(
   segments: string[],
-): 'home' | 'grounds' | 'bookings' | 'favorites' | 'profile' | 'logout' | 'find-opponent' {
+): 'home' | 'grounds' | 'bookings' | 'favorites' | 'profile' | 'logout' | 'find-opponent' | 'cricket' {
   const root = segments[0];
   if (root === 'find-an-opponent') return 'find-opponent';
   if (root === 'ground' || root === 'grounds' || root === 'book-my-ground') {
     return 'grounds';
   }
+  if (root === 'cricket') return 'cricket';
   if (root === 'bookings') return 'bookings';
   if (root === 'favorites') return 'favorites';
   if (root !== '(tabs)') return 'home';
   const tab = segments[1] ?? 'index';
   if (tab === 'index') return 'home';
   if (tab === 'grounds') return 'grounds';
+  if (tab === 'cricket') return 'cricket';
   if (tab === 'bookings') return 'bookings';
   if (tab === 'favorites') return 'favorites';
   if (tab === 'profile') return 'profile';
@@ -77,16 +80,22 @@ export default function MobileTabBar() {
       
       <Pressable
         style={styles.item}
-        onPress={() => go(isOwner ? '/find-an-opponent' : '/(tabs)/grounds')}
+        onPress={() => go('/(tabs)/grounds')}
         accessibilityRole="button"
-        accessibilityLabel={isOwner ? "Find Opponent" : "Grounds"}
-        accessibilityState={{ selected: isOwner ? activeTab === 'find-opponent' : activeTab === 'grounds' }}
+        accessibilityLabel="Grounds"
+        accessibilityState={{ selected: activeTab === 'grounds' }}
       >
-        {isOwner ? (
-          <Swords size={size} color={activeTab === 'find-opponent' ? ACTIVE : INACTIVE} />
-        ) : (
-          <LandPlot size={size} color={activeTab === 'grounds' ? ACTIVE : INACTIVE} />
-        )}
+        <LandPlot size={size} color={activeTab === 'grounds' ? ACTIVE : INACTIVE} />
+      </Pressable>
+
+      <Pressable
+        style={styles.item}
+        onPress={() => go('/cricket')}
+        accessibilityRole="button"
+        accessibilityLabel="Cricket"
+        accessibilityState={{ selected: activeTab === 'cricket' }}
+      >
+        <Trophy size={size} color={activeTab === 'cricket' ? ACTIVE : INACTIVE} />
       </Pressable>
 
       <Pressable
@@ -116,19 +125,17 @@ export default function MobileTabBar() {
       >
         <CircleUser size={size} color={activeTab === 'profile' ? ACTIVE : INACTIVE} />
       </Pressable>
-      <Pressable
-        style={styles.item}
-        onPress={() => go(user ? '/(tabs)/logout' : '/(auth)/login')}
-        accessibilityRole="button"
-        accessibilityLabel={user ? 'Log out' : 'Log in'}
-        accessibilityState={{ selected: activeTab === 'logout' }}
-      >
-        {user ? (
-          <LogOut size={size} color={activeTab === 'logout' ? ACTIVE : INACTIVE} />
-        ) : (
+      {!user && (
+        <Pressable
+          style={styles.item}
+          onPress={() => go('/(auth)/login')}
+          accessibilityRole="button"
+          accessibilityLabel="Log in"
+          accessibilityState={{ selected: activeTab === 'logout' }}
+        >
           <LogIn size={size} color={activeTab === 'logout' ? ACTIVE : INACTIVE} />
-        )}
-      </Pressable>
+        </Pressable>
+      )}
     </View>
   );
 }

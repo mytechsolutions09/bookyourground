@@ -16,6 +16,7 @@ interface BookingCardProps {
   whoTitle?: string;
   onCancel?: () => void;
   onReview?: () => void;
+  lightMode?: boolean;
 }
 
 const NATIVE_CARD_BG = '#043529';
@@ -30,6 +31,7 @@ export default function BookingCard({
   whoTitle,
   onCancel,
   onReview,
+  lightMode,
 }: BookingCardProps) {
   const { width } = useWindowDimensions();
   const isWeb = Platform.OS === 'web';
@@ -42,15 +44,18 @@ export default function BookingCard({
     booking.notes,
   );
 
-  const iconDetail = IS_DARK ? NATIVE_ACCENT : '#10b981';
-  const pinColor = IS_DARK ? NATIVE_TEXT : '#666';
-  const groundNameStyle = [styles.groundName, IS_DARK && styles.groundNameNative];
-  const locationStyle = [styles.location, IS_DARK && styles.locationNative];
-  const detailTextStyle = [styles.detailText, IS_DARK && styles.detailTextNative];
-  const compactNameStyle = [styles.compactGroundName, IS_DARK && styles.compactGroundNameNative];
-  const compactLocStyle = [styles.compactGroundLocation, IS_DARK && styles.compactGroundLocationNative];
-  const amountStyle = [styles.amount, IS_DARK && styles.amountNative];
-  const metaStyle = [styles.metaText, IS_DARK && styles.metaTextNative];
+  const isLight = lightMode || (!isWeb && !IS_DARK) || (isWeb && !IS_DARK);
+  const iconDetail = isLight ? '#10b981' : NATIVE_ACCENT;
+  const pinColor = isLight ? '#666' : NATIVE_TEXT;
+  const groundNameStyle = [styles.groundName, !isLight && styles.groundNameNative];
+  const locationStyle = [styles.location, !isLight && styles.locationNative];
+  const detailTextStyle = [styles.detailText, !isLight && styles.detailTextNative];
+  const compactNameStyle = [styles.compactGroundName, !isLight && styles.compactGroundNameNative];
+  const compactLocStyle = [styles.compactGroundLocation, !isLight && styles.compactGroundLocationNative];
+  const amountStyle = [styles.amount, !isLight && styles.amountNative];
+  const metaStyle = [styles.metaText, !isLight && styles.metaTextNative];
+  const paymentMethodStyle = [styles.paymentMethod, !isLight && styles.paymentMethodNative];
+  const whoTitleStyle = [styles.whoTitleText, !isLight && styles.whoTitleTextNative];
   const badgeBg = getStatusColor(booking.status);
   const statusLabelStyle = styles.statusText;
 
@@ -59,8 +64,9 @@ export default function BookingCard({
       <Card
         style={[
           styles.card,
-          !IS_DARK && styles.cardWeb,
-          IS_DARK && styles.cardNative,
+          isWeb && !IS_DARK && styles.cardWeb,
+          !isWeb && IS_DARK && !isLight && styles.cardNative,
+          isLight && styles.cardLight,
         ]}
       >
         <View style={styles.content}>
@@ -111,7 +117,7 @@ export default function BookingCard({
             <View style={styles.footerLeft}>
               <Text style={amountStyle}>{formatCurrency(booking.total_amount)}</Text>
               {booking.payment_method && (
-                <Text style={[styles.paymentMethod, IS_DARK && styles.paymentMethodNative]}>
+                <Text style={paymentMethodStyle}>
                   Via {booking.payment_method === 'cash' ? 'Cash' : 'Online'}
                 </Text>
               )}
@@ -134,7 +140,7 @@ export default function BookingCard({
                     e.stopPropagation();
                     onCancel();
                   }}
-                  style={[styles.cancelBtnSmall, !IS_DARK && styles.cancelBtnSmallWeb]}
+                  style={[styles.cancelBtnSmall, isLight && styles.cancelBtnSmallWeb]}
                 >
                   <Text style={styles.cancelBtnText}>CANCEL</Text>
                 </TouchableOpacity>
@@ -150,7 +156,7 @@ export default function BookingCard({
           </View>
 
           {whoTitle ? (
-            <Text style={[styles.whoTitleText, IS_DARK && styles.whoTitleTextNative]}>
+            <Text style={whoTitleStyle}>
               Booked by: <Text style={{ fontWeight: '800' }}>{whoTitle}</Text>
             </Text>
           ) : null}
@@ -184,6 +190,16 @@ const styles = StyleSheet.create({
     shadowRadius: 0,
     shadowOffset: { width: 0, height: 0 },
     elevation: 0,
+  },
+  cardLight: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
   content: {
     gap: 8,

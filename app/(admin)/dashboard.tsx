@@ -9,6 +9,7 @@ import {
   Settings,
   Mail,
   LifeBuoy,
+  Package,
 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -148,7 +149,7 @@ export default function AdminDashboardScreen() {
             onPress={() => router.push('/(admin)/inventory')}
           >
             <View style={styles.actionContent}>
-              <Calendar size={18} color="#6366F1" />
+              <Package size={18} color="#6366F1" />
               <Text style={styles.actionText}>Inventory & Occupancy</Text>
             </View>
             <ChevronRight size={18} color="#666" />

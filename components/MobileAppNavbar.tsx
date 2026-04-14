@@ -8,14 +8,15 @@ type MobileAppNavbarProps = {
   title?: string;
   titleColor?: string;
   rightAction?: React.ReactNode;
+  lightBg?: boolean;
 };
 
 /** Green top bar with logo — use on native-only screens (not web). */
-export default function MobileAppNavbar({ title, titleColor = '#02c259', rightAction }: MobileAppNavbarProps) {
+export default function MobileAppNavbar({ title, titleColor = '#02c259', rightAction, lightBg }: MobileAppNavbarProps) {
   const canGoBack = router.canGoBack();
 
   return (
-    <View style={styles.navbar} accessibilityRole="header">
+    <View style={[styles.navbar, lightBg && styles.navbarLight]} accessibilityRole="header">
       {canGoBack && (
         <TouchableOpacity 
           onPress={() => router.back()} 
@@ -46,7 +47,7 @@ const styles = StyleSheet.create({
     minHeight: 92,
     paddingHorizontal: 16,
     paddingTop: 32,
-    paddingBottom: 14,
+    paddingBottom: 8,
     justifyContent: 'flex-end',
     alignItems: 'center',
     backgroundColor: '#043529',
@@ -77,5 +78,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 16,
     bottom: 12,
+  },
+  navbarLight: {
+    backgroundColor: '#FFFFFF',
+    borderBottomColor: '#F1F5F9',
   },
 });

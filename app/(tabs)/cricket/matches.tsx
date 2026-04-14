@@ -197,15 +197,15 @@ export default function CricketMatches() {
 
       {match.status === 'Live' && (
         <View style={{ flexDirection: 'row', gap: 10, marginTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 12 }}>
-          <TouchableOpacity 
+            <TouchableOpacity 
             style={[styles.liveActionBtn, { flex: 1, backgroundColor: '#F0FDF4', borderRadius: 8 }]}
             onPress={() => router.push(`/live/${match.match_id}`)}
           >
             <Text style={styles.liveActionBtnText}>View</Text>
-            <ChevronRight size={14} color="#0D9488" />
+            <ChevronRight size={14} color="#01b854" />
           </TouchableOpacity>
           <TouchableOpacity 
-            style={[styles.liveActionBtn, { flex: 1.5, backgroundColor: '#0D9488', borderRadius: 8 }]}
+            style={[styles.liveActionBtn, { flex: 1.5, backgroundColor: '#01b854', borderRadius: 8 }]}
             onPress={() => router.push(`/cricket/scoring?matchId=${match.match_id}`)}
           >
             <Text style={[styles.liveActionBtnText, { color: '#FFFFFF' }]}>Resume Scoring</Text>
@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
   liveActionBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#0D9488',
+    color: '#01b854',
   },
   matchFooter: {
     marginTop: 12,
