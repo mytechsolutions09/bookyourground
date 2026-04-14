@@ -1,3 +1,32 @@
+# Cricket Hub Analytics & Scoring Integration - Major Update
+
+This update transforms the platform's cricket module into a high-fidelity analytics and management engine. It introduces a sophisticated dashboard for match discovery, granular career statistics across multiple formats (Leather, Tennis, Other), and a professional administrative leaderboard.
+
+## Key Changes
+
+### 1. Cricket Hub Dashboard & Match Initiation
+- **Dashboard Default View**: Resolved the "Match not found" initialization error by implementing the Cricket Hub as the primary view in `scoring.tsx` when no match is active.
+- **Sticky Tab Navigation**: Added a modern, stationary navigation bar with tabs for **Matches**, **Tournaments**, **Teams**, **Stats**, and **Highlights**.
+- **Match Action Center**: Implemented an elegant "Plus" action modal that allows users to **Start a Match**, **Create a Team**, or browse tournaments directly from the scoring module.
+
+### 2. Multi-Format Career Analytics
+- **Ball-Type Partitioning**: Refactored the statistics engine to track performance independently across **Leather**, **Tennis**, and **Other** ball types.
+- **Expanded Metrics**:
+    - **Batting**: Added Ducks, Team Wins, and Team Losses.
+    - **Bowling**: Integrated 3-Wicket Hauls, Wides, No-Balls, Dot Balls, and Boundaries Conceded.
+    - **Fielding**: Added "Caught and Bowled" to the fielding metrics.
+- **Player Stats View**: Reconstructed `/cricket/stats` with a premium, partitioned UI that highlights career aggregates alongside format-specific performance.
+
+### 3. Administrative Hub & Leaderboard
+- **Leaderboard Overhaul**: Upgraded `/cricketdata/leaderboard` to support the new granular data schema. Added dynamic column coloring, category-specific filters, and comprehensive data grids.
+- **Tournament Management**: Transitioned placeholders into functional management interfaces for tournaments and teams.
+
+### 4. Technical Infrastructure
+- **Database Migrations**: Executed a series of SQL migrations (`20260414203000` to `20260414204000`) to normalize the player stats schema and support the new analytics fields.
+- **Match Resumption Fixes**: Corrected the match state reconstruction logic to ensure player squads and match configurations persist accurately across sessions.
+
+---
+
 # Navigation & Discovery Hub - Theme Overhaul
 
 This update standardizes the platform's visual identity for mobile/small-screen users, specifically targeting the "My Bookings" and "Find an Opponent" hubs, while refining the navigation architecture and Cricket UI.
@@ -11,6 +40,7 @@ This update standardizes the platform's visual identity for mobile/small-screen 
 
 ### 2. Navigation & Layout Refinement
 - **Persistent Discovery Tabs**: Unified the "Book a Ground" and "Find an Opponent" tabs into a stable, stationary navigation bar that doesn't jump during transitions.
+
 - **Mobile Navbar Enhancements**: 
     - Added a **Burger Menu** to the top-right of the navbar for public discovery pages.
     - Standardized vertical padding (8px) between the navbar and page content for a premium, compact feel.
@@ -52,4 +82,4 @@ This commit stabilized the cricket scoring engine, fixed data persistence issues
 - **Component Repair**: Fixed several critical syntax errors (mismatched JSX tags, double imports) that were breaking the web build.
 
 ---
-*Last Updated and Pushed on April 14, 2026, at 14:06:02+05:30*
+*Last Updated and Pushed on April 14, 2026, at 20:54:15+05:30*
