@@ -79,23 +79,18 @@ serve(async (req) => {
     const { action, bookingId, bookingDetails, paymentDetails } = body;
 
     console.log(`Action: ${action}, User: ${user.id}`);
-
-    // Validate PayU Secrets early
-    if (action === 'create-payu-hash' || action === 'verify-payu-payment') {
-      const merchantKey = Deno.env.get('PAYU_MERCHANT_KEY');
-      const merchantSalt = Deno.env.get('PAYU_MERCHANT_SALT');
-      
-      if (!merchantKey || !merchantSalt) {
-        console.error('PAYU_MERCHANT_KEY or PAYU_MERCHANT_SALT is missing.');
-        throw new Error('Payment Gateway Configuration Error: PayU Secrets not found.');
-      }
-    }
+    console.log('Request body:', JSON.stringify(body));
 
 
     if (action === 'create-payu-hash') {
       const { txnid, amount, firstname, email } = body;
-      const merchantKey = Deno.env.get('PAYU_MERCHANT_KEY') ?? '';
-      const merchantSalt = Deno.env.get('PAYU_MERCHANT_SALT') ?? '';
+      
+      const merchantKey = Deno.env.get('PAYU_MERCHANT_KEY') || '';
+      const merchantSalt = Deno.env.get('PAYU_MERCHANT_SALT') || '';
+      
+      if (!merchantKey || !merchantSalt) {
+        throw new Error('PayU keys not configured in Supabase Secrets.');
+      }
       
       const cleanTxnid = String(txnid || '').trim();
       const formattedAmount = Number(amount || 0).toFixed(2);
@@ -146,8 +141,13 @@ serve(async (req) => {
 
     if (action === 'verify-payu-payment') {
       const { status, txnid, amount, productinfo, firstname, email, hash } = paymentDetails;
-      const merchantKey = Deno.env.get('PAYU_MERCHANT_KEY') ?? '';
-      const merchantSalt = Deno.env.get('PAYU_MERCHANT_SALT') ?? '';
+      
+      const merchantKey = Deno.env.get('PAYU_MERCHANT_KEY') || '';
+      const merchantSalt = Deno.env.get('PAYU_MERCHANT_SALT') || '';
+
+      if (!merchantKey || !merchantSalt) {
+        throw new Error('PayU keys not configured in Supabase Secrets.');
+      }
 
       // Verify status first
       if (status !== 'success') {
@@ -394,7 +394,156 @@ serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ error: 'Invalid action' }), {
+    if (action === 'create-razorpay-order') {
+      const { amount, currency = 'INR', receipt } = body;
+      
+      const keyId = Deno.env.get('RAZORPAY_KEY_ID');
+      const keySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
+
+      if (!keyId || !keySecret) {
+        throw new Error('Razorpay keys not configured in Supabase Secrets.');
+      }
+
+      const response = await fetch('https://api.razorpay.com/v1/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Basic ' + btoa(`${keyId}:${keySecret}`),
+        },
+        body: JSON.stringify({
+          amount: Math.round(amount * 100), // convert to paise
+          currency,
+          receipt,
+        }),
+      });
+
+      const order = await response.json();
+      if (!response.ok) {
+        throw new Error(order.error?.description || 'Failed to create Razorpay order');
+      }
+
+      return new Response(JSON.stringify({ ...order, key_id: keyId }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'verify-razorpay-payment') {
+      const { razorpay_order_id, razorpay_payment_id, razorpay_signature, bookingId, bookingDetails } = body;
+      
+      const keySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
+
+      if (!keySecret) {
+        throw new Error('Razorpay key secret not configured in Supabase Secrets.');
+      }
+
+      // Verify signature
+      const text = razorpay_order_id + "|" + razorpay_payment_id;
+      const encoder = new TextEncoder();
+      const data = encoder.encode(text);
+      const secretData = encoder.encode(keySecret);
+      
+      const key = await crypto.subtle.importKey(
+        'raw',
+        secretData,
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['sign']
+      );
+      
+      const signatureBuffer = await crypto.subtle.sign('HMAC', key, data);
+      const generatedSignature = Array.from(new Uint8Array(signatureBuffer))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+      
+      if (generatedSignature !== razorpay_signature) {
+        throw new Error('Invalid Razorpay signature.');
+      }
+
+      let finalBookingId = bookingId;
+
+      if ((!finalBookingId || finalBookingId === 'pending') && bookingDetails) {
+        // ATOMIC CREATE
+        const { ground_id, booking_date, start_time, end_time, team_type, coupon_id } = bookingDetails;
+        
+        // 1. Check availability FIRST
+        const { data: availableIds, error: availError } = await supabaseClient.rpc('available_ground_ids_for_slot', {
+            p_ground_ids: [ground_id],
+            p_booking_date: booking_date,
+            p_start_time: start_time,
+        });
+
+        if (availError) {
+          console.error(`[Razorpay] Availability RPC error: ${availError.message}`);
+          throw new Error(`Availability check failed: ${availError.message}`);
+        }
+        
+        const isAvailable = Array.isArray(availableIds) && availableIds.some((r: any) => r.ground_id === ground_id);
+        if (!isAvailable) {
+            throw new Error('This slot is no longer available. Please contact support for a refund as payment was successful.');
+        }
+
+        const { data: ground } = await supabaseClient.from('grounds').select('pitch_type, base_price_per_hour').eq('id', ground_id).single();
+        
+        let pricePerHour = ground.base_price_per_hour;
+        let totalAmount = pricePerHour;
+        if (ground.pitch_type.toLowerCase().includes('cricket') && !ground.pitch_type.toLowerCase().includes('box')) {
+           if (team_type === 'one') totalAmount = Math.round((pricePerHour / 2) * 100) / 100;
+        }
+
+        let discountAmount = 0;
+        if (coupon_id) {
+           const { data: coupon } = await supabaseClient.from('coupons').select('*').eq('id', coupon_id).single();
+           if (coupon) {
+              if (coupon.discount_type === 'percentage') {
+                discountAmount = totalAmount * (coupon.discount_value / 100);
+              } else {
+                discountAmount = coupon.discount_value;
+              }
+           }
+        }
+
+        const { data: newBooking, error: insertError } = await supabaseClient
+          .from('bookings')
+          .insert({
+            user_id: user.id,
+            ground_id,
+            booking_date,
+            start_time,
+            end_time,
+            total_hours: 1,
+            price_per_hour: pricePerHour,
+            total_amount: Math.round((totalAmount - discountAmount) * 100) / 100,
+            coupon_id,
+            discount_amount: discountAmount,
+            notes: (team_type === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Paid via Razorpay: ${razorpay_payment_id})`,
+            status: 'confirmed',
+            payment_method: 'razorpay',
+          })
+          .select('id')
+          .single();
+
+        if (insertError) throw insertError;
+        finalBookingId = newBooking.id;
+      }
+
+      // Record transaction
+      const { data: bookingData } = await supabaseClient.from('bookings').select('total_amount, user_id').eq('id', finalBookingId).single();
+
+      await supabaseClient.from('transactions').insert({
+        booking_id: finalBookingId,
+        user_id: bookingData.user_id,
+        amount: bookingData.total_amount,
+        status: 'completed',
+        payment_method: 'razorpay',
+        transaction_reference: razorpay_payment_id,
+      });
+
+      return new Response(JSON.stringify({ success: true, bookingId: finalBookingId }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    return new Response(JSON.stringify({ error: `Invalid action: ${action}` }), {
       status: 400,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

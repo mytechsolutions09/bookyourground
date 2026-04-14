@@ -7,6 +7,8 @@ import { router } from 'expo-router';
 import { LayoutDashboard, Calendar, Star, Users, IndianRupee, ChevronRight } from 'lucide-react-native';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import { formatBookingSlotSummary } from '@/utils/bookingSlotFormat';
+import BookingCard from '@/components/bookings/BookingCard';
+import { ActivityIndicator } from 'react-native';
 
 const THEME_BG = '#043529';
 const THEME_CARD_BG = '#06392e';
@@ -242,7 +244,50 @@ function DashboardContent() {
           </View>
         </View>
       </View>
+
+      <View style={styles.sectionHeader}>
+        <Text style={[styles.sectionTitle, IS_DARK && styles.sectionTitleDark]}>Upcoming Matches</Text>
+        <TouchableOpacity onPress={() => router.push('/bookings')}>
+          <Text style={[styles.seeAllText, IS_DARK && styles.seeAllTextDark]}>See all</Text>
+        </TouchableOpacity>
+      </View>
+
+      {loading ? (
+        <ActivityIndicator size="large" color="#01b854" style={{ marginTop: 40 }} />
+      ) : upcomingBookings.length > 0 ? (
+        <View style={styles.matchesGrid}>
+          {upcomingBookings.slice(0, 3).map((b) => (
+            <View 
+              key={b.id} 
+              style={[
+                styles.dashboardMatchItem,
+                { maxWidth: isCompact ? '100%' : width < 1200 ? '48.5%' : '32.5%'}
+              ]}
+            >
+              <BookingCard
+                booking={b}
+                lightMode={!IS_DARK}
+                onPress={() => router.push(`/bookings/${b.id}`)}
+              />
+            </View>
+          ))}
+        </View>
+      ) : (
+        <View style={[styles.emptyMatches, IS_DARK && styles.emptyMatchesDark]}>
+          <Calendar size={40} color={IS_DARK ? 'rgba(255,255,255,0.1)' : '#E5E7EB'} />
+          <Text style={[styles.emptyMatchesText, IS_DARK && styles.emptyMatchesTextDark]}>
+            No upcoming games scheduled.
+          </Text>
+          <TouchableOpacity 
+            style={styles.bookNowLink}
+            onPress={() => router.push('/book-my-ground' as any)}
+          >
+            <Text style={styles.bookNowLinkText}>Book your first ground</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </ScrollView>
+
   );
 
   if (Platform.OS === 'web' && !isCompact) {
@@ -406,6 +451,76 @@ const styles = StyleSheet.create({
   },
   statsCaptionDark: {
     color: '#9ca3af',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 32,
+    marginBottom: 16,
+    paddingHorizontal: 4,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  sectionTitleDark: {
+    color: THEME_TEXT,
+  },
+  seeAllText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#01b854',
+  },
+  seeAllTextDark: {
+    color: THEME_ACCENT,
+  },
+  matchesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    width: '100%',
+  },
+  dashboardMatchItem: {
+    flex: 1,
+    minWidth: 300,
+    maxWidth: Platform.OS === 'web' ? '32.5%' : '100%',
+  },
+  emptyMatches: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    marginTop: 8,
+  },
+  emptyMatchesDark: {
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderColor: 'rgba(255,255,255,0.05)',
+  },
+  emptyMatchesText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  emptyMatchesTextDark: {
+    color: '#9CA3AF',
+  },
+  bookNowLink: {
+    marginTop: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: '#F0FDF4',
+  },
+  bookNowLinkText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#01b854',
   },
 });
 

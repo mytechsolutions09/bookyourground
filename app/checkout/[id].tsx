@@ -46,8 +46,8 @@ export default function CheckoutScreen() {
       if (error) throw error;
       setActiveGateways(data || []);
       
-      const payu = data?.find(g => g.name === 'payu');
-      if (payu) setSelectedGateway('payu');
+      const razorpay = data?.find(g => g.name === 'razorpay');
+      if (razorpay) setSelectedGateway('razorpay');
       else if (data?.length) setSelectedGateway(data[0].name);
     } catch (e) {
       console.error('Error fetching gateways:', e);
@@ -73,10 +73,6 @@ export default function CheckoutScreen() {
       const { data: { session } } = await supabase.auth.getSession();
       
       const { data, error } = await supabase.functions.invoke('payment-gateway', {
-        headers: {
-          'Authorization': `Bearer ${session?.access_token || ''}`,
-          'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '',
-        },
         body: {
           action: 'confirm-cash',
           bookingId: booking.isNew ? null : booking.id,
@@ -207,10 +203,6 @@ export default function CheckoutScreen() {
 
       const { data: { session } } = await supabase.auth.getSession();
       const { data: hashData, error: hashError } = await supabase.functions.invoke('payment-gateway', {
-        headers: {
-          'Authorization': `Bearer ${session?.access_token || ''}`,
-          'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '',
-        },
         body: {
           action: 'create-payu-hash',
           txnid,
@@ -274,7 +266,135 @@ export default function CheckoutScreen() {
     }
   };
 
+  const handleRazorpay = async () => {
+    if (!booking) return;
+    try {
+      setProcessing(true);
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // 1. Create Order
+      const { data: order, error: orderError } = await supabase.functions.invoke('payment-gateway', {
+        body: {
+          action: 'create-razorpay-order',
+          amount: booking.total_amount,
+          receipt: `rcpt_${Date.now()}`,
+        },
+      });
+
+      if (orderError) {
+        let msg = orderError.message;
+        if (orderError.context && typeof orderError.context.json === 'function') {
+           try {
+             const errBody = await orderError.context.json();
+             if (errBody && errBody.error) msg = errBody.error;
+           } catch (e) {}
+        }
+        throw new Error(msg);
+      }
+
+      if (order.success === false) {
+        throw new Error(order.error || 'Failed to create Razorpay order');
+      }
+
+      if (Platform.OS === 'web') {
+        // 2. Load Razorpay Script
+        const loadScript = (src: string) => {
+          return new Promise((resolve) => {
+            const script = document.createElement('script');
+            script.src = src;
+            script.id = 'razorpay-sdk';
+            script.onload = () => resolve(true);
+            script.onerror = () => resolve(false);
+            if (!document.getElementById('razorpay-sdk')) {
+              document.body.appendChild(script);
+            } else {
+              resolve(true);
+            }
+          });
+        };
+
+        const res = await loadScript('https://checkout.razorpay.com/v1/checkout.js');
+        if (!res) {
+          Alert.alert('Error', 'Razorpay SDK failed to load. Are you online?');
+          return;
+        }
+
+        // 3. Open Checkout
+        const options = {
+          key: order.key_id,
+          amount: order.amount,
+          currency: order.currency,
+          name: 'Book Your Ground',
+          description: `Booking for ${booking.grounds.name}`,
+          order_id: order.id,
+          handler: async function (response: any) {
+            // 4. Verify Payment
+            try {
+              setProcessing(true);
+              const { data: verifyData, error: verifyError } = await supabase.functions.invoke('payment-gateway', {
+                body: {
+                  action: 'verify-razorpay-payment',
+                  razorpay_order_id: response.razorpay_order_id,
+                  razorpay_payment_id: response.razorpay_payment_id,
+                  razorpay_signature: response.razorpay_signature,
+                  bookingId: booking.isNew ? null : booking.id,
+                  bookingDetails: booking.isNew ? {
+                    ground_id: booking.ground_id,
+                    booking_date: booking.booking_date,
+                    start_time: booking.start_time,
+                    end_time: booking.end_time,
+                    team_type: booking.team_type,
+                    coupon_id: booking.coupon_id,
+                  } : null,
+                },
+              });
+
+              if (verifyError) throw verifyError;
+              
+              if (verifyData && verifyData.success) {
+                Alert.alert('Success', 'Payment successful! Your booking is confirmed.');
+                router.replace(`/bookings/${verifyData.bookingId}` as any);
+              } else {
+                throw new Error(verifyData?.error || 'Payment verification failed.');
+              }
+            } catch (err: any) {
+              Alert.alert('Payment Error', err.message);
+              setProcessing(false);
+            }
+          },
+          prefill: {
+            name: user?.user_metadata?.full_name || '',
+            email: user?.email || '',
+            contact: user?.user_metadata?.phone || '',
+          },
+          theme: {
+            color: '#10b981',
+          },
+          modal: {
+            ondismiss: function() {
+              setProcessing(false);
+            }
+          }
+        };
+
+        const rzp = new (window as any).Razorpay(options);
+        rzp.open();
+      } else {
+        Alert.alert('Mobile Payment', 'Razorpay native integration coming soon.');
+        setProcessing(false);
+      }
+    } catch (error: any) {
+      console.error('Razorpay error:', error);
+      Alert.alert('Error', error.message || 'Razorpay initiation failed.');
+      setProcessing(false);
+    }
+  };
+
   const handlePayment = async () => {
+    if (selectedGateway === 'razorpay') {
+      return handleRazorpay();
+    }
     if (selectedGateway === 'payu') {
       return handlePayU();
     }
@@ -409,7 +529,7 @@ export default function CheckoutScreen() {
               </View>
             </View>
 
-            {selectedGateway === 'payu' ? (
+            {selectedGateway === 'razorpay' || selectedGateway === 'payu' ? (
               <Button
                 title={processing ? 'Processing...' : `Pay ${formatCurrency(booking.total_amount)}`}
                 onPress={handlePayment}

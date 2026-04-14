@@ -1,106 +1,280 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Platform } from 'react-native';
-import { Users2 } from 'lucide-react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Platform, ScrollView, ActivityIndicator } from 'react-native';
+import { Users2, Award, Zap, Swords, Target, Activity, ChevronDown } from 'lucide-react-native';
+import { supabase } from '@/lib/supabase';
 
-const BATTING_STATS = [
-  { label: 'Mat', value: '222' },
-  { label: 'Inns', value: '206' },
-  { label: 'NO', value: '28' },
-  { label: 'Runs', value: '6390' },
-  { label: 'HS', value: '135' },
-  { label: 'Avg', value: '35.9' },
-  { label: 'SR', value: '156.54' },
-  { label: '30s', value: '41' },
-  { label: '50s', value: '37' },
-  { label: '100s', value: '11' },
-  { label: '4s', value: '756' },
-  { label: '6s', value: '241' },
-];
-
-const BOWLING_STATS = [
-  { label: 'Mat', value: '222' },
-  { label: 'Inns', value: '149' },
-  { label: 'Overs', value: '416.3' },
-  { label: 'Wkts', value: '150' },
-  { label: 'Eco', value: '8.87' },
-  { label: 'Avg', value: '24.63' },
-];
+type SubTab = 'batting' | 'bowling' | 'fielding' | 'captain';
 
 export default function CricketStats() {
-  const [subTab, setSubTab] = useState('batting');
+  const [subTab, setSubTab] = useState<SubTab>('batting');
+  const [loading, setLoading] = useState(true);
+  const [statsData, setStatsData] = useState<any[]>([]);
 
-  let currentStats = BATTING_STATS;
-  if (subTab === 'bowling') currentStats = BOWLING_STATS;
+  useEffect(() => {
+    fetchUserStats();
+  }, []);
+
+  const fetchUserStats = async () => {
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: members } = await supabase
+        .from('team_members')
+        .select('id')
+        .eq('profile_id', user.id);
+
+      if (!members || members.length === 0) {
+          setLoading(false);
+          return;
+      }
+
+      const memberIds = members.map(m => m.id);
+
+      const { data: ballStats, error } = await supabase
+        .from('player_ball_stats')
+        .select('*')
+        .in('member_id', memberIds);
+
+      if (error) throw error;
+      if (ballStats) setStatsData(ballStats);
+    } catch (err) {
+      console.error('Error fetching player stats:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatsByFormat = (format: 'overall' | 'leather' | 'tennis' | 'other') => {
+    let data = statsData;
+    if (format !== 'overall') {
+      data = statsData.filter(s => s.ball_type === format);
+    }
+
+    const aggregated = data.reduce((acc: any, curr: any) => {
+      Object.keys(curr).forEach(key => {
+        if (typeof curr[key] === 'number') {
+          acc[key] = (acc[key] || 0) + curr[key];
+        }
+      });
+      acc.highest_score = Math.max(acc.highest_score || 0, curr.highest_score || 0);
+      acc.best_bowling_wickets = Math.max(acc.best_bowling_wickets || 0, curr.best_bowling_wickets || 0);
+      return acc;
+    }, {});
+
+    if (subTab === 'batting') {
+      const inns = aggregated.innings_batted || 0;
+      const no = aggregated.not_outs || 0;
+      const runs = aggregated.total_runs || 0;
+      const avg = (inns > no) ? (runs / (inns - no)).toFixed(2) : runs;
+      return [
+        { label: 'Mat', value: aggregated.matches_played || 0 },
+        { label: 'Inns', value: inns },
+        { label: 'NO', value: no },
+        { label: 'Runs', value: runs },
+        { label: 'HS', value: aggregated.highest_score || 0 },
+        { label: 'Avg', value: avg },
+        { label: 'SR', value: aggregated.strike_rate || '0.00' },
+        { label: '100s', value: aggregated.hundreds || 0 },
+        { label: '50s', value: aggregated.fifties || 0 },
+        { label: '4s', value: aggregated.fours_hit || 0 },
+        { label: 'Duck', value: aggregated.ducks || 0 },
+        { label: 'Won', value: aggregated.matches_won || 0 },
+        { label: 'Lost', value: aggregated.matches_lost || 0 },
+      ];
+    }
+
+    if (subTab === 'bowling') {
+      const runs = aggregated.runs_conceded || 0;
+      const wkts = aggregated.total_wickets || 0;
+      const overs = aggregated.overs_bowled || 0;
+      
+      const eco = overs > 0 ? (runs / overs).toFixed(2) : '0.00';
+      const avg = wkts > 0 ? (runs / wkts).toFixed(2) : '0.00';
+      const sr = wkts > 0 ? ((overs * 6) / wkts).toFixed(2) : '0.00';
+
+      return [
+        { label: 'Mat', value: aggregated.matches_played || 0 },
+        { label: 'Inns', value: aggregated.innings_bowled || 0 },
+        { label: 'Overs', value: overs.toFixed(1) },
+        { label: 'Maidens', value: aggregated.maidens || 0 },
+        { label: 'Runs', value: runs },
+        { label: 'Wkts', value: wkts },
+        { label: 'BB', value: aggregated.best_bowling_wickets ? `${aggregated.best_bowling_wickets}/${aggregated.best_bowling_runs}` : '—' },
+        { label: '3 Wkts', value: aggregated.three_wicket_hauls || 0 },
+        { label: '5 Wkts', value: aggregated.five_wicket_hauls || 0 },
+        { label: 'Eco', value: eco },
+        { label: 'SR', value: sr },
+        { label: 'Avg', value: avg },
+        { label: 'WD', value: aggregated.wides_conceded || 0 },
+        { label: 'NB', value: aggregated.no_balls_conceded || 0 },
+        { label: 'Dots', value: aggregated.dot_balls_bowled || 0 },
+        { label: '4s', value: aggregated.fours_conceded || 0 },
+        { label: '6s', value: aggregated.sixes_conceded || 0 },
+      ];
+    }
+
+    if (subTab === 'fielding') {
+      return [
+        { label: 'Matches', value: aggregated.matches_played || 0 },
+        { label: 'Catches', value: aggregated.total_catches || 0 },
+        { label: 'Run Outs', value: aggregated.run_outs || 0 },
+        { label: 'Stumpings', value: aggregated.stumpings || 0 },
+        { label: 'C.B', value: aggregated.caught_and_bowled || 0 },
+      ];
+    }
+
+    if (subTab === 'captain') {
+      const mat = aggregated.matches_captained || 0;
+      const won = aggregated.matches_won_as_captain || 0;
+      const winPct = mat > 0 ? ((won / mat) * 100).toFixed(1) + '%' : '0%';
+      return [
+        { label: 'Mat (Capt)', value: mat },
+        { label: 'Won', value: won },
+        { label: 'Lost', value: aggregated.matches_lost_as_captain || 0 },
+        { label: 'Win %', value: winPct },
+      ];
+    }
+
+    return [];
+  };
+
+  const renderStatGroup = (format: 'overall' | 'leather' | 'tennis' | 'other', isLast: boolean) => {
+    const stats = getStatsByFormat(format);
+    const label = format.charAt(0).toUpperCase() + format.slice(1);
+    
+    // Check if there is data for this specific format
+    const hasData = format === 'overall' || statsData.some(s => s.ball_type === format);
+
+    return (
+      <View key={format}>
+        <View style={styles.formatSectionHeader}>
+            <View style={styles.formatIndicator}>
+                <View style={[styles.ballDot, { backgroundColor: format === 'leather' ? '#991B1B' : (format === 'tennis' ? '#EA580C' : '#4B5563') }]} />
+                <Text style={styles.formatTitle}>{label} Ball Records</Text>
+            </View>
+            {!hasData && <Text style={styles.noDataLabel}>No match data</Text>}
+        </View>
+
+        <View style={styles.statsGrid}>
+          {stats.map((stat, idx) => (
+            <View key={idx} style={styles.statTile}>
+              <Text style={styles.statValue}>{stat.value}</Text>
+              <Text style={styles.statLabel}>{stat.label}</Text>
+            </View>
+          ))}
+        </View>
+
+        {!isLast && <View style={styles.divider} />}
+      </View>
+    );
+  };
 
   return (
-    <View style={{ flex: 1 }}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.statsPromoHeader}>
-         <Text style={styles.statsPromoText}>Want to improve your stats?</Text>
-         <TouchableOpacity style={styles.analyzeBtn}><Text style={styles.analyzeBtnText}>Analyze</Text></TouchableOpacity>
+         <View>
+            <Text style={styles.statsPromoText}>Personal Records</Text>
+            <Text style={styles.statsPromoSub}>PERFORMANCE ANALYTICS</Text>
+         </View>
+         <TouchableOpacity style={styles.analyzeBtn}>
+            <Activity size={18} color="#01b854" />
+            <Text style={styles.analyzeBtnText}>Analyze</Text>
+         </TouchableOpacity>
       </View>
 
       <View style={styles.statsFilterBar}>
-        {['Batting', 'Bowling', 'Fielding', 'Captain'].map((label) => (
+        {[
+            { id: 'batting', label: 'Batting', icon: Swords },
+            { id: 'bowling', label: 'Bowling', icon: Zap },
+            { id: 'fielding', label: 'Fielding', icon: Target },
+            { id: 'captain', label: 'Captain', icon: Award },
+        ].map((item) => (
           <TouchableOpacity 
-            key={label}
-            style={[styles.statPill, subTab === label.toLowerCase() && styles.statPillActive]} 
-            onPress={() => setSubTab(label.toLowerCase())}
+            key={item.id}
+            style={[styles.statPill, subTab === item.id && styles.statPillActive]} 
+            onPress={() => setSubTab(item.id as SubTab)}
           >
-            <Text style={[styles.statPillText, subTab === label.toLowerCase() && styles.statPillTextActive]}>{label}</Text>
+            <item.icon size={14} color={subTab === item.id ? '#FFFFFF' : '#64748B'} />
+            <Text style={[styles.statPillText, subTab === item.id && styles.statPillTextActive]}>{item.label}</Text>
           </TouchableOpacity>
         ))}
       </View>
 
       <View style={styles.statsContent}>
          <View style={styles.statsSectionHeader}>
-            <Text style={styles.statsSectionTitle}>Overall Performance</Text>
+            <Text style={styles.statsSectionTitle}>Career Overview</Text>
             <TouchableOpacity style={styles.compareBtn}>
                <Users2 size={14} color="#FFFFFF" strokeWidth={2.5} />
                <Text style={styles.compareBtnText}>Compare</Text>
             </TouchableOpacity>
          </View>
 
-         <View style={styles.statsGrid}>
-            {currentStats.map((stat, idx) => (
-              <View key={idx} style={styles.statTile}>
-                 <Text style={styles.statValue}>{stat.value}</Text>
-                 <Text style={styles.statLabel}>{stat.label}</Text>
-              </View>
-            ))}
-         </View>
+         {loading ? (
+             <View style={styles.loadingBox}>
+                <ActivityIndicator color="#01b854" />
+                <Text style={styles.loadingText}>Generating Performance Data...</Text>
+             </View>
+         ) : (
+            <View>
+                {renderStatGroup('overall', false)}
+                {renderStatGroup('leather', false)}
+                {renderStatGroup('tennis', false)}
+                {renderStatGroup('other', true)}
+            </View>
+         )}
 
          <View style={styles.adBanner}>
-            <Image source={{ uri: 'https://images.pexels.com/photos/1595385/pexels-photo-1595385.jpeg' }} style={styles.adImage} />
+            <Image source={{ uri: 'https://images.pexels.com/photos/3628912/pexels-photo-3628912.jpeg' }} style={styles.adImage} />
             <View style={styles.adOverlay}>
-               <Text style={styles.adTitle}>Amazon Prime{'\n'}<Text style={styles.adTitleBold}>Join Prime at ₹125/month*</Text></Text>
-               <TouchableOpacity style={styles.adBtn}><Text style={styles.adBtnText}>Install now</Text></TouchableOpacity>
+               <Text style={styles.adTitle}>Upgrade to Pro{'\n'}<Text style={styles.adTitleBold}>Unlock Advanced Charts</Text></Text>
+               <TouchableOpacity style={styles.adBtn}><Text style={styles.adBtnText}>Upgrade</Text></TouchableOpacity>
             </View>
          </View>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  statsPromoHeader: {
+  container: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
     padding: 16,
+  },
+  statsPromoHeader: {
+    padding: 20,
     backgroundColor: '#01b854',
-    borderRadius: 12,
+    borderRadius: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
+    ...Platform.select({
+        web: { boxShadow: '0 4px 12px rgba(1, 184, 84, 0.2)' }
+    })
   },
   statsPromoText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  statsPromoSub: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 11,
     fontWeight: '700',
+    marginTop: 2,
+    letterSpacing: 1,
   },
   analyzeBtn: {
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   analyzeBtnText: {
     color: '#01b854',
@@ -113,10 +287,14 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   statPill: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#F1F5F9',
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
@@ -125,8 +303,8 @@ const styles = StyleSheet.create({
     borderColor: '#01b854',
   },
   statPillText: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '700',
     color: '#64748B',
   },
   statPillTextActive: {
@@ -134,21 +312,23 @@ const styles = StyleSheet.create({
   },
   statsContent: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 24,
     padding: 20,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    marginBottom: 40,
   },
   statsSectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   statsSectionTitle: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '900',
     color: '#1E293B',
+    letterSpacing: -0.5,
   },
   compareBtn: {
     flexDirection: 'row',
@@ -164,37 +344,88 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
+  formatSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    marginTop: 8,
+  },
+  formatIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  ballDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#01b854',
+  },
+  formatTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#334155',
+  },
+  noDataLabel: {
+    fontSize: 11,
+    color: '#94A3B8',
+    fontWeight: '600',
+    fontStyle: 'italic',
+  },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 10,
     marginBottom: 24,
   },
   statTile: {
-    width: '30%',
+    width: '31%',
     backgroundColor: '#F8FAFC',
     borderRadius: 12,
-    padding: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 4,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#F1F5F9',
   },
   statValue: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
     color: '#1E293B',
-    marginBottom: 4,
+    marginBottom: 1,
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: 10,
+    color: '#64748B',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#F1F5F9',
+    marginVertical: 16,
+    borderStyle: 'dashed',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 1,
+  },
+  loadingBox: {
+    padding: 60,
+    alignItems: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
     color: '#64748B',
     fontWeight: '600',
   },
   adBanner: {
-    height: 100,
-    borderRadius: 12,
+    height: 110,
+    borderRadius: 14,
     overflow: 'hidden',
     position: 'relative',
+    marginTop: 16,
   },
   adImage: {
     width: '100%',
@@ -203,28 +434,30 @@ const styles = StyleSheet.create({
   adOverlay: {
     ...StyleSheet.absoluteFillObject,
     padding: 16,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   adTitle: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
+    lineHeight: 20,
   },
   adTitleBold: {
     fontWeight: '900',
+    color: '#FCD34D',
   },
   adBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: '#F59E0B',
-    borderRadius: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
   },
   adBtnText: {
-    color: '#FFFFFF',
-    fontSize: 11,
+    color: '#000000',
+    fontSize: 12,
     fontWeight: '800',
   },
 });

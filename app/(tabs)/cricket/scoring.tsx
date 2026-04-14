@@ -2602,6 +2602,119 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#0D9488',
   },
+  tabsStickyWrapper: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    zIndex: 10,
+  },
+  tabsInnerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingRight: 8,
+  },
+  tabsScroll: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  tab: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    marginRight: 12,
+    borderRadius: 12,
+    backgroundColor: '#F9FAFB',
+  },
+  tabActive: {
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#0D9488',
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  tabTextActive: {
+    color: '#0D9488',
+    fontWeight: '800',
+  },
+  plusIconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#F0FDF4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+  },
+  mainScroll: {
+    flex: 1,
+  },
+  mainScrollContent: {
+    paddingBottom: 40,
+  },
+  actionModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 32,
+    width: '90%',
+    maxWidth: 400,
+    padding: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.2,
+    shadowRadius: 40,
+    elevation: 25,
+  },
+  actionModalTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#111827',
+    textAlign: 'center',
+    marginBottom: 32,
+  },
+  actionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    justifyContent: 'space-between',
+  },
+  actionItem: {
+    width: '47%',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  actionIconBox: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  actionLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#374151',
+    textAlign: 'center',
+  },
+  actionCloseBtn: {
+    marginTop: 24,
+    paddingVertical: 16,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 16,
+    alignItems: 'center',
+  },
+  actionCloseBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
 });
 
 export default function CricketScreen() {
@@ -6102,6 +6215,122 @@ key={d.id}
     );
   };
 
+  const renderActionModal = () => (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={isActionModalVisible}
+      onRequestClose={() => setIsActionModalVisible(false)}
+    >
+      <TouchableOpacity 
+        style={styles.modalOverlay}
+        activeOpacity={1}
+        onPress={() => setIsActionModalVisible(false)}
+      >
+        <View style={styles.actionModalContent}>
+           <Text style={styles.actionModalTitle}>What would you like to do?</Text>
+           
+           <View style={styles.actionGrid}>
+              <TouchableOpacity 
+                style={styles.actionItem}
+                onPress={() => {
+                  setIsActionModalVisible(false);
+                  setIsSelectingTeams(true);
+                }}
+              >
+                 <View style={[styles.actionIconBox, { backgroundColor: '#F0FDF4' }]}>
+                    <Swords size={28} color="#0D9488" />
+                 </View>
+                 <Text style={styles.actionLabel}>Start a Match</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.actionItem}
+                onPress={() => {
+                  setIsActionModalVisible(false);
+                  setIsCreateTeamModalVisible(true);
+                }}
+              >
+                 <View style={[styles.actionIconBox, { backgroundColor: '#EFF6FF' }]}>
+                    <Users size={28} color="#3B82F6" />
+                 </View>
+                 <Text style={styles.actionLabel}>Create Team</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.actionItem}
+                onPress={() => {
+                  setIsActionModalVisible(false);
+                  alert('Tournament registration coming soon!');
+                }}
+              >
+                 <View style={[styles.actionIconBox, { backgroundColor: '#FFF7ED' }]}>
+                    <Trophy size={28} color="#F59E0B" />
+                 </View>
+                 <Text style={styles.actionLabel}>Host Tournament</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.actionItem}
+                onPress={() => {
+                   setIsActionModalVisible(false);
+                   alert('Match booking coming soon!');
+                }}
+              >
+                 <View style={[styles.actionIconBox, { backgroundColor: '#FAF5FF' }]}>
+                    <Calendar size={28} color="#A855F7" />
+                 </View>
+                 <Text style={styles.actionLabel}>Book Ground</Text>
+              </TouchableOpacity>
+           </View>
+
+           <TouchableOpacity 
+             style={styles.actionCloseBtn}
+             onPress={() => setIsActionModalVisible(false)}
+           >
+              <Text style={styles.actionCloseBtnText}>Close</Text>
+           </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+
+  const renderDashboardView = () => (
+    <View style={{ flex: 1 }}>
+       <View style={styles.tabsStickyWrapper}>
+          <View style={styles.tabsInnerRow}>
+             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsScroll}>
+                {TABS.map(tab => (
+                   <TouchableOpacity 
+                     key={tab.id} 
+                     style={[styles.tab, activeTab === tab.id && styles.tabActive]}
+                     onPress={() => setActiveTab(tab.id)}
+                   >
+                      <Text style={[styles.tabText, activeTab === tab.id && styles.tabTextActive]}>{tab.label}</Text>
+                   </TouchableOpacity>
+                ))}
+             </ScrollView>
+             <TouchableOpacity 
+               style={styles.plusIconWrapper}
+               onPress={() => setIsActionModalVisible(true)}
+             >
+                <Plus size={24} color="#01b854" />
+             </TouchableOpacity>
+          </View>
+       </View>
+       <ScrollView style={styles.mainScroll} contentContainerStyle={styles.mainScrollContent}>
+          {renderContent()}
+       </ScrollView>
+       {renderActionModal()}
+       {renderCreateTeamModal()}
+       {renderQrModal()}
+       {renderSuccessModal()}
+       {renderAddPlayerView()}
+       {renderAddMemberModal()}
+       {renderContactPicker()}
+    </View>
+  );
+
   const renderContent = () => {
     switch (activeTab) {
       case 'matches':
@@ -6313,9 +6542,7 @@ key={d.id}
             <Text style={{ color: '#6B7280', fontSize: 14 }}>Initializing your match...</Text>
           </View>
         ) : (
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <Text>Match not found or failed to resume.</Text>
-          </View>
+          renderDashboardView()
         )))))))))}
       </View>
   );

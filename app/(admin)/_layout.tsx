@@ -51,6 +51,13 @@ export default function AdminLayout() {
       <Stack.Screen name="inventory" />
       <Stack.Screen name="locations" />
       <Stack.Screen name="settings" />
+      <Stack.Screen name="cricketdata/index" />
+      <Stack.Screen name="cricketdata/matches" />
+      <Stack.Screen name="cricketdata/teams" />
+      <Stack.Screen name="cricketdata/tournaments" />
+      <Stack.Screen name="cricketdata/leaderboard" />
+      <Stack.Screen name="cricketdata/stats" />
+      <Stack.Screen name="cricketdata/players" />
     </Stack>
   );
 }

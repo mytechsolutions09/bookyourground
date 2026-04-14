@@ -318,124 +318,30 @@ export default function BookingsScreen() {
             </View>
           </View>
 
-          {visibleBookings.length > 0 && (
-            <View style={styles.tableHeaderContainer}>
-              <View style={styles.tableHeaderRow}>
-                <Text style={[styles.tableHeaderCell, styles.colBookedAt]}>Booked at</Text>
-                <Text style={[styles.tableHeaderCell, styles.colGround]}>Ground</Text>
-                <Text style={[styles.tableHeaderCell, styles.colDateTime]}>Slot Date & time</Text>
-                <Text style={[styles.tableHeaderCell, styles.colTeams]}>Teams</Text>
-                <Text style={[styles.tableHeaderCell, styles.colStatus]}>Status</Text>
-                <Text style={[styles.tableHeaderCell, styles.colAmount]}>Amount</Text>
-                <Text style={[styles.tableHeaderCell, styles.colPayment]}>Payment</Text>
-                {profile?.role === 'ground_owner' && <Text style={[styles.tableHeaderCell, styles.colBookedFor]}>Booked For</Text>}
-              </View>
-            </View>
-          )}
-
           <FlatList
+            key={`bookings-grid-${isWideWeb || isExtraWideWeb ? 3 : isMediumWeb ? 2 : 1}`}
             data={visibleBookings}
-            renderItem={({ item }) => {
-              if (Platform.OS === 'web') {
-                return (
-                  <View style={styles.tableRow}>
-                    <TouchableOpacity
-                      onPress={() => router.push(`/bookings/${item.id}`)}
-                      activeOpacity={0.7}
-                      style={styles.clickableRowSection}
-                    >
-                      <View style={[styles.tableCell, styles.colBookedAt]}>
-                        <Text style={styles.bookedDateText}>
-                          {new Date(item.created_at).toLocaleDateString()}
-                        </Text>
-                        <Text style={styles.bookedTimeText}>
-                          {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </Text>
-                      </View>
-
-                      <View style={[styles.tableCell, styles.colGround]}>
-                        <Text style={styles.groundName}>{item.ground.name}</Text>
-                        <Text style={styles.groundLocation}>
-                          {item.ground.city}, {item.ground.state}
-                        </Text>
-                      </View>
-
-                      <View style={[styles.tableCell, styles.colDateTime]}>
-                        <Text style={styles.dateText}>{formatDateDDMMYY(item.booking_date)}</Text>
-                        <Text style={styles.timeText}>
-                          {`${normalizeDbTimeToHHMM(item.start_time)} – ${normalizeDbTimeToHHMM(item.end_time)}`}
-                        </Text>
-                      </View>
-
-                      <View style={[styles.tableCell, styles.colTeams]}>
-                        <Text style={styles.teamsText}>
-                          {cricketTeamsLabelFromBooking(item.ground.pitch_type, item.notes)?.toUpperCase() || 'FULL SLOT'}
-                        </Text>
-                      </View>
-
-                      <View style={[styles.tableCell, styles.colStatus]}>
-                        <Text style={[
-                          styles.statusBadgeText,
-                          item.status === 'confirmed' ? styles.statusConfirmed : styles.statusCancelled
-                        ]}>
-                          {item.status === 'confirmed' ? (isDateInPast(item.booking_date) ? 'DONE' : 'ACTIVE') : item.status.toUpperCase()}
-                        </Text>
-                      </View>
-
-                      <View style={[styles.tableCell, styles.colAmount]}>
-                        <Text style={styles.amount}>{formatCurrency(item.total_amount)}</Text>
-                      </View>
-
-                      <View style={[styles.tableCell, styles.colPayment]}>
-                        <Text style={[styles.paymentBadgeText, item.payment_method === 'cash' ? styles.paymentCash : styles.paymentOnline]}>
-                            {item.payment_method === 'cash' ? 'CASH' : 'ONLINE'}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-
-                    {profile?.role === 'ground_owner' && (
-                      <View style={[styles.tableCell, styles.colBookedFor]}>
-                        <TextInput
-                          style={styles.bookedForInput}
-                          value={item.booked_for_name || ''}
-                          placeholder="Player Name"
-                          placeholderTextColor="#9ca3af"
-                          onChangeText={(val) => {
-                            setBookings(prev => prev.map(b => b.id === item.id ? { ...b, booked_for_name: val } : b));
-                          }}
-                          onBlur={async () => {
-                            try {
-                              const { error } = await supabase
-                                .from('bookings')
-                                .update({ booked_for_name: item.booked_for_name })
-                                .eq('id', item.id);
-                              if (error) throw error;
-                            } catch (err: any) {
-                              console.error('Error saving booked_for_name:', err);
-                            }
-                          }}
-                        />
-                      </View>
-                    )}
-                  </View>
-                );
-              }
-
-              return (
-                <View style={styles.webItem}>
-                  <BookingCard
-                    booking={item}
-                    onPress={() => router.push(`/bookings/${item.id}`)}
-                    onCancel={activeTab === 'upcoming' && isCancellable(item) ? () => handleCancelBooking(item) : undefined}
-                    onReview={activeTab === 'past' && (item.status === 'confirmed' || item.status === 'completed') && !reviewedBookingIds.includes(item.id) ? () => {
-                      router.push(`/bookings/${item.id}`);
-                    } : undefined}
-                  />
-                </View>
-              );
-            }}
+            renderItem={({ item }) => (
+              <View style={[
+                styles.webItem,
+                { maxWidth: (isWideWeb || isExtraWideWeb) ? '32.5%' : isMediumWeb ? '48.5%' : '100%' }
+              ]}>
+                <BookingCard
+                  booking={item}
+                  lightMode={true}
+                  onPress={() => router.push(`/bookings/${item.id}`)}
+                  onCancel={activeTab === 'upcoming' && isCancellable(item) ? () => handleCancelBooking(item) : undefined}
+                  onReview={activeTab === 'past' && (item.status === 'confirmed' || item.status === 'completed') && !reviewedBookingIds.includes(item.id) ? () => {
+                    router.push(`/bookings/${item.id}`);
+                  } : undefined}
+                />
+              </View>
+            )}
             keyExtractor={item => item.id}
-            numColumns={1}
+            numColumns={isWideWeb || isExtraWideWeb ? 3 : isMediumWeb ? 2 : 1}
+            columnWrapperStyle={
+              (isWideWeb || isExtraWideWeb || isMediumWeb) ? styles.webColumnWrapper : undefined
+            }
             style={styles.webFlatList}
             contentContainerStyle={styles.webList}
             showsVerticalScrollIndicator
@@ -449,6 +355,7 @@ export default function BookingsScreen() {
             }
           />
         </View>
+
       ) : (
         <>
           <View style={styles.nativeActionHeader}>
@@ -810,16 +717,18 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   webList: {
-    paddingHorizontal: 24,
-    paddingTop: 18,
-    paddingBottom: 32,
+    padding: 24,
+    gap: 20,
     width: '100%',
   },
-  webColumnWrapper: {
-    gap: 16,
+  webFlatList: {
+    flex: 1,
   },
   webItem: {
     flex: 1,
+  },
+  webColumnWrapper: {
+    gap: 20,
   },
   webCard: {
     backgroundColor: '#FFFFFF',

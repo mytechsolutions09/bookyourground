@@ -211,9 +211,12 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
     '/settings/ground-types',
     '/settings/payment',
     '/settings/support',
+    '/cricketdata',
+    '/(admin)/cricketdata',
   ];
   const isAdminRoute =
     adminPathnames.includes(cleanPath) ||
+    cleanPath.startsWith('/cricketdata') ||
     cleanPath.startsWith('/(admin)/') ||
     cleanPath.startsWith('/settings/') ||
     cleanPath === '/add-ground' ||
@@ -241,7 +244,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
   // On ground info (/grounds/[id]) and booking info (/bookings/[id]) pages,
   // hide the left sidebar for all roles so the content can take full width.
   const isPublicNoSidebar =
-    isLanding || isMarketing || isGroundInfoPage || isBookingDetails || isCheckoutPage || isLegalOrInfoPage || (cleanPath === '/find-an-opponent' && !isSuperAdmin) || cleanPath === '/(tabs)/grounds' || cleanPath === '/search' || cleanPath.startsWith('/live/') || cleanPath.startsWith('/cricket');
+    isLanding || isMarketing || isGroundInfoPage || isBookingDetails || isCheckoutPage || isLegalOrInfoPage || (cleanPath === '/find-an-opponent' && !isSuperAdmin) || cleanPath === '/(tabs)/grounds' || cleanPath === '/search' || cleanPath.startsWith('/live/') || (cleanPath.startsWith('/cricket') && !cleanPath.startsWith('/cricketdata'));
   // Treat the presence of a Supabase `user` as authenticated even if `profile`
   // hasn't loaded yet (prevents briefly showing "Sign In").
   const isAuthenticated = !!user || !!profile || isSuperAdmin;
@@ -749,6 +752,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                   <>
                     <Text style={styles.sidebarTitle}>Super admin</Text>
                     <NavLink href="/(admin)/dashboard" icon={LayoutDashboard} label="Dashboard" />
+                    <NavLink href="/(admin)/cricketdata" icon={Swords} label="Cricket Hub" />
                     <NavLink href="/(admin)/bookings" icon={Calendar} label="Bookings" />
                     <NavLink href="/(admin)/grounds" icon={MapPin} label="Grounds" />
                     <NavLink href="/(admin)/inventory" icon={CalendarClock} label="Inventory" />
@@ -844,6 +848,12 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                           href="/(admin)/dashboard"
                           icon={LayoutDashboard}
                           label="Dashboard"
+                          hideLabel={sidebarCollapsed}
+                        />
+                        <NavLink
+                          href="/(admin)/cricketdata"
+                          icon={Swords}
+                          label="Cricket Hub"
                           hideLabel={sidebarCollapsed}
                         />
                         <NavLink

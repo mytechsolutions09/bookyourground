@@ -102,10 +102,10 @@ export default function AdminPaymentSettings() {
                 </View>
                 
                 {gateway.name !== 'cash' && (
-                  <TouchableOpacity style={styles.configBtn}>
+                  <View style={styles.configBtn}>
                     <Settings2 size={14} color="#6B7280" />
-                    <Text style={styles.configBtnText}>Configure Keys</Text>
-                  </TouchableOpacity>
+                    <Text style={styles.configBtnText}>Managed via Secrets</Text>
+                  </View>
                 )}
               </View>
             </Card>
@@ -115,8 +115,8 @@ export default function AdminPaymentSettings() {
         <View style={styles.infoBox}>
           <Text style={styles.infoTitle}>Note on Secrets</Text>
           <Text style={styles.infoText}>
-            For security reasons, API Keys and Secrets (like PayU Salt) must be set via Supabase CLI or Dashboard Secrets. 
-            The toggles above control platform visibility.
+            For security reasons, API Keys and Secrets (like Razorpay Key ID or PayU Salt) must be set via Supabase Dashboard Secrets for the Edge Function.
+            The toggles above control platform visibility for users.
           </Text>
         </View>
       </ScrollView>
