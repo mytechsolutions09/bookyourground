@@ -37,6 +37,12 @@ import {
   Ticket,
   Package,
   Users,
+  House,
+  LandPlot,
+  Trophy,
+  CalendarCheck2,
+  Heart,
+  CircleUser,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -179,7 +185,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
 
   const isCompact = useMemo(() => width < 900, [width]);
   const groundsHref = isCompact ? '/(tabs)/grounds' : '/book-my-ground';
-  const cleanPath = pathname.split('?')[0];
+  const cleanPath = (pathname || '').split('?')[0];
   const isLanding = cleanPath === '/' || cleanPath === '';
   const isMarketing = cleanPath === '/book-my-ground';
   // Treat only ground detail routes as "ground details" (hide sidebar, use hero header).
@@ -287,7 +293,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
     };
 
     const clean = (p: string) => p.replace(/\/\([^)]+\)/g, '');
-    const currentPath = clean(normalize(pathname));
+    const currentPath = clean(normalize(pathname || ''));
     const targetHref = clean(normalize(href));
 
     const hrefSegments = href.split('/').filter(Boolean);
@@ -624,7 +630,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
         </View>
       )}
 
-      <View style={bodyStyle}>
+      <View style={[bodyStyle, isCompact && isPublicNoSidebar && { paddingBottom: 60 }]}>
         {(showLandingMobileMenu ||
           showOwnerMobileMenu ||
           showAdminMobileMenu ||
@@ -995,6 +1001,41 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
           {children}
         </View>
       </View>
+
+      {isCompact && isPublicNoSidebar && (
+        <View style={styles.bottomBar}>
+          {[
+            { label: 'Home', icon: House, href: '/' },
+            { label: 'Grounds', icon: LandPlot, href: '/grounds' },
+            { label: 'Cricket', icon: Trophy, href: '/cricket' },
+            { label: 'Bookings', icon: CalendarCheck2, href: '/(tabs)/bookings' },
+            { label: 'Profile', icon: CircleUser, href: '/(tabs)/profile' },
+          ].map((item) => {
+            const Icon = item.icon;
+            const isActive = cleanPath === item.href || 
+                            (item.href === '/grounds' && cleanPath === '/book-my-ground') ||
+                            (item.href === '/' && cleanPath === '');
+            return (
+              <TouchableOpacity
+                key={item.label}
+                style={styles.bottomBarItem}
+                onPress={() => {
+                   if (item.href === '/') {
+                     router.replace('/' as any);
+                   } else {
+                     router.push(item.href as any);
+                   }
+                }}
+              >
+                <Icon size={22} color={isActive ? '#00ea6b' : '#9CA3AF'} />
+                <Text style={[styles.bottomBarText, isActive && styles.bottomBarTextActive]}>
+                  {item.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      )}
     </View>
   );
 }
@@ -1539,5 +1580,35 @@ const styles = StyleSheet.create({
     color: '#dcc093',
     fontFamily: 'Inter',
     outlineStyle: 'none' as any,
+  },
+  bottomBar: {
+    position: 'fixed' as any,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 60,
+    backgroundColor: '#043529',
+    flexDirection: 'row',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
+    zIndex: 3000,
+    paddingHorizontal: 10,
+    paddingBottom: 4,
+  },
+  bottomBarItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: '100%',
+  },
+  bottomBarText: {
+    fontSize: 10,
+    marginTop: 4,
+    color: '#9CA3AF',
+    fontWeight: '500',
+  },
+  bottomBarTextActive: {
+    color: '#00ea6b',
+    fontWeight: '700',
   },
 });

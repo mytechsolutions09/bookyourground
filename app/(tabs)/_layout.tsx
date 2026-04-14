@@ -78,8 +78,7 @@ export default function TabLayout() {
     const insets = useSafeAreaInsets();
     if (hideTabBarOnBigScreens) return null;
 
-    const visibleTabNames = ['index', 'grounds', 'cricket', 'bookings', 'favorites', 'profile'];
-    if (!user) visibleTabNames.push('logout');
+    const visibleTabNames = ['home_tab', 'grounds', 'cricket', 'bookings', 'favorites', 'profile'];
 
     const visibleRoutes = state.routes.filter((route: any) => {
       const { options } = descriptors[route.key];
@@ -129,7 +128,7 @@ export default function TabLayout() {
           contentStyle: { backgroundColor: '#043529' },
         }}
       >
-        <Stack.Screen name="index" />
+        <Stack.Screen name="home_tab" />
         <Stack.Screen name="grounds" />
         <Stack.Screen name="matches" />
         <Stack.Screen name="bookings" />
@@ -160,7 +159,7 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
+        name="home_tab"
         options={{
           title: 'Home',
           tabBarIcon: ({ color, size }) => <House size={size} color={color} />,

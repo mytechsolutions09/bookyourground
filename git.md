@@ -1,3 +1,27 @@
+# Mobile Web Navigation & Routing Stability - Optimization Update
+
+This update optimizes the platform's mobile web experience with a professional bottom navigation bar for landing pages and resolves critical routing conflicts to ensure a seamless first-load experience.
+
+## Key Changes
+
+### 1. Unified Mobile Bottom Navigation
+- **Landing Page Bottom Bar**: Implemented a persistent, app-like bottom navigation bar for mobile web users on the landing page and all public discovery views.
+- **Iconography Synchronization**: Aligned the bottom bar with the internal app dashboard (Home, Grounds, Cricket, Bookings, Profile) using safe, high-quality Lucide icons (`LandPlot`, `Trophy`, `CalendarCheck2`, etc.).
+- **Dynamic Content Padding**: Automatically applied `paddingBottom: 60` to the main content area when the mobile bar is active to prevent navigation from obscuring page content.
+- **Guest UX Polish**: Removed the "Login" icon from bottom navigation bars across the platform to prioritize clean discovery for guest users.
+
+### 2. Routing & Navigator Stability
+- **Navigator Conflict Fix**: Renamed `app/(tabs)/index.tsx` to `app/(tabs)/home_tab.tsx` to eliminate a naming collision at the root URL (`/`) between the main Stack navigator and the internal Tab navigator.
+- **Hydration & SSR Repair**: Added defensive null-check logic for `usePathname()` in the `WebLayout` component, resolving a critical "blank screen on first load" crash that occurred during initial browser hydration.
+- **Automatic Home Redirection**: Configured the internal home-tab route to automatically redirect to the root landing page on web browsers, ensuring unified entry point management.
+- **Smart Active States**: Refined the navigation logic to accurately highlight active items (e.g., Grounds) across both marketing URLs (`/book-my-ground`) and app listing URLs (`/grounds`).
+
+### 3. Visual & Functional Polish
+- **Logo Transition stability**: Fixed the `logoScrolled` background transparency to ensure the brand identity remains prominent during long-page scrolls on mobile.
+- **Tab Bar Sizing**: Standardized bottom bar item sizes and typography (10pt labels, 22pt icons) for a compact and professional native-app feel.
+
+---
+
 # Live Scoring Integration - Global Persistence & UI Refinement
 
 This update significantly enhances the cricket scoring engine with global player discovery, permanent data persistence, and a refined, responsive UI for professional match management.
@@ -109,4 +133,4 @@ This commit stabilized the cricket scoring engine, fixed data persistence issues
 - **Component Repair**: Fixed several critical syntax errors (mismatched JSX tags, double imports) that were breaking the web build.
 
 ---
-*Last Updated and Pushed on April 14, 2026, at 20:54:15+05:30*
+*Last Updated and Pushed on April 15, 2026, at 03:32:00+05:30*
