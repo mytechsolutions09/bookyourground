@@ -14,8 +14,10 @@ import {
   Modal,
   SafeAreaView,
   Animated,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import WebLayout from '@/components/web/WebLayout';
 import { 
   Swords, 
@@ -56,6 +58,7 @@ import {
   IdCard,
   RotateCcw,
   MoreHorizontal,
+  ShieldCheck,
   UserMinus,
   Info,
   Clock,
@@ -271,6 +274,366 @@ const CAPTAIN_STATS = [
 ];
 
 const styles = StyleSheet.create({
+  modalHeaderPremium: {
+    padding: 24,
+    paddingTop: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  modalTitlePremium: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  modalSubtitlePremium: {
+    fontSize: 13,
+    color: 'rgba(255,255,255,0.8)',
+    marginTop: 2,
+  },
+  closeBtnPremium: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  infoCardPremium: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 2,
+  },
+  infoCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  infoCardTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#0D9488',
+    letterSpacing: 1,
+  },
+  matchTeamsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  matchTeamItem: {
+    flex: 1,
+  },
+  matchTeamName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  matchTeamRole: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 2,
+    textTransform: 'uppercase',
+  },
+  vsBadgeContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 12,
+  },
+  vsBadgeSmall: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#9CA3AF',
+  },
+  detailsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  detailItem: {
+    width: '45%',
+  },
+  detailLabel: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  detailValue: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  venueName: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  venueLocation: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  timeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  timeText: {
+    fontSize: 13,
+    color: '#4B5563',
+    fontWeight: '500',
+  },
+  officialsGroup: {
+    gap: 10,
+  },
+  officialCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    backgroundColor: '#F9FAF7',
+    borderRadius: 12,
+  },
+  officialAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F0FDF4',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  officialInitial: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#15803D',
+  },
+  officialNamePremium: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  officialRolePremium: {
+    fontSize: 11,
+    color: '#6B7280',
+  },
+  modalFooterPremium: {
+    padding: 20,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  closeBtnFooter: {
+    backgroundColor: '#0D9488',
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+  },
+  closeBtnFooterText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  dismissalGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 12,
+  },
+  dismissalTile: {
+    width: '30%',
+    aspectRatio: 1.1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  dismissalTileActive: {
+    backgroundColor: '#0D9488',
+    borderColor: '#0D9488',
+  },
+  dismissalIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  dismissalIconContainerActive: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  dismissalText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#4B5563',
+    textAlign: 'center',
+  },
+  dismissalTextActive: {
+    color: '#FFFFFF',
+  },
+  batterSelectionTile: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  batterSelectionTileActive: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#0D9488',
+  },
+  batterSelectionName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#374151',
+    marginTop: 10,
+  },
+  batterSelectionRole: {
+    fontSize: 11,
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    marginTop: 2,
+  },
+  playerGridTile: {
+    width: '47%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 10,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: 10,
+  },
+  playerGridTileActive: {
+    backgroundColor: '#F0F9FF',
+    borderColor: '#0D9488',
+  },
+  playerGridName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+    flex: 1,
+  },
+  extraRunTile: {
+    width: '30%',
+    aspectRatio: 1.2,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  extraRunTileActive: {
+    backgroundColor: '#0D9488',
+    borderColor: '#0D9488',
+  },
+  extraRunTileText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1F2937',
+  },
+  extraRunTileTextActive: {
+    color: '#FFFFFF',
+  },
+  wagonWheelContainer: {
+    padding: 20,
+    alignItems: 'center',
+    flex: 1,
+  },
+  groundOuter: {
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: '#059669',
+    borderWidth: 4,
+    borderColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 20,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  groundInner: {
+    width: '100%',
+    height: '100%',
+    position: 'relative',
+  },
+  pitchCenter: {
+    width: 20,
+    height: 40,
+    backgroundColor: '#FDE68A',
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    marginLeft: -10,
+    marginTop: -20,
+    borderRadius: 2,
+    zIndex: 10,
+  },
+  region: {
+    position: 'absolute',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 4,
+  },
+  regionLabel: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: {width: -1, height: 1},
+    textShadowRadius: 10
+  },
+  longOff: { top: 20, left: 60, width: 80, height: 80 },
+  longOn: { top: 20, right: 60, width: 80, height: 80 },
+  cover: { top: 110, left: 10, width: 80, height: 80 },
+  midWicket: { top: 110, right: 10, width: 80, height: 80 },
+  point: { bottom: 70, left: 20, width: 80, height: 80 },
+  squareLeg: { bottom: 70, right: 20, width: 80, height: 80 },
+  thirdMan: { bottom: 10, left: 80, width: 80, height: 60 },
+  fineLeg: { bottom: 10, right: 80, width: 80, height: 60 },
+  skipBtn: {
+    marginTop: 40,
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+  },
+  skipBtnText: {
+    color: '#6B7280',
+    fontWeight: '600',
+  },
   container: { flex: 1, backgroundColor: '#F3F4F6' },
   tabsStickyWrapper: { backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB', zIndex: 10 },
   tabsInnerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
@@ -501,6 +864,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     flex: 1,
     minHeight: 400,
+    maxWidth: 600,
+    alignSelf: 'center',
+    width: '100%',
   },
   selectionHeader: {
     flexDirection: 'row',
@@ -1766,6 +2132,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#111827',
+    // @ts-ignore
+    outlineStyle: 'none',
   },
   manualEntryForm: {
     paddingTop: 16,
@@ -2786,7 +3154,7 @@ export default function CricketScreen() {
 });
 
   const {
-    matchId: liveMatchId, phase: matchPhase, inn, striker, nonStriker, bowler, crr, rrr, yetToBat, formatOvers,
+    matchId: liveMatchId, phase: matchPhase, inn, matchConfig: activeMatchConfig, striker, nonStriker, bowler, crr, rrr, yetToBat, formatOvers,
     battingPlayers: squadBatting, bowlingPlayers: squadBowling,
     startMatch, resumeMatch, addBall, addExtra, addWicket, savePlayingXi, changeBowler, addNewBowler, undoLastBall, startSecondInnings, setOpeners, swapBatters, markRetiredHurt, reviseTarget, updateMatchConfig, changeSquad
   } = useCricketScoring();
@@ -2806,6 +3174,8 @@ export default function CricketScreen() {
   const [newOversValue, setNewOversValue] = useState('');
   const [isBreakModalVisible, setIsBreakModalVisible] = useState(false);
   const [activeBreakType, setActiveBreakType] = useState('');
+  const [isWagonWheelVisible, setIsWagonWheelVisible] = useState(false);
+  const [pendingRuns, setPendingRuns] = useState<number>(0);
   const [expandedSettingSection, setExpandedSettingSection] = useState<string | null>('Match Settings');
   const drawerAnim = useRef(new Animated.Value(400)).current;
 
@@ -2824,15 +3194,57 @@ export default function CricketScreen() {
       }).start();
     }
   }, [isScoringSettingsVisible]);
+
+  const [playerSearchQuery, setPlayerSearchQuery] = useState('');
+  const [dbSearchResults, setDbSearchResults] = useState<any[]>([]);
+  const [isSearchingDb, setIsSearchingDb] = useState(false);
+  const [isAddingNewPlayerManually, setIsAddingNewPlayerManually] = useState(false);
+  const [manualPlayerName, setManualPlayerName] = useState('');
+  const [manualPlayerPhone, setManualPlayerPhone] = useState('');
+  
+  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [isMatchInfoVisible, setIsMatchInfoVisible] = useState(false);
+
+  useEffect(() => {
+    const searchDbPlayers = async () => {
+      if (playerSearchQuery.trim().length < 3 || isAddingNewPlayerManually) {
+        setDbSearchResults([]);
+        return;
+      }
+
+      setIsSearchingDb(true);
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, full_name, avatar_url, phone')
+          .ilike('full_name', `%${playerSearchQuery}%`)
+          .limit(5);
+
+        if (!error && data) {
+          // Filter out those already in the local squad list to avoid duplicates
+          const localNames = new Set((squadBatting || []).map(n => typeof n === 'string' ? n.toLowerCase() : n?.player_name?.toLowerCase()));
+          const filtered = data.filter(p => !localNames.has(p.full_name.toLowerCase()));
+          setDbSearchResults(filtered);
+        }
+      } catch (err) {
+        console.error('Global search error:', err);
+      } finally {
+        setIsSearchingDb(false);
+      }
+    };
+
+    const timer = setTimeout(searchDbPlayers, 500);
+    return () => clearTimeout(timer);
+  }, [playerSearchQuery, isAddingNewPlayerManually, squadBatting]);
   const [isSelectingNextBowler, setIsSelectingNextBowler] = useState(false);
   const [isSelectingNewBatter, setIsSelectingNewBatter] = useState(false);
   const [pendingWicketData, setPendingWicketData] = useState<{ dismissedName: string } | null>(null);
   const [lastBowlerId, setLastBowlerId] = useState<string | null>(null);
 
-  const [playerSearchQuery, setPlayerSearchQuery] = useState('');
-  const [isAddingNewPlayerManually, setIsAddingNewPlayerManually] = useState(false);
-  const [manualPlayerName, setManualPlayerName] = useState('');
-  const [manualPlayerPhone, setManualPlayerPhone] = useState('');
+  const [groundResults, setGroundResults] = useState<any[]>([]);
+  const [isSearchingGround, setIsSearchingGround] = useState(false);
+  const [showGroundDropdown, setShowGroundDropdown] = useState(false);
 
   useEffect(() => {
     if (matchPhase === 'innings_break') {
@@ -2849,7 +3261,21 @@ export default function CricketScreen() {
   }, [matchPhase]);
 
   const handleAddBall = async (runs: number) => {
+    if (matchConfig.wagonWheel && runs > 0) {
+      setPendingRuns(runs);
+      setIsWagonWheelVisible(true);
+      return;
+    }
     const next = await addBall(runs);
+    if (next && next.legalBalls > 0 && next.legalBalls % 6 === 0) {
+      setLastBowlerId(bowler?.name);
+      setIsSelectingNextBowler(true);
+    }
+  };
+
+  const handleWagonWheelSelect = async (area: string) => {
+    setIsWagonWheelVisible(false);
+    const next = await addBall(pendingRuns, area);
     if (next && next.legalBalls > 0 && next.legalBalls % 6 === 0) {
       setLastBowlerId(bowler?.name);
       setIsSelectingNextBowler(true);
@@ -2882,7 +3308,7 @@ export default function CricketScreen() {
 
   const [fetchedMatches, setFetchedMatches] = useState<any[]>([]);
 
-  const { matchId: urlMatchId, live } = useLocalSearchParams();
+  const { matchId: urlMatchId, live, startMatch: directStart, createTeam } = useLocalSearchParams();
   const [resumeFailed, setResumeFailed] = useState(false);
 
   useEffect(() => {
@@ -2942,9 +3368,12 @@ export default function CricketScreen() {
     } else {
       console.log('[Scoring] No urlMatchId found');
     }
-    if (live === 'true') {
-      setIsLiveSession(true);
+    if (live === 'true' || directStart === 'true') {
+      if (live === 'true') setIsLiveSession(true);
       setIsSelectingTeams(true);
+    }
+    if (createTeam === 'true') {
+      setIsCreateTeamModalVisible(true);
     }
     fetchTeams();
     fetchMatches();
@@ -2964,6 +3393,33 @@ export default function CricketScreen() {
       supabase.removeChannel(channel);
     };
   }, [session]);
+
+  const searchGrounds = async (query: string) => {
+    setMatchConfig(prev => ({ ...prev, ground: query }));
+    if (query.trim().length < 2) {
+      setGroundResults([]);
+      setShowGroundDropdown(false);
+      return;
+    }
+
+    setIsSearchingGround(true);
+    setShowGroundDropdown(true);
+    try {
+      const { data, error } = await supabase
+        .from('grounds')
+        .select('*')
+        .ilike('name', `%${query}%`)
+        .eq('active', true)
+        .limit(10);
+
+      if (error) throw error;
+      setGroundResults(data || []);
+    } catch (e) {
+      console.error('Error searching grounds:', e);
+    } finally {
+      setIsSearchingGround(false);
+    }
+  };
 
   const fetchMatches = async () => {
     const { data, error } = await supabase
@@ -3591,6 +4047,66 @@ export default function CricketScreen() {
     setIsSelectingTeams(true);
   };
 
+  const renderTeamListModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={pickingFor !== null}
+      onRequestClose={() => setPickingFor(null)}
+    >
+      <TouchableOpacity 
+          style={styles.sheetOverlay} 
+          activeOpacity={1} 
+          onPress={() => setPickingFor(null)}
+      >
+        <View style={[styles.sheetContent, { height: '85%' }]}>
+          <View style={styles.sheetHandle} />
+          <View style={styles.modalHeaderRow}>
+            <View>
+              <Text style={styles.sheetTitle}>Select Team {pickingFor}</Text>
+              <Text style={styles.sheetSubtitle}>Pick a team to continue match setup</Text>
+            </View>
+            <TouchableOpacity onPress={() => setPickingFor(null)}>
+              <X size={24} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={[styles.searchBarContainer, { marginHorizontal: 24, marginTop: 16 }]}>
+            <Search size={18} color="#9CA3AF" />
+            <TextInput 
+              placeholder="Search teams..." 
+              placeholderTextColor="#9CA3AF" 
+              style={styles.searchInput} 
+              value={searchQuery} 
+              onChangeText={setSearchQuery} 
+              autoFocus
+            />
+          </View>
+
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 24 }}>
+            {teams
+              .filter(team => team.name.toLowerCase().includes(searchQuery.toLowerCase()))
+              .map(team => (
+                <TeamCard 
+                  key={team.id} 
+                  team={team} 
+                  onSelect={handleTeamSelect}
+                />
+              ))
+            }
+            {teams.filter(team => team.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
+              <View style={styles.noResultArea}>
+                <Users size={48} color="#E5E7EB" />
+                <Text style={styles.noResultTitle}>No Teams Found</Text>
+                <Text style={styles.noResultSub}>Try a different search term or create a new team</Text>
+              </View>
+            )}
+          </ScrollView>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+
   const renderTeamSelection = () => (
     <View style={styles.selectionView}>
       <View style={styles.selectionHeader}>
@@ -3603,8 +4119,8 @@ export default function CricketScreen() {
 
       <View style={styles.teamSelectionRow}>
         <TouchableOpacity 
-          style={[styles.teamSlot, selectedTeamA && styles.teamSlotFilled, pickingFor === 'A' && { borderColor: '#0D9488', borderWidth: 2 }]}
-          onPress={() => { setPickingFor(pickingFor === 'A' ? null : 'A'); setSearchQuery(''); }}
+          style={[styles.teamSlot, selectedTeamA && styles.teamSlotFilled]}
+          onPress={() => { setPickingFor('A'); setSearchQuery(''); }}
         >
           {selectedTeamA ? (
             <>
@@ -3615,8 +4131,8 @@ export default function CricketScreen() {
             </>
           ) : (
             <View style={styles.emptySlot}>
-               <Users2 size={32} color={pickingFor === 'A' ? '#0D9488' : '#9CA3AF'} />
-               <Text style={[styles.slotAction, pickingFor === 'A' && { color: '#0D9488' }]}>Select Team A</Text>
+               <Users2 size={32} color="#9CA3AF" />
+               <Text style={styles.slotAction}>Select Team A</Text>
             </View>
           )}
         </TouchableOpacity>
@@ -3626,8 +4142,8 @@ export default function CricketScreen() {
         </View>
 
         <TouchableOpacity 
-          style={[styles.teamSlot, selectedTeamB && styles.teamSlotFilled, pickingFor === 'B' && { borderColor: '#0D9488', borderWidth: 2 }]}
-          onPress={() => { setPickingFor(pickingFor === 'B' ? null : 'B'); setSearchQuery(''); }}
+          style={[styles.teamSlot, selectedTeamB && styles.teamSlotFilled]}
+          onPress={() => { setPickingFor('B'); setSearchQuery(''); }}
         >
           {selectedTeamB ? (
             <>
@@ -3638,14 +4154,14 @@ export default function CricketScreen() {
             </>
           ) : (
             <View style={styles.emptySlot}>
-               <Users2 size={32} color={pickingFor === 'B' ? '#0D9488' : '#9CA3AF'} />
-               <Text style={[styles.slotAction, pickingFor === 'B' && { color: '#0D9488' }]}>Select Team B</Text>
+               <Users2 size={32} color="#9CA3AF" />
+               <Text style={styles.slotAction}>Select Team B</Text>
             </View>
           )}
         </TouchableOpacity>
       </View>
 
-      {selectedTeamA && selectedTeamB && !pickingFor && (
+      {selectedTeamA && selectedTeamB && (
         <TouchableOpacity 
           style={styles.startMatchBtn}
           onPress={() => setIsSelectingPlayers(true)}
@@ -3653,42 +4169,216 @@ export default function CricketScreen() {
            <Text style={styles.startMatchBtnText}>Select Playing XI</Text>
         </TouchableOpacity>
       )}
+    </View>
+  );
 
-      {pickingFor ? (
-        <View style={{ flex: 1, marginTop: 16 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4, marginBottom: 12 }}>
-            <Text style={styles.pickingText}>
-              Selecting Team {pickingFor} — tap a team below
-            </Text>
-            <TouchableOpacity onPress={() => setPickingFor(null)}>
-              <X size={20} color="#6B7280" />
+  const renderWagonWheelModal = () => (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={isWagonWheelVisible}
+      onRequestClose={() => setIsWagonWheelVisible(false)}
+    >
+      <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setIsWagonWheelVisible(false)}
+      >
+        <View style={[styles.qrModalContent, { width: '95%', maxWidth: 500, height: 600 }]}>
+          <View style={styles.modalHeader}>
+            <View>
+              <Text style={styles.modalTitle}>Wagon Wheel</Text>
+              <Text style={styles.sheetSubtitle}>{pendingRuns} run{pendingRuns > 1 ? 's' : ''} scored. Select area:</Text>
+            </View>
+            <TouchableOpacity onPress={() => setIsWagonWheelVisible(false)}>
+              <X size={24} color="#6B7280" />
             </TouchableOpacity>
           </View>
-          <View style={styles.searchBarContainer}>
-            <Search size={16} color="#9CA3AF" />
-            <TextInput 
-              placeholder="Search teams..." 
-              placeholderTextColor="#9CA3AF" 
-              style={styles.searchInput} 
-              value={searchQuery} 
-              onChangeText={setSearchQuery} 
-            />
+
+          <View style={styles.wagonWheelContainer}>
+             {/* Ground Visualization */}
+             <View style={styles.groundOuter}>
+                <View style={styles.groundInner}>
+                   {/* Regions */}
+                   <TouchableOpacity style={[styles.region, styles.longOff]} onPress={() => handleWagonWheelSelect('Long Off')}><Text style={styles.regionLabel}>Long Off</Text></TouchableOpacity>
+                   <TouchableOpacity style={[styles.region, styles.longOn]} onPress={() => handleWagonWheelSelect('Long On')}><Text style={styles.regionLabel}>Long On</Text></TouchableOpacity>
+                   <TouchableOpacity style={[styles.region, styles.cover]} onPress={() => handleWagonWheelSelect('Cover')}><Text style={styles.regionLabel}>Cover</Text></TouchableOpacity>
+                   <TouchableOpacity style={[styles.region, styles.midWicket]} onPress={() => handleWagonWheelSelect('Mid Wicket')}><Text style={styles.regionLabel}>Mid Wicket</Text></TouchableOpacity>
+                   <TouchableOpacity style={[styles.region, styles.point]} onPress={() => handleWagonWheelSelect('Point')}><Text style={styles.regionLabel}>Point</Text></TouchableOpacity>
+                   <TouchableOpacity style={[styles.region, styles.squareLeg]} onPress={() => handleWagonWheelSelect('Square Leg')}><Text style={styles.regionLabel}>Square Leg</Text></TouchableOpacity>
+                   <TouchableOpacity style={[styles.region, styles.thirdMan]} onPress={() => handleWagonWheelSelect('Third Man')}><Text style={styles.regionLabel}>Third Man</Text></TouchableOpacity>
+                   <TouchableOpacity style={[styles.region, styles.fineLeg]} onPress={() => handleWagonWheelSelect('Fine Leg')}><Text style={styles.regionLabel}>Fine Leg</Text></TouchableOpacity>
+                   
+                   <View style={styles.pitchCenter} />
+                </View>
+             </View>
+             
+             <TouchableOpacity style={styles.skipBtn} onPress={() => handleWagonWheelSelect('N/A')}>
+                <Text style={styles.skipBtnText}>Skip Once</Text>
+             </TouchableOpacity>
+
+             <TouchableOpacity 
+               style={[styles.skipBtn, { marginTop: 12, backgroundColor: '#FEF2F2' }]} 
+               onPress={() => {
+                 setMatchConfig({ ...matchConfig, wagonWheel: false });
+                 handleWagonWheelSelect('N/A');
+               }}
+             >
+                <Text style={[styles.skipBtnText, { color: '#B91C1C' }]}>Skip for this Inning</Text>
+             </TouchableOpacity>
           </View>
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 20 }}>
-            {teams
-              .filter(team => team.name.toLowerCase().includes(searchQuery.toLowerCase()))
-              .map(team => (
-                <TeamCard 
-                  key={team.id} 
-                  team={team} 
-                  onSelect={handleTeamSelect}
-                />
-              ))
-            }
-          </ScrollView>
         </View>
-      ) : null}
-    </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+
+  const renderMatchInfoModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={isMatchInfoVisible}
+      onRequestClose={() => setIsMatchInfoVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={[styles.qrModalContent, { height: '85%', padding: 0, overflow: 'hidden' }]}>
+          <LinearGradient
+            colors={['#0D9488', '#0F766E']}
+            style={styles.modalHeaderPremium}
+          >
+            <View>
+              <Text style={styles.modalTitlePremium}>Match Information</Text>
+              <Text style={styles.modalSubtitlePremium}>Details & Assignments</Text>
+            </View>
+            <TouchableOpacity 
+              onPress={() => setIsMatchInfoVisible(false)}
+              style={styles.closeBtnPremium}
+            >
+              <X size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          </LinearGradient>
+
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, gap: 16 }}>
+             {/* Teams Card */}
+             <View style={styles.infoCardPremium}>
+                <View style={styles.infoCardHeader}>
+                   <Users2 size={18} color="#0D9488" />
+                   <Text style={styles.infoCardTitle}>TEAMS</Text>
+                </View>
+                <View style={styles.matchTeamsRow}>
+                   <View style={styles.matchTeamItem}>
+                      <Text style={styles.matchTeamName}>{selectedTeamA?.name}</Text>
+                      <Text style={styles.matchTeamRole}>Home Team</Text>
+                   </View>
+                   <View style={styles.vsBadgeContainer}>
+                      <Text style={styles.vsBadgeSmall}>VS</Text>
+                   </View>
+                   <View style={styles.matchTeamItem}>
+                      <Text style={[styles.matchTeamName, { textAlign: 'right' }]}>{selectedTeamB?.name}</Text>
+                      <Text style={[styles.matchTeamRole, { textAlign: 'right' }]}>Away Team</Text>
+                   </View>
+                </View>
+             </View>
+             
+             {/* Configuration Card */}
+             <View style={styles.infoCardPremium}>
+                <View style={styles.infoCardHeader}>
+                   <Trophy size={18} color="#0D9488" />
+                   <Text style={styles.infoCardTitle}>MATCH DETAILS</Text>
+                </View>
+                <View style={styles.detailsGrid}>
+                   <View style={styles.detailItem}>
+                      <Text style={styles.detailLabel}>Overs</Text>
+                      <Text style={styles.detailValue}>{matchConfig.totalOvers} Overs</Text>
+                   </View>
+                   <View style={styles.detailItem}>
+                      <Text style={styles.detailLabel}>Ball</Text>
+                      <Text style={styles.detailValue}>{matchConfig.ballType}</Text>
+                   </View>
+                   <View style={styles.detailItem}>
+                      <Text style={styles.detailLabel}>Pitch</Text>
+                      <Text style={styles.detailValue}>{matchConfig.pitchType}</Text>
+                   </View>
+                   <View style={styles.detailItem}>
+                      <Text style={styles.detailLabel}>Type</Text>
+                      <Text style={styles.detailValue}>{matchConfig.type}</Text>
+                   </View>
+                </View>
+             </View>
+
+             {/* Venue Card */}
+             <View style={styles.infoCardPremium}>
+                <View style={styles.infoCardHeader}>
+                   <MapPin size={18} color="#0D9488" />
+                   <Text style={styles.infoCardTitle}>VENUE & TIME</Text>
+                </View>
+                <View style={styles.venueContent}>
+                   <Text style={styles.venueName}>{matchConfig.ground}</Text>
+                   <Text style={styles.venueLocation}>{matchConfig.city}, {matchConfig.state}</Text>
+                   <View style={styles.timeRow}>
+                      <Calendar size={14} color="#6B7280" />
+                      <Text style={styles.timeText}>{matchConfig.dateTime}</Text>
+                   </View>
+                </View>
+             </View>
+             
+             {/* Officials Card */}
+             <View style={styles.infoCardPremium}>
+                <View style={styles.infoCardHeader}>
+                   <ShieldCheck size={18} color="#0D9488" />
+                   <Text style={styles.infoCardTitle}>MATCH OFFICIALS</Text>
+                </View>
+                
+                <View style={styles.officialsGroup}>
+                   {matchConfig.officials.umpires.map((u, i) => u && (
+                     <View key={`u-${i}`} style={styles.officialCard}>
+                        <View style={styles.officialAvatar}>
+                           <Text style={styles.officialInitial}>{u.charAt(0)}</Text>
+                        </View>
+                        <View>
+                           <Text style={styles.officialNamePremium}>{u}</Text>
+                           <Text style={styles.officialRolePremium}>Umpire {i+1}</Text>
+                        </View>
+                     </View>
+                   ))}
+                   
+                   {matchConfig.officials.scorers.map((s, i) => s && (
+                     <View key={`s-${i}`} style={styles.officialCard}>
+                        <View style={[styles.officialAvatar, { backgroundColor: '#F0F9FF' }]}>
+                           <Text style={[styles.officialInitial, { color: '#0369A1' }]}>{s.charAt(0)}</Text>
+                        </View>
+                        <View>
+                           <Text style={styles.officialNamePremium}>{s}</Text>
+                           <Text style={styles.officialRolePremium}>Scorer {i+1}</Text>
+                        </View>
+                     </View>
+                   ))}
+
+                   {matchConfig.officials.referee && (
+                     <View style={styles.officialCard}>
+                        <View style={[styles.officialAvatar, { backgroundColor: '#FDF2F8' }]}>
+                           <Text style={[styles.officialInitial, { color: '#BE185D' }]}>{matchConfig.officials.referee.charAt(0)}</Text>
+                        </View>
+                        <View>
+                           <Text style={styles.officialNamePremium}>{matchConfig.officials.referee}</Text>
+                           <Text style={styles.officialRolePremium}>Match Referee</Text>
+                        </View>
+                     </View>
+                   )}
+                </View>
+             </View>
+          </ScrollView>
+
+          <View style={styles.modalFooterPremium}>
+             <TouchableOpacity 
+               style={styles.closeBtnFooter}
+               onPress={() => setIsMatchInfoVisible(false)}
+             >
+                <Text style={styles.closeBtnFooterText}>Done</Text>
+             </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
   );
 
   const renderQrModal = () => (
@@ -3780,103 +4470,116 @@ export default function CricketScreen() {
     const setXi = currentPickingSide === 'A' ? setPlayingXiA : setPlayingXiB;
 
     const togglePlayer = (player: any) => {
-      const exists = currentXi.find(p => p.id === player.id);
+      const exists = currentXi.find((p: any) => p.id === player.id);
       if (exists) {
-        setXi(currentXi.filter(p => p.id !== player.id));
+        setXi(currentXi.filter((p: any) => p.id !== player.id));
       } else {
         setXi([...currentXi, player]);
       }
     };
 
     return (
-      <View style={styles.selectionView}>
-        <View style={styles.selectionHeader}>
-          <TouchableOpacity onPress={() => setIsSelectingPlayers(false)}>
-            <ChevronRight size={28} color="#0D9488" style={{ transform: [{ rotate: '180deg' }] }} />
-          </TouchableOpacity>
-          <View style={{ alignItems: 'center' }}>
-            <Text style={styles.selectionTitle}>Select Playing XI</Text>
-            <Text style={styles.selectionSubTitle}>{currentTeam?.name} ({currentXi.length} selected)</Text>
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isSelectingPlayers}
+        onRequestClose={() => setIsSelectingPlayers(false)}
+      >
+        <TouchableOpacity 
+          style={styles.sheetOverlay} 
+          activeOpacity={1} 
+          onPress={() => setIsSelectingPlayers(false)}
+        >
+          <View style={[styles.sheetContent, { height: '85%' }]}>
+            <View style={styles.sheetHandle} />
+            <View style={styles.addPlayerHeader}>
+              <View>
+                <Text style={styles.sheetTitle}>Select Playing XI</Text>
+                <Text style={styles.sheetSubtitle}>{currentTeam?.name} ({currentXi.length} selected)</Text>
+              </View>
+              <TouchableOpacity onPress={() => setIsSelectingPlayers(false)}>
+                <X size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 24 }}>
+               {teamMembers.length === 0 ? (
+                 <View style={styles.noResultArea}>
+                    <Users size={48} color="#E5E7EB" />
+                    <Text style={styles.noResultTitle}>No Players Found</Text>
+                    <Text style={styles.noResultSub}>Add players to your team squad first</Text>
+                    <TouchableOpacity 
+                      style={styles.addNewOfficialBtn}
+                      onPress={() => {
+                        setActiveTeamForPlayers(currentTeam);
+                        setIsAddMemberModalVisible(true);
+                      }}
+                    >
+                       <Plus size={20} color="#0D9488" />
+                       <Text style={styles.addNewOfficialText}>Add Player to Squad</Text>
+                    </TouchableOpacity>
+                 </View>
+               ) : (
+                 teamMembers.map((member, idx) => (
+                   <TouchableOpacity 
+                     key={idx} 
+                     style={[styles.playerSelectRow, currentXi.find((p: any) => p.id === member.id) && styles.playerSelectRowActive]}
+                     onPress={() => togglePlayer(member)}
+                   >
+                      <View style={styles.avatarCircle}>
+                         <User size={24} color="#6B7280" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                         <Text style={[styles.playerNameText, currentXi.find((p: any) => p.id === member.id) && { color: '#0D9488' }]}>{member.player_name}</Text>
+                         <Text style={{ fontSize: 12, color: '#6B7280' }}>All-rounder</Text>
+                      </View>
+                      <View style={[styles.checkBox, currentXi.find((p: any) => p.id === member.id) && styles.checkBoxActive]}>
+                         {currentXi.find((p: any) => p.id === member.id) && <Plus size={14} color="#FFFFFF" style={{ transform: [{ rotate: '45deg' }] }} />}
+                      </View>
+                   </TouchableOpacity>
+                 ))
+               )}
+            </ScrollView>
+
+            <View style={{ padding: 24, borderTopWidth: 1, borderTopColor: '#F3F4F6' }}>
+               {currentPickingSide === 'A' ? (
+                 <TouchableOpacity 
+                   style={[styles.startMatchBtn, { marginTop: 0 }, currentXi.length === 0 && { opacity: 0.5 }]}
+                   onPress={() => {
+                      if (currentXi.length === 0) {
+                        alert('Please select at least 1 player for Team A');
+                        return;
+                      }
+                      setIsSelectingPlayers(false);
+                      if (urlMatchId && selectedTeamA) {
+                        savePlayingXi(urlMatchId as string, selectedTeamA.id, currentXi);
+                      }
+                    }}
+                 >
+                    <Text style={styles.startMatchBtnText}>Confirm Team A XI ({currentXi.length})</Text>
+                 </TouchableOpacity>
+               ) : (
+                 <TouchableOpacity 
+                   style={[styles.startMatchBtn, { marginTop: 0 }, currentXi.length === 0 && { opacity: 0.5 }]}
+                   onPress={() => {
+                      if (currentXi.length === 0) {
+                        alert('Please select at least 1 player for Team B');
+                        return;
+                      }
+                      setIsSelectingPlayers(false);
+                      setIsConfiguringMatch(true);
+                      if (urlMatchId && selectedTeamB) {
+                        savePlayingXi(urlMatchId as string, selectedTeamB.id, currentXi);
+                      }
+                    }}
+                 >
+                    <Text style={styles.startMatchBtnText}>Confirm Team B XI ({currentXi.length})</Text>
+                 </TouchableOpacity>
+               )}
+            </View>
           </View>
-          <View style={{ width: 40 }} />
-        </View>
-
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
-           {teamMembers.length === 0 ? (
-             <View style={styles.noResultArea}>
-                <Users size={48} color="#E5E7EB" />
-                <Text style={styles.noResultTitle}>No Players Found</Text>
-                <Text style={styles.noResultSub}>Add players to your team squad first</Text>
-                <TouchableOpacity 
-                  style={styles.addNewOfficialBtn}
-                  onPress={() => {
-                    setActiveTeamForPlayers(currentTeam);
-                    setIsAddMemberModalVisible(true);
-                  }}
-                >
-                   <Plus size={20} color="#0D9488" />
-                   <Text style={styles.addNewOfficialText}>Add Player to Squad</Text>
-                </TouchableOpacity>
-             </View>
-           ) : (
-             teamMembers.map((member, idx) => (
-               <TouchableOpacity 
-                 key={idx} 
-                 style={[styles.playerSelectRow, currentXi.find(p => p.id === member.id) && styles.playerSelectRowActive]}
-                 onPress={() => togglePlayer(member)}
-               >
-                  <View style={styles.avatarCircle}>
-                     <User size={24} color="#6B7280" />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                     <Text style={[styles.playerNameText, currentXi.find(p => p.id === member.id) && { color: '#0D9488' }]}>{member.player_name}</Text>
-                     <Text style={{ fontSize: 12, color: '#6B7280' }}>All-rounder</Text>
-                  </View>
-                  <View style={[styles.checkBox, currentXi.find(p => p.id === member.id) && styles.checkBoxActive]}>
-                     {currentXi.find(p => p.id === member.id) && <Plus size={14} color="#FFFFFF" style={{ transform: [{ rotate: '45deg' }] }} />}
-                  </View>
-               </TouchableOpacity>
-             ))
-           )}
-        </ScrollView>
-
-        <View style={styles.selectionFooter}>
-           {currentPickingSide === 'A' ? (
-             <TouchableOpacity 
-               style={[styles.startMatchBtn, { marginTop: 0 }, currentXi.length === 0 && { opacity: 0.5 }]}
-               onPress={() => {
-                  if (currentXi.length === 0) {
-                    alert('Please select at least 1 player for Team A');
-                    return;
-                  }
-                  setIsSelectingPlayers(false);
-                  if (urlMatchId && selectedTeamA) {
-                    savePlayingXi(urlMatchId as string, selectedTeamA.id, currentXi);
-                  }
-                }}
-             >
-                <Text style={styles.startMatchBtnText}>Confirm Team A Playing XI ({currentXi.length})</Text>
-             </TouchableOpacity>
-           ) : (
-             <TouchableOpacity 
-               style={[styles.startMatchBtn, { marginTop: 0 }, currentXi.length === 0 && { opacity: 0.5 }]}
-               onPress={() => {
-                  if (currentXi.length === 0) {
-                    alert('Please select at least 1 player for Team B');
-                    return;
-                  }
-                  setIsSelectingPlayers(false);
-                  setIsConfiguringMatch(true);
-                  if (urlMatchId && selectedTeamB) {
-                    savePlayingXi(urlMatchId as string, selectedTeamB.id, currentXi);
-                  }
-                }}
-             >
-                <Text style={styles.startMatchBtnText}>Confirm Team B Playing XI ({currentXi.length})</Text>
-             </TouchableOpacity>
-           )}
-        </View>
-      </View>
+        </TouchableOpacity>
+      </Modal>
     );
   };
 
@@ -4233,20 +4936,43 @@ export default function CricketScreen() {
             </View>
 
             <View style={{ marginTop: 32, gap: 20 }}>
-               <View>
+               <View style={{ zIndex: 5000, position: 'relative' }}>
                   <Text style={styles.configLabel}>State</Text>
-                  <View style={styles.pickerWrapper}>
-                     <TextInput 
-                       style={styles.configInput} 
-                       placeholder="Select State"
-                       value={matchConfig.state}
-                       editable={false} // Would normally be a picker
-                     />
-                     <ChevronDown size={20} color="#6B7280" style={styles.pickerIcon} />
-                  </View>
+                  <TouchableOpacity 
+                    style={styles.dropdownTrigger}
+                    onPress={() => {
+                      setShowStateDropdown(!showStateDropdown);
+                      setShowGroundDropdown(false);
+                      setIsDatePickerVisible(false);
+                    }}
+                  >
+                     <Text style={[styles.dropdownValue, !matchConfig.state && styles.dropdownPlaceholder]}>
+                        {matchConfig.state || 'Select State'}
+                     </Text>
+                     <ChevronDown size={20} color="#6B7280" />
+                  </TouchableOpacity>
+                  
+                  {showStateDropdown && (
+                    <View style={[styles.statesDropdown, { position: 'absolute', top: 75, left: 0, right: 0, zIndex: 1000 }]}>
+                       <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled>
+                          {INDIAN_STATES.map((state) => (
+                            <TouchableOpacity 
+                              key={state}
+                              style={styles.stateItem}
+                              onPress={() => {
+                                setMatchConfig({ ...matchConfig, state });
+                                setShowStateDropdown(false);
+                              }}
+                            >
+                               <Text style={styles.stateItemText}>{state}</Text>
+                            </TouchableOpacity>
+                          ))}
+                       </ScrollView>
+                    </View>
+                  )}
                </View>
 
-               <View>
+               <View style={{ zIndex: 1, position: 'relative' }}>
                   <Text style={styles.configLabel}>City</Text>
                   <TextInput 
                     style={styles.configInput} 
@@ -4257,45 +4983,138 @@ export default function CricketScreen() {
                   />
                </View>
 
-               <View>
-                  <Text style={styles.configLabel}>Ground</Text>
-                  <TextInput 
-                    style={styles.configInput} 
-                    placeholder="Search or Enter Ground"
-                    placeholderTextColor="#9CA3AF"
-                    value={matchConfig.ground}
-                    onChangeText={(val) => setMatchConfig({ ...matchConfig, ground: val })}
-                  />
-               </View>
+               <View style={{ zIndex: 4000, position: 'relative' }}>
+                   <Text style={styles.configLabel}>Ground</Text>
+                   <TextInput 
+                     style={styles.configInput} 
+                     placeholder="Search or Enter Ground"
+                     placeholderTextColor="#9CA3AF"
+                     value={matchConfig.ground}
+                     onChangeText={(txt) => {
+                        searchGrounds(txt);
+                        setShowStateDropdown(false);
+                        setIsDatePickerVisible(false);
+                     }}
+                   />
+                   
+                   {showGroundDropdown && (
+                     <View style={[styles.statesDropdown, { position: 'absolute', top: 75, left: 0, right: 0, zIndex: 1000 }]}>
+                        <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled>
+                           {isSearchingGround ? (
+                             <ActivityIndicator color="#0D9488" style={{ padding: 20 }} />
+                           ) : groundResults.length === 0 ? (
+                             <View style={{ padding: 16 }}>
+                               <Text style={{ color: '#9CA3AF', fontSize: 13 }}>No grounds found. You can enter manually above.</Text>
+                             </View>
+                           ) : (
+                             groundResults.map((g) => (
+                               <TouchableOpacity 
+                                 key={g.id}
+                                 style={styles.stateItem}
+                                 onPress={() => {
+                                   setMatchConfig({ ...matchConfig, ground: g.name, city: g.city || matchConfig.city });
+                                   setShowGroundDropdown(false);
+                                 }}
+                               >
+                                  <View>
+                                    <Text style={styles.stateItemText}>{g.name}</Text>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                                      <MapPin size={10} color="#9CA3AF" />
+                                      <Text style={{ fontSize: 11, color: '#6B7280' }}>{g.city}, {g.state}</Text>
+                                    </View>
+                                  </View>
+                               </TouchableOpacity>
+                             ))
+                           )}
+                        </ScrollView>
+                     </View>
+                   )}
+                </View>
 
-               <View>
+               <View style={{ zIndex: 1, position: 'relative' }}>
                   <Text style={styles.configLabel}>Date & Time</Text>
-                  <View style={styles.pickerWrapper}>
-                     <TextInput 
-                       style={styles.configInput} 
-                       value={matchConfig.dateTime}
-                       onChangeText={(val) => setMatchConfig({ ...matchConfig, dateTime: val })}
-                     />
+                  <TouchableOpacity 
+                    style={styles.pickerWrapper}
+                    onPress={() => {
+                      setIsDatePickerVisible(!isDatePickerVisible);
+                      setShowStateDropdown(false);
+                      setShowGroundDropdown(false);
+                    }}
+                  >
+                     <Text style={styles.configInput}>
+                        {matchConfig.dateTime || 'Select Date & Time'}
+                     </Text>
                      <Calendar size={20} color="#6B7280" style={styles.pickerIcon} />
-                  </View>
+                  </TouchableOpacity>
+
+                  {isDatePickerVisible && (
+                    <View style={{ marginTop: 12, padding: 16, backgroundColor: '#FFFFFF', borderRadius: 16, borderWeight: 1, borderColor: '#E5E7EB' }}>
+                      {Platform.OS === 'web' ? (
+                        <input 
+                          type="datetime-local" 
+                          style={{
+                            width: '100%',
+                            padding: '12px',
+                            borderRadius: '8px',
+                            border: '1px solid #E5E7EB',
+                            fontSize: '15px',
+                            fontFamily: 'inherit',
+                            outline: 'none',
+                            backgroundColor: '#F9FAF7'
+                          }}
+                          defaultValue={new Date().toISOString().slice(0, 16)}
+                          onChange={(e) => {
+                            const val = e.target.value.replace('T', ', ');
+                            setMatchConfig({ ...matchConfig, dateTime: val });
+                          }}
+                        />
+                      ) : (
+                        <View>
+                           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+                              {[...Array(7)].map((_, i) => {
+                                const d = new Date();
+                                d.setDate(d.getDate() + i);
+                                const isSelected = selectedDate.toDateString() === d.toDateString();
+                                return (
+                                  <TouchableOpacity 
+                                    key={i} 
+                                    style={[styles.datePill, isSelected && styles.datePillActive]}
+                                    onPress={() => {
+                                      setSelectedDate(d);
+                                      const formatted = `${d.toLocaleDateString()}, 10:00 AM`;
+                                      setMatchConfig({ ...matchConfig, dateTime: formatted });
+                                    }}
+                                  >
+                                     <Text style={[styles.datePillDay, isSelected && styles.datePillTextActive]}>{d.toLocaleDateString('en-US', { weekday: 'short' })}</Text>
+                                     <Text style={[styles.datePillNum, isSelected && styles.datePillTextActive]}>{d.getDate()}</Text>
+                                  </TouchableOpacity>
+                                );
+                              })}
+                           </ScrollView>
+                        </View>
+                      )}
+                    </View>
+                  )}
                </View>
             </View>
 
-            <TouchableOpacity 
-              style={styles.officialsTrigger}
-              onPress={() => setIsConfiguringOfficials(true)}
-            >
-               <View style={styles.officialsTriggerLeft}>
-                  <View style={styles.officialIconBox}>
-                     <IdCard size={20} color="#0D9488" />
+            <View style={{ zIndex: -1 }}>
+               <TouchableOpacity 
+                 style={styles.officialsTrigger}
+                 onPress={() => setIsConfiguringOfficials(true)}
+               >
+                  <View style={styles.officialsTriggerLeft}>
+                     <View style={styles.officialIconBox}>
+                        <IdCard size={20} color="#0D9488" />
+                     </View>
+                     <View>
+                        <Text style={styles.officialsTitle}>Match Officials</Text>
+                        <Text style={styles.officialsSub}>Umpires, Scorers, Commentators...</Text>
+                     </View>
                   </View>
-                  <View>
-                     <Text style={styles.officialsTitle}>Match Officials</Text>
-                     <Text style={styles.officialsSub}>Umpires, Scorers, Commentators...</Text>
-                  </View>
-               </View>
-               <ChevronRight size={20} color="#9CA3AF" />
-            </TouchableOpacity>
+                  <ChevronRight size={20} color="#9CA3AF" />
+               </TouchableOpacity>
+            </View>
          </ScrollView>
 
          <View style={styles.configFooter}>
@@ -4423,11 +5242,22 @@ export default function CricketScreen() {
 
     // Use current 'yet to bat' list from hook
     // Fallback to the full battingPlayers list (also from hook) if needed
-    const alreadyOnFieldOrOut = new Set(inn.batters.map(b => b.name.toLowerCase()));
-    
-    const filteredSquad = squadBatting
-      .filter(name => !alreadyOnFieldOrOut.has(name.toLowerCase()))
-      .filter(name => name.toLowerCase().includes(playerSearchQuery.toLowerCase()))
+    const query = playerSearchQuery.toLowerCase().trim();
+    const alreadyOnFieldOrOut = new Set(
+      inn.batters
+        .filter(b => b && b.name)
+        .map(b => b.name.toLowerCase().trim())
+    );
+    const filteredSquad = (squadBatting || [])
+      .map(entry => {
+         if (typeof entry === 'string') return entry;
+         return entry?.player_name || entry?.name || null;
+      })
+      .filter(name => {
+         if (!name) return false;
+         const lowName = name.toLowerCase().trim();
+         return !alreadyOnFieldOrOut.has(lowName) && lowName.includes(query);
+      })
       .map(name => ({ id: name, player_name: name }));
 
     return (
@@ -4469,53 +5299,208 @@ export default function CricketScreen() {
              </View>
 
              <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}>
-                {filteredSquad.length > 0 ? (
-                  <View style={styles.playerGrid}>
-                    {filteredSquad.map(p => (
+                {isAddingNewPlayerManually ? (
+                   <View style={{ marginTop: 10, gap: 16 }}>
+                      <View style={styles.infoSection}>
+                         <Text style={styles.configLabel}>Enter Full Name</Text>
+                         <TextInput 
+                            style={styles.configInput}
+                            placeholder="e.g. John Smith"
+                            value={playerSearchQuery}
+                            onChangeText={setPlayerSearchQuery}
+                            autoFocus
+                         />
+                      </View>
+
+                      <View style={styles.infoSection}>
+                         <Text style={styles.configLabel}>Phone Number (Optional)</Text>
+                         <TextInput 
+                            style={styles.configInput}
+                            placeholder="e.g. +91 9876543210"
+                            value={manualPlayerPhone}
+                            onChangeText={setManualPlayerPhone}
+                            keyboardType="phone-pad"
+                         />
+                      </View>
+                      
                       <TouchableOpacity 
-                        key={p.id} 
-                        style={styles.playerGridTile}
-                        onPress={() => {
-                           handleAddWicket({ 
-                             dismissedName: pendingWicketData?.dismissedName, 
-                             dismissalType: 'Out', 
-                             newBatterName: p.player_name,
-});
-                           setIsSelectingNewBatter(false);
-                           setPendingWicketData(null);
+                        style={styles.startMatchMainBtn}
+                        onPress={async () => {
+                           if (playerSearchQuery.trim()) {
+                              const name = playerSearchQuery.trim();
+                              const phone = manualPlayerPhone.trim();
+                              
+                              // Persist to Database if activeMatchConfig and liveMatchId are available
+                              if (activeMatchConfig && liveMatchId && inn) {
+                                 try {
+                                    const battingTeamId = inn.battingTeam === activeMatchConfig.teamA ? activeMatchConfig.teamAId : activeMatchConfig.teamBId;
+                                    
+                                    if (battingTeamId) {
+                                       // 1. Add to team_members
+                                       const { data: newMember, error: memErr } = await supabase
+                                          .from('team_members')
+                                          .insert({
+                                             team_id: battingTeamId,
+                                             player_name: name,
+                                             player_phone: phone,
+                                             status: 'accepted',
+                                             role: 'player'
+                                          })
+                                          .select()
+                                          .single();
+                                          
+                                       if (!memErr && newMember) {
+                                          // 2. Add to match_playing_xi so they appear in reports/history correctly
+                                          await supabase.from('match_playing_xi').insert({
+                                             match_id: liveMatchId,
+                                             team_id: battingTeamId,
+                                             player_id: newMember.id
+                                          });
+                                          console.log('[Scoring] Permanently added player:', name, 'to team:', battingTeamId);
+                                       }
+                                    }
+                                 } catch (err) {
+                                    console.error('[Scoring] Error persisting new player:', err);
+                                 }
+                              }
+
+                              handleAddWicket({ 
+                                dismissedName: pendingWicketData?.dismissedName, 
+                                dismissalType: 'Out', 
+                                newBatterName: name,
+                              });
+                              setIsSelectingNewBatter(false);
+                              setPlayerSearchQuery('');
+                              setIsAddingNewPlayerManually(false);
+                              setManualPlayerPhone('');
+                              setPendingWicketData(null);
+                           }
                         }}
                       >
-                         <View style={[styles.miniAvatar, { width: 44, height: 44, backgroundColor: '#FEF3C7' }]}>
-                            <Text style={{ color: '#D97706', fontWeight: 'bold', fontSize: 16 }}>{p.player_name[0]}</Text>
-                         </View>
-                         <Text style={styles.playerGridName} numberOfLines={1}>{p.player_name}</Text>
+                         <Text style={styles.startMatchMainBtnText}>Add & Select Batter</Text>
                       </TouchableOpacity>
-                    ))}
-                  </View>
+                      
+                      <TouchableOpacity onPress={() => setIsAddingNewPlayerManually(false)}>
+                         <Text style={{ textAlign: 'center', color: '#6B7280', fontSize: 14, fontWeight: '600' }}>Cancel & View Squad</Text>
+                      </TouchableOpacity>
+                   </View>
                 ) : (
-                  <View style={{ alignItems: 'center', marginTop: 40 }}>
-                     <Text style={styles.sheetSubtitle}>No more players available in squad.</Text>
-                  </View>
-                )}
+                   <>
+                      {filteredSquad.length > 0 ? (
+                        <View style={styles.playerGrid}>
+                          {filteredSquad.map(p => (
+                            <TouchableOpacity 
+                              key={p.id} 
+                              style={styles.playerGridTile}
+                              onPress={() => {
+                                 handleAddWicket({ 
+                                   dismissedName: pendingWicketData?.dismissedName, 
+                                   dismissalType: 'Out', 
+                                   newBatterName: p.player_name,
+                                 });
+                                 setIsSelectingNewBatter(false);
+                                 setPendingWicketData(null);
+                              }}
+                            >
+                               <View style={[styles.miniAvatar, { width: 44, height: 44, backgroundColor: '#FEF3C7' }]}>
+                                  <Text style={{ color: '#D97706', fontWeight: 'bold', fontSize: 16 }}>{p.player_name[0]}</Text>
+                               </View>
+                               <Text style={styles.playerGridName} numberOfLines={1}>{p.player_name}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      ) : (
+                        <View style={{ alignItems: 'center', marginTop: 40, padding: 20, backgroundColor: '#F9FAFB', borderRadius: 16 }}>
+                           <Users size={32} color="#9CA3AF" />
+                           <Text style={[styles.sheetSubtitle, { marginTop: 12, textAlign: 'center' }]}>No more players available in the initial squad.</Text>
+                        </View>
+                      )}
 
-                <TouchableOpacity 
-                  style={styles.addPlayerMiniBtn}
-                  onPress={() => {
-                     const name = prompt('New Batter Name:');
-                     if (name) {
-                        handleAddWicket({ 
-                          dismissedName: pendingWicketData?.dismissedName, 
-                          dismissalType: 'Out', 
-                          newBatterName: name,
-});
-                        setIsSelectingNewBatter(false);
-                        setPendingWicketData(null);
-                     }
-                  }}
-                >
-                   <Plus size={18} color="#0D9488" />
-                   <Text style={styles.addPlayerMiniText}>Add New Batter</Text>
-                </TouchableOpacity>
+                      {/* Global DB Search Results */}
+                      {dbSearchResults.length > 0 && (
+                        <View style={{ marginTop: 24 }}>
+                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                              <Search size={14} color="#0D9488" />
+                              <Text style={{ fontSize: 13, fontWeight: '700', color: '#0D9488', letterSpacing: 0.5 }}>GLOBAL SEARCH RESULTS</Text>
+                           </View>
+                           <View style={styles.playerGrid}>
+                              {dbSearchResults.map((p: any) => (
+                                <TouchableOpacity 
+                                  key={p.id} 
+                                  style={[styles.playerGridTile, { borderColor: '#0D9488', backgroundColor: '#F0FDF4' }]}
+                                  onPress={async () => {
+                                     // Persist to Database if activeMatchConfig and liveMatchId are available
+                                     if (activeMatchConfig && liveMatchId && inn) {
+                                        try {
+                                           const battingTeamId = inn.battingTeam === activeMatchConfig.teamA ? activeMatchConfig.teamAId : activeMatchConfig.teamBId;
+                                           
+                                           if (battingTeamId) {
+                                              // 1. Add to team_members (linking existing profile)
+                                              const { data: newMember, error: memErr } = await supabase
+                                                 .from('team_members')
+                                                 .insert({
+                                                    team_id: battingTeamId,
+                                                    profile_id: p.id,
+                                                    player_name: p.full_name,
+                                                    player_phone: p.phone,
+                                                    status: 'accepted',
+                                                    role: 'player'
+                                                 })
+                                                 .select()
+                                                 .single();
+                                                 
+                                              if (!memErr && newMember) {
+                                                 // 2. Add to match_playing_xi
+                                                 await supabase.from('match_playing_xi').insert({
+                                                    match_id: liveMatchId,
+                                                    team_id: battingTeamId,
+                                                    player_id: newMember.id
+                                                 });
+                                                 console.log('[Scoring] Permanently linked global player:', p.full_name, 'to team:', battingTeamId);
+                                              }
+                                           }
+                                        } catch (err) {
+                                           console.error('[Scoring] Error linking global player:', err);
+                                        }
+                                     }
+
+                                     handleAddWicket({ 
+                                       dismissedName: pendingWicketData?.dismissedName, 
+                                       dismissalType: 'Out', 
+                                       newBatterName: p.full_name,
+                                     });
+                                     setIsSelectingNewBatter(false);
+                                     setDbSearchResults([]);
+                                     setPlayerSearchQuery('');
+                                     setPendingWicketData(null);
+                                  }}
+                                >
+                                   <View style={[styles.miniAvatar, { width: 44, height: 44, backgroundColor: '#0D9488' }]}>
+                                      <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 16 }}>{p.full_name[0]}</Text>
+                                   </View>
+                                   <Text style={styles.playerGridName} numberOfLines={2}>{p.full_name}</Text>
+                                </TouchableOpacity>
+                              ))}
+                           </View>
+                        </View>
+                      )}
+
+                      {isSearchingDb && (
+                         <View style={{ padding: 20, alignItems: 'center' }}>
+                            <ActivityIndicator size="small" color="#0D9488" />
+                            <Text style={{ fontSize: 12, color: '#6B7280', marginTop: 8 }}>Searching database...</Text>
+                         </View>
+                      )}
+
+                      <TouchableOpacity 
+                        style={[styles.addPlayerMiniBtn, { marginTop: 24, paddingVertical: 16 }]}
+                        onPress={() => setIsAddingNewPlayerManually(true)}
+                      >
+                         <Plus size={18} color="#0D9488" />
+                         <Text style={styles.addPlayerMiniText}>Add & Select New Batter</Text>
+                      </TouchableOpacity>
+                   </>
+                )}
              </ScrollView>
           </View>
         </View>
@@ -4573,6 +5558,13 @@ export default function CricketScreen() {
                     ? `Target: ${inn.target} | Need ${inn.target - inn.runs} from ${parseInt(matchConfig.totalOvers || '20') * 6 - inn.legalBalls} balls` 
                     : `${tossResult.winner === 'A' ? selectedTeamA?.name : selectedTeamB?.name} won the toss and opted to ${tossResult.decision === 'bowl' ? 'bowl' : 'bat'}`}
                 </Text>
+                <TouchableOpacity 
+                   style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: '#F0FDF4' }}
+                   onPress={() => setIsMatchInfoVisible(true)}
+                >
+                   <Info size={14} color="#0D9488" />
+                   <Text style={{ fontSize: 12, fontWeight: '700', color: '#0D9488' }}>Match Info</Text>
+                </TouchableOpacity>
              </View>
 
             {/* In-Play Tables */}            <View style={[styles.playerStatsRow, { gap: 24 }]}>
@@ -4814,13 +5806,13 @@ export default function CricketScreen() {
   const renderDismissalConfiguration = () => {
     if (!inn) return null;
     const dismissalTypes = [
-      { id: 'bowled', label: 'Bowled' },
-      { id: 'caught', label: 'Caught' },
-      { id: 'lbw', label: 'LBW' },
-      { id: 'run_out', label: 'Run Out' },
-      { id: 'stumped', label: 'Stumped' },
-      { id: 'hit_wicket', label: 'Hit Wicket' },
-      { id: 'retired', label: 'Retired' }
+      { id: 'bowled', label: 'Bowled', icon: RotateCcw },
+      { id: 'caught', label: 'Caught', icon: Users2 },
+      { id: 'lbw', label: 'LBW', icon: ShieldCheck },
+      { id: 'run_out', label: 'Run Out', icon: TrendingUp },
+      { id: 'stumped', label: 'Stumped', icon: MapPin },
+      { id: 'hit_wicket', label: 'Hit Wicket', icon: AlertCircle },
+      { id: 'retired', label: 'Retired', icon: UserMinus }
     ];
 
     const battingTeam = tossResult.decision === 'bat' ? tossResult.winner : (tossResult.winner?.id === selectedTeamA?.id ? selectedTeamB : selectedTeamA);
@@ -4832,25 +5824,36 @@ export default function CricketScreen() {
 
     return (
       <View style={styles.selectionView}>
-         <View style={[styles.selectionHeader, { backgroundColor: '#F0FDF4', padding: 20, borderRadius: 24, marginBottom: 20 }]}>
-            <TouchableOpacity onPress={() => setIsConfiguringDismissal(false)} style={{ backgroundColor: '#FFFFFF', padding: 8, borderRadius: 12 }}>
-               <ChevronLeft size={24} color="#01b854" />
+         <LinearGradient
+            colors={['#0D9488', '#0F766E']}
+            style={[styles.selectionHeader, { paddingVertical: 14, paddingHorizontal: 20, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 }]}
+         >
+            <TouchableOpacity onPress={() => setIsConfiguringDismissal(false)} style={styles.closeBtnPremium}>
+               <ChevronLeft size={20} color="#FFFFFF" />
             </TouchableOpacity>
-            <Text style={[styles.selectionTitle, { color: '#01b854' }]}>Wicket Setup</Text>
+            <Text style={[styles.modalTitlePremium, { textAlign: 'center', flex: 1, fontSize: 18 }]}>Wicket Setup</Text>
             <View style={{ width: 40 }} />
-         </View>
+         </LinearGradient>
 
          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
-            <View style={styles.dismissalGrid}>
-               {dismissalTypes.map(d => (
-                 <TouchableOpacity 
-key={d.id} 
-                   style={[styles.dismissalTile, dismissalState.type === d.id && styles.dismissalTileActive]}
-                   onPress={() => setDismissalState({ ...dismissalState, type: d.id, fielder: null, runOutBatter: d.id === 'run_out' ? 'Striker' : null })}
-                 >
-                   <Text style={[styles.dismissalText, dismissalState.type === d.id && styles.dismissalTextActive]}>{d.label}</Text>
-                 </TouchableOpacity>
-               ))}
+            <Text style={[styles.configLabel, { marginBottom: 12 }]}>How did it happen?</Text>
+            <View style={[styles.dismissalGrid, { marginTop: 0, gap: 10 }]}>
+               {dismissalTypes.map(d => {
+                 const Icon = d.icon;
+                 const isActive = dismissalState.type === d.id;
+                 return (
+                    <TouchableOpacity 
+                      key={d.id} 
+                      style={[styles.dismissalTile, isActive && styles.dismissalTileActive]}
+                      onPress={() => setDismissalState({ ...dismissalState, type: d.id, fielder: null, runOutBatter: d.id === 'run_out' ? 'Striker' : null })}
+                    >
+                      <View style={[styles.dismissalIconContainer, isActive && styles.dismissalIconContainerActive]}>
+                         <Icon size={18} color={isActive ? '#FFFFFF' : '#0D9488'} />
+                      </View>
+                      <Text style={[styles.dismissalText, isActive && styles.dismissalTextActive]}>{d.label}</Text>
+                    </TouchableOpacity>
+                 );
+               })}
             </View>
 
             {isRunOut && (
@@ -4866,10 +5869,10 @@ key={d.id}
                         style={[styles.batterSelectionTile, dismissalState.runOutBatter === b.type && styles.batterSelectionTileActive]}
                         onPress={() => setDismissalState({ ...dismissalState, runOutBatter: b.type as any })}
                       >
-                         <View style={[styles.miniAvatar, { backgroundColor: dismissalState.runOutBatter === b.type ? '#0D9488' : '#6B7280', width: 44, height: 44 }]}>
+                         <View style={[styles.miniAvatar, { backgroundColor: dismissalState.runOutBatter === b.type ? '#0D9488' : '#6B7280', width: 48, height: 48, borderRadius: 24 }]}>
                             <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 18 }}>{b.player?.name?.[0] || '?'}</Text>
                          </View>
-                         <Text style={[styles.batterSelectionName, dismissalState.runOutBatter === b.type && { color: '#065F46' }]}>{b.player?.name || b.type}</Text>
+                         <Text style={styles.batterSelectionName}>{b.player?.name || b.type}</Text>
                          <Text style={styles.batterSelectionRole}>{b.type}</Text>
                       </TouchableOpacity>
                     ))}
@@ -4878,19 +5881,22 @@ key={d.id}
             )}
 
             {needsFielder && (
-              <View style={{ marginTop: 24 }}>
-                 <Text style={styles.configLabel}>{isRunOut ? 'Run out by' : (dismissalState.type === 'stumped' ? 'Stumped by' : 'Caught by')}</Text>
-                 <View style={[styles.playerGrid, { marginTop: 8 }]}>
+              <View style={{ marginTop: 28 }}>
+                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <Text style={styles.configLabel}>{isRunOut ? 'Run out by' : (dismissalState.type === 'stumped' ? 'Stumped by' : 'Caught by')}</Text>
+                    <Text style={{ fontSize: 12, color: '#9CA3AF' }}>{bowlingPlayers.length} Fielders</Text>
+                 </View>
+                 <View style={[styles.playerGrid, { marginTop: 0, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }]}>
                     {bowlingPlayers.map(p => (
                       <TouchableOpacity 
                         key={p.id} 
                         style={[styles.playerGridTile, dismissalState.fielder?.id === p.id && styles.playerGridTileActive]}
                         onPress={() => setDismissalState({ ...dismissalState, fielder: p })}
                       >
-                         <View style={styles.miniAvatar}>
-                            <Text style={{ color: '#FFFFFF' }}>{p.player_name[0]}</Text>
+                         <View style={[styles.miniAvatar, { width: 32, height: 32, borderRadius: 16, backgroundColor: dismissalState.fielder?.id === p.id ? '#0D9488' : '#9CA3AF' }]}>
+                            <Text style={{ color: '#FFFFFF', fontSize: 12 }}>{p.player_name[0]}</Text>
                          </View>
-                         <Text style={styles.playerGridName} numberOfLines={1}>{p.player_name}</Text>
+                         <Text style={[styles.playerGridName, dismissalState.fielder?.id === p.id && { color: '#0D9488' }]} numberOfLines={1}>{p.player_name}</Text>
                       </TouchableOpacity>
                     ))}
                  </View>
@@ -4898,9 +5904,9 @@ key={d.id}
             )}
          </ScrollView>
 
-         <View style={styles.configFooter}>
+         <View style={[styles.modalFooterPremium, { paddingBottom: 32 }]}>
             <TouchableOpacity 
-               style={[styles.startMatchMainBtn, !dismissalState.type && { opacity: 0.5 }, (needsFielder && !dismissalState.fielder) && { opacity: 0.5 }]}
+               style={[styles.closeBtnFooter, (!dismissalState.type || (needsFielder && !dismissalState.fielder)) && { opacity: 0.5, backgroundColor: '#9CA3AF' }]}
                disabled={!dismissalState.type || (needsFielder && !dismissalState.fielder)}
                onPress={() => {
                   let dismissedName = striker?.name;
@@ -4917,12 +5923,12 @@ key={d.id}
                     dismissedName,
                     dismissalType: dismissalState.type,
                     fielderName: dismissalState.fielder?.player_name,
-});
+                  });
                   setIsConfiguringDismissal(false);
                   setIsSelectingNewBatter(true);
                }}
             >
-               <Text style={styles.startMatchMainBtnText}>Confirm Wicket</Text>
+               <Text style={styles.closeBtnFooterText}>Confirm Wicket</Text>
             </TouchableOpacity>
          </View>
       </View>
@@ -5355,6 +6361,23 @@ key={d.id}
          </View>
 
          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
+            {searchQuery.trim().length > 0 && !filtered.find(o => o.name.toLowerCase() === searchQuery.toLowerCase()) && (
+              <TouchableOpacity 
+                style={[styles.officialResultCard, { borderStyle: 'dashed', borderColor: '#0D9488', backgroundColor: '#F0FDF4' }]}
+                onPress={() => {
+                  setNewOfficialForm({ name: searchQuery, phone: '', });
+                  setIsAddOfficialModalVisible(true);
+                }}
+              >
+                <View style={[styles.miniAvatar, { backgroundColor: '#0D9488' }]}><Plus size={20} color="#FFFFFF" /></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.resultName, { color: '#0D9488' }]}>Add "{searchQuery}"</Text>
+                  <Text style={styles.resultPhone}>Register as a new official</Text>
+                </View>
+                <ChevronRight size={20} color="#0D9488" />
+              </TouchableOpacity>
+            )}
+
             {filtered.length > 0 ? (
               filtered.map((o, idx) => (
                 <TouchableOpacity key={idx} style={styles.officialResultCard} onPress={() => handleSelect(o)}>
@@ -5366,24 +6389,18 @@ key={d.id}
                    <Text style={styles.resultRole}>{o.role}</Text>
                 </TouchableOpacity>
               ))
+            ) : searchQuery.trim().length === 0 ? (
+               <View style={styles.noResultArea}>
+                  <Users size={48} color="#E5E7EB" />
+                  <Text style={styles.noResultTitle}>Select Official</Text>
+                  <Text style={styles.noResultSub}>Search by name or number to assign to this slot</Text>
+               </View>
             ) : (
-              <View style={styles.noResultArea}>
-                 <Search size={48} color="#E5E7EB" />
-                 <Text style={styles.noResultTitle}>No official found</Text>
-                 <Text style={styles.noResultSub}>Try searching with a full mobile number</Text>
-                 
-                 <TouchableOpacity 
-                   style={styles.addNewOfficialBtn}
-                   onPress={() => {
-                     setNewOfficialForm({ name: '', phone: searchQuery,
-});
-                     setIsAddOfficialModalVisible(true);
-                   }}
-                 >
-                    <Plus size={20} color="#0D9488" />
-                    <Text style={styles.addNewOfficialText}>Add & Register "{searchQuery || 'New Official'}"</Text>
-                 </TouchableOpacity>
-              </View>
+               <View style={styles.noResultArea}>
+                  <Search size={48} color="#E5E7EB" />
+                  <Text style={styles.noResultTitle}>No official found</Text>
+                  <Text style={styles.noResultSub}>Try searching with a full mobile number or tap "Add {searchQuery}" above</Text>
+               </View>
             )}
          </ScrollView>
 
@@ -5545,42 +6562,55 @@ key={d.id}
 
     return (
       <Modal
-        animationType="fade"
+        animationType="slide"
         transparent={true}
         visible={isExtraRunsSelectorVisible}
         onRequestClose={() => setIsExtraRunsSelectorVisible(false)}
       >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
-          onPress={() => setIsExtraRunsSelectorVisible(false)}
-        >
-          <View style={styles.extraSelectorContent}>
-             <Text style={styles.extraSelectorTitle}>Extras: {typeLabel}</Text>
-             <Text style={styles.extraSelectorDesc}>Select additional runs (if any)</Text>
-             <View style={styles.extraRunsGrid}>
-                {runOptions.map(runs => (
-                  <TouchableOpacity 
-                    key={runs} 
-                    style={styles.extraRunTile}
-                    onPress={() => {
-                       handleAddExtra(activeExtraType, runs);
-                       setIsExtraRunsSelectorVisible(false);
-                       setActiveExtraType(null);
-                    }}
-                  >
-                     <Text style={styles.extraRunTileText}>+{runs}</Text>
-                  </TouchableOpacity>
-                ))}
-             </View>
-             <TouchableOpacity 
-               style={styles.cancelExtraBtn}
-               onPress={() => setIsExtraRunsSelectorVisible(false)}
-             >
-                <Text style={styles.cancelExtraText}>Cancel</Text>
-             </TouchableOpacity>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.qrModalContent, { height: 'auto', maxHeight: '80%', padding: 0, overflow: 'hidden' }]}>
+            <LinearGradient
+              colors={['#0D9488', '#0F766E']}
+              style={[styles.modalHeaderPremium, { padding: 24 }]}
+            >
+              <View>
+                <Text style={styles.modalTitlePremium}>Extras Selection</Text>
+                <Text style={styles.modalSubtitlePremium}>{typeLabel}: Select additional runs scored</Text>
+              </View>
+              <TouchableOpacity onPress={() => setIsExtraRunsSelectorVisible(false)} style={styles.closeBtnPremium}>
+                <X size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+            </LinearGradient>
+
+            <View style={{ padding: 24 }}>
+               <View style={styles.extraRunsGrid}>
+                  {runOptions.map(runs => (
+                    <TouchableOpacity 
+                      key={runs} 
+                      style={styles.extraRunTile}
+                      onPress={() => {
+                         handleAddExtra(activeExtraType, runs);
+                         setIsExtraRunsSelectorVisible(false);
+                         setActiveExtraType(null);
+                      }}
+                    >
+                       <Text style={styles.extraRunTileText}>+{runs}</Text>
+                       <Text style={{ fontSize: 10, color: '#9CA3AF', marginTop: 2 }}>RUNS</Text>
+                    </TouchableOpacity>
+                  ))}
+               </View>
+            </View>
+
+            <View style={styles.modalFooterPremium}>
+               <TouchableOpacity 
+                 style={[styles.closeBtnFooter, { backgroundColor: '#F3F4F6' }]}
+                 onPress={() => setIsExtraRunsSelectorVisible(false)}
+               >
+                  <Text style={[styles.closeBtnFooterText, { color: '#4B5563' }]}>Cancel</Text>
+               </TouchableOpacity>
+            </View>
           </View>
-        </TouchableOpacity>
+        </View>
       </Modal>
     );
   };
@@ -6532,8 +7562,15 @@ key={d.id}
           <Text style={styles.backNavBtnText}>Back to Matches</Text>
         </TouchableOpacity>
       </View>
-      {isConfiguringDismissal ? renderDismissalConfiguration() : (isScoring ? renderLiveScoring() : (isSearchingOfficial ? renderOfficialSearch() : (isConfiguringOfficials ? renderMatchOfficials() : (isSelectingOpeners ? renderOpeningSelection() : (isConfiguringToss ? renderTossConfiguration() : (isConfiguringMatch ? renderMatchConfiguration() : (isSelectingTeams ? (isSelectingPlayers ? renderPlayerSelection() : renderTeamSelection()) : (
-        (urlMatchId && !resumeFailed) ? (
+      {isConfiguringDismissal ? renderDismissalConfiguration() : 
+       isScoring ? renderLiveScoring() : 
+       isSearchingOfficial ? renderOfficialSearch() : 
+       isConfiguringOfficials ? renderMatchOfficials() : 
+       isSelectingOpeners ? renderOpeningSelection() : 
+       isConfiguringToss ? renderTossConfiguration() : 
+       isConfiguringMatch ? renderMatchConfiguration() : 
+       isSelectingTeams ? renderTeamSelection() : 
+       (urlMatchId && !resumeFailed) ? (
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
             <Trophy size={64} color="#0D9488" style={{ marginBottom: 24 }} />
             <Text style={{ color: '#111827', fontSize: 20, fontWeight: '800', textAlign: 'center', marginBottom: 12 }}>
@@ -6541,9 +7578,11 @@ key={d.id}
             </Text>
             <Text style={{ color: '#6B7280', fontSize: 14 }}>Initializing your match...</Text>
           </View>
-        ) : (
-          renderDashboardView()
-        )))))))))}
+        ) : renderDashboardView()}
+      {renderPlayerSelection()}
+      {renderTeamListModal()}
+      {renderMatchInfoModal()}
+      {renderWagonWheelModal()}
       </View>
   );
 

@@ -14,7 +14,4 @@ npx expo start --web
 
 commit changes to git
 git push
-
-git stash          # Temporarily saves your local changes
-git pull           # Gets the latest code from GitHub
-git stash pop      # Puts your local changes back on top
+ add changes to git.md

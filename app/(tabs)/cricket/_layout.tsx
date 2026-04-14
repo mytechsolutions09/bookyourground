@@ -10,7 +10,8 @@ import {
   Plus,
   X,
   Radio,
-  HelpCircle
+  HelpCircle,
+  Calendar
 } from 'lucide-react-native';
 import { Modal } from 'react-native';
 import WebLayout from '@/components/web/WebLayout';
@@ -44,69 +45,94 @@ export default function CricketLayout() {
         onPress={() => setIsActionModalVisible(false)}
       >
         <View style={styles.actionModalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>What would you like to do?</Text>
-            <TouchableOpacity onPress={() => setIsActionModalVisible(false)}>
-              <X size={24} color="#6B7280" />
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.actionModalTitle}>What would you like to do?</Text>
           
-          <View style={styles.modalOptions}>
+          <View style={styles.actionGrid}>
             <TouchableOpacity 
-              style={styles.modalOption} 
+              style={styles.actionItem} 
               onPress={() => {
                 setIsActionModalVisible(false);
-                router.push('/cricket/scoring');
+                router.push('/cricket/scoring?startMatch=true');
               }}
             >
-              <View style={[styles.optionIcon, { backgroundColor: '#F0FDF4' }]}>
-                <Swords size={20} color="#01b854" />
+              <View style={[styles.actionIconBox, { backgroundColor: '#F0FDF4' }]}>
+                <Swords size={28} color="#01b854" />
               </View>
-              <Text style={styles.optionText}>Start a match</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.modalOption} 
-              onPress={() => {
-                setIsActionModalVisible(false);
-                router.push('/cricket/scoring?live=true');
-              }}
-            >
-              <View style={[styles.optionIcon, { backgroundColor: '#FEF2F2' }]}>
-                <Radio size={20} color="#EF4444" />
-              </View>
-              <Text style={styles.optionText}>Go live</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.modalOption} onPress={() => setIsActionModalVisible(false)}>
-              <View style={[styles.optionIcon, { backgroundColor: '#FFF7ED' }]}>
-                <Trophy size={20} color="#F97316" />
-              </View>
-              <Text style={styles.optionText}>Start a tournament/Series</Text>
+              <Text style={styles.actionLabel}>Start a Match</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={styles.modalOption} 
+              style={styles.actionItem} 
               onPress={() => {
                 setIsActionModalVisible(false);
-                router.push('/cricket/teams');
+                router.push('/cricket/scoring?createTeam=true');
               }}
             >
-              <View style={[styles.optionIcon, { backgroundColor: '#EFF6FF' }]}>
-                <Users size={20} color="#3B82F6" />
+              <View style={[styles.actionIconBox, { backgroundColor: '#EFF6FF' }]}>
+                <Users size={28} color="#3B82F6" />
               </View>
-              <Text style={styles.optionText}>Add a team</Text>
+              <Text style={styles.actionLabel}>Create Team</Text>
             </TouchableOpacity>
 
-            <View style={styles.modalDivider} />
-
-            <TouchableOpacity style={styles.modalOption} onPress={() => setIsActionModalVisible(false)}>
-              <View style={[styles.optionIcon, { backgroundColor: '#F3F4F6' }]}>
-                <HelpCircle size={20} color="#6B7280" />
+            <TouchableOpacity 
+              style={styles.actionItem} 
+              onPress={() => {
+                setIsActionModalVisible(false);
+                alert('Tournament registration coming soon!');
+              }}
+            >
+              <View style={[styles.actionIconBox, { backgroundColor: '#FFF7ED' }]}>
+                <Trophy size={28} color="#F97316" />
               </View>
-              <Text style={styles.optionText}>Get help</Text>
+              <Text style={styles.actionLabel}>Host Tournament</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.actionItem} 
+              onPress={() => {
+                setIsActionModalVisible(false);
+                router.push('/grounds' as any);
+              }}
+            >
+              <View style={[styles.actionIconBox, { backgroundColor: '#FAF5FF' }]}>
+                <Calendar size={28} color="#A855F7" />
+              </View>
+              <Text style={styles.actionLabel}>Book Ground</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.actionItem} 
+              onPress={() => {
+                setIsActionModalVisible(false);
+                alert('Streaming service coming soon!');
+              }}
+            >
+              <View style={[styles.actionIconBox, { backgroundColor: '#FEF2F2' }]}>
+                <Radio size={28} color="#EF4444" />
+              </View>
+              <Text style={styles.actionLabel}>Go Live</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.actionItem} 
+              onPress={() => {
+                setIsActionModalVisible(false);
+                alert('Support channel opening...');
+              }}
+            >
+              <View style={[styles.actionIconBox, { backgroundColor: '#F0FDFA' }]}>
+                <HelpCircle size={28} color="#0D9488" />
+              </View>
+              <Text style={styles.actionLabel}>Get Help</Text>
             </TouchableOpacity>
           </View>
+
+          <TouchableOpacity 
+            style={styles.actionCloseBtn}
+            onPress={() => setIsActionModalVisible(false)}
+          >
+            <Text style={styles.actionCloseBtnText}>Close</Text>
+          </TouchableOpacity>
         </View>
       </TouchableOpacity>
     </Modal>
@@ -217,59 +243,68 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-end',
-    paddingTop: 100,
-    paddingRight: 20,
-  },
-  actionModalContent: {
-    width: 300,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 24,
-    ...Platform.select({
-      web: {
-        shadowColor: 'rgba(0,0,0,0.1)',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 1,
-        shadowRadius: 30,
-      }
-    })
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#111827',
-  },
-  modalOptions: {
-    gap: 16,
-  },
-  modalOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  optionIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  optionText: {
+  actionModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 32,
+    width: '90%',
+    maxWidth: 400,
+    padding: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.2,
+    shadowRadius: 40,
+    elevation: 25,
+  },
+  actionModalTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#111827',
+    textAlign: 'center',
+    marginBottom: 32,
+  },
+  actionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    justifyContent: 'space-between',
+  },
+  actionItem: {
+    width: '47%',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  actionIconBox: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  actionLabel: {
     fontSize: 14,
     fontWeight: '700',
     color: '#374151',
+    textAlign: 'center',
   },
-  modalDivider: {
-    height: 1,
+  actionCloseBtn: {
+    marginTop: 24,
+    paddingVertical: 16,
     backgroundColor: '#F3F4F6',
-    marginVertical: 4,
+    borderRadius: 16,
+    alignItems: 'center',
+  },
+  actionCloseBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#6B7280',
   },
 });

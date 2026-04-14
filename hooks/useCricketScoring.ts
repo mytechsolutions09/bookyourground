@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 interface Ball {
   type: string;
   label: string;
+  area?: string;
 }
 
 interface Batter {
@@ -71,7 +72,6 @@ const calcRRR = (target: number, runs: number, legalBalls: number, totalOvers: n
 
 function initInning(battingTeam: string, bowlingTeam: string, battingPlayers: string[], bowlingPlayers: string[], target: number | null = null): InningState {
   return {
-    swapBatters, markRetiredHurt, reviseTarget, updateMatchConfig, changeSquad,
     battingTeam,
     bowlingTeam,
     battingPlayers,
@@ -203,6 +203,7 @@ export function useCricketScoring() {
       fielder_name: ballData.fielder ?? null,
       label: ballData.label,
       ball_type: ballData.type,
+      wagon_wheel_area: ballData.area ?? null,
     });
   }, []);
 
@@ -299,10 +300,8 @@ export function useCricketScoring() {
     if (openers) {
       innObj.batters = innObj.batters.map(b => {
         if (b.name === openers.striker) return {
-    swapBatters, markRetiredHurt, reviseTarget, updateMatchConfig, changeSquad,
     ...b, status: 'batting' as const, onStrike: true, startTime: Date.now() };
         if (b.name === openers.nonStriker) return {
-    swapBatters, markRetiredHurt, reviseTarget, updateMatchConfig, changeSquad,
     ...b, status: 'batting' as const, onStrike: false, startTime: Date.now() };
         return b;
       });
@@ -324,7 +323,6 @@ export function useCricketScoring() {
           await pushLiveState(innObj, config, mid);
       setPhase('live');
     return {
-    swapBatters, markRetiredHurt, reviseTarget, updateMatchConfig, changeSquad,
     matchId: mid, inn: innObj };
   }, [createMatch, createInningsRow]);
 
@@ -338,7 +336,6 @@ export function useCricketScoring() {
     return batters.map(b => {
       if (b.status === 'batting' && !b.out) {
         return {
-    swapBatters, markRetiredHurt, reviseTarget, updateMatchConfig, changeSquad,
     ...b, onStrike: !b.onStrike };
       }
       return b;
@@ -395,7 +392,6 @@ export function useCricketScoring() {
     );
     const allOvers = [...(innState.allOvers || []), [...innState.overBalls]];
     return {
-    swapBatters, markRetiredHurt, reviseTarget, updateMatchConfig, changeSquad,
       ...innState, 
       bowlers: newBowlers, 
       allOvers, 
@@ -404,7 +400,7 @@ export function useCricketScoring() {
     };
   }, []);
 
-  const addBall = useCallback(async (runs: number) => {
+  const addBall = useCallback(async (runs: number, area?: string) => {
     if (!inn) return;
     snapshot(inn);
     let next = { ...inn, batters: inn.batters.map(b => ({ ...b })), bowlers: inn.bowlers.map(b => ({ ...b })) };
@@ -447,7 +443,7 @@ export function useCricketScoring() {
 
     const ballType = runs === 4 ? 'four' : runs === 6 ? 'six' : runs === 0 ? 'dot' : 'run';
     const ballLabel = runs === 0 ? '•' : String(runs);
-    next.overBalls = [...next.overBalls, { type: ballType, label: ballLabel }];
+    next.overBalls = [...next.overBalls, { type: ballType, label: ballLabel, area }];
 
     if (runs % 2 === 1) next.batters = rotateStrike(next.batters);
 
@@ -457,7 +453,7 @@ export function useCricketScoring() {
     }
 
     setInn(next);
-    await logBall(next, { runs, type: ballType, label: ballLabel }, matchId!);
+    await logBall(next, { runs, type: ballType, label: ballLabel, area }, matchId!);
     await pushLiveState(next, matchConfig, matchId!);
     await checkEnd(next, matchConfig, matchId!);
 
@@ -596,7 +592,6 @@ export function useCricketScoring() {
           return prev;
         }
         return {
-    swapBatters, markRetiredHurt, reviseTarget, updateMatchConfig, changeSquad,
     ...prev, currentBowlerIdx: prev.bowlers.indexOf(exists) };
       }
       const newBowler: Bowler = {
@@ -604,7 +599,6 @@ export function useCricketScoring() {
       };
       const nextBowlers = [...prev.bowlers, newBowler];
       return {
-    swapBatters, markRetiredHurt, reviseTarget, updateMatchConfig, changeSquad,
     ...prev, bowlers: nextBowlers, currentBowlerIdx: nextBowlers.length - 1 };
     });
   }, []);
@@ -658,8 +652,8 @@ export function useCricketScoring() {
 
     setInningsList([inningsList[0], inn2]);
     setCurrentIdx(1);
-          await pushLiveState(innObj, config, mid);
-      setPhase('live');
+    await pushLiveState(inn2, matchConfig, matchId!);
+    setPhase('live');
     historyRef.current = [];
   }, [inningsList, matchConfig, matchId, createInningsRow]);
 
@@ -729,7 +723,6 @@ export function useCricketScoring() {
       if (innErr) {
         console.error('[useCricketScoring] Error fetching innings:', innErr);
         return {
-    swapBatters, markRetiredHurt, reviseTarget, updateMatchConfig, changeSquad,
     status: 'error' };
       }
       // 3. Construct Config early so it's available even if innings are missing
@@ -759,8 +752,7 @@ export function useCricketScoring() {
            // Re-trigger resume would be complex, so let's just proceed with this fake row for now
            if (isRecovery) {
                console.error('[useCricketScoring] Recovery failed to create innings, aborting to avoid loop');
-               return {
-    swapBatters, markRetiredHurt, reviseTarget, updateMatchConfig, changeSquad, status: 'error' };
+               return { status: 'error' };
            }
            return resumeMatch(mid, true);
         }
@@ -772,8 +764,7 @@ export function useCricketScoring() {
       console.log('[DEBUG-SQUAD] XI Rows Found:', xiRows?.length);
 
         setPhase(xiRows?.length > 0 ? 'toss' : 'setup');
-        return {
-    swapBatters, markRetiredHurt, reviseTarget, updateMatchConfig, changeSquad, status: 'needs_setup', config, xiData: xiRows };
+        return { status: 'needs_setup', config, xiData: xiRows };
       }
       console.log('[useCricketScoring] Found innings:', allInnings.length);
 
@@ -921,11 +912,11 @@ export function useCricketScoring() {
           ...(config.teamBPlayers || []).map(name => ({ team_id: m.team_b_id, player_id: name, team_members: { player_name: name } }))
         ];
       return {
-    swapBatters, markRetiredHurt, reviseTarget, updateMatchConfig, changeSquad, status: 'success', config, xiData: finalXi, lastBowlerName: currentInningToSync.lastBowlerName, tossWinnerId: m.toss_winner_id, tossDecision: m.toss_decision };
+        status: 'success', config, xiData: finalXi, lastBowlerName: currentInningToSync.lastBowlerName, tossWinnerId: m.toss_winner_id, tossDecision: m.toss_decision 
+      };
     } catch (err) {
       console.error('Resume match failed:', err);
       return {
-    swapBatters, markRetiredHurt, reviseTarget, updateMatchConfig, changeSquad,
     status: 'error' };
     }
     }, []);
@@ -959,13 +950,10 @@ export function useCricketScoring() {
       const nonStrikers = prev.batters.filter(b => b.status === 'batting' && !b.onStrike);
       if (strikers.length && nonStrikers.length) {
          return {
-    swapBatters, markRetiredHurt, reviseTarget, updateMatchConfig, changeSquad,
            ...prev,
            batters: prev.batters.map(b => {
-             if (b.name === strikers[0].name) return {
-    swapBatters, markRetiredHurt, reviseTarget, updateMatchConfig, changeSquad, ...b, onStrike: false };
-             if (b.name === nonStrikers[0].name) return {
-    swapBatters, markRetiredHurt, reviseTarget, updateMatchConfig, changeSquad, ...b, onStrike: true };
+             if (b.name === strikers[0].name) return { ...b, onStrike: false };
+             if (b.name === nonStrikers[0].name) return { ...b, onStrike: true };
              return b;
            })
          };
@@ -979,12 +967,10 @@ export function useCricketScoring() {
     setInn(prev => {
       if (!prev) return prev;
       return {
-    swapBatters, markRetiredHurt, reviseTarget, updateMatchConfig, changeSquad,
         ...prev,
         batters: prev.batters.map(b => {
           if (b.name === playerName) {
-             return {
-    swapBatters, markRetiredHurt, reviseTarget, updateMatchConfig, changeSquad, ...b, status: 'out', out: true, dismissal: 'retired hurt', onStrike: false };
+             return { ...b, status: 'out', out: true, dismissal: 'retired hurt', onStrike: false };
           }
           return b;
         })
@@ -996,8 +982,7 @@ export function useCricketScoring() {
   const reviseTarget = useCallback((newTarget: number) => {
     setInn(prev => {
         if (!prev) return prev;
-        return {
-    swapBatters, markRetiredHurt, reviseTarget, updateMatchConfig, changeSquad, ...prev, target: newTarget };
+        return { ...prev, target: newTarget };
     });
   }, []);
 
@@ -1011,7 +996,6 @@ export function useCricketScoring() {
        const teamBatters = prev.batters.map(b => b.name.toLowerCase());
        const added = newPlayers.filter(p => !teamBatters.includes(p.name.toLowerCase()));
        return {
-    swapBatters, markRetiredHurt, reviseTarget, updateMatchConfig, changeSquad,
          ...prev,
          batters: [...prev.batters, ...added.map(p => ({
            name: p.name, runs: 0, balls: 0, dots: 0, fours: 0, sixes: 0, onStrike: false, status: 'yet', out: false, dismissal: ''
@@ -1021,7 +1005,6 @@ export function useCricketScoring() {
   }, []);
 
 return {
-    swapBatters, markRetiredHurt, reviseTarget, updateMatchConfig, changeSquad,
     savePlayingXi,
     matchId, phase, result,
     inn, inn1: inningsList[0], inn2: inningsList[1],
@@ -1029,6 +1012,7 @@ return {
     striker, nonStriker, bowler, crr, rrr, yetToBat,
     battingPlayers: inn?.battingPlayers || [], bowlingPlayers: inn?.bowlingPlayers || [],
     formatOvers,
+    swapBatters, markRetiredHurt, reviseTarget, updateMatchConfig, changeSquad,
     startMatch, resumeMatch, addBall, addExtra, addWicket,
     changeBowler, addNewBowler, undoLastBall, startSecondInnings, setOpeners,
   };

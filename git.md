@@ -1,3 +1,30 @@
+# Live Scoring Integration - Global Persistence & UI Refinement
+
+This update significantly enhances the cricket scoring engine with global player discovery, permanent data persistence, and a refined, responsive UI for professional match management.
+
+## Key Changes
+
+### 1. Global Player Search & Persistence
+- **Global Discovery**: Integrated a platform-wide player search within the "Add New Batter" modal, allowing scorers to add any registered player to a match by name or phone number.
+- **Permanent Squad Management**: Implemented automatic database persistence for new players. Adding a batter during a live match now permanently saves them to the team's professional squad (`team_members`) and records their participation in the match's playing XI.
+- **Automatic RLS Handling**: Added several SQL migrations to relax Row Level Security on `team_members` and `match_officials`, ensuring scorers have the necessary permissions to manage player rosters during live sessions.
+
+### 2. Professional UI/UX Refinements
+- **Compact Wicket Setup**: Transformed the "Wicket Setup" view into a centered, dashboard-style interface for large screens. Optimized the grid layout and card dimensions for a more space-efficient and premium feel.
+- **Search Polish**: Removed default browser focus outlines from search inputs and added a dedicated phone-pad layout for manual player contact entry.
+- **UI Stabilizations**: Fixed several layout jumping issues in the "Add New Batter" modal and implemented clear icons and typography for empty squad states.
+
+### 3. Engine Stability & Bug Fixes
+- **Initialization Error (TDZ) Fix**: Resolved a critical React error ("Cannot access 'playerSearchQuery' before initialization") by reordering state and effect hook declarations.
+- **Second Innings Transition**: Fixed a crash occurring during the start of the second innings caused by undefined variable references (`innObj`, `config`).
+- **Naming Conflict Resolution**: Resolved a bundling failure caused by duplicate `matchConfig` declarations, separating the setup form state from the live match configuration.
+
+### 4. Technical Infrastructure
+- **Database Migrations**: Executed new migrations (`20260415000000_relax_squad_rls.sql`, `20260414180000_scoring_rls_fix.sql`) to synchronize database permissions with the new scoring features.
+- **Scoreboard Data Integrity**: Updated the link-officials logic to ensure umpires and scorers are correctly associated with match IDs even when added mid-game.
+
+---
+
 # Cricket Hub Analytics & Scoring Integration - Major Update
 
 This update transforms the platform's cricket module into a high-fidelity analytics and management engine. It introduces a sophisticated dashboard for match discovery, granular career statistics across multiple formats (Leather, Tennis, Other), and a professional administrative leaderboard.
