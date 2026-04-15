@@ -642,9 +642,6 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                 style={styles.mobileOverlay}
                 onPress={() => setMenuOpen(false)}
               />
-              <View style={styles.main}>
-                {noCard ? children : <View style={styles.mainAppCard}>{children}</View>}
-              </View>
               <View style={styles.sidebarMobile}>
                 <View style={styles.mobileSidebarSearch}>
                   <Search size={18} color="#dcc093" />
@@ -731,7 +728,6 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                     <NavLink href="/(owner)/owner-dashboard" icon={LayoutDashboard} label="Dashboard" />
                     <NavLink href="/(owner)/manage-grounds" icon={MapPin} label="My grounds" />
                     <NavLink href="/cricket" icon={Swords} label="Cricket Hub" />
-                    <NavLink href="/(tabs)/matches" icon={CalendarClock} label="My Matches" />
                     <NavLink href="/(owner)/ground-bookings" icon={Calendar} label="Bookings" />
                     <NavLink href="/(owner)/inventory" icon={CalendarClock} label="Inventory Plan" />
                     <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />

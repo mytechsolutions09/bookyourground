@@ -13,17 +13,44 @@ const fmtOvers = (legalBalls: number, total: number) =>
 const srColor = (sr: number) =>
   sr >= 150 ? '#1D9E75' : sr >= 100 ? '#BA7517' : '#E24B4A';
 
-const generateScorecard = (logs: any[], inningsNum: number, inningsList: any[]) => {
-  const innSteps = inningsList?.sort((a,b) => (a.innings_number || 0) - (b.innings_number || 0)) || [];
-  const inn = innSteps.find(i => i.innings_number === inningsNum);
+const generateScorecard = (logs: any[], inningsNum: number, inningsList: any[], live?: any) => {
+  if (!inningsList || !Array.isArray(inningsList)) return { 
+    batters: [], bowlers: [], extras: { wide: 0, noball: 0, bye: 0, legbye: 0, penalty: 0, total: 0 }, 
+    fow: [], totalRuns: 0, totalWickets: 0, totalOvers: '0.0', crr: '0.00' 
+  };
+
+  const innSteps = [...inningsList].sort((a,b) => (Number(a.innings_number) || 0) - (Number(b.innings_number) || 0));
+  const inn = innSteps.find(i => Number(i.innings_number) === Number(inningsNum));
+  
   const innLogs = logs.filter(l => {
      if (l.innings_id) {
+       // Primary match using innings record from inningsList
        const found = innSteps.find(i => i.id === l.innings_id);
-       if (found) return found.innings_number === inningsNum;
+       if (found) return Number(found.innings_number) === Number(inningsNum);
+       
+       // Robust Fallback: If we have Inning 1 record but this ball has a DIFFERENT innings_id,
+       // and we are looking for Inning 2 data, it's highly likely this ball belongs to Inning 2.
+       // This handles race conditions where balls arrive via realtime before the innings row.
+       if (Number(inningsNum) === 2 && innSteps.length > 0 && innSteps[0].id !== l.innings_id) {
+         return true;
+       }
+       
+       // Conversely, if we are looking for Inning 1 and we have Inning 1 record, 
+       // only include if it matches exactly.
+       if (Number(inningsNum) === 1 && innSteps.length > 0 && innSteps[0].id === l.innings_id) {
+         return true;
+       }
      }
      
-     // Fallback: Use the order of creation if IDs are missing (shouldn't happen but good for robustness)
-     if (inningsNum === 1 && !l.innings_id) return true;
+     // Fallback: If innings_id is missing, try matching by optional innings_number field if it exists
+     if (l.innings_number !== undefined && l.innings_number !== null) {
+        return Number(l.innings_number) === Number(inningsNum);
+     }
+     
+     // Last resort fallback: default to innings 1 for backwards compatibility with older logs.
+     if (!l.innings_id) {
+       return Number(inningsNum) === 1;
+     }
      return false;
   });
 
@@ -129,13 +156,59 @@ const generateScorecard = (logs: any[], inningsNum: number, inningsList: any[]) 
     }
   });
 
+  // --- FINAL ONCE AND FOR ALL FIX: Merge live match state stats ---
+  // If the live state matches the current innings, ensure we include the current players 
+  // with their latest totals, even if individual logs are missing.
+  if (live && Number(live.innings_number) === Number(inningsNum)) {
+    // Merge Striker
+    if (live.striker_name) {
+      const s = live.striker_name;
+      const cur = batters[s];
+      // Use the higher value to avoid double counting if logs ARE present
+      batters[s] = {
+        name: s,
+        runs: Math.max(cur?.runs || 0, live.striker_runs || 0),
+        balls: Math.max(cur?.balls || 0, live.striker_balls || 0),
+        fours: Math.max(cur?.fours || 0, live.striker_fours || 0),
+        sixes: Math.max(cur?.sixes || 0, live.striker_sixes || 0),
+        dismissal: cur?.dismissal || 'not out'
+      };
+    }
+    // Merge Non-Striker
+    if (live.nonstriker_name) {
+      const ns = live.nonstriker_name;
+      const cur = batters[ns];
+      batters[ns] = {
+        name: ns,
+        runs: Math.max(cur?.runs || 0, live.nonstriker_runs || 0),
+        balls: Math.max(cur?.balls || 0, live.nonstriker_balls || 0),
+        fours: Math.max(cur?.fours || 0, live.nonstriker_fours || 0),
+        sixes: Math.max(cur?.sixes || 0, live.nonstriker_sixes || 0),
+        dismissal: cur?.dismissal || 'not out'
+      };
+    }
+    // Merge Bowler
+    if (live.bowler_name) {
+      const b = live.bowler_name;
+      const cur = bowlers[b];
+      bowlers[b] = {
+        name: b,
+        overs: live.bowler_overs || cur?.overs || '0.0',
+        runs: Math.max(cur?.runs || 0, live.bowler_runs || 0),
+        wickets: Math.max(cur?.wickets || 0, live.bowler_wickets || 0),
+        maidens: Math.max(cur?.maidens || 0, live.bowler_maidens || 0),
+        eco: (live.bowler_overs && parseFloat(live.bowler_overs) > 0) ? (live.bowler_runs / parseFloat(live.bowler_overs)).toFixed(2) : (cur?.eco || '0.00')
+      };
+    }
+  }
+
   return {
     inn,
     batters: Object.values(batters),
     bowlers: Object.values(bowlers).map(b => ({
       ...b,
-      overs: `${Math.floor(b.legalBalls / 6)}.${b.legalBalls % 6}`,
-      eco: b.legalBalls > 0 ? ((b.runs / b.legalBalls) * 6).toFixed(2) : '0.00'
+      overs: b.overs || `${Math.floor(b.legalBalls / 6)}.${b.legalBalls % 6}`,
+      eco: b.eco || (b.legalBalls > 0 ? ((b.runs / b.legalBalls) * 6).toFixed(2) : '0.00')
     })),
     extras,
     fow,
@@ -343,8 +416,24 @@ export default function LiveScorecard() {
     if (!matchId) return;
     const channel = supabase.channel(`live-score-${matchId}-${Math.random()}`).on('postgres_changes', { event: '*', schema: 'public', table: 'match_live_state' }, (payload) => {
       if (payload.new && payload.new.match_id === matchId) { setLive(payload.new); setLastUpdated(new Date()); setBlink(true); setTimeout(() => setBlink(false), 600); }
-    }).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'ball_log' }, (payload) => {
-      if (payload.new && payload.new.match_id === matchId) { setBallLogs(prev => [payload.new, ...prev]); }
+    }).on('postgres_changes', { event: '*', schema: 'public', table: 'ball_log' }, (payload) => {
+      if (payload.new && payload.new.match_id === matchId) { 
+        setBallLogs(prev => {
+          const exists = prev.find(b => b.id === payload.new.id);
+          if (exists) return prev.map(b => b.id === payload.new.id ? payload.new : b);
+          return [payload.new, ...prev];
+        });
+      } else if (payload.old && payload.eventType === 'DELETE') {
+        setBallLogs(prev => prev.filter(b => b.id !== payload.old.id));
+      }
+    }).on('postgres_changes', { event: '*', schema: 'public', table: 'innings' }, (payload) => {
+      if (payload.new && payload.new.match_id === matchId) { 
+        setInningsList(prev => {
+          const exists = prev.find(i => i.id === payload.new.id);
+          if (exists) return prev.map(i => i.id === payload.new.id ? payload.new : i);
+          return [...prev, payload.new];
+        });
+      }
     }).subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [matchId]);
@@ -366,17 +455,26 @@ export default function LiveScorecard() {
   const oversStr = fmtOvers(live.legal_balls, live.overs_total);
 
   const renderInningsScorecard = (innNum: number) => {
-    const sc = generateScorecard(ballLogs, innNum, inningsList);
-    const innObj = inningsList?.find(i => i.innings_number === innNum);
+    const sc = generateScorecard(ballLogs, innNum, inningsList, live);
+    const innObj = inningsList?.find(i => Number(i.innings_number) === Number(innNum));
     
-    // Only return null if the innings hasn't even been created yet
-    if (!innObj && !sc.batters.length) return null;
+    // Only return null if the innings hasn't even been created yet AND there are no balls
+    if (!innObj && !ballLogs.find(l => {
+       if (l.innings_id) {
+         const found = inningsList.find(i => i.id === l.innings_id);
+         if (found) return Number(found.innings_number) === Number(innNum);
+         // Fallback for race condition: if it's not Inning 1 ID and we want Inning 2
+         const inn1 = inningsList.find(i => Number(i.innings_number) === 1);
+         if (Number(innNum) === 2 && inn1 && l.innings_id !== inn1.id) return true;
+       }
+       return Number(innNum) === 1 && !l.innings_id;
+    })) return null;
     
     // Determine batting team
-    const isTeamA = innObj ? (innObj.batting_team === match.team_a) : (innNum === 1);
+    const isTeamA = innObj ? (innObj.batting_team === match.team_a) : (Number(innNum) === 1);
     const battingSquad = isTeamA ? squadA : squadB;
-    const teamName = sc.inn?.batting_team || (isTeamA ? match.team_a : match.team_b);
-    const bowlingName = sc.inn?.bowling_team || (isTeamA ? match.team_b : match.team_a);
+    const teamName = innObj?.batting_team || (isTeamA ? match.team_a : match.team_b) || `Innings ${innNum}`;
+    const bowlingName = innObj?.bowling_team || (isTeamA ? match.team_b : match.team_a);
 
     const isExpanded = expandedInnings[innNum] !== false;
 
@@ -386,7 +484,7 @@ export default function LiveScorecard() {
     }).map(m => m.player_name || m.profiles?.full_name).join(', ');
 
     return (
-      <View style={[styles.scWrapper, { marginHorizontal: 12, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB', marginBottom: 20 }]}>
+      <View style={[styles.scWrapper, { marginHorizontal: 12, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB', marginBottom: 0 }]}>
         {/* Header */}
         <TouchableOpacity 
           activeOpacity={0.8}
@@ -395,8 +493,10 @@ export default function LiveScorecard() {
         >
            <Text style={styles.scHeaderText}>{teamName}</Text>
            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={styles.scHeaderScore}>{sc.totalRuns}/{sc.totalWickets}</Text>
-              <Text style={styles.scHeaderOvers}> ({sc.totalOvers} Ov)</Text>
+              <Text style={styles.scHeaderScore}>
+                {sc.totalRuns > 0 ? `${sc.totalRuns}/${sc.totalWickets}` : (innObj?.runs > 0 ? `${innObj.runs}/${innObj.wickets}` : (live?.innings_number === Number(innNum) ? `${live.runs}/${live.wickets}` : '0/0'))}
+              </Text>
+              <Text style={styles.scHeaderOvers}> ({sc.totalRuns > 0 ? sc.totalOvers : (innObj?.legal_balls > 0 ? `${Math.floor(innObj.legal_balls/6)}.${innObj.legal_balls%6}` : (live?.innings_number === Number(innNum) ? `${Math.floor(live.legal_balls/6)}.${live.legal_balls%6}` : '0.0'))} Ov)</Text>
               <ChevronDown 
                 size={18} 
                 color="#FFFFFF" 
@@ -451,9 +551,13 @@ export default function LiveScorecard() {
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Text style={styles.scTotalLabel}>Total</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Text style={styles.scTotalVal}>{sc.totalRuns}/{sc.totalWickets}</Text>
-                      <Text style={styles.scTotalMeta}>({sc.totalOvers} Ov)</Text>
-                      <Text style={[styles.scTotalMeta, { marginLeft: 16 }]}>CRR <Text style={styles.scTotalCrr}>{sc.crr}</Text></Text>
+                      <Text style={styles.scTotalVal}>
+                        {sc.totalRuns > 0 ? `${sc.totalRuns}/${sc.totalWickets}` : (innObj?.runs > 0 ? `${innObj.runs}/${innObj.wickets}` : (live?.innings_number === Number(innNum) ? `${live.runs}/${live.wickets}` : '0/0'))}
+                      </Text>
+                      <Text style={styles.scTotalMeta}>
+                        ({sc.totalRuns > 0 ? sc.totalOvers : (innObj?.legal_balls > 0 ? `${Math.floor(innObj.legal_balls/6)}.${innObj.legal_balls%6}` : (live?.innings_number === Number(innNum) ? `${Math.floor(live.legal_balls/6)}.${live.legal_balls%6}` : '0.0'))} Ov)
+                      </Text>
+                      <Text style={[styles.scTotalMeta, { marginLeft: 16 }]}>CRR <Text style={styles.scTotalCrr}>{sc.totalRuns > 0 ? sc.totalCrr : (innObj?.legal_balls > 0 ? ((innObj.runs / innObj.legal_balls) * 6).toFixed(2) : (live?.legal_balls > 0 ? ((live.runs / live.legal_balls) * 6).toFixed(2) : '0.00'))}</Text></Text>
                     </View>
                 </View>
               </View>
@@ -525,7 +629,7 @@ export default function LiveScorecard() {
         return (
           <ScrollView style={{ flex: 1, backgroundColor: '#F6F4F0' }} contentContainerStyle={{ paddingVertical: 12 }}>
             {/* Main Score Display in Scoreboard Tab */}
-            <View style={[styles.scoreCard, { backgroundColor: isCompleted ? '#2C2C2A' : '#06392e', margin: 12, borderRadius: 12 }]}>
+            <View style={[styles.scoreCard, { backgroundColor: '#043529', margin: 12, borderRadius: 12 }]}>
               {isCompleted && live.result_text && (
                 <View style={styles.resultBanner}>
                    <Text style={styles.resultText}>🏆 {live.result_text}</Text>
@@ -561,7 +665,6 @@ export default function LiveScorecard() {
             </View>
 
             {renderInningsScorecard(1)}
-            <View style={{ height: 20 }} />
             {renderInningsScorecard(2)}
             <View style={{ height: 40 }} />
           </ScrollView>
@@ -1142,7 +1245,7 @@ export default function LiveScorecard() {
            >
              <ChevronLeft size={24} color="#111827" />
            </TouchableOpacity>
-           <Text style={styles.headerMainTitle}>{match.title || 'Individual Match'}</Text>
+           <Text style={styles.headerMainTitle}>{match.team_a} vs {match.team_b}</Text>
         </View>
         <View style={styles.headerRight}>
            <TouchableOpacity 
@@ -1211,16 +1314,16 @@ const styles = StyleSheet.create({
   resultBanner: { backgroundColor: '#FAEEDA', padding: 10, borderRadius: 8, marginBottom: 16, alignItems: 'center' },
   resultText: { color: '#633806', fontSize: 13, fontWeight: 'bold' },
   scoreRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  battingTeamName: { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginBottom: 4 },
-  bigScore: { fontSize: 48, fontWeight: '900', color: '#FFFFFF' },
-  oversCount: { fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 8 },
-  targetBox: { backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 12, padding: 12, alignItems: 'center', width: 120 },
-  targetLabel: { fontSize: 11, color: 'rgba(255,255,255,0.7)' },
-  targetValue: { fontSize: 28, fontWeight: '900', color: '#FFFFFF' },
-  targetSub: { fontSize: 10, color: 'rgba(255,255,255,0.7)', textAlign: 'center', marginTop: 4 },
+  battingTeamName: { fontSize: 12, color: '#01b854', opacity: 0.8, marginBottom: 4 },
+  bigScore: { fontSize: 48, fontWeight: '900', color: '#01b854' },
+  oversCount: { fontSize: 14, color: '#01b854', opacity: 0.9, marginTop: 8 },
+  targetBox: { backgroundColor: 'rgba(0, 0, 0, 0.2)', borderRadius: 12, padding: 12, alignItems: 'center', width: 120 },
+  targetLabel: { fontSize: 11, color: '#01b854', opacity: 0.7 },
+  targetValue: { fontSize: 28, fontWeight: '900', color: '#01b854' },
+  targetSub: { fontSize: 10, color: '#01b854', opacity: 0.7, textAlign: 'center', marginTop: 4 },
   statsRow: { flexDirection: 'row', gap: 10, marginTop: 20, flexWrap: 'wrap' },
-  statPill: { backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
-  statPillText: { fontSize: 12, color: '#FFFFFF' },
+  statPill: { backgroundColor: 'rgba(0, 0, 0, 0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  statPillText: { fontSize: 12, color: '#01b854', fontWeight: 'bold' },
   dataSection: { backgroundColor: '#FFFFFF', margin: 12, marginBottom: 0, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#E8E6E0' },
   sectionTitle: { fontSize: 11, color: '#888780', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: 12 },
   tableHead: { flexDirection: 'row', backgroundColor: '#F6F4F0', padding: 8, borderRadius: 4 },

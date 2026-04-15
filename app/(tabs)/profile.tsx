@@ -194,16 +194,7 @@ export default function ProfileScreen() {
             </View>
             <ChevronRight size={20} color={chevronColor} />
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => router.push('/(tabs)/matches' as any)}
-          >
-            <View style={styles.menuItemLeft}>
-              <Swords size={20} color={themeAccent} />
-              <Text style={[styles.menuItemText, { color: themeText }]}>My Matches</Text>
-            </View>
-            <ChevronRight size={20} color={chevronColor} />
-          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.menuItem}
             onPress={() => router.push('/(owner)/ground-bookings' as any)}

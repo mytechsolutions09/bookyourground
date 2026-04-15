@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, Platform, TouchableOpacity, ScrollView, TextInput } from 'react-native';
-import { Calendar, Filter, X, Save, CheckCircle2, Circle } from 'lucide-react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, Platform, TouchableOpacity, ScrollView, TextInput, useWindowDimensions } from 'react-native';
+import { Calendar, Filter, X, Save, CheckCircle2, Circle, User, Clock } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { BookingWithDetails } from '@/types';
@@ -27,40 +27,46 @@ function NameInputCell({ booking, onSave }: { booking: BookingWithDetails, onSav
   };
 
   return (
-    <TouchableOpacity 
-      activeOpacity={1} 
-      onPress={(e) => e.stopPropagation()} 
-      style={styles.nameInputRow}
-    >
-      <TextInput
-        style={styles.nameInput}
-        value={localName}
-        onChangeText={setLocalName}
-        placeholder="Enter name..."
-        placeholderTextColor="#9CA3AF"
-        onSubmitEditing={handleSave}
-      />
-      {hasChanged && (
-        <TouchableOpacity 
-          style={styles.saveBtn} 
-          onPress={(e) => {
-            e.stopPropagation();
-            handleSave();
-          }}
-          disabled={saving}
-        >
-          <Save size={16} color={saving ? '#9CA3AF' : '#00ea6b'} />
-        </TouchableOpacity>
-      )}
-    </TouchableOpacity>
+    <View style={styles.nameInputWrapper}>
+      <TouchableOpacity 
+        activeOpacity={1} 
+        onPress={(e) => e.stopPropagation()} 
+        style={styles.nameInputRow}
+      >
+        <User size={14} color="#00ea6b" style={styles.nameInputIcon} />
+        <TextInput
+          style={styles.nameInput}
+          value={localName}
+          onChangeText={setLocalName}
+          placeholder="Player name..."
+          placeholderTextColor="#9CA3AF"
+          onSubmitEditing={handleSave}
+        />
+        {hasChanged && (
+          <TouchableOpacity 
+            style={styles.saveBadge} 
+            onPress={(e) => {
+              e.stopPropagation();
+              handleSave();
+            }}
+            disabled={saving}
+          >
+            <Text style={styles.saveBadgeText}>{saving ? '...' : 'SAVE'}</Text>
+          </TouchableOpacity>
+        )}
+      </TouchableOpacity>
+    </View>
   );
 }
 
 export default function OwnerBookingsScreen() {
-  const { user } = useAuth();
+  const { profile, user } = useAuth();
+  const { width } = useWindowDimensions();
   const [bookings, setBookings] = useState<BookingWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const isWeb = Platform.OS === 'web';
+  const isSmallScreen = width < 900;
+  const isLight = isWeb;
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'upcoming' | 'past'>('all');
   const [ownerScope, setOwnerScope] = useState<'all' | 'own' | 'other'>('all');
@@ -359,13 +365,13 @@ export default function OwnerBookingsScreen() {
   );
 
   const content = (
-    <View style={styles.container}>
-      {!isWeb && (
-        <View style={styles.header}>
+    <View style={[styles.container, isSmallScreen && styles.containerMobile]}>
+      {(isSmallScreen) && (
+        <View style={[styles.header, isWeb && styles.headerWebMobile]}>
           <TextInput
-            style={styles.searchBarMobile}
+            style={[styles.searchBarMobile, isWeb && styles.searchBarWebMobile]}
             placeholder="Search bookings..."
-            placeholderTextColor="#9ca3af"
+            placeholderTextColor={isWeb ? "#9ca3af" : "#9ca3af"}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -524,7 +530,7 @@ export default function OwnerBookingsScreen() {
         </View>
       )}
 
-      {isWeb && bookings.length > 0 && (
+      {isWeb && !isSmallScreen && bookings.length > 0 && (
         <View style={styles.filterContainer}>
           <View style={styles.filterRow}>
             <View style={styles.tabsAndFilterLeft}>
@@ -717,7 +723,7 @@ export default function OwnerBookingsScreen() {
         </View>
       )}
 
-      {isWeb && bookings.length > 0 && (
+      {isWeb && !isSmallScreen && bookings.length > 0 && (
         <View style={styles.tableHeaderContainer}>
           <View style={styles.tableHeaderRow}>
             <TouchableOpacity 
@@ -841,7 +847,8 @@ export default function OwnerBookingsScreen() {
           const whoTitle = isSelfBooking 
             ? (isOwnGround ? 'Self' : 'Another Ground') 
             : (item.user?.full_name || 'Customer');
-          if (isWeb) {
+          
+          if (isWeb && !isSmallScreen) {
             return (
               <TouchableOpacity
                 onPress={() => router.push(`/bookings/${item.id}`)}
@@ -956,15 +963,101 @@ export default function OwnerBookingsScreen() {
           }
 
           return (
-            <View>
-              <BookingCard
-                booking={item}
-                onPress={() => router.push(`/bookings/${item.id}`)}
-                showGroundDetails={false}
-                metaText={meta}
-                whoTitle={whoTitle}
-              />
-            </View>
+            <TouchableOpacity 
+              onPress={() => router.push(`/bookings/${item.id}`)}
+              style={[styles.compactRow, !isLight && styles.compactRowNative]}
+              activeOpacity={0.7}
+            >
+              <View style={styles.compactTopRow}>
+                <View style={[styles.compactDateBlock, !isLight && styles.compactDateBlockNative]}>
+                  <Text style={[styles.compactDateDay, !isLight && styles.compactDateDayNative]}>
+                    {new Date(item.booking_date).getDate()}
+                  </Text>
+                  <Text style={[styles.compactDateMonth, !isLight && styles.compactDateMonthNative]}>
+                    {new Date(item.booking_date).toLocaleString('default', { month: 'short' }).toUpperCase()}
+                  </Text>
+                </View>
+                
+                <View style={styles.compactMainInfo}>
+                  <Text style={[styles.compactGroundName, !isLight && styles.compactGroundNameNative]} numberOfLines={1}>
+                    {item.ground.name}
+                  </Text>
+                  <View style={styles.compactSlotRow}>
+                    <Text style={[styles.compactSlotTime, !isLight && styles.compactSlotTimeNative]}>
+                      {`${normalizeDbTimeToHHMM(item.start_time)} – ${normalizeDbTimeToHHMM(item.end_time)}`}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.compactStatusInfoAx}>
+                  <Text style={[styles.compactAmount, !isLight && styles.compactAmountNative]}>
+                    {formatCurrency(item.total_amount)}
+                  </Text>
+                  <View style={[
+                    styles.statusBadgeCompact,
+                    item.status === 'confirmed' ? styles.statusConfirmed : styles.statusCancelled
+                  ]}>
+                    <Text style={[
+                      styles.statusBadgeText,
+                      item.status === 'confirmed' ? styles.statusConfirmed : styles.statusCancelled
+                    ]}>
+                      {item.status === 'confirmed' ? (isDateInPast(item.booking_date) ? 'DONE' : 'ACTIVE') : 'CANCEL'}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.compactDivider} />
+
+              <View style={styles.compactBottomRow}>
+                <View style={styles.compactBottomLeft}>
+                  <NameInputCell booking={item} onSave={saveBookingName} />
+                  
+                  {(() => {
+                    const currentSlotKey = `${item.ground_id}_${item.booking_date}_${item.start_time}`;
+                    const slotOccupancy = bookings.filter(b => 
+                      b.status === 'confirmed' && 
+                      `${b.ground_id}_${b.booking_date}_${b.start_time}` === currentSlotKey
+                    ).reduce((sum, b) => {
+                      const label = cricketTeamsLabelFromBooking(b.ground.pitch_type, b.notes);
+                      if (label === '1 team') return sum + 1;
+                      if (label === 'Both teams') return sum + 2;
+                      return sum + 2;
+                    }, 0);
+
+                    const isTrulyFull = slotOccupancy >= 2;
+
+                    return isOwnGround && (
+                      <View style={isTrulyFull ? styles.fullMatchBadge : styles.partialBadge}>
+                        <Text style={isTrulyFull ? styles.fullMatchBadgeText : styles.partialBadgeText}>
+                          {isTrulyFull ? 'FULL MATCH' : 'NEED 1 MORE'}
+                        </Text>
+                      </View>
+                    );
+                  })()}
+                </View>
+
+                <View style={styles.compactBottomRight}>
+                  <TouchableOpacity 
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      togglePaymentReceived(item);
+                    }}
+                    style={styles.compactPaymentToggle}
+                  >
+                    <Text style={[styles.paymentLabel, { color: isLight ? '#64748B' : '#dcc093' }]}>PAID</Text>
+                    {item.payment_received ? (
+                      <CheckCircle2 size={24} color="#00ea6b" />
+                    ) : (
+                      <Circle size={24} color="#9CA3AF" />
+                    )}
+                  </TouchableOpacity>
+                  <Text style={[styles.compactBookedAt, { textAlign: 'right', marginTop: 4 }]}>
+                    {new Date(item.created_at).toLocaleDateString()} {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                </View>
+              </View>
+            </TouchableOpacity>
           );
         }}
         keyExtractor={item => item.id}
@@ -1004,12 +1097,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: IS_WEB ? '#F5F5F5' : '#043529',
   },
+  containerMobile: {
+    backgroundColor: IS_WEB ? '#F8FAFC' : '#043529',
+  },
   header: {
     backgroundColor: IS_WEB ? '#FFFFFF' : '#043529',
     padding: 16,
     paddingTop: IS_WEB ? 16 : 0,
     borderBottomWidth: 1,
-    borderBottomColor: IS_WEB ? '#E0E0E0' : 'rgba(0,234,107,0.15)',
+    borderBottomColor: IS_WEB ? '#E2E8F0' : 'rgba(0,234,107,0.15)',
+  },
+  headerWebMobile: {
+    paddingTop: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomColor: '#E2E8F0',
   },
   title: {
     fontSize: 24,
@@ -1334,6 +1435,180 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginBottom: 16,
     fontSize: 14,
+  },
+  searchBarWebMobile: {
+    backgroundColor: '#F1F5F9',
+    borderColor: '#E2E8F0',
+    color: '#1E293B',
+  },
+  nameInputWrapper: {
+    flex: 1,
+    minHeight: 38,
+  },
+  nameInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: IS_WEB ? '#f8fafc' : 'rgba(255,255,255,0.05)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    borderWidth: 1,
+    borderColor: IS_WEB ? '#E2E8F0' : 'rgba(0,234,107,0.1)',
+  },
+  nameInputIcon: {
+    marginRight: 6,
+  },
+  nameInput: {
+    flex: 1,
+    fontSize: 13,
+    color: IS_WEB ? '#1E293B' : '#f9fafb',
+    paddingVertical: 8,
+    fontWeight: '600',
+  },
+  saveBadge: {
+    backgroundColor: '#00ea6b',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  saveBadgeText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#043529',
+  },
+  compactRow: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 15,
+    shadowOffset: { width: 0, height: 10 },
+  },
+  compactRowNative: {
+    backgroundColor: '#06392e',
+    borderColor: 'rgba(0,234,107,0.15)',
+  },
+  compactTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  compactDateBlock: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: '#F0FDF4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+  },
+  compactDateBlockNative: {
+    backgroundColor: 'rgba(0,234,107,0.1)',
+    borderColor: 'rgba(0,234,107,0.3)',
+  },
+  compactDateDay: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#166534',
+  },
+  compactDateDayNative: {
+    color: '#00ea6b',
+  },
+  compactDateMonth: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#15803d',
+    marginTop: -2,
+    letterSpacing: 0.5,
+  },
+  compactDateMonthNative: {
+    color: '#dcc093',
+  },
+  compactMainInfo: {
+    flex: 1,
+    paddingHorizontal: 16,
+    gap: 2,
+  },
+  compactGroundName: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.2,
+  },
+  compactGroundNameNative: {
+    color: '#FFFFFF',
+  },
+  compactSlotRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  compactSlotTime: {
+    fontSize: 15,
+    color: '#059669',
+    fontWeight: '700',
+  },
+  compactSlotTimeNative: {
+    color: '#00ea6b',
+  },
+  compactBookedAt: {
+    fontSize: 10,
+    color: '#94A3B8',
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  compactStatusInfoAx: {
+    alignItems: 'flex-end',
+    gap: 6,
+  },
+  compactAmount: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#0F172A',
+  },
+  compactAmountNative: {
+    color: '#00ea6b',
+  },
+  statusBadgeCompact: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  compactDivider: {
+    height: 1,
+    backgroundColor: '#F1F5F9',
+    marginVertical: 14,
+    opacity: 0.8,
+  },
+  compactBottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 16,
+  },
+  compactBottomLeft: {
+    flex: 1,
+    gap: 10,
+  },
+  compactBottomRight: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  compactPaymentToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 4,
+  },
+  paymentLabel: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#64748B',
+    letterSpacing: 0.8,
   },
   searchFilterWrap: {
     marginRight: 12,

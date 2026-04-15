@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Platform } from 'react-native';
 import { MapPin, User, ChevronRight, Share2, Plus } from 'lucide-react-native';
+import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 
 const INITIAL_TEAMS_DATA = [
@@ -56,7 +57,10 @@ export default function CricketTeams() {
   };
 
   const TeamCard = ({ team }: { team: any }) => (
-    <View style={styles.teamCard}>
+    <TouchableOpacity 
+      style={styles.teamCard}
+      onPress={() => router.push(`/teams/${team.id}`)}
+    >
        <View style={[styles.teamAvatar, team.bgColor && { backgroundColor: team.bgColor }]}>
           {team.image ? (
             <Image source={{ uri: team.image }} style={styles.teamImage} />
@@ -79,15 +83,19 @@ export default function CricketTeams() {
              </View>
           </View>
           <View style={styles.teamActions}>
-             <TouchableOpacity style={styles.teamActionBtn}>
+             <TouchableOpacity 
+                style={styles.teamActionBtn}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  // Handle share
+                }}
+             >
                 <Share2 size={18} color="#64748B" />
              </TouchableOpacity>
-             <TouchableOpacity style={styles.teamActionBtn}>
-                <ChevronRight size={18} color="#64748B" />
-             </TouchableOpacity>
+             <ChevronRight size={18} color="#64748B" />
           </View>
        </View>
-    </View>
+    </TouchableOpacity>
   );
 
   return (

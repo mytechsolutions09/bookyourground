@@ -139,57 +139,72 @@ export function useCricketScoring() {
     });
   };
 
-  const pushLiveState = useCallback(async (innState: InningState, cfg: any, mid: string, extraResult: string | null = null) => {
+  const pushLiveState = useCallback(async (innState: InningState, config: any, mid: string, innNumber: number, statusResult: string | null = null) => {
     if (!mid) return;
-    const striker = innState.batters.find(b => b.onStrike && !b.out && b.status === 'batting');
-    const nonStriker = innState.batters.find(b => !b.onStrike && !b.out && b.status === 'batting');
-    const bowler = innState.bowlers[innState.currentBowlerIdx];
-    const lastBall = innState.overBalls[innState.overBalls.length - 1];
 
-    const payload = {
+    const payload: any = {
       match_id: mid,
-      innings_number: currentIdx + 1,
+      innings_number: innNumber,
       batting_team: innState.battingTeam,
       bowling_team: innState.bowlingTeam,
       runs: innState.runs,
       wickets: innState.wickets,
       legal_balls: innState.legalBalls,
-      overs_total: cfg?.overs,
+      overs_total: parseInt(config.totalOvers || '0'),
       target: innState.target,
-      crr: calcCRR(innState.runs, innState.legalBalls),
-      rrr: innState.target
-        ? calcRRR(innState.target, innState.runs, innState.legalBalls, cfg?.overs)
-        : null,
-      striker_name: striker?.name ?? null,
-      striker_runs: striker?.runs ?? 0,
-      striker_balls: striker?.balls ?? 0,
-      striker_fours: striker?.fours ?? 0,
-      striker_sixes: striker?.sixes ?? 0,
-      nonstriker_name: nonStriker?.name ?? null,
-      nonstriker_runs: nonStriker?.runs ?? 0,
-      nonstriker_balls: nonStriker?.balls ?? 0,
-      nonstriker_fours: nonStriker?.fours ?? 0,
-      nonstriker_sixes: nonStriker?.sixes ?? 0,
-      bowler_name: bowler?.name ?? null,
-      bowler_overs: bowler ? `${bowler.overs}.${bowler.balls}` : '0.0',
-      bowler_runs: bowler?.runs ?? 0,
-      bowler_wickets: bowler?.wickets ?? 0,
-      bowler_maidens: bowler?.maidens ?? 0,
-      last_ball_label: lastBall?.label ?? null,
-      last_ball_type: lastBall?.type ?? null,
+      crr: parseFloat(innState.legalBalls > 0 ? ((innState.runs / innState.legalBalls) * 6).toFixed(2) : '0'),
+      rrr: (innState.target && config.totalOvers) ? parseFloat((((innState.target - innState.runs) / ((parseInt(config.totalOvers) * 6) - innState.legalBalls)) * 6).toFixed(2)) : null,
+      striker_name: innState.striker?.name || null,
+      striker_runs: innState.striker?.runs || 0,
+      striker_balls: innState.striker?.balls || 0,
+      striker_fours: innState.striker?.fours || 0,
+      striker_sixes: innState.striker?.sixes || 0,
+      nonstriker_name: innState.nonStriker?.name || null,
+      nonstriker_runs: innState.nonStriker?.runs || 0,
+      nonstriker_balls: innState.nonStriker?.balls || 0,
+      nonstriker_fours: innState.nonStriker?.fours || 0,
+      nonstriker_sixes: innState.nonStriker?.sixes || 0,
+      bowler_name: innState.bowler?.name || null,
+      bowler_overs: innState.bowler ? `${innState.bowler.overs}.${innState.bowler.balls}` : '0.0',
+      bowler_runs: innState.bowler?.runs || 0,
+      bowler_wickets: innState.bowler?.wickets || 0,
+      bowler_maidens: innState.bowler?.maidens || 0,
+      last_ball_label: innState.overBalls.length > 0 ? innState.overBalls[innState.overBalls.length - 1].label : null,
+      last_ball_type: innState.overBalls.length > 0 ? innState.overBalls[innState.overBalls.length - 1].type : null,
       current_over_balls: JSON.stringify(innState.overBalls),
-      match_status: extraResult ? 'completed' : 'live',
-      result_text: extraResult ?? null,
-      updated_at: new Date().toISOString(),
+      match_status: statusResult ? 'completed' : 'live',
+      result_text: statusResult,
+      updated_at: new Date().toISOString()
     };
 
-    await supabase
+    return await supabase
       .from('match_live_state')
       .upsert(payload, { onConflict: 'match_id' });
-  }, [currentIdx]);
+  }, []);
 
   const logBall = useCallback(async (innState: InningState, ballData: any, mid: string) => {
-    if (!mid || !innState.inningsId) return;
+    let inningsId = innState.inningsId;
+    
+    if (!mid) return;
+
+    // Fallback: If inningsId is missing in state (common race condition/persistence bug), try to fetch it
+    if (!inningsId) {
+      console.warn('[useCricketScoring] inningsId missing in logBall. Attempting recovery from DB...');
+      const { data: innRow } = await supabase
+        .from('innings')
+        .select('id')
+        .eq('match_id', mid)
+        .eq('innings_number', currentIdx + 1)
+        .single();
+      
+      if (innRow) {
+        inningsId = innRow.id;
+        console.log('[useCricketScoring] Successfully recovered inningsId:', inningsId);
+      } else {
+        console.error('[useCricketScoring] Critical: Could not recover inningsId. Ball log will fail.');
+        return;
+      }
+    }
     const overNum = Math.floor(innState.legalBalls / 6);
     const ballNum = innState.overBalls.length;
     const bowler = innState.bowlers[innState.currentBowlerIdx];
@@ -201,7 +216,7 @@ export function useCricketScoring() {
 
     await supabase.from('ball_log').insert({
       match_id: mid,
-      innings_id: innState.inningsId,
+      innings_id: inningsId,
       over_number: overNum,
       ball_number: ballNum,
       runs: ballData.runs ?? 0,
@@ -330,7 +345,7 @@ export function useCricketScoring() {
 
     setInningsList([innObj, null]);
     setCurrentIdx(0);
-          await pushLiveState(innObj, config, mid);
+    await pushLiveState(innObj, config, mid, 1);
       setPhase('live');
     return {
     matchId: mid, inn: innObj };
@@ -399,7 +414,7 @@ export function useCricketScoring() {
       }).eq('id', inn.inningsId);
       
       await supabase.from('matches').update({ status: 'completed' }).eq('id', matchId!);
-      await pushLiveState(inn, matchConfig, matchId!, resultText);
+      await pushLiveState(inn, matchConfig, matchId!, currentIdx + 1, resultText);
       setResult(resultText);
       setPhase('completed');
       // setIsScoring(false); 
@@ -424,27 +439,30 @@ export function useCricketScoring() {
     
     // Amateur/Custom rule: if we have fewer than 11 players, we are all out when we run out of partners
     // (Needs at least 2 people to continue batting, or at least 1 person available in the dugout)
-    const teamAllOut = innState.wickets >= (totalPlayers - 1) && yetToBatCount === 0 && activeBatters < 2;
-    
-    // An innings ends if:
-    // 1. They reached absolute all-out (10 wickets)
-    // 2. They reached team all-out based on current squad size
-    const allOut = !ignoreAllOut && (absoluteAllOut || teamAllOut);
-
+    const maxOvers = Number(cfg?.overs || 20);
+    const actualMaxWickets = Math.min(totalPlayers - 1, 10);
     const chaseWon = currentIdx === 1 && innState.target && innState.runs >= innState.target;
-    
-    if (!allOut && !oversUp && !chaseWon) return false;
+    // Ensure we are comparing numbers here to prevent string comparison bugs
+    const inningsEnded = (Number(innState.legalBalls) >= maxOvers * 6) || (Number(innState.wickets) >= actualMaxWickets);
+
+    if (!chaseWon && !inningsEnded) return false;
 
     if (currentIdx === 0) {
       // End of first innings
-      await supabase.from('innings').update({ 
+      const { error: innErr } = await supabase.from('innings').update({ 
         status: 'completed', 
         runs: innState.runs, 
         wickets: innState.wickets, 
         legal_balls: innState.legalBalls 
       }).eq('id', innState.inningsId);
       
-      await supabase.from('matches').update({ status: 'innings_break' }).eq('id', mid);
+      const { error: matchErr } = await supabase.from('matches').update({ status: 'innings_break' }).eq('id', mid);
+      
+      if (innErr || matchErr) {
+        console.error('[useCricketScoring] Error ending innings:', innErr || matchErr);
+        if (typeof window !== 'undefined') alert('Failed to sync innings end to server. Check your connection.');
+      }
+      
       setPhase('innings_break');
     } else {
       // End of second innings (Match Result)
@@ -456,23 +474,32 @@ export function useCricketScoring() {
         const wktsLeft = actualMaxWickets - innState.wickets;
         resultText = `${innState.battingTeam} won by ${Math.max(1, wktsLeft)} wicket${wktsLeft !== 1 ? 's' : ''}`;
       } else {
-        const runDiff = (innState.target || 0) - innState.runs - 1;
-        if (runDiff === -1) {
+        const target = innState.target || 0;
+        if (innState.runs === target - 1) {
            resultText = 'Match Tied';
         } else {
+           const runDiff = target - 1 - innState.runs;
            resultText = `${inn1.battingTeam} won by ${runDiff} run${runDiff !== 1 ? 's' : ''}`;
         }
       }
       
-      await supabase.from('innings').update({ 
+      console.log('[useCricketScoring] Match Completed! Result:', resultText);
+      
+      const { error: innErr } = await supabase.from('innings').update({ 
         status: 'completed', 
         runs: innState.runs, 
         wickets: innState.wickets, 
         legal_balls: innState.legalBalls 
       }).eq('id', innState.inningsId);
       
-      await supabase.from('matches').update({ status: 'completed' }).eq('id', mid);
-      await pushLiveState(innState, cfg, mid, resultText);
+      const { error: matchErr } = await supabase.from('matches').update({ status: 'completed', result_text: resultText }).eq('id', mid);
+      const { error: liveErr } = await pushLiveState(innState, cfg, mid, currentIdx + 1, resultText);
+      
+      if (innErr || matchErr) {
+        console.error('[useCricketScoring] Error finishing match:', innErr || matchErr);
+        if (typeof window !== 'undefined') alert('Warning: Match ended but failed to save result to server. Please check your internet.');
+      }
+
       setResult(resultText);
       setPhase('completed');
     }
@@ -560,7 +587,7 @@ export function useCricketScoring() {
 
     setInn(next);
     await logBall(next, { runs, type: ballType, label: ballLabel, area }, matchId!);
-    await pushLiveState(next, matchConfig, matchId!);
+    await pushLiveState(next, matchConfig, matchId!, currentIdx + 1);
     await checkEnd(next, matchConfig, matchId!);
 
     return next;
@@ -649,8 +676,9 @@ export function useCricketScoring() {
 
     setInn(next);
     await logBall(next, { runs: totalRuns, extras: totalRuns, extraType: type, type: ballType, label }, matchId!);
-    await pushLiveState(next, matchConfig, matchId!);
+    await pushLiveState(next, matchConfig, matchId!, currentIdx + 1);
     await checkEnd(next, matchConfig, matchId!);
+    return next;
   }, [inn, matchId, matchConfig, handleOverEnd, logBall, pushLiveState, checkEnd]);
 
   const addWicket = useCallback(async ({ dismissedName, dismissalType, fielder, newBatterName }: any) => {
@@ -705,7 +733,7 @@ export function useCricketScoring() {
     }
 
     setInn(next);
-    await pushLiveState(next, matchConfig, matchId!);
+    await pushLiveState(next, matchConfig, matchId!, currentIdx + 1);
     
     // If we just added a new batter, use a temporary config override to ensure checkEnd doesn't see us as 'All Out'
     const effectiveConfig = { ...matchConfig };
@@ -718,6 +746,7 @@ export function useCricketScoring() {
     // We pass a boolean to ignore the all-out check temporarily if needed.
     // Or just check overs.
     await checkEnd(next, effectiveConfig, matchId!, !!newBatterName);
+    return next;
   }, [inn, matchId, matchConfig, handleOverEnd, logBall, pushLiveState, checkEnd]);
 
   const addNewBowler = useCallback((name: string) => {
@@ -759,7 +788,7 @@ export function useCricketScoring() {
     setInn(prev);
     
     // 1. Sync live state back to previous
-    await pushLiveState(prev, matchConfig, matchId!);
+    await pushLiveState(prev, matchConfig, matchId!, currentIdx + 1);
     
     // 2. Delete the last ball from Supabase
     const { data: lastBalls } = await supabase
@@ -778,34 +807,59 @@ export function useCricketScoring() {
   }, [matchId, matchConfig, pushLiveState]);
 
   const startSecondInnings = useCallback(async () => {
-    if (!inningsList[0]) return;
-    const inn1 = inningsList[0];
-    const battingTeam = inn1.bowlingTeam;
-    const bowlingTeam = inn1.battingTeam;
-    const battingPlayers = inn1.bowlingPlayers;
-    const bowlingPlayers = inn1.battingPlayers;
-    const target = inn1.runs + 1;
+    // We need to ensure we have Inning 1 data to calculate target and transition squads
+    const { data: inn1Row, error: inn1Err } = await supabase
+      .from('innings')
+      .select('*')
+      .eq('match_id', matchId!)
+      .eq('innings_number', 1)
+      .single();
+
+    if (inn1Err || !inn1Row) {
+      console.error('[useCricketScoring] Cannot start 2nd innings: Inning 1 not found in DB', inn1Err);
+      return;
+    }
+
+    const battingTeam = inn1Row.bowling_team;
+    const bowlingTeam = inn1Row.batting_team;
+    const battingPlayers = inn1Row.bowling_players || [];
+    const bowlingPlayers = inn1Row.batting_players || [];
+    const target = (inn1Row.runs || 0) + 1;
+
+    console.log('[useCricketScoring] Starting 2nd innings. Target:', target);
 
     const innId = await createInningsRow(matchId!, 2, battingTeam, bowlingTeam, battingPlayers, bowlingPlayers, target);
+    if (!innId) {
+      console.error('[useCricketScoring] Failed to create 2nd innings row');
+      return;
+    }
+
     const inn2 = initInning(battingTeam, bowlingTeam, battingPlayers, bowlingPlayers, target);
+    inn2.inningsId = innId;
     inn2.target = target;
 
     await supabase.from('matches').update({ status: 'live' }).eq('id', matchId!);
 
-    setInningsList([inningsList[0], inn2]);
+    setInningsList(prev => [prev[0], inn2]);
     setCurrentIdx(1);
-    await pushLiveState(inn2, matchConfig, matchId!);
+    
+    await pushLiveState(inn2, matchConfig, matchId!, 2);
     setPhase('live');
     historyRef.current = [];
-  }, [inningsList, matchConfig, matchId, createInningsRow]);
+  }, [matchConfig, matchId, createInningsRow, pushLiveState]);
 
   const setOpeners = useCallback(async (strikerName: string, nonStrikerName: string, bowlerName: string, keeperName?: string) => {
     if (!inn) return;
-    setInn(prev => {
-      const next = { ...prev, batters: prev.batters.map(b => ({ ...b })), bowlers: prev.bowlers.map(b => ({ ...b })), keeperName };
+    let nextState: InningState | null = null;
+    
+    setInningsList(prev => {
+      const current = prev[currentIdx];
+      if (!current) return prev;
+      
+      const next = { ...current, batters: current.batters.map(b => ({ ...b })), bowlers: current.bowlers.map(b => ({ ...b })), keeperName };
       
       // Reset all batters to 'yet' first
-      next.batters = next.batters.map(b => ({ ...b, status: 'yet', onStrike: false }));
+      next.batters = next.batters.map(b => ({ ...b, status: 'yet' as const, onStrike: false }));
       
       const sIdx = next.batters.findIndex(b => b.name === strikerName);
       const nsIdx = next.batters.findIndex(b => b.name === nonStrikerName);
@@ -813,23 +867,36 @@ export function useCricketScoring() {
       if (sIdx !== -1) {
         next.batters[sIdx].status = 'batting';
         next.batters[sIdx].onStrike = true;
+      } else {
+        next.batters.push({ name: strikerName, runs: 0, balls: 0, dots: 0, fours: 0, sixes: 0, onStrike: true, status: 'batting', out: false, dismissal: '', startTime: Date.now() });
       }
+      
       if (nsIdx !== -1) {
         next.batters[nsIdx].status = 'batting';
         next.batters[nsIdx].onStrike = false;
+      } else {
+        next.batters.push({ name: nonStrikerName, runs: 0, balls: 0, dots: 0, fours: 0, sixes: 0, onStrike: false, status: 'batting', out: false, dismissal: '', startTime: Date.now() });
       }
 
       let bIdx = next.bowlers.findIndex(b => b.name === bowlerName);
       if (bIdx === -1) {
-        const newBowler: Bowler = { name: bowlerName, overs: 0, balls: 0, runs: 0, wickets: 0, maidens: 0, overRuns: 0 };
+        const newBowler: Bowler = { name: bowlerName, overs: 0, balls: 0, runs: 0, wickets: 0, maidens: 0, overRuns: 0, dots: 0, fours: 0, sixes: 0 };
         next.bowlers.push(newBowler);
         bIdx = next.bowlers.length - 1;
       }
       next.currentBowlerIdx = bIdx;
-
-      return next;
+      
+      nextState = next;
+      const newList = [...prev];
+      newList[currentIdx] = next;
+      return newList as [InningState | null, InningState | null];
     });
-  }, [inn]);
+
+    // Push to live state immediately so viewer sees openers
+    if (nextState) {
+       await pushLiveState(nextState, matchConfig, matchId!, currentIdx + 1);
+    }
+  }, [inn, currentIdx, matchConfig, matchId, pushLiveState]);
 
     const resumeMatch = useCallback(async (mid: string, isRecovery = false) => {
     try {
@@ -1072,7 +1139,7 @@ export function useCricketScoring() {
       setCurrentIdx(currentInnNum - 1);
       
       const currentInningToSync = currentInnNum === 1 ? inn1State : (inn2State || inn1State);
-      await pushLiveState(currentInningToSync, config, mid);
+      await pushLiveState(currentInningToSync, config, mid, currentInnNum);
       
       setPhase('live');
       const finalXi = (xiRows && xiRows.length > 0) ? xiRows : 

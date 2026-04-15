@@ -1,3 +1,30 @@
+# Team Chat Integration & Real-time Squad Communication - Platform Expansion
+
+This update introduces a full-featured, real-time group chat system for cricket teams, enabling seamless communication between accepted players and team owners while refining the mobile dashboard experience.
+
+## Key Changes
+
+### 1. Real-time Team Chat Hub
+- **WhatsApp-style Group Chat**: Implemented a dedicated communication channel within the Team Details dashboard, powered by Supabase Realtime for instant messaging.
+- **Secure Membership Validation**: Integrated strict entry logic that restricts chat access to "Accepted" team members and team owners only.
+- **Message Persistence**: Deployed a new backend infrastructure (`team_messages`) to ensure chat logs are securely stored and synced across all user devices.
+
+### 2. Ephemeral Media Sharing
+- **Integrated Media Support**: Enabled support for sharing images and videos directly within the team chat interface.
+- **Dedicated Storage Architecture**: Provisioned a new `team-chat-media` storage bucket with high-performance delivery and automated cleanup policies.
+- **Smart Broadcasts**: Implemented broadcast-based media delivery to ensure lightweight, real-time updates for high-bandwidth content.
+
+### 3. Professional Team Dashboard (V2)
+- **Tabbed Navigation Architecture**: Redesigned the Team Details experience with a full-screen dashboard featuring **Info**, **Members**, and **Chat** tabs.
+- **Visual & UX Refinements**: Optimized the interface with premium Lucide iconography, dynamic team-branded header backgrounds, and smooth tab transitions.
+- **Membership Management**: Refined the members list to display real-time status (Captain, Pending, Accepted) and profile integration.
+
+### 4. Database & Security Infrastructure
+- **SQL Migrations**: Executed `20260416000000_create_team_messages.sql` and `20260416001000_add_media_to_team_chat.sql` to support the new chat ecosystem.
+- **Robust RLS Policies**: Configured advanced Row Level Security to protect team conversations from unauthorized access while maintaining seamless internal communication.
+
+---
+
 # Inning Transitions & Live Commentary Refinement - UI/UX Optimization Update
 
 This update finalizes the transition logic between match innings and significantly enhances the live spectator experience with interactive commentary filtering and dynamic performance tracking.
@@ -189,4 +216,4 @@ This update delivers a professional-grade overhaul of the platform's booking man
 - **Utility Expansion**: Extended the core helper library with `formatDateDDMMYYYY` and refined sorting algorithms to handle complex multi-field comparisons.
 
 ---
-*Last Updated and Pushed on April 15, 2026, at 20:58:00+05:30*
+*Last Updated and Pushed on April 16, 2026, at 03:35:00+05:30*

@@ -72,12 +72,47 @@ export default function CricketMatches() {
     if (!error && data) {
       const dbMatches = data.map(m => {
         const live = m.match_live_state;
-        const status = (m.status === 'live' || !!live) ? 'Live' : (m.status === 'completed' ? 'Result' : 'Upcoming');
+        const secondInn = m.innings?.find((i: any) => i.innings_number === 2);
+        const firstInn = m.innings?.find((i: any) => i.innings_number === 1);
+        const oversLimit = Number(m.overs || 20) * 6;
+
+        // Comprehensive check for match completion
+        const dbCompleted = m.status === 'completed' || m.status === 'Result';
+        const liveCompleted = live?.match_status === 'completed' || live?.match_status === 'Result';
+        const mathCompleted = (secondInn && Number(secondInn.wickets) >= (Number(m.players || 11) - 1)) || 
+                              (secondInn && Number(secondInn.legal_balls) >= oversLimit) ||
+                              (secondInn && secondInn.target && secondInn.runs >= secondInn.target) ||
+                              (live?.innings_number === 2 && (Number(live.legal_balls) >= oversLimit || (live.target && live.runs >= live.target)));
+
+        const isCompleted = dbCompleted || liveCompleted || !!mathCompleted;
+        const isLive = !isCompleted && (m.status === 'live' || m.status === 'innings_break' || !!live);
+        const status = isCompleted ? 'Result' : (isLive ? 'Live' : 'Upcoming');
         
-        let matchResult = m.result_text;
+        let matchResult = m.result_text || live?.result_text;
         let team1Score, team1Overs, team2Score, team2Overs;
 
-        if (live && status === 'Live') {
+        // Step 1: Base scores from Innings table (historical)
+        if (firstInn) {
+          if (firstInn.batting_team === m.team_a) {
+            team1Score = `${firstInn.runs}/${firstInn.wickets}`;
+            team1Overs = `(${Math.floor(firstInn.legal_balls / 6)}.${firstInn.legal_balls % 6} Ov)`;
+          } else if (firstInn.batting_team === m.team_b) {
+            team2Score = `${firstInn.runs}/${firstInn.wickets}`;
+            team2Overs = `(${Math.floor(firstInn.legal_balls / 6)}.${firstInn.legal_balls % 6} Ov)`;
+          }
+        }
+        if (secondInn) {
+          if (secondInn.batting_team === m.team_a) {
+            team1Score = `${secondInn.runs}/${secondInn.wickets}`;
+            team1Overs = `(${Math.floor(secondInn.legal_balls / 6)}.${secondInn.legal_balls % 6} Ov)`;
+          } else if (secondInn.batting_team === m.team_b) {
+            team2Score = `${secondInn.runs}/${secondInn.wickets}`;
+            team2Overs = `(${Math.floor(secondInn.legal_balls / 6)}.${secondInn.legal_balls % 6} Ov)`;
+          }
+        }
+
+        // Step 2: Override with Live State (most fresh data for current/final inning)
+        if (live) {
           const isTeamABatting = live.batting_team === m.team_a;
           const currentScore = `${live.runs}/${live.wickets}`;
           const currentOvers = `(${Math.floor(live.legal_balls / 6)}.${live.legal_balls % 6} Ov)`;
@@ -85,40 +120,9 @@ export default function CricketMatches() {
           if (isTeamABatting) {
             team1Score = currentScore;
             team1Overs = currentOvers;
-            const firstInn = m.innings.find((i: any) => i.innings_number === 1);
-            if (firstInn && firstInn.batting_team === m.team_b) {
-              team2Score = `${firstInn.runs}/${firstInn.wickets}`;
-              team2Overs = `(${Math.floor(firstInn.legal_balls / 6)}.${firstInn.legal_balls % 6} Ov)`;
-            }
           } else {
             team2Score = currentScore;
             team2Overs = currentOvers;
-            const firstInn = m.innings.find((i: any) => i.innings_number === 1);
-            if (firstInn && firstInn.batting_team === m.team_a) {
-              team1Score = `${firstInn.runs}/${firstInn.wickets}`;
-              team1Overs = `(${Math.floor(firstInn.legal_balls / 6)}.${firstInn.legal_balls % 6} Ov)`;
-            }
-          }
-        } else if (status === 'Result') {
-          const inn1 = m.innings.find((i: any) => i.innings_number === 1);
-          const inn2 = m.innings.find((i: any) => i.innings_number === 2);
-          if (inn1) {
-             if (inn1.batting_team === m.team_a) {
-               team1Score = `${inn1.runs}/${inn1.wickets}`;
-               team1Overs = `(${Math.floor(inn1.legal_balls / 6)}.${inn1.legal_balls % 6} Ov)`;
-             } else {
-               team2Score = `${inn1.runs}/${inn1.wickets}`;
-               team2Overs = `(${Math.floor(inn1.legal_balls / 6)}.${inn1.legal_balls % 6} Ov)`;
-             }
-          }
-          if (inn2) {
-             if (inn2.batting_team === m.team_a) {
-               team1Score = `${inn2.runs}/${inn2.wickets}`;
-               team1Overs = `(${Math.floor(inn2.legal_balls / 6)}.${inn2.legal_balls % 6} Ov)`;
-             } else {
-               team2Score = `${inn2.runs}/${inn2.wickets}`;
-               team2Overs = `(${Math.floor(inn2.legal_balls / 6)}.${inn2.legal_balls % 6} Ov)`;
-             }
           }
         }
 
@@ -152,7 +156,15 @@ export default function CricketMatches() {
   };
 
   const MatchCard = ({ match }: { match: any }) => (
-    <View style={styles.matchCard}>
+    <TouchableOpacity 
+      activeOpacity={0.9}
+      style={styles.matchCard}
+      onPress={() => {
+        if (match.status === 'Live' || match.status === 'Result') {
+          router.push(`/live/${match.match_id}`);
+        }
+      }}
+    >
       <View style={styles.matchHeader}>
         <View style={{ flex: 1 }}>
           <Text style={styles.matchType}>
@@ -220,19 +232,18 @@ export default function CricketMatches() {
           </TouchableOpacity>
         </View>
       )}
-
       {match.status === 'Result' && match.result && (
-        <View style={styles.matchFooter}>
+        <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 12 }}>
           <Text style={styles.resultText}>{match.result}</Text>
         </View>
       )}
-    </View>
+    </TouchableOpacity>
   );
 
   return (
     <View style={{ flex: 1 }}>
       <View style={styles.subTabContainer}>
-        {['All', 'Ongoing', 'Upcoming', 'Result'].map((label) => (
+        {['All', 'Played'].map((label) => (
           <TouchableOpacity
             key={label}
             style={[styles.subTab, subTab === label.toLowerCase() && styles.subTabActive]}
@@ -248,7 +259,7 @@ export default function CricketMatches() {
         {[...fetchedMatches, ...MATCHES_DATA]
           .filter(m => {
             if (subTab === 'all') return true;
-            if (subTab === 'ongoing') return m.status === 'Live';
+            if (subTab === 'played') return m.status === 'Result' || m.status === 'completed';
             return m.status.toLowerCase() === subTab.toLowerCase();
           })
           .map(match => (
