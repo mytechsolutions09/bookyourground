@@ -11,6 +11,8 @@ const IS_WEB = Platform.OS === 'web';
 
 interface EarningsStats {
   totalEarnings: number;
+  cashEarnings: number;
+  onlineEarnings: number;
   totalConfirmedBookings: number;
 }
 
@@ -18,6 +20,8 @@ function OwnerEarningsScreenInner() {
   const { user } = useAuth();
   const [stats, setStats] = useState<EarningsStats>({
     totalEarnings: 0,
+    cashEarnings: 0,
+    onlineEarnings: 0,
     totalConfirmedBookings: 0,
   });
   const [loading, setLoading] = useState(true);
@@ -42,7 +46,8 @@ function OwnerEarningsScreenInner() {
           total_amount,
           status,
           booking_date,
-          ground:grounds!inner(owner_id)
+          payment_method,
+          ground:grounds!inner(owner_id, name, city, state)
         `,
         )
         .eq('ground.owner_id', user.id)
@@ -51,15 +56,25 @@ function OwnerEarningsScreenInner() {
       if (error) throw error;
 
       let total = 0;
+      let cash = 0;
+      let online = 0;
       let count = 0;
       const rows = (data ?? []) as any[];
       rows.forEach((row) => {
-        total += row.total_amount || 0;
+        const amt = row.total_amount || 0;
+        total += amt;
+        if (row.payment_method === 'cash') {
+          cash += amt;
+        } else {
+          online += amt;
+        }
         count += 1;
       });
 
       setStats({
         totalEarnings: total,
+        cashEarnings: cash,
+        onlineEarnings: online,
         totalConfirmedBookings: count,
       });
       setTransactions(rows);
@@ -95,6 +110,16 @@ function OwnerEarningsScreenInner() {
             <View style={styles.card}>
               <Text style={styles.cardLabel}>Total earnings</Text>
               <Text style={styles.cardValue}>{formatCurrency(stats.totalEarnings)}</Text>
+            </View>
+
+            <View style={[styles.card, styles.cardHighlighted]}>
+              <Text style={styles.cardLabel}>Online payments</Text>
+              <Text style={[styles.cardValue, { color: '#3b82f6' }]}>{formatCurrency(stats.onlineEarnings)}</Text>
+            </View>
+
+            <View style={styles.card}>
+              <Text style={styles.cardLabel}>Cash (On site)</Text>
+              <Text style={[styles.cardValue, { color: '#f59e0b' }]}>{formatCurrency(stats.cashEarnings)}</Text>
             </View>
 
             <View style={styles.card}>
@@ -142,6 +167,7 @@ function OwnerEarningsScreenInner() {
                 <View style={styles.transactionsHeaderRow}>
                   <Text style={[styles.transactionsHeaderCell, styles.txColDate]}>Date</Text>
                   <Text style={[styles.transactionsHeaderCell, styles.txColGround]}>Ground</Text>
+                  <Text style={[styles.transactionsHeaderCell, styles.txColMethod]}>Method</Text>
                   <Text style={[styles.transactionsHeaderCell, styles.txColAmount]}>Amount</Text>
                   <Text style={[styles.transactionsHeaderCell, styles.txColStatus]}>Status</Text>
                 </View>
@@ -157,6 +183,9 @@ function OwnerEarningsScreenInner() {
                         {tx.ground?.city}, {tx.ground?.state}
                       </Text>
                     </View>
+                    <Text style={[styles.transactionsCell, styles.txColMethod]}>
+                      {tx.payment_method === 'cash' ? 'CASH' : 'ONLINE'}
+                    </Text>
                     <Text style={[styles.transactionsCell, styles.txColAmount]}>
                       {formatCurrency(tx.total_amount)}
                     </Text>
@@ -330,16 +359,23 @@ const styles = StyleSheet.create({
   txColGround: {
     flex: 2,
   },
+  txColMethod: {
+    width: 80,
+  },
   txColAmount: {
-    flex: 1,
+    width: 100,
   },
   txColStatus: {
-    flex: 1,
+    width: 100,
     textTransform: 'capitalize',
   },
   txGroundSub: {
     fontSize: 12,
     color: IS_WEB ? '#6B7280' : '#9ca3af',
+  },
+  cardHighlighted: {
+    borderColor: 'rgba(59, 130, 246, 0.3)',
+    backgroundColor: IS_WEB ? '#f0f7ff' : '#043529',
   },
 });
 

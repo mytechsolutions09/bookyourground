@@ -133,4 +133,36 @@ This commit stabilized the cricket scoring engine, fixed data persistence issues
 - **Component Repair**: Fixed several critical syntax errors (mismatched JSX tags, double imports) that were breaking the web build.
 
 ---
-*Last Updated and Pushed on April 15, 2026, at 03:32:00+05:30*
+
+# Booking Management & Financial Tracking - Major Dashboard Update
+
+This update delivers a professional-grade overhaul of the platform's booking management systems, introducing granular tracking, interactive data grids, and detailed financial analytics for ground owners.
+
+## Key Changes
+
+### 1. Unified Table-Driven Interface
+- **Web UI Overhaul**: Replaced the card-based grid in both **"My Bookings"** and **"Ground Bookings"** with a professional, data-dense table layout for desktop users.
+- **Improved Hierarchy**: Redesigned the data flow to prioritize essential game details (Ground, Slot Time, Teams, Status) while positioning management tools at the end of the row.
+- **Consistency**: Synchronized the design language across all management surfaces, ensuring owners have a unified experience when tracking their own matches or their customers' activity.
+
+### 2. Interactive Management Tools
+- **Persistent Name Tracking**: Added an editable **"Name"** column to the bookings table. Owners can now input and save customer names directly into the SQL database (`booked_for_name`) with immediate real-time feedback.
+- **Payment Collection Status**: Integrated a **"Paid"** toggle to track payment received status with permanent SQL persistence (`payment_received`). This is optimized for quick on-site cash collection tracking.
+- **Event Isolation**: Implemented non-bubbling click logic for management fields to ensure focusing on an input or clicking a toggle doesn't accidentally trigger row-level navigation.
+
+### 3. Advanced Multi-Column Sorting
+- **Dynamic Sort Engine**: Implemented an interactive sorting system for almost every column in the table, including **Slot Date & Time**, **Ground Name**, **Booked At**, **Amount**, **Teams**, and **Payment Status**.
+- **Chronological Precision**: Engineered the time-based sorting to accurately combine both the booking date and start time for perfect chronological scheduling.
+- **Visual Feedback**: Added dynamic sort indicators (▲/▼) that highlight the active sort key and direction, making it easy to navigate high-volume booking logs.
+
+### 4. Financial Analytics & Checkout Polish
+- **Segmented Earnings**: Upgraded the **Earnings** dashboard to separate revenue into **Cash (On-Site)** and **Online Payments**. This allows owners to reconcile different revenue streams with 100% accuracy.
+- **Transaction Clarity**: Added a "Method" column to the earnings table, explicitly identifying the payment route for every confirmed booking.
+- **Standardized Date Formatting**: Fixed the checkout summary to use a clear, professional **DD-MM-YYYY** format, providing users with absolute clarity during the final payment steps.
+
+### 5. Technical Infrastructure
+- **SQL Migrations**: Successfully executed migrations to add `booked_for_name` and `payment_received` columns to the `bookings` table.
+- **Utility Expansion**: Extended the core helper library with `formatDateDDMMYYYY` and refined sorting algorithms to handle complex multi-field comparisons.
+
+---
+*Last Updated and Pushed on April 15, 2026, at 14:32:00+05:30*

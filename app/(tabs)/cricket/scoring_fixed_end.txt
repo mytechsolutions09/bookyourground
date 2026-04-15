@@ -1,0 +1,57 @@
+      case 'highlights':
+        return (
+          <View style={styles.tabContent}>
+             <View style={styles.placeholderIconArea}><PlayCircle size={48} color="#01b854" /></View>
+            <Text style={styles.placeholderTitle}>Match Highlights</Text>
+            <Text style={styles.placeholderDesc}>Relive the best moments from recent matches. Watch videos and view gallery of top plays.</Text>
+          </View>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const content = (
+    <View style={{ flex: 1, backgroundColor: '#F9FAFB', alignItems: 'center' }}>
+      <View style={{ width: '100%', maxWidth: 1000, flex: 1, backgroundColor: '#FFFFFF', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 3 }}>
+        <View style={styles.scoringTopNav}>
+          <TouchableOpacity 
+            style={styles.backNavBtn}
+            onPress={() => router.push('/cricket/matches')}
+          >
+            <ChevronLeft size={20} color="#6B7280" />
+            <Text style={styles.backNavBtnText}>Back to Matches</Text>
+          </TouchableOpacity>
+        </View>
+        {isConfiguringDismissal ? renderDismissalConfiguration() : 
+         isScoring ? renderLiveScoring() : 
+         isSearchingOfficial ? renderOfficialSearch() : 
+         isConfiguringOfficials ? renderMatchOfficials() : 
+         isSelectingOpeners ? renderOpeningSelection() : 
+         isConfiguringToss ? renderTossConfiguration() : 
+         isConfiguringMatch ? renderMatchConfiguration() : 
+         isSelectingTeams ? renderTeamSelection() : 
+         (urlMatchId && !resumeFailed) ? (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
+              <Trophy size={64} color="#0D9488" style={{ marginBottom: 24 }} />
+              <Text style={{ color: '#111827', fontSize: 20, fontWeight: '800', textAlign: 'center', marginBottom: 12 }}>
+              {["Umpire is deciding whether to call for tea...", "The batsman is complaining about the sight-screen...", "Groundsman is fixing the landing area...", "Waiting for the sightscreen to be moved..."][Math.floor(Date.now() / 2500) % 4]}
+              </Text>
+              <Text style={{ color: '#6B7280', fontSize: 14 }}>Initializing your match...</Text>
+            </View>
+          ) : renderDashboardView()}
+        {renderPlayerSelection()}
+        {renderTeamListModal()}
+        {renderMatchInfoModal()}
+        {renderWagonWheelModal()}
+      </View>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={{ flex: 1 }}>
+      <Stack.Screen options={{ headerShown: false }} />
+      {content}
+    </SafeAreaView>
+  );
+}

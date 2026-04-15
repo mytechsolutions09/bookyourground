@@ -55,6 +55,7 @@ interface InningState {
   target: number | null;
   inningsId: string | null;
   lastBowlerName?: string | null;
+  keeperName?: string | null;
 }
 
 const formatOvers = (legalBalls: number) =>
@@ -104,10 +105,15 @@ function initInning(battingTeam: string, bowlingTeam: string, battingPlayers: st
 }
 
 export function useCricketScoring() {
-  const savePlayingXi = useCallback(async (mid: string, teamId: string, players: any[]) => {
-    console.log('[useCricketScoring] Saving Playing XI for match:', mid, 'team:', teamId, 'players:', players.length);
+  const savePlayingXi = useCallback(async (mid: string, teamId: string, players: any[], captainId?: string) => {
+    console.log('[useCricketScoring] Saving Playing XI for match:', mid, 'team:', teamId, 'players:', players.length, 'captain:', captainId);
     await supabase.from('match_playing_xi').delete().eq('match_id', mid).eq('team_id', teamId);
-    const rows = players.map(p => ({ match_id: mid, team_id: teamId, player_id: p.id }));
+    const rows = players.map(p => ({ 
+      match_id: mid, 
+      team_id: teamId, 
+      player_id: p.id,
+      is_captain: p.id === captainId 
+    }));
     if (rows.length > 0) {
       await supabase.from('match_playing_xi').insert(rows);
     }
@@ -187,7 +193,12 @@ export function useCricketScoring() {
     const overNum = Math.floor(innState.legalBalls / 6);
     const ballNum = innState.overBalls.length;
     const bowler = innState.bowlers[innState.currentBowlerIdx];
-    const striker = innState.batters.find(b => b.onStrike && !b.out && b.status === 'batting');
+    
+    // Find the striker. If this is a wicket ball, the ballData might specify the dismissed batter
+    const striker = ballData.batter_name 
+      ? { name: ballData.batter_name } 
+      : innState.batters.find(b => b.onStrike && !b.out && b.status === 'batting');
+
     await supabase.from('ball_log').insert({
       match_id: mid,
       innings_id: innState.inningsId,
@@ -251,7 +262,7 @@ export function useCricketScoring() {
     return data.id;
   }, []);
 
-  const startMatch = useCallback(async (config: any, tossWinner: string, tossChoice: 'bat' | 'bowl', openers?: { striker: string, nonStriker: string, bowler: string }, existingMatchId?: string) => {
+  const startMatch = useCallback(async (config: any, tossWinner: string, tossChoice: 'bat' | 'bowl', openers?: { striker: string, nonStriker: string, bowler: string, keeper: string }, existingMatchId?: string) => {
     console.log('[useCricketScoring] startMatch called. existingMatchId:', existingMatchId);
     const battingFirst = tossChoice === 'bat';
     const battingTeam = tossWinner === config.teamA
@@ -299,10 +310,8 @@ export function useCricketScoring() {
     // Apply openers directly so they appear immediately on the scoring screen
     if (openers) {
       innObj.batters = innObj.batters.map(b => {
-        if (b.name === openers.striker) return {
-    ...b, status: 'batting' as const, onStrike: true, startTime: Date.now() };
-        if (b.name === openers.nonStriker) return {
-    ...b, status: 'batting' as const, onStrike: false, startTime: Date.now() };
+        if (b.name === openers.striker) return { ...b, status: 'batting' as const, onStrike: true, startTime: Date.now() };
+        if (b.name === openers.nonStriker) return { ...b, status: 'batting' as const, onStrike: false, startTime: Date.now() };
         return b;
       });
       if (!innObj.batters.find(b => b.name === openers.striker)) {
@@ -314,6 +323,7 @@ export function useCricketScoring() {
       const newBowler: Bowler = { name: openers.bowler, overs: 0, balls: 0, runs: 0, wickets: 0, maidens: 0, overRuns: 0, dots: 0, fours: 0, sixes: 0 };
       innObj.bowlers = [newBowler];
       innObj.currentBowlerIdx = 0;
+      innObj.keeperName = openers.keeper;
     }
 
     await supabase.from('matches').update({ status: 'live', toss_winner: tossWinner, toss_choice: tossChoice }).eq('id', mid);
@@ -347,33 +357,117 @@ export function useCricketScoring() {
     if (historyRef.current.length > 30) historyRef.current.shift();
   };
 
-  const checkEnd = useCallback(async (innState: InningState, cfg: any, mid: string) => {
-    const totalPlayers = cfg?.players || 11;
-    const maxWickets = Math.min(totalPlayers - 1, 10);
-    const matchOvers = Number(cfg?.overs || 0);
+  const declareInnings = useCallback(async () => {
+    if (!inn) return;
+    const confirm = typeof window !== 'undefined' ? window.confirm('Are you sure you want to declare/end this innings?') : true;
+    if (!confirm) return;
 
-    const allOut = innState.wickets >= maxWickets;
+    if (currentIdx === 0) {
+      await supabase.from('innings').update({ 
+        status: 'completed', 
+        runs: inn.runs, 
+        wickets: inn.wickets, 
+        legal_balls: inn.legalBalls 
+      }).eq('id', inn.inningsId);
+      
+      await supabase.from('matches').update({ status: 'innings_break' }).eq('id', matchId!);
+      setPhase('innings_break');
+      setIsScoring(false);
+    } else {
+      // End match result logic
+      const inn1 = inningsList[0]!;
+      let resultText;
+      const totalPlayers = Number(matchConfig?.players || 11);
+      const actualMaxWickets = Math.min(totalPlayers - 1, 10);
+      
+      if (inn.target && inn.runs >= inn.target) {
+        const wktsLeft = actualMaxWickets - inn.wickets;
+        resultText = `${inn.battingTeam} won by ${Math.max(1, wktsLeft)} wicket${wktsLeft !== 1 ? 's' : ''}`;
+      } else {
+        const runDiff = (inn.target || 0) - inn.runs - 1;
+        if (runDiff === -1) resultText = 'Match Tied';
+        else resultText = `${inn1.battingTeam} won by ${runDiff} run${runDiff !== 1 ? 's' : ''}`;
+      }
+      
+      await supabase.from('innings').update({ 
+        status: 'completed', 
+        runs: inn.runs, 
+        wickets: inn.wickets, 
+        legal_balls: inn.legalBalls 
+      }).eq('id', inn.inningsId);
+      
+      await supabase.from('matches').update({ status: 'completed' }).eq('id', matchId!);
+      await pushLiveState(inn, matchConfig, matchId!, resultText);
+      setResult(resultText);
+      setPhase('completed');
+      setIsScoring(false);
+    }
+  }, [inn, currentIdx, inningsList, matchId, matchConfig, pushLiveState]);
+
+  const checkEnd = useCallback(async (innState: InningState, cfg: any, mid: string, ignoreAllOut: boolean = false) => {
+    const totalPlayers = Number(cfg?.players || 11);
+    const matchOvers = Number(cfg?.overs || 20);
+
+    // Innings ends if:
+    // 1. Overs are completed (e.g., 120 balls for a 20 over match)
     const oversUp = matchOvers > 0 && innState.legalBalls >= matchOvers * 6;
+    
+    // 2. All out conditions:
+    const activeBatters = innState.batters.filter(b => b.status === 'batting' && !b.out).length;
+    const yetToBatCount = innState.batters.filter(b => b.status === 'yet').length;
+    
+    // Standard rule: 10 wickets is all out regardless of team size
+    const absoluteAllOut = innState.wickets >= 10;
+    
+    // Amateur/Custom rule: if we have fewer than 11 players, we are all out when we run out of partners
+    // (Needs at least 2 people to continue batting, or at least 1 person available in the dugout)
+    const teamAllOut = innState.wickets >= (totalPlayers - 1) && yetToBatCount === 0 && activeBatters < 2;
+    
+    // An innings ends if:
+    // 1. They reached absolute all-out (10 wickets)
+    // 2. They reached team all-out based on current squad size
+    const allOut = !ignoreAllOut && (absoluteAllOut || teamAllOut);
+
     const chaseWon = currentIdx === 1 && innState.target && innState.runs >= innState.target;
     
     if (!allOut && !oversUp && !chaseWon) return false;
 
     if (currentIdx === 0) {
-      await supabase.from('innings').update({ status: 'completed', runs: innState.runs, wickets: innState.wickets, legal_balls: innState.legalBalls }).eq('id', innState.inningsId);
+      // End of first innings
+      await supabase.from('innings').update({ 
+        status: 'completed', 
+        runs: innState.runs, 
+        wickets: innState.wickets, 
+        legal_balls: innState.legalBalls 
+      }).eq('id', innState.inningsId);
+      
       await supabase.from('matches').update({ status: 'innings_break' }).eq('id', mid);
       setPhase('innings_break');
     } else {
+      // End of second innings (Match Result)
       const inn1 = inningsList[0]!;
       let resultText;
-      const maxWickets = Math.min(cfg.players - 1, 10);
+      const actualMaxWickets = Math.min(totalPlayers - 1, 10);
+      
       if (chaseWon) {
-        const wktsLeft = maxWickets - innState.wickets;
-        resultText = `${innState.battingTeam} won by ${wktsLeft} wicket${wktsLeft !== 1 ? 's' : ''}`;
+        const wktsLeft = actualMaxWickets - innState.wickets;
+        resultText = `${innState.battingTeam} won by ${Math.max(1, wktsLeft)} wicket${wktsLeft !== 1 ? 's' : ''}`;
       } else {
         const runDiff = (innState.target || 0) - innState.runs - 1;
-        resultText = `${inn1.battingTeam} won by ${runDiff} run${runDiff !== 1 ? 's' : ''}`;
+        if (runDiff === -1) {
+           resultText = 'Match Tied';
+        } else {
+           resultText = `${inn1.battingTeam} won by ${runDiff} run${runDiff !== 1 ? 's' : ''}`;
+        }
       }
-      await supabase.from('innings').update({ status: 'completed', runs: innState.runs, wickets: innState.wickets, legal_balls: innState.legalBalls }).eq('id', innState.inningsId);
+      
+      await supabase.from('innings').update({ 
+        status: 'completed', 
+        runs: innState.runs, 
+        wickets: innState.wickets, 
+        legal_balls: innState.legalBalls 
+      }).eq('id', innState.inningsId);
+      
       await supabase.from('matches').update({ status: 'completed' }).eq('id', mid);
       await pushLiveState(innState, cfg, mid, resultText);
       setResult(resultText);
@@ -432,6 +526,15 @@ export function useCricketScoring() {
     if (bowlerIdx !== -1 && next.bowlers[bowlerIdx]) {
       next.bowlers[bowlerIdx].runs += runs;
       next.bowlers[bowlerIdx].balls += 1;
+      if (runs === 0) {
+        next.bowlers[bowlerIdx].dots = (next.bowlers[bowlerIdx].dots || 0) + 1;
+      }
+      if (runs === 4) {
+        next.bowlers[bowlerIdx].fours = (next.bowlers[bowlerIdx].fours || 0) + 1;
+      }
+      if (runs === 6) {
+        next.bowlers[bowlerIdx].sixes = (next.bowlers[bowlerIdx].sixes || 0) + 1;
+      }
       next.bowlers[bowlerIdx].overRuns = (next.bowlers[bowlerIdx].overRuns || 0) + runs;
       
       // Auto-increment over if 6 balls reached
@@ -493,11 +596,35 @@ export function useCricketScoring() {
 
       if (isLegalBall) {
         next.bowlers[bowlerIdx].balls += 1;
+        // Byes and Leg-byes are dot balls for the bowler since they concede 0 runs
+        if (additionalRuns === 0 || type === 'bye' || type === 'legbye') {
+           next.bowlers[bowlerIdx].dots = (next.bowlers[bowlerIdx].dots || 0) + 1;
+        }
         if (next.bowlers[bowlerIdx].balls >= 6) {
           next.bowlers[bowlerIdx].overs += 1;
           next.bowlers[bowlerIdx].balls = 0;
         }
       }
+    }
+
+    // Batter stats for No-balls or legal balls with extras (like LB but runs counted)
+    const strikerIdx = next.batters.findIndex(b => b.onStrike && !b.out && b.status === 'batting');
+    if (strikerIdx !== -1) {
+       // On a no-ball, the batter's runs are the additionalRuns
+       // On a no-ball, the batter ALSO faces a ball
+       if (type === 'noball') {
+         next.batters[strikerIdx].runs += additionalRuns;
+         next.batters[strikerIdx].balls += 1;
+         if (additionalRuns === 4) next.batters[strikerIdx].fours += 1;
+         if (additionalRuns === 6) next.batters[strikerIdx].sixes += 1;
+         if (additionalRuns === 0) next.batters[strikerIdx].dots += 1;
+       }
+       // Note: Wides are NOT counted as balls faced for batter.
+       // Byes/Leg-byes ARE balls faced but 0 runs for batter.
+       if (type === 'bye' || type === 'legbye') {
+         next.batters[strikerIdx].balls += 1;
+         next.batters[strikerIdx].dots += 1;
+       }
     }
 
     const label = additionalRuns > 0 ? `${labels[type]}${additionalRuns}` : labels[type];
@@ -529,7 +656,6 @@ export function useCricketScoring() {
     let next = { ...inn, batters: inn.batters.map(b => ({ ...b })), bowlers: inn.bowlers.map(b => ({ ...b })) };
     const bowlerIdx = next.currentBowlerIdx;
     const dismissedIdx = next.batters.findIndex(b => b.name === dismissedName);
-    const nextBatIdx = next.batters.findIndex(b => b.name === newBatterName);
 
     if (dismissedIdx !== -1) {
       next.batters[dismissedIdx].out = true;
@@ -541,13 +667,15 @@ export function useCricketScoring() {
       next.wickets += 1;
       if (bowlerIdx !== -1 && next.bowlers[bowlerIdx]) {
         next.bowlers[bowlerIdx].wickets += 1;
+        // Wicket balls are also dot balls for the bowler (unless they concede runs)
+        next.bowlers[bowlerIdx].dots = (next.bowlers[bowlerIdx].dots || 0) + 1;
       }
       
       next.balls += 1;
       next.legalBalls += 1;
       next.overBalls = [...next.overBalls, { type: 'wicket', label: 'W' }];
       
-      await logBall(next, { isWicket: true, dismissalType, fielder, type: 'wicket', label: 'W' }, matchId!);
+      await logBall(next, { isWicket: true, dismissalType, fielder, type: 'wicket', label: 'W', batter_name: dismissedName }, matchId!);
 
       if (next.legalBalls > 0 && next.legalBalls % 6 === 0) {
         next = handleOverEnd(next);
@@ -575,7 +703,18 @@ export function useCricketScoring() {
 
     setInn(next);
     await pushLiveState(next, matchConfig, matchId!);
-    await checkEnd(next, matchConfig, matchId!);
+    
+    // If we just added a new batter, use a temporary config override to ensure checkEnd doesn't see us as 'All Out'
+    const effectiveConfig = { ...matchConfig };
+    if (newBatterName && effectiveConfig.players) {
+        // If we are choosing a new batter, we are obviously not all out yet
+        // However, we still call checkEnd to see if the OVERS are finished
+    }
+
+    // Crucially: If a new batter was JUST provided, we are definitely NOT all out.
+    // We pass a boolean to ignore the all-out check temporarily if needed.
+    // Or just check overs.
+    await checkEnd(next, effectiveConfig, matchId!, !!newBatterName);
   }, [inn, matchId, matchConfig, handleOverEnd, logBall, pushLiveState, checkEnd]);
 
   const addNewBowler = useCallback((name: string) => {
@@ -657,10 +796,10 @@ export function useCricketScoring() {
     historyRef.current = [];
   }, [inningsList, matchConfig, matchId, createInningsRow]);
 
-  const setOpeners = useCallback(async (strikerName: string, nonStrikerName: string, bowlerName: string) => {
+  const setOpeners = useCallback(async (strikerName: string, nonStrikerName: string, bowlerName: string, keeperName?: string) => {
     if (!inn) return;
     setInn(prev => {
-      const next = { ...prev, batters: prev.batters.map(b => ({ ...b })), bowlers: prev.bowlers.map(b => ({ ...b })) };
+      const next = { ...prev, batters: prev.batters.map(b => ({ ...b })), bowlers: prev.bowlers.map(b => ({ ...b })), keeperName };
       
       // Reset all batters to 'yet' first
       next.batters = next.batters.map(b => ({ ...b, status: 'yet', onStrike: false }));
@@ -868,20 +1007,47 @@ export function useCricketScoring() {
             }
           });
 
+          const activeInLogs = Object.values(battersMap).filter(b => !b.out && b.balls > 0);
+          
           Object.values(battersMap).forEach(b => {
-            if (b.name === live.striker_name) { b.onStrike = true; b.status = 'batting'; }
-            if (b.name === live.nonstriker_name) { b.onStrike = false; b.status = 'batting'; }
+            if (live.striker_name && b.name === live.striker_name) { 
+              b.onStrike = true; 
+              b.status = 'batting'; 
+            } else if (live.nonstriker_name && b.name === live.nonstriker_name) { 
+              b.onStrike = false; 
+              b.status = 'batting'; 
+            } else if (!b.out && b.balls > 0 && (!live.striker_name || !live.nonstriker_name)) {
+              // Fallback: if they faced balls and are not out, they must be one of the current batters
+              b.status = 'batting';
+              // If no strike info, first one gets it
+              if (!Object.values(battersMap).some(tmp => tmp.onStrike)) b.onStrike = true;
+            }
           });
           
           state.currentBowlerIdx = state.bowlers.findIndex(b => b.name === live.bowler_name);
           if (state.currentBowlerIdx === -1) {
+             const lastBowler = Object.values(bowlersMap).sort((a,b) => (b.overs * 6 + b.balls) - (a.overs * 6 + a.balls))[0];
              if (live.bowler_name) {
                 const newBowler = { name: live.bowler_name, overs: 0, balls: 0, runs: 0, wickets: 0, maidens: 0, overRuns: 0 };
                 state.bowlers.push(newBowler);
                 state.currentBowlerIdx = state.bowlers.length - 1;
+             } else if (lastBowler) {
+                state.currentBowlerIdx = Object.values(bowlersMap).indexOf(lastBowler);
              } else {
                 state.currentBowlerIdx = 0;
              }
+          }
+        } else {
+          // No live state record? Reconstruct from logs only
+          Object.values(battersMap).forEach(b => {
+             if (!b.out && b.balls > 0) {
+                b.status = 'batting';
+                if (!Object.values(battersMap).some(tmp => tmp.onStrike)) b.onStrike = true;
+             }
+          });
+          const lastBowler = Object.values(bowlersMap).sort((a,b) => (b.overs * 6 + b.balls) - (a.overs * 6 + a.balls))[0];
+          if (lastBowler) {
+             state.currentBowlerIdx = Object.values(bowlersMap).indexOf(lastBowler);
           }
         }
 
@@ -1006,13 +1172,13 @@ export function useCricketScoring() {
 
 return {
     savePlayingXi,
-    matchId, phase, result,
+    matchId, phase, result, currentIdx,
     inn, inn1: inningsList[0], inn2: inningsList[1],
     matchConfig,
     striker, nonStriker, bowler, crr, rrr, yetToBat,
     battingPlayers: inn?.battingPlayers || [], bowlingPlayers: inn?.bowlingPlayers || [],
     formatOvers,
-    swapBatters, markRetiredHurt, reviseTarget, updateMatchConfig, changeSquad,
+    swapBatters, markRetiredHurt, reviseTarget, updateMatchConfig, changeSquad, declareInnings,
     startMatch, resumeMatch, addBall, addExtra, addWicket,
     changeBowler, addNewBowler, undoLastBall, startSecondInnings, setOpeners,
   };

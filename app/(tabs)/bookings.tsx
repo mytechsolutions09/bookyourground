@@ -25,7 +25,49 @@ import { normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
 import Modal from '@/components/ui/Modal';
 import { slugifyGroundSegment } from '@/utils/groundSlug';
 import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
-import { Calendar, X, Swords } from 'lucide-react-native';
+import { Calendar, X, Swords, Save, CheckCircle2, Circle } from 'lucide-react-native';
+
+function NameInputCell({ booking, onSave }: { booking: BookingWithDetails, onSave: (id: string, name: string) => Promise<void> }) {
+  const [localName, setLocalName] = useState(booking.booked_for_name || '');
+  const [saving, setSaving] = useState(false);
+  const hasChanged = localName !== (booking.booked_for_name || '');
+
+  const handleSave = async () => {
+    if (!hasChanged || saving) return;
+    setSaving(true);
+    await onSave(booking.id, localName);
+    setSaving(false);
+  };
+
+  return (
+    <TouchableOpacity 
+      activeOpacity={1} 
+      onPress={(e) => e.stopPropagation()} 
+      style={styles.nameInputRow}
+    >
+      <TextInput
+        style={styles.nameInput}
+        value={localName}
+        onChangeText={setLocalName}
+        placeholder="Enter name..."
+        placeholderTextColor="#9CA3AF"
+        onSubmitEditing={handleSave}
+      />
+      {hasChanged && (
+        <TouchableOpacity 
+          style={styles.saveBtn} 
+          onPress={(e) => {
+            e.stopPropagation();
+            handleSave();
+          }}
+          disabled={saving}
+        >
+          <Save size={16} color={saving ? '#9CA3AF' : '#00ea6b'} />
+        </TouchableOpacity>
+      )}
+    </TouchableOpacity>
+  );
+}
 
 export default function BookingsScreen() {
   const { user, profile } = useAuth();
@@ -36,6 +78,8 @@ export default function BookingsScreen() {
   const [ownerScope, setOwnerScope] = useState<'all' | 'own' | 'other'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState<'date' | 'ground' | 'amount' | 'status' | 'booked_at' | 'paid' | 'teams' | 'name'>('date');
+  const [sortAsc, setSortAsc] = useState(false);
   
   const { width } = useWindowDimensions();
   const isWeb = Platform.OS === 'web';
@@ -53,7 +97,7 @@ export default function BookingsScreen() {
     if (user) {
       loadBookings();
     }
-  }, [user]);
+  }, [user, profile]);
 
   const loadBookings = async () => {
     if (!user) return;
@@ -139,6 +183,44 @@ export default function BookingsScreen() {
 
 
 
+  const saveBookingName = async (bookingId: string, name: string) => {
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ booked_for_name: name })
+        .eq('id', bookingId);
+      
+      if (error) throw error;
+      
+      // Update local state to keep everything in sync
+      setBookings(prev => prev.map(b => 
+        b.id === bookingId ? { ...b, booked_for_name: name } : b
+      ));
+    } catch (err: any) {
+      if (Platform.OS === 'web') alert(err.message || 'Failed to save name');
+      else Alert.alert('Error', err.message || 'Failed to save name');
+    }
+  };
+
+  const togglePaymentReceived = async (booking: BookingWithDetails) => {
+    const newValue = !booking.payment_received;
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ payment_received: newValue })
+        .eq('id', booking.id);
+      
+      if (error) throw error;
+      
+      setBookings(prev => prev.map(b => 
+        b.id === booking.id ? { ...b, payment_received: newValue } : b
+      ));
+    } catch (err: any) {
+      if (Platform.OS === 'web') alert(err.message || 'Failed to update payment status');
+      else Alert.alert('Error', err.message || 'Failed to update payment status');
+    }
+  };
+
   /** Compare YYYY-MM-DD only; handles DB values with time / timezone suffix. */
   const bookingDateOnly = (raw: string | null | undefined) =>
     String(raw ?? '')
@@ -198,8 +280,40 @@ export default function BookingsScreen() {
       );
     }
 
+    // Sort
+    result = [...result].sort((a, b) => {
+      let comparison = 0;
+      if (sortKey === 'date') {
+        const dateTimeA = `${a.booking_date}T${a.start_time}`;
+        const dateTimeB = `${b.booking_date}T${b.start_time}`;
+        comparison = dateTimeA > dateTimeB ? 1 : -1;
+      } else if (sortKey === 'ground') {
+        const nameA = (a.ground?.name || '').toLowerCase();
+        const nameB = (b.ground?.name || '').toLowerCase();
+        comparison = nameA > nameB ? 1 : -1;
+      } else if (sortKey === 'amount') {
+        comparison = a.total_amount > b.total_amount ? 1 : -1;
+      } else if (sortKey === 'status') {
+        comparison = a.status > b.status ? 1 : -1;
+      } else if (sortKey === 'booked_at') {
+        comparison = new Date(a.created_at).getTime() > new Date(b.created_at).getTime() ? 1 : -1;
+      } else if (sortKey === 'paid') {
+        comparison = (a.payment_received ? 1 : 0) > (b.payment_received ? 1 : 0) ? 1 : -1;
+      } else if (sortKey === 'teams') {
+        const teamsA = cricketTeamsLabelFromBooking(a.ground.pitch_type, a.notes);
+        const teamsB = cricketTeamsLabelFromBooking(b.ground.pitch_type, b.notes);
+        comparison = teamsA > teamsB ? 1 : -1;
+      } else if (sortKey === 'name') {
+        const nameA = (a.booked_for_name || '').toLowerCase();
+        const nameB = (b.booked_for_name || '').toLowerCase();
+        comparison = nameA > nameB ? 1 : -1;
+      }
+
+      return sortAsc ? comparison : -comparison;
+    });
+
     return result;
-  }, [bookings, activeTab, ownerScope, selectedDate, searchQuery, user?.id, profile?.role]);
+  }, [bookings, activeTab, ownerScope, selectedDate, searchQuery, user?.id, profile?.role, sortAsc, sortKey]);
 
   const visibleBookings = filteredBookings;
 
@@ -318,30 +432,191 @@ export default function BookingsScreen() {
             </View>
           </View>
 
-          <FlatList
-            key={`bookings-grid-${isWideWeb || isExtraWideWeb ? 3 : isMediumWeb ? 2 : 1}`}
-            data={visibleBookings}
-            renderItem={({ item }) => (
-              <View style={[
-                styles.webItem,
-                { maxWidth: (isWideWeb || isExtraWideWeb) ? '32.5%' : isMediumWeb ? '48.5%' : '100%' }
-              ]}>
-                <BookingCard
-                  booking={item}
-                  lightMode={true}
-                  onPress={() => router.push(`/bookings/${item.id}`)}
-                  onCancel={activeTab === 'upcoming' && isCancellable(item) ? () => handleCancelBooking(item) : undefined}
-                  onReview={activeTab === 'past' && (item.status === 'confirmed' || item.status === 'completed') && !reviewedBookingIds.includes(item.id) ? () => {
-                    router.push(`/bookings/${item.id}`);
-                  } : undefined}
-                />
+          {visibleBookings.length > 0 && (
+            <View style={styles.tableHeaderContainer}>
+              <View style={styles.tableHeaderRow}>
+                <TouchableOpacity 
+                  onPress={() => {
+                    if (sortKey === 'booked_at') setSortAsc(!sortAsc);
+                    else { setSortKey('booked_at'); setSortAsc(true); }
+                  }}
+                  style={[styles.tableHeaderCell, styles.colBookedAt, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
+                >
+                  <Text style={styles.tableHeaderCell}>Booked at</Text>
+                  {sortKey === 'booked_at' && (
+                    <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => {
+                    if (sortKey === 'ground') setSortAsc(!sortAsc);
+                    else { setSortKey('ground'); setSortAsc(true); }
+                  }}
+                  style={[styles.tableHeaderCell, styles.colGround, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
+                >
+                  <Text style={styles.tableHeaderCell}>Ground</Text>
+                  {sortKey === 'ground' && (
+                    <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => {
+                    if (sortKey === 'date') setSortAsc(!sortAsc);
+                    else { setSortKey('date'); setSortAsc(true); }
+                  }}
+                  style={[styles.tableHeaderCell, styles.colDateTime, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
+                >
+                  <Text style={styles.tableHeaderCell}>Slot Date & time</Text>
+                  {sortKey === 'date' && (
+                    <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => {
+                    if (sortKey === 'teams') setSortAsc(!sortAsc);
+                    else { setSortKey('teams'); setSortAsc(true); }
+                  }}
+                  style={[styles.tableHeaderCell, styles.colTeams, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
+                >
+                  <Text style={styles.tableHeaderCell}>Teams</Text>
+                  {sortKey === 'teams' && (
+                    <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => {
+                    if (sortKey === 'status') setSortAsc(!sortAsc);
+                    else { setSortKey('status'); setSortAsc(true); }
+                  }}
+                  style={[styles.tableHeaderCell, styles.colStatus, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
+                >
+                  <Text style={styles.tableHeaderCell}>Status</Text>
+                  {sortKey === 'status' && (
+                    <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => {
+                    if (sortKey === 'amount') setSortAsc(!sortAsc);
+                    else { setSortKey('amount'); setSortAsc(true); }
+                  }}
+                  style={[styles.tableHeaderCell, styles.colAmount, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
+                >
+                  <Text style={styles.tableHeaderCell}>Amount</Text>
+                  {sortKey === 'amount' && (
+                    <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => {
+                    if (sortKey === 'name') setSortAsc(!sortAsc);
+                    else { setSortKey('name'); setSortAsc(true); }
+                  }}
+                  style={[styles.tableHeaderCell, styles.colName, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
+                >
+                  <Text style={styles.tableHeaderCell}>Name</Text>
+                  {sortKey === 'name' && (
+                    <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => {
+                    if (sortKey === 'paid') setSortAsc(!sortAsc);
+                    else { setSortKey('paid'); setSortAsc(true); }
+                  }}
+                  style={[styles.tableHeaderCell, styles.colPaymentReceived, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
+                >
+                  <Text style={styles.tableHeaderCell}>Paid</Text>
+                  {sortKey === 'paid' && (
+                    <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
+                  )}
+                </TouchableOpacity>
               </View>
-            )}
+            </View>
+          )}
+
+          <FlatList
+            data={visibleBookings}
+            renderItem={({ item }) => {
+              return (
+                <TouchableOpacity
+                  onPress={() => router.push(`/bookings/${item.id}`)}
+                  activeOpacity={0.8}
+                  style={styles.tableRow}
+                >
+                  <View style={[styles.tableCell, styles.colBookedAt]}>
+                    <Text style={styles.bookedDateText}>
+                      {new Date(item.created_at).toLocaleDateString()}
+                    </Text>
+                    <Text style={styles.bookedTimeText}>
+                      {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </Text>
+                  </View>
+
+                  <View style={[styles.tableCell, styles.colGround]}>
+                    <Text style={styles.groundName}>{item.ground.name}</Text>
+                    <Text style={styles.groundLocation}>
+                      {item.ground.city}, {item.ground.state}
+                    </Text>
+                  </View>
+
+                  <View style={[styles.tableCell, styles.colDateTime]}>
+                    <Text style={styles.dateText}>{formatDateDDMMYY(item.booking_date)}</Text>
+                    <Text style={styles.timeText}>
+                      {`${normalizeDbTimeToHHMM(item.start_time)} – ${normalizeDbTimeToHHMM(item.end_time)}`}
+                    </Text>
+                  </View>
+
+                  <View style={[styles.tableCell, styles.colTeams]}>
+                    <Text style={styles.teamsText}>
+                      {(cricketTeamsLabelFromBooking(item.ground.pitch_type, item.notes) || '1 Team').toUpperCase()}
+                    </Text>
+                  </View>
+
+                  <View style={[styles.tableCell, styles.colStatus]}>
+                    <TouchableOpacity 
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        if (item.status === 'confirmed') handleCancelBooking(item);
+                      }}
+                      disabled={item.status !== 'confirmed'}
+                    >
+                      <Text style={[
+                        styles.statusBadgeText,
+                        item.status === 'confirmed' ? styles.statusConfirmed : styles.statusCancelled
+                      ]}>
+                        {item.status === 'confirmed' ? (isDateInPast(item.booking_date) ? 'DONE' : 'ACTIVE') : item.status.toUpperCase()}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={[styles.tableCell, styles.colAmount]}>
+                    <Text style={styles.amount}>{formatCurrency(item.total_amount)}</Text>
+                  </View>
+
+                  <View style={[styles.tableCell, styles.colName]}>
+                    <NameInputCell booking={item} onSave={saveBookingName} />
+                  </View>
+
+                  <View style={[styles.tableCell, styles.colPaymentReceived]}>
+                    <TouchableOpacity 
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        togglePaymentReceived(item);
+                      }}
+                      style={styles.paymentToggle}
+                    >
+                      {item.payment_received ? (
+                        <CheckCircle2 size={20} color="#00ea6b" />
+                      ) : (
+                        <Circle size={20} color="#9CA3AF" />
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </TouchableOpacity>
+              );
+            }}
             keyExtractor={item => item.id}
-            numColumns={isWideWeb || isExtraWideWeb ? 3 : isMediumWeb ? 2 : 1}
-            columnWrapperStyle={
-              (isWideWeb || isExtraWideWeb || isMediumWeb) ? styles.webColumnWrapper : undefined
-            }
             style={styles.webFlatList}
             contentContainerStyle={styles.webList}
             showsVerticalScrollIndicator
@@ -955,10 +1230,33 @@ const styles = StyleSheet.create({
   colPayment: {
     width: 90,
   },
-  colBookedFor: {
+  colWho: {
+    flex: 1.5,
+  },
+  whoPrimaryText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  metaInline: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  colName: {
     width: 150,
   },
-  bookedForInput: {
+  colPaymentReceived: {
+    width: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  paymentToggle: {
+    padding: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nameInput: {
     fontSize: 12,
     color: '#111827',
     padding: 6,
@@ -966,6 +1264,16 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     borderRadius: 6,
     backgroundColor: '#F9FAFB',
+    width: '100%',
+  },
+  saveBtn: {
+    padding: 4,
+    marginLeft: 4,
+  },
+  nameInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
   },
   bookedDateText: {
     fontSize: 13,
@@ -1023,6 +1331,75 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     color: '#111827',
+  },
+  paymentBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    textAlign: 'center',
+    width: 'fit-content' as any,
+  },
+  paymentCash: {
+    backgroundColor: '#FEF3C7',
+    color: '#92400E',
+  },
+  paymentOnline: {
+    backgroundColor: '#DBEAFE',
+    color: '#1E40AF',
+  },
+  groundName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  groundLocation: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  bookedDateText: {
+    fontSize: 13,
+    color: '#111827',
+    fontWeight: '600',
+  },
+  bookedTimeText: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 1,
+  },
+  dateText: {
+    fontSize: 13,
+    color: '#111827',
+    fontWeight: '600',
+  },
+  timeText: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  teamsText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  statusBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    textAlign: 'center',
+    width: 'fit-content' as any,
+  },
+  statusConfirmed: {
+    backgroundColor: '#DEF7EC',
+    color: '#03543F',
+  },
+  statusCancelled: {
+    backgroundColor: '#FDE8E8',
+    color: '#9B1C1C',
   },
   paymentBadgeText: {
     fontSize: 10,

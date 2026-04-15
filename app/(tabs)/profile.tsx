@@ -176,7 +176,7 @@ export default function ProfileScreen() {
           <Text style={[styles.ownerNavTitle, { color: isLight ? themeMuted : themeText }]}>Ground owner</Text>
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => router.push('/(owner)/dashboard' as any)}
+            onPress={() => router.push('/(owner)/owner-dashboard' as any)}
           >
             <View style={styles.menuItemLeft}>
               <LayoutDashboard size={20} color={themeAccent} />
@@ -186,7 +186,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => router.push('/(owner)/grounds' as any)}
+            onPress={() => router.push('/(owner)/manage-grounds' as any)}
           >
             <View style={styles.menuItemLeft}>
               <MapPin size={20} color={themeAccent} />
@@ -206,7 +206,7 @@ export default function ProfileScreen() {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => router.push('/(owner)/bookings' as any)}
+            onPress={() => router.push('/(owner)/ground-bookings' as any)}
           >
             <View style={styles.menuItemLeft}>
               <Calendar size={20} color={themeAccent} />

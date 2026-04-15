@@ -128,7 +128,14 @@ export default function CricketMatches() {
           type: m.match_type || 'Limited Overs',
           tournament: 'Open Match',
           status,
-          date: new Date(m.created_at).toLocaleDateString(),
+          date: (() => {
+             const d = new Date(m.created_at);
+             const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+             const day = d.getDate();
+             const month = months[d.getMonth()];
+             const year = d.getFullYear().toString().slice(-2);
+             return `${day}-${month}-${year}`;
+           })(),
           location: m.venue || 'Unknown Grounds',
           team1: m.team_a,
           team2: m.team_b,

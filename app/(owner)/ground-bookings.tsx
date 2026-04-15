@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, Platform, TouchableOpacity, ScrollView, TextInput } from 'react-native';
-import { Calendar, Filter, X } from 'lucide-react-native';
+import { Calendar, Filter, X, Save, CheckCircle2, Circle } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { BookingWithDetails } from '@/types';
@@ -14,6 +14,48 @@ import { normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import { formatCurrency, formatDate, formatDateDDMMYY, getStatusColor, isDateInPast } from '@/utils/helpers';
 
+function NameInputCell({ booking, onSave }: { booking: BookingWithDetails, onSave: (id: string, name: string) => Promise<void> }) {
+  const [localName, setLocalName] = useState(booking.booked_for_name || '');
+  const [saving, setSaving] = useState(false);
+  const hasChanged = localName !== (booking.booked_for_name || '');
+
+  const handleSave = async () => {
+    if (!hasChanged || saving) return;
+    setSaving(true);
+    await onSave(booking.id, localName);
+    setSaving(false);
+  };
+
+  return (
+    <TouchableOpacity 
+      activeOpacity={1} 
+      onPress={(e) => e.stopPropagation()} 
+      style={styles.nameInputRow}
+    >
+      <TextInput
+        style={styles.nameInput}
+        value={localName}
+        onChangeText={setLocalName}
+        placeholder="Enter name..."
+        placeholderTextColor="#9CA3AF"
+        onSubmitEditing={handleSave}
+      />
+      {hasChanged && (
+        <TouchableOpacity 
+          style={styles.saveBtn} 
+          onPress={(e) => {
+            e.stopPropagation();
+            handleSave();
+          }}
+          disabled={saving}
+        >
+          <Save size={16} color={saving ? '#9CA3AF' : '#00ea6b'} />
+        </TouchableOpacity>
+      )}
+    </TouchableOpacity>
+  );
+}
+
 export default function OwnerBookingsScreen() {
   const { user } = useAuth();
   const [bookings, setBookings] = useState<BookingWithDetails[]>([]);
@@ -23,6 +65,8 @@ export default function OwnerBookingsScreen() {
   const [activeTab, setActiveTab] = useState<'all' | 'upcoming' | 'past'>('all');
   const [ownerScope, setOwnerScope] = useState<'all' | 'own' | 'other'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortKey, setSortKey] = useState<'date' | 'ground' | 'amount' | 'status' | 'booked_at' | 'paid' | 'teams' | 'name'>('date');
+  const [sortAsc, setSortAsc] = useState(false);
   const [showDatePickerMobile, setShowDatePickerMobile] = useState(false);
 
   useEffect(() => {
@@ -155,6 +199,35 @@ export default function OwnerBookingsScreen() {
     );
   };
 
+  const saveBookingName = async (bookingId: string, name: string) => {
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ booked_for_name: name })
+        .eq('id', bookingId);
+      if (error) throw error;
+      setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, booked_for_name: name } : b));
+    } catch (err: any) {
+      if (Platform.OS === 'web') alert(err.message || 'Failed to save name');
+      else Alert.alert('Error', err.message || 'Failed to save name');
+    }
+  };
+
+  const togglePaymentReceived = async (booking: BookingWithDetails) => {
+    const newValue = !booking.payment_received;
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ payment_received: newValue })
+        .eq('id', booking.id);
+      if (error) throw error;
+      setBookings(prev => prev.map(b => b.id === booking.id ? { ...b, payment_received: newValue } : b));
+    } catch (err: any) {
+      if (Platform.OS === 'web') alert(err.message || 'Failed to update payment status');
+      else Alert.alert('Error', err.message || 'Failed to update payment status');
+    }
+  };
+
 
 
 
@@ -190,17 +263,50 @@ export default function OwnerBookingsScreen() {
             ? byDate.filter((b) => b.booking_date < todayIso && b.status === 'confirmed')
             : byDate.filter((b) => b.status === 'cancelled');
 
-      if (!searchQuery.trim()) return byStatus;
-
       const q = searchQuery.toLowerCase();
-      return byStatus.filter((b) => {
+      const base = !searchQuery.trim() ? byStatus : byStatus.filter((b) => {
         const gn = (b.ground?.name || '').toLowerCase();
         const city = (b.ground?.city || '').toLowerCase();
         const customer = (b.user?.full_name || '').toLowerCase();
-        return gn.includes(q) || city.includes(q) || customer.includes(q);
+        const bfn = (b.booked_for_name || '').toLowerCase();
+        return gn.includes(q) || city.includes(q) || customer.includes(q) || bfn.includes(q);
       });
+
+      // Sort
+      const sorted = [...base].sort((a, b) => {
+        let comparison = 0;
+        if (sortKey === 'date') {
+          const dateTimeA = `${a.booking_date}T${a.start_time}`;
+          const dateTimeB = `${b.booking_date}T${b.start_time}`;
+          comparison = dateTimeA > dateTimeB ? 1 : -1;
+        } else if (sortKey === 'ground') {
+          const nameA = (a.ground?.name || '').toLowerCase();
+          const nameB = (b.ground?.name || '').toLowerCase();
+          comparison = nameA > nameB ? 1 : -1;
+        } else if (sortKey === 'amount') {
+          comparison = a.total_amount > b.total_amount ? 1 : -1;
+        } else if (sortKey === 'status') {
+          comparison = a.status > b.status ? 1 : -1;
+        } else if (sortKey === 'booked_at') {
+          comparison = new Date(a.created_at).getTime() > new Date(b.created_at).getTime() ? 1 : -1;
+        } else if (sortKey === 'paid') {
+          comparison = (a.payment_received ? 1 : 0) > (b.payment_received ? 1 : 0) ? 1 : -1;
+        } else if (sortKey === 'teams') {
+          const teamsA = cricketTeamsLabelFromBooking(a.ground.pitch_type, a.notes);
+          const teamsB = cricketTeamsLabelFromBooking(b.ground.pitch_type, b.notes);
+          comparison = teamsA > teamsB ? 1 : -1;
+        } else if (sortKey === 'name') {
+          const nameA = (a.booked_for_name || '').toLowerCase();
+          const nameB = (b.booked_for_name || '').toLowerCase();
+          comparison = nameA > nameB ? 1 : -1;
+        }
+
+        return sortAsc ? comparison : -comparison;
+      });
+
+      return sorted;
     },
-    [bookings, selectedDate, activeTab, ownerScope, user?.id, searchQuery],
+    [bookings, activeTab, ownerScope, selectedDate, searchQuery, user?.id, sortAsc, sortKey],
   );
 
   const todayIsoForCounts = useMemo(() => {
@@ -614,15 +720,109 @@ export default function OwnerBookingsScreen() {
       {isWeb && bookings.length > 0 && (
         <View style={styles.tableHeaderContainer}>
           <View style={styles.tableHeaderRow}>
-            <Text style={[styles.tableHeaderCell, styles.colBookedAt]}>Booked at</Text>
-            <Text style={[styles.tableHeaderCell, styles.colGround]}>Ground</Text>
-            <Text style={[styles.tableHeaderCell, styles.colDateTime]}>Slot Date & time</Text>
-            <Text style={[styles.tableHeaderCell, styles.colTeams]}>Teams</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStatus]}>Status</Text>
-            <Text style={[styles.tableHeaderCell, styles.colAmount]}>Amount</Text>
-            <Text style={[styles.tableHeaderCell, styles.colPayment]}>Payment</Text>
-            <Text style={[styles.tableHeaderCell, styles.colWho]}>Who</Text>
+            <TouchableOpacity 
+              onPress={() => {
+                if (sortKey === 'booked_at') setSortAsc(!sortAsc);
+                else { setSortKey('booked_at'); setSortAsc(true); }
+              }}
+              style={[styles.tableHeaderCell, styles.colBookedAt, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
+            >
+              <Text style={styles.tableHeaderCell}>Booked at</Text>
+              {sortKey === 'booked_at' && (
+                <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
+              )}
+            </TouchableOpacity>
 
+            <TouchableOpacity 
+              onPress={() => {
+                if (sortKey === 'ground') setSortAsc(!sortAsc);
+                else { setSortKey('ground'); setSortAsc(true); }
+              }}
+              style={[styles.tableHeaderCell, styles.colGround, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
+            >
+              <Text style={styles.tableHeaderCell}>Ground</Text>
+              {sortKey === 'ground' && (
+                <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => {
+                if (sortKey === 'date') setSortAsc(!sortAsc);
+                else { setSortKey('date'); setSortAsc(true); }
+              }}
+              style={[styles.tableHeaderCell, styles.colDateTime, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
+            >
+              <Text style={styles.tableHeaderCell}>Slot Date & time</Text>
+              {sortKey === 'date' && (
+                <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => {
+                if (sortKey === 'teams') setSortAsc(!sortAsc);
+                else { setSortKey('teams'); setSortAsc(true); }
+              }}
+              style={[styles.tableHeaderCell, styles.colTeams, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
+            >
+              <Text style={styles.tableHeaderCell}>Teams</Text>
+              {sortKey === 'teams' && (
+                <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => {
+                if (sortKey === 'status') setSortAsc(!sortAsc);
+                else { setSortKey('status'); setSortAsc(true); }
+              }}
+              style={[styles.tableHeaderCell, styles.colStatus, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
+            >
+              <Text style={styles.tableHeaderCell}>Status</Text>
+              {sortKey === 'status' && (
+                <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => {
+                if (sortKey === 'amount') setSortAsc(!sortAsc);
+                else { setSortKey('amount'); setSortAsc(true); }
+              }}
+              style={[styles.tableHeaderCell, styles.colAmount, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
+            >
+              <Text style={styles.tableHeaderCell}>Amount</Text>
+              {sortKey === 'amount' && (
+                <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => {
+                if (sortKey === 'name') setSortAsc(!sortAsc);
+                else { setSortKey('name'); setSortAsc(true); }
+              }}
+              style={[styles.tableHeaderCell, styles.colName, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
+            >
+              <Text style={styles.tableHeaderCell}>Name</Text>
+              {sortKey === 'name' && (
+                <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              onPress={() => {
+                if (sortKey === 'paid') setSortAsc(!sortAsc);
+                else { setSortKey('paid'); setSortAsc(true); }
+              }}
+              style={[styles.tableHeaderCell, styles.colPaymentReceived, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
+            >
+              <Text style={styles.tableHeaderCell}>Paid</Text>
+              {sortKey === 'paid' && (
+                <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
+              )}
+            </TouchableOpacity>
           </View>
         </View>
       )}
@@ -732,17 +932,24 @@ export default function OwnerBookingsScreen() {
                   <Text style={styles.amount}>{formatCurrency(item.total_amount)}</Text>
                 </View>
 
-                <View style={[styles.tableCell, styles.colPayment]}>
-                   <Text style={[styles.paymentBadgeText, item.payment_method === 'cash' ? styles.paymentCash : styles.paymentOnline]}>
-                      {item.payment_method === 'cash' ? 'CASH' : 'ONLINE'}
-                   </Text>
+                <View style={[styles.tableCell, styles.colName]}>
+                  <NameInputCell booking={item} onSave={saveBookingName} />
                 </View>
 
-                <View style={[styles.tableCell, styles.colWho]}>
-                  <Text style={styles.whoPrimaryText}>
-                    {whoTitle}
-                  </Text>
-                  <Text style={styles.metaInline}>{meta}</Text>
+                <View style={[styles.tableCell, styles.colPaymentReceived]}>
+                  <TouchableOpacity 
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      togglePaymentReceived(item);
+                    }}
+                    style={styles.paymentToggle}
+                  >
+                    {item.payment_received ? (
+                      <CheckCircle2 size={20} color="#00ea6b" />
+                    ) : (
+                      <Circle size={20} color="#9CA3AF" />
+                    )}
+                  </TouchableOpacity>
                 </View>
               </TouchableOpacity>
             );
@@ -961,6 +1168,38 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#2b2f4b',
+  },
+  colName: {
+    width: 150,
+  },
+  colPaymentReceived: {
+    width: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  paymentToggle: {
+    padding: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nameInput: {
+    fontSize: 12,
+    color: '#111827',
+    padding: 6,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 6,
+    backgroundColor: '#F9FAFB',
+    width: '100%',
+  },
+  saveBtn: {
+    padding: 4,
+    marginLeft: 4,
+  },
+  nameInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
   },
   tabScrollWrap: {
     marginTop: 12,

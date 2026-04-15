@@ -16,7 +16,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import WebLayout from '@/components/web/WebLayout';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
-import { formatCurrency } from '@/utils/helpers';
+import { formatCurrency, formatDateDDMMYYYY } from '@/utils/helpers';
 import { CreditCard, ShieldCheck, Clock, Calendar, MapPin, ChevronLeft, Wallet } from 'lucide-react-native';
 
 export default function CheckoutScreen() {
@@ -457,7 +457,7 @@ export default function CheckoutScreen() {
                 <Calendar size={16} color="#10b981" />
                 <View>
                   <Text style={styles.detailLabel}>Date</Text>
-                  <Text style={styles.detailValue}>{booking.booking_date}</Text>
+                  <Text style={styles.detailValue}>{formatDateDDMMYYYY(booking.booking_date)}</Text>
                 </View>
               </View>
               <View style={styles.detailItem}>
