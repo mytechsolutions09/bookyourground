@@ -372,7 +372,9 @@ export function useCricketScoring() {
       
       await supabase.from('matches').update({ status: 'innings_break' }).eq('id', matchId!);
       setPhase('innings_break');
-      setIsScoring(false);
+      // setPhase handles the UI switch; setIsScoring is component-side state
+      // setIsScoring(false); 
+
     } else {
       // End match result logic
       const inn1 = inningsList[0]!;
@@ -400,7 +402,8 @@ export function useCricketScoring() {
       await pushLiveState(inn, matchConfig, matchId!, resultText);
       setResult(resultText);
       setPhase('completed');
-      setIsScoring(false);
+      // setIsScoring(false); 
+
     }
   }, [inn, currentIdx, inningsList, matchId, matchConfig, pushLiveState]);
 

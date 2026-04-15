@@ -9,10 +9,15 @@ import {
   Alert,
   TouchableOpacity,
   useWindowDimensions,
+  TextInput,
+  Modal,
+  FlatList,
+  Pressable,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { Image } from 'react-native';
 import WebLayout from '@/components/web/WebLayout';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
@@ -31,6 +36,11 @@ export default function CheckoutScreen() {
   const [processingCash, setProcessingCash] = useState(false);
   const [activeGateways, setActiveGateways] = useState<any[]>([]);
   const [selectedGateway, setSelectedGateway] = useState<string | null>(null);
+  const [couponCode, setCouponCode] = useState('');
+  const [isCouponsModalVisible, setIsCouponsModalVisible] = useState(false);
+  const [availableCoupons, setAvailableCoupons] = useState<any[]>([]);
+  const [fetchingCoupons, setFetchingCoupons] = useState(false);
+  const [applyingCoupon, setApplyingCoupon] = useState(false);
 
   useEffect(() => {
     fetchActiveGateways();
@@ -121,7 +131,7 @@ export default function CheckoutScreen() {
       
       const { data: ground, error: groundError } = await supabase
         .from('grounds')
-        .select('*')
+        .select('*, ground_images(*)')
         .eq('id', groundId)
         .single();
         
@@ -178,7 +188,7 @@ export default function CheckoutScreen() {
       setLoading(true);
       const { data, error } = await supabase
         .from('bookings')
-        .select('*, grounds(*)')
+        .select('*, grounds(*, ground_images(*))')
         .eq('id', id)
         .single();
 
@@ -189,6 +199,70 @@ export default function CheckoutScreen() {
       Alert.alert('Error', 'Could not load booking details.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAvailableCoupons = async () => {
+    try {
+      setFetchingCoupons(true);
+      const { data, error } = await supabase
+        .from('coupons')
+        .select('*')
+        .eq('is_active', true)
+        .or(`expiry_date.is.null,expiry_date.gt.${new Date().toISOString()}`);
+      
+      if (error) throw error;
+      setAvailableCoupons(data || []);
+    } catch (e) {
+      console.error('Error fetching coupons:', e);
+    } finally {
+      setFetchingCoupons(false);
+    }
+  };
+
+  const applyCouponCode = async (codeToApply: string) => {
+    if (!codeToApply || !booking) return;
+    
+    try {
+      setApplyingCoupon(true);
+      const { data, error } = await supabase.rpc('validate_coupon', {
+        p_code: codeToApply,
+        p_user_id: user?.id,
+        p_booking_amount: booking.total_amount + (booking.discount_amount || 0)
+      });
+
+      if (error) throw error;
+
+      if (data.valid) {
+        let discount = 0;
+        const baseAmount = booking.total_amount + (booking.discount_amount || 0);
+
+        if (data.discount_type === 'percentage') {
+          discount = (baseAmount * data.discount_value) / 100;
+          if (data.max_discount) {
+            discount = Math.min(discount, data.max_discount);
+          }
+        } else {
+          discount = data.discount_value;
+        }
+
+        setBooking((prev: any) => ({
+          ...prev,
+          coupon_id: data.id,
+          discount_amount: discount,
+          total_amount: baseAmount - discount
+        }));
+        setCouponCode(data.code);
+        setIsCouponsModalVisible(false);
+        Alert.alert('Success', `Coupon '${data.code}' applied! You saved ${formatCurrency(discount)}`);
+      } else {
+        Alert.alert('Invalid Coupon', data.message);
+      }
+    } catch (e: any) {
+      console.error('Error applying coupon:', e);
+      Alert.alert('Error', e.message || 'Could not apply coupon');
+    } finally {
+      setApplyingCoupon(false);
     }
   };
 
@@ -426,128 +500,202 @@ export default function CheckoutScreen() {
   const isGroundOwnerOrAdmin = profile?.role === 'super_admin' || 
     (profile?.role === 'ground_owner' && (booking?.grounds?.owner_id === user?.id || booking?.ground_id === user?.id));
 
+  const dynamicStyles = {
+    content: {
+      padding: Platform.OS === 'web' ? (width > 768 ? 24 : 16) : 12,
+    },
+    layout: {
+      gap: isDesktop ? (width > 1024 ? 32 : 16) : 12,
+    },
+    productImg: {
+      height: Platform.OS === 'web' && width > 768 ? 220 : 160,
+    },
+    productPlaceholder: {
+      height: Platform.OS === 'web' && width > 768 ? 140 : 120,
+    }
+  };
+
   const content = (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.container} contentContainerStyle={[styles.content, dynamicStyles.content]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => {
           if (router.canGoBack()) router.back();
           else router.replace('/(tabs)');
         }} style={styles.backButton}>
-          <ChevronLeft size={20} color="#1F2937" />
+          <ChevronLeft size={20} color="#FFF" />
         </TouchableOpacity>
         <Text style={styles.title}>Checkout</Text>
       </View>
 
-      <View style={[styles.layout, !isDesktop && styles.layoutMobile]}>
-        {/* Left Column: Summary */}
+      <View style={[styles.layout, !isDesktop && styles.layoutMobile, dynamicStyles.layout]}>
+        {/* Left Column: Items (Booking Details) */}
         <View style={styles.mainColumn}>
-          <Card style={styles.orderCard}>
-            <Text style={styles.sectionTitle}>Booking Summary</Text>
+          <Card style={styles.itemProductCard}>
+            {booking.grounds.ground_images?.[0]?.image_url ? (
+              <Image 
+                source={{ uri: booking.grounds.ground_images[0].image_url }} 
+                style={[styles.productImg, dynamicStyles.productImg]}
+              />
+            ) : (
+              <View style={[styles.productPlaceholder, dynamicStyles.productPlaceholder]}>
+                 <Calendar size={48} color="#01b854" />
+              </View>
+            )}
             
-            <View style={styles.groundInfo}>
-              <Text style={styles.groundName}>{booking.grounds.name}</Text>
-              <View style={styles.locationRow}>
-                <MapPin size={12} color="#6B7280" />
-                <Text style={styles.locationText}>{booking.grounds.city}, {booking.grounds.state}</Text>
+            <View style={styles.productInfo}>
+              <View style={styles.productHeaderRow}>
+                <View>
+                  <Text style={styles.itemTitle}>{booking.grounds.name}</Text>
+                  <View style={styles.itemMetaRow}>
+                    <MapPin size={14} color="#6B7280" />
+                    <Text style={styles.itemMetaText}>{booking.grounds.city}, {booking.grounds.state}</Text>
+                  </View>
+                </View>
+                <Text style={styles.productPrice}>{formatCurrency(booking.total_amount + (booking.discount_amount || 0))}</Text>
               </View>
-            </View>
 
-            <View style={styles.detailsGrid}>
-              <View style={styles.detailItem}>
-                <Calendar size={16} color="#10b981" />
-                <View>
-                  <Text style={styles.detailLabel}>Date</Text>
-                  <Text style={styles.detailValue}>{formatDateDDMMYYYY(booking.booking_date)}</Text>
-                </View>
+              <View style={styles.itemDetailsFooter}>
+                 <View style={styles.footerDetail}>
+                    <Calendar size={16} color="#01b854" />
+                    <View>
+                       <Text style={styles.detailTinyLabel}>MATCH DATE</Text>
+                       <Text style={styles.footerDetailText}>{formatDateDDMMYYYY(booking.booking_date)}</Text>
+                    </View>
+                 </View>
+                 <View style={styles.footerDetail}>
+                    <Clock size={16} color="#01b854" />
+                    <View>
+                       <Text style={styles.detailTinyLabel}>SLOT TIME</Text>
+                       <Text style={styles.footerDetailText}>{booking.start_time.substring(0, 5)} - {booking.end_time.substring(0, 5)}</Text>
+                    </View>
+                 </View>
               </View>
-              <View style={styles.detailItem}>
-                <Clock size={16} color="#10b981" />
-                <View>
-                  <Text style={styles.detailLabel}>Time</Text>
-                  <Text style={styles.detailValue}>{booking.start_time.substring(0, 5)} - {booking.end_time.substring(0, 5)}</Text>
-                </View>
+
+              <View style={styles.productActionsRow}>
+                <TouchableOpacity style={styles.actionBtn}>
+                  <Text style={styles.actionBtnText}>Remove from Checkout</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionBtn}>
+                  <Text style={styles.actionBtnText}>Save Match details</Text>
+                </TouchableOpacity>
               </View>
             </View>
           </Card>
 
           <View style={styles.securityInfo}>
-            <ShieldCheck size={16} color="#059669" />
+            <ShieldCheck size={16} color="#01b854" />
             <Text style={styles.securityText}>
-              Encrypted secure checkout.
+               Purchase protected by Book Your Ground Security
             </Text>
           </View>
         </View>
 
-        {/* Right Column: Payment */}
+        {/* Right Column: Order Summary */}
         <View style={styles.sideColumn}>
-          <Card style={styles.paymentCard}>
-            <Text style={styles.paymentTitle}>Payment Method</Text>
+          <Card style={styles.summaryCard}>
+            <Text style={styles.summaryTitle}>Order Summary</Text>
             
-            <View style={styles.methodSelector}>
-              {activeGateways.filter(g => {
-                if (g.name === 'cash') return isGroundOwnerOrAdmin;
-                return true;
-              }).map(g => (
-                <TouchableOpacity 
-                  key={g.name}
-                  onPress={() => setSelectedGateway(g.name)}
-                  style={[
-                    styles.methodOption,
-                    selectedGateway === g.name && styles.methodOptionActive
-                  ]}
-                >
-                  <View style={[styles.methodCircle, selectedGateway === g.name && styles.methodCircleActive]}>
-                    {g.name === 'cash' ? (
-                      <Wallet size={14} color={selectedGateway === g.name ? '#FFF' : '#6B7280'} />
-                    ) : (
-                      <CreditCard size={14} color={selectedGateway === g.name ? '#FFF' : '#6B7280'} />
-                    )}
-                  </View>
-                  <Text style={[styles.methodLabel, selectedGateway === g.name && styles.methodLabelActive]}>
-                    {g.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            <View style={styles.couponSection}>
+               <TextInput 
+                 style={styles.couponInput}
+                 placeholder="Enter Coupon Code"
+                 placeholderTextColor="#9CA3AF"
+                 value={couponCode}
+                 onChangeText={setCouponCode}
+                 autoCapitalize="characters"
+               />
+               <TouchableOpacity 
+                 style={styles.applyBtn}
+                 onPress={() => applyCouponCode(couponCode)}
+                 disabled={applyingCoupon}
+               >
+                  <Text style={styles.applyBtnText}>{applyingCoupon ? '...' : 'Apply'}</Text>
+               </TouchableOpacity>
             </View>
 
-            <View style={styles.priceContainer}>
-              <View style={styles.priceRow}>
-                <Text style={styles.priceLabel}>Subtotal</Text>
-                <Text style={styles.priceValue}>{formatCurrency(booking.total_amount + (booking.discount_amount || 0))}</Text>
+            <TouchableOpacity 
+              style={styles.offersBtn}
+              onPress={() => {
+                setIsCouponsModalVisible(true);
+                fetchAvailableCoupons();
+              }}
+            >
+               <View style={styles.offersLeft}>
+                  <ShieldCheck size={16} color="#01b854" />
+                  <Text style={styles.offersText}>View Available Offer</Text>
+               </View>
+               <ChevronLeft size={16} color="#9CA3AF" style={{ transform: [{ rotate: '180deg' }] }} />
+            </TouchableOpacity>
+
+            <View style={styles.breakdown}>
+              <View style={styles.breakdownRow}>
+                <Text style={styles.breakdownLabel}>Items (1)</Text>
+                <Text style={styles.breakdownValue}>{formatCurrency(booking.total_amount + (booking.discount_amount || 0))}</Text>
               </View>
-              
               {booking.discount_amount > 0 && (
-                <View style={styles.priceRow}>
-                  <Text style={styles.discountLabel}>Coupon Discount</Text>
-                  <Text style={styles.discountValue}>-{formatCurrency(booking.discount_amount)}</Text>
+                <View style={styles.breakdownRow}>
+                  <Text style={styles.breakdownLabel}>Your savings</Text>
+                  <Text style={styles.breakdownDiscountValue}>-{formatCurrency(booking.discount_amount)}</Text>
                 </View>
               )}
-
-              <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>Total</Text>
-                <Text style={styles.totalValue}>{formatCurrency(booking.total_amount)}</Text>
+              <View style={styles.breakdownRow}>
+                <Text style={styles.breakdownLabel}>Estimated sales tax</Text>
+                <Text style={styles.breakdownValue}>-</Text>
               </View>
+            </View>
+
+            <View style={styles.subtotalRow}>
+              <Text style={styles.subtotalLabel}>Sub Total :</Text>
+              <Text style={styles.subtotalValue}>{formatCurrency(booking.total_amount)}</Text>
+            </View>
+
+            <View style={styles.paymentMethodSection}>
+               <Text style={styles.paymentMethodTitle}>Payment Method</Text>
+               <View style={styles.methodSelector}>
+                {activeGateways.filter(g => {
+                  if (g.name === 'cash') return isGroundOwnerOrAdmin;
+                  return true;
+                }).map(g => (
+                  <TouchableOpacity 
+                    key={g.name}
+                    onPress={() => setSelectedGateway(g.name)}
+                    style={[
+                      styles.methodOption,
+                      selectedGateway === g.name && styles.methodOptionActive
+                    ]}
+                  >
+                    <View style={[styles.methodCircle, selectedGateway === g.name && styles.methodCircleActive]}>
+                      {g.name === 'cash' ? (
+                        <Wallet size={14} color={selectedGateway === g.name ? '#FFF' : '#9CA3AF'} />
+                      ) : (
+                        <CreditCard size={14} color={selectedGateway === g.name ? '#06392e' : '#9CA3AF'} />
+                      )}
+                    </View>
+                    <Text style={[styles.methodLabel, selectedGateway === g.name && styles.methodLabelActive]}>
+                      {g.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+               </View>
             </View>
 
             {selectedGateway === 'razorpay' || selectedGateway === 'payu' ? (
               <Button
-                title={processing ? 'Processing...' : `Pay ${formatCurrency(booking.total_amount)}`}
+                title={processing ? 'Processing...' : `Check Out`}
                 onPress={handlePayment}
                 disabled={processing}
                 loading={processing}
                 fullWidth
                 style={styles.payButton}
-                icon={CreditCard}
               />
             ) : selectedGateway === 'cash' ? (
               <Button
-                title={processingCash ? 'Confirming...' : 'Confirm Booking'}
+                title={processingCash ? 'Confirming...' : 'Confirm Order'}
                 onPress={handleCashPayment}
                 disabled={processingCash}
                 loading={processingCash}
                 fullWidth
                 style={styles.payButton}
-                icon={Wallet}
               />
             ) : (
               <Button
@@ -559,9 +707,78 @@ export default function CheckoutScreen() {
               />
             )}
 
+            <View style={styles.trustFooter}>
+               <View style={styles.trustBanner}>
+                  <ShieldCheck size={14} color="#06392e" />
+                  <Text style={styles.trustFooterText}>Purchase protected by Book Your Ground Guarantee</Text>
+               </View>
+            </View>
+
           </Card>
         </View>
       </View>
+
+      <Modal
+        visible={isCouponsModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setIsCouponsModalVisible(false)}
+      >
+        <Pressable 
+          style={styles.modalOverlay} 
+          onPress={() => setIsCouponsModalVisible(false)}
+        >
+          <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Available Offers</Text>
+              <TouchableOpacity onPress={() => setIsCouponsModalVisible(false)}>
+                <Text style={styles.closeBtnText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+
+            {fetchingCoupons ? (
+              <ActivityIndicator size="large" color="#01b854" style={{ padding: 40 }} />
+            ) : availableCoupons.length === 0 ? (
+              <View style={styles.emptyCoupons}>
+                <Text style={styles.emptyText}>No offers available right now.</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={availableCoupons}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={styles.couponsList}
+                renderItem={({ item }) => (
+                  <TouchableOpacity 
+                    style={styles.couponItem}
+                    onPress={() => applyCouponCode(item.code)}
+                  >
+                    <View style={styles.couponLeft}>
+                      <Text style={styles.couponCodeText}>{item.code}</Text>
+                      <Text style={styles.couponDescText}>
+                        {item.discount_type === 'percentage' 
+                          ? `${item.discount_value}% OFF` 
+                          : `${formatCurrency(item.discount_value)} FLAT OFF`}
+                        {item.max_discount && ` up to ${formatCurrency(item.max_discount)}`}
+                      </Text>
+                      {item.min_booking_amount > 0 && (
+                        <Text style={styles.couponMinText}>
+                          Min booking: {formatCurrency(item.min_booking_amount)}
+                        </Text>
+                      )}
+                    </View>
+                    <TouchableOpacity 
+                      style={styles.applySmallBtn}
+                      onPress={() => applyCouponCode(item.code)}
+                    >
+                      <Text style={styles.applySmallText}>APPLY</Text>
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                )}
+              />
+            )}
+          </View>
+        </Pressable>
+      </Modal>
     </ScrollView>
   );
 
@@ -575,11 +792,10 @@ export default function CheckoutScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#06392e',
   },
   content: {
-    padding: Platform.OS === 'web' ? 24 : 16,
-    maxWidth: 900,
+    maxWidth: 1100,
     alignSelf: 'center',
     width: '100%',
   },
@@ -587,211 +803,457 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#06392e',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
     marginTop: Platform.OS === 'web' ? 0 : 40,
   },
   backButton: {
     padding: 8,
     marginRight: 12,
-    borderRadius: 10,
-    backgroundColor: '#FFF',
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   title: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '800',
-    color: '#111827',
+    color: '#FFF',
   },
   layout: {
     flexDirection: 'row',
-    gap: 16,
   },
   layoutMobile: {
     flexDirection: 'column',
   },
   mainColumn: {
-    flex: 1.5,
+    flex: 1.8,
   },
   sideColumn: {
     flex: 1,
-    minWidth: Platform.OS === 'web' ? 320 : '100%',
+    minWidth: Platform.OS === 'web' ? 360 : '100%',
   },
-  orderCard: {
-    padding: 20,
-    marginBottom: 12,
-    borderRadius: 16,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#374151',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  itemCard: {
+    padding: 24,
     marginBottom: 16,
+    borderRadius: 20,
+    backgroundColor: '#FFF',
+    borderWidth: 0,
   },
-  groundInfo: {
-    marginBottom: 16,
-  },
-  groundName: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 2,
-  },
-  locationText: {
-    fontSize: 12,
-    color: '#6B7280',
-  },
-  detailsGrid: {
+  itemRow: {
     flexDirection: 'row',
     gap: 20,
-    paddingTop: 16,
+  },
+  itemProductCard: {
+    padding: 0,
+    marginBottom: 16,
+    borderRadius: 24,
+    backgroundColor: '#FFF',
+    borderWidth: 0,
+    overflow: 'hidden',
+  },
+  productImg: {
+    width: '100%',
+    resizeMode: 'cover',
+  },
+  productPlaceholder: {
+    width: '100%',
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  productInfo: {
+    padding: 16,
+  },
+  productHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  productPrice: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#06392e',
+  },
+  detailTinyLabel: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    fontWeight: '700',
+    marginBottom: 0,
+  },
+  productActionsRow: {
+    flexDirection: 'row',
+    gap: 16,
+    marginTop: 16,
+    paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
   },
-  detailItem: {
+  itemInfo: {
+    flex: 1,
+  },
+  itemTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  itemMetaRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 12,
+  },
+  itemMetaText: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  itemTags: {
+    flexDirection: 'row',
     gap: 8,
   },
-  detailLabel: {
-    fontSize: 10,
-    color: '#6B7280',
-    textTransform: 'uppercase',
+  itemTag: {
+    fontSize: 11,
+    color: '#01b854',
+    fontWeight: '600',
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
-  detailValue: {
+  itemPriceCol: {
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+  },
+  itemPrice: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  itemActions: {
+    flexDirection: 'row',
+    gap: 16,
+    marginTop: 12,
+  },
+  actionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  actionBtnText: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '600',
+  },
+  itemPolicyRow: {
+    gap: 4,
+    marginTop: 8,
+  },
+  policyItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  policyText: {
+    fontSize: 12,
+    color: '#10b981',
+    fontWeight: '500',
+  },
+  itemDetailsFooter: {
+    flexDirection: 'row',
+    gap: 24,
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  footerDetail: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  footerDetailText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#111827',
+    color: '#374151',
   },
   securityInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: '#ECFDF5',
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
   },
   securityText: {
-    fontSize: 12,
-    color: '#059669',
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.7)',
     fontWeight: '500',
   },
-  paymentCard: {
+  summaryCard: {
     padding: 20,
-    borderRadius: 16,
-    borderTopWidth: 3,
-    borderTopColor: '#10b981',
+    borderRadius: 24,
+    backgroundColor: '#FFF',
+    borderWidth: 0,
   },
-  paymentTitle: {
-    fontSize: 16,
+  summaryTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 12,
+  },
+  couponSection: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 10,
+  },
+  couponInput: {
+    flex: 1,
+    height: 38,
+    borderRadius: 19,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    paddingHorizontal: 16,
+    fontSize: 12,
+    color: '#111827',
+    backgroundColor: '#FFF',
+  },
+  applyBtn: {
+    height: 32,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#013a30',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+  },
+  applyBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#013a30',
+  },
+  offersBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    marginBottom: 12,
+  },
+  offersLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  offersText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  breakdown: {
+    gap: 8,
+    marginBottom: 12,
+  },
+  breakdownRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  breakdownLabel: {
+    fontSize: 12,
+    color: '#4B5563',
+    fontWeight: '500',
+  },
+  breakdownValue: {
+    fontSize: 12,
+    color: '#111827',
+    fontWeight: '800',
+  },
+  breakdownDiscountLabel: {
+    fontSize: 12,
+    color: '#01b854',
+    fontWeight: '600',
+  },
+  breakdownDiscountValue: {
+    fontSize: 12,
+    color: '#01b854',
+    fontWeight: '800',
+  },
+  subtotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  subtotalLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  subtotalValue: {
+    fontSize: 18,
     fontWeight: '800',
     color: '#111827',
-    marginBottom: 16,
+  },
+  paymentMethodSection: {
+    marginBottom: 12,
+  },
+  paymentMethodTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#374151',
+    marginBottom: 6,
   },
   methodSelector: {
-    gap: 8,
-    marginBottom: 20,
+    gap: 6,
   },
   methodOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    padding: 12,
+    gap: 8,
+    padding: 8,
     borderRadius: 12,
     borderWidth: 1.5,
     borderColor: '#F3F4F6',
     backgroundColor: '#FFFFFF',
   },
   methodOptionActive: {
-    borderColor: '#10b981',
+    borderColor: '#01b854',
     backgroundColor: '#ECFDF5',
   },
   methodCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 6,
     backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
   },
   methodCircleActive: {
-    backgroundColor: '#10b981',
+    backgroundColor: '#01b854',
   },
   methodLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: '#4B5563',
   },
   methodLabelActive: {
     color: '#065F46',
   },
-  priceContainer: {
-    marginBottom: 20,
-    backgroundColor: '#F9FAFB',
+  payButton: {
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#01b854',
+  },
+  trustFooter: {
+    marginTop: 16,
+  },
+  trustBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
     padding: 12,
     borderRadius: 12,
+    backgroundColor: '#F9FAFB',
   },
-  priceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  priceLabel: {
-    fontSize: 13,
+  trustFooterText: {
+    fontSize: 11,
     color: '#6B7280',
+    textAlign: 'center',
+    fontWeight: '500',
   },
-  priceValue: {
-    fontSize: 13,
-    color: '#111827',
-    fontWeight: '600',
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
   },
-  discountLabel: {
-    fontSize: 13,
-    color: '#10b981',
+  modalContent: {
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    minHeight: '40%',
+    maxHeight: '80%',
+    padding: 24,
   },
-  discountValue: {
-    fontSize: 13,
-    color: '#10b981',
-    fontWeight: '600',
-  },
-  totalRow: {
+  modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    marginBottom: 20,
   },
-  totalLabel: {
-    fontSize: 15,
+  modalTitle: {
+    fontSize: 20,
     fontWeight: '800',
     color: '#111827',
   },
-  totalValue: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#10b981',
+  closeBtnText: {
+    fontSize: 14,
+    color: '#01b854',
+    fontWeight: '700',
   },
-  payButton: {
-    height: 50,
-    borderRadius: 12,
+  couponsList: {
+    gap: 16,
+    paddingBottom: 20,
   },
-  cashButton: {
-    marginTop: 10,
-    height: 50,
+  couponItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 20,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1.5,
+    borderColor: '#F3F4F6',
+    borderStyle: 'dashed',
+  },
+  couponLeft: {
+    flex: 1,
+  },
+  couponCodeText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#06392e',
+    marginBottom: 4,
+  },
+  couponDescText: {
+    fontSize: 13,
+    color: '#34d399',
+    fontWeight: '700',
+  },
+  couponMinText: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    marginTop: 4,
+  },
+  applySmallBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 12,
-    borderColor: '#10b981',
+    backgroundColor: '#01b854',
+  },
+  applySmallText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#FFF',
+  },
+  emptyCoupons: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
   },
 });

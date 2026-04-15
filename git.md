@@ -1,4 +1,28 @@
+# Inning Transitions & Live Commentary Refinement - UI/UX Optimization Update
+
+This update finalizes the transition logic between match innings and significantly enhances the live spectator experience with interactive commentary filtering and dynamic performance tracking.
+
+## Key Changes
+
+### 1. Automated Innings Transition
+- **Seamless Second Innings Setup**: Implemented an automated transition to the "Select Openers/Bowler/Keeper" screen upon the conclusion of the first innings (via all-out or max overs). This provides a professional match-startup experience for the second half of the game.
+- **State Persistence Fixes**: Resolved critical issues where player assignments (specifically the wicket-keeper) were being lost during the innings switch.
+- **Dynamic Team Detection**: Updated the selection logic to prioritize active innings status over legacy toss data, ensuring the correct batting and bowling squads are always presented.
+
+### 2. Interactive Live Commentary & Scorecard
+- **Commentary Filtering**: Added a functional innings selector in the "Comms" tab, allowing users to filter the play-by-play log by **All Innings**, **Innings 1**, or **Innings 2**.
+- **Dynamic Over Summaries**: Replaced hardcoded placeholder values with a real-time summary engine. Every completed over in the commentary feed now accurately displays the total runs and wickets for that specific over.
+- **Persistent Scorecard Visibility**: Refined the scoreboard rendering to ensure the second innings container appears as soon as it is created, providing a consistent multi-innings view "just like the first innings."
+- **Data Integrity**: Improved the `generateScorecard` engine to use intelligent fallback logic for grouping ball-by-ball logs, ensuring 100% data accuracy in the live tables.
+
+### 3. Checkout & UI Responsiveness
+- **Compact Checkout UI**: Optimized the checkout page for mobile web, reducing vertical gaps between sections and refining the layout for better ergonomics on smaller screens.
+- **Coupons & Offers Modal**: Implemented a dedicated modal for browsing available coupons, providing a cleaner and more professional promotional experience.
+
+---
+
 # Mobile Web Navigation & Routing Stability - Optimization Update
+
 
 This update optimizes the platform's mobile web experience with a professional bottom navigation bar for landing pages and resolves critical routing conflicts to ensure a seamless first-load experience.
 
@@ -165,4 +189,4 @@ This update delivers a professional-grade overhaul of the platform's booking man
 - **Utility Expansion**: Extended the core helper library with `formatDateDDMMYYYY` and refined sorting algorithms to handle complex multi-field comparisons.
 
 ---
-*Last Updated and Pushed on April 15, 2026, at 14:32:00+05:30*
+*Last Updated and Pushed on April 15, 2026, at 20:58:00+05:30*

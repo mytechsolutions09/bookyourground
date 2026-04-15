@@ -14,18 +14,17 @@ const srColor = (sr: number) =>
   sr >= 150 ? '#1D9E75' : sr >= 100 ? '#BA7517' : '#E24B4A';
 
 const generateScorecard = (logs: any[], inningsNum: number, inningsList: any[]) => {
-  const inn = inningsList?.find(i => i.innings_number === inningsNum);
+  const innSteps = inningsList?.sort((a,b) => (a.innings_number || 0) - (b.innings_number || 0)) || [];
+  const inn = innSteps.find(i => i.innings_number === inningsNum);
   const innLogs = logs.filter(l => {
-     // If ball specifically belongs to an innings ID
      if (l.innings_id) {
-       const found = inningsList.find(i => i.id === l.innings_id);
+       const found = innSteps.find(i => i.id === l.innings_id);
        if (found) return found.innings_number === inningsNum;
-       // If ID exists but not in list yet, and we are on innings 1, assume it's early data
-       if (inningsNum === 1) return true;
-       return false;
      }
-     // If no innings_id, assume innings 1
-     return inningsNum === 1;
+     
+     // Fallback: Use the order of creation if IDs are missing (shouldn't happen but good for robustness)
+     if (inningsNum === 1 && !l.innings_id) return true;
+     return false;
   });
 
   const batters: Record<string, any> = {};
@@ -243,6 +242,7 @@ export default function LiveScorecard() {
   const [inningsList, setInningsList] = useState<any[]>([]);
   const [expandedInnings, setExpandedInnings] = useState<Record<number, boolean>>({ 1: true, 2: true });
   const [isUploading, setIsUploading] = useState(false);
+  const [commsInningsFilter, setCommsInningsFilter] = useState<'all' | 1 | 2>('all');
 
   const handlePickImage = async () => {
     if (matchImages.length >= 4) {
@@ -367,10 +367,13 @@ export default function LiveScorecard() {
 
   const renderInningsScorecard = (innNum: number) => {
     const sc = generateScorecard(ballLogs, innNum, inningsList);
-    if (!sc.batters.length && !sc.bowlers.length) return null;
+    const innObj = inningsList?.find(i => i.innings_number === innNum);
+    
+    // Only return null if the innings hasn't even been created yet
+    if (!innObj && !sc.batters.length) return null;
     
     // Determine batting team
-    const isTeamA = sc.inn ? (sc.inn.batting_team === match.team_a) : (innNum === 1);
+    const isTeamA = innObj ? (innObj.batting_team === match.team_a) : (innNum === 1);
     const battingSquad = isTeamA ? squadA : squadB;
     const teamName = sc.inn?.batting_team || (isTeamA ? match.team_a : match.team_b);
     const bowlingName = sc.inn?.bowling_team || (isTeamA ? match.team_b : match.team_a);
@@ -717,10 +720,23 @@ export default function LiveScorecard() {
           <View style={{ flex: 1, backgroundColor: '#F6F4F0', padding: 12 }}>
              {/* Filter Bar */}
              <View style={[styles.commsFilterBar, { backgroundColor: 'transparent', padding: 0, borderBottomWidth: 0, marginBottom: 12 }]}>
-                <View style={[styles.commsFilterBtn, { flex: 1 }]}>
-                   <Text style={styles.commsFilterText}>{live.batting_team}</Text>
+                <TouchableOpacity 
+                   style={[styles.commsFilterBtn, { flex: 1 }]}
+                   onPress={() => {
+                      setCommsInningsFilter(prev => {
+                         if (prev === 'all') return 1;
+                         if (prev === 1 && inningsList.length > 1) return 2;
+                         return 'all';
+                      });
+                   }}
+                >
+                   <Text style={styles.commsFilterText}>
+                      {commsInningsFilter === 'all' ? 'All Innings' : (
+                         inningsList.find(i => i.innings_number === commsInningsFilter)?.batting_team || `Innings ${commsInningsFilter}`
+                      )}
+                   </Text>
                    <ChevronDown size={16} color="#4B5563" />
-                </View>
+                </TouchableOpacity>
                 <View style={[styles.commsFilterBtn, { flex: 1, marginLeft: 10 }]}>
                    <Text style={styles.commsFilterText}>Full Commentary</Text>
                    <ChevronDown size={16} color="#4B5563" />
@@ -729,7 +745,22 @@ export default function LiveScorecard() {
 
              <View style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB' }}>
                <ScrollView style={{ flex: 1 }}>
-                  {ballLogs.map((ball, idx) => {
+
+                  {ballLogs
+                    .filter(ball => {
+                       if (commsInningsFilter === 'all') return true;
+                       const inn = inningsList.find(i => i.innings_number === commsInningsFilter);
+                       return ball.innings_id === inn?.id;
+                    })
+                    .map((ball, idx, arr) => {
+                    const nextBall = arr[idx+1];
+                    const isOverEnd = nextBall && nextBall.over_number !== ball.over_number;
+                    
+                    // Simple over totals (runs/wkts)
+                    const overBalls = arr.filter(b => b.over_number === ball.over_number && b.innings_id === ball.innings_id);
+                    const overRuns = overBalls.reduce((acc, b) => acc + (b.runs || 0) + (b.extras || 0), 0);
+                    const overWks = overBalls.filter(b => b.is_wicket).length;
+
                     return (
                       <View key={ball.id}>
                          <View style={styles.commsBallRow}>
@@ -740,7 +771,7 @@ export default function LiveScorecard() {
                                   ball.is_wicket && styles.bgWicket,
                                   (ball.runs === 4 || ball.runs === 6) && styles.bgBoundary,
                                   ball.extra_type && styles.bgExtra
-                               ]}>
+                                ]}>
                                   <Text style={[
                                      styles.commsResultText,
                                      (ball.is_wicket || ball.runs === 4 || ball.runs === 6 || ball.extra_type) && { color: '#FFFFFF' }
@@ -760,16 +791,21 @@ export default function LiveScorecard() {
                          </View>
                          
                          {/* Over Summary */}
-                         {ball.ball_number === 6 && (
+                         {isOverEnd && (
                            <View style={styles.overSummaryBlock}>
-                              <View style={styles.overBadge}><Text style={styles.overBadgeText}>OVER {ball.over_number + 1}</Text></View>
-                              <Text style={styles.overSummaryRuns}>8 Runs | 1 Wkt</Text>
-                              <Text style={styles.overSummaryScore}>{live.runs}/{live.wickets}</Text>
+                              <View style={styles.overBadge}><Text style={styles.overBadgeText}>END OF OVER {nextBall.over_number + 1}</Text></View>
+                              <Text style={styles.overSummaryRuns}>{overRuns} Run{overRuns !== 1 ? 's' : ''} | {overWks} Wkt{overWks !== 1 ? 's' : ''}</Text>
                            </View>
                          )}
                       </View>
                     );
                   })}
+
+
+
+
+
+
                   {ballLogs.length === 0 && (
                      <View style={{ padding: 60, alignItems: 'center' }}>
                         <Text style={{ color: '#9CA3AF' }}>Waiting for first ball...</Text>

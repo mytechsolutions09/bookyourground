@@ -3332,10 +3332,9 @@ export default function CricketScreen() {
       // Auto-start second innings
       const timer = setTimeout(async () => {
         await startSecondInnings();
-        setMatchState({ striker: null, nonStriker: null, bowler: null,
-});
+        setMatchState({ striker: null, nonStriker: null, bowler: null, keeper: null });
         setIsSelectingOpeners(true);
-        setIsScoring(false); // Move out of live scoring to selection view
+        // setIsScoring(false); // Removed undefined call // Move out of live scoring to selection view
       }, 500); // Small delay for user to see the all-out/innings-end state
       return () => clearTimeout(timer);
     }
@@ -6083,10 +6082,10 @@ export default function CricketScreen() {
   const renderDismissalConfiguration = () => {
     if (!inn) return null;
     const dismissalTypes = [
-      { id: 'bowled', label: 'Bowled', icon: RotateCcw },
-      { id: 'caught', label: 'Caught', icon: Users2 },
+      { id: 'bowled', label: 'Bowled', icon: Target },
+      { id: 'caught', label: 'Caught', icon: Hand },
       { id: 'lbw', label: 'LBW', icon: ShieldCheck },
-      { id: 'run_out', label: 'Run Out', icon: TrendingUp },
+      { id: 'run_out', label: 'Run Out', icon: Zap },
       { id: 'stumped', label: 'Stumped', icon: MapPin },
       { id: 'hit_wicket', label: 'Hit Wicket', icon: AlertCircle },
       { id: 'retired', label: 'Retired', icon: UserMinus }
@@ -6214,7 +6213,9 @@ export default function CricketScreen() {
   };
 
   const renderOpeningSelection = () => {
-    const battingTeamObj = (tossResult.winner === 'A') === (tossResult.decision === 'bat') ? selectedTeamA : selectedTeamB;
+    const battingTeamObj = (inn?.battingTeam) 
+      ? (inn.battingTeam === selectedTeamA?.name ? selectedTeamA : selectedTeamB)
+      : ((tossResult.winner?.id === selectedTeamA?.id) === (tossResult.decision === 'bat') ? selectedTeamA : selectedTeamB);
     const bowlingTeamObj = battingTeamObj?.id === selectedTeamA?.id ? selectedTeamB : selectedTeamA;
     const battingPlayers = battingTeamObj?.id === selectedTeamA?.id ? playingXiA : playingXiB;
     const bowlingPlayers = bowlingTeamObj?.id === selectedTeamA?.id ? playingXiA : playingXiB;
@@ -6253,10 +6254,10 @@ export default function CricketScreen() {
                 <View style={styles.openerSection}>
                    <View style={styles.openerLabelRow}>
                       <Text style={styles.configLabel}>Striker</Text>
-                      <Text style={styles.playingXiLabel}>{battingTeam?.name} Squad</Text>
+                      <Text style={styles.playingXiLabel}>{battingTeamObj?.name} Squad</Text>
                    </View>
                    {battingPlayers.length < 2 && (
-                     <Text style={styles.warningText}>⚠️ Add at least 2 players to {battingTeam?.name} to select both openers.</Text>
+                     <Text style={styles.warningText}>⚠️ Add at least 2 players to {battingTeamObj?.name} to select both openers.</Text>
                    )}
                    <View style={styles.playerGrid}>
                       {battingPlayers.map(p => (
@@ -6275,7 +6276,7 @@ export default function CricketScreen() {
                 <View style={styles.openerSection}>
                    <View style={styles.openerLabelRow}>
                       <Text style={styles.configLabel}>Non-Striker</Text>
-                      <Text style={[styles.playingXiLabel, { color: '#06392e' }]}>{battingTeam?.name} Squad</Text>
+                      <Text style={[styles.playingXiLabel, { color: '#06392e' }]}>{battingTeamObj?.name} Squad</Text>
                    </View>
                    <View style={styles.playerGrid}>
                       {battingPlayers.map(p => (
@@ -6294,7 +6295,7 @@ export default function CricketScreen() {
                 <View style={styles.openerSection}>
                    <View style={styles.openerLabelRow}>
                       <Text style={styles.configLabel}>Opening Bowler</Text>
-                      <Text style={styles.playingXiLabel}>{bowlingTeam?.name} Squad</Text>
+                      <Text style={styles.playingXiLabel}>{bowlingTeamObj?.name} Squad</Text>
                    </View>
                    <View style={styles.playerGrid}>
                       {bowlingPlayers.map(p => (
@@ -6317,7 +6318,7 @@ export default function CricketScreen() {
                 <View style={styles.openerSection}>
                    <View style={styles.openerLabelRow}>
                       <Text style={styles.configLabel}>Wicket Keeper</Text>
-                      <Text style={styles.playingXiLabel}>{bowlingTeam?.name} Squad</Text>
+                      <Text style={styles.playingXiLabel}>{bowlingTeamObj?.name} Squad</Text>
                    </View>
                    <View style={styles.playerGrid}>
                       {bowlingPlayers.map(p => (
