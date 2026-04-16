@@ -1,13 +1,22 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Platform, View, StyleSheet, ScrollView, useWindowDimensions, Text, TouchableOpacity } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import WebLayout from '@/components/web/WebLayout';
 import LandingBookingForm from '@/components/landing/LandingBookingForm';
 import MobileAppNavbar from '../components/MobileAppNavbar';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
+import { GroundWithImages } from '@/types';
+import GroundCard from '@/components/grounds/GroundCard';
+import { Heart } from 'lucide-react-native';
 
 export default function BookMyGroundPage() {
   const { width } = useWindowDimensions();
-  const { groundId, date, startTime, teamType } = useLocalSearchParams();
+  const { user } = useAuth();
+  const { groundId, date, startTime, teamType, tab } = useLocalSearchParams();
+  const [activeTab, setActiveTab] = useState<'book' | 'favorite'>((tab as any) || 'book');
+  const [favorites, setFavorites] = useState<GroundWithImages[]>([]);
+  const [loadingFavs, setLoadingFavs] = useState(false);
 
   // On small web screens, always render booking under the Grounds tab (with bottom bar).
   useEffect(() => {
@@ -15,6 +24,49 @@ export default function BookMyGroundPage() {
       router.replace('/(tabs)/grounds' as any);
     }
   }, [width]);
+
+  useEffect(() => {
+    if (activeTab === 'favorite' && user?.id) {
+      loadFavorites();
+    }
+  }, [activeTab, user?.id]);
+
+  const loadFavorites = async () => {
+    try {
+      setLoadingFavs(true);
+      const { data, error } = await supabase
+        .from('favorites')
+        .select(`
+          ground:grounds (
+            *,
+            ground_images(*)
+          )
+        `)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      const favoritedGrounds = (data || []).map((f: any) => f.ground).filter(Boolean);
+      setFavorites(favoritedGrounds);
+    } catch (error) {
+      console.error('Error loading favorites:', error);
+    } finally {
+      setLoadingFavs(false);
+    }
+  };
+
+  const toggleFavorite = async (groundId: string) => {
+    if (!user) return;
+    try {
+      await supabase
+        .from('favorites')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('ground_id', groundId);
+      setFavorites(prev => prev.filter(g => g.id !== groundId));
+    } catch (e) {
+      console.error('Error removing favorite:', e);
+    }
+  };
 
   if (Platform.OS === 'web' && width < 900) {
     return null;
@@ -27,6 +79,35 @@ export default function BookMyGroundPage() {
     initialTeamType: (teamType === 'one' ? 'one' : 'both') as 'one' | 'both',
   };
 
+  const renderFavorites = () => (
+    <View style={styles.favoritesContainer}>
+      {favorites.length > 0 ? (
+        <View style={styles.favGrid}>
+          {favorites.map((item) => (
+            <View key={item.id} style={styles.favItem}>
+              <GroundCard
+                ground={item}
+                onPress={() => {
+                  const citySlug = (item.city || 'city').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                  const nameSlug = (item.name || 'ground').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                  router.push(`/ground/${citySlug}/${nameSlug}`);
+                }}
+                isFavorite={true}
+                onToggleFavorite={() => toggleFavorite(item.id)}
+              />
+            </View>
+          ))}
+        </View>
+      ) : (
+        <View style={styles.emptyContainer}>
+          <Heart size={48} color="#D1D5DB" strokeWidth={1.5} style={{ marginBottom: 16 }} />
+          <Text style={styles.emptyTitle}>No Favorites Yet</Text>
+          <Text style={styles.emptyText}>Grounds you heart will appear here.</Text>
+        </View>
+      )}
+    </View>
+  );
+
   if (Platform.OS === 'web') {
     return (
       <WebLayout>
@@ -38,10 +119,11 @@ export default function BookMyGroundPage() {
           <View style={styles.page}>
             <View style={styles.tabContainer}>
               <TouchableOpacity 
-                style={[styles.tab, styles.activeTab]}
+                style={[styles.tab, activeTab === 'book' && styles.activeTab]}
                 activeOpacity={0.8}
+                onPress={() => setActiveTab('book')}
               >
-                <Text style={styles.activeTabText}>Book a Ground</Text>
+                <Text style={[styles.tabText, activeTab === 'book' && styles.activeTabText]}>Book a Ground</Text>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.tab}
@@ -50,13 +132,24 @@ export default function BookMyGroundPage() {
               >
                 <Text style={styles.tabText}>Find an Opponent</Text>
               </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.tab, activeTab === 'favorite' && styles.activeTab]}
+                activeOpacity={0.8}
+                onPress={() => setActiveTab('favorite')}
+              >
+                <Text style={[styles.tabText, activeTab === 'favorite' && styles.activeTabText]}>Favourite</Text>
+              </TouchableOpacity>
             </View>
 
-            <LandingBookingForm
-              fullWidth
-              separateSearchResults
-              {...initialProps}
-            />
+            {activeTab === 'book' ? (
+              <LandingBookingForm
+                fullWidth
+                separateSearchResults
+                {...initialProps}
+              />
+            ) : (
+              renderFavorites()
+            )}
           </View>
         </ScrollView>
       </WebLayout>
@@ -89,6 +182,10 @@ const styles = StyleSheet.create({
   page: {
     flex: 1,
     paddingTop: Platform.OS === 'web' ? 96 : 0,
+    maxWidth: 1400,
+    width: '100%',
+    alignSelf: 'center',
+    paddingHorizontal: 24,
   },
   scroll: {
     flex: 1,
@@ -99,31 +196,70 @@ const styles = StyleSheet.create({
   tabContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 12,
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.04)',
+    borderRadius: 999,
+    padding: 6,
     marginBottom: 32,
-    paddingTop: 8,
+    alignSelf: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.02)',
   },
   tab: {
     paddingHorizontal: 28,
     paddingVertical: 12,
-    borderRadius: 99,
-    backgroundColor: '#F3F4F6',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderRadius: 999,
   },
   activeTab: {
-    backgroundColor: '#06392e',
-    borderColor: '#06392e',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   tabText: {
-    color: '#6B7280',
+    color: '#334155',
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '500',
+    fontFamily: 'Inter',
   },
   activeTabText: {
     color: '#01b854',
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '600',
+    fontFamily: 'Inter',
+  },
+  favoritesContainer: {
+    flex: 1,
+    width: '100%',
+  },
+  favGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 20,
+    paddingBottom: 40,
+  },
+  favItem: {
+    width: Platform.OS === 'web' ? 'calc(33.333% - 14px)' : '100%',
+    minWidth: 300,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 100,
+  },
+  emptyTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 8,
+    fontFamily: 'Inter',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+    fontFamily: 'Inter',
   },
 });
-

@@ -208,14 +208,16 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   tabActive: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: 'transparent',
   },
   tabText: {
+    fontFamily: 'Inter',
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#64748B',
   },
   tabTextActive: {
+    fontWeight: '600',
     color: '#01b854',
   },
   plusIconWrapper: {

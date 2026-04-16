@@ -563,8 +563,9 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   sectionTitle: {
+    fontFamily: 'Inter',
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '600',
     color: IS_WEB ? '#111827' : '#FFFFFF',
     marginBottom: 6,
   },
@@ -585,13 +586,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   label: {
+    fontFamily: 'Inter',
     fontSize: 13,
-    fontWeight: '300',
+    fontWeight: '500',
     color: IS_WEB ? '#4B5563' : '#9ca3af',
-    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
     marginBottom: 4,
   },
   input: {
+    fontFamily: 'Inter',
     borderWidth: 1,
     borderColor: IS_WEB ? '#D1D5DB' : 'rgba(0,234,107,0.2)',
     borderRadius: 8,
@@ -599,9 +601,8 @@ const styles = StyleSheet.create({
     paddingVertical: Platform.OS === 'web' ? 8 : 10,
     backgroundColor: IS_WEB ? '#FFFFFF' : '#043529',
     fontSize: 14,
-    fontWeight: '300',
+    fontWeight: '400',
     color: IS_WEB ? '#000' : '#FFF',
-    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
   },
   multilineInput: {
     minHeight: 72,
@@ -641,13 +642,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.1)',
   },
   tabText: {
+    fontFamily: 'Inter',
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#64748B',
-    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
   },
   activeTabText: {
     color: '#01b854',
+    fontWeight: '600',
   },
   tabContentGap: {
     gap: 16,

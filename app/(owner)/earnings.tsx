@@ -261,8 +261,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   title: {
+    fontFamily: 'Inter',
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: '600',
     color: IS_WEB ? '#111827' : '#FFFFFF',
     marginBottom: 8,
   },
@@ -308,8 +309,9 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   cardValue: {
+    fontFamily: 'Inter',
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: '600',
     color: IS_WEB ? '#111827' : '#00ea6b',
   },
   transactionsSection: {
@@ -322,8 +324,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   transactionsTitle: {
+    fontFamily: 'Inter',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: IS_WEB ? '#111827' : '#FFFFFF',
   },
   transactionsEmpty: {
@@ -338,8 +341,9 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   transactionsHeaderCell: {
+    fontFamily: 'Inter',
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '600',
     color: IS_WEB ? '#6B7280' : '#00ea6b',
     textTransform: 'uppercase',
   },
@@ -350,8 +354,10 @@ const styles = StyleSheet.create({
     borderTopColor: IS_WEB ? '#F3F4F6' : 'rgba(0,234,107,0.15)',
   },
   transactionsCell: {
+    fontFamily: 'Inter',
     fontSize: 13,
     color: IS_WEB ? '#111827' : '#E5E7EB',
+    fontWeight: '500',
   },
   txColDate: {
     flex: 1,

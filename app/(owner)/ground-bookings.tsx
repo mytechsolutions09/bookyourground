@@ -1144,8 +1144,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   tableHeaderCell: {
+    fontFamily: 'Inter',
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#6B7280',
     textTransform: 'uppercase',
   },
@@ -1187,9 +1188,10 @@ const styles = StyleSheet.create({
     flex: 1.8,
   },
   bookedDateText: {
+    fontFamily: 'Inter',
     fontSize: 13,
     color: '#111827',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   bookedTimeText: {
     fontSize: 11,
@@ -1197,9 +1199,9 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   groundName: {
-
+    fontFamily: 'Inter',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#111827',
   },
   groundLocation: {
@@ -1208,14 +1210,16 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   amount: {
+    fontFamily: 'Inter',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#111827',
   },
   dateText: {
+    fontFamily: 'Inter',
     fontSize: 13,
     color: '#111827',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   timeText: {
     fontSize: 12,
@@ -1223,8 +1227,9 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   teamsText: {
+    fontFamily: 'Inter',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#111827',
     textAlign: 'left',
   },
@@ -1334,14 +1339,15 @@ const styles = StyleSheet.create({
     borderColor: IS_WEB ? '#01b854' : '#00ea6b',
   },
   tabChipText: {
+    fontFamily: 'Inter',
     fontSize: IS_WEB ? 11.5 : 13,
-    fontWeight: '700',
+    fontWeight: '500',
     color: IS_WEB ? '#6B7280' : '#f9fafb',
     letterSpacing: -0.2,
   },
   tabChipTextActive: {
     color: IS_WEB ? '#01b854' : '#043529',
-    fontWeight: '800',
+    fontWeight: '600',
   },
   verticalDivider: {
     width: 1,
@@ -1510,16 +1516,18 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0,234,107,0.3)',
   },
   compactDateDay: {
+    fontFamily: 'Inter',
     fontSize: 18,
-    fontWeight: '900',
+    fontWeight: '600',
     color: '#166534',
   },
   compactDateDayNative: {
     color: '#00ea6b',
   },
   compactDateMonth: {
+    fontFamily: 'Inter',
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#15803d',
     marginTop: -2,
     letterSpacing: 0.5,
@@ -1533,8 +1541,9 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   compactGroundName: {
+    fontFamily: 'Inter',
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#0F172A',
     letterSpacing: -0.2,
   },
@@ -1548,9 +1557,10 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   compactSlotTime: {
+    fontFamily: 'Inter',
     fontSize: 15,
     color: '#059669',
-    fontWeight: '700',
+    fontWeight: '600',
   },
   compactSlotTimeNative: {
     color: '#00ea6b',
@@ -1566,8 +1576,9 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   compactAmount: {
+    fontFamily: 'Inter',
     fontSize: 16,
-    fontWeight: '900',
+    fontWeight: '600',
     color: '#0F172A',
   },
   compactAmountNative: {
@@ -1605,8 +1616,9 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   paymentLabel: {
+    fontFamily: 'Inter',
     fontSize: 11,
-    fontWeight: '900',
+    fontWeight: '600',
     color: '#64748B',
     letterSpacing: 0.8,
   },

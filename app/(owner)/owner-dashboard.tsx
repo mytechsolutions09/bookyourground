@@ -651,13 +651,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.1)',
   },
   tabText: {
+    fontFamily: 'Inter',
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#64748B',
-    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
   },
   activeTabText: {
     color: '#01b854',
+    fontWeight: '600',
   },
   grid: {
     flexDirection: 'row',
@@ -700,8 +701,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.08)',
   },
   statsLabel: {
+    fontFamily: 'Inter',
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#4B5563',
     paddingVertical: 2,
     textTransform: 'uppercase',
@@ -713,8 +715,9 @@ const styles = StyleSheet.create({
     color: '#9ca3af',
   },
   statsValue: {
+    fontFamily: 'Inter',
     fontSize: 24,
-    fontWeight: '900',
+    fontWeight: '600',
     color: '#111827',
     marginBottom: 2,
     letterSpacing: -1,
@@ -723,8 +726,9 @@ const styles = StyleSheet.create({
     color: THEME_TEXT,
   },
   statsValueSmall: {
+    fontFamily: 'Inter',
     fontSize: 16,
-    fontWeight: '900',
+    fontWeight: '600',
     color: '#111827',
     marginBottom: 2,
     textAlign: 'center',
@@ -734,8 +738,9 @@ const styles = StyleSheet.create({
     color: THEME_GOLD,
   },
   statsCaption: {
+    fontFamily: 'Inter',
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '400',
     color: '#6B7280',
     textAlign: 'center',
   },

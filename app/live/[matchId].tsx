@@ -314,7 +314,7 @@ export default function LiveScorecard() {
   const [matchImages, setMatchImages] = useState<any[]>([]);
   const [inningsList, setInningsList] = useState<any[]>([]);
   const [partnerships, setPartnerships] = useState<any[]>([]);
-  const [expandedInnings, setExpandedInnings] = useState<Record<number, boolean>>({ 1: true, 2: true });
+  const [expandedInnings, setExpandedInnings] = useState<Record<number, boolean>>({ 1: true, 2: false });
   const [isUploading, setIsUploading] = useState(false);
   const [commsInningsFilter, setCommsInningsFilter] = useState<'all' | 1 | 2>('all');
   const [showCommsDropdown, setShowCommsDropdown] = useState(false);
@@ -509,7 +509,7 @@ export default function LiveScorecard() {
               <Text style={styles.scHeaderOvers}> ({sc.totalRuns > 0 ? sc.totalOvers : (innObj?.legal_balls > 0 ? `${Math.floor(innObj.legal_balls/6)}.${innObj.legal_balls%6}` : (live?.innings_number === Number(innNum) ? `${Math.floor(live.legal_balls/6)}.${live.legal_balls%6}` : '0.0'))} Ov)</Text>
               <ChevronDown 
                 size={18} 
-                color="#FFFFFF" 
+                color="#111827" 
                 style={{ marginLeft: 8, transform: [{ rotate: isExpanded ? '180deg' : '0deg' }] }} 
               />
            </View>
@@ -607,6 +607,29 @@ export default function LiveScorecard() {
               ))}
             </View>
 
+            {/* Fall of Wickets */}
+            <View style={[styles.scRowHead, { backgroundColor: '#F9FAFB' }]}>
+                <Text style={[styles.scCol, { flex: 1, textAlign: 'left', color: '#6B7280' }]}>Fall of Wickets</Text>
+                <Text style={[styles.scCol, { color: '#6B7280' }]}>Score (over)</Text>
+            </View>
+            <View style={styles.scTable}>
+              {sc.fow.length > 0 ? (
+                sc.fow.map((f: any, i: number) => (
+                  <View key={i} style={styles.fowRow}>
+                    <View style={{ flexDirection: 'row', flex: 1, alignItems: 'center' }}>
+                      <Text style={styles.fowNum}>{f.num}</Text>
+                      <Text style={styles.fowName}>{f.name}</Text>
+                    </View>
+                    <Text style={styles.fowScore}>
+                      {f.score} <Text style={styles.fowOver}>({f.over} Ov)</Text>
+                    </Text>
+                  </View>
+                ))
+              ) : (
+                <Text style={{ fontSize: 11, color: '#9CA3AF', padding: 10, textAlign: 'center' }}>No wickets fallen yet</Text>
+              )}
+            </View>
+
             {/* Partnerships */}
             <View style={[styles.scRowHead, { backgroundColor: '#F9FAFB' }]}>
                 <Text style={[styles.scCol, { flex: 1, textAlign: 'left', color: '#6B7280' }]}>Partnerships</Text>
@@ -633,26 +656,6 @@ export default function LiveScorecard() {
               )}
             </View>
 
-            {/* Fall of Wickets */}
-            {sc.fow.length > 0 && (
-              <>
-                <View style={[styles.scRowHead, { backgroundColor: '#F9FAFB' }]}>
-                    <Text style={[styles.scCol, { flex: 1, textAlign: 'left', color: '#6B7280' }]}>Fall of Wickets</Text>
-                    <Text style={[styles.scCol, { color: '#6B7280' }]}>Score (over)</Text>
-                </View>
-                {sc.fow.map((f: any, i: number) => (
-                  <View key={i} style={styles.fowRow}>
-                    <View style={{ flexDirection: 'row', flex: 1, alignItems: 'center' }}>
-                      <Text style={styles.fowNum}>{f.num}</Text>
-                      <Text style={styles.fowName}>{f.name}</Text>
-                    </View>
-                    <Text style={styles.fowScore}>
-                      {f.score} <Text style={styles.fowOver}>({f.over} Ov)</Text>
-                    </Text>
-                  </View>
-                ))}
-              </>
-            )}
           </>
         )}
       </View>
@@ -666,12 +669,6 @@ export default function LiveScorecard() {
           <ScrollView style={{ flex: 1, backgroundColor: '#F6F4F0' }} contentContainerStyle={{ paddingVertical: 12 }}>
             {/* Main Score Display in Scoreboard Tab */}
             <View style={[styles.scoreCard, { backgroundColor: '#043529', margin: 12, borderRadius: 12 }]}>
-              {isCompleted && live.result_text && (
-                <View style={styles.resultBanner}>
-                   <Text style={styles.resultText}>🏆 {live.result_text}</Text>
-                </View>
-              )}
-
               <View style={styles.scoreRow}>
                  <View>
                     <Text style={styles.battingTeamName}>{live.batting_team}</Text>
@@ -684,9 +681,11 @@ export default function LiveScorecard() {
                    <View style={styles.targetBox}>
                       <Text style={styles.targetLabel}>Target</Text>
                       <Text style={styles.targetValue}>{live.target}</Text>
-                      <Text style={styles.targetSub}>
-                        Need {Math.max(0, live.target - live.runs)} off {Math.max(0, live.overs_total * 6 - live.legal_balls)}
-                      </Text>
+                      {!isCompleted && (live.overs_total * 6 - live.legal_balls) > 0 && (
+                        <Text style={styles.targetSub}>
+                          Need {Math.max(0, live.target - live.runs)} off {Math.max(0, live.overs_total * 6 - live.legal_balls)}
+                        </Text>
+                      )}
                    </View>
                  )}
               </View>
@@ -696,8 +695,13 @@ export default function LiveScorecard() {
                 {live.rrr && live.innings_number === 2 && (
                   <View style={[styles.statPill, { backgroundColor: 'rgba(255,255,255,0.1)' }]}><Text style={styles.statPillText}>RRR <Text style={{ fontWeight: 'bold' }}>{live.rrr}</Text></Text></View>
                 )}
-                <View style={[styles.statPill, { backgroundColor: 'rgba(255,255,255,0.1)' }]}><Text style={styles.statPillText}>Last: <Text style={{ fontWeight: 'bold' }}>{live.last_ball_label ?? '—'}</Text></Text></View>
               </View>
+
+              {isCompleted && live.result_text && (
+                <View style={[styles.resultBanner, { marginTop: 24, marginBottom: 0 }]}>
+                   <Text style={styles.resultText}>{live.result_text}</Text>
+                </View>
+              )}
             </View>
 
             {renderInningsScorecard(1)}
@@ -1415,13 +1419,19 @@ export default function LiveScorecard() {
         </View>
       </View>
 
-      <View style={{ height: 56, backgroundColor: '#FFFFFF' }}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabScroll} contentContainerStyle={styles.tabContainerStyle}>
+      <View style={styles.tabWrapper}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          style={styles.tabScroll} 
+          contentContainerStyle={styles.tabContainerStyle}
+        >
           {['Info', 'Summary', 'Scoreboard', 'Comms', 'Squads', 'Analysis', 'MVP', 'Gallery'].map((tab) => (
              <TouchableOpacity 
                key={tab} 
                style={[styles.tabBtnRaw, activeTab === tab.toLowerCase() && styles.tabBtnActiveRaw]}
                onPress={() => setActiveTab(tab.toLowerCase())}
+               activeOpacity={0.7}
              >
                 <Text style={[styles.tabBtnTextRaw, activeTab === tab.toLowerCase() && styles.tabBtnTextActiveRaw]}>{tab}</Text>
              </TouchableOpacity>
@@ -1450,12 +1460,52 @@ const styles = StyleSheet.create({
   headerRight: { flexDirection: 'row', gap: 16 },
   headerAction: { padding: 4 },
   
-  tabScroll: { backgroundColor: '#F3F4F6', marginHorizontal: 16, marginVertical: 8, borderRadius: 12 },
-  tabContainerStyle: { paddingHorizontal: 4, height: 40, alignItems: 'center' },
-  tabBtnRaw: { height: 32, paddingHorizontal: 16, marginHorizontal: 2, alignItems: 'center', justifyContent: 'center', borderRadius: 8 },
-  tabBtnActiveRaw: { backgroundColor: '#FFFFFF', elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2 },
-  tabBtnTextRaw: { fontSize: 13, fontWeight: '600', color: '#6B7280' },
-  tabBtnTextActiveRaw: { color: '#111827' },
+  tabWrapper: { 
+    height: 56, 
+    backgroundColor: '#FFFFFF', 
+    justifyContent: 'center' 
+  },
+  tabScroll: { 
+    backgroundColor: 'rgba(0,0,0,0.04)', 
+    marginHorizontal: 16, 
+    marginVertical: 8, 
+    borderRadius: 999,
+    flexGrow: 0,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.02)',
+  },
+  tabContainerStyle: { 
+    paddingHorizontal: 4, 
+    height: 38, 
+    alignItems: 'center' 
+  },
+  tabBtnRaw: { 
+    height: 30, 
+    paddingHorizontal: 16, 
+    marginHorizontal: 2, 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    borderRadius: 999 
+  },
+  tabBtnActiveRaw: { 
+    backgroundColor: '#FFFFFF', 
+    shadowColor: '#000', 
+    shadowOpacity: 0.1, 
+    shadowRadius: 8, 
+    shadowOffset: { width: 0, height: 4 }, 
+    elevation: 4 
+  },
+  tabBtnTextRaw: { 
+    fontSize: 13, 
+    fontWeight: '500', 
+    color: '#334155', 
+    fontFamily: 'Inter' 
+  },
+  tabBtnTextActiveRaw: { 
+    color: '#01b854', 
+    fontWeight: '600', 
+    fontFamily: 'Inter' 
+  },
   
   scoreCard: { padding: 24, paddingBottom: 20 },
   resultBanner: { backgroundColor: '#FAEEDA', padding: 10, borderRadius: 8, marginBottom: 16, alignItems: 'center' },
@@ -1464,10 +1514,35 @@ const styles = StyleSheet.create({
   battingTeamName: { fontSize: 12, color: '#01b854', opacity: 0.8, marginBottom: 4 },
   bigScore: { fontSize: 48, fontWeight: '900', color: '#01b854' },
   oversCount: { fontSize: 14, color: '#01b854', opacity: 0.9, marginTop: 8 },
-  targetBox: { backgroundColor: 'rgba(0, 0, 0, 0.2)', borderRadius: 12, padding: 12, alignItems: 'center', width: 120 },
-  targetLabel: { fontSize: 11, color: '#01b854', opacity: 0.7 },
-  targetValue: { fontSize: 28, fontWeight: '900', color: '#01b854' },
-  targetSub: { fontSize: 10, color: '#01b854', opacity: 0.7, textAlign: 'center', marginTop: 4 },
+  targetBox: { 
+    backgroundColor: 'rgba(255,255,255,0.1)', 
+    borderRadius: 8, 
+    paddingHorizontal: 16, 
+    paddingVertical: 10, 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    minWidth: 90 
+  },
+  targetLabel: { 
+    fontSize: 10, 
+    color: '#FFFFFF', 
+    opacity: 0.8, 
+    fontWeight: '700', 
+    textTransform: 'uppercase', 
+    letterSpacing: 0.5 
+  },
+  targetValue: { 
+    fontSize: 24, 
+    fontWeight: '900', 
+    color: '#FFFFFF' 
+  },
+  targetSub: { 
+    fontSize: 10, 
+    color: '#FFFFFF', 
+    opacity: 0.9, 
+    textAlign: 'center', 
+    marginTop: 4 
+  },
   statsRow: { flexDirection: 'row', gap: 10, marginTop: 20, flexWrap: 'wrap' },
   statPill: { backgroundColor: 'rgba(0, 0, 0, 0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
   statPillText: { fontSize: 12, color: '#01b854', fontWeight: 'bold' },
@@ -1621,10 +1696,19 @@ const styles = StyleSheet.create({
 
   // Scorecard Table Styles
   scWrapper: { backgroundColor: '#FFFFFF', marginTop: 8 },
-  scHeader: { backgroundColor: '#333232', paddingVertical: 12, paddingHorizontal: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  scHeaderText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
-  scHeaderScore: { color: '#FFFFFF', fontSize: 22, fontWeight: '800' },
-  scHeaderOvers: { color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: '400' },
+  scHeader: { 
+    backgroundColor: '#FFFFFF', 
+    paddingVertical: 12, 
+    paddingHorizontal: 16, 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6'
+  },
+  scHeaderText: { color: '#111827', fontSize: 16, fontWeight: '700', fontFamily: 'Inter' },
+  scHeaderScore: { color: '#111827', fontSize: 22, fontWeight: '800', fontFamily: 'Inter' },
+  scHeaderOvers: { color: '#6B7280', fontSize: 13, fontWeight: '500', fontFamily: 'Inter' },
   scTable: { paddingBottom: 12 },
   scRowHead: { flexDirection: 'row', backgroundColor: '#F9FAFB', paddingVertical: 10, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
   scCol: { fontSize: 12, fontWeight: '700', color: '#9CA3AF', textAlign: 'right' },

@@ -1082,13 +1082,14 @@ const styles = StyleSheet.create({
     borderColor: '#00ea6b',
   },
   tabChipText: {
+    fontFamily: 'Inter',
     fontSize: 13,
     color: '#4B5563',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   tabChipTextActive: {
     color: '#00ea6b',
-    fontWeight: '700',
+    fontWeight: '600',
   },
   nativeItemContainer: {
     marginBottom: 0,
@@ -1181,8 +1182,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   tableHeaderCell: {
+    fontFamily: 'Inter',
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#6B7280',
     textTransform: 'uppercase',
   },
@@ -1276,29 +1278,34 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   bookedDateText: {
+    fontFamily: 'Inter',
     fontSize: 13,
     color: '#111827',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   bookedTimeText: {
+    fontFamily: 'Inter',
     fontSize: 11,
     color: '#6B7280',
     marginTop: 1,
   },
   groundName: {
+    fontFamily: 'Inter',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#111827',
   },
   groundLocation: {
+    fontFamily: 'Inter',
     fontSize: 12,
     color: '#6B7280',
     marginTop: 2,
   },
   dateText: {
+    fontFamily: 'Inter',
     fontSize: 13,
     color: '#111827',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   timeText: {
     fontSize: 12,
@@ -1306,8 +1313,9 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   amount: {
+    fontFamily: 'Inter',
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#111827',
   },
   statusBadgeText: {

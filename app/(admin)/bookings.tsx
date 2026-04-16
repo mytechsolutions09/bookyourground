@@ -467,8 +467,9 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   title: {
+    fontFamily: 'Inter',
     fontSize: 24,
-    fontWeight: '800',
+    fontWeight: '600',
     color: IS_WEB ? '#111827' : '#f9fafb',
     letterSpacing: -0.3,
   },
@@ -499,8 +500,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   tableHeaderCell: {
+    fontFamily: 'Inter',
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#6B7280',
     textTransform: 'uppercase',
   },
@@ -545,9 +547,10 @@ const styles = StyleSheet.create({
 
 
   bookedDateText: {
+    fontFamily: 'Inter',
     fontSize: 13,
     color: '#111827',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   bookedTimeText: {
     fontSize: 11,
@@ -555,9 +558,9 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   groundName: {
-
+    fontFamily: 'Inter',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#111827',
   },
   groundLocation: {
@@ -566,14 +569,16 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   amount: {
+    fontFamily: 'Inter',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#111827',
   },
   dateText: {
+    fontFamily: 'Inter',
     fontSize: 13,
     color: '#111827',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   timeText: {
     fontSize: 12,
@@ -597,8 +602,9 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   whoPrimaryText: {
+    fontFamily: 'Inter',
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#111827',
     marginBottom: 2,
   },
@@ -628,14 +634,15 @@ const styles = StyleSheet.create({
     borderColor: IS_WEB ? '#01b854' : '#00ea6b',
   },
   tabChipText: {
+    fontFamily: 'Inter',
     fontSize: IS_WEB ? 11.5 : 13,
-    fontWeight: '700',
+    fontWeight: '500',
     color: IS_WEB ? '#6B7280' : '#f9fafb',
     letterSpacing: -0.2,
   },
   tabChipTextActive: {
     color: IS_WEB ? '#01b854' : '#043529',
-    fontWeight: '800',
+    fontWeight: '600',
   },
   dateFilterWrap: {
     position: 'relative',

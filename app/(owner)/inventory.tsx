@@ -195,7 +195,7 @@ export default function OwnerInventoryScreen() {
 
         {isExpanded && (
           <View style={styles.expandedContent}>
-            <Text style={styles.inventoryTitle}>{daysToShow}-Day Inventory Plan</Text>
+            <Text style={styles.inventoryTitle}>{daysToShow}-Day Inventory</Text>
             {Array.from({ length: daysToShow }).map((_, i) => {
               const d = new Date();
               if (selectedDateFilter) {
@@ -226,7 +226,7 @@ export default function OwnerInventoryScreen() {
       <View style={[styles.pageHeader, isWeb && styles.webPageHeader]}>
         <View style={styles.headerTop}>
           <View>
-            <Text style={styles.title}>Inventory Plan</Text>
+            <Text style={styles.title}>Inventory</Text>
             <Text style={styles.subtitle}>Manage your ground occupancy and slots</Text>
           </View>
           
@@ -240,10 +240,6 @@ export default function OwnerInventoryScreen() {
                       style={[
                         styles.filterTag,
                         statusFilter === status && styles.filterTagActive,
-                        status === 'ALL' && statusFilter === 'ALL' && styles.tagAll,
-                        status === 'EMPTY' && statusFilter === 'EMPTY' && styles.tagEmpty,
-                        status === 'PARTIAL' && statusFilter === 'PARTIAL' && styles.tagPartial,
-                        status === 'FULL' && statusFilter === 'FULL' && styles.tagFull,
                       ]}
                     >
                       <Text style={[
@@ -377,12 +373,15 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   title: {
+    fontFamily: 'Inter',
     fontSize: 24,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#111827',
   },
   subtitle: {
+    fontFamily: 'Inter',
     fontSize: 14,
+    fontWeight: '400',
     color: '#6B7280',
     marginTop: 2,
   },
@@ -396,12 +395,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 20,
     marginTop: 8,
-    backgroundColor: '#FFFFFF',
-    ...Platform.select({
-       web: {
-         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-       } as any
-    })
+    backgroundColor: 'transparent',
   },
   filtersContainer: {
     flexDirection: 'row',
@@ -411,51 +405,33 @@ const styles = StyleSheet.create({
   },
   statusFilters: {
     flexDirection: 'row',
-    gap: 8,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: 'rgba(0,0,0,0.04)',
+    borderRadius: 999,
     padding: 4,
-    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.02)',
   },
   filterTag: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 999,
   },
   filterTagActive: {
+    backgroundColor: '#FFFFFF',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 3,
-    elevation: 3,
-    transform: [{ scale: 1.02 }],
-  },
-  tagAll: {
-    backgroundColor: '#00ea6b',
-    borderColor: '#00c158',
-    borderWidth: 1,
-  },
-  tagEmpty: {
-    backgroundColor: '#F3F4F6',
-    borderColor: '#D1D5DB',
-    borderWidth: 1,
-  },
-  tagPartial: {
-    backgroundColor: '#FFFBEB',
-    borderColor: '#FDE68A',
-    borderWidth: 1,
-  },
-  tagFull: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#A7F3D0',
-    borderWidth: 1,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
   },
   filterTagText: {
+    fontFamily: 'Inter',
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#6B7280',
   },
   filterTagTextActive: {
-    color: '#043529',
+    color: '#01b854',
+    fontWeight: '600',
   },
   dateSearchContainer: {
     flexDirection: 'row',
@@ -522,8 +498,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   groundName: {
+    fontFamily: 'Inter',
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#111827',
   },
   groundLocation: {
@@ -538,8 +515,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAFAFA',
   },
   inventoryTitle: {
+    fontFamily: 'Inter',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#374151',
     marginBottom: 16,
     textTransform: 'uppercase',
@@ -554,8 +532,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dateLabel: {
+    fontFamily: 'Inter',
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#111827',
     backgroundColor: '#E5E7EB',
     paddingHorizontal: 8,
@@ -582,12 +561,14 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0,0,0,0.05)',
   },
   slotTime: {
+    fontFamily: 'Inter',
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   slotStatus: {
+    fontFamily: 'Inter',
     fontSize: 9,
-    fontWeight: '800',
+    fontWeight: '600',
     marginTop: 2,
   },
   emptyContainer: {

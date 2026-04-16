@@ -676,8 +676,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
+    fontFamily: 'Inter',
     fontSize: 24,
-    fontWeight: '800',
+    fontWeight: '600',
     color: IS_WEB ? '#212121' : '#f9fafb',
     letterSpacing: -0.3,
   },
@@ -704,8 +705,9 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   editorTitle: {
+    fontFamily: 'Inter',
     fontSize: 14,
-    fontWeight: '900',
+    fontWeight: '600',
     color: IS_WEB ? '#212121' : '#f9fafb',
     marginBottom: 10,
   },
@@ -748,8 +750,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   modalTitle: {
+    fontFamily: 'Inter',
     fontSize: 16,
-    fontWeight: '900',
+    fontWeight: '600',
     color: IS_WEB ? '#212121' : '#f9fafb',
     flex: 1,
   },
@@ -757,10 +760,10 @@ const styles = StyleSheet.create({
     overflow: 'visible',
   },
   modalSectionTitle: {
+    fontFamily: 'Inter',
     fontSize: 12,
-    fontWeight: '300',
+    fontWeight: '500',
     color: IS_WEB ? '#374151' : '#f9fafb',
-    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
     marginTop: 12,
     marginBottom: 6,
   },
@@ -768,6 +771,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   formInput: {
+    fontFamily: 'Inter',
     borderWidth: 1,
     borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.25)',
     borderRadius: 10,
@@ -775,9 +779,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: IS_WEB ? '#FFFFFF' : 'rgba(4,53,41,0.6)',
     fontSize: 14,
-    fontWeight: '300',
+    fontWeight: '400',
     color: IS_WEB ? '#111827' : '#f9fafb',
-    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
     marginBottom: 10,
   },
   formRow2: {
@@ -790,10 +793,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   locationLabel: {
+    fontFamily: 'Inter',
     fontSize: 12,
-    fontWeight: '300',
+    fontWeight: '500',
     color: IS_WEB ? '#374151' : '#9ca3af',
-    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
     marginBottom: 4,
   },
   switchRow: {

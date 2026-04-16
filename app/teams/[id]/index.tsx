@@ -57,7 +57,7 @@ export default function TeamDetailsPage() {
   const [team, setTeam] = useState<Team | null>(null);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'info' | 'members' | 'chat'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'members' | 'chat' | 'settings'>('info');
   const [memberStatus, setMemberStatus] = useState<string | null>(null);
 
   useEffect(() => {
@@ -255,6 +255,44 @@ export default function TeamDetailsPage() {
         );
       case 'chat':
         return <TeamChatTab teamId={team.id} isMember={isAcceptedMember} />;
+      case 'settings':
+        return (
+          <ScrollView style={styles.tabContent}>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Team Management</Text>
+              <View style={styles.settingsCard}>
+                 <TouchableOpacity style={styles.settingsItem}>
+                   <View style={styles.settingsItemIcon}>
+                     <User size={20} color="#043529" />
+                   </View>
+                   <View style={styles.settingsItemContent}>
+                     <Text style={styles.settingsItemTitle}>Edit Team Profile</Text>
+                     <Text style={styles.settingsItemDesc}>Change name, logo, or location</Text>
+                   </View>
+                 </TouchableOpacity>
+                 
+                 <View style={styles.settingsDivider} />
+                 
+                 <TouchableOpacity style={styles.settingsItem}>
+                   <View style={styles.settingsItemIcon}>
+                     <Users size={20} color="#043529" />
+                   </View>
+                   <View style={styles.settingsItemContent}>
+                     <Text style={styles.settingsItemTitle}>Manage Squad</Text>
+                     <Text style={styles.settingsItemDesc}>Approve requests or remove players</Text>
+                   </View>
+                 </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: '#EF4444' }]}>Danger Zone</Text>
+              <TouchableOpacity style={styles.deleteCard}>
+                <Text style={styles.deleteText}>Delete Team Permanently</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        );
       default:
         return null;
     }
@@ -272,8 +310,11 @@ export default function TeamDetailsPage() {
             <Share2 size={20} color="#FFFFFF" />
           </TouchableOpacity>
           {team.owner_id === user?.id && (
-            <TouchableOpacity style={styles.headerActionBtn}>
-              <Settings size={20} color="#FFFFFF" />
+            <TouchableOpacity 
+              style={styles.headerActionBtn}
+              onPress={() => setActiveTab('settings')}
+            >
+              <Settings size={20} color={activeTab === 'settings' ? '#01b854' : '#FFFFFF'} />
             </TouchableOpacity>
           )}
         </View>
@@ -303,6 +344,15 @@ export default function TeamDetailsPage() {
         >
           <Text style={[styles.tabText, activeTab === 'chat' && styles.activeTabText]}>Chat</Text>
         </TouchableOpacity>
+
+        {team.owner_id === user?.id && (
+          <TouchableOpacity 
+            style={[styles.tab, activeTab === 'settings' && styles.activeTab]} 
+            onPress={() => setActiveTab('settings')}
+          >
+            <Text style={[styles.tabText, activeTab === 'settings' && styles.activeTabText]}>Settings</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={styles.content}>
@@ -622,6 +672,58 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     color: '#92400E',
+  },
+  settingsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    overflow: 'hidden',
+  },
+  settingsItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    gap: 16,
+  },
+  settingsItemIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F0FDF4',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  settingsItemContent: {
+    flex: 1,
+  },
+  settingsItemTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  settingsItemDesc: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  settingsDivider: {
+    height: 1,
+    backgroundColor: '#F1F5F9',
+    marginHorizontal: 16,
+  },
+  deleteCard: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 20,
+    padding: 16,
+    alignItems: 'center',
+  },
+  deleteText: {
+    color: '#DC2626',
+    fontWeight: '800',
+    fontSize: 14,
   },
   qrCard: {
     backgroundColor: '#FFFFFF',

@@ -43,6 +43,8 @@ import {
   CalendarCheck2,
   Heart,
   CircleUser,
+  ClipboardList,
+  Phone,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -303,7 +305,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
           hrefSegments.every((seg, i) => segments[i] === seg)
         : currentPath === targetHref;
     const iconColor = isActive
-      ? (!isCompact ? '#043529' : '#00ea6b')
+      ? (!isCompact ? '#374151' : '#00ea6b')
       : (isCompact ? '#dcc093' : '#6B7280');
     const activeStyle = isCompact ? styles.navLinkActiveMobile : styles.navLinkActive;
 
@@ -707,13 +709,13 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                     <NavLink href="/(owner)/owner-dashboard" icon={LayoutDashboard} label="Dashboard" />
                     <NavLink href="/(owner)/manage-grounds" icon={MapPin} label="My grounds" />
                     <NavLink href="/cricket" icon={Swords} label="Cricket Hub" />
-                    <NavLink href="/(owner)/ground-bookings" icon={Calendar} label="Bookings" />
-                    <NavLink href="/(owner)/inventory" icon={CalendarClock} label="Inventory Plan" />
-                    <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
+                    <NavLink href="/(owner)/ground-bookings" icon={ClipboardList} label="Bookings" />
+                    <NavLink href="/(owner)/inventory" icon={CalendarClock} label="Inventory" />
+                    <NavLink href="/(tabs)/bookings" icon={Ticket} label="My Bookings" />
                     <NavLink href="/(owner)/earnings" icon={IndianRupee} label="Earnings" />
                     <NavLink href="/(owner)/add-ground" icon={PlusCircle} label="Add ground" />
                     <NavLink href="/(owner)/settings" icon={Settings} label="Settings" />
-                    <NavLink href="/(tabs)/support" icon={LifeBuoy} label="Contact Us" />
+                    <NavLink href="/(tabs)/support" icon={Phone} label="Contact Us" />
 
                     <View style={styles.sidebarDivider} />
                     <TouchableOpacity
@@ -771,7 +773,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                     <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
                     <NavLink href="/(tabs)/favorites" icon={Star} label="Favorites" />
                     <NavLink href="/(tabs)/profile" icon={User} label="Profile" />
-                    <NavLink href="/(tabs)/support" icon={LifeBuoy} label="Contact Us" />
+                    <NavLink href="/(tabs)/support" icon={Phone} label="Contact Us" />
 
                     <View style={styles.sidebarDivider} />
                     <TouchableOpacity
@@ -921,13 +923,13 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                         <NavLink href="/(owner)/owner-dashboard" icon={LayoutDashboard} label="Dashboard" />
                         <NavLink href="/(owner)/manage-grounds" icon={MapPin} label="My grounds" />
 
-                        <NavLink href="/(owner)/ground-bookings" icon={Calendar} label="Bookings" />
-                        <NavLink href="/(owner)/inventory" icon={CalendarClock} label="Inventory Plan" />
-                        <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
+                        <NavLink href="/(owner)/ground-bookings" icon={ClipboardList} label="Bookings" />
+                        <NavLink href="/(owner)/inventory" icon={CalendarClock} label="Inventory" />
+                        <NavLink href="/(tabs)/bookings" icon={Ticket} label="My Bookings" />
                         <NavLink href="/(owner)/earnings" icon={IndianRupee} label="Earnings" />
                         <NavLink href="/(owner)/add-ground" icon={PlusCircle} label="Add ground" />
                         <NavLink href="/(owner)/settings" icon={Settings} label="Settings" />
-                        <NavLink href="/(tabs)/support" icon={LifeBuoy} label="Contact Us" />
+                        <NavLink href="/(tabs)/support" icon={Phone} label="Contact Us" />
 
                         <View style={styles.sidebarDivider} />
                         <TouchableOpacity
@@ -948,9 +950,9 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                         />
 
                         <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
-                        <NavLink href="/(tabs)/favorites" icon={Star} label="Favorites" />
+                        <NavLink href="/grounds?tab=favorite" icon={Star} label="Favorites" />
                         <NavLink href="/(tabs)/profile" icon={User} label="Profile" />
-                        <NavLink href="/(tabs)/support" icon={LifeBuoy} label="Contact Us" />
+                        <NavLink href="/(tabs)/support" icon={Phone} label="Contact Us" />
 
                         <View style={styles.sidebarDivider} />
                         <TouchableOpacity
@@ -1224,8 +1226,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 10,
     backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: '#01b854',
   },
   signOutButtonUser: {
     backgroundColor: 'transparent',
@@ -1244,8 +1244,6 @@ const styles = StyleSheet.create({
   },
   signOutButtonMobile: {
     backgroundColor: 'transparent',
-    borderWidth: 1,
-    borderColor: 'rgba(220,192,147,0.2)',
   },
   body: {
     flex: 1,
@@ -1347,16 +1345,17 @@ const styles = StyleSheet.create({
     height: 14,
   },
   navLinkText: {
+    fontFamily: 'Inter',
     fontSize: 14,
-    fontWeight: '600',
-    color: '#666',
+    fontWeight: '500',
+    color: '#4B5563',
   },
   navLinkTextMobile: {
     color: '#dcc093',
   },
   navLinkTextActive: {
-    color: '#043529',
-    fontWeight: '700',
+    color: '#374151',
+    fontWeight: '600',
   },
   navLinkTextActiveMobile: {
     color: '#00ea6b',
@@ -1379,8 +1378,9 @@ const styles = StyleSheet.create({
     marginVertical: 16,
   },
   sidebarTitle: {
+    fontFamily: 'Inter',
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#dcc093',
     textTransform: 'uppercase',
     letterSpacing: 0.8,

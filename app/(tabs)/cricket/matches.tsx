@@ -248,6 +248,7 @@ export default function CricketMatches() {
             key={label}
             style={[styles.subTab, subTab === label.toLowerCase() && styles.subTabActive]}
             onPress={() => setSubTab(label.toLowerCase())}
+            activeOpacity={0.7}
           >
             <Text style={[styles.subTabText, subTab === label.toLowerCase() && styles.subTabTextActive]}>
               {label}
@@ -274,27 +275,39 @@ export default function CricketMatches() {
 const styles = StyleSheet.create({
   subTabContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.04)',
+    borderRadius: 999,
+    padding: 4,
     marginBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.02)',
   },
   subTab: {
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
     alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    justifyContent: 'center',
   },
   subTabActive: {
-    borderBottomColor: '#01b854',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   subTabText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Inter',
+    fontSize: 13,
+    fontWeight: '500',
     color: '#64748B',
   },
   subTabTextActive: {
     color: '#01b854',
+    fontWeight: '600',
   },
   matchesList: {
     gap: 16,
