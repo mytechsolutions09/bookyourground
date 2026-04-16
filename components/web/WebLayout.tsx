@@ -187,7 +187,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
   const groundsHref = isCompact ? '/(tabs)/grounds' : '/book-my-ground';
   const cleanPath = (pathname || '').split('?')[0];
   const isLanding = cleanPath === '/' || cleanPath === '';
-  const isMarketing = cleanPath === '/book-my-ground';
+  const isMarketing = cleanPath === '/book-my-ground' || cleanPath === '/find-an-opponent';
   // Treat only ground detail routes as "ground details" (hide sidebar, use hero header).
   // Plain /grounds (lists, dashboards) should use the normal app navbar.
   const isGroundDetails =
@@ -499,12 +499,6 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                     Cricket
                   </Text>
 
-                  <Text
-                    style={styles.headerPrimaryButtonText}
-                    onPress={() => router.push('/find-an-opponent' as any)}
-                  >
-                    Find Match
-                  </Text>
 
                   <Text
                     style={styles.headerPrimaryButtonText}
@@ -527,7 +521,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                         if (isSuperAdmin) {
                           router.push('/(admin)/dashboard' as any);
                         } else if (isGroundOwner) {
-                          router.push('/(owner)/dashboard' as any);
+                          router.push('/(owner)/owner-dashboard' as any);
                         } else {
                           router.push('/(tabs)/dashboard' as any);
                         }
@@ -589,12 +583,6 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                       </Text>
                     <Text
                       style={styles.headerPrimaryButtonText}
-                      onPress={() => router.push('/find-an-opponent' as any)}
-                    >
-                      Find Match
-                    </Text>
-                    <Text
-                      style={styles.headerPrimaryButtonText}
                       onPress={() => router.push('/book-my-ground' as any)}
                     >
                       Grounds
@@ -613,7 +601,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                           if (isSuperAdmin) {
                             router.push('/(admin)/dashboard' as any);
                           } else if (isGroundOwner) {
-                            router.push('/(owner)/dashboard' as any);
+                            router.push('/(owner)/owner-dashboard' as any);
                           } else {
                             router.push('/(tabs)/dashboard' as any);
                           }
@@ -678,15 +666,6 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                         <Text style={styles.mobilePrimaryButtonText}>Cricket Hub</Text>
                       </TouchableOpacity>
 
-                      <TouchableOpacity
-                        style={styles.mobilePrimaryButton}
-                        onPress={() => {
-                          setMenuOpen(false);
-                          router.push('/find-an-opponent' as any);
-                        }}
-                      >
-                        <Text style={styles.mobilePrimaryButtonText}>Find Opponent</Text>
-                      </TouchableOpacity>
 
                       <TouchableOpacity
                         style={styles.mobilePrimaryButton}

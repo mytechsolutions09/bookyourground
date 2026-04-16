@@ -135,11 +135,11 @@ export default function FindAnOpponentScreen() {
 
   const content = (
     <View style={[styles.container, isWeb && !IS_DARK && styles.webContainerRoot]}>
-      {isWeb && isSmall && (
-        <View style={styles.webTabContainer}>
+      {isWeb && (
+        <View style={width >= 900 ? styles.desktopTabContainer : styles.webTabContainer}>
           <TouchableOpacity 
             style={styles.tab}
-            onPress={() => router.push('/(tabs)/grounds')}
+            onPress={() => router.push('/book-my-ground' as any)}
             activeOpacity={0.7}
           >
             <Text style={styles.tabText}>Book a Ground</Text>
@@ -398,9 +398,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F9FAFB',
+    paddingTop: Platform.OS === 'web' ? 96 : 0,
   },
   webContainerRoot: {
     backgroundColor: '#F9FAFB',
+    paddingTop: Platform.OS === 'web' ? 96 : 0,
   },
   nativeScreen: {
     flex: 1,
@@ -691,46 +693,45 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 8,
+    justifyContent: 'center',
     gap: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    marginBottom: 24,
+    paddingTop: 8,
   },
   tab: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: 28,
+    paddingVertical: 12,
+    borderRadius: 99,
     backgroundColor: '#F3F4F6',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E5E7EB',
   },
   activeTab: {
-    backgroundColor: '#043529',
-    borderColor: '#043529',
+    backgroundColor: '#06392e',
+    borderColor: '#06392e',
   },
   tabText: {
     color: '#6B7280',
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '700',
   },
   activeTabText: {
-    color: '#FFFFFF',
-    fontSize: 13,
+    color: '#01b854',
+    fontSize: 15,
     fontWeight: '800',
   },
   webTabContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 20,
+    justifyContent: 'center',
     gap: 12,
-    maxWidth: 800,
-    alignSelf: 'center',
-    width: '100%',
+    marginBottom: 24,
+    paddingTop: 8,
+  },
+  desktopTabContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+    marginBottom: 24,
+    paddingTop: 8,
   },
 });

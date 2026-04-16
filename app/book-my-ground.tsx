@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Platform, View, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
+import { Platform, View, StyleSheet, ScrollView, useWindowDimensions, Text, TouchableOpacity } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import WebLayout from '@/components/web/WebLayout';
 import LandingBookingForm from '@/components/landing/LandingBookingForm';
@@ -36,6 +36,22 @@ export default function BookMyGroundPage() {
           showsVerticalScrollIndicator
         >
           <View style={styles.page}>
+            <View style={styles.tabContainer}>
+              <TouchableOpacity 
+                style={[styles.tab, styles.activeTab]}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.activeTabText}>Book a Ground</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.tab}
+                activeOpacity={0.8}
+                onPress={() => router.push('/find-an-opponent' as any)}
+              >
+                <Text style={styles.tabText}>Find an Opponent</Text>
+              </TouchableOpacity>
+            </View>
+
             <LandingBookingForm
               fullWidth
               separateSearchResults
@@ -79,6 +95,35 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 12,
+    marginBottom: 32,
+    paddingTop: 8,
+  },
+  tab: {
+    paddingHorizontal: 28,
+    paddingVertical: 12,
+    borderRadius: 99,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  activeTab: {
+    backgroundColor: '#06392e',
+    borderColor: '#06392e',
+  },
+  tabText: {
+    color: '#6B7280',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  activeTabText: {
+    color: '#01b854',
+    fontSize: 15,
+    fontWeight: '800',
   },
 });
 

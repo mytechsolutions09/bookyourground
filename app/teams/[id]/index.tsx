@@ -8,7 +8,9 @@ import {
   ScrollView, 
   ActivityIndicator,
   Platform,
-  SafeAreaView
+  SafeAreaView,
+  Share,
+  Alert
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { 
@@ -25,6 +27,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import TeamChatTab from '@/components/teams/TeamChatTab';
+import QRCode from 'react-native-qrcode-svg';
 
 interface Team {
   id: string;
@@ -101,6 +104,22 @@ export default function TeamDetailsPage() {
     }
   };
 
+  const onShare = async () => {
+    try {
+      const shareUrl = Platform.OS === 'web' 
+        ? window.location.href 
+        : `https://bookyourground.com/teams/${id}`;
+        
+      await Share.share({
+        message: `Check out ${team?.name} on Book Your Ground! Join us and let's play! 🏏\n\n${shareUrl}`,
+        url: shareUrl,
+        title: team?.name,
+      });
+    } catch (error: any) {
+      Alert.alert('Error', error.message);
+    }
+  };
+
   const isAcceptedMember = memberStatus === 'accepted';
 
   if (loading) {
@@ -124,6 +143,20 @@ export default function TeamDetailsPage() {
       case 'info':
         return (
           <ScrollView style={styles.tabContent}>
+            <View style={styles.infoProfileCard}>
+              <View style={[styles.infoTeamLogoContainer, { backgroundColor: team.bg_color || '#01b854' }]}>
+                {team.image_url ? (
+                  <Image source={{ uri: team.image_url }} style={styles.teamLogo} />
+                ) : (
+                  <Text style={styles.teamInitials}>{team.name[0]}</Text>
+                )}
+              </View>
+              <View style={styles.infoProfileText}>
+                <Text style={styles.infoProfileName}>{team.name}</Text>
+                <Text style={styles.infoProfileRole}>OFFICIAL TEAM</Text>
+              </View>
+            </View>
+
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>About Team</Text>
               <View style={styles.infoCard}>
@@ -145,19 +178,51 @@ export default function TeamDetailsPage() {
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Stats Summary</Text>
-              <View style={styles.statsGrid}>
-                <View style={styles.statBox}>
-                  <Text style={styles.statValue}>12</Text>
-                  <Text style={styles.statLabel}>Matches</Text>
+              <Text style={styles.sectionTitle}>Team QR Code</Text>
+              <View style={styles.qrCard}>
+                <View style={styles.qrWrapper}>
+                  <QRCode
+                    value={`https://bookyourground.com/teams/${id}`}
+                    size={160}
+                    color="#043529"
+                    backgroundColor="#FFFFFF"
+                  />
                 </View>
-                <View style={styles.statBox}>
-                  <Text style={styles.statValue}>8</Text>
-                  <Text style={styles.statLabel}>Wins</Text>
+                <Text style={styles.qrHint}>Official QR for {team.name}</Text>
+                <Text style={styles.qrSubHint}>Scan this to view profile or join the squad</Text>
+              </View>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Match Performance</Text>
+              <View style={styles.performanceCard}>
+                <View style={styles.performanceRow}>
+                  <View style={styles.perfItem}>
+                    <Text style={styles.perfLabel}>Matches Won</Text>
+                    <Text style={[styles.perfValue, { color: '#01b854' }]}>8</Text>
+                  </View>
+                  <View style={styles.perfDivider} />
+                  <View style={styles.perfItem}>
+                    <Text style={styles.perfLabel}>Matches Lost</Text>
+                    <Text style={[styles.perfValue, { color: '#EF4444' }]}>4</Text>
+                  </View>
                 </View>
-                <View style={styles.statBox}>
-                  <Text style={styles.statValue}>66%</Text>
-                  <Text style={styles.statLabel}>Win Rate</Text>
+
+                <View style={styles.formSection}>
+                  <Text style={styles.formLabel}>Last 5 Matches</Text>
+                  <View style={styles.formCirclesContainer}>
+                    {['W', 'W', 'L', 'L', 'W'].map((res, idx) => (
+                      <View 
+                        key={idx} 
+                        style={[
+                          styles.formCircle, 
+                          { backgroundColor: res === 'W' ? '#01b854' : '#EF4444' }
+                        ]}
+                      >
+                        <Text style={styles.formCircleText}>{res}</Text>
+                      </View>
+                    ))}
+                  </View>
                 </View>
               </View>
             </View>
@@ -198,12 +263,12 @@ export default function TeamDetailsPage() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.canGoBack() ? router.back() : router.push('/cricket/teams' as any)}>
           <ArrowLeft size={24} color="#FFFFFF" strokeWidth={2.5} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>{team.name}</Text>
         <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.headerActionBtn}>
+          <TouchableOpacity style={styles.headerActionBtn} onPress={onShare}>
             <Share2 size={20} color="#FFFFFF" />
           </TouchableOpacity>
           {team.owner_id === user?.id && (
@@ -215,15 +280,6 @@ export default function TeamDetailsPage() {
       </View>
 
       <View style={styles.hero}>
-        <View style={[styles.teamLogoContainer, { backgroundColor: team.bg_color || '#00ea6b' }]}>
-          {team.image_url ? (
-            <Image source={{ uri: team.image_url }} style={styles.teamLogo} />
-          ) : (
-            <Text style={styles.teamInitials}>{team.name[0]}</Text>
-          )}
-        </View>
-        <Text style={styles.heroName}>{team.name}</Text>
-        <Text style={styles.heroLocation}>{team.location}</Text>
       </View>
 
       <View style={styles.tabBar}>
@@ -231,7 +287,6 @@ export default function TeamDetailsPage() {
           style={[styles.tab, activeTab === 'info' && styles.activeTab]} 
           onPress={() => setActiveTab('info')}
         >
-          <Info size={18} color={activeTab === 'info' ? '#00ea6b' : '#64748B'} />
           <Text style={[styles.tabText, activeTab === 'info' && styles.activeTabText]}>Info</Text>
         </TouchableOpacity>
 
@@ -239,7 +294,6 @@ export default function TeamDetailsPage() {
           style={[styles.tab, activeTab === 'members' && styles.activeTab]} 
           onPress={() => setActiveTab('members')}
         >
-          <Users size={18} color={activeTab === 'members' ? '#00ea6b' : '#64748B'} />
           <Text style={[styles.tabText, activeTab === 'members' && styles.activeTabText]}>Members</Text>
         </TouchableOpacity>
 
@@ -247,12 +301,6 @@ export default function TeamDetailsPage() {
           style={[styles.tab, activeTab === 'chat' && styles.activeTab]} 
           onPress={() => setActiveTab('chat')}
         >
-          <View style={styles.chatTabLabel}>
-            <MessageSquare size={18} color={activeTab === 'chat' ? '#00ea6b' : '#64748B'} />
-            {!isAcceptedMember && (
-              <View style={styles.lockDot} />
-            )}
-          </View>
           <Text style={[styles.tabText, activeTab === 'chat' && styles.activeTabText]}>Chat</Text>
         </TouchableOpacity>
       </View>
@@ -305,20 +353,44 @@ const styles = StyleSheet.create({
   hero: {
     backgroundColor: '#043529',
     alignItems: 'center',
-    paddingBottom: 32,
+    paddingBottom: 10,
+    minHeight: 10,
     borderBottomLeftRadius: 32,
     borderBottomRightRadius: 32,
   },
-  teamLogoContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+  infoProfileCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    gap: 16,
+  },
+  infoTeamLogoContainer: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 4,
-    borderColor: 'rgba(255,255,255,0.1)',
-    marginBottom: 16,
     overflow: 'hidden',
+  },
+  infoProfileText: {
+    flex: 1,
+  },
+  infoProfileName: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#043529',
+  },
+  infoProfileRole: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#01b854',
+    letterSpacing: 1,
+    marginTop: 2,
   },
   teamLogo: {
     width: '100%',
@@ -342,28 +414,26 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F1F5F9',
     marginHorizontal: 16,
-    marginTop: -20,
-    borderRadius: 16,
-    padding: 6,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
+    marginTop: 16,
+    borderRadius: 99,
+    padding: 4,
   },
   tab: {
     flex: 1,
-    flexDirection: 'row',
+    paddingVertical: 10,
+    borderRadius: 99,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    gap: 8,
-    borderRadius: 12,
   },
   activeTab: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   tabText: {
     fontSize: 14,
@@ -371,7 +441,7 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   activeTabText: {
-    color: '#166534',
+    color: '#01b854',
   },
   chatTabLabel: {
     position: 'relative',
@@ -433,29 +503,71 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginTop: 2,
   },
-  statsGrid: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  statBox: {
-    flex: 1,
+  performanceCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
+    borderRadius: 20,
+    padding: 20,
     borderWidth: 1,
     borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 15,
+    elevation: 2,
   },
-  statValue: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#00ea6b',
+  performanceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
-  statLabel: {
+  perfItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  perfDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: '#F1F5F9',
+  },
+  perfLabel: {
     fontSize: 12,
+    fontWeight: '700',
     color: '#64748B',
-    fontWeight: '600',
-    marginTop: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  perfValue: {
+    fontSize: 24,
+    fontWeight: '900',
+  },
+  formSection: {
+    paddingTop: 20,
+    alignItems: 'center',
+  },
+  formLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#64748B',
+    marginBottom: 12,
+  },
+  formCirclesContainer: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  formCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  formCircleText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '900',
   },
   memberRow: {
     flexDirection: 'row',
@@ -510,5 +622,34 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     color: '#92400E',
+  },
+  qrCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  qrWrapper: {
+    padding: 12,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 16,
+  },
+  qrHint: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#043529',
+    textAlign: 'center',
+  },
+  qrSubHint: {
+    fontSize: 12,
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: 4,
+    fontWeight: '500',
   },
 });

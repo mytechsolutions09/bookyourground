@@ -313,9 +313,12 @@ export default function LiveScorecard() {
   const [ballLogs, setBallLogs] = useState<any[]>([]);
   const [matchImages, setMatchImages] = useState<any[]>([]);
   const [inningsList, setInningsList] = useState<any[]>([]);
+  const [partnerships, setPartnerships] = useState<any[]>([]);
   const [expandedInnings, setExpandedInnings] = useState<Record<number, boolean>>({ 1: true, 2: true });
   const [isUploading, setIsUploading] = useState(false);
   const [commsInningsFilter, setCommsInningsFilter] = useState<'all' | 1 | 2>('all');
+  const [showCommsDropdown, setShowCommsDropdown] = useState(false);
+  const [activeTab, setActiveTab] = useState('info');
 
   const handlePickImage = async () => {
     if (matchImages.length >= 4) {
@@ -404,6 +407,8 @@ export default function LiveScorecard() {
         if (inns) setInningsList(inns);
         const { data: logs } = await supabase.from('ball_log').select('*').eq('match_id', matchId).order('over_number', { ascending: false }).order('ball_number', { ascending: false });
         if (logs) setBallLogs(logs || []);
+        const { data: ps } = await supabase.from('partnerships').select('*').eq('match_id', matchId).order('wicket_number', { ascending: true });
+        if (ps) setPartnerships(ps);
         const { data: imgs } = await supabase.from('match_images').select('*').eq('match_id', matchId).order('created_at', { ascending: false });
         if (imgs) setMatchImages(imgs);
       }
@@ -420,7 +425,6 @@ export default function LiveScorecard() {
       if (payload.new && payload.new.match_id === matchId) { 
         setBallLogs(prev => {
           const exists = prev.find(b => b.id === payload.new.id);
-          if (exists) return prev.map(b => b.id === payload.new.id ? payload.new : b);
           return [payload.new, ...prev];
         });
       } else if (payload.old && payload.eventType === 'DELETE') {
@@ -434,11 +438,17 @@ export default function LiveScorecard() {
           return [...prev, payload.new];
         });
       }
+    }).on('postgres_changes', { event: '*', schema: 'public', table: 'partnerships' }, (payload) => {
+      if (payload.new && payload.new.match_id === matchId) {
+        setPartnerships(prev => {
+          const exists = prev.find(p => p.id === payload.new.id);
+          if (exists) return prev.map(p => p.id === payload.new.id ? payload.new : p);
+          return [...prev, payload.new];
+        });
+      }
     }).subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [matchId]);
-
-  const [activeTab, setActiveTab] = useState('info');
 
   if (!live || !match) return (
     <View style={styles.loadingContainer}>
@@ -595,6 +605,32 @@ export default function LiveScorecard() {
                   </View>
                 </View>
               ))}
+            </View>
+
+            {/* Partnerships */}
+            <View style={[styles.scRowHead, { backgroundColor: '#F9FAFB' }]}>
+                <Text style={[styles.scCol, { flex: 1, textAlign: 'left', color: '#6B7280' }]}>Partnerships</Text>
+                <Text style={[styles.scCol, { color: '#6B7280' }]}>Runs (Balls)</Text>
+            </View>
+            <View style={styles.scTable}>
+              {partnerships
+                .filter(p => p.innings_id === innObj?.id || (inningsList.find(inn => inn.innings_number === innNum)?.id === p.innings_id))
+                .sort((a,b) => a.wicket_number - b.wicket_number)
+                .map((p, i) => (
+                  <View key={i} style={[styles.scRow, { flexDirection: 'column', alignItems: 'stretch', paddingVertical: 10 }]}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                       <Text style={{ fontSize: 12, fontWeight: '700', color: '#374151' }}>{p.wicket_number}{p.wicket_number === 1 ? 'st' : p.wicket_number === 2 ? 'nd' : p.wicket_number === 3 ? 'rd' : 'th'} Wicket</Text>
+                       <Text style={{ fontSize: 13, fontWeight: '800', color: '#111827' }}>{p.total_runs} <Text style={{ fontSize: 11, fontWeight: '400', color: '#6B7280' }}>({p.total_balls}b)</Text></Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                       <Text style={{ fontSize: 11, color: '#4B5563' }}>{p.batter_1_name}: {p.batter_1_runs}({p.batter_1_balls})</Text>
+                       <Text style={{ fontSize: 11, color: '#4B5563' }}>{p.batter_2_name}: {p.batter_2_runs}({p.batter_2_balls})</Text>
+                    </View>
+                  </View>
+                ))}
+              {partnerships.filter(p => p.innings_id === innObj?.id || (inningsList.find(inn => inn.innings_number === innNum)?.id === p.innings_id)).length === 0 && (
+                 <Text style={{ fontSize: 11, color: '#9CA3AF', padding: 10, textAlign: 'center' }}>No partnerships yet</Text>
+              )}
             </View>
 
             {/* Fall of Wickets */}
@@ -822,28 +858,72 @@ export default function LiveScorecard() {
         return (
           <View style={{ flex: 1, backgroundColor: '#F6F4F0', padding: 12 }}>
              {/* Filter Bar */}
-             <View style={[styles.commsFilterBar, { backgroundColor: 'transparent', padding: 0, borderBottomWidth: 0, marginBottom: 12 }]}>
-                <TouchableOpacity 
-                   style={[styles.commsFilterBtn, { flex: 1 }]}
-                   onPress={() => {
-                      setCommsInningsFilter(prev => {
-                         if (prev === 'all') return 1;
-                         if (prev === 1 && inningsList.length > 1) return 2;
-                         return 'all';
-                      });
-                   }}
-                >
-                   <Text style={styles.commsFilterText}>
-                      {commsInningsFilter === 'all' ? 'All Innings' : (
-                         inningsList.find(i => i.innings_number === commsInningsFilter)?.batting_team || `Innings ${commsInningsFilter}`
-                      )}
-                   </Text>
-                   <ChevronDown size={16} color="#4B5563" />
-                </TouchableOpacity>
-                <View style={[styles.commsFilterBtn, { flex: 1, marginLeft: 10 }]}>
-                   <Text style={styles.commsFilterText}>Full Commentary</Text>
-                   <ChevronDown size={16} color="#4B5563" />
+             <View style={{ zIndex: 100 }}>
+                <View style={[styles.commsFilterBar, { backgroundColor: 'transparent', padding: 0, borderBottomWidth: 0, marginBottom: 12 }]}>
+                   <TouchableOpacity 
+                      style={[styles.commsFilterBtn, { flex: 1, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB' }]}
+                      onPress={() => setShowCommsDropdown(!showCommsDropdown)}
+                   >
+                      <Text style={styles.commsFilterText}>
+                         {commsInningsFilter === 'all' ? 'All Innings' : (
+                            inningsList.find(i => i.innings_number === commsInningsFilter)?.batting_team || `Innings ${commsInningsFilter}`
+                         )}
+                      </Text>
+                      <ChevronDown size={16} color="#4B5563" />
+                   </TouchableOpacity>
+                   <View style={[styles.commsFilterBtn, { flex: 1, marginLeft: 10, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB' }]}>
+                      <Text style={styles.commsFilterText}>Full Commentary</Text>
+                      <ChevronDown size={16} color="#4B5563" />
+                   </View>
                 </View>
+
+                {showCommsDropdown && (
+                   <View style={{ 
+                      position: 'absolute', 
+                      top: 45, 
+                      left: 0, 
+                      width: '48%', 
+                      backgroundColor: '#FFFFFF', 
+                      borderRadius: 12, 
+                      padding: 4, 
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.1,
+                      shadowRadius: 8,
+                      elevation: 5,
+                      borderWidth: 1,
+                      borderColor: '#F3F4F6',
+                      zIndex: 1001
+                   }}>
+                      {[
+                        { label: 'All Innings', value: 'all' },
+                        { label: inningsList.find(i => i.innings_number === 1)?.batting_team || 'Innings 1', value: 1 },
+                        ...(inningsList.length > 1 ? [{ label: inningsList.find(i => i.innings_number === 2)?.batting_team || 'Innings 2', value: 2 }] : [])
+                      ].map((opt, i) => (
+                        <TouchableOpacity 
+                           key={i} 
+                           style={{ 
+                              paddingVertical: 10, 
+                              paddingHorizontal: 12, 
+                              borderRadius: 8,
+                              backgroundColor: commsInningsFilter === opt.value ? '#F0FDFA' : 'transparent'
+                           }}
+                           onPress={() => {
+                              setCommsInningsFilter(opt.value as any);
+                              setShowCommsDropdown(false);
+                           }}
+                        >
+                           <Text style={{ 
+                              fontSize: 14, 
+                              fontWeight: commsInningsFilter === opt.value ? '700' : '400',
+                              color: commsInningsFilter === opt.value ? '#0D9488' : '#374151'
+                           }}>
+                              {opt.label}
+                           </Text>
+                        </TouchableOpacity>
+                      ))}
+                   </View>
+                )}
              </View>
 
              <View style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB' }}>
@@ -999,18 +1079,85 @@ export default function LiveScorecard() {
 
              {/* Partnership */}
              <View style={styles.analysisCard}>
-               <View style={styles.cardHeaderRow}><Text style={styles.cardTitle}>Partnership</Text></View>
+               <View style={styles.cardHeaderRow}><Text style={styles.cardTitle}>Partnerships</Text></View>
                <Text style={styles.subLabel}>{match.team_a}</Text>
-               <View style={{ gap: 12 }}>
-                  {ps1.slice(0, 5).map((p, i) => (
-                    <View key={i} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                       <Text style={{ fontSize: 10, color: '#6B7280', width: 60, textAlign: 'right', marginRight: 8 }}>{p.out?.split(' ')?.[0] || 'Batter'}</Text>
-                       <View style={{ flex: 1, height: 16, backgroundColor: '#F3F4F6', borderRadius: 4, overflow: 'hidden' }}>
-                          <View style={{ width: `${Math.min(100, (p.runs / 100) * 100)}%`, height: '100%', backgroundColor: '#F97316' }} />
+               <View style={{ gap: 20 }}>
+                  {partnerships.filter(p => {
+                    const inn = inningsList.find(i => i.id === p.innings_id);
+                    return inn?.innings_number === 1;
+                  }).map((p, i) => (
+                    <View key={i} style={{ gap: 8 }}>
+                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                         <Text style={{ fontSize: 12, fontWeight: '700', color: '#374151' }}>{p.wicket_number}{p.wicket_number === 1 ? 'st' : p.wicket_number === 2 ? 'nd' : p.wicket_number === 3 ? 'rd' : 'th'} Wicket</Text>
+                         <Text style={{ fontSize: 13, fontWeight: '800', color: '#111827' }}>{p.total_runs} <Text style={{ fontSize: 11, fontWeight: '400', color: '#6B7280' }}>({p.total_balls} balls)</Text></Text>
                        </View>
-                       <Text style={{ fontSize: 11, fontWeight: '700', marginLeft: 8, width: 40 }}>{p.runs}({p.balls})</Text>
+                       
+                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                          <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                             <Text style={{ fontSize: 11, fontWeight: '600' }}>{p.batter_1_name}</Text>
+                             <Text style={{ fontSize: 10, color: '#6B7280' }}>{p.batter_1_runs}({p.batter_1_balls})</Text>
+                          </View>
+                          
+                          <View style={{ flex: 2, height: 8, backgroundColor: '#F3F4F6', borderRadius: 4, overflow: 'hidden', flexDirection: 'row' }}>
+                             <View style={{ flex: p.batter_1_runs || 1, height: '100%', backgroundColor: '#0D9488' }} />
+                             <View style={{ flex: p.extras || 0, height: '100%', backgroundColor: '#F59E0B', opacity: 0.5 }} />
+                             <View style={{ flex: p.batter_2_runs || 1, height: '100%', backgroundColor: '#3B82F6' }} />
+                          </View>
+                          
+                          <View style={{ flex: 1, alignItems: 'flex-start' }}>
+                             <Text style={{ fontSize: 11, fontWeight: '600' }}>{p.batter_2_name}</Text>
+                             <Text style={{ fontSize: 10, color: '#6B7280' }}>{p.batter_2_runs}({p.batter_2_balls})</Text>
+                          </View>
+                       </View>
+                       {p.out_batter_name && (
+                         <Text style={{ fontSize: 9, color: '#EF4444', textAlign: 'center', fontStyle: 'italic' }}>Out: {p.out_batter_name}</Text>
+                       )}
                     </View>
                   ))}
+                  {partnerships.filter(p => inningsList.find(i => i.id === p.innings_id)?.innings_number === 1).length === 0 && (
+                    <Text style={{ fontSize: 12, color: '#9CA3AF', textAlign: 'center', padding: 20 }}>No partnership data available</Text>
+                  )}
+               </View>
+
+               {/* Repeat for Team B / Innings 2 */}
+               <View style={{ height: 1, backgroundColor: '#F3F4F6', marginVertical: 20 }} />
+               <Text style={styles.subLabel}>{match.team_b}</Text>
+               <View style={{ gap: 20 }}>
+                  {partnerships.filter(p => {
+                    const inn = inningsList.find(i => i.id === p.innings_id);
+                    return inn?.innings_number === 2;
+                  }).map((p, i) => (
+                    <View key={i} style={{ gap: 8 }}>
+                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                         <Text style={{ fontSize: 12, fontWeight: '700', color: '#374151' }}>{p.wicket_number}{p.wicket_number === 1 ? 'st' : p.wicket_number === 2 ? 'nd' : p.wicket_number === 3 ? 'rd' : 'th'} Wicket</Text>
+                         <Text style={{ fontSize: 13, fontWeight: '800', color: '#111827' }}>{p.total_runs} <Text style={{ fontSize: 11, fontWeight: '400', color: '#6B7280' }}>({p.total_balls} balls)</Text></Text>
+                       </View>
+                       
+                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                          <View style={{ flex: 1, alignItems: 'flex-end' }}>
+                             <Text style={{ fontSize: 11, fontWeight: '600' }}>{p.batter_1_name}</Text>
+                             <Text style={{ fontSize: 10, color: '#6B7280' }}>{p.batter_1_runs}({p.batter_1_balls})</Text>
+                          </View>
+                          
+                          <View style={{ flex: 2, height: 8, backgroundColor: '#F3F4F6', borderRadius: 4, overflow: 'hidden', flexDirection: 'row' }}>
+                             <View style={{ flex: p.batter_1_runs || 1, height: '100%', backgroundColor: '#0D9488' }} />
+                             <View style={{ flex: p.extras || 0, height: '100%', backgroundColor: '#F59E0B', opacity: 0.5 }} />
+                             <View style={{ flex: p.batter_2_runs || 1, height: '100%', backgroundColor: '#3B82F6' }} />
+                          </View>
+                          
+                          <View style={{ flex: 1, alignItems: 'flex-start' }}>
+                             <Text style={{ fontSize: 11, fontWeight: '600' }}>{p.batter_2_name}</Text>
+                             <Text style={{ fontSize: 10, color: '#6B7280' }}>{p.batter_2_runs}({p.batter_2_balls})</Text>
+                          </View>
+                       </View>
+                       {p.out_batter_name && (
+                         <Text style={{ fontSize: 9, color: '#EF4444', textAlign: 'center', fontStyle: 'italic' }}>Out: {p.out_batter_name}</Text>
+                       )}
+                    </View>
+                  ))}
+                  {partnerships.filter(p => inningsList.find(i => i.id === p.innings_id)?.innings_number === 2).length === 0 && (
+                    <Text style={{ fontSize: 12, color: '#9CA3AF', textAlign: 'center', padding: 20 }}>No partnership data available for 2nd innings</Text>
+                  )}
                </View>
              </View>
 

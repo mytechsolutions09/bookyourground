@@ -139,6 +139,85 @@ export function useCricketScoring() {
     });
   };
 
+  const syncPartnershipInDB = useCallback(async (innState: InningState, mid: string, isWicket: boolean = false, outPlayerName?: string) => {
+    if (!mid || !innState.inningsId) return;
+
+    // Find active batters
+    const batting = innState.batters.filter(b => b.status === 'batting' && (!b.out || b.name === outPlayerName));
+    if (batting.length < 2 && !isWicket) return;
+
+    const wicketNum = innState.wickets + (isWicket ? 0 : 1);
+    
+    // First, find or create the active partnership record for this match/innings/wicket
+    const { data: existing } = await supabase
+      .from('partnerships')
+      .select('*')
+      .eq('match_id', mid)
+      .eq('innings_id', innState.inningsId)
+      .eq('wicket_number', wicketNum)
+      .maybeSingle();
+
+    const batter1 = existing?.batter_1_name || batting[0]?.name || 'Unknown';
+    const batter2 = existing?.batter_2_name || batting[1]?.name || 'Unknown';
+
+    const payload: any = {
+      match_id: mid,
+      innings_id: innState.inningsId,
+      wicket_number: wicketNum,
+      batter_1_name: batter1,
+      batter_2_name: batter2,
+      is_active: !isWicket,
+      updated_at: new Date().toISOString()
+    };
+
+    if (isWicket) {
+      payload.out_batter_name = outPlayerName;
+      payload.not_out_batter_name = batting.find(b => b.name !== outPlayerName)?.name || null;
+    }
+
+    // Calculate totals from ball logs for data integrity
+    const { data: balls } = await supabase
+      .from('ball_log')
+      .select('runs, extras, batter_name, is_wicket')
+      .eq('match_id', mid)
+      .eq('innings_id', innState.inningsId);
+    
+    let pRuns = 0;
+    let pBalls = 0;
+    let b1Runs = 0;
+    let b1Balls = 0;
+    let b2Runs = 0;
+    let b2Balls = 0;
+    let pExtras = 0;
+    
+    let currentWickets = 0;
+    balls?.forEach(b => {
+      if (currentWickets === wicketNum - 1) {
+        pRuns += (b.runs || 0) + (b.extras || 0);
+        if (b.batter_name === batter1) {
+          b1Runs += (b.runs || 0);
+          b1Balls += 1;
+        } else if (b.batter_name === batter2) {
+          b2Runs += (b.runs || 0);
+          b2Balls += 1;
+        }
+        if (b.extras > 0) pExtras += b.extras;
+        pBalls += 1;
+      }
+      if (b.is_wicket) currentWickets++;
+    });
+
+    payload.total_runs = pRuns;
+    payload.total_balls = pBalls;
+    payload.batter_1_runs = b1Runs;
+    payload.batter_1_balls = b1Balls;
+    payload.batter_2_runs = b2Runs;
+    payload.batter_2_balls = b2Balls;
+    payload.extras = pExtras;
+
+    await supabase.from('partnerships').upsert(payload, { onConflict: 'match_id,innings_id,wicket_number' });
+  }, []);
+
   const pushLiveState = useCallback(async (innState: InningState, config: any, mid: string, innNumber: number, statusResult: string | null = null) => {
     if (!mid) return;
 
@@ -587,11 +666,12 @@ export function useCricketScoring() {
 
     setInn(next);
     await logBall(next, { runs, type: ballType, label: ballLabel, area }, matchId!);
+    await syncPartnershipInDB(next, matchId!);
     await pushLiveState(next, matchConfig, matchId!, currentIdx + 1);
     await checkEnd(next, matchConfig, matchId!);
 
     return next;
-  }, [inn, matchId, matchConfig, handleOverEnd, logBall, pushLiveState, checkEnd]);
+  }, [inn, matchId, matchConfig, handleOverEnd, logBall, pushLiveState, checkEnd, syncPartnershipInDB]);
 
   const addExtra = useCallback(async (type: string, additionalRuns: number = 0) => {
     if (!inn) return;
@@ -676,10 +756,11 @@ export function useCricketScoring() {
 
     setInn(next);
     await logBall(next, { runs: totalRuns, extras: totalRuns, extraType: type, type: ballType, label }, matchId!);
+    await syncPartnershipInDB(next, matchId!);
     await pushLiveState(next, matchConfig, matchId!, currentIdx + 1);
     await checkEnd(next, matchConfig, matchId!);
     return next;
-  }, [inn, matchId, matchConfig, handleOverEnd, logBall, pushLiveState, checkEnd]);
+  }, [inn, matchId, matchConfig, handleOverEnd, logBall, pushLiveState, checkEnd, syncPartnershipInDB]);
 
   const addWicket = useCallback(async ({ dismissedName, dismissalType, fielder, newBatterName }: any) => {
     if (!inn) return;
@@ -707,6 +788,7 @@ export function useCricketScoring() {
       next.overBalls = [...next.overBalls, { type: 'wicket', label: 'W' }];
       
       await logBall(next, { isWicket: true, dismissalType, fielder, type: 'wicket', label: 'W', batter_name: dismissedName }, matchId!);
+      await syncPartnershipInDB(next, matchId!, true, dismissedName);
 
       if (next.legalBalls > 0 && next.legalBalls % 6 === 0) {
         next = handleOverEnd(next);
@@ -747,7 +829,7 @@ export function useCricketScoring() {
     // Or just check overs.
     await checkEnd(next, effectiveConfig, matchId!, !!newBatterName);
     return next;
-  }, [inn, matchId, matchConfig, handleOverEnd, logBall, pushLiveState, checkEnd]);
+  }, [inn, matchId, matchConfig, handleOverEnd, logBall, pushLiveState, checkEnd, syncPartnershipInDB]);
 
   const addNewBowler = useCallback((name: string) => {
     setInn(prev => {
