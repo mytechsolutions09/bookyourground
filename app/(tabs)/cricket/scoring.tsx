@@ -71,6 +71,7 @@ import {
   Target,
   Hand
 } from 'lucide-react-native';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -320,7 +321,7 @@ const styles = StyleSheet.create({
   infoCardTitle: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#0D9488',
+    color: '#01b854',
     letterSpacing: 1,
   },
   matchTeamsRow: {
@@ -334,7 +335,7 @@ const styles = StyleSheet.create({
   matchTeamName: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: '#06392e',
   },
   matchTeamRole: {
     fontSize: 11,
@@ -378,7 +379,7 @@ const styles = StyleSheet.create({
   venueName: {
     fontSize: 17,
     fontWeight: '700',
-    color: '#111827',
+    color: '#06392e',
   },
   venueLocation: {
     fontSize: 13,
@@ -426,7 +427,7 @@ const styles = StyleSheet.create({
   officialNamePremium: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#111827',
+    color: '#06392e',
   },
   officialRolePremium: {
     fontSize: 11,
@@ -439,7 +440,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#F3F4F6',
   },
   closeBtnFooter: {
-    backgroundColor: '#0D9488',
+    backgroundColor: '#01b854',
     paddingVertical: 14,
     borderRadius: 14,
     alignItems: 'center',
@@ -535,7 +536,7 @@ const styles = StyleSheet.create({
   },
   playerGridTileActive: {
     backgroundColor: '#F0F9FF',
-    borderColor: '#0D9488',
+    borderColor: '#01b854',
   },
   playerGridName: {
     fontSize: 13,
@@ -554,8 +555,8 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   extraRunTileActive: {
-    backgroundColor: '#0D9488',
-    borderColor: '#0D9488',
+    backgroundColor: '#01b854',
+    borderColor: '#01b854',
   },
   extraRunTileText: {
     fontSize: 18,
@@ -600,7 +601,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     zIndex: 10,
     borderWidth: 1,
-    borderColor: '#F59E0B'
+    borderColor: '#dcc093'
   },
   dividerLine: {
     position: 'absolute',
@@ -670,7 +671,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#6B7280',
   },
-  tabTextActive: { color: '#111827', fontWeight: '800' },
+  tabTextActive: { color: '#06392e', fontWeight: '800' },
   mainScroll: { flex: 1 },
   mainScrollContent: { paddingBottom: 60 },
   contentContainer: { flex: 1 },
@@ -678,7 +679,7 @@ const styles = StyleSheet.create({
   subTab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 10 },
   subTabActive: { backgroundColor: '#FFFFFF', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2 },
   subTabText: { fontSize: 14, fontWeight: '600', color: '#6B7280' },
-  subTabTextActive: { color: '#111827' },
+  subTabTextActive: { color: '#06392e' },
   matchesList: { paddingHorizontal: 20, paddingTop: 0, paddingBottom: 20, gap: 12 },
   matchCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#E5E7EB' },
   matchHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6', paddingBottom: 12 },
@@ -714,7 +715,7 @@ const styles = StyleSheet.create({
   teamScoreText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: '#06392e',
   },
   teamOversText: {
     fontSize: 12,
@@ -722,14 +723,14 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   teamRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  teamName: { fontSize: 15, color: '#111827' },
+  teamName: { fontSize: 15, color: '#06392e' },
   teamNameBold: { fontWeight: '700', fontSize: 16 },
   teamScore: { fontSize: 14, color: '#4B5563' },
-  teamScoreBold: { fontWeight: '700', color: '#111827', fontSize: 16 },
+  teamScoreBold: { fontWeight: '700', color: '#06392e', fontSize: 16 },
   matchMessage: { fontSize: 13, color: '#4B5563', fontStyle: 'italic', marginBottom: 12, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#F3F4F6' },
   matchResultText: { fontSize: 13, color: '#059669', fontWeight: '600', marginBottom: 12 },
   matchFooter: { flexDirection: 'row', gap: 20, borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 12 },
-  footerLink: { fontSize: 13, color: '#0D9488', fontWeight: '600' },
+  footerLink: { fontSize: 13, color: '#01b854', fontWeight: '600' },
   pulseDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#4ADE80' },
   liveActionBtn: {
     flexDirection: 'row',
@@ -742,7 +743,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#F1F5F9',
   },
   liveActionBtnText: {
-    color: '#0D9488',
+    color: '#01b854',
     fontSize: 14,
     fontWeight: '600',
   },
@@ -756,50 +757,50 @@ const styles = StyleSheet.create({
   tournamentTitleOverlay: { position: 'absolute', bottom: 12, left: 12, right: 12, color: '#FFFFFF', fontSize: 18, fontWeight: '800' },
   tournamentInfo: { padding: 16, flexDirection: 'row', alignItems: 'center' },
   tournamentMeta: { fontSize: 13, color: '#6B7280', marginBottom: 2 },
-  followLink: { color: '#0D9488', fontWeight: '700', fontSize: 14 },
+  followLink: { color: '#01b854', fontWeight: '700', fontSize: 14 },
   teamCard: { backgroundColor: '#FFFFFF', borderRadius: 16, padding: 12, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#E5E7EB' },
   teamAvatar: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB' },
   teamImage: { width: '100%', height: '100%' },
   teamInitials: { fontSize: 20, fontWeight: '800', color: '#FFFFFF' },
   teamContent: { flex: 1, marginLeft: 16, flexDirection: 'row', alignItems: 'center' },
-  teamTitle: { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 4 },
+  teamTitle: { fontSize: 16, fontWeight: '700', color: '#06392e', marginBottom: 4 },
   teamMetaRow: { flexDirection: 'row', alignItems: 'center' },
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   metaLabel: { fontSize: 12, color: '#6B7280' },
   captainIcon: { width: 14, height: 14, borderRadius: 7, backgroundColor: '#6B7280', alignItems: 'center', justifyContent: 'center' },
   captainIconText: { color: '#FFFFFF', fontSize: 9, fontWeight: '900' },
   searchBarContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', marginHorizontal: 20, marginVertical: 16, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: '#E5E7EB', gap: 10 },
-  searchInput: { flex: 1, fontSize: 14, color: '#111827', outlineStyle: 'none' as any },
+  searchInput: { flex: 1, fontSize: 14, color: '#06392e', outlineStyle: 'none' as any },
   statsPromoHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
   statsPromoText: { fontSize: 14, color: '#374151', fontWeight: '500' },
-  analyzeBtn: { backgroundColor: '#F59E0B', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 99 },
+  analyzeBtn: { backgroundColor: '#dcc093', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 99 },
   analyzeBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700' },
   statsFilterBar: { flexDirection: 'row', paddingHorizontal: 20, paddingVertical: 16, gap: 10 },
   statPill: { paddingHorizontal: 18, paddingVertical: 8, borderRadius: 99, backgroundColor: '#E5E7EB' },
-  statPillActive: { backgroundColor: '#F59E0B' },
+  statPillActive: { backgroundColor: '#dcc093' },
   statPillText: { fontSize: 13, fontWeight: '600', color: '#4B5563' },
   statPillTextActive: { color: '#FFFFFF' },
   statsContent: { paddingHorizontal: 20 },
   statsSectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  statsSectionTitle: { fontSize: 16, fontWeight: '700', color: '#111827' },
-  compareBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#0D9488', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, gap: 6 },
+  statsSectionTitle: { fontSize: 16, fontWeight: '700', color: '#06392e' },
+  compareBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#01b854', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 8, gap: 6 },
   compareBtnText: { color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   statTile: { width: '19%', backgroundColor: '#FFFFFF', paddingVertical: 12, alignItems: 'center', borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB' },
-  statValue: { fontSize: 15, fontWeight: '800', color: '#111827', marginBottom: 2 },
+  statValue: { fontSize: 15, fontWeight: '800', color: '#06392e', marginBottom: 2 },
   statLabel: { fontSize: 10, color: '#9CA3AF', fontWeight: '500' },
   captainFooter: { marginTop: 10 },
-  ballTypeLabel: { fontSize: 14, color: '#111827', fontWeight: '600', marginBottom: 10 },
+  ballTypeLabel: { fontSize: 14, color: '#06392e', fontWeight: '600', marginBottom: 10 },
   adBanner: { marginVertical: 20, borderRadius: 20, overflow: 'hidden', height: 120, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB', position: 'relative' },
   adImage: { width: '100%', height: '100%', opacity: 0.6 },
   adOverlay: { ...StyleSheet.absoluteFillObject, padding: 20, justifyContent: 'center' },
-  adTitle: { fontSize: 16, color: '#111827', lineHeight: 20 },
+  adTitle: { fontSize: 16, color: '#06392e', lineHeight: 20 },
   adTitleBold: { fontWeight: '900', fontSize: 20 },
-  adBtn: { backgroundColor: '#0D9488', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, alignSelf: 'flex-start', marginTop: 10 },
+  adBtn: { backgroundColor: '#01b854', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, alignSelf: 'flex-start', marginTop: 10 },
   adBtnText: { color: '#FFFFFF', fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
   tabContent: { paddingVertical: 70, paddingHorizontal: 30, alignItems: 'center', justifyContent: 'center' },
   placeholderIconArea: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#F0FDF4', alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
-  placeholderTitle: { fontSize: 26, fontWeight: '900', color: '#111827', marginBottom: 12, textAlign: 'center' },
+  placeholderTitle: { fontSize: 26, fontWeight: '900', color: '#06392e', marginBottom: 12, textAlign: 'center' },
   placeholderDesc: { fontSize: 16, color: '#6B7280', textAlign: 'center', lineHeight: 26, maxWidth: 340, marginBottom: 32 },
   placeholderBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#043529', paddingHorizontal: 24, paddingVertical: 14, borderRadius: 16 },
   placeholderBtnText: { fontSize: 15, fontWeight: '800', color: '#FFFFFF' },
@@ -839,7 +840,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
+    color: '#06392e',
   },
   modalOptions: {
     gap: 8,
@@ -892,7 +893,7 @@ const styles = StyleSheet.create({
   selectionTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#111827',
+    color: '#06392e',
   },
   teamSelectionRow: {
     flexDirection: 'row',
@@ -926,14 +927,14 @@ const styles = StyleSheet.create({
   slotAction: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#0D9488',
+    color: '#01b854',
     textAlign: 'center',
   },
   vsContainer: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#111827',
+    backgroundColor: '#06392e',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -981,7 +982,7 @@ const styles = StyleSheet.create({
   slotName: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#111827',
+    color: '#06392e',
     textAlign: 'center',
   },
   startMatchBtn: {
@@ -1011,7 +1012,7 @@ const styles = StyleSheet.create({
   },
   createTeamCard: {
     borderStyle: 'dashed',
-    borderColor: '#0D9488',
+    borderColor: '#01b854',
     backgroundColor: '#F0FDF4',
   },
   createTeamIcon: {
@@ -1022,12 +1023,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#0D9488',
+    borderColor: '#01b854',
   },
   createTeamText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#0D9488',
+    color: '#01b854',
     marginBottom: 2,
   },
   createTeamSubtext: {
@@ -1063,11 +1064,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 15,
-    color: '#111827',
+    color: '#06392e',
     outlineStyle: 'none' as any,
   },
   submitBtn: {
-    backgroundColor: '#0D9488',
+    backgroundColor: '#01b854',
     paddingVertical: 16,
     borderRadius: 14,
     alignItems: 'center',
@@ -1113,7 +1114,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#0D9488',
+    backgroundColor: '#01b854',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -1126,7 +1127,7 @@ const styles = StyleSheet.create({
   qrTeamName: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#111827',
+    color: '#06392e',
   },
   qrTeamMeta: {
     fontSize: 12,
@@ -1155,7 +1156,7 @@ const styles = StyleSheet.create({
   downloadBtn: {
     marginTop: 24,
     width: '100%',
-    backgroundColor: '#111827',
+    backgroundColor: '#06392e',
     paddingVertical: 16,
     borderRadius: 16,
     alignItems: 'center',
@@ -1190,7 +1191,7 @@ const styles = StyleSheet.create({
   successTitle: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#111827',
+    color: '#06392e',
     marginBottom: 8,
   },
   successMessage: {
@@ -1201,7 +1202,7 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   successCloseBtn: {
-    backgroundColor: '#111827',
+    backgroundColor: '#06392e',
     paddingVertical: 14,
     paddingHorizontal: 32,
     borderRadius: 14,
@@ -1222,12 +1223,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#0D9488',
+    borderColor: '#01b854',
   },
   loginBtnTextInline: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#0D9488',
+    color: '#01b854',
   },
   addPlayerModalContent: {
     backgroundColor: '#FFFFFF',
@@ -1259,7 +1260,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: '#0D9488',
+    backgroundColor: '#01b854',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
@@ -1273,7 +1274,7 @@ const styles = StyleSheet.create({
   activeTeamName: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#111827',
+    color: '#06392e',
     marginBottom: 4,
   },
   activeTeamMeta: {
@@ -1289,7 +1290,7 @@ const styles = StyleSheet.create({
   addPlayerTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#111827',
+    color: '#06392e',
   },
   addPlayerScroll: {
     paddingHorizontal: 24,
@@ -1298,7 +1299,7 @@ const styles = StyleSheet.create({
   sectionHeading: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: '#06392e',
     marginBottom: 20,
   },
   inviteContainer: {
@@ -1380,7 +1381,7 @@ const styles = StyleSheet.create({
   optionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
+    color: '#06392e',
     marginBottom: 2,
   },
   optionSubtext: {
@@ -1411,7 +1412,7 @@ const styles = StyleSheet.create({
   },
   adminBannerText: {
     fontSize: 14,
-    color: '#111827',
+    color: '#06392e',
   },
   promoBanner: {
     backgroundColor: '#149D8F',
@@ -1470,7 +1471,7 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#F59E0B',
+    backgroundColor: '#dcc093',
     borderWidth: 2,
     borderColor: '#FFFFFF',
   },
@@ -1506,7 +1507,7 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: 24,
     paddingHorizontal: 16,
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#06392e',
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
   },
@@ -1608,7 +1609,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   profileSubTabTextActive: {
-    color: '#111827',
+    color: '#06392e',
     fontWeight: '800',
   },
   profilePlaceholder: {
@@ -1625,7 +1626,7 @@ const styles = StyleSheet.create({
   placeholderTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#111827',
+    color: '#06392e',
     marginBottom: 8,
     textTransform: 'capitalize',
   },
@@ -1690,14 +1691,14 @@ const styles = StyleSheet.create({
   },
   trophyYear: {
     fontSize: 12,
-    color: '#F59E0B',
+    color: '#dcc093',
     fontWeight: '800',
     marginTop: 12,
   },
   trophyEvent: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#111827',
+    color: '#06392e',
     textAlign: 'center',
     marginTop: 4,
   },
@@ -1721,7 +1722,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#06392e',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1737,7 +1738,7 @@ const styles = StyleSheet.create({
   addMemberSmallText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#0D9488',
+    color: '#01b854',
   },
   leaderboardSubTabs: {
     flexDirection: 'row',
@@ -1766,7 +1767,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   lbSubTabTextActive: {
-    color: '#111827',
+    color: '#06392e',
     fontWeight: '700',
   },
   playerSelectRow: {
@@ -1781,7 +1782,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   playerSelectRowActive: {
-    borderColor: '#0D9488',
+    borderColor: '#01b854',
     backgroundColor: '#F0FDF4',
   },
   checkBox: {
@@ -1794,8 +1795,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkBoxActive: {
-    backgroundColor: '#0D9488',
-    borderColor: '#0D9488',
+    backgroundColor: '#01b854',
+    borderColor: '#01b854',
   },
   selectionSubTitle: {
     fontSize: 12,
@@ -1825,7 +1826,7 @@ const styles = StyleSheet.create({
   vsName: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#111827',
+    color: '#06392e',
     textAlign: 'center',
   },
   vsPlayers: {
@@ -1872,7 +1873,7 @@ const styles = StyleSheet.create({
   },
   typePillActive: {
     backgroundColor: '#F0FDF4',
-    borderColor: '#0D9488',
+    borderColor: '#01b854',
   },
   typePillText: {
     fontSize: 14,
@@ -1880,7 +1881,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   typePillTextActive: {
-    color: '#0D9488',
+    color: '#01b854',
   },
   configInput: {
     backgroundColor: '#F9FAFB',
@@ -1890,10 +1891,10 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
+    color: '#06392e',
   },
   hundredInfo: {
-    backgroundColor: '#FFF7ED',
+    backgroundColor: '#fcf8ef',
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
@@ -1916,7 +1917,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   ballTypeBtnActive: {
-    backgroundColor: '#111827',
+    backgroundColor: '#06392e',
   },
   ballText: {
     fontSize: 14,
@@ -2008,7 +2009,7 @@ const styles = StyleSheet.create({
   bigRuns: {
     fontSize: 40,
     fontWeight: '900',
-    color: '#111827',
+    color: '#06392e',
   },
   overText: {
     fontSize: 18,
@@ -2035,7 +2036,7 @@ const styles = StyleSheet.create({
   crrValue: {
     fontSize: 18,
     fontWeight: '900',
-    color: '#111827',
+    color: '#06392e',
   },
   scoreRow: {
     flexDirection: 'row',
@@ -2105,7 +2106,7 @@ const styles = StyleSheet.create({
   statsValueText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#111827',
+    color: '#06392e',
     width: 20,
     textAlign: 'center',
   },
@@ -2120,7 +2121,7 @@ const styles = StyleSheet.create({
   statsValueTextFixed: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#111827',
+    color: '#06392e',
     width: 22,
     textAlign: 'center',
   },
@@ -2134,7 +2135,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 12,
   },
   modalSearchContainer: {
     flexDirection: 'row',
@@ -2149,7 +2152,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     fontWeight: '600',
-    color: '#111827',
+    color: '#06392e',
     // @ts-ignore
     outlineStyle: 'none',
   },
@@ -2170,7 +2173,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0FDF4',
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: '#0D9488',
+    borderColor: '#01b854',
     borderRadius: 12,
     paddingVertical: 14,
     marginTop: 24,
@@ -2179,7 +2182,7 @@ const styles = StyleSheet.create({
   addPlayerMiniText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#0D9488',
+    color: '#01b854',
   },
   timelineContainer: {
     height: 48,
@@ -2197,7 +2200,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#EF4444',
   },
   ballBoundary: {
-    backgroundColor: '#0D9488',
+    backgroundColor: '#01b854',
   },
   ballLabel: {
     fontSize: 12,
@@ -2230,16 +2233,16 @@ const styles = StyleSheet.create({
   runBtnText: {
     fontSize: 20,
     fontWeight: '900',
-    color: '#111827',
+    color: '#06392e',
   },
   boundaryBtn: {
     backgroundColor: '#F0FDF4',
-    borderColor: '#0D9488',
+    borderColor: '#01b854',
   },
   boundaryBtnText: {
     fontSize: 20,
     fontWeight: '900',
-    color: '#0D9488',
+    color: '#01b854',
   },
   wicketBtn: {
     backgroundColor: '#FEF2F2',
@@ -2296,7 +2299,7 @@ const styles = StyleSheet.create({
   },
   playerTileActive: {
     backgroundColor: '#F0FDF4',
-    borderColor: '#0D9488',
+    borderColor: '#01b854',
     borderWidth: 2,
   },
   playerTileName: {
@@ -2306,7 +2309,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   playerTileNameActive: {
-    color: '#0D9488',
+    color: '#01b854',
   },
   contactItem: {
     padding: 20,
@@ -2334,7 +2337,7 @@ const styles = StyleSheet.create({
   },
   wagonWheelDesc: {
     fontSize: 14,
-    color: '#111827',
+    color: '#06392e',
     fontWeight: '500',
   },
   toggleBg: {
@@ -2345,7 +2348,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   toggleBgActive: {
-    backgroundColor: '#0D9488',
+    backgroundColor: '#01b854',
   },
   toggleCircle: {
     width: 20,
@@ -2366,7 +2369,7 @@ const styles = StyleSheet.create({
   },
   pitchBtnActive: {
     backgroundColor: '#F0FDF4',
-    borderColor: '#0D9488',
+    borderColor: '#01b854',
   },
   pitchText: {
     fontSize: 14,
@@ -2374,7 +2377,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   pitchTextActive: {
-    color: '#0D9488',
+    color: '#01b854',
   },
   pickerWrapper: {
     position: 'relative',
@@ -2416,7 +2419,7 @@ const styles = StyleSheet.create({
   officialsTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#111827',
+    color: '#06392e',
   },
   officialsSub: {
     fontSize: 12,
@@ -2426,7 +2429,7 @@ const styles = StyleSheet.create({
   officialGroupTitle: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#111827',
+    color: '#06392e',
     marginBottom: 12,
   },
   officialInputRow: {
@@ -2445,13 +2448,13 @@ const styles = StyleSheet.create({
     height: 52,
     fontSize: 15,
     fontWeight: '600',
-    color: '#111827',
+    color: '#06392e',
   },
   officialValueText: {
     flex: 1,
     fontSize: 15,
     fontWeight: '600',
-    color: '#111827',
+    color: '#06392e',
     paddingVertical: 16,
   },
   officialPlaceholderText: {
@@ -2472,7 +2475,7 @@ const styles = StyleSheet.create({
   resultName: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: '#06392e',
   },
   resultPhone: {
     fontSize: 12,
@@ -2482,7 +2485,7 @@ const styles = StyleSheet.create({
   resultRole: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#0D9488',
+    color: '#01b854',
     backgroundColor: '#F0FDF4',
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -2519,7 +2522,7 @@ const styles = StyleSheet.create({
   addNewOfficialText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#0D9488',
+    color: '#01b854',
   },
   contactItem: {
     flexDirection: 'row',
@@ -2538,14 +2541,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   contactInitial: {
-    color: '#0D9488',
+    color: '#01b854',
     fontWeight: '700',
     fontSize: 16,
   },
   contactName: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
+    color: '#06392e',
   },
   contactPhone: {
     fontSize: 13,
@@ -2605,7 +2608,7 @@ const styles = StyleSheet.create({
   },
   dropdownValue: {
     fontSize: 15,
-    color: '#111827',
+    color: '#06392e',
   },
   dropdownPlaceholder: {
     color: '#9CA3AF',
@@ -2637,9 +2640,9 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#F59E0B',
+    backgroundColor: '#dcc093',
     padding: 6,
-    shadowColor: '#F59E0B',
+    shadowColor: '#dcc093',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.4,
     shadowRadius: 12,
@@ -2687,7 +2690,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tossTeamBtnActive: {
-    borderColor: '#0D9488',
+    borderColor: '#01b854',
     backgroundColor: '#F0FDF4',
     borderWidth: 2,
   },
@@ -2718,8 +2721,8 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   decisionBtnActive: {
-    backgroundColor: '#111827',
-    borderColor: '#111827',
+    backgroundColor: '#06392e',
+    borderColor: '#06392e',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
@@ -2735,7 +2738,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   overSummaryBanner: {
-    backgroundColor: '#111827',
+    backgroundColor: '#06392e',
     padding: 20,
     marginHorizontal: 16,
     borderRadius: 16,
@@ -2770,7 +2773,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   filterChipActive: {
-    backgroundColor: '#111827',
+    backgroundColor: '#06392e',
   },
   filterChipText: {
     fontSize: 14,
@@ -2818,7 +2821,7 @@ const styles = StyleSheet.create({
   drawerTitle: {
     fontSize: 22,
     fontWeight: '900',
-    color: '#111827',
+    color: '#06392e',
   },
   settingSection: {
     borderBottomWidth: 1,
@@ -2834,7 +2837,7 @@ const styles = StyleSheet.create({
   sectionHeaderTextMenu: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#111827',
+    color: '#06392e',
   },
   sectionOptionsList: {
     backgroundColor: '#FFFFFF',
@@ -2909,7 +2912,7 @@ const styles = StyleSheet.create({
   showLessText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#0D9488',
+    color: '#01b854',
   },
   extraSelectorContent: {
     backgroundColor: '#FFFFFF',
@@ -2922,7 +2925,7 @@ const styles = StyleSheet.create({
   extraSelectorTitle: {
     fontSize: 20,
     fontWeight: '900',
-    color: '#111827',
+    color: '#06392e',
     marginBottom: 4,
   },
   extraSelectorDesc: {
@@ -2950,7 +2953,7 @@ const styles = StyleSheet.create({
   extraRunTileText: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#111827',
+    color: '#06392e',
   },
   cancelExtraBtn: {
     paddingVertical: 12,
@@ -2962,14 +2965,17 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   sheetTitle: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '900',
-    color: '#111827',
+    color: '#06392e',
+    fontFamily: 'Inter',
   },
   sheetSubtitle: {
     fontSize: 14,
     color: '#6B7280',
-    marginTop: 4,
+    fontWeight: '500',
+    marginTop: 6,
+    fontFamily: 'Inter',
   },
   addPlayerMiniBtn: {
     flexDirection: 'row',
@@ -2980,14 +2986,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: '#0D9488',
+    borderColor: '#01b854',
     marginTop: 16,
     justifyContent: 'center',
   },
   addPlayerMiniText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#0D9488',
+    color: '#01b854',
   },
   tabsStickyWrapper: {
     backgroundColor: '#FFFFFF',
@@ -3014,7 +3020,7 @@ const styles = StyleSheet.create({
   tabActive: {
     backgroundColor: '#F0FDF4',
     borderWidth: 1,
-    borderColor: '#0D9488',
+    borderColor: '#01b854',
   },
   tabText: {
     fontSize: 14,
@@ -3022,7 +3028,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   tabTextActive: {
-    color: '#0D9488',
+    color: '#01b854',
     fontWeight: '800',
   },
   plusIconWrapper: {
@@ -3056,7 +3062,7 @@ const styles = StyleSheet.create({
   actionModalTitle: {
     fontSize: 22,
     fontWeight: '900',
-    color: '#111827',
+    color: '#06392e',
     textAlign: 'center',
     marginBottom: 32,
   },
@@ -3115,7 +3121,7 @@ const styles = StyleSheet.create({
   },
   playerSelectRowActive: {
     backgroundColor: '#F0FDF4',
-    borderColor: '#0D9488',
+    borderColor: '#01b854',
   },
   avatarCircle: {
      width: 44,
@@ -3130,7 +3136,7 @@ const styles = StyleSheet.create({
   playerNameText: {
      fontSize: 15,
      fontWeight: '700',
-     color: '#111827',
+     color: '#06392e',
   },
   checkBox: {
      width: 24,
@@ -3143,8 +3149,8 @@ const styles = StyleSheet.create({
      justifyContent: 'center',
   },
   checkBoxActive: {
-     backgroundColor: '#0D9488',
-     borderColor: '#0D9488',
+     backgroundColor: '#01b854',
+     borderColor: '#01b854',
   },
   captainPickBtn: {
      flexDirection: 'row',
@@ -3166,6 +3172,241 @@ const styles = StyleSheet.create({
   },
   captainPickTextActive: {
      color: '#01b854',
+  },
+  teamCardPremium: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  teamCardPremiumActive: {
+    borderColor: '#01b854',
+    backgroundColor: '#F0FDF4',
+  },
+  teamCardPremiumDisabled: {
+    opacity: 0.6,
+    backgroundColor: '#F9FAFB',
+  },
+  teamAvatarPremium: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  teamInitialsPremium: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  teamContentPremium: {
+    flex: 1,
+    marginLeft: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  teamTitlePremium: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#06392e',
+    marginBottom: 6,
+    fontFamily: 'Inter',
+  },
+  teamMetaGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  metaBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  metaBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B7280',
+    fontFamily: 'Inter',
+  },
+  selectBtnPremium: {
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+  },
+  selectBtnPremiumActive: {
+    backgroundColor: '#01b854',
+  },
+  selectBtnPremiumDisabled: {
+    backgroundColor: '#E5E7EB',
+  },
+  selectBtnTextPremium: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#4B5563',
+    fontFamily: 'Inter',
+  },
+  qrIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#F0FDF4',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalTabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#F3F4F6',
+    marginHorizontal: 24,
+    marginTop: 8,
+    marginBottom: 16,
+    padding: 4,
+    borderRadius: 14,
+  },
+  modalTabItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  modalTabItemActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  modalTabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
+    fontFamily: 'Inter',
+  },
+  modalTabTextActive: {
+    color: '#06392e',
+    fontWeight: '700',
+  },
+  closeBtnPremium: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  placeholderBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#01b854',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 14,
+  },
+  placeholderBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: 'Inter',
+  },
+  scanQrActionBtn: {
+    padding: 4,
+  },
+  scannedTeamResult: {
+    marginHorizontal: 24,
+    marginTop: 12,
+    padding: 16,
+    backgroundColor: '#F0FDF4',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#01b854',
+    gap: 12,
+  },
+  scannedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  scannedTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#01b854',
+    flex: 1,
+  },
+  fullModalScanner: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  scannerHeader: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    right: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    zIndex: 20,
+  },
+  scannerTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  scannerClose: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scannerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+  },
+  scannerFrame: {
+    width: 250,
+    height: 250,
+    borderWidth: 2,
+    borderColor: '#01b854',
+    borderRadius: 24,
+    backgroundColor: 'transparent',
+  },
+  scannerHint: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    marginTop: 24,
+    textAlign: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
   },
 });
 
@@ -3199,6 +3440,11 @@ export default function CricketScreen() {
   const [isConfiguringMatch, setIsConfiguringMatch] = useState(false);
   const [isConfiguringToss, setIsConfiguringToss] = useState(false);
   const [isSelectingOpeners, setIsSelectingOpeners] = useState(false);
+  const [isScanningQr, setIsScanningQr] = useState(false);
+  const [teamSelectionTab, setTeamSelectionTab] = useState<'search' | 'scan'>('search');
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+  const [scannedTeam, setScannedTeam] = useState<any>(null);
+  const [isSearchingScannedTeam, setIsSearchingScannedTeam] = useState(false);
   const [isScoring, setIsScoring] = useState(false);
   const [isSearchingOfficial, setIsSearchingOfficial] = useState(false);
   const [isFlipping, setIsFlipping] = useState(false);
@@ -3667,7 +3913,7 @@ export default function CricketScreen() {
         ...t,
         isUserTeam: t.owner_id === session?.user?.id,
         initials: t.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 2),
-        bgColor: '#0D9488',
+        bgColor: '#01b854',
         image: t.image_url 
       }));
       setTeams([...dbTeams, ...INITIAL_TEAMS_DATA.filter(it => !dbTeams.some(dt => dt.id === it.id))]);
@@ -3939,10 +4185,10 @@ export default function CricketScreen() {
             onPress={() => router.push(`/live/${match.match_id}`)}
           >
             <Text style={styles.liveActionBtnText}>View</Text>
-            <ChevronRight size={14} color="#0D9488" />
+            <ChevronRight size={14} color="#01b854" />
           </TouchableOpacity>
           <TouchableOpacity 
-            style={[styles.liveActionBtn, { borderTopWidth: 0, marginTop: 0, flex: 1.5, backgroundColor: '#0D9488', borderRadius: 8 }]}
+            style={[styles.liveActionBtn, { borderTopWidth: 0, marginTop: 0, flex: 1.5, backgroundColor: '#01b854', borderRadius: 8 }]}
             onPress={() => router.push(`/cricket/scoring?matchId=${match.match_id}`)}
           >
             <Text style={[styles.liveActionBtnText, { color: '#FFFFFF' }]}>Resume Scoring</Text>
@@ -3990,8 +4236,11 @@ export default function CricketScreen() {
 
   const TeamCard = ({ team, onSelect, disabled, selected }: { team: any; onSelect?: (team: any) => void, disabled?: boolean, selected?: boolean }) => (
     <TouchableOpacity 
-      style={[styles.teamCard, selected && { borderColor: '#0D9488', backgroundColor: '#F0FDF4' }, disabled && { opacity: 0.5 }]}
-      disabled={disabled}
+      style={[
+        styles.teamCardPremium, 
+        selected && styles.teamCardPremiumActive,
+        disabled && styles.teamCardPremiumDisabled
+      ]}
       onPress={() => {
         if (onSelect) onSelect(team);
         else if (team.isUserTeam) {
@@ -4000,38 +4249,41 @@ export default function CricketScreen() {
         }
       }}
     >
-       <View style={[styles.teamAvatar, team.bgColor && { backgroundColor: team.bgColor }, disabled && { backgroundColor: '#9CA3AF' }]}>
+       <View style={[styles.teamAvatarPremium, team.bgColor && { backgroundColor: team.bgColor }, disabled && { backgroundColor: '#E5E7EB' }]}>
           {team.image ? (
             <Image source={{ uri: team.image }} style={styles.teamImage} />
           ) : (
-            <Text style={styles.teamInitials}>{team.initials}</Text>
+            <Text style={styles.teamInitialsPremium}>{team.initials || (team.name ? team.name[0] : '?')}</Text>
           )}
        </View>
-       <View style={styles.teamContent}>
+       <View style={styles.teamContentPremium}>
           <View style={{ flex: 1 }}>
-             <Text style={[styles.teamTitle, selected && { color: '#0D9488' }]}>{team.name}</Text>
-             <View style={styles.teamMetaRow}>
-                <View style={[styles.metaItem, { marginRight: 16 }]}>
-                   <MapPin size={12} color="#9CA3AF" />
-                   <Text style={styles.metaLabel}>{team.location}</Text>
+             <Text style={[styles.teamTitlePremium, selected && { color: '#01b854' }]} numberOfLines={1}>{team.name}</Text>
+             <View style={styles.teamMetaGrid}>
+                <View style={styles.metaBadge}>
+                   <MapPin size={10} color="#6B7280" />
+                   <Text style={styles.metaBadgeText}>{team.location}</Text>
                 </View>
-                <View style={styles.metaItem}>
-                   <View style={styles.captainIcon}><Text style={styles.captainIconText}>C</Text></View>
-                   <Text style={styles.metaLabel}>{team.captain}</Text>
+                <View style={styles.metaBadge}>
+                   <User size={10} color="#6B7280" />
+                   <Text style={styles.metaBadgeText}>{team.captain}</Text>
                 </View>
              </View>
           </View>
           {onSelect ? (
             <TouchableOpacity 
-              style={[styles.selectBtn, selected && { backgroundColor: '#0D9488' }, disabled && { backgroundColor: '#E5E7EB' }]} 
+              style={[styles.selectBtnPremium, selected && styles.selectBtnPremiumActive, disabled && styles.selectBtnPremiumDisabled]} 
               disabled={disabled}
               onPress={() => onSelect(team)}
             >
-               <Text style={[styles.selectBtnText, selected && { color: '#FFFFFF' }, disabled && { color: '#9CA3AF' }]}>{selected ? 'Selected' : disabled ? 'Unavailable' : 'Select'}</Text>
+               <Text style={[styles.selectBtnTextPremium, selected && { color: '#FFFFFF' }]}>{selected ? 'Picked' : disabled ? 'N/A' : 'Select'}</Text>
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity onPress={() => { setActiveTeamForQr(team); setIsQrModalVisible(true); }}>
-              <QrCode size={20} color="#0D9488" strokeWidth={1.5} />
+            <TouchableOpacity 
+              style={styles.qrIconBtn}
+              onPress={() => { setActiveTeamForQr(team); setIsQrModalVisible(true); }}
+            >
+              <QrCode size={18} color="#01b854" strokeWidth={2} />
             </TouchableOpacity>
           )}
        </View>
@@ -4044,7 +4296,7 @@ export default function CricketScreen() {
       onPress={() => setIsCreateTeamModalVisible(true)}
     >
        <View style={styles.createTeamIcon}>
-          <Plus size={24} color="#0D9488" />
+          <Plus size={24} color="#01b854" />
        </View>
        <View style={styles.teamContent}>
           <Text style={styles.createTeamText}>Create New Team</Text>
@@ -4204,31 +4456,80 @@ export default function CricketScreen() {
           activeOpacity={1} 
           onPress={() => setPickingFor(null)}
       >
-        <View style={[styles.sheetContent, { height: '85%' }]}>
+        <View style={[styles.sheetContent, { height: '85%', backgroundColor: '#FFFFFF' }]}>
           <View style={styles.sheetHandle} />
           <View style={styles.modalHeaderRow}>
             <View>
               <Text style={styles.sheetTitle}>Select Team {pickingFor}</Text>
-              <Text style={styles.sheetSubtitle}>Pick a team to continue match setup</Text>
+              <Text style={styles.sheetSubtitle}>Search or scan the team to begin the match setup</Text>
             </View>
-            <TouchableOpacity onPress={() => setPickingFor(null)}>
+            <TouchableOpacity onPress={() => setPickingFor(null)} style={styles.closeBtnPremium}>
               <X size={24} color="#6B7280" />
             </TouchableOpacity>
           </View>
 
-          <View style={[styles.searchBarContainer, { marginHorizontal: 24, marginTop: 16 }]}>
-            <Search size={18} color="#9CA3AF" />
-            <TextInput 
-              placeholder="Search teams..." 
-              placeholderTextColor="#9CA3AF" 
-              style={styles.searchInput} 
-              value={searchQuery} 
-              onChangeText={setSearchQuery} 
-              autoFocus
-            />
+          <View style={{ flexDirection: 'row', paddingHorizontal: 24, gap: 12, marginBottom: 20 }}>
+            <TouchableOpacity 
+              style={[{ flex: 1, height: 48, borderRadius: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#F3F4F6' }, teamSelectionTab === 'search' && { backgroundColor: '#06392e' }]}
+              onPress={() => setTeamSelectionTab('search')}
+            >
+              <Search size={18} color={teamSelectionTab === 'search' ? '#FFFFFF' : '#6B7280'} />
+              <Text style={[{ fontSize: 14, fontWeight: '700', color: '#6B7280' }, teamSelectionTab === 'search' && { color: '#FFFFFF' }]}>Search</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[{ flex: 1, height: 48, borderRadius: 24, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#F3F4F6' }, teamSelectionTab === 'scan' && { backgroundColor: '#06392e' }]}
+              onPress={async () => {
+                if (!cameraPermission?.granted) {
+                  const res = await requestCameraPermission();
+                  if (!res.granted) return;
+                }
+                setIsScanningQr(true);
+                setTeamSelectionTab('scan');
+              }}
+            >
+              <QrCode size={18} color={teamSelectionTab === 'scan' ? '#FFFFFF' : '#6B7280'} />
+              <Text style={[{ fontSize: 14, fontWeight: '700', color: '#6B7280' }, teamSelectionTab === 'scan' && { color: '#FFFFFF' }]}>Scan QR</Text>
+            </TouchableOpacity>
           </View>
 
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 24 }}>
+          {teamSelectionTab === 'search' && (
+            <View style={[styles.searchBarContainer, { marginHorizontal: 24, marginTop: 0, marginBottom: 12, elevation: 0, shadowOpacity: 0 }]}>
+              <Search size={18} color="#9CA3AF" />
+              <TextInput 
+                placeholder="Find a team by name..." 
+                placeholderTextColor="#9CA3AF" 
+                style={styles.searchInput} 
+                value={searchQuery} 
+                onChangeText={setSearchQuery} 
+                autoFocus
+              />
+            </View>
+          )}
+
+          {scannedTeam && (
+            <View style={[styles.scannedTeamResult, { marginHorizontal: 24, marginBottom: 16 }]}>
+               <View style={styles.scannedHeader}>
+                  <ShieldCheck size={18} color="#01b854" />
+                  <Text style={styles.scannedTitle}>Team Found via QRScan</Text>
+                  <TouchableOpacity onPress={() => setScannedTeam(null)}>
+                     <X size={18} color="#6B7280" />
+                  </TouchableOpacity>
+               </View>
+               <TeamCard 
+                 team={scannedTeam} 
+                 onSelect={(t) => {
+                   handleTeamSelect(t);
+                   setScannedTeam(null);
+                   setTeamSelectionTab('search');
+                 }}
+               />
+            </View>
+          )}
+
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 24, paddingTop: 0 }}>
+            <Text style={[styles.sectionHeading, { marginBottom: 16, fontSize: 13, color: '#9CA3AF' }]}>
+              {searchQuery ? 'SEARCH RESULTS' : 'AVAILABLE TEAMS'}
+            </Text>
             {teams
               .filter(team => team.name.toLowerCase().includes(searchQuery.toLowerCase()))
               .map(team => {
@@ -4248,12 +4549,23 @@ export default function CricketScreen() {
               })
             }
             {teams.filter(team => team.name.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 && (
-              <View style={styles.noResultArea}>
+              <View style={[styles.noResultArea, { backgroundColor: '#FFFFFF', borderRadius: 24, padding: 40, borderStyle: 'dashed', borderWidth: 1, borderColor: '#E5E7EB' }]}>
                 <Users size={48} color="#E5E7EB" />
                 <Text style={styles.noResultTitle}>No Teams Found</Text>
-                <Text style={styles.noResultSub}>Try a different search term or create a new team</Text>
+                <Text style={styles.noResultSub}>Try searching for another name or create a new team to begin.</Text>
+                <TouchableOpacity 
+                   style={[styles.placeholderBtn, { marginTop: 24, backgroundColor: '#01b854' }]}
+                   onPress={() => {
+                     setPickingFor(null);
+                     setIsCreateTeamModalVisible(true);
+                   }}
+                >
+                   <Plus size={20} color="#FFFFFF" />
+                   <Text style={styles.placeholderBtnText}>Create New Team</Text>
+                </TouchableOpacity>
               </View>
             )}
+            <View style={{ height: 40 }} />
           </ScrollView>
         </View>
       </TouchableOpacity>
@@ -4323,6 +4635,55 @@ export default function CricketScreen() {
         </TouchableOpacity>
       )}
     </View>
+  );
+
+  const renderQrScannerModal = () => (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={isScanningQr}
+      onRequestClose={() => setIsScanningQr(false)}
+    >
+      <View style={styles.fullModalScanner}>
+        <View style={styles.scannerHeader}>
+           <Text style={styles.scannerTitle}>Scan Team QR</Text>
+           <TouchableOpacity onPress={() => setIsScanningQr(false)} style={styles.scannerClose}>
+              <X size={24} color="#FFFFFF" />
+           </TouchableOpacity>
+        </View>
+        
+        <CameraView
+          style={StyleSheet.absoluteFillObject}
+          onBarcodeScanned={async ({ data }) => {
+            if (data.startsWith('team_')) {
+              const teamId = data.replace('team_', '');
+              setIsScanningQr(false);
+              setIsSearchingScannedTeam(true);
+              try {
+                const { data: team, error } = await supabase
+                  .from('teams')
+                  .select('*')
+                  .eq('id', teamId)
+                  .maybeSingle();
+                if (team) setScannedTeam(team);
+              } catch (err) {
+                console.error('QR Search error:', err);
+              } finally {
+                setIsSearchingScannedTeam(false);
+              }
+            }
+          }}
+          barcodeScannerSettings={{
+            barcodeTypes: ['qr'],
+          }}
+        />
+
+        <View style={styles.scannerOverlay}>
+           <View style={styles.scannerFrame} />
+           <Text style={styles.scannerHint}>Position Team QR code within the frame</Text>
+        </View>
+      </View>
+    </Modal>
   );
 
   const renderWagonWheelModal = () => (
@@ -4401,7 +4762,7 @@ export default function CricketScreen() {
       <View style={styles.modalOverlay}>
         <View style={[styles.qrModalContent, { height: '85%', padding: 0, overflow: 'hidden' }]}>
           <LinearGradient
-            colors={['#0D9488', '#0F766E']}
+            colors={['#01b854', '#06392e']}
             style={styles.modalHeaderPremium}
           >
             <View>
@@ -4420,7 +4781,7 @@ export default function CricketScreen() {
              {/* Teams Card */}
              <View style={styles.infoCardPremium}>
                 <View style={styles.infoCardHeader}>
-                   <Users2 size={18} color="#0D9488" />
+                   <Users2 size={18} color="#01b854" />
                    <Text style={styles.infoCardTitle}>TEAMS</Text>
                 </View>
                 <View style={styles.matchTeamsRow}>
@@ -4441,7 +4802,7 @@ export default function CricketScreen() {
              {/* Configuration Card */}
              <View style={styles.infoCardPremium}>
                 <View style={styles.infoCardHeader}>
-                   <Trophy size={18} color="#0D9488" />
+                   <Trophy size={18} color="#01b854" />
                    <Text style={styles.infoCardTitle}>MATCH DETAILS</Text>
                 </View>
                 <View style={styles.detailsGrid}>
@@ -4467,7 +4828,7 @@ export default function CricketScreen() {
              {/* Venue Card */}
              <View style={styles.infoCardPremium}>
                 <View style={styles.infoCardHeader}>
-                   <MapPin size={18} color="#0D9488" />
+                   <MapPin size={18} color="#01b854" />
                    <Text style={styles.infoCardTitle}>VENUE & TIME</Text>
                 </View>
                 <View style={styles.venueContent}>
@@ -4483,7 +4844,7 @@ export default function CricketScreen() {
              {/* Officials Card */}
              <View style={styles.infoCardPremium}>
                 <View style={styles.infoCardHeader}>
-                   <ShieldCheck size={18} color="#0D9488" />
+                   <ShieldCheck size={18} color="#01b854" />
                    <Text style={styles.infoCardTitle}>MATCH OFFICIALS</Text>
                 </View>
                 
@@ -4666,12 +5027,12 @@ export default function CricketScreen() {
         >
           <View style={[styles.sheetContent, { height: '85%' }]}>
             <View style={styles.sheetHandle} />
-            <View style={styles.addPlayerHeader}>
+            <View style={styles.modalHeaderRow}>
               <View>
                 <Text style={styles.sheetTitle}>Select Playing XI</Text>
                 <Text style={styles.sheetSubtitle}>{currentTeam?.name} • {currentXi.length} picked {currentCaptain ? '• Captain set' : '• Pick a Captain'}</Text>
               </View>
-              <TouchableOpacity onPress={() => setIsSelectingPlayers(false)}>
+              <TouchableOpacity onPress={() => setIsSelectingPlayers(false)} style={styles.closeBtnPremium}>
                 <X size={24} color="#6B7280" />
               </TouchableOpacity>
             </View>
@@ -4689,7 +5050,7 @@ export default function CricketScreen() {
                         setIsAddMemberModalVisible(true);
                       }}
                     >
-                       <Plus size={20} color="#0D9488" />
+                       <Plus size={20} color="#01b854" />
                        <Text style={styles.addNewOfficialText}>Add Player to Squad</Text>
                     </TouchableOpacity>
                  </View>
@@ -4789,14 +5150,14 @@ export default function CricketScreen() {
       <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
         <View style={[styles.modalHeader, { paddingHorizontal: 20 }]}>
           <Text style={styles.modalTitle}>Full Scorecard</Text>
-          <TouchableOpacity onPress={() => setIsFullScorecardVisible(false)}><X size={24} color="#111827" /></TouchableOpacity>
+          <TouchableOpacity onPress={() => setIsFullScorecardVisible(false)}><X size={24} color="#06392e" /></TouchableOpacity>
         </View>
         <ScrollView style={{ flex: 1, padding: 20 }}>
-           <Text style={{ fontSize: 18, fontWeight: '800', color: '#111827', marginBottom: 12 }}>{inn.battingTeam} Batting</Text>
+           <Text style={{ fontSize: 18, fontWeight: '800', color: '#06392e', marginBottom: 12 }}>{inn.battingTeam} Batting</Text>
            {inn.batters.filter(b => b.status !== 'yet').map((b, i) => (
               <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }}>
                  <View style={{ flex: 2 }}>
-                    <Text style={{ fontWeight: '700', color: '#111827' }}>{b.name}{b.onStrike ? '*' : ''}</Text>
+                    <Text style={{ fontWeight: '700', color: '#06392e' }}>{b.name}{b.onStrike ? '*' : ''}</Text>
                     <Text style={{ fontSize: 12, color: '#6B7280' }}>{b.dismissal || (b.status === 'batting' ? 'not out' : 'yet to bat')}</Text>
                  </View>
                  <View style={{ flexDirection: 'row', gap: 15 }}>
@@ -4808,7 +5169,7 @@ export default function CricketScreen() {
               </View>
            ))}
            <View style={{ marginTop: 20 }}>
-              <Text style={{ fontSize: 18, fontWeight: '800', color: '#111827', marginBottom: 12 }}>{inn.bowlingTeam} Bowling</Text>
+              <Text style={{ fontSize: 18, fontWeight: '800', color: '#06392e', marginBottom: 12 }}>{inn.bowlingTeam} Bowling</Text>
               {inn.bowlers.map((b, i) => (
                 <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }}>
                    <Text style={{ flex: 2, fontWeight: '700' }}>{b.name}</Text>
@@ -4846,7 +5207,7 @@ export default function CricketScreen() {
                         setIsRetiredHurtModalVisible(false);
                       }}
                     >
-                       <Text style={{ fontWeight: '700', color: '#111827' }}>{b.name}</Text>
+                       <Text style={{ fontWeight: '700', color: '#06392e' }}>{b.name}</Text>
                     </TouchableOpacity>
                  ))}
               </View>
@@ -4989,7 +5350,7 @@ export default function CricketScreen() {
                       alert(`Match is now in ${type}. Stop the clock!`);
                    }}
                 >
-                   <Text style={{ fontWeight: '700', color: '#111827' }}>{type}</Text>
+                   <Text style={{ fontWeight: '700', color: '#06392e' }}>{type}</Text>
                 </TouchableOpacity>
               ))}
            </View>
@@ -5011,7 +5372,7 @@ export default function CricketScreen() {
       <View style={styles.selectionView}>
          <View style={styles.selectionHeader}>
             <TouchableOpacity onPress={() => setIsConfiguringMatch(false)}>
-               <ChevronRight size={28} color="#0D9488" style={{ transform: [{ rotate: '180deg' }] }} />
+               <ChevronRight size={28} color="#01b854" style={{ transform: [{ rotate: '180deg' }] }} />
             </TouchableOpacity>
             <Text style={styles.selectionTitle}>Match Details</Text>
             <View style={{ width: 40 }} />
@@ -5197,7 +5558,7 @@ export default function CricketScreen() {
                      <View style={[styles.statesDropdown, { position: 'absolute', top: 75, left: 0, right: 0, zIndex: 1000 }]}>
                         <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled>
                            {isSearchingGround ? (
-                             <ActivityIndicator color="#0D9488" style={{ padding: 20 }} />
+                             <ActivityIndicator color="#01b854" style={{ padding: 20 }} />
                            ) : groundResults.length === 0 ? (
                              <View style={{ padding: 16 }}>
                                <Text style={{ color: '#9CA3AF', fontSize: 13 }}>No grounds found. You can enter manually above.</Text>
@@ -5301,7 +5662,7 @@ export default function CricketScreen() {
                >
                   <View style={styles.officialsTriggerLeft}>
                      <View style={styles.officialIconBox}>
-                        <IdCard size={20} color="#0D9488" />
+                        <IdCard size={20} color="#01b854" />
                      </View>
                      <View>
                         <Text style={styles.officialsTitle}>Match Officials</Text>
@@ -5511,7 +5872,7 @@ export default function CricketScreen() {
                          style={styles.addPlayerMiniBtn}
                          onPress={() => setIsAddingNewPlayerManually(true)}
                        >
-                          <Plus size={18} color="#0D9488" />
+                          <Plus size={18} color="#01b854" />
                           <Text style={styles.addPlayerMiniText}>Add New Bowler</Text>
                        </TouchableOpacity>
                     </>
@@ -5534,23 +5895,23 @@ export default function CricketScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { maxWidth: 500, padding: 32, alignItems: 'center' }]}>
-             <View style={{ backgroundColor: '#F0FDF4', padding: 20, borderRadius: 99, marginBottom: 24 }}>
-                <Trophy size={48} color="#0D9488" fill="#0D9488" />
+             <View style={{ backgroundColor: '#F0FDF4', padding: 24, borderRadius: 24, marginBottom: 24, width: '100%', alignItems: 'center' }}>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: '#01b854', textTransform: 'uppercase', letterSpacing: 1 }}>Match Completed</Text>
              </View>
              
-             <Text style={{ fontSize: 24, fontWeight: '900', color: '#111827', textAlign: 'center', marginBottom: 8 }}>Match Completed!</Text>
-             <Text style={{ fontSize: 18, fontWeight: '700', color: '#0D9488', textAlign: 'center', marginBottom: 24 }}>{result}</Text>
+             <Text style={{ fontSize: 24, fontWeight: '900', color: '#06392e', textAlign: 'center', marginBottom: 8 }}>Match Completed!</Text>
+             <Text style={{ fontSize: 18, fontWeight: '800', color: '#01b854', textAlign: 'center', marginBottom: 24 }}>{result}</Text>
              
-             <View style={{ width: '100%', backgroundColor: '#F9FAFB', borderRadius: 16, padding: 20, marginBottom: 24 }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+             <View style={{ width: '100%', backgroundColor: '#F9FAFB', borderRadius: 24, padding: 24, marginBottom: 24, borderWidth: 1, borderColor: '#F3F4F6' }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
                    <View>
                       <Text style={{ fontSize: 12, fontWeight: '600', color: '#6B7280', marginBottom: 4 }}>{inn1?.battingTeam}</Text>
-                      <Text style={{ fontSize: 18, fontWeight: '800', color: '#111827' }}>{inn1?.runs}-{inn1?.wickets}</Text>
+                      <Text style={{ fontSize: 18, fontWeight: '800', color: '#06392e' }}>{inn1?.runs}-{inn1?.wickets}</Text>
                       <Text style={{ fontSize: 11, color: '#9CA3AF' }}>({formatOvers(inn1?.legalBalls || 0)})</Text>
                    </View>
                    <View style={{ alignItems: 'flex-end' }}>
                       <Text style={{ fontSize: 12, fontWeight: '600', color: '#6B7280', marginBottom: 4 }}>{inn2?.battingTeam || (inn1?.bowlingTeam)}</Text>
-                      <Text style={{ fontSize: 18, fontWeight: '800', color: '#111827' }}>{inn2 ? `${inn2.runs}-${inn2.wickets}` : 'Not Bat'}</Text>
+                      <Text style={{ fontSize: 18, fontWeight: '800', color: '#06392e' }}>{inn2 ? `${inn2.runs}-${inn2.wickets}` : 'Not Bat'}</Text>
                       <Text style={{ fontSize: 11, color: '#9CA3AF' }}>({formatOvers(inn2?.legalBalls || 0)})</Text>
                    </View>
                 </View>
@@ -5560,27 +5921,37 @@ export default function CricketScreen() {
                 <View style={{ gap: 8 }}>
                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                       <Text style={{ fontSize: 13, color: '#6B7280' }}>Match Format</Text>
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#111827' }}>{matchConfig.totalOvers} Overs</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#06392e' }}>{matchConfig.totalOvers} Overs</Text>
                    </View>
                    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                       <Text style={{ fontSize: 13, color: '#6B7280' }}>Venue</Text>
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#111827' }}>{matchConfig.ground}</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#06392e' }}>{matchConfig.ground}</Text>
                    </View>
                 </View>
              </View>
              
              <TouchableOpacity 
-               style={[styles.startMatchMainBtn, { width: '100%', marginBottom: 12 }]} 
-               onPress={() => router.push('/cricket/matches')}
+               style={[styles.startMatchMainBtn, { width: '100%', marginBottom: 12, backgroundColor: '#06392e' }]} 
+               onPress={() => {
+                 setIsMatchResultVisible(false);
+                 if (liveMatchId) {
+                   router.push(`/live/${liveMatchId}`);
+                 } else {
+                   router.push('/cricket/matches');
+                 }
+               }}
              >
                 <Text style={styles.startMatchMainBtnText}>View Full Scorecard</Text>
              </TouchableOpacity>
              
              <TouchableOpacity 
                style={{ padding: 12 }} 
-               onPress={() => setIsMatchResultVisible(false)}
+               onPress={() => {
+                 setIsMatchResultVisible(false);
+                 router.push('/cricket/matches');
+               }}
              >
-                <Text style={{ fontSize: 14, fontWeight: '600', color: '#6B7280' }}>Close</Text>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#6B7280' }}>Close</Text>
              </TouchableOpacity>
           </View>
         </View>
@@ -5799,14 +6170,14 @@ export default function CricketScreen() {
                       {filteredDbResults.length > 0 && (
                         <View style={{ marginTop: 24 }}>
                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                              <Search size={14} color="#0D9488" />
-                              <Text style={{ fontSize: 13, fontWeight: '700', color: '#0D9488', letterSpacing: 0.5 }}>GLOBAL SEARCH RESULTS</Text>
+                              <Search size={14} color="#01b854" />
+                              <Text style={{ fontSize: 13, fontWeight: '700', color: '#01b854', letterSpacing: 0.5 }}>GLOBAL SEARCH RESULTS</Text>
                            </View>
                            <View style={styles.playerGrid}>
                               {filteredDbResults.map((p: any) => (
                                 <TouchableOpacity 
                                   key={p.id} 
-                                  style={[styles.playerGridTile, { borderColor: '#0D9488', backgroundColor: '#F0FDF4' }]}
+                                  style={[styles.playerGridTile, { borderColor: '#01b854', backgroundColor: '#F0FDF4' }]}
                                   onPress={async () => {
                                      // Persist to Database if activeMatchConfig and liveMatchId are available
                                      if (activeMatchConfig && liveMatchId && inn) {
@@ -5854,7 +6225,7 @@ export default function CricketScreen() {
                                      setPendingWicketData(null);
                                   }}
                                 >
-                                   <View style={[styles.miniAvatar, { width: 44, height: 44, backgroundColor: '#0D9488' }]}>
+                                   <View style={[styles.miniAvatar, { width: 44, height: 44, backgroundColor: '#01b854' }]}>
                                       <Text style={{ color: '#FFFFFF', fontWeight: 'bold', fontSize: 16 }}>{p.full_name[0]}</Text>
                                    </View>
                                    <Text style={styles.playerGridName} numberOfLines={2}>{p.full_name}</Text>
@@ -5866,7 +6237,7 @@ export default function CricketScreen() {
 
                       {isSearchingDb && (
                          <View style={{ padding: 20, alignItems: 'center' }}>
-                            <ActivityIndicator size="small" color="#0D9488" />
+                            <ActivityIndicator size="small" color="#01b854" />
                             <Text style={{ fontSize: 12, color: '#6B7280', marginTop: 8 }}>Searching database...</Text>
                          </View>
                       )}
@@ -5875,7 +6246,7 @@ export default function CricketScreen() {
                         style={[styles.addPlayerMiniBtn, { marginTop: 24, paddingVertical: 16 }]}
                         onPress={() => setIsAddingNewPlayerManually(true)}
                       >
-                         <Plus size={18} color="#0D9488" />
+                         <Plus size={18} color="#01b854" />
                          <Text style={styles.addPlayerMiniText}>Add & Select New Batter</Text>
                       </TouchableOpacity>
                    </>
@@ -5936,15 +6307,18 @@ export default function CricketScreen() {
              <View style={styles.targetRow}>
                 <Text style={styles.targetText}>
                   {inn.target 
-                    ? `Target: ${inn.target} | Need ${inn.target - inn.runs} from ${parseInt(matchConfig.totalOvers || '20') * 6 - inn.legalBalls} balls` 
-                    : `${tossResult.winner === 'A' ? selectedTeamA?.name : selectedTeamB?.name} won the toss and opted to ${tossResult.decision === 'bowl' ? 'bowl' : 'bat'}`}
+                    ? ( (parseInt(matchConfig.totalOvers || '20') * 6 - inn.legalBalls) > 0 && (inn.target - inn.runs) > 0 
+                       ? `Target: ${inn.target} | Need ${inn.target - inn.runs} from ${parseInt(matchConfig.totalOvers || '20') * 6 - inn.legalBalls} balls` 
+                       : `Target: ${inn.target}`
+                      )
+                    : `${inn.battingTeam} is batting first`}
                 </Text>
                 <TouchableOpacity 
                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
                    onPress={() => setIsMatchInfoVisible(true)}
                 >
-                   <Info size={14} color="#0D9488" />
-                   <Text style={{ fontSize: 13, fontWeight: '700', color: '#0D9488', textDecorationLine: 'underline' }}>Match Info</Text>
+                   <Info size={14} color="#01b854" />
+                   <Text style={{ fontSize: 13, fontWeight: '700', color: '#01b854', textDecorationLine: 'underline' }}>Match Info</Text>
                 </TouchableOpacity>
              </View>
 
@@ -5972,7 +6346,7 @@ export default function CricketScreen() {
                           }
                        }}
                     >
-                       <Text style={[styles.playerName, b?.onStrike && { color: '#0D9488' }, { flex: 2 }]} numberOfLines={1}>
+                       <Text style={[styles.playerName, b?.onStrike && { color: '#01b854' }, { flex: 2 }]} numberOfLines={1}>
                           {b?.name || 'Select Batter...'}{b?.onStrike ? '*' : ''}
                        </Text>
                        <View style={[styles.statsValues, { gap: 10 }]}>
@@ -6105,7 +6479,7 @@ export default function CricketScreen() {
             
             {matchPhase === 'innings_break' && (
               <TouchableOpacity 
-                style={[styles.actionIconBtn, { backgroundColor: '#FFF7ED', width: '30%' }]}
+                style={[styles.actionIconBtn, { backgroundColor: '#fcf8ef', width: '30%' }]}
                 onPress={async () => {
                   await startSecondInnings();
                   setMatchState({ striker: null, nonStriker: null, bowler: null, keeper: null });
@@ -6163,7 +6537,7 @@ export default function CricketScreen() {
                      setIsSelectingNextBowler(false);
                    }}
                  >
-                    <View style={[styles.miniAvatar, { width: 40, height: 40, backgroundColor: lastBowlerId === p.player_name ? '#9CA3AF' : '#0D9488' }]}>
+                    <View style={[styles.miniAvatar, { width: 40, height: 40, backgroundColor: lastBowlerId === p.player_name ? '#9CA3AF' : '#01b854' }]}>
                        <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>{p.player_name[0]}</Text>
                     </View>
                     <Text style={styles.playerGridName} numberOfLines={1}>{p.player_name}</Text>
@@ -6171,7 +6545,7 @@ export default function CricketScreen() {
                  </TouchableOpacity>
                ))}
                 <TouchableOpacity 
-                  style={[styles.playerGridTile, { borderStyle: 'dashed', borderColor: '#0D9488' }]}
+                  style={[styles.playerGridTile, { borderStyle: 'dashed', borderColor: '#01b854' }]}
                   onPress={async () => {
                     const name = prompt('Enter New Bowler Name:');
                     if (name) {
@@ -6204,8 +6578,8 @@ export default function CricketScreen() {
                     }
                   }}
                 >
-                  <Plus size={24} color="#0D9488" />
-                  <Text style={[styles.playerGridName, { color: '#0D9488' }]}>Add New</Text>
+                  <Plus size={24} color="#01b854" />
+                  <Text style={[styles.playerGridName, { color: '#01b854' }]}>Add New</Text>
                 </TouchableOpacity>
             </View>
          </ScrollView>
@@ -6246,9 +6620,9 @@ export default function CricketScreen() {
             style={[styles.selectionHeader, { paddingVertical: 14, paddingHorizontal: 20, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }]}
          >
             <TouchableOpacity onPress={() => setIsConfiguringDismissal(false)} style={styles.closeBtnPremium}>
-               <ChevronLeft size={20} color="#0D9488" />
+               <ChevronLeft size={20} color="#01b854" />
             </TouchableOpacity>
-            <Text style={[styles.modalTitlePremium, { textAlign: 'center', flex: 1, fontSize: 18, color: '#111827' }]}>Wicket Setup</Text>
+            <Text style={[styles.modalTitlePremium, { textAlign: 'center', flex: 1, fontSize: 18, color: '#06392e' }]}>Wicket Setup</Text>
             <View style={{ width: 40 }} />
          </View>
 
@@ -6356,12 +6730,14 @@ export default function CricketScreen() {
 
     return (
       <View style={styles.selectionView}>
-         <View style={styles.selectionHeader}>
-            <TouchableOpacity onPress={() => setIsSelectingOpeners(false)}>
-               <ChevronLeft size={28} color="#0D9488" />
+         <View style={styles.modalHeaderRow}>
+            <View>
+               <Text style={styles.sheetTitle}>Select Openers</Text>
+               <Text style={styles.sheetSubtitle}>Pick the starting pair and bowler</Text>
+            </View>
+            <TouchableOpacity onPress={() => setIsSelectingOpeners(false)} style={styles.closeBtnPremium}>
+               <X size={24} color="#6B7280" />
             </TouchableOpacity>
-            <Text style={styles.selectionTitle}>Select Openers</Text>
-            <View style={{ width: 40 }} />
          </View>
 
          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
@@ -6550,7 +6926,7 @@ export default function CricketScreen() {
       <View style={styles.selectionView}>
          <View style={styles.selectionHeader}>
             <TouchableOpacity onPress={() => setIsConfiguringToss(false)}>
-               <ChevronLeft size={28} color="#0D9488" />
+               <ChevronLeft size={28} color="#01b854" />
             </TouchableOpacity>
             <Text style={styles.selectionTitle}>Toss Details</Text>
             <View style={{ width: 40 }} />
@@ -6578,7 +6954,7 @@ export default function CricketScreen() {
                       style={[styles.tossTeamBtn, tossResult.winner?.id === team?.id && styles.tossTeamBtnActive]}
                       onPress={() => setTossResult({ ...tossResult, winner: team })}
                     >
-                       <View style={[styles.miniAvatar, { backgroundColor: team?.bgColor || '#3B82F6', marginBottom: 8 }]}>
+                       <View style={[styles.miniAvatar, { backgroundColor: team?.bgColor || '#06392e', marginBottom: 8 }]}>
                           <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>{team?.initials}</Text>
                        </View>
                        <Text style={[styles.tossTeamName, tossResult.winner?.id === team?.id && styles.tossTeamNameActive]}>{team?.name}</Text>
@@ -6625,7 +7001,7 @@ export default function CricketScreen() {
     <View style={styles.selectionView}>
        <View style={styles.selectionHeader}>
           <TouchableOpacity onPress={() => setIsConfiguringOfficials(false)}>
-             <ChevronRight size={28} color="#0D9488" style={{ transform: [{ rotate: '180deg' }] }} />
+             <ChevronRight size={28} color="#01b854" style={{ transform: [{ rotate: '180deg' }] }} />
           </TouchableOpacity>
           <Text style={styles.selectionTitle}>Match Officials</Text>
           <View style={{ width: 40 }} />
@@ -6772,7 +7148,7 @@ export default function CricketScreen() {
       <View style={styles.selectionView}>
          <View style={styles.selectionHeader}>
             <TouchableOpacity onPress={() => setIsSearchingOfficial(false)}>
-               <ChevronRight size={28} color="#0D9488" style={{ transform: [{ rotate: '180deg' }] }} />
+               <ChevronRight size={28} color="#01b854" style={{ transform: [{ rotate: '180deg' }] }} />
             </TouchableOpacity>
             <Text style={styles.selectionTitle}>Search Official</Text>
             <View style={{ width: 40 }} />
@@ -6793,18 +7169,18 @@ export default function CricketScreen() {
          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
             {searchQuery.trim().length > 0 && !filtered.find(o => o.name.toLowerCase() === searchQuery.toLowerCase()) && (
               <TouchableOpacity 
-                style={[styles.officialResultCard, { borderStyle: 'dashed', borderColor: '#0D9488', backgroundColor: '#F0FDF4' }]}
+                style={[styles.officialResultCard, { borderStyle: 'dashed', borderColor: '#01b854', backgroundColor: '#F0FDF4' }]}
                 onPress={() => {
                   setNewOfficialForm({ name: searchQuery, phone: '', });
                   setIsAddOfficialModalVisible(true);
                 }}
               >
-                <View style={[styles.miniAvatar, { backgroundColor: '#0D9488' }]}><Plus size={20} color="#FFFFFF" /></View>
+                <View style={[styles.miniAvatar, { backgroundColor: '#01b854' }]}><Plus size={20} color="#FFFFFF" /></View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.resultName, { color: '#0D9488' }]}>Add "{searchQuery}"</Text>
+                  <Text style={[styles.resultName, { color: '#01b854' }]}>Add "{searchQuery}"</Text>
                   <Text style={styles.resultPhone}>Register as a new official</Text>
                 </View>
-                <ChevronRight size={20} color="#0D9488" />
+                <ChevronRight size={20} color="#01b854" />
               </TouchableOpacity>
             )}
 
@@ -6987,7 +7363,7 @@ export default function CricketScreen() {
                     }}
                   >
                      <View style={styles.sheetIconBox}>
-                        <item.icon size={26} color="#111827" strokeWidth={1.5} />
+                        <item.icon size={26} color="#06392e" strokeWidth={1.5} />
                      </View>
                      <Text style={styles.sheetItemLabel}>{item.label}</Text>
                   </TouchableOpacity>
@@ -7021,7 +7397,7 @@ export default function CricketScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.qrModalContent, { height: 'auto', maxHeight: '80%', padding: 0, overflow: 'hidden' }]}>
             <LinearGradient
-              colors={['#0D9488', '#0F766E']}
+              colors={['#01b854', '#06392e']}
               style={[styles.modalHeaderPremium, { padding: 24 }]}
             >
               <View>
@@ -7136,7 +7512,7 @@ export default function CricketScreen() {
              <View style={styles.drawerHeader}>
                 <Text style={styles.drawerTitle}>Settings</Text>
                 <TouchableOpacity onPress={closeDrawer}>
-                   <X size={24} color="#111827" />
+                   <X size={24} color="#06392e" />
                 </TouchableOpacity>
              </View>
 
@@ -7246,7 +7622,7 @@ export default function CricketScreen() {
         </View>
 
         <View style={styles.profileInfoRow}>
-          <View style={[styles.profileAvatar, { backgroundColor: activeTeamForPlayers?.bgColor || '#3B82F6' }]}>
+          <View style={[styles.profileAvatar, { backgroundColor: activeTeamForPlayers?.bgColor || '#06392e' }]}>
             <Text style={styles.profileAvatarText}>{activeTeamForPlayers?.initials || 'T'}</Text>
           </View>
           <View>
@@ -7307,7 +7683,7 @@ export default function CricketScreen() {
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                <Text style={styles.sectionHeading}>{teamMembers.length} Members</Text>
                <TouchableOpacity style={styles.addMemberSmallBtn} onPress={() => setManagementTab('squad')}>
-                  <Plus size={16} color="#0D9488" />
+                  <Plus size={16} color="#01b854" />
                   <Text style={styles.addMemberSmallText}>Add New</Text>
                </TouchableOpacity>
             </View>
@@ -7329,10 +7705,10 @@ export default function CricketScreen() {
           <View style={{ gap: 16 }}>
              <View style={styles.statsSummaryGrid}>
                 {[
-                  { label: 'Matches', value: '12', color: '#3B82F6' },
-                  { label: 'Won', value: '8', color: '#10B981' },
+                  { label: 'Matches', value: '12', color: '#06392e' },
+                  { label: 'Won', value: '8', color: '#01b854' },
                   { label: 'Lost', value: '4', color: '#EF4444' },
-                  { label: 'Win %', value: '66%', color: '#F59E0B' }
+                  { label: 'Win %', value: '66%', color: '#dcc093' }
                 ].map((stat, i) => (
                   <View key={i} style={styles.statBox}>
                      <Text style={[styles.statBoxValue, { color: stat.color }]}>{stat.value}</Text>
@@ -7344,7 +7720,7 @@ export default function CricketScreen() {
                 <Text style={styles.sectionHeading}>Team Form</Text>
                 <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
                    {['W', 'W', 'L', 'W', 'W'].map((r, i) => (
-                     <View key={i} style={[styles.formCircle, { backgroundColor: r === 'W' ? '#10B981' : '#EF4444' }]}>
+                     <View key={i} style={[styles.formCircle, { backgroundColor: r === 'W' ? '#01b854' : '#EF4444' }]}>
                         <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 12 }}>{r}</Text>
                      </View>
                    ))}
@@ -7356,7 +7732,7 @@ export default function CricketScreen() {
         return (
           <View style={styles.trophyGrid}>
              <View style={styles.trophyBox}>
-                <Trophy size={40} color="#F59E0B" />
+                <Trophy size={40} color="#dcc093" />
                 <Text style={styles.trophyYear}>2025</Text>
                 <Text style={styles.trophyEvent}>City Premier League</Text>
              </View>
@@ -7385,13 +7761,13 @@ export default function CricketScreen() {
              {teamMembers.length > 0 ? teamMembers.slice(0, 3).map((m, i) => (
                <View key={i} style={styles.leaderboardRow}>
                   <Text style={styles.rankNum}>{i+1}</Text>
-                  <View style={[styles.miniAvatar, { backgroundColor: i === 0 ? '#F59E0B' : '#3B82F6' }]}><Text style={{ color: '#FFFFFF', fontSize: 10 }}>{m.player_name[0]}</Text></View>
+                  <View style={[styles.miniAvatar, { backgroundColor: i === 0 ? '#dcc093' : '#06392e' }]}><Text style={{ color: '#FFFFFF', fontSize: 10 }}>{m.player_name[0]}</Text></View>
                   <View style={{ flex: 1 }}>
                      <Text style={{ fontWeight: '700' }}>{m.player_name}</Text>
                      <Text style={{ fontSize: 11, color: '#6B7280' }}>8 matches played</Text>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
-                     <Text style={{ color: '#0D9488', fontWeight: '800' }}>{400 + (100 - i * 20)} pts</Text>
+                     <Text style={{ color: '#01b854', fontWeight: '800' }}>{400 + (100 - i * 20)} pts</Text>
                      <Text style={{ fontSize: 10, color: '#9CA3AF' }}>Avg: {45 - i*5}.2</Text>
                   </View>
                </View>
@@ -7489,12 +7865,12 @@ export default function CricketScreen() {
                     <View style={styles.inviteContainer}>
                        <View style={styles.inviteLabelRow}>
                           <Text style={styles.inviteLabel}>Team Link</Text>
-                          <Share2 size={20} color="#0D9488" />
+                          <Share2 size={20} color="#01b854" />
                        </View>
                        
                        <View style={styles.linkBox}>
                           <View style={styles.linkIconWrapper}>
-                             <Link size={20} color="#0D9488" />
+                             <Link size={20} color="#01b854" />
                           </View>
                           <Text style={styles.linkText} numberOfLines={2}>
                             https://bookyourground.com/invite-team/{activeTeamForPlayers?.id}
@@ -7516,7 +7892,7 @@ export default function CricketScreen() {
                       onPress={() => setIsAddMemberModalVisible(true)}
                     >
                        <View style={styles.optionCircle}>
-                          <Smartphone size={24} color="#0D9488" />
+                          <Smartphone size={24} color="#01b854" />
                        </View>
                        <View style={styles.optionContent}>
                           <Text style={styles.optionTitle}>Add via Phone Number</Text>
@@ -7529,7 +7905,7 @@ export default function CricketScreen() {
                       onPress={() => setIsContactPickerVisible(true)}
                     >
                        <View style={styles.optionCircle}>
-                          <UserPlus size={24} color="#0D9488" />
+                          <UserPlus size={24} color="#01b854" />
                        </View>
                        <View style={styles.optionContent}>
                           <Text style={styles.optionTitle}>Add from Contacts</Text>
@@ -7545,7 +7921,7 @@ export default function CricketScreen() {
                       }}
                     >
                        <View style={styles.optionCircle}>
-                          <QrCode size={24} color="#0D9488" />
+                          <QrCode size={24} color="#01b854" />
                        </View>
                        <View style={styles.optionContent}>
                           <Text style={styles.optionTitle}>Team QR code</Text>
@@ -7766,7 +8142,7 @@ export default function CricketScreen() {
                 }}
               >
                  <View style={[styles.actionIconBox, { backgroundColor: '#F0FDF4' }]}>
-                    <Swords size={28} color="#0D9488" />
+                    <Swords size={28} color="#01b854" />
                  </View>
                  <Text style={styles.actionLabel}>Start a Match</Text>
               </TouchableOpacity>
@@ -7778,8 +8154,8 @@ export default function CricketScreen() {
                   setIsCreateTeamModalVisible(true);
                 }}
               >
-                 <View style={[styles.actionIconBox, { backgroundColor: '#EFF6FF' }]}>
-                    <Users size={28} color="#3B82F6" />
+                 <View style={[styles.actionIconBox, { backgroundColor: '#f2f7f5' }]}>
+                    <Users size={28} color="#06392e" />
                  </View>
                  <Text style={styles.actionLabel}>Create Team</Text>
               </TouchableOpacity>
@@ -7791,8 +8167,8 @@ export default function CricketScreen() {
                   alert('Tournament registration coming soon!');
                 }}
               >
-                 <View style={[styles.actionIconBox, { backgroundColor: '#FFF7ED' }]}>
-                    <Trophy size={28} color="#F59E0B" />
+                 <View style={[styles.actionIconBox, { backgroundColor: '#fcf8ef' }]}>
+                    <Trophy size={28} color="#dcc093" />
                  </View>
                  <Text style={styles.actionLabel}>Host Tournament</Text>
               </TouchableOpacity>
@@ -7805,7 +8181,7 @@ export default function CricketScreen() {
                 }}
               >
                  <View style={[styles.actionIconBox, { backgroundColor: '#FAF5FF' }]}>
-                    <Calendar size={28} color="#A855F7" />
+                    <Calendar size={28} color="#518167" />
                  </View>
                  <Text style={styles.actionLabel}>Book Ground</Text>
               </TouchableOpacity>
@@ -8016,7 +8392,7 @@ export default function CricketScreen() {
                         <Image source={{ uri: 'https://images.pexels.com/photos/159443/pexels-photo-159443.jpeg' }} style={styles.adImage} />
                         <View style={styles.adOverlay}>
                           <Text style={styles.adTitle}>Beat the summer!\n<Text style={styles.adTitleBold}>Blinkit</Text></Text>
-                          <TouchableOpacity style={[styles.adBtn, { backgroundColor: '#111827' }]}><Text style={styles.adBtnText}>Order Now</Text></TouchableOpacity>
+                          <TouchableOpacity style={[styles.adBtn, { backgroundColor: '#06392e' }]}><Text style={styles.adBtnText}>Order Now</Text></TouchableOpacity>
                         </View>
                     </View>
                  </View>
@@ -8085,8 +8461,8 @@ export default function CricketScreen() {
          isSelectingTeams ? renderTeamSelection() : 
          (urlMatchId && !resumeFailed) ? (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
-              <Trophy size={64} color="#0D9488" style={{ marginBottom: 24 }} />
-              <Text style={{ color: '#111827', fontSize: 20, fontWeight: '800', textAlign: 'center', marginBottom: 12 }}>
+              <Trophy size={64} color="#01b854" style={{ marginBottom: 24 }} />
+              <Text style={{ color: '#06392e', fontSize: 20, fontWeight: '800', textAlign: 'center', marginBottom: 12 }}>
               {["Umpire is deciding whether to call for tea...", "The batsman is complaining about the sight-screen...", "Groundsman is fixing the landing area...", "Waiting for the sightscreen to be moved..."][Math.floor(Date.now() / 2500) % 4]}
               </Text>
               <Text style={{ color: '#6B7280', fontSize: 14 }}>Initializing your match...</Text>
@@ -8097,6 +8473,7 @@ export default function CricketScreen() {
         {renderMatchInfoModal()}
         {renderWagonWheelModal()}
         {renderMatchResultModal()}
+        {renderQrScannerModal()}
       </View>
     </View>
   );

@@ -1,28 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ChevronRight, History, PlayCircle } from 'lucide-react-native';
+import { ChevronRight, History, Calendar, Search, Radio, Trophy, Clock } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useCricketScoring } from '@/hooks/useCricketScoring';
+import { useAuth } from '@/contexts/AuthContext';
 
-const MATCHES_DATA = [
+const MATCHES_DATA: any[] = [
   {
-    id: '1',
+    id: 'static-1',
     type: 'League Matches',
     tournament: 'SL T20 Cricket Cup',
     status: 'Upcoming',
     date: '18-Apr-26',
-    time: '1:30 PM',
+    rawDate: new Date('2026-04-18'),
     location: 'Sushant Lok 3, Gurugram',
     team1: 'SL Titans',
     team2: 'Sikh Squad',
   },
   {
-    id: '2',
+    id: 'static-2',
     type: 'Corporate Match',
     tournament: 'Weekend Bash',
     status: 'Result',
     date: '12-Apr-26',
+    rawDate: new Date('2026-04-12'),
     location: 'Vicky Cricket Ground',
     team1: 'Tech XI',
     team2: 'Hustlers',
@@ -34,39 +36,98 @@ const MATCHES_DATA = [
   }
 ];
 
+const CATEGORY_TABS = [
+  { key: 'all',    label: 'ALL' },
+  { key: 'played', label: 'Played' },
+];
+
+const STATUS_FILTERS = [
+  { key: 'all',      label: 'All' },
+  { key: 'live',     label: 'Live' },
+  { key: 'upcoming', label: 'Upcoming' },
+  { key: 'result',   label: 'Result' },
+];
+
+const DATE_FILTERS = [
+  { key: 'all_time',   label: 'All Time' },
+  { key: 'today',      label: 'Today' },
+  { key: 'this_week',  label: 'This Week' },
+  { key: 'this_month', label: 'This Month' },
+];
+
 export default function CricketMatches() {
   const router = useRouter();
-  const [subTab, setSubTab] = useState('all');
+  const { session } = useAuth();
+  const [category, setCategory] = useState('all');
+  const [status, setStatus] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all_time');
+  const [searchQuery, setSearchQuery] = useState('');
   const [fetchedMatches, setFetchedMatches] = useState<any[]>([]);
+  const [userTeams, setUserTeams] = useState<string[]>([]);
+  const [userPlayedMatches, setUserPlayedMatches] = useState<string[]>([]);
   const { resumeMatch } = useCricketScoring();
 
   useEffect(() => {
     fetchMatches();
+    if (session?.user?.id) {
+       fetchUserCricketContext();
+    }
 
     const channel = supabase
       .channel(`live-matches-list-${Math.random()}`)
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'match_live_state' 
-      }, () => {
-        fetchMatches();
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'match_live_state'
+      }, () => { 
+        fetchMatches(); 
+        if (session?.user?.id) fetchUserCricketContext();
       })
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+    return () => { supabase.removeChannel(channel); };
+  }, [session?.user?.id]);
+
+  const fetchUserCricketContext = async () => {
+    if (!session?.user?.id) return;
+
+    // 1. Teams where I am a member (profile_id matches my auth id)
+    const { data: memberEntries } = await supabase
+      .from('team_members')
+      .select('id, team_id')
+      .eq('profile_id', session.user.id);
+
+    // 2. Teams where I am the owner
+    const { data: ownedTeams } = await supabase
+      .from('teams')
+      .select('id')
+      .eq('owner_id', session.user.id);
+
+    const myProfileIds = memberEntries?.map(p => p.id) || [];
+    const myTeamIds = Array.from(new Set([
+      ...(memberEntries?.map(m => m.team_id) || []),
+      ...(ownedTeams?.map(t => t.id) || [])
+    ]));
+
+    // 3. Matches where I specifically played (for "Played" tab)
+    if (myProfileIds.length > 0) {
+      const { data: playedInXi } = await supabase
+        .from('match_playing_xi')
+        .select('match_id')
+        .in('player_id', myProfileIds);
+      
+      if (playedInXi) {
+        setUserPlayedMatches(playedInXi.map(pxi => pxi.match_id));
+      }
+    }
+
+    setUserTeams(myTeamIds);
+  };
 
   const fetchMatches = async () => {
     const { data, error } = await supabase
       .from('matches')
-      .select(`
-        *,
-        match_live_state (*),
-        innings (*)
-      `)
+      .select(`*, match_live_state (*), innings (*)`)
       .order('created_at', { ascending: false });
 
     if (!error && data) {
@@ -76,22 +137,21 @@ export default function CricketMatches() {
         const firstInn = m.innings?.find((i: any) => i.innings_number === 1);
         const oversLimit = Number(m.overs || 20) * 6;
 
-        // Comprehensive check for match completion
         const dbCompleted = m.status === 'completed' || m.status === 'Result';
         const liveCompleted = live?.match_status === 'completed' || live?.match_status === 'Result';
-        const mathCompleted = (secondInn && Number(secondInn.wickets) >= (Number(m.players || 11) - 1)) || 
-                              (secondInn && Number(secondInn.legal_balls) >= oversLimit) ||
-                              (secondInn && secondInn.target && secondInn.runs >= secondInn.target) ||
-                              (live?.innings_number === 2 && (Number(live.legal_balls) >= oversLimit || (live.target && live.runs >= live.target)));
+        const mathCompleted =
+          (secondInn && Number(secondInn.wickets) >= (Number(m.players || 11) - 1)) ||
+          (secondInn && Number(secondInn.legal_balls) >= oversLimit) ||
+          (secondInn && secondInn.target && secondInn.runs >= secondInn.target) ||
+          (live?.innings_number === 2 && (Number(live.legal_balls) >= oversLimit || (live.target && live.runs >= live.target)));
 
         const isCompleted = dbCompleted || liveCompleted || !!mathCompleted;
         const isLive = !isCompleted && (m.status === 'live' || m.status === 'innings_break' || !!live);
         const status = isCompleted ? 'Result' : (isLive ? 'Live' : 'Upcoming');
-        
+
         let matchResult = m.result_text || live?.result_text;
         let team1Score, team1Overs, team2Score, team2Overs;
 
-        // Step 1: Base scores from Innings table (historical)
         if (firstInn) {
           if (firstInn.batting_team === m.team_a) {
             team1Score = `${firstInn.runs}/${firstInn.wickets}`;
@@ -110,21 +170,17 @@ export default function CricketMatches() {
             team2Overs = `(${Math.floor(secondInn.legal_balls / 6)}.${secondInn.legal_balls % 6} Ov)`;
           }
         }
-
-        // Step 2: Override with Live State (most fresh data for current/final inning)
         if (live) {
           const isTeamABatting = live.batting_team === m.team_a;
           const currentScore = `${live.runs}/${live.wickets}`;
           const currentOvers = `(${Math.floor(live.legal_balls / 6)}.${live.legal_balls % 6} Ov)`;
-          
-          if (isTeamABatting) {
-            team1Score = currentScore;
-            team1Overs = currentOvers;
-          } else {
-            team2Score = currentScore;
-            team2Overs = currentOvers;
-          }
+          if (isTeamABatting) { team1Score = currentScore; team1Overs = currentOvers; }
+          else { team2Score = currentScore; team2Overs = currentOvers; }
         }
+
+        const rawDate = new Date(m.created_at);
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const formattedDate = `${rawDate.getDate()}-${months[rawDate.getMonth()]}-${rawDate.getFullYear().toString().slice(-2)}`;
 
         return {
           id: m.id,
@@ -132,17 +188,13 @@ export default function CricketMatches() {
           type: m.match_type || 'Limited Overs',
           tournament: 'Open Match',
           status,
-          date: (() => {
-             const d = new Date(m.created_at);
-             const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-             const day = d.getDate();
-             const month = months[d.getMonth()];
-             const year = d.getFullYear().toString().slice(-2);
-             return `${day}-${month}-${year}`;
-           })(),
+          date: formattedDate,
+          rawDate,
           location: m.venue || 'Unknown Grounds',
           team1: m.team_a,
           team2: m.team_b,
+          team_a_id: m.team_a_id,
+          team_b_id: m.team_b_id,
           team1Score,
           team1Overs,
           team2Score,
@@ -155,10 +207,69 @@ export default function CricketMatches() {
     }
   };
 
+  const allMatches = useMemo(() => [...fetchedMatches, ...MATCHES_DATA], [fetchedMatches]);
+
+  const filteredMatches = useMemo(() => {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfWeek = new Date(startOfToday);
+    startOfWeek.setDate(startOfToday.getDate() - startOfToday.getDay());
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    return allMatches.filter(m => {
+      // 1. Category logic
+      // ALL category now shows all matches globally
+      if (category === 'played') {
+         if (!userPlayedMatches.includes(m.id)) {
+            if (typeof m.id === 'string' && !m.id.startsWith('static-')) return false;
+         }
+      }
+
+      // 2. Status filter
+      if (status !== 'all') {
+        if (status === 'live' && m.status !== 'Live') return false;
+        if (status === 'upcoming' && m.status !== 'Upcoming') return false;
+        if (status === 'result' && (m.status !== 'Result' && m.status !== 'completed')) return false;
+      }
+
+      // Date filter
+      const matchDate = m.rawDate ? new Date(m.rawDate) : null;
+      if (matchDate) {
+        if (dateFilter === 'today' && matchDate < startOfToday) return false;
+        if (dateFilter === 'this_week' && matchDate < startOfWeek) return false;
+        if (dateFilter === 'this_month' && matchDate < startOfMonth) return false;
+      }
+
+      // Search filter
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        return (
+          m.team1?.toLowerCase().includes(q) ||
+          m.team2?.toLowerCase().includes(q) ||
+          m.location?.toLowerCase().includes(q) ||
+          m.tournament?.toLowerCase().includes(q)
+        );
+      }
+
+      return true;
+    });
+  }, [allMatches, category, status, userTeams, userPlayedMatches, dateFilter, searchQuery]);
+
+  const liveCount = useMemo(() => {
+    return allMatches.filter(m => {
+      if (category === 'played') {
+         if (!userPlayedMatches.includes(m.id)) {
+            if (typeof m.id === 'string' && !m.id.startsWith('static-')) return false;
+         }
+      }
+      return m.status === 'Live';
+    }).length;
+  }, [allMatches, category, userTeams, userPlayedMatches]);
+
   const MatchCard = ({ match }: { match: any }) => (
-    <TouchableOpacity 
+    <TouchableOpacity
       activeOpacity={0.9}
-      style={styles.matchCard}
+      style={[styles.matchCard, match.status === 'Live' && styles.matchCardLive]}
       onPress={() => {
         if (match.status === 'Live' || match.status === 'Result') {
           router.push(`/live/${match.match_id}`);
@@ -170,61 +281,74 @@ export default function CricketMatches() {
           <Text style={styles.matchType}>
             {match.type}, <Text style={styles.matchTournament}>{match.tournament}</Text>
           </Text>
-          <Text style={styles.matchMeta}>{match.date} | {match.location}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+            <Calendar size={11} color="#94A3B8" />
+            <Text style={styles.matchMeta}>{match.date}</Text>
+            {match.location ? (
+              <>
+                <Text style={{ color: '#CBD5E1', fontSize: 10 }}>•</Text>
+                <Text style={styles.matchMeta} numberOfLines={1}>{match.location}</Text>
+              </>
+            ) : null}
+          </View>
         </View>
         <View style={[
-          styles.statusBadge, 
-          match.status === 'Result' ? styles.statusBadgeResult : 
-          (match.status === 'Live' ? styles.statusBadgeLive : styles.statusBadgeUpcoming)
+          styles.statusBadge,
+          match.status === 'Result' ? styles.statusBadgeResult :
+          match.status === 'Live' ? styles.statusBadgeLive : styles.statusBadgeUpcoming
         ]}>
           {match.status === 'Live' && <View style={styles.pulseDot} />}
           <Text style={[
             styles.statusBadgeText,
-            match.status === 'Result' ? styles.statusBadgeTextResult : 
-            (match.status === 'Live' ? styles.statusBadgeTextLive : styles.statusBadgeTextUpcoming)
-          ]}>{match.status === 'Live' ? 'LIVE' : match.status}</Text>
+            match.status === 'Result' ? styles.statusBadgeTextResult :
+            match.status === 'Live' ? styles.statusBadgeTextLive : styles.statusBadgeTextUpcoming
+          ]}>{match.status === 'Live' ? 'LIVE' : match.status.toUpperCase()}</Text>
         </View>
       </View>
 
       <View style={styles.matchTeams}>
         <View style={styles.matchTeamRow}>
           <View style={styles.teamInfo}>
-            <View style={[styles.miniAvatar, { width: 32, height: 32, backgroundColor: '#F1F5F9' }]}>
-               <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#64748B' }}>{match.team1[0]}</Text>
+            <View style={[styles.miniAvatar, { backgroundColor: '#F1F5F9' }]}>
+              <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#64748B' }}>{(match.team1 || '?')[0]}</Text>
             </View>
-            <Text style={styles.teamNameText} numberOfLines={1}>{match.team1}</Text>
+            <Text style={styles.teamNameText} numberOfLines={1}>{match.team1 || 'TBC'}</Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             {match.status === 'Live' && match.batting_team === match.team1 && <View style={styles.liveIndicatorDot} />}
-            {match.team1Score && <Text style={styles.teamScoreText}>{match.team1Score} <Text style={styles.teamOversText}>{match.team1Overs}</Text></Text>}
+            {match.team1Score && (
+              <Text style={styles.teamScoreText}>{match.team1Score} <Text style={styles.teamOversText}>{match.team1Overs}</Text></Text>
+            )}
           </View>
         </View>
 
         <View style={styles.matchTeamRow}>
           <View style={styles.teamInfo}>
-            <View style={[styles.miniAvatar, { width: 32, height: 32, backgroundColor: '#F1F5F9' }]}>
-               <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#64748B' }}>{match.team2[0]}</Text>
+            <View style={[styles.miniAvatar, { backgroundColor: '#F8FAFC' }]}>
+              <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#64748B' }}>{(match.team2 || '?')[0]}</Text>
             </View>
-            <Text style={styles.teamNameText} numberOfLines={1}>{match.team2}</Text>
+            <Text style={styles.teamNameText} numberOfLines={1}>{match.team2 || 'TBC'}</Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             {match.status === 'Live' && match.batting_team === match.team2 && <View style={styles.liveIndicatorDot} />}
-            {match.team2Score && <Text style={styles.teamScoreText}>{match.team2Score} <Text style={styles.teamOversText}>{match.team2Overs}</Text></Text>}
+            {match.team2Score && (
+              <Text style={styles.teamScoreText}>{match.team2Score} <Text style={styles.teamOversText}>{match.team2Overs}</Text></Text>
+            )}
           </View>
         </View>
       </View>
 
       {match.status === 'Live' && (
-        <View style={{ flexDirection: 'row', gap: 10, marginTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 12 }}>
-            <TouchableOpacity 
-            style={[styles.liveActionBtn, { flex: 1, backgroundColor: '#F0FDF4', borderRadius: 8 }]}
+        <View style={{ flexDirection: 'row', gap: 10, marginTop: 14, borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 12 }}>
+          <TouchableOpacity
+            style={[styles.liveActionBtn, { flex: 1, backgroundColor: '#F0FDF4', borderRadius: 10 }]}
             onPress={() => router.push(`/live/${match.match_id}`)}
           >
             <Text style={styles.liveActionBtnText}>View</Text>
             <ChevronRight size={14} color="#01b854" />
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.liveActionBtn, { flex: 1.5, backgroundColor: '#01b854', borderRadius: 8 }]}
+          <TouchableOpacity
+            style={[styles.liveActionBtn, { flex: 1.5, backgroundColor: '#06392e', borderRadius: 10 }]}
             onPress={() => router.push(`/cricket/scoring?matchId=${match.match_id}`)}
           >
             <Text style={[styles.liveActionBtnText, { color: '#FFFFFF' }]}>Resume Scoring</Text>
@@ -234,88 +358,254 @@ export default function CricketMatches() {
       )}
       {match.status === 'Result' && match.result && (
         <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 12 }}>
-          <Text style={styles.resultText}>{match.result}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Trophy size={12} color="#01b854" />
+            <Text style={styles.resultText}>{match.result}</Text>
+          </View>
+        </View>
+      )}
+      {match.status === 'Upcoming' && (
+        <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Clock size={12} color="#94A3B8" />
+            <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '500' }}>Scheduled · {match.date}</Text>
+          </View>
         </View>
       )}
     </TouchableOpacity>
   );
 
   return (
-    <View style={{ flex: 1 }}>
-      <View style={styles.subTabContainer}>
-        {['All', 'Played'].map((label) => (
-          <TouchableOpacity
-            key={label}
-            style={[styles.subTab, subTab === label.toLowerCase() && styles.subTabActive]}
-            onPress={() => setSubTab(label.toLowerCase())}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.subTabText, subTab === label.toLowerCase() && styles.subTabTextActive]}>
-              {label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+    <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+      {/* Search Bar */}
+      <View style={styles.searchBar}>
+        <Search size={16} color="#94A3B8" />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search teams, venue..."
+          placeholderTextColor="#94A3B8"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          // @ts-ignore
+          outlineStyle="none"
+        />
       </View>
-      <View style={styles.matchesList}>
-        {[...fetchedMatches, ...MATCHES_DATA]
-          .filter(m => {
-            if (subTab === 'all') return true;
-            if (subTab === 'played') return m.status === 'Result' || m.status === 'completed';
-            return m.status.toLowerCase() === subTab.toLowerCase();
-          })
-          .map(match => (
+
+      {/* Category Filter (ALL / Played) */}
+      <View style={{ marginBottom: 12 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
+          {CATEGORY_TABS.map((tab, idx) => (
+            <TouchableOpacity
+              key={tab.key}
+              style={[
+                styles.categoryTab,
+                category === tab.key && styles.categoryTabActive,
+                { marginRight: idx < CATEGORY_TABS.length - 1 ? 12 : 0 }
+              ]}
+              onPress={() => setCategory(tab.key)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.categoryTabText, category === tab.key && styles.categoryTabTextActive]}>
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* Status Filter Tabs */}
+      <View style={{ marginBottom: 12 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
+          {STATUS_FILTERS.map((tab, idx) => (
+            <TouchableOpacity
+              key={tab.key}
+              style={[
+                styles.statusTab,
+                status === tab.key && styles.statusTabActive,
+                { marginRight: idx < STATUS_FILTERS.length - 1 ? 8 : 0 }
+              ]}
+              onPress={() => setStatus(tab.key)}
+              activeOpacity={0.8}
+            >
+              {tab.key === 'live' && liveCount > 0 && <View style={styles.livePip} />}
+              <Text style={[styles.statusTabText, status === tab.key && styles.statusTabTextActive]}>
+                {tab.label}
+              </Text>
+              {tab.key === 'live' && liveCount > 0 && (
+                <View style={styles.countBadge}>
+                  <Text style={styles.countBadgeText}>{liveCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* Date Filter Pills */}
+      <View style={{ marginBottom: 16 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
+          {DATE_FILTERS.map((df, idx) => (
+            <TouchableOpacity
+              key={df.key}
+              style={[
+                styles.datePill,
+                dateFilter === df.key && styles.datePillActive,
+                { marginRight: idx < DATE_FILTERS.length - 1 ? 8 : 0 }
+              ]}
+              onPress={() => setDateFilter(df.key)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.datePillText, dateFilter === df.key && styles.datePillTextActive]}>
+                {df.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* Matches List */}
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.matchesList} showsVerticalScrollIndicator={false}>
+        {filteredMatches.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Radio size={40} color="#CBD5E1" />
+            <Text style={styles.emptyTitle}>No matches found</Text>
+            <Text style={styles.emptyDesc}>Try changing the filter or search term</Text>
+          </View>
+        ) : (
+          filteredMatches.map(match => (
             <MatchCard key={match.id} match={match} />
           ))
-        }
-      </View>
+        )}
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  subTabContainer: {
+  searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.04)',
-    borderRadius: 999,
-    padding: 4,
-    marginBottom: 20,
-    alignSelf: 'flex-start',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    marginHorizontal: 16,
+    marginBottom: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 10,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.02)',
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  subTab: {
-    paddingHorizontal: 20,
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#1E293B',
+    fontWeight: '500',
+  },
+  tabsScroll: {
+    marginBottom: 12,
+  },
+  tabsScrollContent: {
+    paddingHorizontal: 16,
+  },
+  categoryTab: {
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+  },
+  categoryTabActive: {
+    backgroundColor: '#06392e',
+    borderColor: '#06392e',
+  },
+  categoryTabText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#64748B',
+    letterSpacing: 0.2,
+  },
+  categoryTabTextActive: {
+    color: '#FFFFFF',
+  },
+  statusTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
-  subTabActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+  statusTabActive: {
+    backgroundColor: '#06392e',
+    borderColor: '#06392e',
   },
-  subTabText: {
-    fontFamily: 'Inter',
+  statusTabText: {
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '600',
     color: '#64748B',
   },
-  subTabTextActive: {
-    color: '#01b854',
+  statusTabTextActive: {
+    color: '#FFFFFF',
+  },
+  livePip: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#01b854',
+  },
+  countBadge: {
+    backgroundColor: '#01b854',
+    borderRadius: 9,
+    minWidth: 18,
+    height: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  countBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  datePill: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  datePillActive: {
+    backgroundColor: '#dcc09320',
+    borderColor: '#dcc093',
+  },
+  datePillText: {
+    fontSize: 12,
     fontWeight: '600',
+    color: '#64748B',
+  },
+  datePillTextActive: {
+    color: '#06392e',
+    fontWeight: '700',
   },
   matchesList: {
-    gap: 16,
+    gap: 14,
+    paddingHorizontal: 16,
+    paddingBottom: 32,
   },
   matchCard: {
     backgroundColor: '#FFFFFF',
     padding: 16,
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     shadowColor: '#000',
@@ -324,66 +614,54 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
+  matchCardLive: {
+    borderColor: '#01b85430',
+    borderWidth: 1.5,
+    backgroundColor: '#fafffe',
+  },
   matchHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   matchType: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: '#334155',
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   matchTournament: {
     color: '#64748B',
     fontWeight: '500',
   },
   matchMeta: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#94A3B8',
-    marginTop: 2,
   },
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 6,
+    borderRadius: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
   },
-  statusBadgeLive: {
-    backgroundColor: '#F0FDF4',
-  },
-  statusBadgeResult: {
-    backgroundColor: '#F1F5F9',
-  },
-  statusBadgeUpcoming: {
-    backgroundColor: '#EFF6FF',
-  },
-  statusBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
-  },
-  statusBadgeTextLive: {
-    color: '#10B981',
-  },
-  statusBadgeTextResult: {
-    color: '#64748B',
-  },
-  statusBadgeTextUpcoming: {
-    color: '#3B82F6',
-  },
+  statusBadgeLive: { backgroundColor: '#F0FDF4' },
+  statusBadgeResult: { backgroundColor: '#F1F5F9' },
+  statusBadgeUpcoming: { backgroundColor: '#EFF6FF' },
+  statusBadgeText: { fontSize: 10, fontWeight: '800' },
+  statusBadgeTextLive: { color: '#01b854' },
+  statusBadgeTextResult: { color: '#64748B' },
+  statusBadgeTextUpcoming: { color: '#518167' },
   pulseDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#10B981',
+    backgroundColor: '#01b854',
   },
-  matchTeams: {
-    gap: 12,
-  },
+  matchTeams: { gap: 12 },
   matchTeamRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -393,33 +671,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    flex: 1,
   },
   miniAvatar: {
+    width: 34,
+    height: 34,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 16,
+    borderRadius: 10,
   },
   teamNameText: {
     fontSize: 15,
     fontWeight: '700',
     color: '#1E293B',
-    maxWidth: 200,
+    flex: 1,
   },
   teamScoreText: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#1E293B',
+    color: '#06392e',
   },
   teamOversText: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#64748B',
+    color: '#94A3B8',
   },
   liveIndicatorDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#10B981',
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#01b854',
   },
   liveActionBtn: {
     flexDirection: 'row',
@@ -433,16 +714,26 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#01b854',
   },
-  matchFooter: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-  },
   resultText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#64748B',
+    color: '#518167',
     fontStyle: 'italic',
+    flex: 1,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 60,
+    gap: 12,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#94A3B8',
+  },
+  emptyDesc: {
+    fontSize: 13,
+    color: '#CBD5E1',
+    textAlign: 'center',
   },
 });
