@@ -14,6 +14,7 @@ import {
   Trophy,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUI } from '@/contexts/UIContext';
 
 const ACTIVE = '#00ea6b';
 const INACTIVE = '#e5e7eb';
@@ -46,10 +47,11 @@ export default function MobileTabBar() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const segments = useSegments();
-  const { user, profile } = useAuth();
+  const { isTabBarVisible } = useUI();
   const isOwner = profile?.role === 'ground_owner';
 
   if (Platform.OS === 'web') return null;
+  if (!isTabBarVisible) return null;
 
   const activeTab = getActiveTab(segments as string[]);
   const size = 24;

@@ -769,7 +769,6 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                     <Text style={styles.sidebarTitle}>My Account</Text>
                     <NavLink href="/(tabs)/dashboard" icon={LayoutDashboard} label="Dashboard" />
                     <NavLink href="/cricket" icon={Swords} label="Cricket Hub" />
-                    <NavLink href="/(tabs)/matches" icon={CalendarClock} label="My Matches" />
                     <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
                     <NavLink href="/(tabs)/favorites" icon={Star} label="Favorites" />
                     <NavLink href="/(tabs)/profile" icon={User} label="Profile" />
@@ -973,7 +972,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
 
         <View style={[
           styles.main,
-          !isPublicNoSidebar && !isCompact && !noCard && styles.mainAppCard
+          !isPublicNoSidebar && !isCompact && !noCard && (isGroundOwner || isSuperAdmin) && styles.mainAppCard
         ]}>
           {children}
         </View>
@@ -1252,7 +1251,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 'auto',
     width: '100%',
     position: 'relative',
-    paddingTop: 24, // Restored padding for Owners and Users
+    paddingTop: 32, 
     paddingHorizontal: 24,
   },
   bodyAdmin: {
@@ -1287,7 +1286,7 @@ const styles = StyleSheet.create({
     ...Platform.select({
       web: {
         position: 'sticky' as any,
-        top: 64, 
+        top: 96, 
         alignSelf: 'flex-start',
         maxHeight: 'calc(100vh - 80px)' as any,
         transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',

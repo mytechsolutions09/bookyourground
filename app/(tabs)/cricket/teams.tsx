@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Platform } from 'react-native';
-import { MapPin, User, ChevronRight, Share2, Plus } from 'lucide-react-native';
+import { MapPin, User, ChevronRight, Share2, Plus, QrCode } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { Modal } from 'react-native';
+import QRCode from 'react-native-qrcode-svg';
 
 const INITIAL_TEAMS_DATA = [
   {
@@ -27,7 +29,7 @@ const INITIAL_TEAMS_DATA = [
     location: 'Delhi',
     captain: 'Ashish Sharma',
     initials: 'CX',
-    bgColor: '#F87171',
+    bgColor: '#F1F5F9',
     isUserTeam: false,
   }
 ];
@@ -35,6 +37,7 @@ const INITIAL_TEAMS_DATA = [
 export default function CricketTeams() {
   const [subTab, setSubTab] = useState('your');
   const [fetchedTeams, setFetchedTeams] = useState<any[]>([]);
+  const [selectedQRTeam, setSelectedQRTeam] = useState<any>(null);
 
   useEffect(() => {
     fetchTeams();
@@ -50,7 +53,7 @@ export default function CricketTeams() {
         captain: t.captain,
         image: t.image_url,
         initials: t.name[0],
-        bgColor: '#3B82F6',
+        bgColor: '#F1F5F9',
         isUserTeam: true
       })));
     }
@@ -87,12 +90,11 @@ export default function CricketTeams() {
                 style={styles.teamActionBtn}
                 onPress={(e) => {
                   e.stopPropagation();
-                  // Handle share
+                  setSelectedQRTeam(team);
                 }}
              >
-                <Share2 size={18} color="#64748B" />
+                <QrCode size={18} color="#64748B" />
              </TouchableOpacity>
-             <ChevronRight size={18} color="#64748B" />
           </View>
        </View>
     </TouchableOpacity>
@@ -132,6 +134,41 @@ export default function CricketTeams() {
              <TeamCard key={team.id} team={team} />
            ))}
       </View>
+
+      {/* Enlarged QR Modal */}
+      <Modal
+        visible={!!selectedQRTeam}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setSelectedQRTeam(null)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setSelectedQRTeam(null)}
+        >
+          <View style={styles.qrModalContent}>
+            <Text style={styles.qrModalTitle}>{selectedQRTeam?.name} Profile</Text>
+            <View style={styles.qrModalWrapper}>
+               {selectedQRTeam && (
+                 <QRCode
+                    value={`https://bookyourground.com/teams/${selectedQRTeam.id}`}
+                    size={200}
+                    color="#043529"
+                    backgroundColor="#FFFFFF"
+                 />
+               )}
+            </View>
+            <Text style={styles.qrModalHint}>Scan to join the squad</Text>
+            <TouchableOpacity 
+              style={styles.qrModalCloseBtn}
+              onPress={() => setSelectedQRTeam(null)}
+            >
+              <Text style={styles.qrModalCloseText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -282,5 +319,53 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#166534',
     opacity: 0.7,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  qrModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 32,
+    padding: 32,
+    alignItems: 'center',
+    width: '90%',
+    maxWidth: 400,
+  },
+  qrModalTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#043529',
+    marginBottom: 24,
+  },
+  qrModalWrapper: {
+    padding: 16,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 24,
+  },
+  qrModalHint: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#64748B',
+    marginBottom: 32,
+  },
+  qrModalCloseBtn: {
+    backgroundColor: '#043529',
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 16,
+    width: '100%',
+    alignItems: 'center',
+  },
+  qrModalCloseText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
 });

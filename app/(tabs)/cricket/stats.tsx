@@ -1,18 +1,71 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import { Users2, Award, Zap, Swords, Target, Activity, ChevronDown } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 
-type SubTab = 'batting' | 'bowling' | 'fielding' | 'captain';
+type SubTab = 'batting' | 'bowling' | 'fielding' | 'captain' | 'leaders';
 
 export default function CricketStats() {
+  const router = useRouter();
   const [subTab, setSubTab] = useState<SubTab>('batting');
   const [loading, setLoading] = useState(true);
   const [statsData, setStatsData] = useState<any[]>([]);
+  const [leaders, setLeaders] = useState<any>({ batting: [], bowling: [] });
 
   useEffect(() => {
     fetchUserStats();
+    fetchLeaders();
   }, []);
+
+  const fetchLeaders = async () => {
+    try {
+      // Fetch top 10 Batters (Global)
+      const { data: batters } = await supabase
+        .from('player_ball_stats')
+        .select(`
+          member_id,
+          total_runs,
+          highest_score,
+          team_members (
+            profile_id,
+            profiles (
+              full_name,
+              avatar_url
+            )
+          )
+        `)
+        .eq('ball_type', 'leather')
+        .order('total_runs', { ascending: false })
+        .limit(10);
+
+      // Fetch top 10 Bowlers (Global)
+      const { data: bowlers } = await supabase
+        .from('player_ball_stats')
+        .select(`
+          member_id,
+          total_wickets,
+          best_bowling_wickets,
+          team_members (
+            profile_id,
+            profiles (
+              full_name,
+              avatar_url
+            )
+          )
+        `)
+        .eq('ball_type', 'leather')
+        .order('total_wickets', { ascending: false })
+        .limit(10);
+
+      setLeaders({ 
+        batting: batters || [], 
+        bowling: bowlers || [] 
+      });
+    } catch (err) {
+      console.error('Error fetching leaders:', err);
+    }
+  };
 
   const fetchUserStats = async () => {
     try {
@@ -143,8 +196,6 @@ export default function CricketStats() {
   const renderStatGroup = (format: 'overall' | 'leather' | 'tennis' | 'other', isLast: boolean) => {
     const stats = getStatsByFormat(format);
     const label = format.charAt(0).toUpperCase() + format.slice(1);
-    
-    // Check if there is data for this specific format
     const hasData = format === 'overall' || statsData.some(s => s.ball_type === format);
 
     return (
@@ -171,6 +222,34 @@ export default function CricketStats() {
     );
   };
 
+  const LeaderItem = ({ profileId, name, avatar, score, label, rank }: any) => {
+    return (
+      <TouchableOpacity 
+        style={styles.leaderRow}
+        onPress={() => router.push(`/players/${profileId}` as any)}
+      >
+        <View style={styles.leaderRankBox}>
+          <Text style={styles.leaderRank}>{rank}</Text>
+        </View>
+        
+        {avatar ? (
+          <Image source={{ uri: avatar }} style={styles.leaderAvatar} />
+        ) : (
+          <View style={styles.leaderAvatarPlaceholder}>
+            <Users2 size={16} color="#94A3B8" />
+          </View>
+        )}
+        
+        <View style={styles.leaderInfo}>
+          <Text style={styles.leaderName}>{name}</Text>
+          <Text style={styles.leaderScore}>{label}: {score}</Text>
+        </View>
+        
+        <ChevronDown size={18} color="#E2E8F0" style={{ transform: [{ rotate: '-90deg' }] }} />
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.statsPromoHeader}>
@@ -190,6 +269,7 @@ export default function CricketStats() {
             { id: 'bowling', label: 'Bowling', icon: Zap },
             { id: 'fielding', label: 'Fielding', icon: Target },
             { id: 'captain', label: 'Captain', icon: Award },
+            { id: 'leaders', label: 'Leaders', icon: Users2 },
         ].map((item) => (
           <TouchableOpacity 
             key={item.id}
@@ -216,14 +296,42 @@ export default function CricketStats() {
                 <ActivityIndicator color="#01b854" />
                 <Text style={styles.loadingText}>Generating Performance Data...</Text>
              </View>
-         ) : (
+          ) : subTab === 'leaders' ? (
+             <View>
+                <Text style={styles.leaderSectionTitle}>Top Batters</Text>
+                {leaders.batting.map((l: any, idx: number) => (
+                  <LeaderItem 
+                    key={idx}
+                    rank={idx + 1}
+                    profileId={l.team_members?.profile_id}
+                    name={l.team_members?.profiles?.full_name}
+                    avatar={l.team_members?.profiles?.avatar_url}
+                    score={l.total_runs}
+                    label="Runs"
+                  />
+                ))}
+
+                <Text style={[styles.leaderSectionTitle, { marginTop: 24 }]}>Top Bowlers</Text>
+                {leaders.bowling.map((l: any, idx: number) => (
+                  <LeaderItem 
+                    key={idx}
+                    rank={idx + 1}
+                    profileId={l.team_members?.profile_id}
+                    name={l.team_members?.profiles?.full_name}
+                    avatar={l.team_members?.profiles?.avatar_url}
+                    score={l.total_wickets}
+                    label="Wickets"
+                  />
+                ))}
+             </View>
+          ) : (
             <View>
                 {renderStatGroup('overall', false)}
                 {renderStatGroup('leather', false)}
                 {renderStatGroup('tennis', false)}
                 {renderStatGroup('other', true)}
             </View>
-         )}
+          )}
 
          <View style={styles.adBanner}>
             <Image source={{ uri: 'https://images.pexels.com/photos/3628912/pexels-photo-3628912.jpeg' }} style={styles.adImage} />
@@ -251,9 +359,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
-    ...Platform.select({
-        web: { boxShadow: '0 4px 12px rgba(1, 184, 84, 0.2)' }
-    })
   },
   statsPromoText: {
     color: '#FFFFFF',
@@ -459,5 +564,58 @@ const styles = StyleSheet.create({
     color: '#000000',
     fontSize: 12,
     fontWeight: '800',
+  },
+  leaderSectionTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#64748B',
+    textTransform: 'uppercase',
+    marginBottom: 12,
+    letterSpacing: 0.5,
+  },
+  leaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8FAFC',
+  },
+  leaderRankBox: {
+    width: 24,
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  leaderRank: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#94A3B8',
+  },
+  leaderAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+  },
+  leaderAvatarPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  leaderInfo: {
+    flex: 1,
+  },
+  leaderName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#043529',
+  },
+  leaderScore: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
   },
 });

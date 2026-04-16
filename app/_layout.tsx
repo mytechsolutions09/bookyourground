@@ -4,6 +4,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { UIProvider } from '@/contexts/UIContext';
 import { MobileTabBarHost } from '@/components/navigation/MobileTabBarHost';
 
 export default function RootLayout() {
@@ -46,27 +47,28 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-        <View style={{ flex: 1 }}>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              // Avoid default nav/card tint flashing blue before the landing paints.
-              contentStyle: { backgroundColor: '#FFFFFF', flex: 1 },
-            }}
-          >
-            <Stack.Screen name="index" />
-            <Stack.Screen name="welcome" />
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="(owner)" />
-            <Stack.Screen name="(admin)" />
-            <Stack.Screen name="+not-found" />
-          </Stack>
+      <UIProvider>
+        <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+          <View style={{ flex: 1 }}>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: '#FFFFFF', flex: 1 },
+              }}
+            >
+              <Stack.Screen name="index" />
+              <Stack.Screen name="welcome" />
+              <Stack.Screen name="(auth)" />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="(owner)" />
+              <Stack.Screen name="(admin)" />
+              <Stack.Screen name="+not-found" />
+            </Stack>
+          </View>
+          <MobileTabBarHost />
         </View>
-        <MobileTabBarHost />
-      </View>
-      <StatusBar style="auto" />
+        <StatusBar style="auto" />
+      </UIProvider>
     </AuthProvider>
   );
 }

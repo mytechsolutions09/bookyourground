@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, TextInput, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ChevronRight, History, Calendar, Search, Radio, Trophy, Clock } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
@@ -58,6 +58,9 @@ const DATE_FILTERS = [
 export default function CricketMatches() {
   const router = useRouter();
   const { session } = useAuth();
+  const { width } = useWindowDimensions();
+  const isLargeScreen = width > 1024;
+  
   const [category, setCategory] = useState('all');
   const [status, setStatus] = useState('all');
   const [dateFilter, setDateFilter] = useState('all_time');
@@ -388,80 +391,161 @@ export default function CricketMatches() {
           onChangeText={setSearchQuery}
           // @ts-ignore
           outlineStyle="none"
+          // @ts-ignore
+          boxShadow="none"
         />
       </View>
 
-      {/* Category Filter (ALL / Played) */}
-      <View style={{ marginBottom: 12 }}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
-          {CATEGORY_TABS.map((tab, idx) => (
-            <TouchableOpacity
-              key={tab.key}
-              style={[
-                styles.categoryTab,
-                category === tab.key && styles.categoryTabActive,
-                { marginRight: idx < CATEGORY_TABS.length - 1 ? 12 : 0 }
-              ]}
-              onPress={() => setCategory(tab.key)}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.categoryTabText, category === tab.key && styles.categoryTabTextActive]}>
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+      {/* Responsive Filters */}
+      {isLargeScreen ? (
+        <View style={{ marginBottom: 24 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center' }}>
+            {/* Categories */}
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              {CATEGORY_TABS.map((tab, idx) => (
+                <TouchableOpacity
+                  key={tab.key}
+                  style={[
+                    styles.categoryTab,
+                    category === tab.key && styles.categoryTabActive,
+                    { marginRight: idx < CATEGORY_TABS.length - 1 ? 12 : 0 }
+                  ]}
+                  onPress={() => setCategory(tab.key)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.categoryTabText, category === tab.key && styles.categoryTabTextActive]}>
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
-      {/* Status Filter Tabs */}
-      <View style={{ marginBottom: 12 }}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
-          {STATUS_FILTERS.map((tab, idx) => (
-            <TouchableOpacity
-              key={tab.key}
-              style={[
-                styles.statusTab,
-                status === tab.key && styles.statusTabActive,
-                { marginRight: idx < STATUS_FILTERS.length - 1 ? 8 : 0 }
-              ]}
-              onPress={() => setStatus(tab.key)}
-              activeOpacity={0.8}
-            >
-              {tab.key === 'live' && liveCount > 0 && <View style={styles.livePip} />}
-              <Text style={[styles.statusTabText, status === tab.key && styles.statusTabTextActive]}>
-                {tab.label}
-              </Text>
-              {tab.key === 'live' && liveCount > 0 && (
-                <View style={styles.countBadge}>
-                  <Text style={styles.countBadgeText}>{liveCount}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+            <View style={styles.verticalDivider} />
 
-      {/* Date Filter Pills */}
-      <View style={{ marginBottom: 16 }}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
-          {DATE_FILTERS.map((df, idx) => (
-            <TouchableOpacity
-              key={df.key}
-              style={[
-                styles.datePill,
-                dateFilter === df.key && styles.datePillActive,
-                { marginRight: idx < DATE_FILTERS.length - 1 ? 8 : 0 }
-              ]}
-              onPress={() => setDateFilter(df.key)}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.datePillText, dateFilter === df.key && styles.datePillTextActive]}>
-                {df.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
+            {/* Status */}
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              {STATUS_FILTERS.map((tab, idx) => (
+                <TouchableOpacity
+                  key={tab.key}
+                  style={[
+                    styles.statusTab,
+                    status === tab.key && styles.statusTabActive,
+                    { marginRight: idx < STATUS_FILTERS.length - 1 ? 8 : 0 }
+                  ]}
+                  onPress={() => setStatus(tab.key)}
+                  activeOpacity={0.8}
+                >
+                  {tab.key === 'live' && liveCount > 0 && <View style={styles.livePip} />}
+                  <Text style={[styles.statusTabText, status === tab.key && styles.statusTabTextActive]}>
+                    {tab.label}
+                  </Text>
+                  {tab.key === 'live' && liveCount > 0 && (
+                    <View style={styles.countBadge}>
+                      <Text style={styles.countBadgeText}>{liveCount}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.verticalDivider} />
+
+            {/* Date */}
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              {DATE_FILTERS.map((df, idx) => (
+                <TouchableOpacity
+                  key={df.key}
+                  style={[
+                    styles.datePill,
+                    dateFilter === df.key && styles.datePillActive,
+                    { marginRight: idx < DATE_FILTERS.length - 1 ? 8 : 0 }
+                  ]}
+                  onPress={() => setDateFilter(df.key)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.datePillText, dateFilter === df.key && styles.datePillTextActive]}>
+                    {df.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
+        </View>
+      ) : (
+        <>
+          {/* Mobile Categories */}
+          <View style={{ marginBottom: 12 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
+              {CATEGORY_TABS.map((tab, idx) => (
+                <TouchableOpacity
+                  key={tab.key}
+                  style={[
+                    styles.categoryTab,
+                    category === tab.key && styles.categoryTabActive,
+                    { marginRight: idx < CATEGORY_TABS.length - 1 ? 12 : 0 }
+                  ]}
+                  onPress={() => setCategory(tab.key)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.categoryTabText, category === tab.key && styles.categoryTabTextActive]}>
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          {/* Mobile Status */}
+          <View style={{ marginBottom: 12 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
+              {STATUS_FILTERS.map((tab, idx) => (
+                <TouchableOpacity
+                  key={tab.key}
+                  style={[
+                    styles.statusTab,
+                    status === tab.key && styles.statusTabActive,
+                    { marginRight: idx < STATUS_FILTERS.length - 1 ? 8 : 0 }
+                  ]}
+                  onPress={() => setStatus(tab.key)}
+                  activeOpacity={0.8}
+                >
+                  {tab.key === 'live' && liveCount > 0 && <View style={styles.livePip} />}
+                  <Text style={[styles.statusTabText, status === tab.key && styles.statusTabTextActive]}>
+                    {tab.label}
+                  </Text>
+                  {tab.key === 'live' && liveCount > 0 && (
+                    <View style={styles.countBadge}>
+                      <Text style={styles.countBadgeText}>{liveCount}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          {/* Mobile Date */}
+          <View style={{ marginBottom: 16 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
+              {DATE_FILTERS.map((df, idx) => (
+                <TouchableOpacity
+                  key={df.key}
+                  style={[
+                    styles.datePill,
+                    dateFilter === df.key && styles.datePillActive,
+                    { marginRight: idx < DATE_FILTERS.length - 1 ? 8 : 0 }
+                  ]}
+                  onPress={() => setDateFilter(df.key)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.datePillText, dateFilter === df.key && styles.datePillTextActive]}>
+                    {df.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </>
+      )}
 
       {/* Matches List */}
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.matchesList} showsVerticalScrollIndicator={false}>
@@ -505,6 +589,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1E293B',
     fontWeight: '500',
+    // @ts-ignore
+    outlineWidth: 0,
+    // @ts-ignore
+    outlineStyle: 'none',
   },
   tabsScroll: {
     marginBottom: 12,
@@ -532,6 +620,12 @@ const styles = StyleSheet.create({
   },
   categoryTabTextActive: {
     color: '#FFFFFF',
+  },
+  verticalDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: '#E2E8F0',
+    marginHorizontal: 16,
   },
   statusTab: {
     flexDirection: 'row',

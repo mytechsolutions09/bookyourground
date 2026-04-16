@@ -104,16 +104,31 @@ export default function BookingsScreen() {
 
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      let query = supabase
         .from('bookings')
         .select(`
           *,
           ground:grounds(
             *,
             ground_images(*)
+          ),
+          profile:profiles!user_id(
+            full_name,
+            team_name,
+            phone
           )
-        `)
-        .eq('user_id', user.id)
+        `);
+
+      // If regular user, RLS will now allow seeing opponents, 
+      // but we still want to primarily fetch our own involvements.
+      if (profile?.role === 'user') {
+        // We fetch everything we have access to (own + matched opponents)
+        // RLS handles the security.
+      } else if (profile?.role === 'ground_owner') {
+        // Owners see all bookings for their grounds (handled by RLS)
+      }
+
+      const { data, error } = await query
         .in('status', ['confirmed', 'cancelled'])
         .order('booking_date', { ascending: false });
 
@@ -246,8 +261,33 @@ export default function BookingsScreen() {
     const mm = `${d.getMonth() + 1}`.padStart(2, '0');
     const dd = `${d.getDate()}`.padStart(2, '0');
     const today = `${yyyy}-${mm}-${dd}`;
-
     let result = bookings;
+
+    // Detect matches for users
+    const slotGroups = result.reduce((acc, b) => {
+      const key = `${b.ground_id}_${b.booking_date}_${b.start_time}`;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(b);
+      return acc;
+    }, {} as Record<string, BookingWithDetails[]>);
+
+    // If regular user, show only one row per slot but with match info
+    if (profile?.role === 'user') {
+      result = result.filter(b => b.user_id === user?.id);
+      // Enrich with opponent info
+      result = result.map(b => {
+        const key = `${b.ground_id}_${b.booking_date}_${b.start_time}`;
+        const group = slotGroups[key] || [];
+        const opponent = group.find(ob => ob.id !== b.id);
+        if (opponent) {
+          return {
+            ...b,
+            opponent: (opponent as any).profile
+          };
+        }
+        return b;
+      });
+    }
 
     // Status Filter
     if (activeTab === 'upcoming') {
@@ -315,6 +355,7 @@ export default function BookingsScreen() {
     return result;
   }, [bookings, activeTab, ownerScope, selectedDate, searchQuery, user?.id, profile?.role, sortAsc, sortKey]);
 
+  const showAdminColumns = profile?.role === 'ground_owner';
   const visibleBookings = filteredBookings;
 
   const content = (
@@ -507,30 +548,34 @@ export default function BookingsScreen() {
                     <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
                   )}
                 </TouchableOpacity>
-                <TouchableOpacity 
-                  onPress={() => {
-                    if (sortKey === 'name') setSortAsc(!sortAsc);
-                    else { setSortKey('name'); setSortAsc(true); }
-                  }}
-                  style={[styles.tableHeaderCell, styles.colName, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
-                >
-                  <Text style={styles.tableHeaderCell}>Name</Text>
-                  {sortKey === 'name' && (
-                    <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  onPress={() => {
-                    if (sortKey === 'paid') setSortAsc(!sortAsc);
-                    else { setSortKey('paid'); setSortAsc(true); }
-                  }}
-                  style={[styles.tableHeaderCell, styles.colPaymentReceived, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
-                >
-                  <Text style={styles.tableHeaderCell}>Paid</Text>
-                  {sortKey === 'paid' && (
-                    <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
-                  )}
-                </TouchableOpacity>
+                {showAdminColumns && (
+                  <TouchableOpacity 
+                    onPress={() => {
+                      if (sortKey === 'name') setSortAsc(!sortAsc);
+                      else { setSortKey('name'); setSortAsc(true); }
+                    }}
+                    style={[styles.tableHeaderCell, styles.colName, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
+                  >
+                    <Text style={styles.tableHeaderCell}>Name</Text>
+                    {sortKey === 'name' && (
+                      <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
+                    )}
+                  </TouchableOpacity>
+                )}
+                {showAdminColumns && (
+                  <TouchableOpacity 
+                    onPress={() => {
+                      if (sortKey === 'paid') setSortAsc(!sortAsc);
+                      else { setSortKey('paid'); setSortAsc(true); }
+                    }}
+                    style={[styles.tableHeaderCell, styles.colPaymentReceived, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
+                  >
+                    <Text style={styles.tableHeaderCell}>Paid</Text>
+                    {sortKey === 'paid' && (
+                      <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
+                    )}
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           )}
@@ -569,8 +614,13 @@ export default function BookingsScreen() {
 
                   <View style={[styles.tableCell, styles.colTeams]}>
                     <Text style={styles.teamsText}>
-                      {(cricketTeamsLabelFromBooking(item.ground.pitch_type, item.notes) || '1 Team').toUpperCase()}
+                      {((item as any).opponent ? 'MATCHED' : (cricketTeamsLabelFromBooking(item.ground.pitch_type, item.notes) || '1 Team')).toUpperCase()}
                     </Text>
+                    {(item as any).opponent && (
+                      <Text style={styles.opponentMiniText} numberOfLines={1}>
+                        vs {(item as any).opponent.team_name || (item as any).opponent.full_name}
+                      </Text>
+                    )}
                   </View>
 
                   <View style={[styles.tableCell, styles.colStatus]}>
@@ -594,25 +644,29 @@ export default function BookingsScreen() {
                     <Text style={styles.amount}>{formatCurrency(item.total_amount)}</Text>
                   </View>
 
-                  <View style={[styles.tableCell, styles.colName]}>
-                    <NameInputCell booking={item} onSave={saveBookingName} />
-                  </View>
+                  {showAdminColumns && (
+                    <View style={[styles.tableCell, styles.colName]}>
+                      <NameInputCell booking={item} onSave={saveBookingName} />
+                    </View>
+                  )}
 
-                  <View style={[styles.tableCell, styles.colPaymentReceived]}>
-                    <TouchableOpacity 
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        togglePaymentReceived(item);
-                      }}
-                      style={styles.paymentToggle}
-                    >
-                      {item.payment_received ? (
-                        <CheckCircle2 size={20} color="#00ea6b" />
-                      ) : (
-                        <Circle size={20} color="#9CA3AF" />
-                      )}
-                    </TouchableOpacity>
-                  </View>
+                  {showAdminColumns && (
+                    <View style={[styles.tableCell, styles.colPaymentReceived]}>
+                      <TouchableOpacity 
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          togglePaymentReceived(item);
+                        }}
+                        style={styles.paymentToggle}
+                      >
+                        {item.payment_received ? (
+                          <CheckCircle2 size={20} color="#00ea6b" />
+                        ) : (
+                          <Circle size={20} color="#9CA3AF" />
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </TouchableOpacity>
               );
             }}
@@ -1339,6 +1393,13 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     color: '#111827',
+  },
+  opponentMiniText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#01b854',
+    marginTop: 2,
+    textTransform: 'uppercase',
   },
   paymentBadgeText: {
     fontSize: 10,

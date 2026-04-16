@@ -5023,18 +5023,37 @@ export default function CricketScreen() {
         <TouchableOpacity 
           style={styles.sheetOverlay} 
           activeOpacity={1} 
-          onPress={() => setIsSelectingPlayers(false)}
+          onPress={() => { setIsSelectingPlayers(false); setPlayerSearchQuery(''); }}
         >
-          <View style={[styles.sheetContent, { height: '85%' }]}>
+          <Pressable 
+            style={[styles.sheetContent, { height: '85%' }]}
+            onPress={(e) => {
+              if (Platform.OS === 'web') {
+                (e as any).stopPropagation();
+              }
+            }}
+          >
             <View style={styles.sheetHandle} />
             <View style={styles.modalHeaderRow}>
               <View>
                 <Text style={styles.sheetTitle}>Select Playing XI</Text>
                 <Text style={styles.sheetSubtitle}>{currentTeam?.name} • {currentXi.length} picked {currentCaptain ? '• Captain set' : '• Pick a Captain'}</Text>
               </View>
-              <TouchableOpacity onPress={() => setIsSelectingPlayers(false)} style={styles.closeBtnPremium}>
+              <TouchableOpacity onPress={() => { setIsSelectingPlayers(false); setPlayerSearchQuery(''); }} style={styles.closeBtnPremium}>
                 <X size={24} color="#6B7280" />
               </TouchableOpacity>
+            </View>
+
+            <View style={[styles.modalSearchContainer, { marginHorizontal: 24, marginBottom: 16 }]}>
+              <Search size={18} color="#9CA3AF" />
+              <TextInput 
+                style={styles.modalSearchInput}
+                placeholder="Search player..."
+                value={playerSearchQuery}
+                onChangeText={setPlayerSearchQuery}
+                // @ts-ignore
+                outlineStyle="none"
+              />
             </View>
 
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 24 }}>
@@ -5055,7 +5074,12 @@ export default function CricketScreen() {
                     </TouchableOpacity>
                  </View>
                ) : (
-                 teamMembers.map((member, idx) => {
+                 teamMembers
+                   .filter(m => 
+                     m.player_name.toLowerCase().includes(playerSearchQuery.toLowerCase()) ||
+                     (m.player_phone && m.player_phone.includes(playerSearchQuery))
+                   )
+                   .map((member, idx) => {
                    const isSelected = !!currentXi.find((p: any) => p.id === member.id);
                    const isCaptain = currentCaptain?.id === member.id;
                    
@@ -5091,50 +5115,32 @@ export default function CricketScreen() {
             </ScrollView>
 
             <View style={{ padding: 24, borderTopWidth: 1, borderTopColor: '#F3F4F6' }}>
-               {currentPickingSide === 'A' ? (
-                 <TouchableOpacity 
-                   style={[styles.startMatchBtn, { marginTop: 0 }, (currentXi.length === 0 || !teamACaptain) && { opacity: 0.5 }]}
-                   onPress={() => {
-                      if (currentXi.length === 0) {
-                        alert('Please select at least 1 player for Team A');
-                        return;
-                      }
-                      if (!teamACaptain) {
-                        alert('Please select a Captain for Team A');
-                        return;
-                      }
-                      setIsSelectingPlayers(false);
-                      if (urlMatchId && selectedTeamA) {
-                        savePlayingXi(urlMatchId as string, selectedTeamA.id, currentXi, teamACaptain?.id);
-                      }
-                    }}
-                 >
-                    <Text style={styles.startMatchBtnText}>Confirm Team A XI ({currentXi.length})</Text>
-                 </TouchableOpacity>
-               ) : (
-                 <TouchableOpacity 
-                   style={[styles.startMatchBtn, { marginTop: 0 }, (currentXi.length === 0 || !teamBCaptain) && { opacity: 0.5 }]}
-                   onPress={() => {
-                      if (currentXi.length === 0) {
-                        alert('Please select at least 1 player for Team B');
-                        return;
-                      }
-                      if (!teamBCaptain) {
-                        alert('Please select a Captain for Team B');
-                        return;
-                      }
-                      setIsSelectingPlayers(false);
-                      setIsConfiguringMatch(true);
-                      if (urlMatchId && selectedTeamB) {
-                        savePlayingXi(urlMatchId as string, selectedTeamB.id, currentXi, teamBCaptain?.id);
-                      }
-                    }}
-                 >
-                    <Text style={styles.startMatchBtnText}>Confirm Team B XI ({currentXi.length})</Text>
-                 </TouchableOpacity>
-               )}
+               <TouchableOpacity 
+                 style={[styles.startMatchBtn, { marginTop: 0 }, (currentXi.length === 0 || !currentCaptain) && { opacity: 0.5 }]}
+                 onPress={() => {
+                    const side = currentPickingSide === 'A' ? 'A' : 'B';
+                    if (currentXi.length === 0) {
+                      alert(`Please select at least 1 player for Team ${side}`);
+                      return;
+                    }
+                    if (!currentCaptain) {
+                      alert(`Please select a Captain for Team ${side}`);
+                      return;
+                    }
+                    
+                    setIsSelectingPlayers(false);
+                    if (side === 'B') setIsConfiguringMatch(true);
+                    
+                    if (urlMatchId && currentTeam) {
+                      savePlayingXi(urlMatchId as string, currentTeam.id, currentXi, currentCaptain.id);
+                    }
+                    setPlayerSearchQuery('');
+                  }}
+               >
+                  <Text style={styles.startMatchBtnText}>Confirm Team {currentPickingSide} XI ({currentXi.length})</Text>
+               </TouchableOpacity>
             </View>
-          </View>
+          </Pressable>
         </TouchableOpacity>
       </Modal>
     );
@@ -8224,13 +8230,7 @@ export default function CricketScreen() {
        <ScrollView style={styles.mainScroll} contentContainerStyle={styles.mainScrollContent}>
           {renderContent()}
        </ScrollView>
-       {renderActionModal()}
-       {renderCreateTeamModal()}
-       {renderQrModal()}
-       {renderSuccessModal()}
        {renderAddPlayerView()}
-       {renderAddMemberModal()}
-       {renderContactPicker()}
     </View>
   );
 
@@ -8474,6 +8474,12 @@ export default function CricketScreen() {
         {renderWagonWheelModal()}
         {renderMatchResultModal()}
         {renderQrScannerModal()}
+        {renderAddMemberModal()}
+        {renderCreateTeamModal()}
+        {renderContactPicker()}
+        {renderActionModal()}
+        {renderQrModal()}
+        {renderSuccessModal()}
       </View>
     </View>
   );

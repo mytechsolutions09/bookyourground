@@ -18,6 +18,7 @@ import {
 } from 'lucide-react-native';
 import { ActivityIndicator, Platform, useWindowDimensions, View, Pressable, StyleSheet } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUI } from '@/contexts/UIContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const AUTH_REQUIRED_TAB = new Set(['dashboard', 'bookings', 'profile']);
@@ -76,7 +77,8 @@ export default function TabLayout() {
 
   const CustomTabBar = ({ state, descriptors, navigation }: any) => {
     const insets = useSafeAreaInsets();
-    if (hideTabBarOnBigScreens) return null;
+    const { isTabBarVisible } = useUI();
+    if (hideTabBarOnBigScreens || !isTabBarVisible) return null;
 
     const visibleTabNames = ['home_tab', 'grounds', 'cricket', 'bookings', 'favorites', 'profile'];
 

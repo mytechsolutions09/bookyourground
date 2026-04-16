@@ -133,22 +133,9 @@ function DashboardContent() {
   const content = (
     <ScrollView
       style={[styles.root, IS_DARK && styles.rootDark]}
-      contentContainerStyle={styles.scrollContent}
+      contentContainerStyle={[styles.scrollContent, (Platform.OS === 'web' && !isCompact) && styles.scrollContentWeb]}
     >
-      <View style={styles.headerRow}>
-        <View style={styles.headerTitleWrap}>
-          <Text style={[styles.welcomeTitle, IS_DARK && styles.welcomeTitleDark]}>Dashboard</Text>
-          <Text style={[styles.welcomeSubtitle, IS_DARK && styles.welcomeSubtitleDark]}>
-            Overview of your games and favorite grounds.
-          </Text>
-        </View>
-        <TouchableOpacity
-          style={[styles.primaryButton, IS_DARK && styles.primaryButtonDark]}
-          onPress={() => router.push('/book-my-ground' as any)}
-        >
-          <Text style={[styles.primaryButtonText, IS_DARK && styles.primaryButtonTextDark]}>Book a ground</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Header section removed */}
 
       <View style={styles.grid}>
         <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
@@ -317,7 +304,7 @@ const styles = StyleSheet.create({
   },
   root: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: Platform.OS === 'web' ? 'transparent' : '#F9FAFB',
   },
   rootDark: {
     backgroundColor: THEME_BG,
@@ -328,6 +315,9 @@ const styles = StyleSheet.create({
     maxWidth: 1200,
     alignSelf: 'center',
     width: '100%',
+  },
+  scrollContentWeb: {
+    paddingTop: 0,
   },
   headerRow: {
     flexDirection: 'row',

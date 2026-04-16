@@ -105,10 +105,20 @@ export default function BookingCard({
                 )}
               </Text>
             </View>
-            {cricketTeamsLabel ? (
+            {((booking as any).opponent || cricketTeamsLabel) ? (
               <View style={styles.detail}>
                 <Users size={16} color={iconDetail} />
-                <Text style={detailTextStyle}>{cricketTeamsLabel}</Text>
+                <Text style={detailTextStyle}>
+                  {(booking as any).opponent ? 'MATCHED' : cricketTeamsLabel}
+                </Text>
+                {(booking as any).opponent && (
+                  <View style={styles.vsBadge}>
+                    <Text style={styles.vsBadgeText}>VS</Text>
+                    <Text style={styles.opponentNameText} numberOfLines={1}>
+                      {((booking as any).opponent.team_name || (booking as any).opponent.full_name).toUpperCase()}
+                    </Text>
+                  </View>
+                )}
               </View>
             ) : null}
           </View>
@@ -378,6 +388,27 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
     letterSpacing: 0.5,
+  },
+  vsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    gap: 4,
+    flex: 1,
+  },
+  vsBadgeText: {
+    fontSize: 9,
+    fontWeight: '900',
+    color: '#10b981',
+  },
+  opponentNameText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#111827',
+    flex: 1,
   },
 });
 

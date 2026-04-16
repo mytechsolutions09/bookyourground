@@ -10,9 +10,12 @@ import {
   Platform,
   SafeAreaView,
   Share,
-  Alert
+  Alert,
+  Modal,
+  TextInput
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
+import { useUI } from '@/contexts/UIContext';
 import { 
   MapPin, 
   User, 
@@ -21,7 +24,8 @@ import {
   Info, 
   ArrowLeft,
   Settings,
-  Share2
+  Share2,
+  Shield
 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -37,6 +41,9 @@ interface Team {
   image_url: string | null;
   owner_id: string;
   bg_color: string | null;
+  owner?: {
+    full_name: string;
+  };
 }
 
 interface TeamMember {
@@ -51,20 +58,254 @@ interface TeamMember {
   };
 }
 
+const TABS = [
+  { key: 'info', label: 'Info' },
+  { key: 'matches', label: 'Matches' },
+  { key: 'stats', label: 'Stats' },
+  { key: 'leaderboard', label: 'Leaderboard' },
+  { key: 'members', label: 'Members' },
+  { key: 'chat', label: 'Chat' },
+];
+
 export default function TeamDetailsPage() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
+  const { setTabBarVisible } = useUI();
   const [team, setTeam] = useState<Team | null>(null);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'info' | 'members' | 'chat' | 'settings'>('info');
+  const [activeTab, setActiveTab] = useState<string>('info');
   const [memberStatus, setMemberStatus] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editLocation, setEditLocation] = useState('');
+  const [isQRModalOpen, setIsQRModalOpen] = useState(false);
+  const [teamMatches, setTeamMatches] = useState<any[]>([]);
+  const [matchesLoading, setMatchesLoading] = useState(false);
+  const [rpcStats, setRpcStats] = useState<any>(null);
+  const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [activeSubTab, setActiveSubTab] = useState<'bat' | 'bowl' | 'field' | 'partnership'>('bat');
+  const [partnerships, setPartnerships] = useState<any[]>([]);
+  const [partnershipsLoading, setPartnershipsLoading] = useState(false);
+  
+  const lastScrollY = React.useRef(0);
+
+  const handleScroll = (event: any) => {
+    const currentY = event.nativeEvent.contentOffset.y;
+    // Show on scroll up, hide on scroll down
+    if (currentY <= 0) {
+      setTabBarVisible(true);
+    } else if (currentY > lastScrollY.current && currentY > 60) {
+      setTabBarVisible(false);
+    } else if (currentY < lastScrollY.current) {
+      setTabBarVisible(true);
+    }
+    lastScrollY.current = currentY;
+  };
 
   useEffect(() => {
     if (id) {
       loadTeamData();
+      loadMatches();
+      loadLeaderboard();
     }
   }, [id]);
+
+  // Fetch partnerships when leaderboard tab is active
+  useEffect(() => {
+    if (activeTab === 'leaderboard' && activeSubTab === 'partnership' && teamMatches.length > 0) {
+      loadPartnerships();
+    }
+  }, [activeSubTab, activeTab, teamMatches.length]);
+
+  const loadPartnerships = async () => {
+    try {
+      setPartnershipsLoading(true);
+      const matchIds = teamMatches.map(m => m.id);
+      const { data, error } = await supabase
+        .from('partnerships')
+        .select('*')
+        .in('match_id', matchIds)
+        .order('total_runs', { ascending: false })
+        .limit(10);
+      if (error) throw error;
+      setPartnerships(data || []);
+    } catch (err) {
+      console.error('Error loading partnerships:', err);
+    } finally {
+      setPartnershipsLoading(false);
+    }
+  };
+
+  const loadLeaderboard = async () => {
+    try {
+      setLeaderboardLoading(true);
+      // Fetch stats for all members of this team
+      const { data, error } = await supabase
+        .from('player_ball_stats')
+        .select(`
+          *,
+          member:team_members(
+            id,
+            player_name,
+            profile:profiles(avatar_url)
+          )
+        `)
+        .in('member_id', members.map(m => m.id))
+        .eq('ball_type', 'leather');
+
+      if (error) throw error;
+      setLeaderboardData(data || []);
+    } catch (err) {
+      console.error('Error loading leaderboard:', err);
+    } finally {
+      setLeaderboardLoading(false);
+    }
+  };
+
+  const loadMatches = async () => {
+    try {
+      setMatchesLoading(true);
+      
+      // 1. Get Summary Stats via RPC (High Performance)
+      const { data: statsData, error: statsError } = await supabase
+        .rpc('get_team_stats', { target_team_id: id });
+      
+      if (!statsError) {
+        setRpcStats(statsData);
+      }
+
+      // 2. Fetch last 10 matches for the history list
+      const { data, error } = await supabase
+        .from('matches')
+        .select(`*, match_live_state (*)`)
+        .or(`team_a_id.eq.${id},team_b_id.eq.${id}`)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      
+      if (error) throw error;
+      setTeamMatches(data || []);
+    } catch (err) {
+      console.error('Error loading matches:', err);
+    } finally {
+      setMatchesLoading(false);
+    }
+  };
+
+  const calculateStats = () => {
+    // Priority 1: Use Server-side RPC results
+    if (rpcStats) {
+      const winRate = rpcStats.matches > 0 ? ((rpcStats.won / rpcStats.matches) * 100).toFixed(1) : '0';
+      return {
+        matches: rpcStats.matches,
+        upcoming: rpcStats.upcoming,
+        won: rpcStats.won,
+        lost: rpcStats.lost,
+        tie: rpcStats.tie,
+        draw: rpcStats.draw,
+        noResult: rpcStats.no_result,
+        tossWon: rpcStats.toss_won,
+        batFirst: rpcStats.bat_first,
+        fieldFirst: rpcStats.field_first,
+        runsFor: rpcStats.runs_for,
+        runsAg: rpcStats.runs_against,
+        highest: rpcStats.highest_score,
+        lowest: rpcStats.lowest_score,
+        winRate: `${winRate}%`
+      };
+    }
+
+    // Priority 2: Fallback to client-side calc from the fetched teamMatches array
+    let stats = {
+      matches: 0, upcoming: 0, won: 0, lost: 0, tie: 0, draw: 0, noResult: 0,
+      tossWon: 0, batFirst: 0, fieldFirst: 0,
+      runsFor: 0, runsAg: 0, highest: 0, lowest: Infinity
+    };
+
+    teamMatches.forEach(m => {
+      const isTeamA = m.team_a_id === id;
+      const live = m.match_live_state;
+      
+      // Basic counts
+      if (m.status === 'scheduled') stats.upcoming++;
+      else stats.matches++;
+
+      if (live?.winner_id === id) {
+        stats.won++;
+        stats.points += 2; // Assuming 2 points for win
+      } else if (live?.winner_id && live?.winner_id !== id) {
+        stats.lost++;
+      } else if (live?.match_status === 'tie') {
+        stats.tie++;
+        stats.points += 1;
+      } else if (live?.match_status === 'draw') {
+        stats.draw++;
+        stats.points += 1;
+      } else if (m.status === 'abandoned' || live?.match_status === 'abandoned') {
+        stats.noResult++;
+        stats.points += 1;
+      }
+
+      // Toss & Decisions
+      if (m.toss_winner_id === id) stats.tossWon++;
+      
+      const batFirstTeamId = m.toss_decision === 'bat' ? m.toss_winner_id : (m.team_a_id === m.toss_winner_id ? m.team_b_id : m.team_a_id);
+      if (batFirstTeamId === id) stats.batFirst++;
+      else if (m.status !== 'scheduled') stats.fieldFirst++;
+
+      // Runs Parsing
+      const myScoreRaw = isTeamA ? live?.team_a_score : live?.team_b_score;
+      const oppScoreRaw = isTeamA ? live?.team_b_score : live?.team_a_score;
+      
+      const parseRuns = (s: string) => parseInt(s?.split('/')[0] || '0');
+      const myRuns = parseRuns(myScoreRaw);
+      const oppRuns = parseRuns(oppScoreRaw);
+
+      if (myRuns > 0) {
+        stats.runsFor += myRuns;
+        if (myRuns > stats.highest) stats.highest = myRuns;
+        if (myRuns < stats.lowest) stats.lowest = myRuns;
+      }
+      if (oppRuns > 0) stats.runsAg += oppRuns;
+    });
+
+    if (stats.lowest === Infinity) stats.lowest = 0;
+    
+    const winRate = stats.matches > 0 ? ((stats.won / stats.matches) * 100).toFixed(1) : '0';
+
+    return {
+      ...stats,
+      winRate: `${winRate}%`
+    };
+  };
+
+  const dynamicStats = calculateStats();
+
+  const loadLeaderboardWithIds = async (memberIds: string[]) => {
+    try {
+      setLeaderboardLoading(true);
+      const { data, error } = await supabase
+        .from('player_ball_stats')
+        .select(`
+          *,
+          member:team_members(
+            id,
+            player_name,
+            profile:profiles(avatar_url)
+          )
+        `)
+        .in('member_id', memberIds)
+        .eq('ball_type', 'leather');
+
+      if (error) throw error;
+      setLeaderboardData(data || []);
+    } catch (err) {
+      console.error('Error loading leaderboard with IDs:', err);
+    } finally {
+      setLeaderboardLoading(false);
+    }
+  };
 
   const loadTeamData = async () => {
     try {
@@ -73,7 +314,7 @@ export default function TeamDetailsPage() {
       // 1. Fetch Team Details
       const { data: teamData, error: teamError } = await supabase
         .from('teams')
-        .select('*')
+        .select('*, owner:profiles!owner_id(full_name)')
         .eq('id', id)
         .single();
       
@@ -88,6 +329,11 @@ export default function TeamDetailsPage() {
       
       if (membersError) throw membersError;
       setMembers(membersData || []);
+      
+      // Load leaderboard after members are available to get IDs
+      if (membersData && membersData.length > 0) {
+        loadLeaderboardWithIds(membersData.map(m => m.id));
+      }
 
       // 3. Check current user status
       const myMembership = membersData?.find(m => m.profile_id === user?.id);
@@ -121,6 +367,142 @@ export default function TeamDetailsPage() {
   };
 
   const isAcceptedMember = memberStatus === 'accepted';
+  const isOwner = team?.owner_id === user?.id;
+
+  const handleDeleteTeam = async () => {
+    const performDelete = async () => {
+      const { error } = await supabase.from('teams').delete().eq('id', id);
+      if (error) {
+        if (Platform.OS === 'web') alert(error.message);
+        else Alert.alert('Error', error.message);
+      } else {
+        router.push('/cricket/teams' as any);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (confirm("Are you sure you want to delete this team permanently?")) {
+        performDelete();
+      }
+    } else {
+      Alert.alert(
+        "Delete Team",
+        "Are you sure you want to delete this team permanently?",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Delete", style: "destructive", onPress: performDelete }
+        ]
+      );
+    }
+  };
+
+  const handleUpdateMember = async (profileId: string, newStatus: string) => {
+    try {
+      if (newStatus === 'removed') {
+        const { error } = await supabase
+          .from('team_members')
+          .delete()
+          .eq('team_id', id)
+          .eq('profile_id', profileId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('team_members')
+          .update({ status: newStatus })
+          .eq('team_id', id)
+          .eq('profile_id', profileId);
+        if (error) throw error;
+      }
+      loadTeamData();
+    } catch (err: any) {
+      if (Platform.OS === 'web') alert(err.message);
+      else Alert.alert('Error', err.message);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      const { error } = await supabase
+        .from('teams')
+        .update({ name: editName, location: editLocation })
+        .eq('id', id);
+      
+      if (error) throw error;
+      setIsEditing(false);
+      loadTeamData();
+    } catch (err: any) {
+      if (Platform.OS === 'web') alert(err.message);
+      else Alert.alert('Error', err.message);
+    }
+  };
+
+  const openEditModal = () => {
+    setEditName(team?.name || '');
+    setEditLocation(team?.location || '');
+    setIsEditing(true);
+  };
+
+  const handleLeaveTeam = async () => {
+    const performLeave = async () => {
+      const { error } = await supabase
+        .from('team_members')
+        .delete()
+        .eq('team_id', id)
+        .eq('profile_id', user?.id);
+      
+      if (error) {
+        if (Platform.OS === 'web') alert(error.message);
+        else Alert.alert('Error', error.message);
+      } else {
+        setMemberStatus(null);
+        loadTeamData();
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (confirm("Are you sure you want to leave this team?")) {
+        performLeave();
+      }
+    } else {
+      Alert.alert(
+        "Leave Team",
+        "Are you sure you want to leave this team?",
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Leave", style: "destructive", onPress: performLeave }
+        ]
+      );
+    }
+  };
+
+  const handleJoinTeam = async () => {
+    try {
+      if (!user) {
+        if (Platform.OS === 'web') alert('Please login to join the team');
+        else Alert.alert('Login Required', 'Please login to join the team');
+        return;
+      }
+
+      const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
+
+      const { error } = await supabase
+        .from('team_members')
+        .insert({
+          team_id: id,
+          profile_id: user.id,
+          player_name: profile?.full_name || 'Anonymous Player',
+          role: 'player',
+          status: 'accepted'
+        });
+
+      if (error) throw error;
+      setMemberStatus('accepted');
+      loadTeamData();
+    } catch (err: any) {
+      if (Platform.OS === 'web') alert(err.message);
+      else Alert.alert('Error', err.message);
+    }
+  };
 
   if (loading) {
     return (
@@ -142,95 +524,353 @@ export default function TeamDetailsPage() {
     switch (activeTab) {
       case 'info':
         return (
-          <ScrollView style={styles.tabContent}>
+          <ScrollView 
+            style={styles.tabContent} 
+            showsVerticalScrollIndicator={false}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+          >
+            {/* Header Card */}
             <View style={styles.infoProfileCard}>
-              <View style={[styles.infoTeamLogoContainer, { backgroundColor: team.bg_color || '#01b854' }]}>
-                {team.image_url ? (
-                  <Image source={{ uri: team.image_url }} style={styles.teamLogo} />
-                ) : (
-                  <Text style={styles.teamInitials}>{team.name[0]}</Text>
-                )}
+              <View style={styles.profileMainInfo}>
+                <View style={[styles.infoTeamLogoContainer, { backgroundColor: team.bg_color || '#01b854' }]}>
+                  {team.image_url ? (
+                    <Image source={{ uri: team.image_url }} style={styles.teamLogo} />
+                  ) : (
+                    <Text style={styles.teamInitials}>{team.name[0]}</Text>
+                  )}
+                </View>
+                <View style={styles.infoProfileText}>
+                  <Text style={styles.infoProfileName}>{team.name}</Text>
+                  <View style={styles.officialBadge}>
+                    <Text style={styles.officialBadgeText}>OFFICIAL TEAM</Text>
+                  </View>
+                </View>
               </View>
-              <View style={styles.infoProfileText}>
-                <Text style={styles.infoProfileName}>{team.name}</Text>
-                <Text style={styles.infoProfileRole}>OFFICIAL TEAM</Text>
+
+              <View style={styles.profileRightActions}>
+                 <TouchableOpacity 
+                   style={styles.miniQRContainer}
+                   onPress={() => setIsQRModalOpen(true)}
+                 >
+                    <QRCode
+                       value={`https://bookyourground.com/teams/${id}`}
+                       size={60}
+                       color="#043529"
+                       backgroundColor="#FFFFFF"
+                    />
+                 </TouchableOpacity>
+                 {!memberStatus && !isOwner && (
+                    <TouchableOpacity style={styles.joinBtn} onPress={handleJoinTeam}>
+                      <Text style={styles.joinBtnText}>JOIN</Text>
+                    </TouchableOpacity>
+                  )}
               </View>
             </View>
 
+            {/* Team Info */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>About Team</Text>
               <View style={styles.infoCard}>
                 <View style={styles.infoRow}>
-                  <MapPin size={20} color="#64748B" />
-                  <View style={styles.infoTextGroup}>
+                  <MapPin size={18} color="#94A3B8" />
+                  <View style={[styles.infoTextGroup, { marginLeft: 12 }]}>
                     <Text style={styles.infoLabel}>Location</Text>
                     <Text style={styles.infoValue}>{team.location}</Text>
                   </View>
                 </View>
+                
+                <View style={styles.infoDivider} />
+
                 <View style={styles.infoRow}>
-                  <User size={20} color="#64748B" />
-                  <View style={styles.infoTextGroup}>
+                  <Shield size={18} color="#94A3B8" />
+                  <View style={[styles.infoTextGroup, { marginLeft: 12 }]}>
+                    <Text style={styles.infoLabel}>Admin / Owner</Text>
+                    <Text style={styles.infoValue}>{team?.owner?.full_name || 'Team Admin'}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.infoDivider} />
+                
+                <View style={styles.infoRow}>
+                  <User size={18} color="#94A3B8" />
+                  <View style={[styles.infoTextGroup, { marginLeft: 12 }]}>
                     <Text style={styles.infoLabel}>Captain</Text>
                     <Text style={styles.infoValue}>{team.captain}</Text>
                   </View>
                 </View>
               </View>
             </View>
-
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Team QR Code</Text>
-              <View style={styles.qrCard}>
-                <View style={styles.qrWrapper}>
-                  <QRCode
-                    value={`https://bookyourground.com/teams/${id}`}
-                    size={160}
-                    color="#043529"
-                    backgroundColor="#FFFFFF"
-                  />
-                </View>
-                <Text style={styles.qrHint}>Official QR for {team.name}</Text>
-                <Text style={styles.qrSubHint}>Scan this to view profile or join the squad</Text>
-              </View>
+          </ScrollView>
+        );
+      case 'matches':
+        return (
+          <ScrollView 
+            style={styles.tabContent} 
+            contentContainerStyle={styles.tabContentInner}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+          >
+            <View style={styles.sectionHeaderRow}>
+               <Text style={styles.sectionTitle}>Match History</Text>
             </View>
 
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Match Performance</Text>
-              <View style={styles.performanceCard}>
-                <View style={styles.performanceRow}>
-                  <View style={styles.perfItem}>
-                    <Text style={styles.perfLabel}>Matches Won</Text>
-                    <Text style={[styles.perfValue, { color: '#01b854' }]}>8</Text>
-                  </View>
-                  <View style={styles.perfDivider} />
-                  <View style={styles.perfItem}>
-                    <Text style={styles.perfLabel}>Matches Lost</Text>
-                    <Text style={[styles.perfValue, { color: '#EF4444' }]}>4</Text>
-                  </View>
-                </View>
-
-                <View style={styles.formSection}>
-                  <Text style={styles.formLabel}>Last 5 Matches</Text>
-                  <View style={styles.formCirclesContainer}>
-                    {['W', 'W', 'L', 'L', 'W'].map((res, idx) => (
-                      <View 
-                        key={idx} 
-                        style={[
-                          styles.formCircle, 
-                          { backgroundColor: res === 'W' ? '#01b854' : '#EF4444' }
-                        ]}
-                      >
-                        <Text style={styles.formCircleText}>{res}</Text>
+            {matchesLoading ? (
+              <ActivityIndicator size="small" color="#01b854" />
+            ) : teamMatches.length === 0 ? (
+              <View style={styles.emptyMatches}>
+                 <Text style={styles.emptyMatchesText}>No matches found for this team.</Text>
+              </View>
+            ) : (
+              <View style={styles.matchesList}>
+                {teamMatches.slice(0, 10).map((match) => {
+                  const isTeamA = match.team_a_id === id;
+                  const myScore = isTeamA ? match.match_live_state?.team_a_score : match.match_live_state?.team_b_score;
+                  const oppScore = isTeamA ? match.match_live_state?.team_b_score : match.match_live_state?.team_a_score;
+                  const oppName = isTeamA ? match.team_b : match.team_a;
+                  const isWon = match.match_live_state?.winner_id === id;
+                  
+                  return (
+                    <TouchableOpacity 
+                      key={match.id} 
+                      style={styles.matchHistoryCard}
+                      onPress={() => router.push(`/live/${match.id}`)}
+                    >
+                      <View style={styles.matchHistoryHeader}>
+                        <Text style={styles.matchHistoryDate}>
+                          {new Date(match.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+                        </Text>
+                        <View style={[
+                          styles.matchResultBadge, 
+                          { backgroundColor: isWon ? '#F0FDF4' : '#FEF2F2' }
+                        ]}>
+                          <Text style={[
+                            styles.matchResultBadgeText,
+                            { color: isWon ? '#01b854' : '#EF4444' }
+                          ]}>
+                            {isWon ? 'WON' : 'LOST'}
+                          </Text>
+                        </View>
                       </View>
-                    ))}
-                  </View>
-                </View>
+                      
+                      <View style={styles.matchHistoryTeams}>
+                         <View style={styles.matchHistoryTeamRow}>
+                            <Text style={styles.matchHistoryTeamName}>{team?.name}</Text>
+                            <Text style={styles.matchHistoryTeamScore}>{myScore || '0/0'}</Text>
+                         </View>
+                         <View style={styles.matchHistoryVS}>
+                            <Text style={styles.vsText}>VS</Text>
+                         </View>
+                         <View style={styles.matchHistoryTeamRow}>
+                            <Text style={styles.matchHistoryTeamName}>{oppName}</Text>
+                            <Text style={styles.matchHistoryTeamScore}>{oppScore || '0/0'}</Text>
+                         </View>
+                      </View>
+                      
+                      {match.match_live_state?.result_text && (
+                        <Text style={styles.matchHistoryResultText}>
+                          {match.match_live_state.result_text}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
+            )}
+          </ScrollView>
+        );
+      case 'stats':
+        return (
+          <ScrollView 
+            style={styles.tabContent} 
+            showsVerticalScrollIndicator={false}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+          >
+            {/* Dynamic Overview Stats */}
+            <View style={styles.sectionHeaderRow}>
+               <Text style={styles.sectionTitle}>Overview</Text>
             </View>
+            
+            <View style={styles.statsGrid}>
+              {[
+                { label: 'MATCHES', value: dynamicStats.matches.toString() },
+                { label: 'UPCOMING', value: dynamicStats.upcoming.toString() },
+                { label: 'WON', value: dynamicStats.won.toString(), color: '#01b854' },
+                { label: 'LOST', value: dynamicStats.lost.toString(), color: '#EF4444' },
+                { label: 'TIE', value: dynamicStats.tie.toString(), color: '#6366F1' },
+                { label: 'DRAW', value: dynamicStats.draw.toString(), color: '#8B5CF6' },
+                { label: 'NO RESULT', value: dynamicStats.noResult.toString(), color: '#94A3B8' },
+                { label: 'WIN %', value: dynamicStats.winRate },
+                { label: 'TOSS WON', value: dynamicStats.tossWon.toString() },
+                { label: 'BAT FIRST', value: dynamicStats.batFirst.toString() },
+                { label: 'FIELD FIRST', value: dynamicStats.fieldFirst.toString() },
+                { label: 'RUNS (FOR)', value: dynamicStats.runsFor.toLocaleString() },
+                { label: 'RUNS (AG)', value: dynamicStats.runsAg.toLocaleString() },
+                { label: 'HIGHEST', value: dynamicStats.highest.toString() },
+                { label: 'LOWEST', value: dynamicStats.lowest.toString() },
+              ].map((stat, idx) => (
+                <View key={idx} style={styles.statGridItem}>
+                  <Text style={styles.statGridLabel}>{stat.label}</Text>
+                  <Text style={[styles.statGridValue, stat.color ? { color: stat.color } : null]}>
+                    {stat.value}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </ScrollView>
+        );
+      case 'leaderboard':
+        return (
+          <ScrollView 
+            style={styles.tabContent} 
+            showsVerticalScrollIndicator={false}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+          >
+            {/* Sub-Tabs */}
+            <View style={styles.subTabBar}>
+              {[
+                { key: 'bat', label: 'Bat' },
+                { key: 'bowl', label: 'Bowl' },
+                { key: 'field', label: 'Field' },
+                { key: 'partnership', label: 'Partnership' },
+              ].map((sub) => (
+                <TouchableOpacity 
+                   key={sub.key} 
+                   style={[styles.subTab, activeSubTab === sub.key && styles.activeSubTab]}
+                   onPress={() => setActiveSubTab(sub.key as any)}
+                >
+                  <Text style={[styles.subTabText, activeSubTab === sub.key && styles.activeSubTabText]}>
+                    {sub.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {leaderboardLoading ? (
+              <ActivityIndicator size="small" color="#01b854" style={{ marginTop: 20 }} />
+            ) : (
+              <View style={{ marginTop: 16 }}>
+                {activeSubTab === 'bat' && (
+                  <View>
+                    <Text style={styles.sectionTitle}>Top Batters (Runs)</Text>
+                    <View style={styles.leaderboardCard}>
+                      {[...leaderboardData].sort((a,b) => b.total_runs - a.total_runs).slice(0, 10).map((stat, idx) => (
+                        <View key={stat.id} style={[styles.leaderboardRow, idx === 9 && { borderBottomWidth: 0 }]}>
+                          <View style={styles.leaderboardPlayerInfo}>
+                            <Text style={styles.leaderboardRank}>{idx + 1}</Text>
+                            <View style={styles.leaderboardAvatar}>
+                              {stat.member?.profile?.avatar_url ? (
+                                <Image source={{ uri: stat.member.profile.avatar_url }} style={styles.avatarImg} />
+                              ) : (
+                                <Text style={styles.avatarInitial}>{(stat.member?.player_name || '?')[0]}</Text>
+                              )}
+                            </View>
+                            <Text style={styles.leaderboardName} numberOfLines={1}>{stat.member?.player_name}</Text>
+                          </View>
+                          <View style={styles.leaderboardValueContainer}>
+                            <Text style={styles.leaderboardValue}>{stat.total_runs}</Text>
+                            <Text style={styles.leaderboardUnit}>Runs</Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+                {activeSubTab === 'bowl' && (
+                  <View>
+                    <Text style={styles.sectionTitle}>Top Bowlers (Wkts)</Text>
+                    <View style={styles.leaderboardCard}>
+                      {[...leaderboardData].sort((a,b) => b.total_wickets - a.total_wickets).slice(0, 10).map((stat, idx) => (
+                        <View key={stat.id} style={[styles.leaderboardRow, idx === 9 && { borderBottomWidth: 0 }]}>
+                          <View style={styles.leaderboardPlayerInfo}>
+                            <Text style={styles.leaderboardRank}>{idx + 1}</Text>
+                            <View style={styles.leaderboardAvatar}>
+                              {stat.member?.profile?.avatar_url ? (
+                                <Image source={{ uri: stat.member.profile.avatar_url }} style={styles.avatarImg} />
+                              ) : (
+                                <Text style={styles.avatarInitial}>{(stat.member?.player_name || '?')[0]}</Text>
+                              )}
+                            </View>
+                            <Text style={styles.leaderboardName} numberOfLines={1}>{stat.member?.player_name}</Text>
+                          </View>
+                          <View style={styles.leaderboardValueContainer}>
+                            <Text style={styles.leaderboardValue}>{stat.total_wickets}</Text>
+                            <Text style={styles.leaderboardUnit}>Wkt</Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+                {activeSubTab === 'field' && (
+                  <View>
+                    <Text style={styles.sectionTitle}>Top Fielders (Catches)</Text>
+                    <View style={styles.leaderboardCard}>
+                      {[...leaderboardData].sort((a,b) => (b.total_catches || 0) - (a.total_catches || 0)).slice(0, 10).map((stat, idx) => (
+                        <View key={stat.id} style={[styles.leaderboardRow, idx === 9 && { borderBottomWidth: 0 }]}>
+                          <View style={styles.leaderboardPlayerInfo}>
+                            <Text style={styles.leaderboardRank}>{idx + 1}</Text>
+                            <View style={styles.leaderboardAvatar}>
+                              {stat.member?.profile?.avatar_url ? (
+                                <Image source={{ uri: stat.member.profile.avatar_url }} style={styles.avatarImg} />
+                              ) : (
+                                <Text style={styles.avatarInitial}>{(stat.member?.player_name || '?')[0]}</Text>
+                              )}
+                            </View>
+                            <Text style={styles.leaderboardName} numberOfLines={1}>{stat.member?.player_name}</Text>
+                          </View>
+                          <View style={styles.leaderboardValueContainer}>
+                            <Text style={styles.leaderboardValue}>{stat.total_catches || 0}</Text>
+                            <Text style={styles.leaderboardUnit}>Catches</Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+                {activeSubTab === 'partnership' && (
+                  <View>
+                    <Text style={styles.sectionTitle}>Highest Team Partnerships</Text>
+                    {partnershipsLoading ? (
+                      <ActivityIndicator size="small" color="#01b854" />
+                    ) : partnerships.length === 0 ? (
+                      <View style={styles.emptyMatches}>
+                         <Text style={styles.emptyMatchesText}>No partnership data available.</Text>
+                      </View>
+                    ) : (
+                      <View style={styles.leaderboardCard}>
+                        {partnerships.map((p, idx) => (
+                          <View key={p.id} style={[styles.leaderboardRow, idx === partnerships.length - 1 && { borderBottomWidth: 0 }]}>
+                            <View style={[styles.leaderboardPlayerInfo, { flexDirection: 'column', alignItems: 'flex-start', gap: 2 }]}>
+                              <Text style={styles.leaderboardName}>{p.batter_1_name} & {p.batter_2_name}</Text>
+                              <Text style={styles.formNote}>Wicket: {p.wicket_number}</Text>
+                            </View>
+                            <View style={styles.leaderboardValueContainer}>
+                              <Text style={styles.leaderboardValue}>{p.total_runs}</Text>
+                              <Text style={styles.leaderboardUnit}>{p.total_balls} Balls</Text>
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                )}
+              </View>
+            )}
           </ScrollView>
         );
       case 'members':
         return (
-          <ScrollView style={styles.tabContent}>
+          <ScrollView 
+            style={styles.tabContent}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+          >
              {members.map((member) => (
                <View key={member.id} style={styles.memberRow}>
                   <View style={styles.memberAvatar}>
@@ -244,10 +884,47 @@ export default function TeamDetailsPage() {
                     <Text style={styles.memberName}>{member.player_name}</Text>
                     <Text style={styles.memberRole}>{member.role.toUpperCase()}</Text>
                   </View>
-                  {member.status === 'pending' && (
-                    <View style={styles.pendingBadge}>
-                      <Text style={styles.pendingText}>PENDING</Text>
-                    </View>
+                  {member.status === 'pending' ? (
+                    isOwner ? (
+                      <View style={{ flexDirection: 'row', gap: 8 }}>
+                        <TouchableOpacity 
+                          style={[styles.memberActionBtn, { backgroundColor: '#F0FDF4' }]}
+                          onPress={() => handleUpdateMember(member.profile_id, 'accepted')}
+                        >
+                          <Text style={{ color: '#01b854', fontWeight: '800', fontSize: 10 }}>ACCEPT</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          style={[styles.memberActionBtn, { backgroundColor: '#FEF2F2' }]}
+                          onPress={() => handleUpdateMember(member.profile_id, 'removed')}
+                        >
+                          <Text style={{ color: '#EF4444', fontWeight: '800', fontSize: 10 }}>REJECT</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : (
+                      <View style={styles.pendingBadge}>
+                        <Text style={styles.pendingText}>PENDING</Text>
+                      </View>
+                    )
+                  ) : (
+                    isOwner ? (
+                      member.profile_id !== user?.id && (
+                        <TouchableOpacity 
+                          style={{ padding: 8 }}
+                          onPress={() => handleUpdateMember(member.profile_id, 'removed')}
+                        >
+                          <Text style={{ color: '#EF4444', fontWeight: '700', fontSize: 11 }}>REMOVE</Text>
+                        </TouchableOpacity>
+                      )
+                    ) : (
+                      member.profile_id === user?.id && (
+                        <TouchableOpacity 
+                          style={{ padding: 8 }}
+                          onPress={handleLeaveTeam}
+                        >
+                          <Text style={{ color: '#EF4444', fontWeight: '700', fontSize: 11 }}>LEAVE</Text>
+                        </TouchableOpacity>
+                      )
+                    )
                   )}
                </View>
              ))}
@@ -257,11 +934,15 @@ export default function TeamDetailsPage() {
         return <TeamChatTab teamId={team.id} isMember={isAcceptedMember} />;
       case 'settings':
         return (
-          <ScrollView style={styles.tabContent}>
+          <ScrollView 
+            style={styles.tabContent}
+            onScroll={handleScroll}
+            scrollEventThrottle={16}
+          >
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Team Management</Text>
               <View style={styles.settingsCard}>
-                 <TouchableOpacity style={styles.settingsItem}>
+                 <TouchableOpacity style={styles.settingsItem} onPress={openEditModal}>
                    <View style={styles.settingsItemIcon}>
                      <User size={20} color="#043529" />
                    </View>
@@ -273,7 +954,7 @@ export default function TeamDetailsPage() {
                  
                  <View style={styles.settingsDivider} />
                  
-                 <TouchableOpacity style={styles.settingsItem}>
+                 <TouchableOpacity style={styles.settingsItem} onPress={() => setActiveTab('members')}>
                    <View style={styles.settingsItemIcon}>
                      <Users size={20} color="#043529" />
                    </View>
@@ -287,7 +968,7 @@ export default function TeamDetailsPage() {
 
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: '#EF4444' }]}>Danger Zone</Text>
-              <TouchableOpacity style={styles.deleteCard}>
+              <TouchableOpacity style={styles.deleteCard} onPress={handleDeleteTeam}>
                 <Text style={styles.deleteText}>Delete Team Permanently</Text>
               </TouchableOpacity>
             </View>
@@ -324,40 +1005,104 @@ export default function TeamDetailsPage() {
       </View>
 
       <View style={styles.tabBar}>
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'info' && styles.activeTab]} 
-          onPress={() => setActiveTab('info')}
-        >
-          <Text style={[styles.tabText, activeTab === 'info' && styles.activeTabText]}>Info</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'members' && styles.activeTab]} 
-          onPress={() => setActiveTab('members')}
-        >
-          <Text style={[styles.tabText, activeTab === 'members' && styles.activeTabText]}>Members</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={[styles.tab, activeTab === 'chat' && styles.activeTab]} 
-          onPress={() => setActiveTab('chat')}
-        >
-          <Text style={[styles.tabText, activeTab === 'chat' && styles.activeTabText]}>Chat</Text>
-        </TouchableOpacity>
-
-        {team.owner_id === user?.id && (
+        {TABS.map((tab) => (
           <TouchableOpacity 
-            style={[styles.tab, activeTab === 'settings' && styles.activeTab]} 
-            onPress={() => setActiveTab('settings')}
+            key={tab.key}
+            style={[styles.tab, activeTab === tab.key && styles.activeTab]} 
+            onPress={() => setActiveTab(tab.key)}
           >
-            <Text style={[styles.tabText, activeTab === 'settings' && styles.activeTabText]}>Settings</Text>
+            <Text style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
+              {tab.label}
+            </Text>
           </TouchableOpacity>
-        )}
+        ))}
       </View>
 
       <View style={styles.content}>
         {renderTabContent()}
       </View>
+
+      {/* Edit Team Modal */}
+      <Modal
+        visible={isEditing}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsEditing(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Edit Team Profile</Text>
+            
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Team Name</Text>
+              <TextInput
+                style={styles.textInput}
+                value={editName}
+                onChangeText={setEditName}
+                placeholder="Enter team name"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Location</Text>
+              <TextInput
+                style={styles.textInput}
+                value={editLocation}
+                onChangeText={setEditLocation}
+                placeholder="Enter location"
+              />
+            </View>
+
+            <View style={styles.modalBtnRow}>
+              <TouchableOpacity 
+                style={[styles.modalBtn, styles.cancelBtn]} 
+                onPress={() => setIsEditing(false)}
+              >
+                <Text style={styles.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.modalBtn, styles.saveBtn]} 
+                onPress={handleSaveProfile}
+              >
+                <Text style={styles.saveBtnText}>Save Changes</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Enlarged QR Modal */}
+      <Modal
+        visible={isQRModalOpen}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setIsQRModalOpen(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setIsQRModalOpen(false)}
+        >
+          <View style={styles.qrModalContent}>
+            <Text style={styles.qrModalTitle}>{team?.name} Profile</Text>
+            <View style={styles.qrModalWrapper}>
+               <QRCode
+                  value={`https://bookyourground.com/teams/${id}`}
+                  size={200}
+                  color="#043529"
+                  backgroundColor="#FFFFFF"
+               />
+            </View>
+            <Text style={styles.qrModalHint}>Scan to join the squad</Text>
+            <TouchableOpacity 
+              style={styles.qrModalCloseBtn}
+              onPress={() => setIsQRModalOpen(false)}
+            >
+              <Text style={styles.qrModalCloseText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -414,10 +1159,27 @@ const styles = StyleSheet.create({
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 24,
     borderWidth: 1,
     borderColor: '#F1F5F9',
+  },
+  profileMainInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 16,
+  },
+  profileRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  miniQRContainer: {
+    padding: 6,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   infoTeamLogoContainer: {
     width: 70,
@@ -431,16 +1193,24 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   infoProfileName: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '900',
     color: '#043529',
+    letterSpacing: -0.5,
   },
-  infoProfileRole: {
+  officialBadge: {
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+    marginTop: 4,
+  },
+  officialBadgeText: {
     fontSize: 10,
     fontWeight: '800',
     color: '#01b854',
-    letterSpacing: 1,
-    marginTop: 2,
+    letterSpacing: 0.5,
   },
   teamLogo: {
     width: '100%',
@@ -460,7 +1230,254 @@ const styles = StyleSheet.create({
   heroLocation: {
     fontSize: 14,
     color: 'rgba(255,255,255,0.7)',
+    fontWeight: '500',
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingHorizontal: 4,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  matchesList: {
+    gap: 16,
+    paddingBottom: 24,
+  },
+  matchHistoryCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOpacity: 0.02,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  matchHistoryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  matchHistoryDate: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#94A3B8',
+    textTransform: 'uppercase',
+  },
+  matchResultBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  matchResultBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  matchHistoryTeams: {
+    gap: 8,
+  },
+  matchHistoryTeamRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  matchHistoryTeamName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  matchHistoryTeamScore: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#043529',
+  },
+  matchHistoryVS: {
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  vsText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#CBD5E1',
+  },
+  matchHistoryResultText: {
+    marginTop: 16,
+    fontSize: 12,
     fontWeight: '600',
+    color: '#01b854',
+    textAlign: 'center',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  emptyMatches: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyMatchesText: {
+    fontSize: 14,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+  statGridItem: {
+    flex: 1,
+    minWidth: (Platform.OS === 'web' ? 120 : 100),
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.02,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  statGridLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#64748B',
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  statGridValue: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#043529',
+    textAlign: 'center',
+  },
+  statIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  statGridLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#64748B',
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  statGridValue: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#043529',
+    textAlign: 'center',
+  },
+  formCardGrid: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  formNote: {
+    marginTop: 12,
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#94A3B8',
+  },
+  leaderboardCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.02,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  leaderboardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8FAFC',
+  },
+  leaderboardPlayerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
+  },
+  leaderboardRank: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#94A3B8',
+    width: 20,
+  },
+  leaderboardAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  leaderboardName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1E293B',
+    flex: 1,
+  },
+  leaderboardValueContainer: {
+    alignItems: 'flex-end',
+  },
+  leaderboardValue: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#043529',
+  },
+  leaderboardUnit: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#94A3B8',
+    textTransform: 'uppercase',
+  },
+  subTabBar: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 8,
+  },
+  subTab: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
+  },
+  activeSubTab: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#DCFCE7',
+  },
+  subTabText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  activeSubTabText: {
+    color: '#01b854',
   },
   tabBar: {
     flexDirection: 'row',
@@ -536,7 +1553,12 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    paddingVertical: 12,
+  },
+  infoDivider: {
+    height: 1,
+    backgroundColor: '#F1F5F9',
+    marginVertical: 4,
   },
   infoTextGroup: {
     flex: 1,
@@ -590,8 +1612,39 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   perfValue: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '900',
+    color: '#1E293B',
+  },
+  winRateSection: {
+    paddingTop: 16,
+    paddingBottom: 4,
+  },
+  winRateHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  winRateLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  winRateValue: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#01b854',
+  },
+  progressBarContainer: {
+    height: 8,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: '#01b854',
   },
   formSection: {
     paddingTop: 20,
@@ -753,5 +1806,131 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 4,
     fontWeight: '500',
+  },
+  memberActionBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 10,
+    width: '100%',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#043529',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#64748B',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
+  textInput: {
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  modalBtnRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  modalBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelBtn: {
+    backgroundColor: '#F1F5F9',
+  },
+  saveBtn: {
+    backgroundColor: '#01b854',
+  },
+  cancelBtnText: {
+    color: '#64748B',
+    fontWeight: '700',
+  },
+  saveBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  qrModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    width: '80%',
+    maxWidth: 320,
+  },
+  qrModalTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#043529',
+    marginBottom: 20,
+  },
+  qrModalWrapper: {
+    padding: 16,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 16,
+  },
+  qrModalHint: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '600',
+    marginBottom: 24,
+  },
+  qrModalCloseBtn: {
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 99,
+  },
+  qrModalCloseText: {
+    color: '#64748B',
+    fontWeight: '800',
+    fontSize: 14,
+  },
+  joinBtn: {
+    backgroundColor: '#01b854',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  joinBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+    fontSize: 12,
   },
 });

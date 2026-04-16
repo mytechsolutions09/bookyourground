@@ -17,6 +17,7 @@ import { Modal } from 'react-native';
 import WebLayout from '@/components/web/WebLayout';
 
 const TABS = [
+  { id: 'player-profile', label: 'Player Profile', path: '/cricket/player-profile' },
   { id: 'matches', label: 'Matches', path: '/cricket/matches' },
   { id: 'tournaments', label: 'Tournaments', path: '/cricket/tournaments' },
   { id: 'teams', label: 'Teams', path: '/cricket/teams' },
@@ -29,7 +30,7 @@ export default function CricketLayout() {
   const pathname = usePathname();
   const { width } = useWindowDimensions();
 
-  const activeTabId = TABS.find(t => pathname.includes(t.id))?.id || 'matches';
+  const activeTabId = TABS.find(t => pathname.includes(t.id))?.id || 'player-profile';
   const [isActionModalVisible, setIsActionModalVisible] = React.useState(false);
 
   const renderActionModal = () => (
