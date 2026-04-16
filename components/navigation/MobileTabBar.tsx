@@ -21,7 +21,7 @@ const INACTIVE = '#e5e7eb';
 
 function getActiveTab(
   segments: string[],
-): 'home' | 'grounds' | 'bookings' | 'favorites' | 'profile' | 'logout' | 'find-opponent' | 'cricket' {
+): 'home' | 'grounds' | 'bookings' | 'favorites' | 'profile' | 'logout' | 'find-opponent' | 'cricket' | 'shop' {
   const root = segments[0];
   if (root === 'find-an-opponent') return 'find-opponent';
   if (root === 'ground' || root === 'grounds' || root === 'book-my-ground') {
@@ -30,6 +30,7 @@ function getActiveTab(
   if (root === 'cricket') return 'cricket';
   if (root === 'bookings') return 'bookings';
   if (root === 'favorites') return 'favorites';
+  if (root === 'shop') return 'shop';
   if (root !== '(tabs)') return 'home';
   const tab = segments[1] ?? 'index';
   if (tab === 'index') return 'home';
@@ -38,6 +39,7 @@ function getActiveTab(
   if (tab === 'bookings') return 'bookings';
   if (tab === 'favorites') return 'favorites';
   if (tab === 'profile') return 'profile';
+  if (tab === 'shop') return 'shop';
   if (tab === 'logout') return 'logout';
   return 'home';
 }
@@ -48,7 +50,7 @@ export default function MobileTabBar() {
   const router = useRouter();
   const segments = useSegments();
   const { isTabBarVisible } = useUI();
-  const isOwner = profile?.role === 'ground_owner';
+  const { user } = useAuth();
 
   if (Platform.OS === 'web') return null;
   if (!isTabBarVisible) return null;
@@ -102,22 +104,14 @@ export default function MobileTabBar() {
 
       <Pressable
         style={styles.item}
-        onPress={() => go('/(tabs)/bookings')}
+        onPress={() => go('/(tabs)/shop')}
         accessibilityRole="button"
-        accessibilityLabel="Bookings"
-        accessibilityState={{ selected: activeTab === 'bookings' }}
+        accessibilityLabel="Shop"
+        accessibilityState={{ selected: activeTab === 'shop' }}
       >
-        <CalendarCheck2 size={size} color={activeTab === 'bookings' ? ACTIVE : INACTIVE} />
+        <ShoppingBag size={size} color={activeTab === 'shop' ? ACTIVE : INACTIVE} />
       </Pressable>
-      <Pressable
-        style={styles.item}
-        onPress={() => go('/(tabs)/favorites')}
-        accessibilityRole="button"
-        accessibilityLabel="Favorites"
-        accessibilityState={{ selected: activeTab === 'favorites' }}
-      >
-        <Heart size={size} color={activeTab === 'favorites' ? ACTIVE : INACTIVE} fill={activeTab === 'favorites' ? ACTIVE : 'none'} />
-      </Pressable>
+
       <Pressable
         style={styles.item}
         onPress={() => go('/(tabs)/profile')}
@@ -127,6 +121,7 @@ export default function MobileTabBar() {
       >
         <CircleUser size={size} color={activeTab === 'profile' ? ACTIVE : INACTIVE} />
       </Pressable>
+
       {!user && (
         <Pressable
           style={styles.item}

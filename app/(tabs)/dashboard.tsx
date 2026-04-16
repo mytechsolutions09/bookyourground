@@ -128,7 +128,7 @@ function DashboardContent() {
     [bookings],
   );
 
-  const IS_DARK = Platform.OS !== 'web' || isCompact;
+  const IS_DARK = false;
 
   const content = (
     <ScrollView
@@ -300,14 +300,14 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   nativeWrapper: {
     flex: 1,
-    backgroundColor: THEME_BG,
+    backgroundColor: '#F8FAFC',
   },
   root: {
     flex: 1,
     backgroundColor: Platform.OS === 'web' ? 'transparent' : '#F9FAFB',
   },
   rootDark: {
-    backgroundColor: THEME_BG,
+    backgroundColor: '#F8FAFC',
   },
   scrollContent: {
     padding: 16,

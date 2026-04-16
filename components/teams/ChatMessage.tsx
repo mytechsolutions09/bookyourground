@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Image, TouchableOpacity, Linking, Alert } from 'react-native';
+import { View, Text as RNText, StyleSheet, Image, TouchableOpacity, Linking, Alert, Platform } from 'react-native';
 import { Download, FileIcon } from 'lucide-react-native';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
@@ -18,6 +18,26 @@ export default function ChatMessage({ message, showSender = true }: ChatMessageP
     if (!message.content) return;
     
     try {
+      if (Platform.OS === 'web') {
+        try {
+          // On web, try direct download first
+          const response = await fetch(message.content);
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = message.content.split('/').pop() || 'download';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(url);
+        } catch (webErr) {
+          // Fallback: Just open the URL in a new tab if catch fails (likely CORS)
+          window.open(message.content, '_blank');
+        }
+        return;
+      }
+
       const fileName = message.content.split('/').pop() || 'media';
       const fileUri = FileSystem.documentDirectory + fileName;
       
@@ -42,9 +62,9 @@ export default function ChatMessage({ message, showSender = true }: ChatMessageP
               <Image source={{ uri: message.sender.avatar_url }} style={styles.avatar} />
             ) : (
               <View style={styles.avatarPlaceholder}>
-                <Text style={styles.avatarInitials}>
+                <RNText style={styles.avatarInitials}>
                   {message.sender?.full_name?.charAt(0) || '?'}
-                </Text>
+                </RNText>
               </View>
             )}
          </View>
@@ -52,7 +72,7 @@ export default function ChatMessage({ message, showSender = true }: ChatMessageP
       
       <View style={[styles.bubble, isOwn ? styles.ownBubble : styles.otherBubble, message.is_media && styles.mediaBubble]}>
         {!isOwn && showSender && (
-          <Text style={styles.senderName}>{message.sender?.full_name || 'Player'}</Text>
+          <RNText style={styles.senderName}>{message.sender?.full_name || 'Player'}</RNText>
         )}
         
         {message.is_media ? (
@@ -62,24 +82,24 @@ export default function ChatMessage({ message, showSender = true }: ChatMessageP
             ) : (
               <View style={styles.videoPlaceholder}>
                 <FileIcon size={32} color={isOwn ? '#043529' : '#64748B'} />
-                <Text style={[styles.videoText, isOwn ? styles.ownText : styles.otherText]}>Video Shared</Text>
+                <RNText style={[styles.videoText, isOwn ? styles.ownText : styles.otherText]}>Video Shared</RNText>
               </View>
             )}
             
             <TouchableOpacity style={styles.downloadBtn} onPress={handleDownload}>
               <Download size={16} color="#FFFFFF" strokeWidth={2.5} />
-              <Text style={styles.downloadText}>Download</Text>
+              <RNText style={styles.downloadText}>Download</RNText>
             </TouchableOpacity>
           </View>
         ) : (
-          <Text style={[styles.messageText, isOwn ? styles.ownText : styles.otherText]}>
+          <RNText style={[styles.messageText, isOwn ? styles.ownText : styles.otherText]}>
             {message.content}
-          </Text>
+          </RNText>
         )}
 
-        <Text style={[styles.timestamp, isOwn ? styles.ownTimestamp : styles.otherTimestamp]}>
+        <RNText style={[styles.timestamp, isOwn ? styles.ownTimestamp : styles.otherTimestamp]}>
           {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </Text>
+        </RNText>
       </View>
     </View>
   );

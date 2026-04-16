@@ -3427,6 +3427,8 @@ export default function CricketScreen() {
   const [isContactPickerVisible, setIsContactPickerVisible] = useState(false);
   const [realContacts, setRealContacts] = useState<any[]>([]);
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
+  const [globalSearchResults, setGlobalSearchResults] = useState<any[]>([]);
+  const [isSearchingGlobal, setIsSearchingGlobal] = useState(false);
   const [memberForm, setMemberForm] = useState({ name: '', phone: '' });
   
   const [managementTab, setManagementTab] = useState<'squad' | 'profile'>('squad');
@@ -3535,9 +3537,12 @@ export default function CricketScreen() {
   const [isMatchInfoVisible, setIsMatchInfoVisible] = useState(false);
 
   useEffect(() => {
+    let active = true;
     const searchDbPlayers = async () => {
-      if (playerSearchQuery.trim().length < 3 || isAddingNewPlayerManually) {
+      const q = (playerSearchQuery || '').trim();
+      if (q.length < 3 || isAddingNewPlayerManually) {
         setDbSearchResults([]);
+        setIsSearchingDb(false);
         return;
       }
 
@@ -3546,25 +3551,34 @@ export default function CricketScreen() {
         const { data, error } = await supabase
           .from('profiles')
           .select('id, full_name, avatar_url, phone')
-          .ilike('full_name', `%${playerSearchQuery}%`)
-          .limit(5);
+          .or(`full_name.ilike.%${q}%,phone.ilike.%${q}%`)
+          .limit(10);
+
+        if (!active) return;
 
         if (!error && data) {
-          // Filter out those already in the local squad list to avoid duplicates
-          const localNames = new Set((squadBatting || []).map(n => typeof n === 'string' ? n.toLowerCase() : n?.player_name?.toLowerCase()));
-          const filtered = data.filter(p => !localNames.has(p.full_name.toLowerCase()));
+          const localPhones = new Set((teamMembers || []).map(m => m.player_phone));
+          const localNames = new Set((teamMembers || []).map(m => m.player_name?.toLowerCase()));
+          
+          const filtered = data.filter(p => 
+            !localPhones.has(p.phone) && 
+            !localNames.has(p.full_name?.toLowerCase())
+          );
           setDbSearchResults(filtered);
         }
       } catch (err) {
-        console.error('Global search error:', err);
+        if (active) console.error('Global search error:', err);
       } finally {
-        setIsSearchingDb(false);
+        if (active) setIsSearchingDb(false);
       }
     };
 
     const timer = setTimeout(searchDbPlayers, 500);
-    return () => clearTimeout(timer);
-  }, [playerSearchQuery, isAddingNewPlayerManually, squadBatting]);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [playerSearchQuery, isAddingNewPlayerManually, teamMembers]);
   const [isSelectingNextBowler, setIsSelectingNextBowler] = useState(false);
   const [isSelectingNewBatter, setIsSelectingNewBatter] = useState(false);
   const [pendingWicketData, setPendingWicketData] = useState<{ dismissedName: string } | null>(null);
@@ -4010,6 +4024,44 @@ export default function CricketScreen() {
     }
   };
 
+  const handleSelectGlobalPlayer = async (player: any) => {
+    const currentTeam = currentPickingSide === 'A' ? selectedTeamA : selectedTeamB;
+    if (!currentTeam) return;
+    
+    setIsSearchingGlobal(true);
+    try {
+      const { data, error } = await supabase
+        .from('team_members')
+        .insert([
+          { 
+            team_id: currentTeam.id, 
+            player_name: player.full_name, 
+            player_phone: player.phone,
+            profile_id: player.id,
+            status: 'accepted'
+          }
+        ])
+        .select();
+
+      if (error) throw error;
+      
+      if (data && data[0]) {
+        // Refresh local team members
+        await fetchTeamMembers(currentTeam.id);
+        // Automatically select them for Playing XI
+        togglePlayer(data[0]);
+        // Clear search
+        setPlayerSearchQuery('');
+        setDbSearchResults([]);
+      }
+    } catch (err) {
+      console.error('Error adding global player:', err);
+      alert('Failed to add player to squad.');
+    } finally {
+      setIsSearchingGlobal(false);
+    }
+  };
+
   const handleAddMember = async () => {
     if (!memberForm.name || !memberForm.phone) {
       alert('Please fill name and phone');
@@ -4059,7 +4111,7 @@ export default function CricketScreen() {
   const fetchTeamMembers = async (teamId: string) => {
     const { data, error } = await supabase
       .from('team_members')
-      .select('*')
+      .select('*, profiles(avatar_url)')
       .eq('team_id', teamId);
     
     if (data) setTeamMembers(data);
@@ -5056,61 +5108,115 @@ export default function CricketScreen() {
               />
             </View>
 
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 24 }}>
-               {teamMembers.length === 0 ? (
-                 <View style={styles.noResultArea}>
-                    <Users size={48} color="#E5E7EB" />
-                    <Text style={styles.noResultTitle}>No Players Found</Text>
-                    <Text style={styles.noResultSub}>Add players to your team squad first</Text>
-                    <TouchableOpacity 
-                      style={styles.addNewOfficialBtn}
-                      onPress={() => {
-                        setActiveTeamForPlayers(currentTeam);
-                        setIsAddMemberModalVisible(true);
-                      }}
-                    >
-                       <Plus size={20} color="#01b854" />
-                       <Text style={styles.addNewOfficialText}>Add Player to Squad</Text>
-                    </TouchableOpacity>
-                 </View>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 24, paddingBottom: 40 }}>
+               {/* Search results from existing team squad */}
+               <View style={{ marginBottom: 16 }}>
+                 <Text style={{ fontSize: 12, fontWeight: '800', color: '#6B7280', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>Team Squad</Text>
+               </View>
+
+               {teamMembers
+                  .filter(m => 
+                    m.player_name.toLowerCase().includes(playerSearchQuery.toLowerCase()) ||
+                    (m.player_phone && m.player_phone.includes(playerSearchQuery))
+                  ).length === 0 && playerSearchQuery === '' ? (
+                  <View style={styles.noResultArea}>
+                     <Users size={48} color="#E5E7EB" />
+                     <Text style={styles.noResultTitle}>No Players Found</Text>
+                     <Text style={styles.noResultSub}>Add players to your team squad first</Text>
+                     <TouchableOpacity 
+                       style={styles.addNewOfficialBtn}
+                       onPress={() => {
+                         setActiveTeamForPlayers(currentTeam);
+                         setIsAddMemberModalVisible(true);
+                       }}
+                     >
+                        <Plus size={20} color="#01b854" />
+                        <Text style={styles.addNewOfficialText}>Add Player to Squad</Text>
+                     </TouchableOpacity>
+                  </View>
                ) : (
-                 teamMembers
-                   .filter(m => 
-                     m.player_name.toLowerCase().includes(playerSearchQuery.toLowerCase()) ||
-                     (m.player_phone && m.player_phone.includes(playerSearchQuery))
-                   )
-                   .map((member, idx) => {
-                   const isSelected = !!currentXi.find((p: any) => p.id === member.id);
-                   const isCaptain = currentCaptain?.id === member.id;
-                   
-                   return (
-                   <View key={idx} style={[styles.playerSelectRow, isSelected && styles.playerSelectRowActive]}>
-                      <TouchableOpacity 
-                        style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}
-                        onPress={() => togglePlayer(member)}
-                      >
+                 <>
+                   {teamMembers
+                     .filter(m => 
+                       m.player_name.toLowerCase().includes(playerSearchQuery.toLowerCase()) ||
+                       (m.player_phone && m.player_phone.includes(playerSearchQuery))
+                     )
+                     .map((member, idx) => {
+                     const isSelected = !!currentXi.find((p: any) => p.id === member.id);
+                     const isCaptain = currentCaptain?.id === member.id;
+                     
+                     return (
+                     <View key={idx} style={[styles.playerSelectRow, isSelected && styles.playerSelectRowActive]}>
+                        <TouchableOpacity 
+                          style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}
+                          onPress={() => togglePlayer(member)}
+                        >
+                          <View style={styles.avatarCircle}>
+                             {member.profiles?.avatar_url ? (
+                               <Image source={{ uri: member.profiles.avatar_url }} style={{ width: '100%', height: '100%', borderRadius: 20 }} />
+                             ) : (
+                               <User size={24} color="#6B7280" />
+                             )}
+                          </View>
+                          <View style={{ flex: 1 }}>
+                             <Text style={[styles.playerNameText, isSelected && { color: '#01b854' }]}>{member.player_name}</Text>
+                             <Text style={{ fontSize: 12, color: '#6B7280' }}>All-rounder</Text>
+                          </View>
+                          <View style={[styles.checkBox, isSelected && styles.checkBoxActive]}>
+                             {isSelected && <Plus size={14} color="#FFFFFF" style={{ transform: [{ rotate: '45deg' }] }} />}
+                          </View>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity 
+                          style={[styles.captainPickBtn, isCaptain && styles.captainPickBtnActive]}
+                          onPress={() => toggleCaptain(member)}
+                        >
+                           <Crown size={16} color={isCaptain ? '#01b854' : '#9CA3AF'} />
+                           {isCaptain && <Text style={[styles.captainPickText, styles.captainPickTextActive]}>CAPTAIN</Text>}
+                        </TouchableOpacity>
+                     </View>
+                     );
+                   })}
+                 </>
+               )}
+
+               {/* Global Search Results from Database */}
+               {dbSearchResults.length > 0 && (
+                 <View style={{ marginTop: 24 }}>
+                   <View style={{ marginBottom: 12 }}>
+                     <Text style={{ fontSize: 12, fontWeight: '800', color: '#01b854', textTransform: 'uppercase', letterSpacing: 1 }}>Search in BookYourGround</Text>
+                   </View>
+                   {dbSearchResults.map((player, idx) => (
+                     <TouchableOpacity 
+                       key={`global-${idx}`} 
+                       style={[styles.playerSelectRow, { backgroundColor: '#F0FDFA', borderColor: '#CCFBF1' }]}
+                       onPress={() => handleSelectGlobalPlayer(player)}
+                     >
                         <View style={styles.avatarCircle}>
-                           <User size={24} color="#6B7280" />
+                           {player.avatar_url ? (
+                             <Image source={{ uri: player.avatar_url }} style={{ width: '100%', height: '100%', borderRadius: 20 }} />
+                           ) : (
+                             <User size={24} color="#6B7280" />
+                           )}
                         </View>
                         <View style={{ flex: 1 }}>
-                           <Text style={[styles.playerNameText, isSelected && { color: '#01b854' }]}>{member.player_name}</Text>
-                           <Text style={{ fontSize: 12, color: '#6B7280' }}>All-rounder</Text>
+                           <Text style={styles.playerNameText}>{player.full_name}</Text>
+                           {player.phone && <Text style={{ fontSize: 12, color: '#6B7280' }}>{player.phone}</Text>}
                         </View>
-                        <View style={[styles.checkBox, isSelected && styles.checkBoxActive]}>
-                           {isSelected && <Plus size={14} color="#FFFFFF" style={{ transform: [{ rotate: '45deg' }] }} />}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#FFFFFF', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: '#5EEAD4' }}>
+                           <PlusCircle size={16} color="#0D9488" />
+                           <Text style={{ fontSize: 12, fontWeight: '700', color: '#0D9488' }}>Add</Text>
                         </View>
-                      </TouchableOpacity>
+                     </TouchableOpacity>
+                   ))}
+                 </View>
+               )}
 
-                      <TouchableOpacity 
-                        style={[styles.captainPickBtn, isCaptain && styles.captainPickBtnActive]}
-                        onPress={() => toggleCaptain(member)}
-                      >
-                         <Crown size={16} color={isCaptain ? '#01b854' : '#9CA3AF'} />
-                         {isCaptain && <Text style={[styles.captainPickText, styles.captainPickTextActive]}>CAPTAIN</Text>}
-                      </TouchableOpacity>
-                   </View>
-                   );
-                 })
+               {isSearchingDb && (
+                 <View style={{ marginTop: 20, alignItems: 'center' }}>
+                   <ActivityIndicator size="small" color="#01b854" />
+                   <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 8 }}>Searching database...</Text>
+                 </View>
                )}
             </ScrollView>
 

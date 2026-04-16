@@ -15,8 +15,9 @@ import {
   Swords,
   CalendarClock,
   Trophy,
+  ShoppingBag,
 } from 'lucide-react-native';
-import { ActivityIndicator, Platform, useWindowDimensions, View, Pressable, StyleSheet } from 'react-native';
+import { ActivityIndicator, Platform, useWindowDimensions, View, Pressable, StyleSheet, Text as RNText } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUI } from '@/contexts/UIContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -80,8 +81,8 @@ export default function TabLayout() {
     const { isTabBarVisible } = useUI();
     if (hideTabBarOnBigScreens || !isTabBarVisible) return null;
 
-    const visibleTabNames = ['home_tab', 'grounds', 'cricket', 'bookings', 'favorites', 'profile'];
-
+    const visibleTabNames = ['home_tab', 'grounds', 'cricket', 'shop', 'profile'];
+    
     const visibleRoutes = state.routes.filter((route: any) => {
       const { options } = descriptors[route.key];
       return visibleTabNames.includes(route.name) && options.href !== null;
@@ -113,7 +114,16 @@ export default function TabLayout() {
               onPress={onPress}
               style={styles.tabItem}
             >
-              {Icon && Icon({ color: isFocused ? '#00ea6b' : '#9ca3af', size: 24 })}
+              {Icon && Icon({ color: isFocused ? '#00ea6b' : '#9ca3af', size: 22 })}
+              <RNText 
+                numberOfLines={1} 
+                style={[
+                  styles.tabLabel, 
+                  { color: isFocused ? '#00ea6b' : '#9ca3af' }
+                ]}
+              >
+                {options.title}
+              </RNText>
             </Pressable>
           );
         })}
@@ -177,8 +187,15 @@ export default function TabLayout() {
       <Tabs.Screen
         name="cricket"
         options={{
-          title: 'Cricket Hub',
+          title: 'Cricket',
           tabBarIcon: ({ color, size }) => <Trophy size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="shop"
+        options={{
+          title: 'Shop',
+          tabBarIcon: ({ color, size }) => <ShoppingBag size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -192,6 +209,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="bookings"
         options={{
+          href: null,
           title: 'Bookings',
           tabBarIcon: ({ color, size }) => <CalendarCheck2 size={size} color={color} />,
         }}
@@ -199,6 +217,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="favorites"
         options={{
+          href: null,
           title: 'Favorites',
           tabBarIcon: ({ color, size }) => (
             <Heart size={size} color={color} fill={color === '#00ea6b' ? '#00ea6b' : 'none'} />
@@ -236,7 +255,7 @@ const styles = StyleSheet.create({
   customTabBar: {
     flexDirection: 'row',
     backgroundColor: '#043529',
-    height: 60,
+    height: 75,
     borderTopWidth: 1,
     borderTopColor: '#06392e',
     alignItems: 'center',
@@ -248,5 +267,11 @@ const styles = StyleSheet.create({
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingTop: 8,
+  },
+  tabLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 4,
   },
 });

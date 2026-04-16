@@ -1,13 +1,13 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   View,
-  Text,
+  Text as RNText,
   Image,
   StyleSheet,
   TouchableOpacity,
   Platform,
   useWindowDimensions,
-  TextInput,
+  TextInput as RNTextInput,
   ScrollView,
 } from 'react-native';
 import { router, usePathname, useSegments } from 'expo-router';
@@ -45,6 +45,7 @@ import {
   CircleUser,
   ClipboardList,
   Phone,
+  ShoppingBag,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -201,7 +202,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
     cleanPath === '/privacy' ||
     cleanPath === '/refund-policy' ||
     cleanPath === '/contact' ||
-    cleanPath === '/cricket';
+    cleanPath === '/cricket/player-profile';
   const adminPathnames = [
     '/dashboard',
     '/bookings',
@@ -252,7 +253,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
   // On ground info (/grounds/[id]) and booking info (/bookings/[id]) pages,
   // hide the left sidebar for all roles so the content can take full width.
   const isPublicNoSidebar =
-    isLanding || isMarketing || isGroundInfoPage || isBookingDetails || isCheckoutPage || isLegalOrInfoPage || (cleanPath === '/find-an-opponent' && !isSuperAdmin) || cleanPath === '/(tabs)/grounds' || cleanPath === '/search' || cleanPath.startsWith('/live/') || (cleanPath.startsWith('/cricket') && !cleanPath.startsWith('/cricketdata'));
+    isLanding || isMarketing || isGroundInfoPage || isBookingDetails || isCheckoutPage || isLegalOrInfoPage || (cleanPath === '/find-an-opponent' && !isSuperAdmin) || cleanPath === '/(tabs)/grounds' || cleanPath === '/shop' || cleanPath === '/search' || cleanPath.startsWith('/live/') || (cleanPath.startsWith('/cricket/player-profile') && !cleanPath.startsWith('/cricketdata'));
   // Treat the presence of a Supabase `user` as authenticated even if `profile`
   // hasn't loaded yet (prevents briefly showing "Sign In").
   const isAuthenticated = !!user || !!profile || isSuperAdmin;
@@ -332,10 +333,10 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
         <Icon size={18} color={iconColor} />
         {!isCompact && hideLabel && hovered && Platform.OS === 'web' && (
           <View style={styles.tooltip}>
-            <Text style={styles.tooltipText}>{label}</Text>
+            <RNText style={styles.tooltipText}>{label}</RNText>
           </View>
         )}
-        <Text
+        <RNText
           numberOfLines={1}
           style={[
             styles.navLinkText,
@@ -346,7 +347,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
           ]}
         >
           {label}
-        </Text>
+        </RNText>
       </TouchableOpacity>
     );
   };
@@ -408,7 +409,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                   {!isCompact && (
                     <View style={styles.headerSearch}>
                       <Search size={16} color="#9CA3AF" style={styles.headerSearchIcon} />
-                      <TextInput
+                      <RNTextInput
                         placeholder="Search by city or venue name..."
                         placeholderTextColor="#9CA3AF"
                         value={searchQuery}
@@ -437,14 +438,14 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                       {searchFocused && (searchQuery.length >= 2) && (
                         <View style={styles.searchDropdown}>
                           {isSearching ? (
-                            <Text style={styles.searchDropdownText}>Searching...</Text>
+                            <RNText style={styles.searchDropdownText}>Searching...</RNText>
                           ) : (searchResults.grounds.length === 0 && searchResults.matches.length === 0) ? (
-                            <Text style={styles.searchDropdownText}>No results found for "{searchQuery}"</Text>
+                            <RNText style={styles.searchDropdownText}>No results found for "{searchQuery}"</RNText>
                           ) : (
                             <ScrollView style={styles.searchDropdownScroll} keyboardShouldPersistTaps="handled">
                               {searchResults.grounds.length > 0 && (
                                 <View style={styles.searchSection}>
-                                  <Text style={styles.searchSectionTitle}>VENUES</Text>
+                                  <RNText style={styles.searchSectionTitle}>VENUES</RNText>
                                   {searchResults.grounds.map(g => (
                                     <TouchableOpacity 
                                       key={g.id} 
@@ -455,8 +456,8 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                                         <Building2 size={14} color="#01b854" />
                                       </View>
                                       <View style={styles.searchItemInfo}>
-                                        <Text style={styles.searchItemName}>{g.name}</Text>
-                                        <Text style={styles.searchItemMeta}>{g.city}, {g.state}</Text>
+                                        <RNText style={styles.searchItemName}>{g.name}</RNText>
+                                        <RNText style={styles.searchItemMeta}>{g.city}, {g.state}</RNText>
                                       </View>
                                     </TouchableOpacity>
                                   ))}
@@ -465,7 +466,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                               
                               {searchResults.matches.length > 0 && (
                                 <View style={styles.searchSection}>
-                                  <Text style={styles.searchSectionTitle}>AVAILABLE MATCHES</Text>
+                                  <RNText style={styles.searchSectionTitle}>AVAILABLE MATCHES</RNText>
                                   {searchResults.matches.map(m => (
                                     <TouchableOpacity 
                                       key={m.id} 
@@ -476,12 +477,12 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                                         <Swords size={14} color="#01b854" />
                                       </View>
                                       <View style={styles.searchItemInfo}>
-                                        <Text style={styles.searchItemName}>
+                                        <RNText style={styles.searchItemName}>
                                           {m.user?.team_name || m.user?.full_name || 'Anonymous Match'}
-                                        </Text>
-                                        <Text style={styles.searchItemMeta}>
+                                        </RNText>
+                                        <RNText style={styles.searchItemMeta}>
                                           {m.ground?.name} • {m.ground?.city}
-                                        </Text>
+                                        </RNText>
                                       </View>
                                     </TouchableOpacity>
                                   ))}
@@ -494,30 +495,37 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                     </View>
                   )}
 
-                  <Text
+                  <RNText
                     style={styles.headerPrimaryButtonText}
-                    onPress={() => router.push('/cricket' as any)}
+                    onPress={() => router.push('/cricket/player-profile' as any)}
                   >
                     Cricket
-                  </Text>
+                  </RNText>
+
+                  <RNText
+                    style={styles.headerPrimaryButtonText}
+                    onPress={() => router.push('/shop' as any)}
+                  >
+                    Shop
+                  </RNText>
 
 
-                  <Text
+                  <RNText
                     style={styles.headerPrimaryButtonText}
                     onPress={() => router.push(groundsHref as any)}
                   >
                     Grounds
-                  </Text>
+                  </RNText>
 
                   {!isAuthenticated ? (
-                    <Text
+                    <RNText
                       style={styles.headerSecondaryButtonText}
                       onPress={() => router.push('/(auth)/login' as any)}
                     >
                       Sign in
-                    </Text>
+                    </RNText>
                   ) : (
-                    <Text
+                    <RNText
                       style={styles.headerSecondaryButtonText}
                       onPress={() => {
                         if (isSuperAdmin) {
@@ -530,7 +538,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                       }}
                     >
                       Dashboard
-                    </Text>
+                    </RNText>
                   )}
                 </>
               )}
@@ -577,27 +585,33 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
               ) : (
                 !isCompact && (
                   <View style={{ flexDirection: 'row', gap: 24 }}>
-                      <Text
+                      <RNText
                         style={styles.headerPrimaryButtonText}
-                        onPress={() => router.push('/cricket' as any)}
+                        onPress={() => router.push('/cricket/player-profile' as any)}
                       >
                         Cricket
-                      </Text>
-                    <Text
+                      </RNText>
+                      <RNText
+                        style={styles.headerPrimaryButtonText}
+                        onPress={() => router.push('/shop' as any)}
+                      >
+                        Shop
+                      </RNText>
+                    <RNText
                       style={styles.headerPrimaryButtonText}
                       onPress={() => router.push('/book-my-ground' as any)}
                     >
                       Grounds
-                    </Text>
+                    </RNText>
                     {!isAuthenticated ? (
-                      <Text
+                      <RNText
                         style={styles.headerSecondaryButtonText}
                         onPress={() => router.push('/(auth)/login' as any)}
                       >
                         Sign in
-                      </Text>
+                      </RNText>
                     ) : (
-                      <Text
+                      <RNText
                         style={styles.headerPrimaryButtonText}
                         onPress={() => {
                           if (isSuperAdmin) {
@@ -610,7 +624,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                         }}
                       >
                         Dashboard
-                      </Text>
+                      </RNText>
                     )}
                   </View>
                 )
@@ -635,7 +649,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
               <View style={styles.sidebarMobile}>
                 <View style={styles.mobileSidebarSearch}>
                   <Search size={18} color="#dcc093" />
-                  <TextInput
+                  <RNTextInput
                     style={styles.mobileSidebarSearchInput}
                     placeholder="Search venues or matches..."
                     placeholderTextColor="rgba(220, 192, 147, 0.5)"
@@ -657,15 +671,25 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                   !showAdminMobileMenu &&
                   !showUserMobileMenu && (
                     <>
-                      <Text style={styles.sidebarTitle}>Get started</Text>
+                      <RNText style={styles.sidebarTitle}>Get started</RNText>
                       <TouchableOpacity
                         style={styles.mobilePrimaryButton}
                         onPress={() => {
                           setMenuOpen(false);
-                          router.push('/cricket' as any);
+                          router.push('/cricket/player-profile' as any);
                         }}
                       >
-                        <Text style={styles.mobilePrimaryButtonText}>Cricket Hub</Text>
+                        <RNText style={styles.mobilePrimaryButtonText}>Cricket Hub</RNText>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.mobilePrimaryButton}
+                        onPress={() => {
+                          setMenuOpen(false);
+                          router.push('/shop' as any);
+                        }}
+                      >
+                        <RNText style={styles.mobilePrimaryButtonText}>Shop</RNText>
                       </TouchableOpacity>
 
 
@@ -676,7 +700,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                           router.push(groundsHref as any);
                         }}
                       >
-                        <Text style={styles.mobilePrimaryButtonText}>Grounds</Text>
+                        <RNText style={styles.mobilePrimaryButtonText}>Grounds</RNText>
                       </TouchableOpacity>
 
                       {!isAuthenticated ? (
@@ -687,7 +711,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                             router.push('/(auth)/login' as any);
                           }}
                         >
-                          <Text style={styles.mobileSecondaryButtonText}>Sign in</Text>
+                          <RNText style={styles.mobileSecondaryButtonText}>Sign in</RNText>
                         </TouchableOpacity>
                       ) : (
                         <TouchableOpacity
@@ -697,7 +721,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                             router.push('/(tabs)/profile' as any);
                           }}
                         >
-                          <Text style={styles.mobileSecondaryButtonText}>Profile</Text>
+                          <RNText style={styles.mobileSecondaryButtonText}>Profile</RNText>
                         </TouchableOpacity>
                       )}
                     </>
@@ -705,10 +729,11 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
 
                 {showOwnerMobileMenu && (
                   <>
-                    <Text style={styles.sidebarTitle}>Ground owner</Text>
+                    <RNText style={styles.sidebarTitle}>Ground owner</RNText>
                     <NavLink href="/(owner)/owner-dashboard" icon={LayoutDashboard} label="Dashboard" />
                     <NavLink href="/(owner)/manage-grounds" icon={MapPin} label="My grounds" />
-                    <NavLink href="/cricket" icon={Swords} label="Cricket Hub" />
+                    <NavLink href="/shop" icon={ShoppingBag} label="Shop" />
+                    <NavLink href="/cricket/player-profile" icon={Swords} label="Cricket Hub" />
                     <NavLink href="/(owner)/ground-bookings" icon={ClipboardList} label="Bookings" />
                     <NavLink href="/(owner)/inventory" icon={CalendarClock} label="Inventory" />
                     <NavLink href="/(tabs)/bookings" icon={Ticket} label="My Bookings" />
@@ -726,15 +751,16 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                       }}
                     >
                       <LogOut size={18} color={isCompact ? '#dcc093' : '#E5E7EB'} />
-                      <Text style={[styles.signOutText, isCompact && styles.signOutTextMobile]}>Sign out</Text>
+                      <RNText style={[styles.signOutText, isCompact && styles.signOutTextMobile]}>Sign out</RNText>
                     </TouchableOpacity>
                   </>
                 )}
 
                 {showAdminMobileMenu && (
                   <>
-                    <Text style={styles.sidebarTitle}>Super admin</Text>
+                    <RNText style={styles.sidebarTitle}>Super admin</RNText>
                     <NavLink href="/(admin)/dashboard" icon={LayoutDashboard} label="Dashboard" />
+                    <NavLink href="/shop" icon={ShoppingBag} label="Shop" />
                     <NavLink href="/(admin)/cricketdata" icon={Swords} label="Cricket Hub" />
                     <NavLink href="/(admin)/bookings" icon={Calendar} label="Bookings" />
                     <NavLink href="/(admin)/grounds" icon={MapPin} label="Grounds" />
@@ -759,16 +785,17 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                       }}
                     >
                       <LogOut size={18} color={isCompact ? '#dcc093' : '#E5E7EB'} />
-                      <Text style={[styles.signOutText, isCompact && styles.signOutTextMobile]}>Sign out</Text>
+                      <RNText style={[styles.signOutText, isCompact && styles.signOutTextMobile]}>Sign out</RNText>
                     </TouchableOpacity>
                   </>
                 )}
 
                 {showUserMobileMenu && (
                   <>
-                    <Text style={styles.sidebarTitle}>My Account</Text>
+                    <RNText style={styles.sidebarTitle}>My Account</RNText>
                     <NavLink href="/(tabs)/dashboard" icon={LayoutDashboard} label="Dashboard" />
-                    <NavLink href="/cricket" icon={Swords} label="Cricket Hub" />
+                    <NavLink href="/shop" icon={ShoppingBag} label="Shop" />
+                    <NavLink href="/cricket/player-profile" icon={Swords} label="Cricket Hub" />
                     <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
                     <NavLink href="/(tabs)/favorites" icon={Star} label="Favorites" />
                     <NavLink href="/(tabs)/profile" icon={User} label="Profile" />
@@ -783,7 +810,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                       }}
                     >
                       <LogOut size={18} color={isCompact ? '#dcc093' : '#E5E7EB'} />
-                      <Text style={[styles.signOutText, isCompact && styles.signOutTextMobile]}>Sign out</Text>
+                      <RNText style={[styles.signOutText, isCompact && styles.signOutTextMobile]}>Sign out</RNText>
                     </TouchableOpacity>
                   </>
                 )}
@@ -813,7 +840,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                       <>
                         <View style={styles.sidebarHeaderRow}>
                           {!sidebarCollapsed && (
-                            <Text style={styles.sidebarSectionTitle}>Super admin</Text>
+                            <RNText style={styles.sidebarSectionTitle}>Super admin</RNText>
                           )}
                           <TouchableOpacity
                             style={styles.collapseButton}
@@ -836,6 +863,12 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                           href="/(admin)/cricketdata"
                           icon={Swords}
                           label="Cricket Hub"
+                          hideLabel={sidebarCollapsed}
+                        />
+                        <NavLink
+                          href="/shop"
+                          icon={ShoppingBag}
+                          label="Shop"
                           hideLabel={sidebarCollapsed}
                         />
                         <NavLink
@@ -908,19 +941,20 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                           } : {})}
                         >
                           <LogOut size={18} color="#01b854" />
-                          {!sidebarCollapsed && <Text style={styles.signOutText}>Sign out</Text>}
+                          {!sidebarCollapsed && <RNText style={styles.signOutText}>Sign out</RNText>}
                           {sidebarCollapsed && signOutHovered && Platform.OS === 'web' && (
                             <View style={styles.tooltip}>
-                              <Text style={styles.tooltipText}>Sign out</Text>
+                              <RNText style={styles.tooltipText}>Sign out</RNText>
                             </View>
                           )}
                         </TouchableOpacity>
                       </>
                     ) : isGroundOwner ? (
                       <>
-                        <Text style={styles.sidebarSectionTitle}>Ground owner</Text>
+                        <RNText style={styles.sidebarSectionTitle}>Ground owner</RNText>
                         <NavLink href="/(owner)/owner-dashboard" icon={LayoutDashboard} label="Dashboard" />
                         <NavLink href="/(owner)/manage-grounds" icon={MapPin} label="My grounds" />
+                        <NavLink href="/shop" icon={ShoppingBag} label="Shop" />
 
                         <NavLink href="/(owner)/ground-bookings" icon={ClipboardList} label="Bookings" />
                         <NavLink href="/(owner)/inventory" icon={CalendarClock} label="Inventory" />
@@ -936,17 +970,18 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                           onPress={handleSignOut}
                         >
                           <LogOut size={18} color="#01b854" />
-                          <Text style={styles.signOutText}>Sign out</Text>
+                          <RNText style={styles.signOutText}>Sign out</RNText>
                         </TouchableOpacity>
                       </>
                     ) : (
                       <>
-                        <Text style={styles.sidebarSectionTitle}>My Account</Text>
+                        <RNText style={styles.sidebarSectionTitle}>My Account</RNText>
                         <NavLink
                           href="/(tabs)/dashboard"
                           icon={LayoutDashboard}
                           label="Dashboard"
                         />
+                        <NavLink href="/shop" icon={ShoppingBag} label="Shop" />
 
                         <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
                         <NavLink href="/grounds?tab=favorite" icon={Star} label="Favorites" />
@@ -959,7 +994,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                           onPress={handleSignOut}
                         >
                           <LogOut size={18} color="#01b854" />
-                          <Text style={styles.signOutText}>Sign out</Text>
+                          <RNText style={styles.signOutText}>Sign out</RNText>
                         </TouchableOpacity>
                       </>
                     )}
@@ -983,7 +1018,8 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
           {[
             { label: 'Home', icon: House, href: '/' },
             { label: 'Grounds', icon: LandPlot, href: '/grounds' },
-            { label: 'Cricket', icon: Trophy, href: '/cricket' },
+            { label: 'Cricket', icon: Trophy, href: '/cricket/player-profile' },
+            { label: 'Shop', icon: ShoppingBag, href: '/shop' },
             { label: 'Bookings', icon: CalendarCheck2, href: '/(tabs)/bookings' },
             { label: 'Profile', icon: CircleUser, href: '/(tabs)/profile' },
           ].map((item) => {
@@ -1004,9 +1040,9 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                 }}
               >
                 <Icon size={22} color={isActive ? '#00ea6b' : '#9CA3AF'} />
-                <Text style={[styles.bottomBarText, isActive && styles.bottomBarTextActive]}>
+                <RNText style={[styles.bottomBarText, isActive && styles.bottomBarTextActive]}>
                   {item.label}
-                </Text>
+                </RNText>
               </TouchableOpacity>
             );
           })}

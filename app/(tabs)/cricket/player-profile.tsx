@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { 
   View, 
-  Text, 
+  Text as RNText, 
   StyleSheet, 
   ScrollView, 
   TouchableOpacity, 
   Image, 
   ActivityIndicator,
   Platform,
-  TextInput,
+  TextInput as RNTextInput,
   Modal,
   FlatList
 } from 'react-native';
@@ -222,8 +222,8 @@ export default function PlayerProfile() {
         <Icon size={20} color={color} />
       </View>
       <View>
-        <Text style={styles.statValue}>{value}</Text>
-        <Text style={styles.statLabel}>{label}</Text>
+        <RNText style={styles.statValue}>{value}</RNText>
+        <RNText style={styles.statLabel}>{label}</RNText>
       </View>
     </View>
   );
@@ -261,7 +261,7 @@ export default function PlayerProfile() {
         <View style={styles.modalOverlay}>
           <View style={styles.stateModalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select State</Text>
+              <RNText style={styles.modalTitle}>Select State</RNText>
               <TouchableOpacity onPress={() => setShowStatePicker(false)}>
                 <X size={24} color="#1E293B" />
               </TouchableOpacity>
@@ -269,7 +269,7 @@ export default function PlayerProfile() {
 
             <View style={styles.modalSearchContainer}>
               <Search size={18} color="#94A3B8" />
-              <TextInput
+              <RNTextInput
                 style={styles.modalSearchInput}
                 placeholder="Search state..."
                 value={stateSearch}
@@ -292,9 +292,9 @@ export default function PlayerProfile() {
                     setStateSearch('');
                   }}
                 >
-                  <Text style={[styles.stateItemText, editedData.state === item && styles.stateItemTextActive]}>
+                  <RNText style={[styles.stateItemText, editedData.state === item && styles.stateItemTextActive]}>
                     {item}
-                  </Text>
+                  </RNText>
                   {editedData.state === item && <View style={styles.activeDot} />}
                 </TouchableOpacity>
               )}
@@ -335,7 +335,7 @@ export default function PlayerProfile() {
           <View style={styles.profileInfo}>
             {isEditing ? (
               <View style={styles.editForm}>
-                <TextInput
+                <RNTextInput
                   style={styles.editInput}
                   value={editedData.full_name}
                   onChangeText={(t) => setEditedData({ ...editedData, full_name: t })}
@@ -349,9 +349,9 @@ export default function PlayerProfile() {
                     style={[styles.stateSelectorTrigger, { marginLeft: 0, flex: 1, justifyContent: 'space-between' }]}
                     onPress={() => setShowStatePicker(true)}
                   >
-                    <Text style={[styles.stateSelectorText, !editedData.state && { color: '#94A3B8' }]}>
+                    <RNText style={[styles.stateSelectorText, !editedData.state && { color: '#94A3B8' }]}>
                       {editedData.state || 'Select Your State'}
-                    </Text>
+                    </RNText>
                     <ChevronDown size={14} color="#64748B" />
                   </TouchableOpacity>
                 </View>
@@ -359,7 +359,7 @@ export default function PlayerProfile() {
             ) : (
               <>
                 <View style={styles.nameRow}>
-                  <Text style={styles.profileName}>{profile?.full_name || 'Cricket Player'}</Text>
+                  <RNText style={styles.profileName}>{profile?.full_name || 'Cricket Player'}</RNText>
                   <TouchableOpacity onPress={handleEdit} style={styles.editBtn}>
                     <Edit3 size={16} color="#01b854" />
                   </TouchableOpacity>
@@ -371,7 +371,7 @@ export default function PlayerProfile() {
                      {playerTags.map(tag => (
                        <View key={tag.id} style={[styles.styleTag, { backgroundColor: tag.color + '10', borderColor: tag.color + '30' }]}>
                           {renderTagIcon(tag.icon, tag.color)}
-                          <Text style={[styles.styleTagText, { color: tag.color }]}>{tag.label}</Text>
+                          <RNText style={[styles.styleTagText, { color: tag.color }]}>{tag.label}</RNText>
                        </View>
                      ))}
                   </View>
@@ -379,9 +379,9 @@ export default function PlayerProfile() {
 
                 <View style={styles.locationRow}>
                   <MapPin size={14} color="#64748B" />
-                  <Text style={styles.locationText}>
+                  <RNText style={styles.locationText}>
                     {profile?.state || 'Location not set'}
-                  </Text>
+                  </RNText>
                 </View>
               </>
             )}
@@ -395,13 +395,13 @@ export default function PlayerProfile() {
                         style={[styles.editChip, editedData.player_type === role && styles.editChipActive]}
                         onPress={() => setEditedData({ ...editedData, player_type: role })}
                      >
-                       <Text style={[styles.editChipText, editedData.player_type === role && styles.editChipTextActive]}>{role}</Text>
+                       <RNText style={[styles.editChipText, editedData.player_type === role && styles.editChipTextActive]}>{role}</RNText>
                      </TouchableOpacity>
                    ))}
                 </ScrollView>
               ) : (
                 <View style={styles.roleTag}>
-                  <Text style={styles.roleTagText}>{profile?.player_type || 'All Rounder'}</Text>
+                  <RNText style={styles.roleTagText}>{profile?.player_type || 'All Rounder'}</RNText>
                 </View>
               )}
             </View>
@@ -409,10 +409,10 @@ export default function PlayerProfile() {
             {!isEditing && (
               <View style={[styles.roleTags, { marginTop: 6 }]}>
                 <View style={[styles.roleTag, { backgroundColor: '#F0FDF4' }]}>
-                  <Text style={[styles.roleTagText, { color: '#166534' }]}>{profile?.batting_style || 'Right Hand Bat'}</Text>
+                  <RNText style={[styles.roleTagText, { color: '#166534' }]}>{profile?.batting_style || 'Right Hand Bat'}</RNText>
                 </View>
                 <View style={[styles.roleTag, { backgroundColor: '#FEF2F2' }]}>
-                  <Text style={[styles.roleTagText, { color: '#991B1B' }]}>{profile?.bowling_style || 'Right Arm Fast'}</Text>
+                  <RNText style={[styles.roleTagText, { color: '#991B1B' }]}>{profile?.bowling_style || 'Right Arm Fast'}</RNText>
                 </View>
               </View>
             )}
@@ -422,7 +422,7 @@ export default function PlayerProfile() {
         {isEditing && (
           <View style={styles.editSections}>
              <View style={styles.editSection}>
-                <Text style={styles.editSectionTitle}>Batting Style</Text>
+                <RNText style={styles.editSectionTitle}>Batting Style</RNText>
                 <View style={styles.chipRow}>
                   {['Right Hand Bat', 'Left Hand Bat'].map(s => (
                     <TouchableOpacity 
@@ -430,14 +430,14 @@ export default function PlayerProfile() {
                       style={[styles.editChip, editedData.batting_style === s && styles.editChipActive]}
                       onPress={() => setEditedData({ ...editedData, batting_style: s })}
                     >
-                      <Text style={[styles.editChipText, editedData.batting_style === s && styles.editChipTextActive]}>{s}</Text>
+                      <RNText style={[styles.editChipText, editedData.batting_style === s && styles.editChipTextActive]}>{s}</RNText>
                     </TouchableOpacity>
                   ))}
                 </View>
              </View>
 
              <View style={styles.editSection}>
-                <Text style={styles.editSectionTitle}>Bowling Style</Text>
+                <RNText style={styles.editSectionTitle}>Bowling Style</RNText>
                 <View style={styles.chipRow}>
                   {['Right Arm Fast', 'Left Arm Fast', 'Right Arm Spin', 'Left Arm Spin'].map(s => (
                     <TouchableOpacity 
@@ -445,7 +445,7 @@ export default function PlayerProfile() {
                       style={[styles.editChip, editedData.bowling_style === s && styles.editChipActive]}
                       onPress={() => setEditedData({ ...editedData, bowling_style: s })}
                     >
-                      <Text style={[styles.editChipText, editedData.bowling_style === s && styles.editChipTextActive]}>{s}</Text>
+                      <RNText style={[styles.editChipText, editedData.bowling_style === s && styles.editChipTextActive]}>{s}</RNText>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -457,7 +457,7 @@ export default function PlayerProfile() {
                  onPress={() => setIsEditing(false)}
                >
                  <X size={20} color="#64748B" />
-                 <Text style={styles.cancelBtnText}>Cancel</Text>
+                 <RNText style={styles.cancelBtnText}>Cancel</RNText>
                </TouchableOpacity>
                <TouchableOpacity 
                  style={styles.saveBtn}
@@ -469,7 +469,7 @@ export default function PlayerProfile() {
                  ) : (
                    <>
                      <Save size={20} color="#FFFFFF" />
-                     <Text style={styles.saveBtnText}>Save Changes</Text>
+                     <RNText style={styles.saveBtnText}>Save Changes</RNText>
                    </>
                  )}
                </TouchableOpacity>
@@ -481,18 +481,18 @@ export default function PlayerProfile() {
 
         <View style={styles.headerStats}>
           <View style={styles.headerStatItem}>
-            <Text style={styles.headerStatValue}>{stats?.matches || 0}</Text>
-            <Text style={styles.headerStatLabel}>Matches</Text>
+            <RNText style={styles.headerStatValue}>{stats?.matches || 0}</RNText>
+            <RNText style={styles.headerStatLabel}>Matches</RNText>
           </View>
           <View style={styles.headerStatDivider} />
           <View style={styles.headerStatItem}>
-            <Text style={styles.headerStatValue}>{stats?.runs || 0}</Text>
-            <Text style={styles.headerStatLabel}>Runs</Text>
+            <RNText style={styles.headerStatValue}>{stats?.runs || 0}</RNText>
+            <RNText style={styles.headerStatLabel}>Runs</RNText>
           </View>
           <View style={styles.headerStatDivider} />
           <View style={styles.headerStatItem}>
-            <Text style={styles.headerStatValue}>{stats?.wickets || 0}</Text>
-            <Text style={styles.headerStatLabel}>Wickets</Text>
+            <RNText style={styles.headerStatValue}>{stats?.wickets || 0}</RNText>
+            <RNText style={styles.headerStatLabel}>Wickets</RNText>
           </View>
         </View>
       </View>
@@ -500,7 +500,7 @@ export default function PlayerProfile() {
       {/* Career Excellence Grid */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Career Excellence</Text>
+          <RNText style={styles.sectionTitle}>Career Excellence</RNText>
           <TrendingUp size={20} color="#01b854" />
         </View>
         
@@ -515,32 +515,32 @@ export default function PlayerProfile() {
       {/* Recent Activity */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Recent Forms</Text>
+          <RNText style={styles.sectionTitle}>Recent Forms</RNText>
           <TouchableOpacity>
-            <Text style={styles.viewAllBtn}>History</Text>
+            <RNText style={styles.viewAllBtn}>History</RNText>
           </TouchableOpacity>
         </View>
 
         <View style={styles.formCard}>
           <View style={styles.formRow}>
              <View style={styles.matchInfo}>
-                <Text style={styles.matchOpponent}>vs Ggn Titans</Text>
-                <Text style={styles.matchDate}>15 Apr 2026 • Won</Text>
+                <RNText style={styles.matchOpponent}>vs Ggn Titans</RNText>
+                <RNText style={styles.matchDate}>15 Apr 2026 • Won</RNText>
              </View>
              <View style={styles.matchScore}>
-                <Text style={styles.scoreText}>42 (28)</Text>
-                <Text style={styles.perfLabel}>Batting</Text>
+                <RNText style={styles.scoreText}>42 (28)</RNText>
+                <RNText style={styles.perfLabel}>Batting</RNText>
              </View>
           </View>
           <View style={styles.formDivider} />
           <View style={styles.formRow}>
              <View style={styles.matchInfo}>
-                <Text style={styles.matchOpponent}>vs SL Titans</Text>
-                <Text style={styles.matchDate}>12 Apr 2026 • Lost</Text>
+                <RNText style={styles.matchOpponent}>vs SL Titans</RNText>
+                <RNText style={styles.matchDate}>12 Apr 2026 • Lost</RNText>
              </View>
              <View style={styles.matchScore}>
-                <Text style={styles.scoreText}>1/18 (4.0)</Text>
-                <Text style={styles.perfLabel}>Bowling</Text>
+                <RNText style={styles.scoreText}>1/18 (4.0)</RNText>
+                <RNText style={styles.perfLabel}>Bowling</RNText>
              </View>
           </View>
         </View>
@@ -550,13 +550,13 @@ export default function PlayerProfile() {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.badgesScroll}>
         <View style={[styles.badgeCard, { backgroundColor: '#FFF7ED' }]}>
           <Award size={32} color="#F97316" />
-          <Text style={styles.badgeTitle}>Century Maker</Text>
-          <Text style={styles.badgeDesc}>Scored 100+ in a match</Text>
+          <RNText style={styles.badgeTitle}>Century Maker</RNText>
+          <RNText style={styles.badgeDesc}>Scored 100+ in a match</RNText>
         </View>
         <View style={[styles.badgeCard, { backgroundColor: '#F0FDF4' }]}>
           <Zap size={32} color="#166534" />
-          <Text style={styles.badgeTitle}>Quick Fire</Text>
-          <Text style={styles.badgeDesc}>200+ Strike rate match</Text>
+          <RNText style={styles.badgeTitle}>Quick Fire</RNText>
+          <RNText style={styles.badgeDesc}>200+ Strike rate match</RNText>
         </View>
       </ScrollView>
 
@@ -568,6 +568,7 @@ export default function PlayerProfile() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F8FAFC',
   },
   center: {
     flex: 1,
@@ -591,6 +592,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 20,
+    flexWrap: 'wrap',
   },
   avatarContainer: {
     position: 'relative',

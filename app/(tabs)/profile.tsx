@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, useWindowDimensions } from 'react-native';
+import { View, Text as RNText, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, useWindowDimensions } from 'react-native';
 import { router } from 'expo-router';
 import {
   User,
@@ -13,8 +13,10 @@ import {
   Settings,
   Bell,
   Swords,
+  Shield,
   CalendarClock,
   LifeBuoy,
+  Star,
 } from 'lucide-react-native';
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -25,6 +27,7 @@ import MobileAppNavbar from '../../components/MobileAppNavbar';
 import ProfileHeaderTabs from '@/components/profile/ProfileHeaderTabs';
 
 const IS_WEB = Platform.OS === 'web';
+const IS_DARK = false;
 const DARK_BG = '#043529';
 const DARK_ACCENT = '#00ea6b';
 const DARK_TEXT = '#dcc093';
@@ -49,7 +52,7 @@ export default function ProfileScreen() {
     profile?.role === 'super_admin' ||
     (user?.email?.toLowerCase() ?? '') === adminEmail.toLowerCase();
 
-  const isLight = isWeb && !isCompact;
+  const isLight = true;
   const themeBg = isLight ? LIGHT_BG : DARK_BG;
   const themeAccent = isLight ? LIGHT_ACCENT : DARK_ACCENT;
   const themeText = isLight ? LIGHT_TEXT : DARK_TEXT;
@@ -137,34 +140,34 @@ export default function ProfileScreen() {
             <User size={40} color={themeAccent} />
           </View>
         </View>
-        <Text style={[styles.name, { color: themeText }]}>{profile?.full_name}</Text>
+        <RNText style={[styles.name, { color: themeText }]}>{profile?.full_name}</RNText>
         <View style={[styles.roleBadge, { borderColor: themeAccent, backgroundColor: isLight ? 'rgba(16, 185, 129, 0.08)' : 'transparent', marginBottom: 16 }]}>
-          <Text style={[styles.roleText, { color: isLight ? themeAccent : themeText }]}>
+          <RNText style={[styles.roleText, { color: isLight ? themeAccent : themeText }]}>
             {profile && getRoleLabel(profile.role)}
-          </Text>
+          </RNText>
         </View>
 
         <View style={styles.overviewInfo}>
           <View style={styles.overviewInfoItem}>
             <Mail size={14} color={themeAccent} />
-            <Text style={[styles.overviewInfoText, { color: isLight ? '#475569' : themeText }]}>
+            <RNText style={[styles.overviewInfoText, { color: isLight ? '#475569' : themeText }]}>
               {user?.email}
-            </Text>
+            </RNText>
           </View>
           {profile?.phone && (
             <View style={styles.overviewInfoItem}>
               <Phone size={14} color={themeAccent} />
-              <Text style={[styles.overviewInfoText, { color: isLight ? '#475569' : themeText }]}>
+              <RNText style={[styles.overviewInfoText, { color: isLight ? '#475569' : themeText }]}>
                 {profile.phone}
-              </Text>
+              </RNText>
             </View>
           )}
           {profile?.team_name && (
             <View style={styles.overviewInfoItem}>
               <Swords size={14} color={themeAccent} />
-              <Text style={[styles.overviewInfoText, { color: isLight ? '#475569' : themeText }]}>
+              <RNText style={[styles.overviewInfoText, { color: isLight ? '#475569' : themeText }]}>
                 Team: {profile.team_name}
-              </Text>
+              </RNText>
             </View>
           )}
         </View>
@@ -173,14 +176,14 @@ export default function ProfileScreen() {
 
       {(profile?.role === 'ground_owner' && (!isWeb || isCompact)) ? (
         <View style={[styles.menuCard, styles.ownerNavCard, { backgroundColor: themeCard, borderColor: themeBorder }]}>
-          <Text style={[styles.ownerNavTitle, { color: isLight ? themeMuted : themeText }]}>Ground owner</Text>
+          <RNText style={[styles.ownerNavTitle, { color: isLight ? themeMuted : themeText }]}>Ground owner</RNText>
           <TouchableOpacity
             style={styles.menuItem}
             onPress={() => router.push('/(owner)/owner-dashboard' as any)}
           >
             <View style={styles.menuItemLeft}>
               <LayoutDashboard size={20} color={themeAccent} />
-              <Text style={[styles.menuItemText, { color: themeText }]}>Dashboard</Text>
+              <RNText style={[styles.menuItemText, { color: themeText }]}>Dashboard</RNText>
             </View>
             <ChevronRight size={20} color={chevronColor} />
           </TouchableOpacity>
@@ -190,7 +193,7 @@ export default function ProfileScreen() {
           >
             <View style={styles.menuItemLeft}>
               <MapPin size={20} color={themeAccent} />
-              <Text style={[styles.menuItemText, { color: themeText }]}>My grounds</Text>
+              <RNText style={[styles.menuItemText, { color: themeText }]}>My grounds</RNText>
             </View>
             <ChevronRight size={20} color={chevronColor} />
           </TouchableOpacity>
@@ -201,7 +204,7 @@ export default function ProfileScreen() {
           >
             <View style={styles.menuItemLeft}>
               <Calendar size={20} color={themeAccent} />
-              <Text style={[styles.menuItemText, { color: themeText }]}>Bookings</Text>
+              <RNText style={[styles.menuItemText, { color: themeText }]}>Bookings</RNText>
             </View>
             <ChevronRight size={20} color={chevronColor} />
           </TouchableOpacity>
@@ -211,7 +214,7 @@ export default function ProfileScreen() {
           >
             <View style={styles.menuItemLeft}>
               <CalendarClock size={20} color={themeAccent} />
-              <Text style={[styles.menuItemText, { color: themeText }]}>Inventory Plan</Text>
+              <RNText style={[styles.menuItemText, { color: themeText }]}>Inventory Plan</RNText>
             </View>
             <ChevronRight size={20} color={chevronColor} />
           </TouchableOpacity>
@@ -221,7 +224,7 @@ export default function ProfileScreen() {
           >
             <View style={styles.menuItemLeft}>
               <Calendar size={20} color={themeAccent} />
-              <Text style={[styles.menuItemText, { color: themeText }]}>My Bookings</Text>
+              <RNText style={[styles.menuItemText, { color: themeText }]}>My Bookings</RNText>
             </View>
             <ChevronRight size={20} color={chevronColor} />
           </TouchableOpacity>
@@ -231,7 +234,7 @@ export default function ProfileScreen() {
           >
             <View style={styles.menuItemLeft}>
               <IndianRupee size={20} color={themeAccent} />
-              <Text style={[styles.menuItemText, { color: themeText }]}>Earnings</Text>
+              <RNText style={[styles.menuItemText, { color: themeText }]}>Earnings</RNText>
             </View>
             <ChevronRight size={20} color={chevronColor} />
           </TouchableOpacity>
@@ -241,7 +244,7 @@ export default function ProfileScreen() {
           >
             <View style={styles.menuItemLeft}>
               <PlusCircle size={20} color={themeAccent} />
-              <Text style={[styles.menuItemText, { color: themeText }]}>Add ground</Text>
+              <RNText style={[styles.menuItemText, { color: themeText }]}>Add ground</RNText>
             </View>
             <ChevronRight size={20} color={chevronColor} />
           </TouchableOpacity>
@@ -251,7 +254,7 @@ export default function ProfileScreen() {
           >
             <View style={styles.menuItemLeft}>
               <Settings size={20} color={themeAccent} />
-              <Text style={[styles.menuItemText, { color: themeText }]}>Settings</Text>
+              <RNText style={[styles.menuItemText, { color: themeText }]}>Settings</RNText>
             </View>
             <ChevronRight size={20} color={chevronColor} />
           </TouchableOpacity>
@@ -261,7 +264,7 @@ export default function ProfileScreen() {
           >
             <View style={styles.menuItemLeft}>
               <LifeBuoy size={20} color={themeAccent} />
-              <Text style={[styles.menuItemText, { color: themeText }]}>Contact Us</Text>
+              <RNText style={[styles.menuItemText, { color: themeText }]}>Contact Us</RNText>
             </View>
             <ChevronRight size={20} color={chevronColor} />
           </TouchableOpacity>
@@ -272,29 +275,70 @@ export default function ProfileScreen() {
             style={styles.menuItem}
             onPress={() => router.push('/(owner)/grounds')}
           >
-            <Text style={styles.menuItemText}>Manage Grounds</Text>
+            <RNText style={styles.menuItemText}>Manage Grounds</RNText>
             <ChevronRight size={20} color={chevronColor} />
           </TouchableOpacity>
         </View>
       ) : null}
 
       {(isCompact || !isWeb) && (
-        <View style={[styles.menuCard, { backgroundColor: themeCard, borderColor: themeBorder }]}>
-          {isSuperAdmin && (
+        <View style={styles.menuContainer}>
+          <RNText style={styles.ownerNavTitle}>MY ACCOUNT</RNText>
+          <View style={[styles.menuCard, { backgroundColor: themeCard, borderColor: themeBorder }]}>
+            {isSuperAdmin && (
             <TouchableOpacity
               style={styles.menuItem}
               onPress={() => router.push('/(admin)/dashboard')}
             >
-              <Text style={[styles.menuItemText, { color: themeText }]}>Admin Dashboard</Text>
+              <View style={styles.menuItemLeft}>
+                <Shield size={20} color={themeAccent} />
+                <RNText style={[styles.menuItemText, { color: themeText }]}>Admin Dashboard</RNText>
+              </View>
               <ChevronRight size={20} color={chevronColor} />
             </TouchableOpacity>
           )}
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => router.push('/(tabs)/dashboard' as any)}
+          >
+            <View style={styles.menuItemLeft}>
+              <LayoutDashboard size={20} color={themeAccent} />
+              <RNText style={[styles.menuItemText, { color: themeText }]}>My Dashboard</RNText>
+            </View>
+            <ChevronRight size={20} color={chevronColor} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => router.push('/(tabs)/bookings' as any)}
+          >
+            <View style={styles.menuItemLeft}>
+              <Calendar size={20} color={themeAccent} />
+              <RNText style={[styles.menuItemText, { color: themeText }]}>My Bookings</RNText>
+            </View>
+            <ChevronRight size={20} color={chevronColor} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => router.push('/grounds?tab=favorite' as any)}
+          >
+            <View style={styles.menuItemLeft}>
+              <Star size={20} color={themeAccent} />
+              <RNText style={[styles.menuItemText, { color: themeText }]}>Favorites</RNText>
+            </View>
+            <ChevronRight size={20} color={chevronColor} />
+          </TouchableOpacity>
 
           <TouchableOpacity 
             style={styles.menuItem}
             onPress={() => router.push('/(tabs)/profile/notifications' as any)}
           >
-            <Text style={[styles.menuItemText, { color: themeText }]}>Notifications</Text>
+            <View style={styles.menuItemLeft}>
+              <Bell size={20} color={themeAccent} />
+              <RNText style={[styles.menuItemText, { color: themeText }]}>Notifications</RNText>
+            </View>
             <ChevronRight size={20} color={chevronColor} />
           </TouchableOpacity>
   
@@ -302,7 +346,21 @@ export default function ProfileScreen() {
             style={styles.menuItem}
             onPress={() => router.push('/(tabs)/profile/settings' as any)}
           >
-            <Text style={[styles.menuItemText, { color: themeText }]}>Settings</Text>
+            <View style={styles.menuItemLeft}>
+              <Settings size={20} color={themeAccent} />
+              <RNText style={[styles.menuItemText, { color: themeText }]}>Settings</RNText>
+            </View>
+            <ChevronRight size={20} color={chevronColor} />
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => router.push('/(tabs)/support' as any)}
+          >
+            <View style={styles.menuItemLeft}>
+              <LifeBuoy size={20} color={themeAccent} />
+              <RNText style={[styles.menuItemText, { color: themeText }]}>Contact Us</RNText>
+            </View>
             <ChevronRight size={20} color={chevronColor} />
           </TouchableOpacity>
 
@@ -311,10 +369,13 @@ export default function ProfileScreen() {
               style={styles.menuItem}
               onPress={handleDeleteAccount}
             >
-              <Text style={[styles.menuItemText, { color: '#EF4444' }]}>Delete Account</Text>
+              <View style={styles.menuItemLeft}>
+                <RNText style={[styles.menuItemText, { color: '#EF4444' }]}>Delete Account</RNText>
+              </View>
               <ChevronRight size={20} color="#EF4444" />
             </TouchableOpacity>
           )}
+          </View>
         </View>
       )}
 
@@ -366,14 +427,14 @@ const styles = StyleSheet.create({
   },
   nativeScreen: {
     flex: 1,
-    backgroundColor: '#043529',
+    backgroundColor: '#F8FAFC',
   },
   nativeScrollContent: {
     paddingBottom: 24,
   },
   container: {
     flex: 1,
-    backgroundColor: '#043529',
+    backgroundColor: '#F8FAFC',
   },
   header: {
     backgroundColor: '#FFFFFF',
@@ -526,6 +587,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     borderWidth: 1,
     borderColor: '#F3F4F6',
+  },
+  menuContainer: {
+    marginTop: 24,
   },
   settingsIcon: {
     marginLeft: 4,

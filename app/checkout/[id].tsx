@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View,
-  Text,
+  Text as RNText,
   StyleSheet,
   ScrollView,
   Platform,
@@ -9,7 +9,7 @@ import {
   Alert,
   TouchableOpacity,
   useWindowDimensions,
-  TextInput,
+  TextInput as RNTextInput,
   Modal,
   FlatList,
   Pressable,
@@ -488,7 +488,7 @@ export default function CheckoutScreen() {
   if (!booking) {
     return (
       <View style={styles.centered}>
-        <Text>Booking not found.</Text>
+        <RNText>Booking not found.</RNText>
         <Button title="Go Back" onPress={() => {
           if (router.canGoBack()) router.back();
           else router.replace('/(tabs)');
@@ -515,16 +515,29 @@ export default function CheckoutScreen() {
     }
   };
 
+  const isSmallScreen = width < 768;
+  const themeBg = isSmallScreen ? '#F8FAFC' : '#06392e';
+  const themeTextColor = isSmallScreen ? '#111827' : '#FFFFFF';
+  const themeBackBtnBg = isSmallScreen ? '#FFFFFF' : 'rgba(255, 255, 255, 0.1)';
+  const themeBackBtnBorder = isSmallScreen ? '#E2E8F0' : 'rgba(255, 255, 255, 0.1)';
+  const themeBackIconColor = isSmallScreen ? '#475569' : '#FFFFFF';
+
   const content = (
-    <ScrollView style={styles.container} contentContainerStyle={[styles.content, dynamicStyles.content]}>
+    <ScrollView 
+      style={[styles.container, { backgroundColor: themeBg }]} 
+      contentContainerStyle={[styles.content, dynamicStyles.content]}
+    >
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => {
-          if (router.canGoBack()) router.back();
-          else router.replace('/(tabs)');
-        }} style={styles.backButton}>
-          <ChevronLeft size={20} color="#FFF" />
+        <TouchableOpacity 
+          onPress={() => {
+            if (router.canGoBack()) router.back();
+            else router.replace('/(tabs)');
+          }} 
+          style={[styles.backButton, { backgroundColor: themeBackBtnBg, borderColor: themeBackBtnBorder }]}
+        >
+          <ChevronLeft size={20} color={themeBackIconColor} />
         </TouchableOpacity>
-        <Text style={styles.title}>Checkout</Text>
+        <RNText style={[styles.title, { color: themeTextColor }]}>Checkout</RNText>
       </View>
 
       <View style={[styles.layout, !isDesktop && styles.layoutMobile, dynamicStyles.layout]}>
@@ -545,58 +558,58 @@ export default function CheckoutScreen() {
             <View style={styles.productInfo}>
               <View style={styles.productHeaderRow}>
                 <View>
-                  <Text style={styles.itemTitle}>{booking.grounds.name}</Text>
+                  <RNText style={styles.itemTitle}>{booking.grounds.name}</RNText>
                   <View style={styles.itemMetaRow}>
                     <MapPin size={14} color="#6B7280" />
-                    <Text style={styles.itemMetaText}>{booking.grounds.city}, {booking.grounds.state}</Text>
+                    <RNText style={styles.itemMetaText}>{booking.grounds.city}, {booking.grounds.state}</RNText>
                   </View>
                 </View>
-                <Text style={styles.productPrice}>{formatCurrency(booking.total_amount + (booking.discount_amount || 0))}</Text>
+                <RNText style={styles.productPrice}>{formatCurrency(booking.total_amount + (booking.discount_amount || 0))}</RNText>
               </View>
 
               <View style={styles.itemDetailsFooter}>
                  <View style={styles.footerDetail}>
                     <Calendar size={16} color="#01b854" />
                     <View>
-                       <Text style={styles.detailTinyLabel}>MATCH DATE</Text>
-                       <Text style={styles.footerDetailText}>{formatDateDDMMYYYY(booking.booking_date)}</Text>
+                       <RNText style={styles.detailTinyLabel}>MATCH DATE</RNText>
+                       <RNText style={styles.footerDetailText}>{formatDateDDMMYYYY(booking.booking_date)}</RNText>
                     </View>
                  </View>
                  <View style={styles.footerDetail}>
                     <Clock size={16} color="#01b854" />
                     <View>
-                       <Text style={styles.detailTinyLabel}>SLOT TIME</Text>
-                       <Text style={styles.footerDetailText}>{booking.start_time.substring(0, 5)} - {booking.end_time.substring(0, 5)}</Text>
+                       <RNText style={styles.detailTinyLabel}>SLOT TIME</RNText>
+                       <RNText style={styles.footerDetailText}>{booking.start_time.substring(0, 5)} - {booking.end_time.substring(0, 5)}</RNText>
                     </View>
                  </View>
               </View>
 
               <View style={styles.productActionsRow}>
                 <TouchableOpacity style={styles.actionBtn}>
-                  <Text style={styles.actionBtnText}>Remove from Checkout</Text>
+                  <RNText style={styles.actionBtnText}>Remove from Checkout</RNText>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.actionBtn}>
-                  <Text style={styles.actionBtnText}>Save Match details</Text>
+                  <RNText style={styles.actionBtnText}>Save Match details</RNText>
                 </TouchableOpacity>
               </View>
             </View>
           </Card>
 
-          <View style={styles.securityInfo}>
+          <View style={[styles.securityInfo, { backgroundColor: isSmallScreen ? '#ECFDF5' : 'rgba(255, 255, 255, 0.05)', borderColor: isSmallScreen ? '#D1FAE5' : 'transparent', borderWidth: isSmallScreen ? 1 : 0 }]}>
             <ShieldCheck size={16} color="#01b854" />
-            <Text style={styles.securityText}>
+            <RNText style={[styles.securityText, { color: isSmallScreen ? '#065F46' : 'rgba(255, 255, 255, 0.7)' }]}>
                Purchase protected by Book Your Ground Security
-            </Text>
+            </RNText>
           </View>
         </View>
 
         {/* Right Column: Order Summary */}
         <View style={styles.sideColumn}>
           <Card style={styles.summaryCard}>
-            <Text style={styles.summaryTitle}>Order Summary</Text>
+            <RNText style={styles.summaryTitle}>Order Summary</RNText>
             
             <View style={styles.couponSection}>
-               <TextInput 
+               <RNTextInput 
                  style={styles.couponInput}
                  placeholder="Enter Coupon Code"
                  placeholderTextColor="#9CA3AF"
@@ -609,7 +622,7 @@ export default function CheckoutScreen() {
                  onPress={() => applyCouponCode(couponCode)}
                  disabled={applyingCoupon}
                >
-                  <Text style={styles.applyBtnText}>{applyingCoupon ? '...' : 'Apply'}</Text>
+                  <RNText style={styles.applyBtnText}>{applyingCoupon ? '...' : 'Apply'}</RNText>
                </TouchableOpacity>
             </View>
 
@@ -622,35 +635,35 @@ export default function CheckoutScreen() {
             >
                <View style={styles.offersLeft}>
                   <ShieldCheck size={16} color="#01b854" />
-                  <Text style={styles.offersText}>View Available Offer</Text>
+                  <RNText style={styles.offersText}>View Available Offer</RNText>
                </View>
                <ChevronLeft size={16} color="#9CA3AF" style={{ transform: [{ rotate: '180deg' }] }} />
             </TouchableOpacity>
 
             <View style={styles.breakdown}>
               <View style={styles.breakdownRow}>
-                <Text style={styles.breakdownLabel}>Items (1)</Text>
-                <Text style={styles.breakdownValue}>{formatCurrency(booking.total_amount + (booking.discount_amount || 0))}</Text>
+                <RNText style={styles.breakdownLabel}>Items (1)</RNText>
+                <RNText style={styles.breakdownValue}>{formatCurrency(booking.total_amount + (booking.discount_amount || 0))}</RNText>
               </View>
               {booking.discount_amount > 0 && (
                 <View style={styles.breakdownRow}>
-                  <Text style={styles.breakdownLabel}>Your savings</Text>
-                  <Text style={styles.breakdownDiscountValue}>-{formatCurrency(booking.discount_amount)}</Text>
+                  <RNText style={styles.breakdownLabel}>Your savings</RNText>
+                  <RNText style={styles.breakdownDiscountValue}>-{formatCurrency(booking.discount_amount)}</RNText>
                 </View>
               )}
               <View style={styles.breakdownRow}>
-                <Text style={styles.breakdownLabel}>Estimated sales tax</Text>
-                <Text style={styles.breakdownValue}>-</Text>
+                <RNText style={styles.breakdownLabel}>Estimated sales tax</RNText>
+                <RNText style={styles.breakdownValue}>-</RNText>
               </View>
             </View>
 
             <View style={styles.subtotalRow}>
-              <Text style={styles.subtotalLabel}>Sub Total :</Text>
-              <Text style={styles.subtotalValue}>{formatCurrency(booking.total_amount)}</Text>
+              <RNText style={styles.subtotalLabel}>Sub Total :</RNText>
+              <RNText style={styles.subtotalValue}>{formatCurrency(booking.total_amount)}</RNText>
             </View>
 
             <View style={styles.paymentMethodSection}>
-               <Text style={styles.paymentMethodTitle}>Payment Method</Text>
+               <RNText style={styles.paymentMethodTitle}>Payment Method</RNText>
                <View style={styles.methodSelector}>
                 {activeGateways.filter(g => {
                   if (g.name === 'cash') return isGroundOwnerOrAdmin;
@@ -671,9 +684,9 @@ export default function CheckoutScreen() {
                         <CreditCard size={14} color={selectedGateway === g.name ? '#06392e' : '#9CA3AF'} />
                       )}
                     </View>
-                    <Text style={[styles.methodLabel, selectedGateway === g.name && styles.methodLabelActive]}>
+                    <RNText style={[styles.methodLabel, selectedGateway === g.name && styles.methodLabelActive]}>
                       {g.label}
-                    </Text>
+                    </RNText>
                   </TouchableOpacity>
                 ))}
                </View>
@@ -710,7 +723,7 @@ export default function CheckoutScreen() {
             <View style={styles.trustFooter}>
                <View style={styles.trustBanner}>
                   <ShieldCheck size={14} color="#06392e" />
-                  <Text style={styles.trustFooterText}>Purchase protected by Book Your Ground Guarantee</Text>
+                  <RNText style={styles.trustFooterText}>Purchase protected by Book Your Ground Guarantee</RNText>
                </View>
             </View>
 
@@ -730,9 +743,9 @@ export default function CheckoutScreen() {
         >
           <View style={styles.modalContent} onStartShouldSetResponder={() => true}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Available Offers</Text>
+              <RNText style={styles.modalTitle}>Available Offers</RNText>
               <TouchableOpacity onPress={() => setIsCouponsModalVisible(false)}>
-                <Text style={styles.closeBtnText}>Close</Text>
+                <RNText style={styles.closeBtnText}>Close</RNText>
               </TouchableOpacity>
             </View>
 
@@ -740,7 +753,7 @@ export default function CheckoutScreen() {
               <ActivityIndicator size="large" color="#01b854" style={{ padding: 40 }} />
             ) : availableCoupons.length === 0 ? (
               <View style={styles.emptyCoupons}>
-                <Text style={styles.emptyText}>No offers available right now.</Text>
+                <RNText style={styles.emptyText}>No offers available right now.</RNText>
               </View>
             ) : (
               <FlatList
@@ -753,24 +766,24 @@ export default function CheckoutScreen() {
                     onPress={() => applyCouponCode(item.code)}
                   >
                     <View style={styles.couponLeft}>
-                      <Text style={styles.couponCodeText}>{item.code}</Text>
-                      <Text style={styles.couponDescText}>
+                      <RNText style={styles.couponCodeText}>{item.code}</RNText>
+                      <RNText style={styles.couponDescText}>
                         {item.discount_type === 'percentage' 
                           ? `${item.discount_value}% OFF` 
                           : `${formatCurrency(item.discount_value)} FLAT OFF`}
                         {item.max_discount && ` up to ${formatCurrency(item.max_discount)}`}
-                      </Text>
+                      </RNText>
                       {item.min_booking_amount > 0 && (
-                        <Text style={styles.couponMinText}>
+                        <RNText style={styles.couponMinText}>
                           Min booking: {formatCurrency(item.min_booking_amount)}
-                        </Text>
+                        </RNText>
                       )}
                     </View>
                     <TouchableOpacity 
                       style={styles.applySmallBtn}
                       onPress={() => applyCouponCode(item.code)}
                     >
-                      <Text style={styles.applySmallText}>APPLY</Text>
+                      <RNText style={styles.applySmallText}>APPLY</RNText>
                     </TouchableOpacity>
                   </TouchableOpacity>
                 )}
