@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text as RNText, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, TextInput as RNTextInput } from 'react-native';
+import { View, Text as RNText, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, TextInput as RNTextInput, useWindowDimensions } from 'react-native';
 import { ShoppingBag, Search, Filter, ArrowRight, Star, ShoppingCart } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -48,6 +48,9 @@ const CATEGORIES = [
 
 export default function ShopScreen() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isSmall = width < 900;
+
   const content = (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       {/* Hero Banner */}
@@ -130,7 +133,7 @@ export default function ShopScreen() {
     </ScrollView>
   );
 
-  if (Platform.OS === 'web') {
+  if (Platform.OS === 'web' && !isSmall) {
     return <WebLayout>{content}</WebLayout>;
   }
 
@@ -138,11 +141,10 @@ export default function ShopScreen() {
     <View style={{ flex: 1, backgroundColor: '#F3F4F6' }}>
       <MobileAppNavbar 
         title="Cricket Shop" 
-        titleColor="#00ea6b" 
         rightAction={
           <View style={styles.headerIcons}>
-            <TouchableOpacity style={styles.iconBtn}><Search size={24} color="#00ea6b" /></TouchableOpacity>
-            <TouchableOpacity style={styles.iconBtn}><ShoppingCart size={24} color="#00ea6b" /></TouchableOpacity>
+            <TouchableOpacity style={styles.iconBtn}><Search size={24} color="#01b854" /></TouchableOpacity>
+            <TouchableOpacity style={styles.iconBtn}><ShoppingCart size={24} color="#01b854" /></TouchableOpacity>
           </View>
         }
       />

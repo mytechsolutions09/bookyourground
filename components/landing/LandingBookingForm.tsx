@@ -187,7 +187,10 @@ export default function LandingBookingForm({
   const { width: windowWidth } = useWindowDimensions();
   const isWeb = Platform.OS === 'web';
   const IS_DARK = !isWeb || windowWidth < 900;
-  const styles = React.useMemo(() => getStyles(isWeb, lightAppTheme), [isWeb, lightAppTheme]);
+  
+  // Web is always light theme (including small screens); Native follows lightAppTheme prop.
+  const isEffectiveLight = isWeb || lightAppTheme;
+  const styles = React.useMemo(() => getStyles(isWeb, isEffectiveLight), [isWeb, isEffectiveLight]);
 
   /** Landing: Search → pick ground → Book Now. Skip when booking a known ground. */
   const useLandingSearchFlow = hideGroundPicker && !initialGroundId;
@@ -1535,7 +1538,7 @@ export default function LandingBookingForm({
                     ground={g}
                     displayPricePerUnit={displayPricePerUnit}
                     unitLabelOverride={unitLabelOverride}
-                    lightMode={lightAppTheme || (isWeb && !IS_DARK)}
+                    lightMode={isEffectiveLight}
                     onPress={() => {
                       const query: string[] = [];
                       if (bookingDate) {
@@ -2428,7 +2431,7 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
   labelBookGroundNative: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#9ca3af',
+    color: '#4B5563',
     textTransform: 'uppercase',
     letterSpacing: 1.5,
     marginBottom: 6,
@@ -2799,7 +2802,7 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
     fontSize: 14,
     fontWeight: '400',
     fontFamily: 'Inter',
-    color: isLight ? '#1F2937' : '#FFFFFF',
+    color: isLight ? '#111827' : '#FFFFFF',
   },
   dropdownButtonTextSelected: {
     color: isLight ? '#518167' : '#00ea6b',
@@ -2860,9 +2863,9 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
   },
   portalMenu: {
     position: 'absolute',
-    backgroundColor: Platform.OS === 'web' ? '#FFFFFF' : '#043529',
+    backgroundColor: isLight ? '#FFFFFF' : '#043529',
     borderWidth: 1,
-    borderColor: Platform.OS === 'web' ? '#E5E7EB' : '#00ea6b',
+    borderColor: isLight ? '#E5E7EB' : '#00ea6b',
     borderRadius: 12,
     padding: 8,
     shadowColor: '#000',
@@ -2921,21 +2924,21 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
   },
   dropdownButtonTextGroundPage: {
     ...Platform.select({
-      web: { color: isLight ? '#000000' : '#02c259' },
-      default: { color: isLight ? '#000000' : '#dcc093' },
+      web: { color: isLight ? '#518167' : '#02c259' },
+      default: { color: isLight ? '#518167' : '#dcc093' },
     }),
   },
   dropdownButtonTextSelectedGroundPage: {
     fontWeight: '600',
     ...Platform.select({
-      web: { color: isLight ? '#000000' : '#02c259' },
-      default: { color: isLight ? '#000000' : '#dcc093' },
+      web: { color: isLight ? '#518167' : '#02c259' },
+      default: { color: isLight ? '#518167' : '#dcc093' },
     }),
   },
   dropdownButtonTextDisabledGroundPage: {
     ...Platform.select({
-      web: { color: '#06392e' },
-      default: { color: 'rgba(220,192,147,0.55)' },
+      web: { color: isLight ? '#518167' : '#06392e' },
+      default: { color: isLight ? '#518167' : 'rgba(220,192,147,0.55)' },
     }),
   },
   dropdownMenuGroundPage: {

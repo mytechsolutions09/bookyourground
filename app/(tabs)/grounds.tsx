@@ -162,7 +162,6 @@ export default function GroundsTabScreen() {
     <View style={styles.nativeRoot}>
       <MobileAppNavbar 
         title={activeTab === 'book' ? "Book a Ground" : "Favourites"} 
-        titleColor="#00ea6b" 
       />
       
       {renderTabs(styles.nativeTabContainer)}

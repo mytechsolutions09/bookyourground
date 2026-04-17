@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, useWindowDimensions, Platform, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView as RNScrollView, ActivityIndicator, useWindowDimensions, Platform, TouchableOpacity, Image, Share, PanResponder } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import WebLayout from '@/components/web/WebLayout';
@@ -303,6 +304,7 @@ const getRunTypesData = (innLogs: any[]) => {
 };
 
 export default function LiveScorecard() {
+  const insets = useSafeAreaInsets();
   const { matchId } = useLocalSearchParams<{ matchId: string }>();
   const [live, setLive] = useState<any>(null);
   const [match, setMatch] = useState<any>(null);
@@ -319,6 +321,29 @@ export default function LiveScorecard() {
   const [commsInningsFilter, setCommsInningsFilter] = useState<'all' | 1 | 2>('all');
   const [showCommsDropdown, setShowCommsDropdown] = useState(false);
   const [activeTab, setActiveTab] = useState('info');
+
+  const TABS_ARRAY = ['info', 'summary', 'scoreboard', 'comms', 'squads', 'analysis', 'mvp', 'gallery'];
+
+  const myPanResponder = PanResponder.create({
+    onStartShouldSetPanResponder: () => false,
+    onMoveShouldSetPanResponder: (_, gesture) => {
+      return Math.abs(gesture.dx) > 40 && Math.abs(gesture.dy) < 40;
+    },
+    onPanResponderRelease: (_, gesture) => {
+      const idx = TABS_ARRAY.indexOf(activeTab);
+      if (gesture.dx < -50) {
+        // Swipe Left (Next tab)
+        if (idx < TABS_ARRAY.length - 1) {
+          setActiveTab(TABS_ARRAY[idx + 1]);
+        }
+      } else if (gesture.dx > 50) {
+        // Swipe Right (Prev tab)
+        if (idx > 0) {
+          setActiveTab(TABS_ARRAY[idx - 1]);
+        }
+      }
+    },
+  });
 
   const handlePickImage = async () => {
     if (matchImages.length >= 4) {
@@ -666,7 +691,7 @@ export default function LiveScorecard() {
     switch (activeTab) {
       case 'scoreboard':
         return (
-          <ScrollView style={{ flex: 1, backgroundColor: '#F6F4F0' }} contentContainerStyle={{ paddingVertical: 12 }}>
+          <RNScrollView style={{ flex: 1, backgroundColor: '#F6F4F0' }} contentContainerStyle={{ paddingVertical: 12 }}>
             {/* Main Score Display in Scoreboard Tab */}
             <View style={[styles.scoreCard, { backgroundColor: '#043529', margin: 12, borderRadius: 12 }]}>
               <View style={styles.scoreRow}>
@@ -707,7 +732,7 @@ export default function LiveScorecard() {
             {renderInningsScorecard(1)}
             {renderInningsScorecard(2)}
             <View style={{ height: 40 }} />
-          </ScrollView>
+          </RNScrollView>
         );
       case 'info':
         return (
@@ -931,7 +956,7 @@ export default function LiveScorecard() {
              </View>
 
              <View style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB' }}>
-               <ScrollView style={{ flex: 1 }}>
+               <RNScrollView style={{ flex: 1 }}>
 
                   {ballLogs
                     .filter(ball => {
@@ -998,7 +1023,7 @@ export default function LiveScorecard() {
                         <Text style={{ color: '#9CA3AF' }}>Waiting for first ball...</Text>
                      </View>
                   )}
-               </ScrollView>
+               </RNScrollView>
              </View>
           </View>
         );
@@ -1019,7 +1044,7 @@ export default function LiveScorecard() {
         const rt1 = getRunTypesData(inn1Logs);
 
         return (
-          <ScrollView style={{ flex: 1, backgroundColor: '#F6F4F0' }} contentContainerStyle={{ padding: 12 }}>
+          <RNScrollView style={{ flex: 1, backgroundColor: '#F6F4F0' }} contentContainerStyle={{ padding: 12 }}>
              {/* Insights Banner */}
              <View style={[styles.insightsBanner, { borderRadius: 12, marginBottom: 12, borderBottomWidth: 0 }]}>
                 <Text style={styles.insightsMsg}>Analyse this match in-depth with</Text>
@@ -1048,7 +1073,7 @@ export default function LiveScorecard() {
                 <View style={styles.manhattanContainer}>
                    <View style={styles.yAxis}>{[24, 16, 8, 0].map(v => <Text key={v} style={styles.yText}>{v}</Text>)}</View>
                    <View style={styles.chartArea}>
-                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ alignItems: 'flex-end', height: 200, paddingBottom: 20 }}>
+                      <RNScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ alignItems: 'flex-end', height: 200, paddingBottom: 20 }}>
                          {an1.map((ov, i) => (
                            <View key={i} style={styles.overGroup}>
                               <View style={[styles.overBar, { height: 40 + Math.random() * 100, backgroundColor: '#3B82F6' }]}>
@@ -1059,7 +1084,7 @@ export default function LiveScorecard() {
                               </View>
                            </View>
                          ))}
-                      </ScrollView>
+                      </RNScrollView>
                       <View style={styles.xAxis}>
                          <Text style={styles.xAxisLabel}>Overs</Text>
                       </View>
@@ -1172,7 +1197,7 @@ export default function LiveScorecard() {
                    <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#F97316' }]} /><Text style={styles.legendText}>{match.team_b}</Text></View>
                 </View>
                 <View style={{ height: 200, marginTop: 10 }}>
-                   <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                   <RNScrollView horizontal showsHorizontalScrollIndicator={false}>
                       <View style={{ width: totalMatchOvers * 30 + 40, height: 200 }}>
                          <View style={{ flex: 1, borderLeftWidth: 1, borderBottomWidth: 1, borderColor: '#E5E7EB', marginLeft: 20, marginBottom: 20 }}>
                             {an1.map((ov, i) => i > 0 && (
@@ -1187,7 +1212,7 @@ export default function LiveScorecard() {
                             ))}
                          </View>
                       </View>
-                   </ScrollView>
+                   </RNScrollView>
                 </View>
              </View>
 
@@ -1216,7 +1241,7 @@ export default function LiveScorecard() {
                    ))}
                 </View>
              </View>
-          </ScrollView>
+          </RNScrollView>
         );
       }
       case 'mvp':
@@ -1234,7 +1259,7 @@ export default function LiveScorecard() {
              </View>
 
              <View style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB' }}>
-               <ScrollView style={{ flex: 1 }}>
+               <RNScrollView style={{ flex: 1 }}>
                   {mvpData.map((player, idx) => (
                     <View key={idx} style={styles.mvpPlayerRow}>
                        <View style={styles.mvpRankBox}>
@@ -1259,7 +1284,7 @@ export default function LiveScorecard() {
                        <Text style={{ color: '#9CA3AF', marginTop: 12, textAlign: 'center' }}>Match points will appear as game progresses.</Text>
                     </View>
                   )}
-               </ScrollView>
+               </RNScrollView>
              </View>
           </View>
         );
@@ -1291,7 +1316,7 @@ export default function LiveScorecard() {
                </View>
              ) : (
                <View style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB' }}>
-                 <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.galleryGrid}>
+                 <RNScrollView style={{ flex: 1 }} contentContainerStyle={styles.galleryGrid}>
                     {matchImages.map((img, idx) => (
                       <View key={img.id || idx} style={styles.galleryItem}>
                          <Image source={{ uri: img.url }} style={styles.galleryImage} />
@@ -1307,7 +1332,7 @@ export default function LiveScorecard() {
                          <Text style={styles.galleryAddMoreText}>Add More</Text>
                       </TouchableOpacity>
                     )}
-                 </ScrollView>
+                 </RNScrollView>
                </View>
              )}
           </View>
@@ -1388,7 +1413,13 @@ export default function LiveScorecard() {
   return (
     <WebLayout noCard>
       <Stack.Screen options={{ title: `${match.team_a} vs ${match.team_b} - Live Score` }} />
-      <View style={styles.topHeader}>
+      <View style={[
+        styles.topHeader, 
+        Platform.OS !== 'web' && { 
+          paddingTop: insets.top + 10, 
+          height: 66 + insets.top 
+        }
+      ]}>
         <View style={styles.headerLeft}>
            <TouchableOpacity 
              onPress={() => router.canGoBack() ? router.back() : router.push('/cricket')}
@@ -1420,7 +1451,7 @@ export default function LiveScorecard() {
       </View>
 
       <View style={styles.tabWrapper}>
-        <ScrollView 
+        <RNScrollView 
           horizontal 
           showsHorizontalScrollIndicator={false} 
           style={styles.tabScroll} 
@@ -1436,17 +1467,18 @@ export default function LiveScorecard() {
                 <Text style={[styles.tabBtnTextRaw, activeTab === tab.toLowerCase() && styles.tabBtnTextActiveRaw]}>{tab}</Text>
              </TouchableOpacity>
           ))}
-        </ScrollView>
+        </RNScrollView>
       </View>
 
-      <ScrollView 
+      <RNScrollView 
         style={styles.container} 
         contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
+        {...myPanResponder.panHandlers}
       >
         {renderTabContent()}
 
-      </ScrollView>
+      </RNScrollView>
     </WebLayout>
   );
 }

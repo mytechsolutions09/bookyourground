@@ -316,7 +316,6 @@ export default function GroundDetailsPrettyUrlScreen() {
             <Text style={styles.name}>{ground.name}</Text>
 
             <View style={styles.locationRow}>
-              <MapPin size={16} color="#dcc093" strokeWidth={2} />
               <Text style={styles.location}>
                 {ground.address}, {ground.city}, {ground.state} - {ground.pincode}
               </Text>
@@ -325,15 +324,10 @@ export default function GroundDetailsPrettyUrlScreen() {
             {mapsUrl && (
               <Pressable
                 onPress={() => { void Linking.openURL(mapsUrl); }}
-                style={styles.mapsLinkBtn}
+                style={styles.mapsLinkWrap}
               >
-                <View style={styles.mapsLinkBtnContent}>
-                  <View style={styles.mapsIconCircle}>
-                    <Navigation2 size={14} color="#00ea6b" strokeWidth={2.5} />
-                  </View>
-                  <Text style={styles.mapsLinkText}>GET DIRECTIONS</Text>
-                </View>
-                <ChevronRight size={18} color="#00ea6b" opacity={0.6} />
+                <MapPin size={14} color="#518167" strokeWidth={2.5} />
+                <Text style={styles.mapsLinkText}>Get Directions</Text>
               </Pressable>
             )}
 
@@ -561,7 +555,14 @@ export default function GroundDetailsPrettyUrlScreen() {
     <>
       <Stack.Screen 
         options={{ 
-          title: ground?.name ?? 'Ground',
+          title: (ground?.name ?? 'Ground').toUpperCase(),
+          headerTitleStyle: { 
+            fontFamily: 'Inter', 
+            fontSize: 16, 
+            fontWeight: '700', 
+            color: '#111827',
+            letterSpacing: 1.2,
+          },
           headerLeft: () => null,
           headerRight: () => (
             Platform.OS !== 'web' && ground?.id ? (
@@ -747,8 +748,9 @@ const styles = StyleSheet.create({
 
   // ── Name / location / rating ──────────────────────────
   name: {
-    fontSize: IS_WEB ? 26 : 24,
-    fontWeight: '800',
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: '500',
     color: '#111827',
     marginBottom: 4,
     letterSpacing: -0.5,
@@ -764,48 +766,24 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   location: {
+    fontFamily: 'Inter',
     flex: 1,
     fontSize: 14,
-    color: '#4B5563',
+    color: '#374151',
     lineHeight: 20,
   },
-  mapsLinkBtn: {
+  mapsLinkWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#F0FDF4',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    marginTop: 12,
-    marginBottom: 6,
-    borderWidth: 1,
-    borderColor: '#DCFCE7',
-    ...Platform.select({
-      web: {
-        alignSelf: 'flex-start',
-        minWidth: 200,
-      },
-    }),
-  },
-  mapsLinkBtnContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  mapsIconCircle: {
-     width: 28,
-     height: 28,
-     borderRadius: 14,
-     backgroundColor: IS_WEB ? '#FFFFFF' : 'rgba(0,234,107,0.1)',
-     justifyContent: 'center',
-     alignItems: 'center',
+    gap: 4,
+    marginTop: 8,
+    marginBottom: 8,
   },
   mapsLinkText: {
-    fontSize: 13,
-    color: IS_WEB ? '#166534' : '#00ea6b',
-    fontWeight: '700',
-    letterSpacing: 0.8,
+    fontFamily: 'Inter',
+    fontSize: 12,
+    color: '#518167',
+    fontWeight: '600',
   },
   starsSummaryRow: {
     flexDirection: 'row',
@@ -816,6 +794,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   rating: {
+    fontFamily: 'Inter',
     fontSize: 14,
     color: '#374151',
     fontWeight: '600',
@@ -829,23 +808,26 @@ const styles = StyleSheet.create({
     borderTopColor: 'rgba(0,234,107,0.15)',
   },
   priceLabel: {
+    fontFamily: 'Inter',
     fontSize: 11,
-    color: '#6b7280',
+    color: '#64748B',
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     marginBottom: 2,
   },
   priceValue: {
-    fontSize: 26,
+    fontFamily: 'Inter',
+    fontSize: 20,
     fontWeight: '800',
     color: '#111827',
     letterSpacing: -0.5,
   },
   priceUnit: {
+    fontFamily: 'Inter',
     fontSize: 14,
     fontWeight: '500',
-    color: '#6b7280',
+    color: '#64748B',
   },
 
   // ── Booking strip (native) ────────────────────────────
@@ -860,12 +842,14 @@ const styles = StyleSheet.create({
 
   // ── Section title ─────────────────────────────────────
   sectionTitle: {
+    fontFamily: 'Inter',
     fontSize: 18,
     fontWeight: '700',
     color: '#111827',
     marginBottom: 12,
   },
   description: {
+    fontFamily: 'Inter',
     fontSize: 14,
     color: '#4B5563',
     lineHeight: 22,
@@ -881,10 +865,12 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F1F5F9',
   },
   detailLabel: {
+    fontFamily: 'Inter',
     fontSize: 14,
-    color: '#6B7280',
+    color: '#374151',
   },
   detailValue: {
+    fontFamily: 'Inter',
     fontSize: 14,
     color: '#111827',
     fontWeight: '600',
@@ -916,6 +902,7 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
   amenityText: {
+    fontFamily: 'Inter',
     fontSize: 13,
     color: '#334155',
     fontWeight: '600',
@@ -953,17 +940,20 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   reviewRatingText: {
+    fontFamily: 'Inter',
     fontSize: 12,
     fontWeight: '600',
     color: '#374151',
     marginLeft: 4,
   },
   reviewAuthorText: {
+    fontFamily: 'Inter',
     fontSize: 12,
     color: '#6b7280',
     fontWeight: '500',
   },
   reviewCommentText: {
+    fontFamily: 'Inter',
     fontSize: 13,
     color: '#4B5563',
     lineHeight: 20,
@@ -977,6 +967,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#E5E7EB',
   },
   reviewFormTitle: {
+    fontFamily: 'Inter',
     fontSize: 14,
     fontWeight: '700',
     color: '#111827',
@@ -992,6 +983,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   reviewInput: {
+    fontFamily: 'Inter',
     borderWidth: 1,
     borderColor: '#D1D5DB',
     borderRadius: 12,
@@ -1008,6 +1000,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   reviewHintText: {
+    fontFamily: 'Inter',
     marginTop: 8,
     fontSize: 13,
     color: '#6b7280',
@@ -1018,6 +1011,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   reviewDateText: {
+    fontFamily: 'Inter',
     fontSize: 11,
     color: '#94A3B8',
     fontWeight: '500',
@@ -1044,15 +1038,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avgRatingValue: {
+    fontFamily: 'Inter',
     fontSize: 15,
     fontWeight: '800',
     color: '#111827',
   },
   avgRatingText: {
+    fontFamily: 'Inter',
     fontSize: 13,
     color: '#6b7280',
   },
   reviewCountText: {
+    fontFamily: 'Inter',
     fontSize: 13,
     color: '#6b7280',
     marginLeft: 8,
@@ -1069,6 +1066,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
   },
   writeReviewText: {
+    fontFamily: 'Inter',
     fontSize: 13,
     fontWeight: '600',
     color: '#374151',
@@ -1080,6 +1078,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   sortByLabel: {
+    fontFamily: 'Inter',
     fontSize: 13,
     color: '#6b7280',
     fontWeight: '500',
@@ -1103,6 +1102,7 @@ const styles = StyleSheet.create({
     borderColor: '#518167',
   },
   sortChipText: {
+    fontFamily: 'Inter',
     fontSize: 11,
     fontWeight: '600',
     color: '#6B7280',

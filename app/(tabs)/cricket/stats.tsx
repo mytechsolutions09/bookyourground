@@ -252,18 +252,12 @@ export default function CricketStats() {
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={styles.statsPromoHeader}>
-         <View>
-            <Text style={styles.statsPromoText}>Personal Records</Text>
-            <Text style={styles.statsPromoSub}>PERFORMANCE ANALYTICS</Text>
-         </View>
-         <TouchableOpacity style={styles.analyzeBtn}>
-            <Activity size={18} color="#01b854" />
-            <Text style={styles.analyzeBtnText}>Analyze</Text>
-         </TouchableOpacity>
-      </View>
-
-      <View style={styles.statsFilterBar}>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false} 
+        style={styles.statsFilterBarScroll}
+        contentContainerStyle={styles.statsFilterBarContainer}
+      >
         {[
             { id: 'batting', label: 'Batting', icon: Swords },
             { id: 'bowling', label: 'Bowling', icon: Zap },
@@ -280,16 +274,10 @@ export default function CricketStats() {
             <Text style={[styles.statPillText, subTab === item.id && styles.statPillTextActive]}>{item.label}</Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
 
       <View style={styles.statsContent}>
-         <View style={styles.statsSectionHeader}>
-            <Text style={styles.statsSectionTitle}>Career Overview</Text>
-            <TouchableOpacity style={styles.compareBtn}>
-               <Users2 size={14} color="#FFFFFF" strokeWidth={2.5} />
-               <Text style={styles.compareBtnText}>Compare</Text>
-            </TouchableOpacity>
-         </View>
+
 
          {loading ? (
              <View style={styles.loadingBox}>
@@ -349,56 +337,24 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
-    padding: 16,
+    padding: 12,
   },
-  statsPromoHeader: {
-    padding: 20,
-    backgroundColor: '#01b854',
-    borderRadius: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  statsPromoText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  statsPromoSub: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 11,
-    fontWeight: '700',
-    marginTop: 2,
-    letterSpacing: 1,
-  },
-  analyzeBtn: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  analyzeBtnText: {
-    color: '#01b854',
-    fontWeight: '800',
-    fontSize: 13,
-  },
-  statsFilterBar: {
-    flexDirection: 'row',
-    gap: 8,
+  statsFilterBarScroll: {
     marginBottom: 20,
+    marginHorizontal: -12,
+  },
+  statsFilterBarContainer: {
+    paddingHorizontal: 12,
+    gap: 8,
   },
   statPill: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 10,
-    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 999,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -408,17 +364,20 @@ const styles = StyleSheet.create({
     borderColor: '#01b854',
   },
   statPillText: {
+    fontFamily: 'Inter',
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#64748B',
   },
   statPillTextActive: {
+    fontFamily: 'Inter',
     color: '#FFFFFF',
+    fontWeight: '600',
   },
   statsContent: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 20,
+    borderRadius: 20,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     marginBottom: 40,
@@ -430,8 +389,9 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   statsSectionTitle: {
+    fontFamily: 'Inter',
     fontSize: 20,
-    fontWeight: '900',
+    fontWeight: '600',
     color: '#1E293B',
     letterSpacing: -0.5,
   },
@@ -445,9 +405,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   compareBtnText: {
+    fontFamily: 'Inter',
     color: '#FFFFFF',
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   formatSectionHeader: {
     flexDirection: 'row',
@@ -468,8 +429,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#01b854',
   },
   formatTitle: {
+    fontFamily: 'Inter',
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#334155',
   },
   noDataLabel: {
@@ -495,15 +457,17 @@ const styles = StyleSheet.create({
     borderColor: '#F1F5F9',
   },
   statValue: {
+    fontFamily: 'Inter',
     fontSize: 17,
-    fontWeight: '800',
+    fontWeight: '400',
     color: '#1E293B',
     marginBottom: 1,
   },
   statLabel: {
+    fontFamily: 'Inter',
     fontSize: 10,
     color: '#64748B',
-    fontWeight: '700',
+    fontWeight: '500',
     textTransform: 'uppercase',
   },
   divider: {
@@ -521,9 +485,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   loadingText: {
+    fontFamily: 'Inter',
     fontSize: 14,
     color: '#64748B',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   adBanner: {
     height: 110,
@@ -545,13 +510,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   adTitle: {
+    fontFamily: 'Inter',
     color: '#FFFFFF',
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '500',
     lineHeight: 20,
   },
   adTitleBold: {
-    fontWeight: '900',
+    fontFamily: 'Inter',
+    fontWeight: '600',
     color: '#FCD34D',
   },
   adBtn: {
@@ -561,13 +528,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   adBtnText: {
+    fontFamily: 'Inter',
     color: '#000000',
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   leaderSectionTitle: {
+    fontFamily: 'Inter',
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#64748B',
     textTransform: 'uppercase',
     marginBottom: 12,
@@ -586,8 +555,9 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   leaderRank: {
+    fontFamily: 'Inter',
     fontSize: 14,
-    fontWeight: '900',
+    fontWeight: '500',
     color: '#94A3B8',
   },
   leaderAvatar: {
@@ -609,13 +579,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   leaderName: {
+    fontFamily: 'Inter',
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#043529',
   },
   leaderScore: {
+    fontFamily: 'Inter',
     fontSize: 12,
     color: '#64748B',
-    fontWeight: '500',
+    fontWeight: '400',
   },
 });

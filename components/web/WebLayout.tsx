@@ -498,12 +498,14 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                         Cricket
                       </RNText>
 
-                      <RNText
-                        style={styles.headerPrimaryButtonText}
-                        onPress={() => router.push('/shop' as any)}
-                      >
-                        Shop
-                      </RNText>
+                      {!isGroundOwner && (
+                        <RNText
+                          style={styles.headerPrimaryButtonText}
+                          onPress={() => router.push('/shop' as any)}
+                        >
+                          Shop
+                        </RNText>
+                      )}
 
 
                       <RNText
@@ -589,12 +591,14 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                     >
                       Cricket
                     </RNText>
-                    <RNText
-                      style={styles.headerPrimaryButtonText}
-                      onPress={() => router.push('/shop' as any)}
-                    >
-                      Shop
-                    </RNText>
+                    {!isGroundOwner && (
+                      <RNText
+                        style={styles.headerPrimaryButtonText}
+                        onPress={() => router.push('/shop' as any)}
+                      >
+                        Shop
+                      </RNText>
+                    )}
                     <RNText
                       style={styles.headerPrimaryButtonText}
                       onPress={() => router.push('/book-my-ground' as any)}
@@ -730,7 +734,6 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                     <RNText style={styles.sidebarTitle}>Ground owner</RNText>
                     <NavLink href="/(owner)/owner-dashboard" icon={LayoutDashboard} label="Dashboard" />
                     <NavLink href="/(owner)/manage-grounds" icon={MapPin} label="My grounds" />
-                    <NavLink href="/shop" icon={ShoppingBag} label="Shop" />
                     <NavLink href="/cricket/player-profile" icon={Swords} label="Cricket Hub" />
                     <NavLink href="/(owner)/ground-bookings" icon={ClipboardList} label="Bookings" />
                     <NavLink href="/(owner)/inventory" icon={CalendarClock} label="Inventory" />
@@ -951,7 +954,6 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                         <RNText style={styles.sidebarSectionTitle}>Ground owner</RNText>
                         <NavLink href="/(owner)/owner-dashboard" icon={LayoutDashboard} label="Dashboard" />
                         <NavLink href="/(owner)/manage-grounds" icon={MapPin} label="My grounds" />
-                        <NavLink href="/shop" icon={ShoppingBag} label="Shop" />
 
                         <NavLink href="/(owner)/ground-bookings" icon={ClipboardList} label="Bookings" />
                         <NavLink href="/(owner)/inventory" icon={CalendarClock} label="Inventory" />
@@ -1016,7 +1018,10 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
             { label: 'Cricket', icon: Trophy, href: '/cricket/player-profile' },
             { label: 'Shop', icon: ShoppingBag, href: '/shop' },
             { label: 'Profile', icon: CircleUser, href: '/(tabs)/profile' },
-          ].map((item) => {
+          ].filter(item => {
+            if (item.label === 'Shop' && isGroundOwner) return false;
+            return true;
+          }).map((item) => {
             const Icon = item.icon;
             const isActive = cleanPath === item.href ||
               (item.href === '/grounds' && cleanPath === '/book-my-ground') ||

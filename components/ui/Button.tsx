@@ -115,6 +115,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   text: {
+    fontFamily: 'Inter',
     fontWeight: '600',
   },
   primaryText: {

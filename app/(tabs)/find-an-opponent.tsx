@@ -377,7 +377,6 @@ export default function FindAnOpponentScreen() {
     <View style={styles.nativeScreen}>
       <MobileAppNavbar 
         title="Find an Opponent" 
-        titleColor="#00ea6b" 
       />
 
       <View style={styles.tabContainer}>

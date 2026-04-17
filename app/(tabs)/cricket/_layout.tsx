@@ -145,7 +145,7 @@ export default function CricketLayout() {
   const content = (
     <View style={styles.container}>
       {(Platform.OS !== 'web' || isCompact) && (
-        <MobileAppNavbar title="Cricket" titleColor="#00ea6b" />
+        <MobileAppNavbar title="Cricket" />
       )}
       {!pathname.includes('/scoring') && (
         <View style={styles.tabsStickyWrapper}>

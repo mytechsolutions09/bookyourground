@@ -12,7 +12,7 @@ type MobileAppNavbarProps = {
 };
 
 /** Green top bar with logo — use on native-only screens (not web). */
-export default function MobileAppNavbar({ title, titleColor = '#02c259', rightAction, lightBg }: MobileAppNavbarProps) {
+export default function MobileAppNavbar({ title, titleColor = '#01b854', rightAction, lightBg }: MobileAppNavbarProps) {
   const canGoBack = router.canGoBack();
 
   return (
@@ -50,9 +50,9 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     justifyContent: 'flex-end',
     alignItems: 'center',
-    backgroundColor: '#043529',
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(0,0,0,0.2)',
+    borderBottomColor: 'rgba(0,0,0,0.1)',
   },
   backButton: {
     position: 'absolute',
@@ -70,9 +70,11 @@ const styles = StyleSheet.create({
   titleText: {
     marginTop: 8,
     marginBottom: 6,
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
-    letterSpacing: 0.2,
+    fontFamily: 'Inter',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
   },
   rightActionContainer: {
     position: 'absolute',
