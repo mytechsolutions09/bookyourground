@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Pressable, StyleSheet, Platform } from 'react-native';
+import { View, Pressable, StyleSheet, Platform, Text } from 'react-native';
 import { useRouter, useSegments } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -7,21 +7,20 @@ import {
   LandPlot,
   CalendarCheck2,
   CircleUser,
-  LogIn,
-  LogOut,
   Heart,
   Swords,
   Trophy,
+  ShoppingBag,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUI } from '@/contexts/UIContext';
 
 const ACTIVE = '#00ea6b';
-const INACTIVE = '#e5e7eb';
+const INACTIVE = '#9ca3af';
 
 function getActiveTab(
   segments: string[],
-): 'home' | 'grounds' | 'bookings' | 'favorites' | 'profile' | 'logout' | 'find-opponent' | 'cricket' | 'shop' {
+): 'home' | 'grounds' | 'bookings' | 'favorites' | 'profile' | 'find-opponent' | 'cricket' | 'shop' {
   const root = segments[0];
   if (root === 'find-an-opponent') return 'find-opponent';
   if (root === 'ground' || root === 'grounds' || root === 'book-my-ground') {
@@ -33,14 +32,13 @@ function getActiveTab(
   if (root === 'shop') return 'shop';
   if (root !== '(tabs)') return 'home';
   const tab = segments[1] ?? 'index';
-  if (tab === 'index') return 'home';
+  if (tab === 'index' || tab === 'home_tab') return 'home';
   if (tab === 'grounds') return 'grounds';
   if (tab === 'cricket') return 'cricket';
   if (tab === 'bookings') return 'bookings';
   if (tab === 'favorites') return 'favorites';
   if (tab === 'profile') return 'profile';
   if (tab === 'shop') return 'shop';
-  if (tab === 'logout') return 'logout';
   return 'home';
 }
 
@@ -56,7 +54,7 @@ export default function MobileTabBar() {
   if (!isTabBarVisible) return null;
 
   const activeTab = getActiveTab(segments as string[]);
-  const size = 24;
+  const size = 22;
 
   const go = (href: string) => {
     router.push(href as any);
@@ -74,12 +72,13 @@ export default function MobileTabBar() {
     >
       <Pressable
         style={styles.item}
-        onPress={() => go('/(tabs)')}
+        onPress={() => go('/(tabs)/home_tab')}
         accessibilityRole="button"
         accessibilityLabel="Home"
         accessibilityState={{ selected: activeTab === 'home' }}
       >
         <House size={size} color={activeTab === 'home' ? ACTIVE : INACTIVE} />
+        <Text style={[styles.label, { color: activeTab === 'home' ? ACTIVE : INACTIVE }]}>Home</Text>
       </Pressable>
       
       <Pressable
@@ -90,16 +89,18 @@ export default function MobileTabBar() {
         accessibilityState={{ selected: activeTab === 'grounds' }}
       >
         <LandPlot size={size} color={activeTab === 'grounds' ? ACTIVE : INACTIVE} />
+        <Text style={[styles.label, { color: activeTab === 'grounds' ? ACTIVE : INACTIVE }]}>Grounds</Text>
       </Pressable>
 
       <Pressable
         style={styles.item}
-        onPress={() => go('/cricket')}
+        onPress={() => go('/(tabs)/cricket')}
         accessibilityRole="button"
         accessibilityLabel="Cricket"
         accessibilityState={{ selected: activeTab === 'cricket' }}
       >
         <Trophy size={size} color={activeTab === 'cricket' ? ACTIVE : INACTIVE} />
+        <Text style={[styles.label, { color: activeTab === 'cricket' ? ACTIVE : INACTIVE }]}>Cricket</Text>
       </Pressable>
 
       <Pressable
@@ -110,6 +111,7 @@ export default function MobileTabBar() {
         accessibilityState={{ selected: activeTab === 'shop' }}
       >
         <ShoppingBag size={size} color={activeTab === 'shop' ? ACTIVE : INACTIVE} />
+        <Text style={[styles.label, { color: activeTab === 'shop' ? ACTIVE : INACTIVE }]}>Shop</Text>
       </Pressable>
 
       <Pressable
@@ -120,19 +122,8 @@ export default function MobileTabBar() {
         accessibilityState={{ selected: activeTab === 'profile' }}
       >
         <CircleUser size={size} color={activeTab === 'profile' ? ACTIVE : INACTIVE} />
+        <Text style={[styles.label, { color: activeTab === 'profile' ? ACTIVE : INACTIVE }]}>Profile</Text>
       </Pressable>
-
-      {!user && (
-        <Pressable
-          style={styles.item}
-          onPress={() => go('/(auth)/login')}
-          accessibilityRole="button"
-          accessibilityLabel="Log in"
-          accessibilityState={{ selected: activeTab === 'logout' }}
-        >
-          <LogIn size={size} color={activeTab === 'logout' ? ACTIVE : INACTIVE} />
-        </Pressable>
-      )}
     </View>
   );
 }
@@ -145,12 +136,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#043529',
     borderTopWidth: 1,
     paddingTop: 8,
-    minHeight: 52,
+    height: 85,
   },
   item: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 4,
+  },
+  label: {
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 4,
   },
 });

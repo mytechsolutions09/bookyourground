@@ -37,7 +37,7 @@ const MATCHES_DATA: any[] = [
 ];
 
 const CATEGORY_TABS = [
-  { key: 'all',    label: 'ALL' },
+  { key: 'all',    label: 'All' },
   { key: 'played', label: 'Played' },
 ];
 
@@ -61,8 +61,8 @@ export default function CricketMatches() {
   const { width } = useWindowDimensions();
   const isLargeScreen = width > 1024;
   
-  const [category, setCategory] = useState('all');
-  const [status, setStatus] = useState('all');
+  const [category, setCategory] = useState('played');
+  const [status, setStatus] = useState('result');
   const [dateFilter, setDateFilter] = useState('all_time');
   const [searchQuery, setSearchQuery] = useState('');
   const [fetchedMatches, setFetchedMatches] = useState<any[]>([]);
@@ -256,7 +256,70 @@ export default function CricketMatches() {
 
       return true;
     });
-  }, [allMatches, category, status, userTeams, userPlayedMatches, dateFilter, searchQuery]);
+  }, [allMatches, category, status, userPlayedMatches, dateFilter, searchQuery]);
+
+  // Dropdown states
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+
+  const FilterDropdown = ({ 
+    label, 
+    value, 
+    options, 
+    onSelect, 
+    id, 
+    icon: Icon 
+  }: { 
+    label: string, 
+    value: string, 
+    options: any[], 
+    onSelect: (val: string) => void, 
+    id: string,
+    icon: any 
+  }) => {
+    const isOpen = activeDropdown === id;
+    const selectedLabel = options.find(o => o.key === value)?.label || label;
+    
+    return (
+      <View style={{ flex: 1, position: 'relative', zIndex: isOpen ? 100 : 1 }}>
+        <TouchableOpacity 
+          style={[styles.dropdownTrigger, isOpen && styles.dropdownTriggerActive]}
+          onPress={() => setActiveDropdown(isOpen ? null : id)}
+        >
+          <Icon size={14} color={isOpen ? '#01b854' : '#64748B'} />
+          <Text style={[styles.dropdownTriggerText, isOpen && styles.dropdownTriggerTextActive]} numberOfLines={1}>
+            {selectedLabel}
+          </Text>
+        </TouchableOpacity>
+
+        {isOpen && (
+          <>
+            <TouchableOpacity 
+              style={styles.dropdownOverlay} 
+              activeOpacity={1} 
+              onPress={() => setActiveDropdown(null)} 
+            />
+            <View style={styles.dropdownMenu}>
+              {options.map((opt) => (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[styles.dropdownOption, value === opt.key && styles.dropdownOptionActive]}
+                  onPress={() => {
+                    onSelect(opt.key);
+                    setActiveDropdown(null);
+                  }}
+                >
+                  <Text style={[styles.dropdownOptionText, value === opt.key && styles.dropdownOptionTextActive]}>
+                    {opt.label}
+                  </Text>
+                  {value === opt.key && <View style={styles.dropdownOptionDot} />}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </>
+        )}
+      </View>
+    );
+  };
 
   const liveCount = useMemo(() => {
     return allMatches.filter(m => {
@@ -396,156 +459,35 @@ export default function CricketMatches() {
         />
       </View>
 
-      {/* Responsive Filters */}
-      {isLargeScreen ? (
-        <View style={{ marginBottom: 24 }}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center' }}>
-            {/* Categories */}
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              {CATEGORY_TABS.map((tab, idx) => (
-                <TouchableOpacity
-                  key={tab.key}
-                  style={[
-                    styles.categoryTab,
-                    category === tab.key && styles.categoryTabActive,
-                    { marginRight: idx < CATEGORY_TABS.length - 1 ? 12 : 0 }
-                  ]}
-                  onPress={() => setCategory(tab.key)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.categoryTabText, category === tab.key && styles.categoryTabTextActive]}>
-                    {tab.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <View style={styles.verticalDivider} />
-
-            {/* Status */}
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              {STATUS_FILTERS.map((tab, idx) => (
-                <TouchableOpacity
-                  key={tab.key}
-                  style={[
-                    styles.statusTab,
-                    status === tab.key && styles.statusTabActive,
-                    { marginRight: idx < STATUS_FILTERS.length - 1 ? 8 : 0 }
-                  ]}
-                  onPress={() => setStatus(tab.key)}
-                  activeOpacity={0.8}
-                >
-                  {tab.key === 'live' && liveCount > 0 && <View style={styles.livePip} />}
-                  <Text style={[styles.statusTabText, status === tab.key && styles.statusTabTextActive]}>
-                    {tab.label}
-                  </Text>
-                  {tab.key === 'live' && liveCount > 0 && (
-                    <View style={styles.countBadge}>
-                      <Text style={styles.countBadgeText}>{liveCount}</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <View style={styles.verticalDivider} />
-
-            {/* Date */}
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              {DATE_FILTERS.map((df, idx) => (
-                <TouchableOpacity
-                  key={df.key}
-                  style={[
-                    styles.datePill,
-                    dateFilter === df.key && styles.datePillActive,
-                    { marginRight: idx < DATE_FILTERS.length - 1 ? 8 : 0 }
-                  ]}
-                  onPress={() => setDateFilter(df.key)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.datePillText, dateFilter === df.key && styles.datePillTextActive]}>
-                    {df.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </ScrollView>
-        </View>
-      ) : (
-        <>
-          {/* Mobile Categories */}
-          <View style={{ marginBottom: 12 }}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
-              {CATEGORY_TABS.map((tab, idx) => (
-                <TouchableOpacity
-                  key={tab.key}
-                  style={[
-                    styles.categoryTab,
-                    category === tab.key && styles.categoryTabActive,
-                    { marginRight: idx < CATEGORY_TABS.length - 1 ? 12 : 0 }
-                  ]}
-                  onPress={() => setCategory(tab.key)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.categoryTabText, category === tab.key && styles.categoryTabTextActive]}>
-                    {tab.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-
-          {/* Mobile Status */}
-          <View style={{ marginBottom: 12 }}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
-              {STATUS_FILTERS.map((tab, idx) => (
-                <TouchableOpacity
-                  key={tab.key}
-                  style={[
-                    styles.statusTab,
-                    status === tab.key && styles.statusTabActive,
-                    { marginRight: idx < STATUS_FILTERS.length - 1 ? 8 : 0 }
-                  ]}
-                  onPress={() => setStatus(tab.key)}
-                  activeOpacity={0.8}
-                >
-                  {tab.key === 'live' && liveCount > 0 && <View style={styles.livePip} />}
-                  <Text style={[styles.statusTabText, status === tab.key && styles.statusTabTextActive]}>
-                    {tab.label}
-                  </Text>
-                  {tab.key === 'live' && liveCount > 0 && (
-                    <View style={styles.countBadge}>
-                      <Text style={styles.countBadgeText}>{liveCount}</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-
-          {/* Mobile Date */}
-          <View style={{ marginBottom: 16 }}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 16 }}>
-              {DATE_FILTERS.map((df, idx) => (
-                <TouchableOpacity
-                  key={df.key}
-                  style={[
-                    styles.datePill,
-                    dateFilter === df.key && styles.datePillActive,
-                    { marginRight: idx < DATE_FILTERS.length - 1 ? 8 : 0 }
-                  ]}
-                  onPress={() => setDateFilter(df.key)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.datePillText, dateFilter === df.key && styles.datePillTextActive]}>
-                    {df.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </>
-      )}
+      {/* Refined Filters Row */}
+      <View style={styles.filtersWrapper}>
+         <View style={styles.filtersRow}>
+            <FilterDropdown 
+              id="category" 
+              label="Category" 
+              value={category} 
+              options={CATEGORY_TABS} 
+              onSelect={setCategory} 
+              icon={Trophy}
+            />
+            <FilterDropdown 
+              id="status" 
+              label="Status" 
+              value={status} 
+              options={STATUS_FILTERS} 
+              onSelect={setStatus} 
+              icon={Radio}
+            />
+            <FilterDropdown 
+              id="date" 
+              label="Date" 
+              value={dateFilter} 
+              options={DATE_FILTERS} 
+              onSelect={setDateFilter} 
+              icon={Calendar}
+            />
+         </View>
+      </View>
 
       {/* Matches List */}
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.matchesList} showsVerticalScrollIndicator={false}>
@@ -571,7 +513,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
-    marginHorizontal: 16,
     marginBottom: 14,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -600,100 +541,94 @@ const styles = StyleSheet.create({
   tabsScrollContent: {
     paddingHorizontal: 16,
   },
-  categoryTab: {
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 14,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+  filtersWrapper: {
+    marginBottom: 20,
+    zIndex: 100,
   },
-  categoryTabActive: {
-    backgroundColor: '#06392e',
-    borderColor: '#06392e',
+  filtersRow: {
+    flexDirection: 'row',
+    gap: 10,
   },
-  categoryTabText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#64748B',
-    letterSpacing: 0.2,
-  },
-  categoryTabTextActive: {
-    color: '#FFFFFF',
-  },
-  verticalDivider: {
-    width: 1,
-    height: 24,
-    backgroundColor: '#E2E8F0',
-    marginHorizontal: 16,
-  },
-  statusTab: {
+  dropdownTrigger: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: '#E2E8F0',
+    gap: 8,
   },
-  statusTabActive: {
-    backgroundColor: '#06392e',
-    borderColor: '#06392e',
+  dropdownTriggerActive: {
+    borderColor: '#01b854',
+    backgroundColor: '#F0FDF4',
   },
-  statusTabText: {
+  dropdownTriggerText: {
+    flex: 1,
     fontSize: 13,
     fontWeight: '600',
     color: '#64748B',
   },
-  statusTabTextActive: {
-    color: '#FFFFFF',
+  dropdownTriggerTextActive: {
+    color: '#01b854',
+    fontWeight: '700',
   },
-  livePip: {
+  dropdownOverlay: {
+    position: 'absolute',
+    top: -1000,
+    left: -1000,
+    right: -1000,
+    bottom: -1000,
+    backgroundColor: 'transparent',
+    zIndex: 90,
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    marginTop: 6,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 10,
+    zIndex: 100,
+  },
+  dropdownOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  dropdownOptionActive: {
+    backgroundColor: '#F8FAFC',
+  },
+  dropdownOptionText: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  dropdownOptionTextActive: {
+    color: '#043529',
+    fontWeight: '700',
+  },
+  dropdownOptionDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
     backgroundColor: '#01b854',
   },
-  countBadge: {
-    backgroundColor: '#01b854',
-    borderRadius: 9,
-    minWidth: 18,
-    height: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
-  },
-  countBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  datePill: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: '#F1F5F9',
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  datePillActive: {
-    backgroundColor: '#dcc09320',
-    borderColor: '#dcc093',
-  },
-  datePillText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-  datePillTextActive: {
-    color: '#06392e',
-    fontWeight: '700',
-  },
   matchesList: {
     gap: 14,
-    paddingHorizontal: 16,
     paddingBottom: 32,
   },
   matchCard: {

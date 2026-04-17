@@ -6,15 +6,16 @@ export default function GroundLayout() {
     <Stack
       screenOptions={{
         headerShown: Platform.OS !== 'web',
-        headerStyle: { backgroundColor: '#043529' },
-        headerTintColor: '#00ea6b',
+        headerStyle: { backgroundColor: '#FFFFFF' },
+        headerTintColor: '#111827',
         headerTitleStyle: {
-          color: '#02c259',
+          color: '#111827',
           fontWeight: '700',
           fontSize: 17,
         },
         headerShadowVisible: false,
         contentStyle: { backgroundColor: '#FFFFFF' },
+        animation: 'slide_from_bottom',
       }}
     />
   );

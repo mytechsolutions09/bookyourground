@@ -1,5 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Platform, View, StyleSheet, ScrollView, TouchableOpacity, Text, useWindowDimensions } from 'react-native';
+import { Platform, View, StyleSheet, ScrollView, TouchableOpacity, Text, useWindowDimensions, LayoutAnimation, UIManager } from 'react-native';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 import WebLayout from '@/components/web/WebLayout';
 import LandingBookingForm from '@/components/landing/LandingBookingForm';
 import MobileAppNavbar from '../../components/MobileAppNavbar';
@@ -8,7 +12,7 @@ import { Menu as MenuIcon, Heart } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { GroundWithImages } from '@/types';
-import GroundCard from '@/components/grounds/GroundCard';
+import GroundsSearchBar from '@/components/grounds/GroundsSearchBar';
 
 export default function GroundsTabScreen() {
   const { width } = useWindowDimensions();
@@ -20,10 +24,21 @@ export default function GroundsTabScreen() {
   const [loadingFavs, setLoadingFavs] = useState(false);
 
   useEffect(() => {
+    if (Platform.OS !== 'web' && LayoutAnimation) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    }
     if (activeTab === 'favorite' && user?.id) {
       loadFavorites();
     }
   }, [activeTab, user?.id]);
+
+  const handleTabPress = (tabName: 'book' | 'favorite') => {
+    if (activeTab === tabName) return;
+    if (Platform.OS !== 'web' && LayoutAnimation) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    }
+    setActiveTab(tabName);
+  };
 
   const loadFavorites = async () => {
     try {
@@ -75,6 +90,7 @@ export default function GroundsTabScreen() {
               router.push(`/ground/${citySlug}/${nameSlug}`);
             }}
             isFavorite={true}
+            lightMode={true}
             onToggleFavorite={() => toggleFavorite(item.id)}
           />
         ))
@@ -92,21 +108,26 @@ export default function GroundsTabScreen() {
     <View style={[styles.tabContainerBase, tabContainerStyle]}>
       <TouchableOpacity 
         style={[styles.tab, activeTab === 'book' && styles.activeTab]}
-        onPress={() => setActiveTab('book')}
+        onPress={() => handleTabPress('book')}
         activeOpacity={0.7}
       >
         <Text style={[styles.tabText, activeTab === 'book' && styles.activeTabText]}>Book a Ground</Text>
       </TouchableOpacity>
       <TouchableOpacity 
         style={styles.tab}
-        onPress={() => router.push('/find-an-opponent')}
+        onPress={() => {
+          if (Platform.OS !== 'web') {
+            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+          }
+          router.push('/find-an-opponent');
+        }}
         activeOpacity={0.7}
       >
         <Text style={styles.tabText}>Find an Opponent</Text>
       </TouchableOpacity>
       <TouchableOpacity 
         style={[styles.tab, activeTab === 'favorite' && styles.activeTab]}
-        onPress={() => setActiveTab('favorite')}
+        onPress={() => handleTabPress('favorite')}
         activeOpacity={0.7}
       >
         <Text style={[styles.tabText, activeTab === 'favorite' && styles.activeTabText]}>Favourite</Text>
@@ -124,7 +145,12 @@ export default function GroundsTabScreen() {
         >
           {renderTabs(isSmall ? styles.webTabContainerNative : styles.webTabContainer)}
           <View style={styles.page}>
-            {activeTab === 'book' ? <LandingBookingForm fullWidth /> : renderFavorites()}
+            {activeTab === 'book' ? (
+              <View>
+                <GroundsSearchBar lightMode={true} />
+                <LandingBookingForm fullWidth />
+              </View>
+            ) : renderFavorites()}
           </View>
         </ScrollView>
       </WebLayout>
@@ -135,21 +161,23 @@ export default function GroundsTabScreen() {
   return (
     <View style={styles.nativeRoot}>
       <MobileAppNavbar 
-        title={activeTab === 'book' ? "Book a ground" : "Favourites"} 
-        titleColor="#043529" 
-        lightBg 
-        rightAction={
-          <TouchableOpacity onPress={() => {}}>
-            <MenuIcon size={24} color="#043529" />
-          </TouchableOpacity>
-        }
+        title={activeTab === 'book' ? "Book a Ground" : "Favourites"} 
+        titleColor="#00ea6b" 
       />
       
       {renderTabs(styles.nativeTabContainer)}
 
-      <ScrollView style={styles.page} contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.page} 
+        contentContainerStyle={{ paddingBottom: 40 }} 
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="always"
+      >
         {activeTab === 'book' ? (
-          <LandingBookingForm fullWidth noCard bookGroundScreenNative hideTitle />
+          <View>
+             <GroundsSearchBar lightMode={true} />
+             <LandingBookingForm fullWidth noCard bookGroundScreenNative hideTitle lightAppTheme />
+          </View>
         ) : (
           renderFavorites()
         )}
@@ -182,11 +210,9 @@ const styles = StyleSheet.create({
   tabContainerBase: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.04)',
+    backgroundColor: 'transparent',
     borderRadius: 999,
     padding: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.02)',
   },
   nativeTabContainer: {
     marginHorizontal: 16,
@@ -213,12 +239,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   activeTab: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    backgroundColor: 'transparent',
   },
   tabText: {
     color: '#334155',

@@ -37,6 +37,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import { getPlayerTags } from '@/lib/stats-logic';
 import { useAuth } from '@/contexts/AuthContext';
+import { useRouter } from 'expo-router';
 
 const INDIAN_STATES = [
   "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", 
@@ -49,6 +50,7 @@ const INDIAN_STATES = [
 ];
 
 export default function PlayerProfile() {
+  const router = useRouter();
   const { user } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
@@ -63,6 +65,8 @@ export default function PlayerProfile() {
   useEffect(() => {
     if (user) {
       loadPlayerData();
+    } else {
+      setLoading(false);
     }
   }, [user]);
 
@@ -212,6 +216,26 @@ export default function PlayerProfile() {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#01b854" />
+      </View>
+    );
+  }
+
+  if (!user) {
+    return (
+      <View style={styles.loginRequired}>
+        <View style={styles.loginIconBox}>
+          <User size={48} color="#01b854" />
+        </View>
+        <RNText style={styles.loginTitle}>Profile Not Available</RNText>
+        <RNText style={styles.loginSubtitle}>
+          Please login to view your cricket profile, track elite stats, and manage teams.
+        </RNText>
+        <TouchableOpacity 
+          style={styles.loginBtn}
+          onPress={() => router.push('/(auth)/login' as any)}
+        >
+          <RNText style={styles.loginBtnText}>Login / Sign Up</RNText>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -1021,5 +1045,52 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: '#01b854',
+  },
+  loginRequired: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    backgroundColor: '#F8FAFC',
+    marginTop: 60,
+  },
+  loginIconBox: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#F0FDF4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+  },
+  loginTitle: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#0F172A',
+    marginBottom: 12,
+  },
+  loginSubtitle: {
+    fontSize: 15,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 32,
+    paddingHorizontal: 20,
+  },
+  loginBtn: {
+    backgroundColor: '#01b854',
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 16,
+    shadowColor: '#01b854',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  loginBtnText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

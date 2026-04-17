@@ -138,10 +138,12 @@ export default function TabLayout() {
           headerShown: false,
           gestureEnabled: true,
           contentStyle: { backgroundColor: '#043529' },
+          animation: 'slide_from_bottom',
         }}
       >
         <Stack.Screen name="home_tab" />
         <Stack.Screen name="grounds" />
+        <Stack.Screen name="shop" />
         <Stack.Screen name="matches" />
         <Stack.Screen name="bookings" />
         <Stack.Screen name="favorites" />
@@ -255,7 +257,7 @@ const styles = StyleSheet.create({
   customTabBar: {
     flexDirection: 'row',
     backgroundColor: '#043529',
-    height: 75,
+    height: 85,
     borderTopWidth: 1,
     borderTopColor: '#06392e',
     alignItems: 'center',

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text as RNText, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, TextInput as RNTextInput } from 'react-native';
 import { ShoppingBag, Search, Filter, ArrowRight, Star, ShoppingCart } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import WebLayout from '@/components/web/WebLayout';
 
 const FEATURED_PRODUCTS = [
@@ -45,6 +46,7 @@ const CATEGORIES = [
 ];
 
 export default function ShopScreen() {
+  const router = useRouter();
   const content = (
     <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       {/* Hero Banner */}
@@ -56,7 +58,10 @@ export default function ShopScreen() {
           <RNText style={styles.heroTag}>NEW ARRIVAL</RNText>
           <RNText style={styles.heroTitle}>Premium Cricket Gear</RNText>
           <RNText style={styles.heroSubtitle}>Gear up with the world's finest cricket equipment.</RNText>
-          <TouchableOpacity style={styles.heroBtn}>
+          <TouchableOpacity 
+            style={styles.heroBtn}
+            onPress={() => router.push({ pathname: '/shop/[id]', params: { id: '1' } })}
+          >
             <RNText style={styles.heroBtnText}>Shop Now</RNText>
             <ArrowRight size={18} color="#043529" />
           </TouchableOpacity>
@@ -90,7 +95,11 @@ export default function ShopScreen() {
         </View>
         <View style={styles.productGrid}>
           {FEATURED_PRODUCTS.map(product => (
-            <TouchableOpacity key={product.id} style={styles.productCard}>
+            <TouchableOpacity 
+              key={product.id} 
+              style={styles.productCard}
+              onPress={() => router.push({ pathname: '/shop/[id]', params: { id: product.id } })}
+            >
               <View style={styles.imageWrapper}>
                 <Image source={{ uri: product.image }} style={styles.productImage} />
                 {product.tag && (
@@ -126,13 +135,16 @@ export default function ShopScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F3F4F6' }}>
-      <View style={styles.mobileHeader}>
-        <RNText style={styles.mobileTitle}>Cricket Shop</RNText>
-        <View style={styles.headerIcons}>
-          <TouchableOpacity style={styles.iconBtn}><Search size={24} color="#043529" /></TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtn}><ShoppingCart size={24} color="#043529" /></TouchableOpacity>
-        </View>
-      </View>
+      <MobileAppNavbar 
+        title="Cricket Shop" 
+        titleColor="#00ea6b" 
+        rightAction={
+          <View style={styles.headerIcons}>
+            <TouchableOpacity style={styles.iconBtn}><Search size={24} color="#00ea6b" /></TouchableOpacity>
+            <TouchableOpacity style={styles.iconBtn}><ShoppingCart size={24} color="#00ea6b" /></TouchableOpacity>
+          </View>
+        }
+      />
       {content}
     </View>
   );

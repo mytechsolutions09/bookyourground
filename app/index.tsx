@@ -50,7 +50,7 @@ export default function IndexScreen() {
       if (user) {
         router.replace('/(tabs)/dashboard');
       } else {
-        router.replace('/(tabs)');
+        router.replace('/(tabs)/home_tab');
       }
     }
   }, [user, loading, welcomeChecked, os]);

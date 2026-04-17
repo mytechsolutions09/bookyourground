@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, useWindowDimensions, Platform, Linking } from 'react-native';
-import { Calendar, Clock, MapPin, Users, Sword, Map as MapIcon, Star } from 'lucide-react-native';
+import { Calendar, Clock, MapPin, Users, Star, Map as MapIcon } from 'lucide-react-native';
 import { BookingWithDetails } from '@/types';
 import { formatCurrency, formatDate } from '@/utils/helpers';
 import { formatBookingSlotSummary } from '@/utils/bookingSlotFormat';
@@ -15,141 +15,151 @@ interface MatchCardProps {
   lightMode?: boolean;
 }
 
-const NATIVE_CARD_BG = '#043529';
-const NATIVE_ACCENT = '#00ea6b';
+const NATIVE_CARD_BG = '#06392e';
+const NATIVE_BORDER = '#02c259';
 const NATIVE_TEXT = '#dcc093';
 
-export default function MatchCard({ match, onJoin, buttonTitle = 'Join Match', teamsCount = '1/2 Teams', lightMode }: MatchCardProps) {
+export default function MatchCard({
+  match,
+  onJoin,
+  buttonTitle = 'Join Match',
+  teamsCount = '1/2 Teams',
+  lightMode,
+}: MatchCardProps) {
   const { width } = useWindowDimensions();
   const isWeb = Platform.OS === 'web';
-  const IS_DARK = !isWeb || (width < 900);
+  const IS_DARK = !isWeb || width < 900;
   const isLight = lightMode || (!isWeb && !IS_DARK) || (isWeb && !IS_DARK);
-  
-  const primaryImage = match.ground.ground_images?.[0]?.image_url ||
+
+  const primaryImage =
+    match.ground.ground_images?.[0]?.image_url ||
     'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
 
-  const iconColor = isLight ? '#10b981' : NATIVE_ACCENT;
+  const iconColor = isLight ? '#10b981' : NATIVE_BORDER;
   const textColor = isLight ? '#4B5563' : NATIVE_TEXT;
-  const titleColor = isLight ? '#111827' : NATIVE_TEXT;
+  const titleColor = isLight ? '#043529' : NATIVE_TEXT;
   const pinColor = isLight ? '#666' : NATIVE_TEXT;
-  const subtleTextColor = isLight ? '#9CA3AF' : NATIVE_TEXT;
 
   // Calculate rating
   const reviews = (match.ground as any).reviews || [];
   const reviewCount = reviews.length;
-  const avgRating = reviewCount > 0
-    ? reviews.reduce((sum: number, r: any) => sum + (r.rating || 0), 0) / reviewCount
-    : 0;
+  const avgRating =
+    reviewCount > 0
+      ? reviews.reduce((sum: number, r: any) => sum + (r.rating || 0), 0) / reviewCount
+      : 0;
+
+  const cardStyle = [
+    styles.card,
+    !isLight && styles.cardNative,
+    isLight && styles.cardWeb,
+  ];
 
   return (
-    <Card
-      style={[
-        styles.card,
-        isWeb && !IS_DARK && styles.cardWeb,
-        !isWeb && IS_DARK && !isLight && styles.cardNative,
-        isLight && styles.cardLight,
-      ]}
-    >
-      <View style={styles.content}>
-        <View style={styles.imageContainer}>
+    <TouchableOpacity onPress={onJoin} activeOpacity={0.8} style={styles.touchable}>
+      <Card style={cardStyle}>
+        <View style={styles.imageWrapper}>
           <Image source={{ uri: primaryImage }} style={styles.image} />
+          <View style={styles.statusBadge}>
+            <Users size={12} color="#FFFFFF" />
+            <Text style={styles.statusText}>{teamsCount}</Text>
+          </View>
         </View>
 
-        <View style={styles.body}>
+        <View style={styles.content}>
           <View style={styles.titleRow}>
-            <Text style={[styles.groundName, { color: titleColor }]}>{match.ground.name}</Text>
-            <View style={[
-              styles.statusBadge, 
-              styles.statusBadgeInline,
-              !IS_DARK && styles.statusBadgeWeb
-            ]}>
-              <Users size={12} color={IS_DARK ? '#fff' : '#6B7280'} />
-              <Text style={[styles.statusText, !IS_DARK && styles.statusTextWeb]}>{teamsCount}</Text>
-            </View>
-          </View>
-
-          {/* New Rating Row */}
-          <View style={styles.ratingRow}>
-            {[1, 2, 3, 4, 5].map((i) => {
-              const filled = reviewCount > 0 && i <= Math.round(avgRating);
-              return (
-                <Star
-                  key={i}
-                  size={12}
-                  color={filled ? '#FFA000' : (isLight ? '#E5E7EB' : '#374151')}
-                  fill={filled ? '#FFA000' : 'none'}
-                />
-              );
-            })}
-            <Text style={[styles.ratingText, { color: isLight ? '#6B7280' : '#9CA3AF' }]}>
-              {reviewCount > 0
-                ? `${avgRating.toFixed(1)} (${reviewCount} reviews)`
-                : 'No reviews yet'}
+            <Text style={[styles.name, { color: titleColor }]} numberOfLines={1}>
+              {match.ground.name}
+            </Text>
+            <Text style={styles.price}>
+              {formatCurrency(Number(match.total_amount))}
+              <Text style={styles.priceUnit}> / match</Text>
             </Text>
           </View>
-          
-          <TouchableOpacity 
-            style={styles.locationRow}
-            onPress={() => {
-              const query = encodeURIComponent(`${match.ground.address}, ${match.ground.city}, ${match.ground.state}`);
-              const url = Platform.select({
-                ios: `maps:0,0?q=${query}`,
-                android: `geo:0,0?q=${query}`,
-                default: `https://www.google.com/maps/search/?api=1&query=${query}`
-              });
-              Linking.openURL(url);
-            }}
-          >
-            <MapPin size={14} color={pinColor} />
-            <Text style={[styles.location, { color: pinColor }]}>
-              {match.ground.city}, {match.ground.state}
-            </Text>
-            <View style={styles.mapLink}>
-              <MapIcon size={12} color={iconColor} />
-              <Text style={[styles.mapLinkText, { color: iconColor }]}>View on Map</Text>
-            </View>
-          </TouchableOpacity>
 
-          <View style={styles.opponentRow}>
-             <View style={styles.opponentAvatar}>
-                <Users size={14} color={iconColor} />
-             </View>
-             <View style={styles.opponentInfo}>
-                <Text style={[styles.opponentLabel, { color: isWeb && !IS_DARK ? '#9CA3AF' : textColor }]}>OPPONENT WAITING</Text>
-                <Text style={[styles.opponentName, { color: titleColor }]}>
-                   {(match.user?.full_name || 'Anonymous Player').toUpperCase()}
-                   {match.user?.team_name && (
-                      <Text style={styles.teamNameHighlight}> • {match.user.team_name.toUpperCase()}</Text>
-                   )}
-                </Text>
-             </View>
+          <View style={styles.subTitleRow}>
+            <View style={styles.ratingBlockRow}>
+              <View style={styles.starRow}>
+                {[1, 2, 3, 4, 5].map((i) => {
+                  const filled = reviewCount > 0 && i <= Math.round(avgRating);
+                  return (
+                    <Star
+                      key={i}
+                      size={14}
+                      color={filled ? '#FFA000' : '#D1D5DB'}
+                      fill={filled ? '#FFA000' : 'none'}
+                    />
+                  );
+                })}
+              </View>
+              <Text style={[styles.ratingText, { color: isLight ? '#666' : NATIVE_TEXT }]}>
+                {reviewCount > 0
+                  ? `${avgRating.toFixed(1)} (${reviewCount})`
+                  : 'No reviews yet'}
+              </Text>
+            </View>
+            <View style={styles.locationRowShort}>
+              <MapPin size={12} color={pinColor} />
+              <Text style={[styles.location, { color: pinColor }]} numberOfLines={1}>
+                {match.ground.city}
+              </Text>
+            </View>
           </View>
 
-          <View style={styles.divider} />
-
-          <View style={styles.detailsGrid}>
-            <View style={styles.detailItem}>
-              <Calendar size={16} color={iconColor} />
-              <Text style={[styles.detailText, { color: textColor }]}>{formatDate(match.booking_date)}</Text>
+          <View style={styles.opponentSection}>
+            <View style={styles.opponentAvatar}>
+              <Users size={14} color={iconColor} />
             </View>
-            <View style={styles.detailItem}>
-              <Clock size={16} color={iconColor} />
-              <Text style={[styles.detailText, { color: textColor }]}>
-                {formatBookingSlotSummary(
-                  match.start_time,
-                  match.end_time,
-                  match.ground.pitch_type,
+            <View style={styles.opponentInfo}>
+              <Text style={[styles.opponentLabel, { color: isLight ? '#9CA3AF' : textColor }]}>
+                OPPONENT WAITING
+              </Text>
+              <Text style={[styles.opponentName, { color: titleColor }]}>
+                {(match.user?.full_name || 'Anonymous Player').toUpperCase()}
+                {match.user?.team_name && (
+                  <Text style={styles.teamNameHighlight}> • {match.user.team_name.toUpperCase()}</Text>
                 )}
               </Text>
             </View>
           </View>
 
-          <View style={styles.footer}>
-            <View style={styles.priceContainer}>
-              <Text style={styles.priceLabel}>{teamsCount === '2/2 Teams' ? 'Total Paid' : 'Price to join'}</Text>
-              <Text style={[styles.priceValue, isLight && styles.priceValueLight]}>{formatCurrency(Number(match.total_amount))}</Text>
+          <View style={styles.divider} />
+
+          <View style={styles.scheduleBlock}>
+            <View style={styles.scheduleRow}>
+              <Calendar size={13} color={iconColor} />
+              <Text style={[styles.scheduleText, { color: textColor }]} numberOfLines={1}>
+                {formatDate(match.booking_date)}
+              </Text>
             </View>
-            
+            <View style={styles.scheduleRow}>
+              <Clock size={13} color={iconColor} />
+              <Text style={[styles.scheduleText, { color: textColor }]} numberOfLines={1}>
+                {formatBookingSlotSummary(match.start_time, match.end_time, match.ground.pitch_type)}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.footer}>
+            <TouchableOpacity
+              style={[styles.mapsBtn, !isLight && styles.mapsBtnNative]}
+              onPress={() => {
+                const query = encodeURIComponent(
+                  `${match.ground.address}, ${match.ground.city}, ${match.ground.state}`,
+                );
+                const url = Platform.select({
+                  ios: `maps:0,0?q=${query}`,
+                  android: `geo:0,0?q=${query}`,
+                  default: `https://www.google.com/maps/search/?api=1&query=${query}`,
+                });
+                Linking.openURL(url!);
+              }}
+            >
+              <MapIcon size={12} color={iconColor} />
+              <Text style={[styles.mapsLink, { color: isLight ? '#6B7280' : NATIVE_BORDER }]}>
+                View maps
+              </Text>
+            </TouchableOpacity>
+
             <Button
               title={buttonTitle}
               onPress={onJoin}
@@ -160,218 +170,129 @@ export default function MatchCard({ match, onJoin, buttonTitle = 'Join Match', t
             />
           </View>
         </View>
-      </View>
-    </Card>
+      </Card>
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    marginBottom: 16,
-    borderRadius: 20,
-    overflow: 'hidden',
+  touchable: {
+    width: '100%',
+    alignSelf: 'stretch',
+    marginBottom: 8,
   },
-  cardWeb: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#f0f0f0',
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
+  card: {
+    padding: 0,
+    overflow: 'hidden',
+    marginBottom: 8,
+    width: '100%',
+    alignSelf: 'stretch',
   },
   cardNative: {
-    backgroundColor: '#06392e',
-    borderColor: 'rgba(0,234,107,0.15)',
+    backgroundColor: NATIVE_CARD_BG,
     borderWidth: 1,
+    borderColor: 'rgba(0,234,107,0.2)',
   },
-  cardLight: {
+  cardWeb: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    borderColor: '#E5E7EB',
   },
-  content: {
-    flexDirection: 'column',
-  },
-  imageContainer: {
+  imageWrapper: {
     position: 'relative',
+    width: '100%',
   },
   image: {
     width: '100%',
-    height: 150,
-    backgroundColor: '#eee',
+    height: undefined,
+    aspectRatio: 16 / 9,
+    backgroundColor: '#E0E0E0',
   },
   statusBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
-  statusBadgeInline: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  statusBadgeWeb: {
-    backgroundColor: '#f3f4f6',
-  },
-  statusTextWeb: {
-    color: '#6B7280',
-  },
   statusText: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '700',
   },
-  body: {
-    padding: 16,
-    gap: 8,
+  content: {
+    padding: 12,
   },
   titleRow: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    gap: 10,
     marginBottom: 4,
   },
-  groundName: {
-    ...Platform.select({
-      web: { fontSize: 22 },
-      default: { fontSize: 18 },
-    }),
-    fontWeight: '800',
+  name: {
     flex: 1,
-    marginRight: 8,
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 4,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 6,
-    marginTop: -2,
-  },
-  ratingText: {
-    fontSize: 11,
-    fontWeight: '600',
-    marginLeft: 2,
-  },
-  location: {
-    ...Platform.select({
-      web: { fontSize: 15 },
-      default: { fontSize: 14 },
-    }),
-  },
-  mapLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginLeft: 'auto',
-    backgroundColor: 'rgba(0,234,107,0.05)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  mapLinkText: {
-    fontSize: 10,
+    fontSize: 18,
     fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
-  divider: {
-    height: 1,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    marginVertical: 4,
-  },
-  detailsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-    marginBottom: 8,
-  },
-  detailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  detailText: {
-    ...Platform.select({
-      web: { fontSize: 15 },
-      default: { fontSize: 14 },
-    }),
-    fontWeight: '500',
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 8,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.05)',
-  },
-  priceContainer: {
-    gap: 0,
-  },
-  priceLabel: {
-    ...Platform.select({
-      web: { fontSize: 12 },
-      default: { fontSize: 11 },
-    }),
-    color: '#9CA3AF',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    fontWeight: '600',
-  },
-  priceValue: {
-    ...Platform.select({
-      web: { fontSize: 20 },
-      default: { fontSize: 18 },
-    }),
-    fontWeight: '900',
-    color: '#00ea6b',
-  },
-  priceValueLight: {
+  price: {
+    fontSize: 16,
+    fontWeight: '700',
     color: '#02c259',
   },
-  joinButton: {
-    borderRadius: 10,
-    ...Platform.select({
-      web: { minWidth: 120, height: 36 },
-      default: { minWidth: 110, height: 34 },
-    }),
-    backgroundColor: '#00ea6b',
+  priceUnit: {
+    fontSize: 11,
+    fontWeight: '400',
+    color: '#6B7280',
   },
-  joinButtonText: {
-    color: '#043529',
-    fontWeight: '700',
+  subTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
   },
-  opponentRow: {
+  ratingBlockRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  starRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  ratingText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  locationRowShort: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  location: {
+    fontSize: 14,
+  },
+  opponentSection: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     marginTop: 4,
     backgroundColor: 'rgba(0,234,107,0.03)',
-    padding: 10,
+    padding: 8,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(0,234,107,0.08)',
   },
   opponentAvatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: 'rgba(0,234,107,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -380,17 +301,67 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   opponentLabel: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '800',
     letterSpacing: 0.5,
-    marginBottom: 2,
+    marginBottom: 1,
   },
   opponentName: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
   },
   teamNameHighlight: {
     fontWeight: '800',
     color: '#10b981',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    marginVertical: 10,
+  },
+  scheduleBlock: {
+    marginBottom: 10,
+    gap: 6,
+  },
+  scheduleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+  },
+  scheduleText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 16,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  mapsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  mapsBtnNative: {
+    gap: 6,
+  },
+  mapsLink: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  joinButton: {
+    borderRadius: 10,
+    minWidth: 100,
+    height: 34,
+    backgroundColor: '#00ea6b',
+  },
+  joinButtonText: {
+    color: '#043529',
+    fontWeight: '700',
+    fontSize: 13,
   },
 });

@@ -401,7 +401,7 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.nativeScreen}>
-      <MobileAppNavbar />
+      <MobileAppNavbar title="My Profile" titleColor="#00ea6b" />
       <ScrollView style={styles.container} contentContainerStyle={styles.nativeScrollContent}>
         {profileBody}
       </ScrollView>

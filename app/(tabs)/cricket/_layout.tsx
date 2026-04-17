@@ -15,6 +15,7 @@ import {
 } from 'lucide-react-native';
 import { Modal } from 'react-native';
 import WebLayout from '@/components/web/WebLayout';
+import MobileAppNavbar from '@/components/MobileAppNavbar';
 
 const TABS = [
   { id: 'player-profile', label: 'Player Profile', path: '/cricket/player-profile' },
@@ -142,6 +143,9 @@ export default function CricketLayout() {
   return (
     <WebLayout noCard>
       <View style={styles.container}>
+        {Platform.OS !== 'web' && (
+          <MobileAppNavbar title="Cricket" titleColor="#00ea6b" />
+        )}
         {!pathname.includes('/scoring') && (
           <View style={styles.tabsStickyWrapper}>
           <View style={styles.tabsInnerRow}>

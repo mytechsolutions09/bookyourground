@@ -24,6 +24,8 @@ interface GroundCardProps {
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
   favoriteLoading?: boolean;
+  /** Force light theme. Default is true on Web, false on Native. */
+  lightMode?: boolean;
 }
 
 export default function GroundCard({
@@ -36,8 +38,10 @@ export default function GroundCard({
   isFavorite = false,
   onToggleFavorite,
   favoriteLoading = false,
+  lightMode = Platform.OS === 'web',
 }: GroundCardProps) {
   const isWeb = Platform.OS === 'web';
+  const isLight = lightMode;
   const schedule = useMemo(
     () => getGroundBookingScheduleLines(ground.pitch_type),
     [ground.pitch_type],
@@ -61,16 +65,16 @@ export default function GroundCard({
     return `https://www.google.com/maps/search/?api=1&query=${query}`;
   }, [ground.address, ground.city, ground.state]);
 
-  const pinColor = isWeb ? '#6B7280' : NATIVE_TEXT;
-  const scheduleIconColor = isWeb ? '#10b981' : NATIVE_BORDER;
+  const pinColor = isLight ? '#6B7280' : NATIVE_TEXT;
+  const scheduleIconColor = isLight ? '#10b981' : NATIVE_BORDER;
   
-  const nameStyle = [styles.name, compact && styles.nameCompact, !isWeb && styles.nameNative];
-  const ratingStyle = [styles.rating, compact && styles.ratingCompact, !isWeb && styles.ratingNative];
-  const locationStyle = [styles.location, !isWeb && styles.locationNative];
-  const scheduleTextStyle = [styles.scheduleText, !isWeb && styles.scheduleTextNative];
-  const priceStyle = [styles.price, compact && styles.priceCompact, !isWeb && styles.priceNative];
-  const mapsLinkStyle = [styles.mapsLink, !isWeb && styles.mapsLinkNative];
-  const amenityStyle = [styles.amenity, !isWeb && styles.amenityNative];
+  const nameStyle = [styles.name, compact && styles.nameCompact, !isLight && styles.nameNative];
+  const ratingStyle = [styles.rating, compact && styles.ratingCompact, !isLight && styles.ratingNative];
+  const locationStyle = [styles.location, !isLight && styles.locationNative];
+  const scheduleTextStyle = [styles.scheduleText, !isLight && styles.scheduleTextNative];
+  const priceStyle = [styles.price, compact && styles.priceCompact, !isLight && styles.priceNative];
+  const mapsLinkStyle = [styles.mapsLink, !isLight && styles.mapsLinkNative];
+  const amenityStyle = [styles.amenity, !isLight && styles.amenityNative];
 
   return (
     <TouchableOpacity
@@ -82,8 +86,8 @@ export default function GroundCard({
         style={[
           styles.card,
           compact && styles.cardCompact,
-          !isWeb && styles.cardNative,
-          isWeb && styles.cardWeb,
+          !isLight && styles.cardNative,
+          isLight && styles.cardWeb,
         ]}
       >
         <View style={styles.imageWrapper}>
@@ -112,7 +116,23 @@ export default function GroundCard({
             <Text style={nameStyle} numberOfLines={2}>
               {ground.name}
             </Text>
-            <View style={styles.ratingBlock}>
+            <Text style={priceStyle}>
+              {formatCurrency(
+                displayPricePerUnit != null
+                  ? displayPricePerUnit
+                  : ground.base_price_per_hour,
+              )}
+              <Text style={styles.priceUnit}>
+                {unitLabelOverride ??
+                  (String(ground.pitch_type ?? '').toLowerCase().includes('box')
+                    ? '/hr'
+                    : ' / match')}
+              </Text>
+            </Text>
+          </View>
+
+          <View style={styles.subTitleRow}>
+            <View style={styles.ratingBlockRow}>
               <View style={styles.starRow}>
                 {[1, 2, 3, 4, 5].map((i) => {
                   const filled = reviewCount > 0 && i <= Math.round(averageRating);
@@ -132,61 +152,47 @@ export default function GroundCard({
                   : 'No reviews yet'}
               </Text>
             </View>
+            <View style={styles.locationRowShort}>
+              <MapPin size={12} color={pinColor} />
+              <Text style={locationStyle} numberOfLines={1}>{ground.city}</Text>
+            </View>
           </View>
-          <View style={styles.locationRow}>
-            <MapPin size={14} color={pinColor} />
-            <Text style={locationStyle}>{ground.city}, {ground.state}</Text>
-          </View>
+
           {showBookingSchedule ? (
             <View style={styles.scheduleBlock}>
               <View style={styles.scheduleRow}>
                 <Calendar size={13} color={scheduleIconColor} />
-                <Text style={scheduleTextStyle} numberOfLines={2}>
+                <Text style={scheduleTextStyle} numberOfLines={1}>
                   {schedule.datesLine}
                 </Text>
               </View>
               <View style={styles.scheduleRow}>
                 <Clock size={13} color={scheduleIconColor} />
-                <Text style={scheduleTextStyle} numberOfLines={3}>
+                <Text style={scheduleTextStyle} numberOfLines={1}>
                   {schedule.slotsLine}
                 </Text>
               </View>
             </View>
           ) : null}
-            <View style={styles.footer}>
-            <View style={styles.footerLeft}>
-              <Text style={priceStyle}>
-                {formatCurrency(
-                  displayPricePerUnit != null
-                    ? displayPricePerUnit
-                    : ground.base_price_per_hour,
-                )}
-                {unitLabelOverride ??
-                  (String(ground.pitch_type ?? '').toLowerCase().includes('box')
-                    ? '/hr'
-                    : ' / match')}
-              </Text>
-              {mapsUrl && (
-                <TouchableOpacity
-                  style={[styles.mapsBtn, !isWeb && styles.mapsBtnNative]}
-                  onPress={() => {
-                    void Linking.openURL(mapsUrl);
-                  }}
-                >
-                  <MapPin size={11} color={isWeb ? '#6B7280' : NATIVE_BORDER} />
-                  <Text style={mapsLinkStyle}>View on Google Maps</Text>
-                </TouchableOpacity>
-              )}
-            </View>
+
+          <View style={styles.footer}>
             <View style={styles.amenities}>
               {ground.has_floodlights ? <Text style={amenityStyle}>Lights</Text> : null}
               {ground.has_parking ? <Text style={amenityStyle}>Parking</Text> : null}
               {ground.has_changing_rooms ? (
                 <Text style={amenityStyle}>Changing rooms</Text>
               ) : null}
-              {ground.has_pavilion ? <Text style={amenityStyle}>Pavilion</Text> : null}
-              {ground.has_washrooms ? <Text style={amenityStyle}>Washroom</Text> : null}
             </View>
+            {mapsUrl && (
+              <TouchableOpacity
+                style={[styles.mapsBtn, !isLight && styles.mapsBtnNative]}
+                onPress={() => {
+                  void Linking.openURL(mapsUrl);
+                }}
+              >
+                <Text style={mapsLinkStyle}>View Maps</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </Card>
@@ -291,6 +297,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 2,
   },
+  subTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  ratingBlockRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  locationRowShort: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -338,23 +360,31 @@ const styles = StyleSheet.create({
   footer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'flex-end',
     gap: 8,
+    marginTop: 12,
+    flexWrap: 'wrap',
   },
   footerLeft: {
     flex: 1,
     minWidth: 0,
   },
   price: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
     color: '#02c259',
+  },
+  priceUnit: {
+    fontSize: 11,
+    fontWeight: '400',
+    color: '#6B7280',
   },
   priceCompact: {
     fontSize: 13,
   },
   priceNative: {
     color: NATIVE_BORDER,
+    fontSize: 16,
   },
   mapsBtn: {
     flexDirection: 'row',
@@ -377,7 +407,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
-    justifyContent: 'flex-end',
+    justifyContent: 'flex-start',
     flex: 1,
     minWidth: 120,
   },

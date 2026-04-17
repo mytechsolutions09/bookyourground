@@ -51,6 +51,13 @@ type BatsmanType = 'RH' | 'LH';
 type BowlerType = 'RA_Fast' | 'LA_Fast' | 'RA_Spin' | 'LA_Spin';
 type OversType = '1-6' | 'After-6';
 
+interface Fielder {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+}
+
 const getPositionName = (x: number, y: number, batsman: BatsmanType): string => {
   const dx = x - CIRCLE_CX;
   const dy = y - (CIRCLE_CY - 40); // Relative to batsman position (batsman stands slightly behind center)

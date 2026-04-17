@@ -28,7 +28,7 @@ export default function CheckoutScreen() {
   const { id } = useLocalSearchParams();
   const { user, profile } = useAuth();
   const { width } = useWindowDimensions();
-  const isDesktop = width > 768;
+  const isDesktop = width > 480;
   
   const [booking, setBooking] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -505,7 +505,7 @@ export default function CheckoutScreen() {
       padding: Platform.OS === 'web' ? (width > 768 ? 24 : 16) : 12,
     },
     layout: {
-      gap: isDesktop ? (width > 1024 ? 32 : 16) : 12,
+      gap: isDesktop ? (width > 1024 ? 32 : 16) : 0,
     },
     productImg: {
       height: Platform.OS === 'web' && width > 768 ? 220 : 160,
@@ -516,11 +516,11 @@ export default function CheckoutScreen() {
   };
 
   const isSmallScreen = width < 768;
-  const themeBg = isSmallScreen ? '#F8FAFC' : '#06392e';
-  const themeTextColor = isSmallScreen ? '#111827' : '#FFFFFF';
-  const themeBackBtnBg = isSmallScreen ? '#FFFFFF' : 'rgba(255, 255, 255, 0.1)';
-  const themeBackBtnBorder = isSmallScreen ? '#E2E8F0' : 'rgba(255, 255, 255, 0.1)';
-  const themeBackIconColor = isSmallScreen ? '#475569' : '#FFFFFF';
+  const themeBg = '#F8FAFC';
+  const themeTextColor = '#111827';
+  const themeBackBtnBg = '#FFFFFF';
+  const themeBackBtnBorder = '#E2E8F0';
+  const themeBackIconColor = '#475569';
 
   const content = (
     <ScrollView 
@@ -595,9 +595,9 @@ export default function CheckoutScreen() {
             </View>
           </Card>
 
-          <View style={[styles.securityInfo, { backgroundColor: isSmallScreen ? '#ECFDF5' : 'rgba(255, 255, 255, 0.05)', borderColor: isSmallScreen ? '#D1FAE5' : 'transparent', borderWidth: isSmallScreen ? 1 : 0 }]}>
+          <View style={[styles.securityInfo, { backgroundColor: '#ECFDF5', borderColor: '#D1FAE5', borderWidth: 1 }]}>
             <ShieldCheck size={16} color="#01b854" />
-            <RNText style={[styles.securityText, { color: isSmallScreen ? '#065F46' : 'rgba(255, 255, 255, 0.7)' }]}>
+            <RNText style={[styles.securityText, { color: '#065F46' }]}>
                Purchase protected by Book Your Ground Security
             </RNText>
           </View>
@@ -805,7 +805,7 @@ export default function CheckoutScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#06392e',
+    backgroundColor: '#F8FAFC',
   },
   content: {
     maxWidth: 1100,
@@ -816,7 +816,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#06392e',
+    backgroundColor: '#F8FAFC',
   },
   header: {
     flexDirection: 'row',
@@ -848,7 +848,7 @@ const styles = StyleSheet.create({
   },
   sideColumn: {
     flex: 1,
-    minWidth: Platform.OS === 'web' ? 360 : '100%',
+    minWidth: Platform.OS === 'web' ? 300 : '100%',
   },
   itemCard: {
     padding: 24,

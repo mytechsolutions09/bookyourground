@@ -102,7 +102,12 @@ export default function CricketTeams() {
 
   return (
     <View style={{ flex: 1 }}>
-      <View style={styles.subTabContainer}>
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false} 
+        contentContainerStyle={styles.tabsScroll} 
+        style={styles.tabsWrapper}
+      >
         {['Your', 'All', 'Top Teams', 'Networks'].map((label) => (
           <TouchableOpacity 
             key={label} 
@@ -112,7 +117,7 @@ export default function CricketTeams() {
             <Text style={[styles.subTabText, subTab === label.toLowerCase() && styles.subTabTextActive]}>{label}</Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
       
       <View style={styles.teamList}>
          {subTab === 'your' && (
@@ -174,34 +179,36 @@ export default function CricketTeams() {
 }
 
 const styles = StyleSheet.create({
-  subTabContainer: {
-    flexDirection: 'row',
+  tabsWrapper: {
     marginBottom: 20,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 8,
-    padding: 4,
+  },
+  tabsScroll: {
+    gap: 10,
   },
   subTab: {
-    flex: 1,
+    paddingHorizontal: 18,
     paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 6,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   subTabActive: {
-    backgroundColor: '#FFFFFF',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    backgroundColor: '#01b854',
+    borderColor: '#01b854',
+    shadowColor: '#01b854',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   subTabText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#64748B',
   },
   subTabTextActive: {
-    color: '#01b854',
+    color: '#FFFFFF',
   },
   teamList: {
     gap: 12,

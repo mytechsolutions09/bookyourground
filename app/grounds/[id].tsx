@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, Alert, Platform, TextInput, Pressable, Linking } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { MapPin, Star } from 'lucide-react-native';
+import { MapPin, Star, Heart } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { slugifyGroundSegment } from '@/utils/groundSlug';
 import { isCricketGroundType } from '@/utils/cricketGround';
@@ -32,7 +32,62 @@ export default function GroundDetailsScreen() {
   const [reviewRating, setReviewRating] = useState<number>(5);
   const [reviewComment, setReviewComment] = useState<string>('');
   const [heroImageIndex, setHeroImageIndex] = useState(0);
+  const [isFavorite, setIsFavorite] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
   const idParam = Array.isArray(id) ? id[0] : id;
+
+  const checkFavorite = async () => {
+    if (!user?.id || !ground?.id) {
+      setIsFavorite(false);
+      return;
+    }
+    try {
+      const { data, error } = await supabase
+        .from('favorites')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('ground_id', ground.id)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      setIsFavorite(!!data);
+    } catch (e) {
+      console.warn('Error checking favorite:', e);
+    }
+  };
+
+  const toggleFavorite = async () => {
+    if (!user) {
+      Alert.alert('Login required', 'Please sign in to favorite grounds.');
+      router.push('/(auth)/login' as any);
+      return;
+    }
+    if (!ground?.id || favoriteLoading) return;
+
+    setFavoriteLoading(true);
+    try {
+      if (isFavorite) {
+        const { error } = await supabase
+          .from('favorites')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('ground_id', ground.id);
+        if (error) throw error;
+        setIsFavorite(false);
+      } else {
+        const { error } = await supabase
+          .from('favorites')
+          .insert({ user_id: user.id, ground_id: ground.id });
+        if (error) throw error;
+        setIsFavorite(true);
+      }
+    } catch (e: any) {
+      console.error('Error toggling favorite:', e);
+      Alert.alert('Error', e.message ?? 'Failed to update favorites');
+    } finally {
+      setFavoriteLoading(false);
+    }
+  };
 
   const loadGround = async () => {
     try {
@@ -106,6 +161,12 @@ export default function GroundDetailsScreen() {
     loadGround();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idParam]);
+
+  useEffect(() => {
+    if (ground?.id && user?.id) {
+      checkFavorite();
+    }
+  }, [ground?.id, user?.id]);
 
   useEffect(() => {
     setHeroImageIndex(0);
@@ -380,6 +441,41 @@ export default function GroundDetailsScreen() {
                   : 'No reviews yet'}
               </Text>
             </View>
+
+            {/* Price strip (mobile) */}
+            {Platform.OS !== 'web' && ground.base_price_per_hour ? (
+              <View style={styles.priceStrip}>
+                <View>
+                  <Text style={styles.priceLabel}>Starting from</Text>
+                  <Text style={styles.priceValue}>
+                    ₹{Number(ground.base_price_per_hour).toLocaleString('en-IN')}
+                    <Text style={styles.priceUnit}>
+                      {String(ground.pitch_type ?? '').toLowerCase().includes('box') ? ' /hr' : ' /match'}
+                    </Text>
+                  </Text>
+                </View>
+              </View>
+            ) : null}
+
+            {/* ── Booking form (Now part of the main container) ── */}
+            {ground.id ? (
+              <View style={styles.formContainer}>
+                <LandingBookingForm
+                  initialGroundId={String(ground.id)}
+                  hideGroundPicker
+                  initialDate={typeof date === 'string' ? date : undefined}
+                  initialStartTime={typeof time === 'string' ? time : undefined}
+                  initialTeamType={
+                    teams === 'one' || teams === 'both' ? (teams as 'one' | 'both') : undefined
+                  }
+                  fullWidth
+                  noCard
+                  hideTitle
+                  groundPageAccent
+                  lightAppTheme
+                />
+              </View>
+            ) : null}
           </Card>
 
           {ground.description && (
@@ -550,20 +646,6 @@ export default function GroundDetailsScreen() {
             )}
           </Card>
 
-          {ground.id ? (
-            <LandingBookingForm
-              initialGroundId={String(ground.id)}
-              hideGroundPicker
-              initialDate={typeof date === 'string' ? date : undefined}
-              initialStartTime={typeof time === 'string' ? time : undefined}
-              initialTeamType={
-                teams === 'one' || teams === 'both' ? (teams as 'one' | 'both') : undefined
-              }
-              fullWidth
-              hideTitle
-              groundPageAccent
-            />
-          ) : null}
         </View>
       </ScrollView>
     );
@@ -571,7 +653,30 @@ export default function GroundDetailsScreen() {
 
   return (
     <>
-      <Stack.Screen options={{ title: ground?.name ?? 'Ground' }} />
+      <Stack.Screen 
+        options={{ 
+          title: ground?.name ?? 'Ground',
+          headerLeft: () => null,
+          headerRight: () => (
+            Platform.OS !== 'web' && ground?.id ? (
+              <Pressable
+                onPress={toggleFavorite}
+                disabled={favoriteLoading}
+                style={{ marginRight: 15 }}
+                accessibilityRole="button"
+                accessibilityLabel={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+              >
+                <Heart
+                  size={22}
+                  color={isFavorite ? '#518167' : '#64748B'}
+                  fill={isFavorite ? '#518167' : 'none'}
+                  strokeWidth={2}
+                />
+              </Pressable>
+            ) : null
+          )
+        }} 
+      />
       {Platform.OS === 'web' ? <WebLayout>{content}</WebLayout> : content}
     </>
   );
@@ -580,27 +685,32 @@ export default function GroundDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F9FAFB',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F9FAFB',
   },
   imageCard: {
     padding: 0,
     overflow: 'hidden',
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    marginBottom: 12,
   },
   heroImage: {
     width: '100%',
     height: 280,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: '#F1F5F9',
   },
   thumbScroll: {
     maxHeight: 100,
     borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    borderTopColor: '#F1F5F9',
   },
   thumbScrollContent: {
     paddingVertical: 12,
@@ -627,7 +737,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 80,
     borderRadius: 8,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: '#EDF2F7',
   },
   content: {
     padding: 16,
@@ -645,9 +755,14 @@ const styles = StyleSheet.create({
   },
   name: {
     fontSize: 26,
-    fontWeight: '700',
-    color: '#212121',
-    marginBottom: 8,
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: 4,
+    letterSpacing: -0.5,
+  },
+  formContainer: {
+    marginTop: 16,
+    paddingTop: 8,
   },
   locationRow: {
     flexDirection: 'row',
@@ -679,16 +794,27 @@ const styles = StyleSheet.create({
   },
   rating: {
     fontSize: 16,
-    color: '#333',
+    color: '#4B5563',
     fontWeight: '600',
   },
   section: {
-    marginBottom: 16,
+    marginBottom: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 20,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#212121',
+    color: '#111827',
     marginBottom: 12,
   },
   description: {
@@ -700,9 +826,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: '#F1F5F9',
   },
   detailLabel: {
     fontSize: 15,
@@ -710,7 +836,7 @@ const styles = StyleSheet.create({
   },
   detailValue: {
     fontSize: 15,
-    color: '#333',
+    color: '#111827',
     fontWeight: '600',
   },
   detailValueMuted: {
@@ -745,6 +871,32 @@ const styles = StyleSheet.create({
   noReviewsText: {
     fontSize: 14,
     color: '#6B7280',
+  },
+  priceStrip: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  priceLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 2,
+    fontWeight: '500',
+  },
+  priceValue: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#111827',
+    letterSpacing: -0.5,
+  },
+  priceUnit: {
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
   },
   reviewsList: {
     marginTop: 8,
@@ -805,13 +957,14 @@ const styles = StyleSheet.create({
   reviewInput: {
     borderWidth: 1,
     borderColor: '#D1D5DB',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    minHeight: 70,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    minHeight: 80,
     textAlignVertical: 'top',
     fontSize: 13,
     color: '#111827',
+    backgroundColor: '#FFFFFF',
     marginBottom: 8,
   },
   reviewSubmitButton: {

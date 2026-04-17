@@ -75,11 +75,11 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
       setSearchResults({ grounds: [], matches: [] });
       return;
     }
-    
+
     setIsSearching(true);
     try {
       const q = `%${query}%`;
-      
+
       // 1. Search Grounds
       const { data: groundsData } = await supabase
         .from('grounds')
@@ -149,14 +149,14 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
   const handleResultPress = (type: 'ground' | 'match', item: any) => {
     setSearchQuery('');
     setSearchFocused(false);
-    
+
     if (type === 'ground') {
       router.push(makeGroundPath(item) as any);
     } else {
       // Direct join for Matches found in search
       const citySlug = (item.ground?.city || 'city').toLowerCase().replace(/[^a-z0-9]+/g, '-');
       const nameSlug = (item.ground?.name || 'ground').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-      
+
       router.push({
         pathname: `/ground/${citySlug}/${nameSlug}`,
         params: {
@@ -253,7 +253,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
   // On ground info (/grounds/[id]) and booking info (/bookings/[id]) pages,
   // hide the left sidebar for all roles so the content can take full width.
   const isPublicNoSidebar =
-    isLanding || isMarketing || isGroundInfoPage || isBookingDetails || isCheckoutPage || isLegalOrInfoPage || (cleanPath === '/find-an-opponent' && !isSuperAdmin) || cleanPath === '/(tabs)/grounds' || cleanPath === '/shop' || cleanPath === '/search' || cleanPath.startsWith('/live/') || (cleanPath.startsWith('/cricket/player-profile') && !cleanPath.startsWith('/cricketdata'));
+    isLanding || isMarketing || isGroundInfoPage || isBookingDetails || isCheckoutPage || isLegalOrInfoPage || (cleanPath === '/find-an-opponent' && !isSuperAdmin) || cleanPath === '/(tabs)/grounds' || cleanPath === '/shop' || cleanPath.startsWith('/shop/') || cleanPath === '/search' || cleanPath.startsWith('/live/') || (cleanPath.startsWith('/cricket/') && !cleanPath.startsWith('/cricketdata'));
   // Treat the presence of a Supabase `user` as authenticated even if `profile`
   // hasn't loaded yet (prevents briefly showing "Sign In").
   const isAuthenticated = !!user || !!profile || isSuperAdmin;
@@ -303,7 +303,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
     const isActive =
       hrefSegments.length > 0
         ? hrefSegments.length === segments.length &&
-          hrefSegments.every((seg, i) => segments[i] === seg)
+        hrefSegments.every((seg, i) => segments[i] === seg)
         : currentPath === targetHref;
     const iconColor = isActive
       ? (!isCompact ? '#374151' : '#00ea6b')
@@ -447,8 +447,8 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                                 <View style={styles.searchSection}>
                                   <RNText style={styles.searchSectionTitle}>VENUES</RNText>
                                   {searchResults.grounds.map(g => (
-                                    <TouchableOpacity 
-                                      key={g.id} 
+                                    <TouchableOpacity
+                                      key={g.id}
                                       style={styles.searchItem}
                                       onPress={() => handleResultPress('ground', g)}
                                     >
@@ -463,13 +463,13 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                                   ))}
                                 </View>
                               )}
-                              
+
                               {searchResults.matches.length > 0 && (
                                 <View style={styles.searchSection}>
                                   <RNText style={styles.searchSectionTitle}>AVAILABLE MATCHES</RNText>
                                   {searchResults.matches.map(m => (
-                                    <TouchableOpacity 
-                                      key={m.id} 
+                                    <TouchableOpacity
+                                      key={m.id}
                                       style={styles.searchItem}
                                       onPress={() => handleResultPress('match', m)}
                                     >
@@ -585,18 +585,18 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
               ) : (
                 !isCompact && (
                   <View style={{ flexDirection: 'row', gap: 24 }}>
-                      <RNText
-                        style={styles.headerPrimaryButtonText}
-                        onPress={() => router.push('/cricket/player-profile' as any)}
-                      >
-                        Cricket
-                      </RNText>
-                      <RNText
-                        style={styles.headerPrimaryButtonText}
-                        onPress={() => router.push('/shop' as any)}
-                      >
-                        Shop
-                      </RNText>
+                    <RNText
+                      style={styles.headerPrimaryButtonText}
+                      onPress={() => router.push('/cricket/player-profile' as any)}
+                    >
+                      Cricket
+                    </RNText>
+                    <RNText
+                      style={styles.headerPrimaryButtonText}
+                      onPress={() => router.push('/shop' as any)}
+                    >
+                      Shop
+                    </RNText>
                     <RNText
                       style={styles.headerPrimaryButtonText}
                       onPress={() => router.push('/book-my-ground' as any)}
@@ -794,7 +794,6 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                   <>
                     <RNText style={styles.sidebarTitle}>My Account</RNText>
                     <NavLink href="/(tabs)/dashboard" icon={LayoutDashboard} label="Dashboard" />
-                    <NavLink href="/shop" icon={ShoppingBag} label="Shop" />
                     <NavLink href="/cricket/player-profile" icon={Swords} label="Cricket Hub" />
                     <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
                     <NavLink href="/(tabs)/favorites" icon={Star} label="Favorites" />
@@ -819,7 +818,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
           )}
 
         {showMenuPanel ? (
-          <View 
+          <View
             style={isAdminLayout ? styles.sidebarContainerAdmin : styles.sidebarContainer}
           >
             <View
@@ -981,8 +980,6 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                           icon={LayoutDashboard}
                           label="Dashboard"
                         />
-                        <NavLink href="/shop" icon={ShoppingBag} label="Shop" />
-
                         <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
                         <NavLink href="/grounds?tab=favorite" icon={Star} label="Favorites" />
                         <NavLink href="/(tabs)/profile" icon={User} label="Profile" />
@@ -1024,19 +1021,19 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
             { label: 'Profile', icon: CircleUser, href: '/(tabs)/profile' },
           ].map((item) => {
             const Icon = item.icon;
-            const isActive = cleanPath === item.href || 
-                            (item.href === '/grounds' && cleanPath === '/book-my-ground') ||
-                            (item.href === '/' && cleanPath === '');
+            const isActive = cleanPath === item.href ||
+              (item.href === '/grounds' && cleanPath === '/book-my-ground') ||
+              (item.href === '/' && cleanPath === '');
             return (
               <TouchableOpacity
                 key={item.label}
                 style={styles.bottomBarItem}
                 onPress={() => {
-                   if (item.href === '/') {
-                     router.replace('/' as any);
-                   } else {
-                     router.push(item.href as any);
-                   }
+                  if (item.href === '/') {
+                    router.replace('/' as any);
+                  } else {
+                    router.push(item.href as any);
+                  }
                 }}
               >
                 <Icon size={22} color={isActive ? '#00ea6b' : '#9CA3AF'} />
@@ -1287,7 +1284,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 'auto',
     width: '100%',
     position: 'relative',
-    paddingTop: 32, 
+    paddingTop: 32,
     paddingHorizontal: 24,
   },
   bodyAdmin: {
@@ -1322,7 +1319,7 @@ const styles = StyleSheet.create({
     ...Platform.select({
       web: {
         position: 'sticky' as any,
-        top: 96, 
+        top: 96,
         alignSelf: 'flex-start',
         maxHeight: 'calc(100vh - 80px)' as any,
         transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',

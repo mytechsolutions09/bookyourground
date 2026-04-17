@@ -12,7 +12,13 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
+  LayoutAnimation,
+  UIManager,
 } from 'react-native';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { BookingWithDetails } from '@/types';
@@ -149,6 +155,13 @@ export default function FindAnOpponentScreen() {
             activeOpacity={0.7}
           >
             <Text style={styles.activeTabText}>Find an Opponent</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.tab}
+            onPress={() => router.push('/(tabs)/grounds?tab=favorite')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.tabText}>Favourite</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -364,19 +377,18 @@ export default function FindAnOpponentScreen() {
     <View style={styles.nativeScreen}>
       <MobileAppNavbar 
         title="Find an Opponent" 
-        titleColor="#043529" 
-        lightBg 
-        rightAction={
-          <TouchableOpacity onPress={() => {}}>
-            <Menu size={24} color="#043529" />
-          </TouchableOpacity>
-        }
+        titleColor="#00ea6b" 
       />
 
       <View style={styles.tabContainer}>
         <TouchableOpacity 
           style={styles.tab}
-          onPress={() => router.push('/(tabs)/grounds')}
+          onPress={() => {
+            if (Platform.OS !== 'web' && LayoutAnimation) {
+              LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            }
+            router.push('/(tabs)/grounds');
+          }}
           activeOpacity={0.7}
         >
           <Text style={styles.tabText}>Book a Ground</Text>
@@ -386,6 +398,18 @@ export default function FindAnOpponentScreen() {
           activeOpacity={0.7}
         >
           <Text style={styles.activeTabText}>Find an Opponent</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.tab}
+          onPress={() => {
+            if (Platform.OS !== 'web' && LayoutAnimation) {
+              LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+            }
+            router.push('/(tabs)/grounds?tab=favorite');
+          }}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.tabText}>Favourite</Text>
         </TouchableOpacity>
       </View>
 
@@ -656,7 +680,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   nativeItem: {
-    marginBottom: 8,
+    marginBottom: 4,
   },
   loaderContainer: {
     flex: 1,
@@ -695,42 +719,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.04)',
+    backgroundColor: 'transparent',
     borderRadius: 999,
     padding: 6,
     marginHorizontal: 16,
     marginTop: 8,
     marginBottom: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.02)',
   },
   webTabContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.04)',
+    backgroundColor: 'transparent',
     borderRadius: 999,
     padding: 6,
     marginBottom: 24,
     width: '100%',
     maxWidth: 600,
     alignSelf: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.02)',
   },
   desktopTabContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.04)',
+    backgroundColor: 'transparent',
     borderRadius: 999,
     padding: 6,
     marginBottom: 24,
     width: '100%',
     maxWidth: 600,
     alignSelf: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.02)',
   },
   tab: {
     flex: 1,
@@ -740,12 +758,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   activeTab: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+    backgroundColor: 'transparent',
   },
   tabText: {
     color: '#334155',
