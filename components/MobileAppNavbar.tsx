@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Image, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Image, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { router } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 
@@ -44,9 +44,9 @@ export default function MobileAppNavbar({ title, titleColor = '#02c259', rightAc
 
 const styles = StyleSheet.create({
   navbar: {
-    minHeight: 92,
+    minHeight: Platform.OS === 'web' ? 64 : 92,
     paddingHorizontal: 16,
-    paddingTop: 32,
+    paddingTop: Platform.OS === 'web' ? 12 : 32,
     paddingBottom: 8,
     justifyContent: 'flex-end',
     alignItems: 'center',

@@ -369,7 +369,7 @@ export default function FindAnOpponentScreen() {
     </View>
   );
 
-  if (Platform.OS === 'web') {
+  if (Platform.OS === 'web' && !isSmall) {
     return <WebLayout>{content}</WebLayout>;
   }
 

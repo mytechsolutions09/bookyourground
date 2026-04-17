@@ -7,7 +7,8 @@ import {
   Platform, 
   TouchableOpacity, 
   ActivityIndicator, 
-  RefreshControl 
+  RefreshControl,
+  useWindowDimensions 
 } from 'react-native';
 import { router } from 'expo-router';
 import { 
@@ -183,7 +184,10 @@ function NotificationsInner() {
 }
 
 export default function NotificationsScreen() {
-  if (IS_WEB) {
+  const { width } = useWindowDimensions();
+  const isCompact = width < 900;
+
+  if (IS_WEB && !isCompact) {
     return (
       <WebLayout noCard>
         <NotificationsInner />

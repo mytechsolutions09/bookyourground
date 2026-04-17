@@ -3,6 +3,7 @@ import { View, Text as RNText, StyleSheet, ScrollView, TouchableOpacity, Image, 
 import { ShoppingBag, Search, Filter, ArrowRight, Star, ShoppingCart } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import MobileAppNavbar from '@/components/MobileAppNavbar';
 import WebLayout from '@/components/web/WebLayout';
 
 const FEATURED_PRODUCTS = [

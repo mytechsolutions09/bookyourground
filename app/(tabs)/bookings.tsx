@@ -687,19 +687,6 @@ export default function BookingsScreen() {
 
       ) : (
         <>
-          <View style={styles.nativeActionHeader}>
-            <View>
-              <Text style={styles.nativeActionTitle}>Plan your next game</Text>
-              <Text style={styles.nativeActionSubtitle}>Join a match or find an opponent</Text>
-            </View>
-            <TouchableOpacity 
-              style={styles.nativeActionButton}
-              onPress={() => router.push('/find-an-opponent')}
-            >
-              <Swords size={18} color="#043529" />
-              <Text style={styles.nativeActionButtonText}>Find Opponent</Text>
-            </TouchableOpacity>
-          </View>
 
           <View style={styles.nativeFilterBar}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.nativeTabRow}>
@@ -799,7 +786,9 @@ export default function BookingsScreen() {
     </View>
   );
 
-  if (Platform.OS === 'web') {
+  const isCompact = width < 900;
+
+  if (Platform.OS === 'web' && !isCompact) {
     return (
       <WebLayout>
         {content}

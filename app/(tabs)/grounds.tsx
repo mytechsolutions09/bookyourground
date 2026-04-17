@@ -135,7 +135,7 @@ export default function GroundsTabScreen() {
     </View>
   );
 
-  if (Platform.OS === 'web') {
+  if (Platform.OS === 'web' && !isSmall) {
     return (
       <WebLayout>
         <ScrollView

@@ -186,6 +186,7 @@ export default function LandingBookingForm({
   const { user } = useAuth();
   const { width: windowWidth } = useWindowDimensions();
   const isWeb = Platform.OS === 'web';
+  const IS_DARK = !isWeb || windowWidth < 900;
   const styles = React.useMemo(() => getStyles(isWeb, lightAppTheme), [isWeb, lightAppTheme]);
 
   /** Landing: Search → pick ground → Book Now. Skip when booking a known ground. */

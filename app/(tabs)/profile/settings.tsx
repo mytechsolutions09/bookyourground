@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Platform, ScrollView, TextInput, Alert, ActivityIndicator, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, StyleSheet, Platform, ScrollView, TextInput, Alert, ActivityIndicator, TouchableOpacity, Modal, useWindowDimensions } from 'react-native';
 import { Mail, Phone, CheckCircle } from 'lucide-react-native';
 import { router } from 'expo-router';
 import WebLayout from '@/components/web/WebLayout';
@@ -186,7 +186,10 @@ function UserSettingsInner() {
 }
 
 export default function UserSettingsScreen() {
-  if (IS_WEB) {
+  const { width } = useWindowDimensions();
+  const isCompact = width < 900;
+
+  if (IS_WEB && !isCompact) {
     return (
       <WebLayout noCard>
         <UserSettingsInner />

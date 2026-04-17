@@ -259,17 +259,11 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
   const isAuthenticated = !!user || !!profile || isSuperAdmin;
   // App pages: sidebar as before. Public routes (/, book-my-ground): burger opens a small drawer
   // (Sign In / Sign Up when logged out; Profile when logged in).
-  const showOwnerMobileMenu = isAuthenticated && isGroundOwner && !isPublicNoSidebar && isCompact;
-  const showAdminMobileMenu =
-    isAuthenticated && isSuperAdmin && isAdminRoute && !isPublicNoSidebar && isCompact;
-  const showUserMobileMenu =
-    isAuthenticated &&
-    !isGroundOwner &&
-    !isSuperAdmin &&
-    !isPublicNoSidebar &&
-    isCompact;
   const showMenuPanel = !isPublicNoSidebar && isAuthenticated && !isCompact;
-  const showLandingMobileMenu = isPublicNoSidebar && isCompact;
+  const showLandingMobileMenu = false; // Disabled globally on mobile web in favor of bottom bar
+  const showOwnerMobileMenu = false;
+  const showAdminMobileMenu = false;
+  const showUserMobileMenu = false;
 
   const handleSignOut = async () => {
     await signOut();
@@ -377,7 +371,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
             !isGroundDetails && !isMarketing && scrolled && styles.heroHeaderScrolled,
           ]}
         >
-          <View style={styles.headerContent}>
+          <View style={[styles.headerContent, isCompact && styles.headerContentCompact]}>
             <TouchableOpacity
               onPress={() => router.replace('/')}
               style={[styles.logo, scrolled && styles.logoScrolled]}
@@ -495,50 +489,54 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                     </View>
                   )}
 
-                  <RNText
-                    style={styles.headerPrimaryButtonText}
-                    onPress={() => router.push('/cricket/player-profile' as any)}
-                  >
-                    Cricket
-                  </RNText>
+                  {!isCompact && (
+                    <>
+                      <RNText
+                        style={styles.headerPrimaryButtonText}
+                        onPress={() => router.push('/cricket/player-profile' as any)}
+                      >
+                        Cricket
+                      </RNText>
 
-                  <RNText
-                    style={styles.headerPrimaryButtonText}
-                    onPress={() => router.push('/shop' as any)}
-                  >
-                    Shop
-                  </RNText>
+                      <RNText
+                        style={styles.headerPrimaryButtonText}
+                        onPress={() => router.push('/shop' as any)}
+                      >
+                        Shop
+                      </RNText>
 
 
-                  <RNText
-                    style={styles.headerPrimaryButtonText}
-                    onPress={() => router.push(groundsHref as any)}
-                  >
-                    Grounds
-                  </RNText>
+                      <RNText
+                        style={styles.headerPrimaryButtonText}
+                        onPress={() => router.push(groundsHref as any)}
+                      >
+                        Grounds
+                      </RNText>
 
-                  {!isAuthenticated ? (
-                    <RNText
-                      style={styles.headerSecondaryButtonText}
-                      onPress={() => router.push('/(auth)/login' as any)}
-                    >
-                      Sign in
-                    </RNText>
-                  ) : (
-                    <RNText
-                      style={styles.headerSecondaryButtonText}
-                      onPress={() => {
-                        if (isSuperAdmin) {
-                          router.push('/(admin)/dashboard' as any);
-                        } else if (isGroundOwner) {
-                          router.push('/(owner)/owner-dashboard' as any);
-                        } else {
-                          router.push('/(tabs)/dashboard' as any);
-                        }
-                      }}
-                    >
-                      Dashboard
-                    </RNText>
+                      {!isAuthenticated ? (
+                        <RNText
+                          style={styles.headerSecondaryButtonText}
+                          onPress={() => router.push('/(auth)/login' as any)}
+                        >
+                          Sign in
+                        </RNText>
+                      ) : (
+                        <RNText
+                          style={styles.headerSecondaryButtonText}
+                          onPress={() => {
+                            if (isSuperAdmin) {
+                              router.push('/(admin)/dashboard' as any);
+                            } else if (isGroundOwner) {
+                              router.push('/(owner)/owner-dashboard' as any);
+                            } else {
+                              router.push('/(tabs)/dashboard' as any);
+                            }
+                          }}
+                        >
+                          Dashboard
+                        </RNText>
+                      )}
+                    </>
                   )}
                 </>
               )}
@@ -555,7 +553,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
             isUserRoute && !isPublicNoSidebar && styles.userHeader,
           ]}
         >
-          <View style={styles.headerContent}>
+          <View style={[styles.headerContent, isCompact && styles.headerContentCompact]}>
             <TouchableOpacity
               onPress={() => router.replace('/')}
               style={styles.logo}
@@ -571,7 +569,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
             </TouchableOpacity>
 
             <View style={styles.headerRight}>
-              {(isCompact && (isAuthenticated || isPublicNoSidebar)) ? (
+              {(!isCompact && (isAuthenticated || isPublicNoSidebar)) ? (
                 <TouchableOpacity
                   style={styles.burgerButton}
                   onPress={() => setMenuOpen((prev) => !prev)}
@@ -634,7 +632,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
         </View>
       )}
 
-      <View style={[bodyStyle, isCompact && isPublicNoSidebar && { paddingBottom: 60 }]}>
+      <View style={[bodyStyle, isCompact && isPublicNoSidebar && { paddingBottom: 72 }]}>
         {(showLandingMobileMenu ||
           showOwnerMobileMenu ||
           showAdminMobileMenu ||
@@ -1010,14 +1008,13 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
         </View>
       </View>
 
-      {isCompact && isPublicNoSidebar && (
+      {isCompact && (
         <View style={styles.bottomBar}>
           {[
             { label: 'Home', icon: House, href: '/' },
             { label: 'Grounds', icon: LandPlot, href: '/grounds' },
             { label: 'Cricket', icon: Trophy, href: '/cricket/player-profile' },
             { label: 'Shop', icon: ShoppingBag, href: '/shop' },
-            { label: 'Bookings', icon: CalendarCheck2, href: '/(tabs)/bookings' },
             { label: 'Profile', icon: CircleUser, href: '/(tabs)/profile' },
           ].map((item) => {
             const Icon = item.icon;
@@ -1036,7 +1033,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                   }
                 }}
               >
-                <Icon size={22} color={isActive ? '#00ea6b' : '#9CA3AF'} />
+                <Icon size={22} color={isActive ? '#00ea6b' : '#9ca3af'} />
                 <RNText style={[styles.bottomBarText, isActive && styles.bottomBarTextActive]}>
                   {item.label}
                 </RNText>
@@ -1111,8 +1108,11 @@ const styles = StyleSheet.create({
     maxWidth: 1400,
     marginHorizontal: 'auto',
     paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingVertical: 14, // Standard desktop
     width: '100%',
+  },
+  headerContentCompact: {
+    paddingVertical: 8, // Smaller screen
   },
   logo: {
     flexDirection: 'row',
@@ -1125,8 +1125,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(15,23,42,0.85)',
   },
   logoImage: {
-    height: 40,
-    width: 220,
+    height: 38,
+    width: 200,
     maxWidth: '100%' as any,
   },
   sidebarBrand: {
@@ -1593,24 +1593,25 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 60,
+    height: 85,
     backgroundColor: '#043529',
     flexDirection: 'row',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.1)',
+    borderTopColor: '#06392e',
     zIndex: 3000,
     paddingHorizontal: 10,
-    paddingBottom: 4,
+    paddingBottom: 2,
   },
   bottomBarItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     height: '100%',
+    paddingTop: 8,
   },
   bottomBarText: {
     fontSize: 10,
-    marginTop: 4,
+    marginTop: 2,
     color: '#9CA3AF',
     fontWeight: '500',
   },

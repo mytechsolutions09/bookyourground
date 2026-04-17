@@ -128,7 +128,7 @@ function DashboardContent() {
     [bookings],
   );
 
-  const IS_DARK = false;
+  const IS_DARK = Platform.OS !== 'web' || isCompact;
 
   const content = (
     <ScrollView

@@ -140,14 +140,15 @@ export default function CricketLayout() {
     </Modal>
   );
 
-  return (
-    <WebLayout noCard>
-      <View style={styles.container}>
-        {Platform.OS !== 'web' && (
-          <MobileAppNavbar title="Cricket" titleColor="#00ea6b" />
-        )}
-        {!pathname.includes('/scoring') && (
-          <View style={styles.tabsStickyWrapper}>
+  const isCompact = width < 900;
+
+  const content = (
+    <View style={styles.container}>
+      {(Platform.OS !== 'web' || isCompact) && (
+        <MobileAppNavbar title="Cricket" titleColor="#00ea6b" />
+      )}
+      {!pathname.includes('/scoring') && (
+        <View style={styles.tabsStickyWrapper}>
           <View style={styles.tabsInnerRow}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsScroll} style={{ flex: 1 }}>
               {TABS.map((tab) => (
@@ -171,15 +172,24 @@ export default function CricketLayout() {
         </View>
       )}
 
-        <ScrollView style={styles.mainScroll} contentContainerStyle={styles.mainScrollContent} showsVerticalScrollIndicator={false}>
-          <View style={styles.contentContainer}>
-             <Slot />
-          </View>
-        </ScrollView>
-      </View>
+      <ScrollView style={styles.mainScroll} contentContainerStyle={styles.mainScrollContent} showsVerticalScrollIndicator={false}>
+        <View style={styles.contentContainer}>
+          <Slot />
+        </View>
+      </ScrollView>
       {renderActionModal()}
-    </WebLayout>
+    </View>
   );
+
+  if (Platform.OS === 'web' && !isCompact) {
+    return (
+      <WebLayout noCard>
+        {content}
+      </WebLayout>
+    );
+  }
+
+  return content;
 }
 
 const styles = StyleSheet.create({

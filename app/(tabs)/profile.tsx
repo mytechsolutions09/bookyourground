@@ -27,7 +27,7 @@ import MobileAppNavbar from '../../components/MobileAppNavbar';
 import ProfileHeaderTabs from '@/components/profile/ProfileHeaderTabs';
 
 const IS_WEB = Platform.OS === 'web';
-const IS_DARK = false;
+const IS_DARK = Platform.OS !== 'web' || (typeof window !== 'undefined' && window.innerWidth < 900);
 const DARK_BG = '#043529';
 const DARK_ACCENT = '#00ea6b';
 const DARK_TEXT = '#dcc093';
@@ -391,7 +391,7 @@ export default function ProfileScreen() {
     </View>
   );
 
-  if (Platform.OS === 'web') {
+  if (Platform.OS === 'web' && !isCompact) {
     return (
       <WebLayout noCard>
         <ScrollView style={[styles.container, { backgroundColor: 'transparent' }]}>{profileBody}</ScrollView>
