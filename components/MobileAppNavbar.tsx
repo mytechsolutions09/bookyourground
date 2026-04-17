@@ -9,17 +9,18 @@ type MobileAppNavbarProps = {
   titleColor?: string;
   rightAction?: React.ReactNode;
   lightBg?: boolean;
+  smallerTitle?: boolean;
 };
 
 /** Green top bar with logo — use on native-only screens (not web). */
-export default function MobileAppNavbar({ title, titleColor = '#01b854', rightAction, lightBg }: MobileAppNavbarProps) {
+export default function MobileAppNavbar({ title, titleColor = '#01b854', rightAction, lightBg, smallerTitle }: MobileAppNavbarProps) {
   const canGoBack = router.canGoBack();
 
   return (
     <View style={[styles.navbar, lightBg && styles.navbarLight]} accessibilityRole="header">
       {canGoBack && (
-        <TouchableOpacity 
-          onPress={() => router.back()} 
+        <TouchableOpacity
+          onPress={() => router.back()}
           style={styles.backButton}
           accessibilityLabel="Go back"
           accessibilityRole="button"
@@ -28,7 +29,7 @@ export default function MobileAppNavbar({ title, titleColor = '#01b854', rightAc
         </TouchableOpacity>
       )}
       {title ? (
-        <Text style={[styles.titleText, { color: titleColor }]}>{title}</Text>
+        <Text style={[styles.titleText, { color: titleColor }, smallerTitle && { fontSize: 15 }]}>{title}</Text>
       ) : (
         <Image
           source={require('../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}

@@ -507,7 +507,7 @@ const styles = StyleSheet.create({
   },
   backText: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#043529',
   },
   editBtnTop: {
@@ -521,7 +521,7 @@ const styles = StyleSheet.create({
   },
   editTextBot: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#15803d',
   },
   headerCard: {
@@ -573,11 +573,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileName: {
-    fontSize: 22,
-    fontWeight: '900',
+    fontFamily: 'Inter',
+    fontSize: 20,
+    fontWeight: '500',
     color: '#043529',
-    letterSpacing: -0.5,
+    letterSpacing: 1.2,
     marginBottom: 4,
+    textTransform: 'uppercase',
   },
   nameRow: {
      flexDirection: 'row',
@@ -608,7 +610,7 @@ const styles = StyleSheet.create({
   },
   styleTagText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '500',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -629,7 +631,7 @@ const styles = StyleSheet.create({
   },
   roleTagText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#1E40AF',
   },
   editForm: {
@@ -637,7 +639,7 @@ const styles = StyleSheet.create({
   },
   editInput: {
     fontSize: 20,
-    fontWeight: '900',
+    fontWeight: '500',
     color: '#043529',
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
@@ -658,7 +660,7 @@ const styles = StyleSheet.create({
   },
   editSectionTitle: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#94A3B8',
     textTransform: 'uppercase',
   },
@@ -681,7 +683,7 @@ const styles = StyleSheet.create({
   },
   editChipText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#64748B',
   },
   editChipTextActive: {
@@ -700,7 +702,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F5F9',
   },
   cancelBtnText: {
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#64748B',
   },
   saveBtn: {
@@ -711,7 +713,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#01b854',
   },
   saveBtnText: {
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#FFFFFF',
   },
   headerDivider: {
@@ -729,12 +731,12 @@ const styles = StyleSheet.create({
   },
   headerStatValue: {
     fontSize: 20,
-    fontWeight: '900',
+    fontWeight: '500',
     color: '#043529',
   },
   headerStatLabel: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#94A3B8',
     textTransform: 'uppercase',
     marginTop: 2,
@@ -755,7 +757,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '900',
+    fontWeight: '500',
     color: '#1E293B',
     letterSpacing: -0.5,
   },
@@ -784,12 +786,12 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 16,
-    fontWeight: '900',
+    fontWeight: '500',
     color: '#043529',
   },
   statLabel: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#94A3B8',
     textTransform: 'uppercase',
   },
@@ -816,7 +818,7 @@ const styles = StyleSheet.create({
   },
   matchOpponent: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#1E293B',
     marginBottom: 2,
   },
@@ -830,12 +832,12 @@ const styles = StyleSheet.create({
   },
   scoreText: {
     fontSize: 15,
-    fontWeight: '900',
+    fontWeight: '500',
     color: '#043529',
   },
   perfLabel: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#64748B',
     textTransform: 'uppercase',
   },

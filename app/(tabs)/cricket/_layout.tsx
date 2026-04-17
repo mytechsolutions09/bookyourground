@@ -16,23 +16,117 @@ import {
 import { Modal } from 'react-native';
 import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
+import { useUI } from '@/contexts/UIContext';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withTiming, 
+  Easing, 
+  useAnimatedScrollHandler,
+  runOnJS
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import CricketPlayerProfile from './player-profile';
+import CricketMatches from './matches';
+import CricketTournaments from './tournaments';
+import CricketTeams from './teams';
+import CricketStats from './stats';
+import CricketHighlights from './highlights';
 
 const TABS = [
-  { id: 'player-profile', label: 'Player Profile', path: '/cricket/player-profile' },
-  { id: 'matches', label: 'Matches', path: '/cricket/matches' },
-  { id: 'tournaments', label: 'Tournaments', path: '/cricket/tournaments' },
-  { id: 'teams', label: 'Teams', path: '/cricket/teams' },
-  { id: 'stats', label: 'Stats', path: '/cricket/stats' },
-  { id: 'highlights', label: 'Highlights', path: '/cricket/highlights' },
+  { id: 'player-profile', label: 'Player Profile', index: 0 },
+  { id: 'matches', label: 'Matches', index: 1 },
+  { id: 'tournaments', label: 'Tournaments', index: 2 },
+  { id: 'teams', label: 'Teams', index: 3 },
+  { id: 'stats', label: 'Stats', index: 4 },
+  { id: 'highlights', label: 'Highlights', index: 5 },
 ];
 
 export default function CricketLayout() {
   const router = useRouter();
   const pathname = usePathname();
-  const { width } = useWindowDimensions();
+  const { width: windowWidth } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const { setTabBarVisible } = useUI();
 
-  const activeTabId = TABS.find(t => pathname.includes(t.id))?.id || 'player-profile';
+  // Find initial tab from URL
+  const initialTabId = TABS.find(t => pathname.includes(t.id))?.id || 'player-profile';
+  const initialIndex = TABS.find(t => t.id === initialTabId)?.index || 0;
+
+  const [activeTabId, setActiveTabId] = React.useState(initialTabId);
+  const horizontalPagerRef = React.useRef<Animated.ScrollView>(null);
+  const tabScrollRef = React.useRef<ScrollView>(null);
+  
   const [isActionModalVisible, setIsActionModalVisible] = React.useState(false);
+  
+  const headerTranslateY = useSharedValue(0);
+  const lastScrollY = useSharedValue(0);
+  const HEADER_HEIGHT = 105;
+
+  // Auto-scroll the tab bar when active tab changes
+  React.useEffect(() => {
+    const idx = TABS.find(t => t.id === activeTabId)?.index || 0;
+    tabScrollRef.current?.scrollTo({ x: idx * 100 - (windowWidth/2) + 50, animated: true });
+    
+    // URL sync removed to prevent infinite loops during rapid swipes
+  }, [activeTabId]);
+
+  // Handle manual tab press
+  const onTabPress = (tabId: string, idx: number) => {
+    setActiveTabId(tabId);
+    horizontalPagerRef.current?.scrollTo({ x: idx * windowWidth, animated: true });
+  };
+
+  const horizontalScrollHandler = useAnimatedScrollHandler({
+    onMomentumEnd: (event) => {
+      const idx = Math.round(event.contentOffset.x / windowWidth);
+      const tab = TABS[idx];
+      if (tab) {
+        runOnJS(setActiveTabId)(tab.id);
+      }
+    },
+  });
+
+  React.useEffect(() => {
+    return () => setTabBarVisible(true);
+  }, []);
+
+  const verticalScrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      const currentY = event.contentOffset.y;
+      const diff = currentY - lastScrollY.value;
+      
+      if (diff > 1 && currentY > 50) {
+        if (headerTranslateY.value === 0) {
+          headerTranslateY.value = withTiming(-HEADER_HEIGHT - insets.top, { 
+            duration: 600,
+            easing: Easing.out(Easing.exp)
+          });
+          runOnJS(setTabBarVisible)(false);
+        }
+      } else if (diff < -2 || currentY < 20) {
+        if (headerTranslateY.value < 0) {
+          headerTranslateY.value = withTiming(0, { 
+            duration: 600,
+            easing: Easing.out(Easing.exp)
+          });
+          runOnJS(setTabBarVisible)(true);
+        }
+      }
+      lastScrollY.value = currentY;
+    },
+  });
+
+  const headerAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: headerTranslateY.value }],
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    backgroundColor: '#F8FAFC',
+  }));
 
   const renderActionModal = () => (
     <Modal
@@ -80,7 +174,7 @@ export default function CricketLayout() {
               style={styles.actionItem} 
               onPress={() => {
                 setIsActionModalVisible(false);
-                alert('Tournament registration coming soon!');
+                router.push('/cricket-tournament/create');
               }}
             >
               <View style={[styles.actionIconBox, { backgroundColor: '#FFF7ED' }]}>
@@ -140,43 +234,79 @@ export default function CricketLayout() {
     </Modal>
   );
 
-  const isCompact = width < 900;
+  const isCompact = windowWidth < 900;
 
   const content = (
     <View style={styles.container}>
-      {(Platform.OS !== 'web' || isCompact) && (
-        <MobileAppNavbar title="Cricket" />
-      )}
-      {!pathname.includes('/scoring') && (
-        <View style={styles.tabsStickyWrapper}>
-          <View style={styles.tabsInnerRow}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsScroll} style={{ flex: 1 }}>
-              {TABS.map((tab) => (
-                <TouchableOpacity 
-                  key={tab.id} 
-                  style={[styles.tab, activeTabId === tab.id && styles.tabActive]} 
-                  onPress={() => router.push(tab.path as any)}
-                >
-                  <Text style={[styles.tabText, activeTabId === tab.id && styles.tabTextActive]}>{tab.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-            
-            <TouchableOpacity 
-              style={styles.plusIconWrapper}
-              onPress={() => setIsActionModalVisible(true)}
-            >
-              <Plus size={24} color="#01b854" strokeWidth={3} />
-            </TouchableOpacity>
+      <Animated.View style={headerAnimatedStyle}>
+        {(Platform.OS !== 'web' || isCompact) && (
+          <MobileAppNavbar title="Cricket" smallerTitle={true} />
+        )}
+        {!pathname.includes('/scoring') && (
+          <View style={styles.tabsStickyWrapper}>
+            <View style={styles.tabsInnerRow}>
+              <ScrollView 
+                ref={tabScrollRef}
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                contentContainerStyle={styles.tabsScroll} 
+                style={{ flex: 1 }}
+              >
+                 {TABS.map((tab) => (
+                   <TouchableOpacity 
+                     key={tab.id} 
+                     style={styles.tab} 
+                     onPress={() => onTabPress(tab.id, tab.index)}
+                   >
+                     <View style={[styles.tabUnderline, activeTabId === tab.id && styles.tabUnderlineActive]}>
+                       <Text style={[styles.tabText, activeTabId === tab.id && styles.tabTextActive]}>{tab.label}</Text>
+                     </View>
+                   </TouchableOpacity>
+                 ))}
+              </ScrollView>
+              
+              <TouchableOpacity 
+                style={styles.plusIconWrapper}
+                onPress={() => setIsActionModalVisible(true)}
+              >
+                <Plus size={24} color="#01b854" strokeWidth={3} />
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      )}
+        )}
+      </Animated.View>
 
-      <ScrollView style={styles.mainScroll} contentContainerStyle={styles.mainScrollContent} showsVerticalScrollIndicator={false}>
-        <View style={styles.contentContainer}>
-          <Slot />
-        </View>
-      </ScrollView>
+      <Animated.ScrollView
+        ref={horizontalPagerRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        contentOffset={{ x: initialIndex * windowWidth, y: 0 }}
+        onScroll={horizontalScrollHandler}
+        scrollEventThrottle={16}
+        style={{ flex: 1 }}
+      >
+        {TABS.map((tab) => (
+          <View key={tab.id} style={{ width: windowWidth }}>
+            <Animated.ScrollView 
+              onScroll={verticalScrollHandler}
+              scrollEventThrottle={16}
+              style={styles.mainScroll} 
+              contentContainerStyle={[styles.mainScrollContent, { paddingTop: HEADER_HEIGHT + insets.top }]} 
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.contentContainer}>
+                {tab.id === 'player-profile' && <CricketPlayerProfile />}
+                {tab.id === 'matches' && <CricketMatches />}
+                {tab.id === 'tournaments' && <CricketTournaments />}
+                {tab.id === 'teams' && <CricketTeams />}
+                {tab.id === 'stats' && <CricketStats />}
+                {tab.id === 'highlights' && <CricketHighlights />}
+              </View>
+            </Animated.ScrollView>
+          </View>
+        ))}
+      </Animated.ScrollView>
       {renderActionModal()}
     </View>
   );
@@ -199,8 +329,6 @@ const styles = StyleSheet.create({
   },
   tabsStickyWrapper: {
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
     paddingTop: Platform.OS === 'web' ? 0 : 0,
     zIndex: 10,
   },
@@ -213,21 +341,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   tabsScroll: {
-    paddingVertical: 12,
+    paddingVertical: 5,
     gap: 8,
   },
   tab: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: 16,
     backgroundColor: 'transparent',
   },
-  tabActive: {
-    backgroundColor: 'transparent',
+  tabUnderline: {
+    paddingVertical: 10,
+    borderBottomWidth: 3,
+    borderBottomColor: 'transparent',
+  },
+  tabUnderlineActive: {
+    borderBottomColor: '#01b854',
   },
   tabText: {
     fontFamily: 'Inter',
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '500',
     color: '#64748B',
   },
@@ -238,11 +369,9 @@ const styles = StyleSheet.create({
   plusIconWrapper: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F0FDF4',
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 12,
+    marginLeft: 4,
   },
   mainScroll: {
     flex: 1,
@@ -255,7 +384,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     width: '100%',
     paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingTop: 0,
   },
   modalOverlay: {
     flex: 1,

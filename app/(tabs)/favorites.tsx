@@ -9,6 +9,16 @@ import {
   TouchableOpacity,
   useWindowDimensions,
 } from 'react-native';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withTiming, 
+  Easing, 
+  useAnimatedScrollHandler,
+  runOnJS
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useUI } from '@/contexts/UIContext';
 import { router } from 'expo-router';
 import { Heart } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
@@ -18,7 +28,7 @@ import GroundCard from '@/components/grounds/GroundCard';
 import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 
-function FavoritesInner() {
+function FavoritesInner({ onScroll, headerHeight, insets }: { onScroll?: any, headerHeight: number, insets: any }) {
   const { user } = useAuth();
   const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,13 +109,20 @@ function FavoritesInner() {
 
   return (
     <View style={styles.container}>
-      <FlatList
+      <Animated.FlatList
+        onScroll={onScroll}
+        scrollEventThrottle={16}
         data={grounds}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, { paddingTop: Platform.OS !== 'web' ? headerHeight + insets.top + 8 : 0 }]}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00ea6b" />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+            tintColor="#00ea6b" 
+            progressViewOffset={Platform.OS !== 'web' ? headerHeight + insets.top + 10 : 0}
+          />
         }
         ListEmptyComponent={
           !loading ? (
@@ -121,43 +138,96 @@ function FavoritesInner() {
   );
 }
 
-export default function FavoritesScreen() {
+export default function FavoritesScreen({ hideHeader = false, externalScrollHandler }: { hideHeader?: boolean, externalScrollHandler?: any }) {
   const { width } = useWindowDimensions();
   const isWebWithTabs = Platform.OS === 'web' && width >= 900;
+  const insets = useSafeAreaInsets();
+  const { setTabBarVisible } = useUI();
   
-  const content = (
+  const headerTranslateY = useSharedValue(0);
+  const lastScrollY = useSharedValue(0);
+  const HEADER_HEIGHT = 100;
+
+  useEffect(() => {
+    return () => setTabBarVisible(true);
+  }, []);
+
+  const verticalScrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      const currentY = event.contentOffset.y;
+      const diff = currentY - lastScrollY.value;
+      
+      if (diff > 1 && currentY > 50) {
+        if (headerTranslateY.value === 0) {
+          headerTranslateY.value = withTiming(-HEADER_HEIGHT - insets.top, { 
+            duration: 600,
+            easing: Easing.out(Easing.exp)
+          });
+          runOnJS(setTabBarVisible)(false);
+        }
+      } else if (diff < -2 || currentY < 20) {
+        if (headerTranslateY.value < 0) {
+          headerTranslateY.value = withTiming(0, { 
+            duration: 600,
+            easing: Easing.out(Easing.exp)
+          });
+          runOnJS(setTabBarVisible)(true);
+        }
+      }
+      lastScrollY.value = currentY;
+    },
+  });
+
+  const headerAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: headerTranslateY.value }],
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    backgroundColor: '#F9FAFB',
+  }));
+  
+  const content = (isWeb: boolean) => (
     <View style={{ flex: 1 }}>
-       <View style={[styles.tabContainer, isWebWithTabs && styles.webTabContainer]}>
-          <TouchableOpacity 
-            style={styles.tab}
-            onPress={() => router.push('/grounds')}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.tabText}>Book a Ground</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.tab}
-            onPress={() => router.push('/find-an-opponent')}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.tabText}>Find an Opponent</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.tab, styles.activeTab]}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.activeTabText}>Favourite</Text>
-          </TouchableOpacity>
-        </View>
-        <FavoritesInner />
+       {!hideHeader && (
+         <View style={[styles.tabContainer, isWebWithTabs && styles.webTabContainer]}>
+            <TouchableOpacity 
+              style={styles.tab}
+              onPress={() => router.push('/grounds')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.tabText}>Book a Ground</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.tab}
+              onPress={() => router.push('/find-an-opponent')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.tabText}>Find an Opponent</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.tab, styles.activeTab]}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.activeTabText}>Favourite</Text>
+            </TouchableOpacity>
+          </View>
+       )}
+        <FavoritesInner 
+          onScroll={isWeb ? null : (externalScrollHandler || verticalScrollHandler)} 
+          headerHeight={hideHeader ? 0 : HEADER_HEIGHT}
+          insets={insets}
+        />
     </View>
   );
+
 
   if (Platform.OS === 'web') {
     return (
       <WebLayout>
         <View style={styles.webWrapper}>
-          {content}
+          {content(true)}
         </View>
       </WebLayout>
     );
@@ -165,8 +235,38 @@ export default function FavoritesScreen() {
 
   return (
     <View style={styles.nativeRoot}>
-      <MobileAppNavbar title="My Favorites" titleColor="#043529" lightBg />
-      {content}
+      <Animated.View style={headerAnimatedStyle}>
+        <MobileAppNavbar title="My Favorites" titleColor="#043529" lightBg />
+        {!hideHeader && (
+           <View style={[styles.tabContainer, isWebWithTabs && styles.webTabContainer]}>
+            <TouchableOpacity 
+              style={styles.tab}
+              onPress={() => router.push('/grounds')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.tabText}>Book a Ground</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.tab}
+              onPress={() => router.push('/find-an-opponent')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.tabText}>Find an Opponent</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.tab, styles.activeTab]}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.activeTabText}>Favourite</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </Animated.View>
+      <FavoritesInner 
+        onScroll={externalScrollHandler || verticalScrollHandler} 
+        headerHeight={HEADER_HEIGHT}
+        insets={insets}
+      />
     </View>
   );
 }

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Platform } from 'react-native';
-import { MapPin, User, ChevronRight, Share2, Plus, QrCode } from 'lucide-react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Platform, ScrollView, Modal } from 'react-native';
+import { MapPin, Plus, QrCode } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { Modal } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 
 const INITIAL_TEAMS_DATA = [
   {
@@ -44,26 +44,34 @@ export default function CricketTeams() {
   }, []);
 
   const fetchTeams = async () => {
-    const { data, error } = await supabase.from('teams').select('*').order('name');
-    if (!error && data) {
-      setFetchedTeams(data.map(t => ({
-        id: t.id,
-        name: t.name,
-        location: t.location,
-        captain: t.captain,
-        image: t.image_url,
-        initials: t.name[0],
-        bgColor: '#F1F5F9',
-        isUserTeam: true
-      })));
+    try {
+      const { data, error } = await supabase.from('teams').select('*').order('name');
+      if (!error && data) {
+        setFetchedTeams(data.map(t => ({
+          id: t.id,
+          name: t.name,
+          location: t.location,
+          captain: t.captain,
+          image: t.image_url,
+          initials: t.name[0],
+          bgColor: '#F1F5F9',
+          isUserTeam: true
+        })));
+      }
+    } catch (e) {
+      console.error('Error fetching teams:', e);
     }
   };
 
-  const TeamCard = ({ team }: { team: any }) => (
-    <TouchableOpacity 
-      style={styles.teamCard}
-      onPress={() => router.push(`/teams/${team.id}`)}
+  const renderTeamCard = (team: any, index: number) => (
+    <Animated.View 
+      key={team.id}
+      entering={FadeInUp.delay(index * 50).springify().damping(15)}
     >
+      <TouchableOpacity 
+        style={styles.teamCard}
+        onPress={() => router.push(`/teams/${team.id}`)}
+      >
        <View style={[styles.teamAvatar, team.bgColor && { backgroundColor: team.bgColor }]}>
           {team.image ? (
             <Image source={{ uri: team.image }} style={styles.teamImage} />
@@ -76,7 +84,7 @@ export default function CricketTeams() {
              <Text style={styles.teamTitle}>{team.name}</Text>
              <View style={styles.teamMetaRow}>
                 <View style={[styles.metaItem, { marginRight: 16 }]}>
-                   <MapPin size={12} color="#9CA3AF" />
+                   <MapPin size={12} color="#94A3B8" />
                    <Text style={styles.metaLabel}>{team.location}</Text>
                 </View>
                 <View style={styles.metaItem}>
@@ -93,51 +101,61 @@ export default function CricketTeams() {
                   setSelectedQRTeam(team);
                 }}
              >
-                <QrCode size={18} color="#64748B" />
+                <QrCode size={18} color="#94A3B8" />
              </TouchableOpacity>
           </View>
        </View>
     </TouchableOpacity>
+    </Animated.View>
   );
 
   return (
     <View style={{ flex: 1 }}>
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false} 
-        contentContainerStyle={styles.tabsScroll} 
-        style={styles.tabsWrapper}
-      >
-        {['Your', 'All', 'Top Teams', 'Networks'].map((label) => (
-          <TouchableOpacity 
-            key={label} 
-            style={[styles.subTab, subTab === label.toLowerCase() && styles.subTabActive]} 
-            onPress={() => setSubTab(label.toLowerCase())}
-          >
-            <Text style={[styles.subTabText, subTab === label.toLowerCase() && styles.subTabTextActive]}>{label}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      <View style={styles.tabsHeaderRow}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          contentContainerStyle={styles.tabsScroll} 
+          style={styles.tabsWrapper}
+        >
+          {['Your', 'All', 'Top Teams', 'Networks'].map((label) => (
+            <TouchableOpacity 
+              key={label} 
+              style={[styles.subTab, subTab === label.toLowerCase() && styles.subTabActive]} 
+              onPress={() => setSubTab(label.toLowerCase())}
+            >
+              <Text style={[styles.subTabText, subTab === label.toLowerCase() && styles.subTabTextActive]}>{label}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+        <TouchableOpacity 
+          style={styles.miniPlusBtn}
+          onPress={() => router.push('/cricket/scoring?createTeam=true')}
+        >
+          <Plus size={20} color="#01b854" strokeWidth={3} />
+        </TouchableOpacity>
+      </View>
       
       <View style={styles.teamList}>
-         {subTab === 'your' && (
-           <TouchableOpacity style={styles.addTeamPlaceholder}>
-              <View style={styles.plusCircle}><Plus size={24} color="#01b854" /></View>
-              <View>
-                 <Text style={styles.addTeamTitle}>Add Your Team</Text>
-                 <Text style={styles.addTeamDesc}>Create your team to start playing matches</Text>
-              </View>
-           </TouchableOpacity>
-         )}
-
-         {[...fetchedTeams, ...INITIAL_TEAMS_DATA]
-           .filter(t => {
-             if (subTab === 'your') return t.isUserTeam;
-             return true;
-           })
-           .map(team => (
-             <TeamCard key={team.id} team={team} />
-           ))}
+         {(() => {
+           const allTeams = [...fetchedTeams, ...INITIAL_TEAMS_DATA];
+           const uniqueTeams = [];
+           const seen = new Set();
+           for (const t of allTeams) {
+             if (!seen.has(t.id)) {
+               uniqueTeams.push(t);
+               seen.add(t.id);
+             }
+           }
+           
+           return uniqueTeams
+             .filter(t => {
+               if (subTab === 'your') return t.isUserTeam;
+               if (subTab === 'all') return true;
+               return false;
+             })
+             .map((team, index) => renderTeamCard(team, index));
+         })()}
       </View>
 
       {/* Enlarged QR Modal */}
@@ -179,16 +197,31 @@ export default function CricketTeams() {
 }
 
 const styles = StyleSheet.create({
+  tabsHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    paddingRight: 8,
+  },
   tabsWrapper: {
-    marginBottom: 20,
+    flex: 1,
+    maxHeight: 50,
   },
   tabsScroll: {
-    gap: 10,
+    paddingHorizontal: 0,
+    gap: 8,
+  },
+  miniPlusBtn: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
   },
   subTab: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -203,7 +236,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   subTabText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '700',
     color: '#64748B',
   },
@@ -211,12 +244,13 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   teamList: {
+    paddingHorizontal: 0,
     gap: 12,
   },
   teamCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 14,
+    padding: 8,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
@@ -233,11 +267,11 @@ const styles = StyleSheet.create({
   teamAvatar: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: 12,
     backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: 12,
     overflow: 'hidden',
   },
   teamImage: {
@@ -245,7 +279,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   teamInitials: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     color: '#64748B',
   },
@@ -256,10 +290,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   teamTitle: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: 'normal',
     color: '#1E293B',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   teamMetaRow: {
     flexDirection: 'row',
@@ -271,7 +305,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   metaLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#64748B',
     fontWeight: '500',
   },
@@ -295,41 +329,46 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   teamActionBtn: {
-    padding: 8,
+    padding: 6,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   addTeamPlaceholder: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: 20,
     backgroundColor: '#F0FDF4',
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#DCFCE7',
+    borderColor: '#01b854',
     borderStyle: 'dashed',
-    marginBottom: 8,
+    marginBottom: 12,
     gap: 16,
   },
   plusCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
   },
   addTeamTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
-    color: '#166534',
+    color: '#043529',
+    marginBottom: 2,
   },
   addTeamDesc: {
     fontSize: 12,
     color: '#166534',
-    opacity: 0.7,
+    opacity: 0.8,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
@@ -341,37 +380,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '90%',
     maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 10,
   },
   qrModalTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '900',
     color: '#043529',
     marginBottom: 24,
   },
   qrModalWrapper: {
-    padding: 16,
+    padding: 20,
     backgroundColor: '#F8FAFC',
-    borderRadius: 24,
+    borderRadius: 28,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     marginBottom: 24,
   },
   qrModalHint: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
     color: '#64748B',
     marginBottom: 32,
   },
   qrModalCloseBtn: {
     backgroundColor: '#043529',
-    paddingVertical: 14,
+    paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 16,
     width: '100%',
     alignItems: 'center',
   },
   qrModalCloseText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
     color: '#FFFFFF',
   },

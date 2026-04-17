@@ -5,6 +5,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import WebLayout from '@/components/web/WebLayout';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withTiming, 
+  Easing, 
+  useAnimatedScrollHandler,
+  runOnJS
+} from 'react-native-reanimated';
+import { useUI } from '@/contexts/UIContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const FEATURED_PRODUCTS = [
   {
@@ -49,10 +59,60 @@ const CATEGORIES = [
 export default function ShopScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const isSmall = width < 900;
+  const { setTabBarVisible } = useUI();
 
-  const content = (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+  const headerTranslateY = useSharedValue(0);
+  const lastScrollY = useSharedValue(0);
+  const HEADER_HEIGHT = 75; // Reduced navbar height
+
+  React.useEffect(() => {
+    return () => setTabBarVisible(true);
+  }, []);
+
+  const verticalScrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      const currentY = event.contentOffset.y;
+      const diff = currentY - lastScrollY.value;
+      
+      if (diff > 1 && currentY > 50) {
+        if (headerTranslateY.value === 0) {
+          headerTranslateY.value = withTiming(-HEADER_HEIGHT - insets.top, { 
+            duration: 600,
+            easing: Easing.out(Easing.exp)
+          });
+          runOnJS(setTabBarVisible)(false);
+        }
+      } else if (diff < -2 || currentY < 20) {
+        if (headerTranslateY.value < 0) {
+          headerTranslateY.value = withTiming(0, { 
+            duration: 600,
+            easing: Easing.out(Easing.exp)
+          });
+          runOnJS(setTabBarVisible)(true);
+        }
+      }
+      lastScrollY.value = currentY;
+    },
+  });
+
+  const headerAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: headerTranslateY.value }],
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+  }));
+
+  const content = (onScroll?: any) => (
+    <Animated.ScrollView 
+      onScroll={onScroll}
+      scrollEventThrottle={16}
+      style={styles.container} 
+      contentContainerStyle={[styles.scrollContent, onScroll && { paddingTop: HEADER_HEIGHT + insets.top }]}
+    >
       {/* Hero Banner */}
       <LinearGradient
         colors={['#043529', '#06392e']}
@@ -130,25 +190,28 @@ export default function ShopScreen() {
           ))}
         </View>
       </View>
-    </ScrollView>
+    </Animated.ScrollView>
   );
 
   if (Platform.OS === 'web' && !isSmall) {
-    return <WebLayout>{content}</WebLayout>;
+    return <WebLayout>{content()}</WebLayout>;
   }
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F3F4F6' }}>
-      <MobileAppNavbar 
-        title="Cricket Shop" 
-        rightAction={
-          <View style={styles.headerIcons}>
-            <TouchableOpacity style={styles.iconBtn}><Search size={24} color="#01b854" /></TouchableOpacity>
-            <TouchableOpacity style={styles.iconBtn}><ShoppingCart size={24} color="#01b854" /></TouchableOpacity>
-          </View>
-        }
-      />
-      {content}
+      <Animated.View style={headerAnimatedStyle}>
+        <MobileAppNavbar 
+          title="Cricket Shop" 
+          smallerTitle={true}
+          rightAction={
+            <View style={styles.headerIcons}>
+              <TouchableOpacity style={styles.iconBtn}><Search size={24} color="#01b854" /></TouchableOpacity>
+              <TouchableOpacity style={styles.iconBtn}><ShoppingCart size={24} color="#01b854" /></TouchableOpacity>
+            </View>
+          }
+        />
+      </Animated.View>
+      {content(verticalScrollHandler)}
     </View>
   );
 }

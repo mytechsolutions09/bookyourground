@@ -251,7 +251,7 @@ export default function CricketStats() {
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <View style={styles.container}>
       <ScrollView 
         horizontal 
         showsHorizontalScrollIndicator={false} 
@@ -329,7 +329,7 @@ export default function CricketStats() {
             </View>
          </View>
       </View>
-    </ScrollView>
+    </View>
   );
 }
 
@@ -337,14 +337,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
-    padding: 12,
   },
   statsFilterBarScroll: {
     marginBottom: 20,
-    marginHorizontal: -12,
   },
   statsFilterBarContainer: {
-    paddingHorizontal: 12,
     gap: 8,
   },
   statPill: {

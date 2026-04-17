@@ -14,6 +14,7 @@ import {
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUI } from '@/contexts/UIContext';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
 
 const ACTIVE = '#00ea6b';
 const INACTIVE = '#9ca3af';
@@ -49,9 +50,26 @@ export default function MobileTabBar() {
   const segments = useSegments();
   const { isTabBarVisible } = useUI();
   const { user } = useAuth();
+  
+  const translateY = useSharedValue(0);
+
+  React.useEffect(() => {
+    translateY.value = withTiming(isTabBarVisible ? 0 : 100, {
+      duration: 600,
+      easing: Easing.out(Easing.exp),
+    });
+  }, [isTabBarVisible]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+  }));
 
   if (Platform.OS === 'web') return null;
-  if (!isTabBarVisible) return null;
 
   const activeTab = getActiveTab(segments as string[]);
   const size = 22;
@@ -61,9 +79,10 @@ export default function MobileTabBar() {
   };
 
   return (
-    <View
+    <Animated.View
       style={[
         styles.bar,
+        animatedStyle,
         {
           paddingBottom: Math.max(insets.bottom, 8),
           borderTopColor: '#06392e',
@@ -124,7 +143,7 @@ export default function MobileTabBar() {
         <CircleUser size={size} color={activeTab === 'profile' ? ACTIVE : INACTIVE} />
         <Text style={[styles.label, { color: activeTab === 'profile' ? ACTIVE : INACTIVE }]}>Profile</Text>
       </Pressable>
-    </View>
+    </Animated.View>
   );
 }
 

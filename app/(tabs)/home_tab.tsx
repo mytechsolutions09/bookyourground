@@ -12,6 +12,15 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withTiming, 
+  Easing, 
+  useAnimatedScrollHandler,
+  runOnJS
+} from 'react-native-reanimated';
+import { useUI } from '@/contexts/UIContext';
 import { useIsFocused } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, usePathname } from 'expo-router';
@@ -149,6 +158,31 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sportFilter, setSportFilter] = useState('cricket');
+  const { setTabBarVisible } = useUI();
+  
+  const lastScrollY = useSharedValue(0);
+
+  useEffect(() => {
+    return () => setTabBarVisible(true);
+  }, []);
+
+  const verticalScrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      const currentY = event.contentOffset.y;
+      if (currentY <= 0) {
+         runOnJS(setTabBarVisible)(true);
+         return;
+      }
+      const diff = currentY - lastScrollY.value;
+      
+      if (diff > 1 && currentY > 50) {
+         runOnJS(setTabBarVisible)(false);
+      } else if (diff < -2) {
+         runOnJS(setTabBarVisible)(true);
+      }
+      lastScrollY.value = currentY;
+    },
+  });
 
   const loadGrounds = useCallback(async () => {
     try {
@@ -231,7 +265,9 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.screen}>
-      <ScrollView
+      <Animated.ScrollView
+        onScroll={verticalScrollHandler}
+        scrollEventThrottle={16}
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -330,12 +366,14 @@ export default function HomeScreen() {
               <Text style={styles.sectionTitle}>Book a Ground</Text>
             </View>
           </View>
-          <LandingBookingForm 
-            fullWidth 
-            noCard 
-            hideTitle 
-            bookGroundScreenNative
-          />
+          <View style={{ paddingHorizontal: 20 }}>
+            <LandingBookingForm 
+              fullWidth 
+              noCard 
+              hideTitle 
+              bookGroundScreenNative
+            />
+          </View>
         </View>
 
         {/* ── Sport Categories ──────────────────────────── */}
@@ -471,7 +509,7 @@ export default function HomeScreen() {
         </View>
 
         <View style={{ height: 32 }} />
-      </ScrollView>
+      </Animated.ScrollView>
     </View>
   );
 }

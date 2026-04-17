@@ -25,15 +25,21 @@ export function useTeamChat(teamId: string) {
   useEffect(() => {
     if (!teamId) return;
 
+    let isSubscribed = true;
+    // Use a unique channel instance name to avoid "already subscribed" errors during remounts
+    const suffix = Math.random().toString(36).substring(7);
+    const channelName = `team_chat:${teamId}:${suffix}`;
+    
     loadMessages();
 
     // Subscribe to new messages (DB + Broadcast)
-    const channel = supabase
-      .channel(`team_chat:${teamId}`, {
-        config: {
-          broadcast: { self: true },
-        },
-      })
+    const channel = supabase.channel(channelName, {
+      config: {
+        broadcast: { self: true },
+      },
+    });
+
+    channel
       .on(
         'postgres_changes',
         { 
@@ -43,6 +49,7 @@ export function useTeamChat(teamId: string) {
           filter: `team_id=eq.${teamId}` 
         },
         async (payload) => {
+          if (!isSubscribed) return;
           // Fetch sender info for the new message
           const { data: sender } = await supabase
             .from('profiles')
@@ -59,13 +66,14 @@ export function useTeamChat(teamId: string) {
         }
       )
       .on('broadcast', { event: 'media_message' }, (payload) => {
+        if (!isSubscribed) return;
         // Handle media broadcast (not in DB)
         const mediaMsg: TeamMessage = {
           id: payload.payload.id,
           team_id: teamId,
           sender_id: payload.payload.sender_id,
-          content: payload.payload.media_url, // Use content for URL in media type
-          created_at: payload.payload.created_at,
+          content: payload.payload.media_url, 
+          created_at: payload.payload.media_url ? payload.payload.created_at : new Date().toISOString(),
           sender: {
              full_name: payload.payload.sender_name,
              avatar_url: payload.payload.sender_avatar
@@ -78,6 +86,7 @@ export function useTeamChat(teamId: string) {
       .subscribe();
 
     return () => {
+      isSubscribed = false;
       supabase.removeChannel(channel);
     };
   }, [teamId]);

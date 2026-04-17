@@ -12,8 +12,18 @@ import {
   Share,
   Alert,
   Modal,
-  TextInput as RNTextInput
+  TextInput as RNTextInput,
+  useWindowDimensions,
+  Dimensions
 } from 'react-native';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withTiming, 
+  Easing, 
+  useAnimatedScrollHandler,
+  runOnJS
+} from 'react-native-reanimated';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useUI } from '@/contexts/UIContext';
 import { 
@@ -27,6 +37,7 @@ import {
   Share2,
   Shield
 } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
@@ -71,6 +82,7 @@ export default function TeamDetailsPage() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const { setTabBarVisible } = useUI();
+  const insets = useSafeAreaInsets();
   const [team, setTeam] = useState<Team | null>(null);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,6 +101,25 @@ export default function TeamDetailsPage() {
   const [partnerships, setPartnerships] = useState<any[]>([]);
   const [partnershipsLoading, setPartnershipsLoading] = useState(false);
   
+  const { width: windowWidth } = useWindowDimensions();
+  const horizontalPagerRef = React.useRef<Animated.ScrollView>(null);
+  const tabScrollRef = React.useRef<ScrollView>(null);
+
+  const onTabPress = (tabKey: string, idx: number) => {
+    setActiveTab(tabKey);
+    horizontalPagerRef.current?.scrollTo({ x: idx * windowWidth, animated: true });
+  };
+
+  const horizontalScrollHandler = useAnimatedScrollHandler({
+    onMomentumEnd: (event) => {
+      const idx = Math.round(event.contentOffset.x / windowWidth);
+      const tab = TABS[idx];
+      if (tab) {
+        runOnJS(setActiveTab)(tab.key);
+      }
+    },
+  });
+
   const lastScrollY = React.useRef(0);
 
   const handleScroll = (event: any) => {
@@ -520,507 +551,43 @@ export default function TeamDetailsPage() {
     );
   }
 
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'info':
-        return (
-          <ScrollView 
-            style={styles.tabContent} 
-            showsVerticalScrollIndicator={false}
-            onScroll={handleScroll}
-            scrollEventThrottle={16}
-          >
-            {/* Header Card */}
-            <View style={styles.infoProfileCard}>
-              <View style={styles.profileMainInfo}>
-                <View style={[styles.infoTeamLogoContainer, { backgroundColor: team.image_url ? 'transparent' : '#F1F5F9' }]}>
-                  {team.image_url ? (
-                    <Image source={{ uri: team.image_url }} style={styles.teamLogo} />
-                  ) : (
-                    <RNText style={[styles.teamInitials, { color: '#64748B' }]}>{team.name[0]}</RNText>
-                  )}
-                </View>
-                <View style={styles.infoProfileText}>
-                  <RNText style={styles.infoProfileName}>{team.name}</RNText>
-                  <View style={[styles.officialBadge, { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' }]}>
-                    <RNText style={[styles.officialBadgeText, { color: '#64748B' }]}>OFFICIAL TEAM</RNText>
-                  </View>
-                </View>
-              </View>
 
-              <View style={styles.profileRightActions}>
-                 <TouchableOpacity 
-                   style={styles.miniQRContainer}
-                   onPress={() => setIsQRModalOpen(true)}
-                 >
-                    <QRCode
-                       value={`https://bookyourground.com/teams/${id}`}
-                       size={60}
-                       color="#043529"
-                       backgroundColor="#FFFFFF"
-                    />
-                 </TouchableOpacity>
-                 {!memberStatus && !isOwner && (
-                    <TouchableOpacity style={styles.joinBtn} onPress={handleJoinTeam}>
-                      <RNText style={styles.joinBtnText}>JOIN</RNText>
-                    </TouchableOpacity>
-                  )}
-              </View>
-            </View>
-
-            {/* Team Info */}
-            <View style={styles.section}>
-              <RNText style={styles.sectionTitle}>About Team</RNText>
-              <View style={styles.infoCard}>
-                <View style={styles.infoRow}>
-                  <MapPin size={18} color="#94A3B8" />
-                  <View style={[styles.infoTextGroup, { marginLeft: 12 }]}>
-                    <RNText style={styles.infoLabel}>Location</RNText>
-                    <RNText style={styles.infoValue}>{team.location}</RNText>
-                  </View>
-                </View>
-                
-                <View style={styles.infoDivider} />
-
-                <View style={styles.infoRow}>
-                  <Shield size={18} color="#94A3B8" />
-                  <View style={[styles.infoTextGroup, { marginLeft: 12 }]}>
-                    <RNText style={styles.infoLabel}>Admin / Owner</RNText>
-                    <RNText style={styles.infoValue}>{team?.owner?.full_name || 'Team Admin'}</RNText>
-                  </View>
-                </View>
-
-                <View style={styles.infoDivider} />
-                
-                <View style={styles.infoRow}>
-                  <User size={18} color="#94A3B8" />
-                  <View style={[styles.infoTextGroup, { marginLeft: 12 }]}>
-                    <RNText style={styles.infoLabel}>Captain</RNText>
-                    <RNText style={styles.infoValue}>{team.captain}</RNText>
-                  </View>
-                </View>
-              </View>
-            </View>
-          </ScrollView>
-        );
-      case 'matches':
-        return (
-          <ScrollView 
-            style={styles.tabContent} 
-            contentContainerStyle={styles.tabContentInner}
-            onScroll={handleScroll}
-            scrollEventThrottle={16}
-          >
-            <View style={styles.sectionHeaderRow}>
-               <RNText style={styles.sectionTitle}>Match History</RNText>
-            </View>
-
-            {matchesLoading ? (
-              <ActivityIndicator size="small" color="#01b854" />
-            ) : teamMatches.length === 0 ? (
-              <View style={styles.emptyMatches}>
-                 <RNText style={styles.emptyMatchesText}>No matches found for this team.</RNText>
-              </View>
-            ) : (
-              <View style={styles.matchesList}>
-                {teamMatches.slice(0, 10).map((match) => {
-                  const isTeamA = match.team_a_id === id;
-                  const myScore = isTeamA ? match.match_live_state?.team_a_score : match.match_live_state?.team_b_score;
-                  const oppScore = isTeamA ? match.match_live_state?.team_b_score : match.match_live_state?.team_a_score;
-                  const oppName = isTeamA ? match.team_b : match.team_a;
-                  const isWon = match.match_live_state?.winner_id === id;
-                  
-                  return (
-                    <TouchableOpacity 
-                      key={match.id} 
-                      style={styles.matchHistoryCard}
-                      onPress={() => router.push(`/live/${match.id}`)}
-                    >
-                      <View style={styles.matchHistoryHeader}>
-                        <RNText style={styles.matchHistoryDate}>
-                          {new Date(match.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
-                        </RNText>
-                        <View style={[
-                          styles.matchResultBadge, 
-                          { backgroundColor: isWon ? '#F0FDF4' : '#FEF2F2' }
-                        ]}>
-                          <RNText style={[
-                            styles.matchResultBadgeText,
-                            { color: isWon ? '#01b854' : '#EF4444' }
-                          ]}>
-                            {isWon ? 'WON' : 'LOST'}
-                          </RNText>
-                        </View>
-                      </View>
-                      
-                      <View style={styles.matchHistoryTeams}>
-                         <View style={styles.matchHistoryTeamRow}>
-                            <RNText style={styles.matchHistoryTeamName}>{team?.name}</RNText>
-                            <RNText style={styles.matchHistoryTeamScore}>{myScore || '0/0'}</RNText>
-                         </View>
-                         <View style={styles.matchHistoryVS}>
-                            <RNText style={styles.vsText}>VS</RNText>
-                         </View>
-                         <View style={styles.matchHistoryTeamRow}>
-                            <RNText style={styles.matchHistoryTeamName}>{oppName}</RNText>
-                            <RNText style={styles.matchHistoryTeamScore}>{oppScore || '0/0'}</RNText>
-                         </View>
-                      </View>
-                      
-                      {match.match_live_state?.result_text && (
-                        <RNText style={styles.matchHistoryResultText}>
-                          {match.match_live_state.result_text}
-                        </RNText>
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            )}
-          </ScrollView>
-        );
-      case 'stats':
-        return (
-          <ScrollView 
-            style={styles.tabContent} 
-            showsVerticalScrollIndicator={false}
-            onScroll={handleScroll}
-            scrollEventThrottle={16}
-          >
-            {/* Dynamic Overview Stats */}
-            <View style={styles.sectionHeaderRow}>
-               <RNText style={styles.sectionTitle}>Overview</RNText>
-            </View>
-            
-            <View style={styles.statsGrid}>
-              {[
-                { label: 'MATCHES', value: dynamicStats.matches.toString() },
-                { label: 'UPCOMING', value: dynamicStats.upcoming.toString() },
-                { label: 'WON', value: dynamicStats.won.toString(), color: '#01b854' },
-                { label: 'LOST', value: dynamicStats.lost.toString(), color: '#EF4444' },
-                { label: 'TIE', value: dynamicStats.tie.toString(), color: '#6366F1' },
-                { label: 'DRAW', value: dynamicStats.draw.toString(), color: '#8B5CF6' },
-                { label: 'NO RESULT', value: dynamicStats.noResult.toString(), color: '#94A3B8' },
-                { label: 'WIN %', value: dynamicStats.winRate },
-                { label: 'TOSS WON', value: dynamicStats.tossWon.toString() },
-                { label: 'BAT FIRST', value: dynamicStats.batFirst.toString() },
-                { label: 'FIELD FIRST', value: dynamicStats.fieldFirst.toString() },
-                { label: 'RUNS (FOR)', value: dynamicStats.runsFor.toLocaleString() },
-                { label: 'RUNS (AG)', value: dynamicStats.runsAg.toLocaleString() },
-                { label: 'HIGHEST', value: dynamicStats.highest.toString() },
-                { label: 'LOWEST', value: dynamicStats.lowest.toString() },
-              ].map((stat, idx) => (
-                <View key={idx} style={styles.statGridItem}>
-                  <RNText style={styles.statGridLabel}>{stat.label}</RNText>
-                  <RNText style={[styles.statGridValue, stat.color ? { color: stat.color } : null]}>
-                    {stat.value}
-                  </RNText>
-                </View>
-              ))}
-            </View>
-          </ScrollView>
-        );
-      case 'leaderboard':
-        return (
-          <ScrollView 
-            style={styles.tabContent} 
-            showsVerticalScrollIndicator={false}
-            onScroll={handleScroll}
-            scrollEventThrottle={16}
-          >
-            {/* Sub-Tabs */}
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false} 
-              style={styles.subTabBar}
-              contentContainerStyle={styles.subTabBarContent}
-            >
-              {[
-                { key: 'bat', label: 'Bat' },
-                { key: 'bowl', label: 'Bowl' },
-                { key: 'field', label: 'Field' },
-                { key: 'partnership', label: 'Partnership' },
-              ].map((sub) => (
-                <TouchableOpacity 
-                   key={sub.key} 
-                   style={[styles.subTab, activeSubTab === sub.key && styles.activeSubTab]}
-                   onPress={() => setActiveSubTab(sub.key as any)}
-                >
-                  <RNText style={[styles.subTabText, activeSubTab === sub.key && styles.activeSubTabText]}>
-                    {sub.label}
-                  </RNText>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
-            {leaderboardLoading ? (
-              <ActivityIndicator size="small" color="#01b854" style={{ marginTop: 20 }} />
-            ) : (
-              <View style={{ marginTop: 16 }}>
-                {activeSubTab === 'bat' && (
-                  <View>
-                    <RNText style={styles.sectionTitle}>Top Batters (Runs)</RNText>
-                    <View style={styles.leaderboardCard}>
-                      {[...leaderboardData].sort((a,b) => b.total_runs - a.total_runs).slice(0, 10).map((stat, idx) => (
-                        <View key={stat.id} style={[styles.leaderboardRow, idx === 9 && { borderBottomWidth: 0 }]}>
-                          <View style={styles.leaderboardPlayerInfo}>
-                            <RNText style={styles.leaderboardRank}>{idx + 1}</RNText>
-                            <View style={styles.leaderboardAvatar}>
-                              {stat.member?.profile?.avatar_url ? (
-                                <Image source={{ uri: stat.member.profile.avatar_url }} style={styles.avatarImg} />
-                              ) : (
-                                <RNText style={styles.avatarInitial}>{(stat.member?.player_name || '?')[0]}</RNText>
-                              )}
-                            </View>
-                            <RNText style={styles.leaderboardName} numberOfLines={1}>{stat.member?.player_name}</RNText>
-                          </View>
-                          <View style={styles.leaderboardValueContainer}>
-                            <RNText style={styles.leaderboardValue}>{stat.total_runs}</RNText>
-                            <RNText style={styles.leaderboardUnit}>Runs</RNText>
-                          </View>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                )}
-
-                {activeSubTab === 'bowl' && (
-                  <View>
-                    <RNText style={styles.sectionTitle}>Top Bowlers (Wkts)</RNText>
-                    <View style={styles.leaderboardCard}>
-                      {[...leaderboardData].sort((a,b) => b.total_wickets - a.total_wickets).slice(0, 10).map((stat, idx) => (
-                        <View key={stat.id} style={[styles.leaderboardRow, idx === 9 && { borderBottomWidth: 0 }]}>
-                          <View style={styles.leaderboardPlayerInfo}>
-                            <RNText style={styles.leaderboardRank}>{idx + 1}</RNText>
-                            <View style={styles.leaderboardAvatar}>
-                              {stat.member?.profile?.avatar_url ? (
-                                <Image source={{ uri: stat.member.profile.avatar_url }} style={styles.avatarImg} />
-                              ) : (
-                                <RNText style={styles.avatarInitial}>{(stat.member?.player_name || '?')[0]}</RNText>
-                              )}
-                            </View>
-                            <RNText style={styles.leaderboardName} numberOfLines={1}>{stat.member?.player_name}</RNText>
-                          </View>
-                          <View style={styles.leaderboardValueContainer}>
-                            <RNText style={styles.leaderboardValue}>{stat.total_wickets}</RNText>
-                            <RNText style={styles.leaderboardUnit}>Wkt</RNText>
-                          </View>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                )}
-
-                {activeSubTab === 'field' && (
-                  <View>
-                    <RNText style={styles.sectionTitle}>Top Fielders (Catches)</RNText>
-                    <View style={styles.leaderboardCard}>
-                      {[...leaderboardData].sort((a,b) => (b.total_catches || 0) - (a.total_catches || 0)).slice(0, 10).map((stat, idx) => (
-                        <View key={stat.id} style={[styles.leaderboardRow, idx === 9 && { borderBottomWidth: 0 }]}>
-                          <View style={styles.leaderboardPlayerInfo}>
-                            <RNText style={styles.leaderboardRank}>{idx + 1}</RNText>
-                            <View style={styles.leaderboardAvatar}>
-                              {stat.member?.profile?.avatar_url ? (
-                                <Image source={{ uri: stat.member.profile.avatar_url }} style={styles.avatarImg} />
-                              ) : (
-                                <RNText style={styles.avatarInitial}>{(stat.member?.player_name || '?')[0]}</RNText>
-                              )}
-                            </View>
-                            <RNText style={styles.leaderboardName} numberOfLines={1}>{stat.member?.player_name}</RNText>
-                          </View>
-                          <View style={styles.leaderboardValueContainer}>
-                            <RNText style={styles.leaderboardValue}>{stat.total_catches || 0}</RNText>
-                            <RNText style={styles.leaderboardUnit}>Catches</RNText>
-                          </View>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                )}
-
-                {activeSubTab === 'partnership' && (
-                  <View>
-                    <RNText style={styles.sectionTitle}>Highest Team Partnerships</RNText>
-                    {partnershipsLoading ? (
-                      <ActivityIndicator size="small" color="#01b854" />
-                    ) : partnerships.length === 0 ? (
-                      <View style={styles.emptyMatches}>
-                         <RNText style={styles.emptyMatchesText}>No partnership data available.</RNText>
-                      </View>
-                    ) : (
-                      <View style={styles.leaderboardCard}>
-                        {partnerships.map((p, idx) => (
-                          <View key={p.id} style={[styles.leaderboardRow, idx === partnerships.length - 1 && { borderBottomWidth: 0 }]}>
-                            <View style={[styles.leaderboardPlayerInfo, { flexDirection: 'column', alignItems: 'flex-start', gap: 2 }]}>
-                              <RNText style={styles.leaderboardName}>{p.batter_1_name} & {p.batter_2_name}</RNText>
-                              <RNText style={styles.formNote}>Wicket: {p.wicket_number}</RNText>
-                            </View>
-                            <View style={styles.leaderboardValueContainer}>
-                              <RNText style={styles.leaderboardValue}>{p.total_runs}</RNText>
-                              <RNText style={styles.leaderboardUnit}>{p.total_balls} Balls</RNText>
-                            </View>
-                          </View>
-                        ))}
-                      </View>
-                    )}
-                  </View>
-                )}
-              </View>
-            )}
-          </ScrollView>
-        );
-      case 'members':
-        return (
-          <ScrollView 
-            style={styles.tabContent}
-            onScroll={handleScroll}
-            scrollEventThrottle={16}
-          >
-             {members.map((member) => (
-               <View key={member.id} style={styles.memberRow}>
-                  <View style={styles.memberAvatar}>
-                    {member.profile?.avatar_url ? (
-                      <Image source={{ uri: member.profile.avatar_url }} style={styles.avatarImg} />
-                    ) : (
-                      <RNText style={styles.avatarInitial}>{member.player_name[0]}</RNText>
-                    )}
-                  </View>
-                  <View style={styles.memberInfo}>
-                    <RNText style={styles.memberName}>{member.player_name}</RNText>
-                    <RNText style={styles.memberRole}>{member.role.toUpperCase()}</RNText>
-                  </View>
-                  {member.status === 'pending' ? (
-                    isOwner ? (
-                      <View style={{ flexDirection: 'row', gap: 8 }}>
-                        <TouchableOpacity 
-                          style={[styles.memberActionBtn, { backgroundColor: '#F0FDF4' }]}
-                          onPress={() => handleUpdateMember(member.profile_id, 'accepted')}
-                        >
-                          <RNText style={{ color: '#01b854', fontFamily: 'Inter', fontWeight: '800', fontFamily: 'Inter', fontSize: 10 }}>ACCEPT</RNText>
-                        </TouchableOpacity>
-                        <TouchableOpacity 
-                          style={[styles.memberActionBtn, { backgroundColor: '#FEF2F2' }]}
-                          onPress={() => handleUpdateMember(member.profile_id, 'removed')}
-                        >
-                          <RNText style={{ color: '#EF4444', fontFamily: 'Inter', fontWeight: '800', fontFamily: 'Inter', fontSize: 10 }}>REJECT</RNText>
-                        </TouchableOpacity>
-                      </View>
-                    ) : (
-                      <View style={styles.pendingBadge}>
-                        <RNText style={styles.pendingText}>PENDING</RNText>
-                      </View>
-                    )
-                  ) : (
-                    isOwner ? (
-                      member.profile_id !== user?.id && (
-                        <TouchableOpacity 
-                          style={{ padding: 8 }}
-                          onPress={() => handleUpdateMember(member.profile_id, 'removed')}
-                        >
-                          <RNText style={{ color: '#EF4444', fontFamily: 'Inter', fontWeight: '700', fontFamily: 'Inter', fontSize: 11 }}>REMOVE</RNText>
-                        </TouchableOpacity>
-                      )
-                    ) : (
-                      member.profile_id === user?.id && (
-                        <TouchableOpacity 
-                          style={{ padding: 8 }}
-                          onPress={handleLeaveTeam}
-                        >
-                          <RNText style={{ color: '#EF4444', fontFamily: 'Inter', fontWeight: '700', fontFamily: 'Inter', fontSize: 11 }}>LEAVE</RNText>
-                        </TouchableOpacity>
-                      )
-                    )
-                  )}
-               </View>
-             ))}
-          </ScrollView>
-        );
-      case 'chat':
-        return <TeamChatTab teamId={team.id} isMember={isAcceptedMember} />;
-      case 'settings':
-        return (
-          <ScrollView 
-            style={styles.tabContent}
-            onScroll={handleScroll}
-            scrollEventThrottle={16}
-          >
-            <View style={styles.section}>
-              <RNText style={styles.sectionTitle}>Team Management</RNText>
-              <View style={styles.settingsCard}>
-                 <TouchableOpacity style={styles.settingsItem} onPress={openEditModal}>
-                   <View style={styles.settingsItemIcon}>
-                     <User size={20} color="#043529" />
-                   </View>
-                   <View style={styles.settingsItemContent}>
-                     <RNText style={styles.settingsItemTitle}>Edit Team Profile</RNText>
-                     <RNText style={styles.settingsItemDesc}>Change name, logo, or location</RNText>
-                   </View>
-                 </TouchableOpacity>
-                 
-                 <View style={styles.settingsDivider} />
-                 
-                 <TouchableOpacity style={styles.settingsItem} onPress={() => setActiveTab('members')}>
-                   <View style={styles.settingsItemIcon}>
-                     <Users size={20} color="#043529" />
-                   </View>
-                   <View style={styles.settingsItemContent}>
-                     <RNText style={styles.settingsItemTitle}>Manage Squad</RNText>
-                     <RNText style={styles.settingsItemDesc}>Approve requests or remove players</RNText>
-                   </View>
-                 </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.section}>
-              <RNText style={[styles.sectionTitle, { color: '#EF4444' }]}>Danger Zone</RNText>
-              <TouchableOpacity style={styles.deleteCard} onPress={handleDeleteTeam}>
-                <RNText style={styles.deleteText}>Delete Team Permanently</RNText>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
-        );
-      default:
-        return null;
-    }
-  };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.canGoBack() ? router.back() : router.push('/cricket/teams' as any)}>
-          <ArrowLeft size={24} color="#FFFFFF" strokeWidth={2.5} />
+          <ArrowLeft size={24} color="#1E293B" strokeWidth={2.5} />
         </TouchableOpacity>
         <RNText style={styles.headerTitle} numberOfLines={1}>{team.name}</RNText>
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.headerActionBtn} onPress={onShare}>
-            <Share2 size={20} color="#FFFFFF" />
+            <Share2 size={20} color="#1E293B" />
           </TouchableOpacity>
           {team.owner_id === user?.id && (
             <TouchableOpacity 
               style={styles.headerActionBtn}
               onPress={() => setActiveTab('settings')}
             >
-              <Settings size={20} color={activeTab === 'settings' ? '#01b854' : '#FFFFFF'} />
+              <Settings size={20} color={activeTab === 'settings' ? '#01b854' : '#1E293B'} />
             </TouchableOpacity>
           )}
         </View>
       </View>
 
-      <View style={styles.hero}>
-      </View>
-
       <View style={styles.tabBarContainer}>
         <ScrollView 
+          ref={tabScrollRef}
           horizontal 
           showsHorizontalScrollIndicator={false} 
           style={styles.tabBar}
           contentContainerStyle={styles.tabBarContent}
         >
-          {TABS.map((tab) => (
+          {TABS.map((tab, idx) => (
             <TouchableOpacity 
               key={tab.key}
               style={[styles.tab, activeTab === tab.key && styles.activeTab]} 
-              onPress={() => setActiveTab(tab.key)}
+              onPress={() => onTabPress(tab.key, idx)}
             >
               <RNText style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
                 {tab.label}
@@ -1031,7 +598,287 @@ export default function TeamDetailsPage() {
       </View>
 
       <View style={styles.content}>
-        {renderTabContent()}
+        <Animated.ScrollView
+          ref={horizontalPagerRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onScroll={horizontalScrollHandler}
+          scrollEventThrottle={16}
+          contentOffset={{ x: TABS.findIndex(t => t.key === activeTab) * windowWidth, y: 0 }}
+        >
+          {TABS.map((tab) => (
+            <View key={tab.key} style={{ width: windowWidth }}>
+              {activeTab === tab.key || true ? ( // Keep all tabs mounted for smooth swipe, or optimize if needed
+                 (() => {
+                    switch (tab.key) {
+                      case 'info':
+                        return (
+                          <ScrollView 
+                            style={styles.tabContent} 
+                            showsVerticalScrollIndicator={false}
+                            onScroll={handleScroll}
+                            scrollEventThrottle={16}
+                          >
+                            <View style={styles.infoProfileCard}>
+                              <View style={styles.profileMainInfo}>
+                                <View style={[styles.infoTeamLogoContainer, { backgroundColor: team.image_url ? 'transparent' : '#F1F5F9' }]}>
+                                  {team.image_url ? (
+                                    <Image source={{ uri: team.image_url }} style={styles.teamLogo} />
+                                  ) : (
+                                    <RNText style={[styles.teamInitials, { color: '#64748B' }]}>{team.name[0]}</RNText>
+                                  )}
+                                </View>
+                                <View style={styles.infoProfileText}>
+                                  <RNText style={styles.infoProfileName}>{team.name}</RNText>
+                                  <View style={styles.officialBadge}>
+                                    <RNText style={styles.officialBadgeText}>OFFICIAL TEAM</RNText>
+                                  </View>
+                                </View>
+                              </View>
+                              <View style={styles.profileRightActions}>
+                                 <TouchableOpacity 
+                                   style={styles.miniQRContainer}
+                                   onPress={() => setIsQRModalOpen(true)}
+                                 >
+                                    <QRCode
+                                       value={`https://bookyourground.com/teams/${id}`}
+                                       size={50}
+                                       color="#043529"
+                                       backgroundColor="transparent"
+                                    />
+                                 </TouchableOpacity>
+                              </View>
+                            </View>
+                            <View style={styles.section}>
+                              <RNText style={styles.sectionTitle}>About Team</RNText>
+                              
+                              {!memberStatus && !isOwner && (
+                                <TouchableOpacity style={styles.fullJoinBtn} onPress={handleJoinTeam}>
+                                  <Users size={18} color="#FFFFFF" strokeWidth={2.5} />
+                                  <RNText style={styles.fullJoinBtnText}>JOIN TEAM SQUAD</RNText>
+                                </TouchableOpacity>
+                              )}
+
+                              <View style={styles.infoCard}>
+                                <View style={styles.infoRow}>
+                                  <MapPin size={18} color="#94A3B8" />
+                                  <View style={[styles.infoTextGroup, { marginLeft: 12 }]}>
+                                    <RNText style={styles.infoLabel}>Location</RNText>
+                                    <RNText style={styles.infoValue}>{team.location}</RNText>
+                                  </View>
+                                </View>
+                                <View style={styles.infoDivider} />
+                                <View style={styles.infoRow}>
+                                  <Shield size={18} color="#94A3B8" />
+                                  <View style={[styles.infoTextGroup, { marginLeft: 12 }]}>
+                                    <RNText style={styles.infoLabel}>Admin / Owner</RNText>
+                                    <RNText style={styles.infoValue}>{team?.owner?.full_name || 'Team Admin'}</RNText>
+                                  </View>
+                                </View>
+                                <View style={styles.infoDivider} />
+                                <View style={styles.infoRow}>
+                                  <User size={18} color="#94A3B8" />
+                                  <View style={[styles.infoTextGroup, { marginLeft: 12 }]}>
+                                    <RNText style={styles.infoLabel}>Captain</RNText>
+                                    <RNText style={styles.infoValue}>{team.captain}</RNText>
+                                  </View>
+                                </View>
+                              </View>
+                            </View>
+                          </ScrollView>
+                        );
+                      case 'matches':
+                        return (
+                          <ScrollView 
+                            style={styles.tabContent} 
+                            contentContainerStyle={styles.tabContentInner}
+                            onScroll={handleScroll}
+                            scrollEventThrottle={16}
+                          >
+                            <RNText style={styles.sectionTitle}>Match History</RNText>
+                            {matchesLoading ? (
+                              <ActivityIndicator size="small" color="#01b854" />
+                            ) : teamMatches.length === 0 ? (
+                              <View style={styles.emptyMatches}>
+                                 <RNText style={styles.emptyMatchesText}>No matches found for this team.</RNText>
+                              </View>
+                            ) : (
+                              <View style={styles.matchesList}>
+                                {teamMatches.slice(0, 10).map((match) => {
+                                  const isTeamA = match.team_a_id === id;
+                                  const myScore = isTeamA ? match.match_live_state?.team_a_score : match.match_live_state?.team_b_score;
+                                  const oppScore = isTeamA ? match.match_live_state?.team_b_score : match.match_live_state?.team_a_score;
+                                  const oppName = isTeamA ? match.team_b : match.team_a;
+                                  const isWon = match.match_live_state?.winner_id === id;
+                                  return (
+                                    <TouchableOpacity 
+                                      key={match.id} 
+                                      style={styles.matchHistoryCard}
+                                      onPress={() => router.push(`/live/${match.id}`)}
+                                    >
+                                      <View style={styles.matchHistoryHeader}>
+                                        <RNText style={styles.matchHistoryDate}>
+                                          {new Date(match.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+                                        </RNText>
+                                        <View style={[styles.matchResultBadge, { backgroundColor: isWon ? '#F0FDF4' : '#FEF2F2' }]}>
+                                          <RNText style={[styles.matchResultBadgeText, { color: isWon ? '#01b854' : '#EF4444' }]}>
+                                            {isWon ? 'WON' : 'LOST'}
+                                          </RNText>
+                                        </View>
+                                      </View>
+                                      <View style={styles.matchHistoryTeams}>
+                                         <View style={styles.matchHistoryTeamRow}>
+                                            <RNText style={styles.matchHistoryTeamName}>{team?.name}</RNText>
+                                            <RNText style={styles.matchHistoryTeamScore}>{myScore || '0/0'}</RNText>
+                                         </View>
+                                         <View style={styles.matchHistoryVS}><RNText style={styles.vsText}>VS</RNText></View>
+                                         <View style={styles.matchHistoryTeamRow}>
+                                            <RNText style={styles.matchHistoryTeamName}>{oppName}</RNText>
+                                            <RNText style={styles.matchHistoryTeamScore}>{oppScore || '0/0'}</RNText>
+                                         </View>
+                                      </View>
+                                      {match.match_live_state?.result_text && (
+                                        <RNText style={styles.matchHistoryResultText}>{match.match_live_state.result_text}</RNText>
+                                      )}
+                                    </TouchableOpacity>
+                                  );
+                                })}
+                              </View>
+                            )}
+                          </ScrollView>
+                        );
+                      case 'stats':
+                        return (
+                          <ScrollView 
+                            style={styles.tabContent} 
+                            showsVerticalScrollIndicator={false}
+                            onScroll={handleScroll}
+                            scrollEventThrottle={16}
+                          >
+                            <RNText style={styles.sectionTitle}>Overview</RNText>
+                            <View style={styles.statsGrid}>
+                              {[
+                                { label: 'MATCHES', value: dynamicStats.matches.toString() },
+                                { label: 'UPCOMING', value: dynamicStats.upcoming.toString() },
+                                { label: 'WON', value: dynamicStats.won.toString(), color: '#01b854' },
+                                { label: 'LOST', value: dynamicStats.lost.toString(), color: '#EF4444' },
+                                { label: 'TOSS WON', value: dynamicStats.tossWon.toString() },
+                                { label: 'WIN %', value: dynamicStats.winRate },
+                                { label: 'RUNS (FOR)', value: dynamicStats.runsFor.toLocaleString() },
+                                { label: 'HIGHEST', value: dynamicStats.highest.toString() },
+                              ].map((stat, idx) => (
+                                <View key={idx} style={styles.statGridItem}>
+                                  <RNText style={styles.statGridLabel}>{stat.label}</RNText>
+                                  <RNText style={[styles.statGridValue, stat.color ? { color: stat.color } : null]}>{stat.value}</RNText>
+                                </View>
+                              ))}
+                            </View>
+                          </ScrollView>
+                        );
+                      case 'leaderboard':
+                        return (
+                          <ScrollView 
+                            style={styles.tabContent} 
+                            showsVerticalScrollIndicator={false}
+                            onScroll={handleScroll}
+                            scrollEventThrottle={16}
+                          >
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.subTabBar} contentContainerStyle={styles.subTabBarContent}>
+                              {[{ key: 'bat', label: 'Bat' }, { key: 'bowl', label: 'Bowl' }, { key: 'field', label: 'Field' }, { key: 'partnership', label: 'Partnership' }].map((sub) => (
+                                <TouchableOpacity key={sub.key} style={[styles.subTab, activeSubTab === sub.key && styles.activeSubTab]} onPress={() => setActiveSubTab(sub.key as any)}>
+                                  <RNText style={[styles.subTabText, activeSubTab === sub.key && styles.activeSubTabText]}>{sub.label}</RNText>
+                                </TouchableOpacity>
+                              ))}
+                            </ScrollView>
+                            {leaderboardLoading ? (
+                              <ActivityIndicator size="small" color="#01b854" style={{ marginTop: 20 }} />
+                            ) : (
+                              <View style={{ marginTop: 16 }}>
+                                {activeSubTab === 'bat' && (
+                                  <View>
+                                    <RNText style={styles.sectionTitle}>Top Batters (Runs)</RNText>
+                                    <View style={styles.leaderboardCard}>
+                                      {[...leaderboardData].sort((a,b) => b.total_runs - a.total_runs).slice(0, 10).map((stat, idx) => (
+                                        <View key={stat.id} style={[styles.leaderboardRow, idx === 9 && { borderBottomWidth: 0 }]}>
+                                          <View style={styles.leaderboardPlayerInfo}>
+                                            <RNText style={styles.leaderboardRank}>{idx + 1}</RNText>
+                                            <View style={styles.leaderboardAvatar}>
+                                              {stat.member?.profile?.avatar_url ? (
+                                                <Image source={{ uri: stat.member.profile.avatar_url }} style={styles.avatarImg} />
+                                              ) : (
+                                                <RNText style={styles.avatarInitial}>{(stat.member?.player_name || '?')[0]}</RNText>
+                                              )}
+                                            </View>
+                                            <RNText style={styles.leaderboardName} numberOfLines={1}>{stat.member?.player_name}</RNText>
+                                          </View>
+                                          <View style={styles.leaderboardValueContainer}><RNText style={styles.leaderboardValue}>{stat.total_runs}</RNText><RNText style={styles.leaderboardUnit}>Runs</RNText></View>
+                                        </View>
+                                      ))}
+                                    </View>
+                                  </View>
+                                )}
+                                {activeSubTab === 'bowl' && (
+                                  <View>
+                                    <RNText style={styles.sectionTitle}>Top Bowlers (Wkts)</RNText>
+                                    <View style={styles.leaderboardCard}>
+                                      {[...leaderboardData].sort((a,b) => b.total_wickets - a.total_wickets).slice(0, 10).map((stat, idx) => (
+                                        <View key={stat.id} style={[styles.leaderboardRow, idx === 9 && { borderBottomWidth: 0 }]}>
+                                          <View style={styles.leaderboardPlayerInfo}>
+                                            <RNText style={styles.leaderboardRank}>{idx + 1}</RNText>
+                                            <View style={styles.leaderboardAvatar}>
+                                              {stat.member?.profile?.avatar_url ? (
+                                                <Image source={{ uri: stat.member.profile.avatar_url }} style={styles.avatarImg} />
+                                              ) : (
+                                                <RNText style={styles.avatarInitial}>{(stat.member?.player_name || '?')[0]}</RNText>
+                                              )}
+                                            </View>
+                                            <RNText style={styles.leaderboardName} numberOfLines={1}>{stat.member?.player_name}</RNText>
+                                          </View>
+                                          <View style={styles.leaderboardValueContainer}><RNText style={styles.leaderboardValue}>{stat.total_wickets}</RNText><RNText style={styles.leaderboardUnit}>Wkt</RNText></View>
+                                        </View>
+                                      ))}
+                                    </View>
+                                  </View>
+                                )}
+                              </View>
+                            )}
+                          </ScrollView>
+                        );
+                      case 'members':
+                        return (
+                          <ScrollView 
+                            style={styles.tabContent}
+                            onScroll={handleScroll}
+                            scrollEventThrottle={16}
+                          >
+                             {members.map((member) => (
+                               <View key={member.id} style={styles.memberRow}>
+                                  <View style={styles.memberAvatar}>
+                                    {member.profile?.avatar_url ? (
+                                      <Image source={{ uri: member.profile.avatar_url }} style={styles.avatarImg} />
+                                    ) : (
+                                      <RNText style={styles.avatarInitial}>{member.player_name[0]}</RNText>
+                                    )}
+                                  </View>
+                                  <View style={styles.memberInfo}>
+                                    <RNText style={styles.memberName}>{member.player_name}</RNText>
+                                    <RNText style={styles.memberRole}>{member.role.toUpperCase()}</RNText>
+                                  </View>
+                               </View>
+                             ))}
+                          </ScrollView>
+                        );
+                      case 'chat':
+                        return <TeamChatTab teamId={team.id} isMember={isAcceptedMember} />;
+                      default:
+                        return null;
+                    }
+                 })()
+              ) : null}
+            </View>
+          ))}
+        </Animated.ScrollView>
       </View>
 
       {/* Edit Team Modal */}
@@ -1098,12 +945,12 @@ export default function TeamDetailsPage() {
           <View style={styles.qrModalContent}>
             <RNText style={styles.qrModalTitle}>{team?.name} Profile</RNText>
             <View style={styles.qrModalWrapper}>
-               <QRCode
-                  value={`https://bookyourground.com/teams/${id}`}
-                  size={200}
-                  color="#043529"
-                  backgroundColor="#FFFFFF"
-               />
+                    <QRCode
+                       value={`https://bookyourground.com/teams/${id}`}
+                       size={200}
+                       color="#043529"
+                       backgroundColor="white"
+                    />
             </View>
             <RNText style={styles.qrModalHint}>Scan to join the squad</RNText>
             <TouchableOpacity 
@@ -1131,22 +978,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#043529',
   },
   header: {
-    backgroundColor: '#043529',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: Platform.OS === 'ios' ? 50 : 8,
-    paddingBottom: 12,
+    paddingTop: Platform.OS === 'web' ? 12 : 36,
+    paddingBottom: 8,
     paddingHorizontal: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(0,0,0,0.1)',
   },
   headerTitle: {
-    
-    fontFamily: 'Inter', fontSize: 18,
-    fontFamily: 'Inter', fontWeight: '500',
+    fontFamily: 'Inter',
+    fontSize: 15,
+    fontWeight: '700',
     color: '#01b854',
     flex: 1,
     marginHorizontal: 16,
     textAlign: 'center',
+    letterSpacing: 1.2,
+    textTransform: 'uppercase',
   },
   backBtn: {
     padding: 8,
@@ -1159,7 +1010,6 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   hero: {
-    backgroundColor: '#043529',
     alignItems: 'center',
     paddingBottom: 4,
     minHeight: 4,
@@ -1168,21 +1018,25 @@ const styles = StyleSheet.create({
   },
   infoProfileCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 16,
+    borderRadius: 24,
+    padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 24,
+    marginBottom: 20,
     borderWidth: 1,
     borderColor: '#F1F5F9',
-    flexWrap: 'wrap',
-    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
   },
   profileMainInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 12,
+    flexShrink: 1,
   },
   profileRightActions: {
     flexDirection: 'row',
@@ -1190,16 +1044,12 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   miniQRContainer: {
-    padding: 6,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    padding: 0,
   },
   infoTeamLogoContainer: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
@@ -1208,44 +1058,51 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   infoProfileName: {
-    fontFamily: 'Inter', fontSize: 22,
-    fontFamily: 'Inter', fontWeight: '900',
-    color: '#043529',
-    letterSpacing: -0.5,
+    fontFamily: 'Inter',
+    fontSize: 19,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.3,
   },
   officialBadge: {
-    backgroundColor: '#F0FDF4',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 99,
     alignSelf: 'flex-start',
-    marginTop: 4,
+    marginTop: 6,
+    borderWidth: 1,
+    borderColor: '#D1FAE5',
   },
   officialBadgeText: {
-    fontFamily: 'Inter', fontSize: 10,
-    fontFamily: 'Inter', fontWeight: '800',
-    color: '#01b854',
-    letterSpacing: 0.5,
+    fontFamily: 'Inter',
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#059669',
+    letterSpacing: 1,
   },
   teamLogo: {
     width: '100%',
     height: '100%',
   },
   teamInitials: {
-    fontFamily: 'Inter', fontSize: 40,
-    fontFamily: 'Inter', fontWeight: '900',
+    fontFamily: 'Inter',
+    fontSize: 40,
+    fontWeight: '900',
     color: '#FFFFFF',
   },
   heroName: {
-    fontFamily: 'Inter', fontSize: 24,
-    fontFamily: 'Inter', fontWeight: '900',
+    fontFamily: 'Inter',
+    fontSize: 24,
+    fontWeight: '900',
     color: '#FFFFFF',
     marginBottom: 4,
   },
   heroLocation: {
-    fontFamily: 'Inter', fontSize: 14,
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: '500',
     color: 'rgba(255,255,255,0.7)',
-    fontFamily: 'Inter', fontWeight: '500',
   },
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -1281,8 +1138,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   matchHistoryDate: {
-    fontFamily: 'Inter', fontSize: 12,
-    fontFamily: 'Inter', fontWeight: '700',
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: '700',
     color: '#94A3B8',
     textTransform: 'uppercase',
   },
@@ -1292,8 +1150,9 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   matchResultBadgeText: {
-    fontFamily: 'Inter', fontSize: 10,
-    fontFamily: 'Inter', fontWeight: '800',
+    fontFamily: 'Inter',
+    fontSize: 10,
+    fontWeight: '800',
   },
   matchHistoryTeams: {
     gap: 8,
@@ -1304,13 +1163,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   matchHistoryTeamName: {
-    fontFamily: 'Inter', fontSize: 16,
-    fontFamily: 'Inter', fontWeight: '700',
+    fontFamily: 'Inter',
+    fontSize: 16,
+    fontWeight: '700',
     color: '#1E293B',
   },
   matchHistoryTeamScore: {
-    fontFamily: 'Inter', fontSize: 16,
-    fontFamily: 'Inter', fontWeight: '800',
+    fontFamily: 'Inter',
+    fontSize: 16,
+    fontWeight: '800',
     color: '#043529',
   },
   matchHistoryVS: {
@@ -1318,14 +1179,16 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   vsText: {
-    fontFamily: 'Inter', fontSize: 10,
-    fontFamily: 'Inter', fontWeight: '800',
+    fontFamily: 'Inter',
+    fontSize: 10,
+    fontWeight: '800',
     color: '#CBD5E1',
   },
   matchHistoryResultText: {
     marginTop: 16,
-    fontFamily: 'Inter', fontSize: 12,
-    fontFamily: 'Inter', fontWeight: '600',
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: '600',
     color: '#01b854',
     textAlign: 'center',
     paddingTop: 12,
@@ -1337,9 +1200,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   emptyMatchesText: {
-    fontFamily: 'Inter', fontSize: 14,
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: '500',
     color: '#94A3B8',
-    fontFamily: 'Inter', fontWeight: '500',
   },
   statGridItem: {
     flex: 1,
@@ -1357,8 +1221,9 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
   },
   statGridLabel: {
-    fontFamily: 'Inter', fontSize: 10,
-    fontFamily: 'Inter', fontWeight: '700',
+    fontFamily: 'Inter',
+    fontSize: 10,
+    fontWeight: '700',
     color: '#64748B',
     textAlign: 'center',
     textTransform: 'uppercase',
@@ -1366,8 +1231,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   statGridValue: {
-    fontFamily: 'Inter', fontSize: 18,
-    fontFamily: 'Inter', fontWeight: '900',
+    fontFamily: 'Inter',
+    fontSize: 18,
+    fontWeight: '900',
     color: '#043529',
     textAlign: 'center',
   },
@@ -1390,8 +1256,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   statGridValue: {
-    fontFamily: 'Inter', fontSize: 18,
-    fontFamily: 'Inter', fontWeight: '900',
+    fontFamily: 'Inter',
+    fontSize: 18,
+    fontWeight: '900',
     color: '#043529',
     textAlign: 'center',
   },
@@ -1405,8 +1272,9 @@ const styles = StyleSheet.create({
   },
   formNote: {
     marginTop: 12,
-    fontFamily: 'Inter', fontSize: 11,
-    fontFamily: 'Inter', fontWeight: '600',
+    fontFamily: 'Inter',
+    fontSize: 11,
+    fontWeight: '600',
     color: '#94A3B8',
   },
   leaderboardCard: {
@@ -1435,8 +1303,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   leaderboardRank: {
-    fontFamily: 'Inter', fontSize: 14,
-    fontFamily: 'Inter', fontWeight: '800',
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: '800',
     color: '#94A3B8',
     width: 20,
   },
@@ -1450,8 +1319,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   leaderboardName: {
-    fontFamily: 'Inter', fontSize: 15,
-    fontFamily: 'Inter', fontWeight: '700',
+    fontFamily: 'Inter',
+    fontSize: 15,
+    fontWeight: '700',
     color: '#1E293B',
     flex: 1,
   },
@@ -1459,13 +1329,15 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   leaderboardValue: {
-    fontFamily: 'Inter', fontSize: 18,
-    fontFamily: 'Inter', fontWeight: '900',
+    fontFamily: 'Inter',
+    fontSize: 18,
+    fontWeight: '900',
     color: '#043529',
   },
   leaderboardUnit: {
-    fontFamily: 'Inter', fontSize: 10,
-    fontFamily: 'Inter', fontWeight: '700',
+    fontFamily: 'Inter',
+    fontSize: 10,
+    fontWeight: '700',
     color: '#94A3B8',
     textTransform: 'uppercase',
   },
@@ -1490,21 +1362,21 @@ const styles = StyleSheet.create({
     borderColor: '#DCFCE7',
   },
   subTabText: {
-    fontFamily: 'Inter', fontSize: 12,
-    fontFamily: 'Inter', fontWeight: '700',
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: '700',
     color: '#64748B',
   },
   activeSubTabText: {
     color: '#01b854',
   },
   tabBarContainer: {
-    marginTop: 8,
+    marginTop: 0,
   },
   tabBar: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'transparent',
     marginHorizontal: 16,
-    borderRadius: 99,
-    padding: 4,
+    paddingVertical: 4,
   },
   tabBarContent: {
     flexDirection: 'row',
@@ -1512,26 +1384,25 @@ const styles = StyleSheet.create({
     minWidth: '100%',
   },
   tab: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 99,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
   },
   activeTab: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    borderBottomColor: '#01b854',
   },
   tabText: {
-    fontFamily: 'Inter', fontSize: 14,
-    fontFamily: 'Inter', fontWeight: '700',
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: '600',
     color: '#64748B',
   },
   activeTabText: {
+    fontFamily: 'Inter',
+    fontWeight: '700',
     color: '#01b854',
   },
   chatTabLabel: {
@@ -1560,8 +1431,9 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: {
-    fontFamily: 'Inter', fontSize: 16,
-    fontFamily: 'Inter', fontWeight: '800',
+    fontFamily: 'Inter',
+    fontSize: 16,
+    fontWeight: '800',
     color: '#1E293B',
     marginBottom: 12,
     letterSpacing: -0.3,
@@ -1588,15 +1460,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   infoLabel: {
-    fontFamily: 'Inter', fontSize: 12,
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: '600',
     color: '#94A3B8',
-    fontFamily: 'Inter', fontWeight: '600',
     textTransform: 'uppercase',
   },
   infoValue: {
-    fontFamily: 'Inter', fontSize: 15,
+    fontFamily: 'Inter',
+    fontSize: 15,
+    fontWeight: '700',
     color: '#1E293B',
-    fontFamily: 'Inter', fontWeight: '700',
     marginTop: 2,
   },
   performanceCard: {
@@ -1628,16 +1502,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F5F9',
   },
   perfLabel: {
-    fontFamily: 'Inter', fontSize: 12,
-    fontFamily: 'Inter', fontWeight: '700',
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: '700',
     color: '#64748B',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 6,
   },
   perfValue: {
-    fontFamily: 'Inter', fontSize: 22,
-    fontFamily: 'Inter', fontWeight: '900',
+    fontFamily: 'Inter',
+    fontSize: 22,
+    fontWeight: '900',
     color: '#1E293B',
   },
   winRateSection: {
@@ -1651,13 +1527,15 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   winRateLabel: {
-    fontFamily: 'Inter', fontSize: 13,
-    fontFamily: 'Inter', fontWeight: '700',
+    fontFamily: 'Inter',
+    fontSize: 13,
+    fontWeight: '700',
     color: '#64748B',
   },
   winRateValue: {
-    fontFamily: 'Inter', fontSize: 14,
-    fontFamily: 'Inter', fontWeight: '900',
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: '900',
     color: '#01b854',
   },
   progressBarContainer: {
@@ -1675,8 +1553,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   formLabel: {
-    fontFamily: 'Inter', fontSize: 13,
-    fontFamily: 'Inter', fontWeight: '700',
+    fontFamily: 'Inter',
+    fontSize: 13,
+    fontWeight: '700',
     color: '#64748B',
     marginBottom: 12,
   },
@@ -1692,9 +1571,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   formCircleText: {
+    fontFamily: 'Inter',
     color: '#FFFFFF',
-    fontFamily: 'Inter', fontSize: 14,
-    fontFamily: 'Inter', fontWeight: '900',
+    fontSize: 14,
+    fontWeight: '900',
   },
   memberRow: {
     flexDirection: 'row',
@@ -1721,21 +1601,24 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   avatarInitial: {
-    fontFamily: 'Inter', fontSize: 18,
-    fontFamily: 'Inter', fontWeight: '700',
+    fontFamily: 'Inter',
+    fontSize: 18,
+    fontWeight: '700',
     color: '#64748B',
   },
   memberInfo: {
     flex: 1,
   },
   memberName: {
-    fontFamily: 'Inter', fontSize: 15,
-    fontFamily: 'Inter', fontWeight: '700',
+    fontFamily: 'Inter',
+    fontSize: 15,
+    fontWeight: '700',
     color: '#1E293B',
   },
   memberRole: {
-    fontFamily: 'Inter', fontSize: 10,
-    fontFamily: 'Inter', fontWeight: '800',
+    fontFamily: 'Inter',
+    fontSize: 10,
+    fontWeight: '800',
     color: '#94A3B8',
     marginTop: 2,
   },
@@ -1746,8 +1629,9 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   pendingText: {
-    fontFamily: 'Inter', fontSize: 10,
-    fontFamily: 'Inter', fontWeight: '800',
+    fontFamily: 'Inter',
+    fontSize: 10,
+    fontWeight: '800',
     color: '#92400E',
   },
   settingsCard: {
@@ -1775,8 +1659,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   settingsItemTitle: {
-    fontFamily: 'Inter', fontSize: 15,
-    fontFamily: 'Inter', fontWeight: '700',
+    fontFamily: 'Inter',
+    fontSize: 15,
+    fontWeight: '700',
     color: '#1E293B',
   },
   settingsItemDesc: {
@@ -1798,9 +1683,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   deleteText: {
+    fontFamily: 'Inter',
     color: '#DC2626',
-    fontFamily: 'Inter', fontWeight: '800',
-    fontFamily: 'Inter', fontSize: 14,
+    fontWeight: '800',
+    fontSize: 14,
   },
   qrCard: {
     backgroundColor: '#FFFFFF',
@@ -1819,17 +1705,19 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   qrHint: {
-    fontFamily: 'Inter', fontSize: 16,
-    fontFamily: 'Inter', fontWeight: '800',
+    fontFamily: 'Inter',
+    fontSize: 16,
+    fontWeight: '800',
     color: '#043529',
     textAlign: 'center',
   },
   qrSubHint: {
-    fontFamily: 'Inter', fontSize: 12,
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: '500',
     color: '#64748B',
     textAlign: 'center',
     marginTop: 4,
-    fontFamily: 'Inter', fontWeight: '500',
   },
   memberActionBtn: {
     paddingHorizontal: 10,
@@ -1857,8 +1745,9 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   modalTitle: {
-    fontFamily: 'Inter', fontSize: 20,
-    fontFamily: 'Inter', fontWeight: '900',
+    fontFamily: 'Inter',
+    fontSize: 20,
+    fontWeight: '900',
     color: '#043529',
     marginBottom: 24,
     textAlign: 'center',
@@ -1867,18 +1756,20 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   inputLabel: {
-    fontFamily: 'Inter', fontSize: 12,
-    fontFamily: 'Inter', fontWeight: '800',
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: '800',
     color: '#64748B',
     marginBottom: 8,
     textTransform: 'uppercase',
   },
   textInput: {
+    fontFamily: 'Inter',
     backgroundColor: '#F1F5F9',
     borderRadius: 12,
     padding: 14,
-    fontFamily: 'Inter', fontSize: 15,
-    fontFamily: 'Inter', fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '600',
     color: '#1E293B',
   },
   modalBtnRow: {
@@ -1904,8 +1795,9 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter', fontWeight: '700',
   },
   saveBtnText: {
+    fontFamily: 'Inter',
     color: '#FFFFFF',
-    fontFamily: 'Inter', fontWeight: '800',
+    fontWeight: '800',
   },
   qrModalContent: {
     backgroundColor: '#FFFFFF',
@@ -1916,8 +1808,9 @@ const styles = StyleSheet.create({
     maxWidth: 320,
   },
   qrModalTitle: {
-    fontFamily: 'Inter', fontSize: 18,
-    fontFamily: 'Inter', fontWeight: '900',
+    fontFamily: 'Inter',
+    fontSize: 18,
+    fontWeight: '900',
     color: '#043529',
     marginBottom: 20,
   },
@@ -1930,9 +1823,10 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   qrModalHint: {
-    fontFamily: 'Inter', fontSize: 14,
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: '600',
     color: '#64748B',
-    fontFamily: 'Inter', fontWeight: '600',
     marginBottom: 24,
   },
   qrModalCloseBtn: {
@@ -1942,9 +1836,10 @@ const styles = StyleSheet.create({
     borderRadius: 99,
   },
   qrModalCloseText: {
+    fontFamily: 'Inter',
     color: '#64748B',
-    fontFamily: 'Inter', fontWeight: '800',
-    fontFamily: 'Inter', fontSize: 14,
+    fontWeight: '800',
+    fontSize: 14,
   },
   joinBtn: {
     backgroundColor: '#01b854',
@@ -1954,7 +1849,30 @@ const styles = StyleSheet.create({
   },
   joinBtnText: {
     color: '#FFFFFF',
-    fontFamily: 'Inter', fontWeight: '900',
-    fontFamily: 'Inter', fontSize: 12,
+    fontFamily: 'Inter',
+    fontWeight: '900',
+    fontSize: 12,
+  },
+  fullJoinBtn: {
+    backgroundColor: '#01b854',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 16,
+    marginBottom: 16,
+    gap: 10,
+    shadowColor: '#01b854',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  fullJoinBtnText: {
+    color: '#FFFFFF',
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
 });

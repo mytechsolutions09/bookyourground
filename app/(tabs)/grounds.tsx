@@ -13,15 +13,96 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { GroundWithImages } from '@/types';
 import GroundsSearchBar from '@/components/grounds/GroundsSearchBar';
+import FindAnOpponentScreen from './find-an-opponent';
+import FavoritesScreen from './favorites';
+import { useUI } from '@/contexts/UIContext';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+  useAnimatedScrollHandler,
+  runOnJS
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function GroundsTabScreen() {
   const { width } = useWindowDimensions();
   const { user } = useAuth();
   const { tab } = useLocalSearchParams();
   const isSmall = width < 900;
-  const [activeTab, setActiveTab] = useState<'book' | 'favorite'>((tab as any) || 'book');
+  const [activeTab, setActiveTab] = useState<'book' | 'opponent' | 'favorite'>((tab as any) || 'book');
+  const horizontalPagerRef = React.useRef<Animated.ScrollView>(null);
+  const tabScrollRef = React.useRef<ScrollView>(null);
   const [favorites, setFavorites] = useState<GroundWithImages[]>([]);
   const [loadingFavs, setLoadingFavs] = useState(false);
+  const insets = useSafeAreaInsets();
+  const { setTabBarVisible } = useUI();
+
+  const headerTranslateY = useSharedValue(0);
+  const lastScrollY = useSharedValue(0);
+  const HEADER_HEIGHT = 110;
+
+  const TABS_LIST = [
+    { id: 'book', label: 'Book a Ground', index: 0 },
+    { id: 'opponent', label: 'Find an Opponent', index: 1 },
+    { id: 'favorite', label: 'Favourite', index: 2 },
+  ];
+
+  const onTabPress = (tabId: 'book' | 'opponent' | 'favorite', idx: number) => {
+    setActiveTab(tabId);
+    horizontalPagerRef.current?.scrollTo({ x: idx * width, animated: true });
+  };
+
+  const horizontalScrollHandler = useAnimatedScrollHandler({
+    onMomentumEnd: (event) => {
+      const idx = Math.round(event.contentOffset.x / width);
+      const tab = TABS_LIST[idx];
+      if (tab) {
+        runOnJS(setActiveTab)(tab.id as any);
+      }
+    },
+  });
+
+  useEffect(() => {
+    return () => setTabBarVisible(true);
+  }, []);
+
+  const verticalScrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      const currentY = event.contentOffset.y;
+      const diff = currentY - lastScrollY.value;
+
+      if (diff > 1 && currentY > 50) {
+        if (headerTranslateY.value === 0) {
+          headerTranslateY.value = withTiming(-HEADER_HEIGHT - insets.top, {
+            duration: 600,
+            easing: Easing.out(Easing.exp)
+          });
+          runOnJS(setTabBarVisible)(false);
+        }
+      } else if (diff < -2 || currentY < 20) {
+        if (headerTranslateY.value < 0) {
+          headerTranslateY.value = withTiming(0, {
+            duration: 600,
+            easing: Easing.out(Easing.exp)
+          });
+          runOnJS(setTabBarVisible)(true);
+        }
+      }
+      lastScrollY.value = currentY;
+    },
+  });
+
+  const headerAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: headerTranslateY.value }],
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    backgroundColor: '#F9FAFB',
+  }));
 
   useEffect(() => {
     if (Platform.OS !== 'web' && LayoutAnimation) {
@@ -31,14 +112,6 @@ export default function GroundsTabScreen() {
       loadFavorites();
     }
   }, [activeTab, user?.id]);
-
-  const handleTabPress = (tabName: 'book' | 'favorite') => {
-    if (activeTab === tabName) return;
-    if (Platform.OS !== 'web' && LayoutAnimation) {
-      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-    }
-    setActiveTab(tabName);
-  };
 
   const loadFavorites = async () => {
     try {
@@ -106,32 +179,16 @@ export default function GroundsTabScreen() {
 
   const renderTabs = (tabContainerStyle: any) => (
     <View style={[styles.tabContainerBase, tabContainerStyle]}>
-      <TouchableOpacity 
-        style={[styles.tab, activeTab === 'book' && styles.activeTab]}
-        onPress={() => handleTabPress('book')}
-        activeOpacity={0.7}
-      >
-        <Text style={[styles.tabText, activeTab === 'book' && styles.activeTabText]}>Book a Ground</Text>
-      </TouchableOpacity>
-      <TouchableOpacity 
-        style={styles.tab}
-        onPress={() => {
-          if (Platform.OS !== 'web') {
-            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-          }
-          router.push('/find-an-opponent');
-        }}
-        activeOpacity={0.7}
-      >
-        <Text style={styles.tabText}>Find an Opponent</Text>
-      </TouchableOpacity>
-      <TouchableOpacity 
-        style={[styles.tab, activeTab === 'favorite' && styles.activeTab]}
-        onPress={() => handleTabPress('favorite')}
-        activeOpacity={0.7}
-      >
-        <Text style={[styles.tabText, activeTab === 'favorite' && styles.activeTabText]}>Favourite</Text>
-      </TouchableOpacity>
+      {TABS_LIST.map((tab) => (
+        <TouchableOpacity
+          key={tab.id}
+          style={[styles.tab, activeTab === tab.id && styles.activeTab]}
+          onPress={() => onTabPress(tab.id as any, tab.index)}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.tabText, activeTab === tab.id && styles.activeTabText]}>{tab.label}</Text>
+        </TouchableOpacity>
+      ))}
     </View>
   );
 
@@ -150,6 +207,8 @@ export default function GroundsTabScreen() {
                 <GroundsSearchBar lightMode={true} />
                 <LandingBookingForm fullWidth />
               </View>
+            ) : activeTab === 'opponent' ? (
+              <FindAnOpponentScreen hideHeader />
             ) : renderFavorites()}
           </View>
         </ScrollView>
@@ -160,27 +219,55 @@ export default function GroundsTabScreen() {
   // Native: full-screen booking with navbar + tabs.
   return (
     <View style={styles.nativeRoot}>
-      <MobileAppNavbar 
-        title={activeTab === 'book' ? "Book a Ground" : "Favourites"} 
-      />
-      
-      {renderTabs(styles.nativeTabContainer)}
+      <Animated.View style={headerAnimatedStyle}>
+        <MobileAppNavbar
+          title={activeTab === 'book' ? "Book a Ground" : (activeTab === 'opponent' ? "Find an Opponent" : "Favourites")}
+          smallerTitle={true}
+        />
+        {renderTabs(styles.nativeTabContainer)}
+      </Animated.View>
 
-      <ScrollView 
-        style={styles.page} 
-        contentContainerStyle={{ paddingBottom: 40 }} 
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="always"
+      <Animated.ScrollView
+        ref={horizontalPagerRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        contentOffset={{ x: TABS_LIST.find(t => t.id === activeTab)?.index! * width, y: 0 }}
+        onScroll={horizontalScrollHandler}
+        scrollEventThrottle={16}
+        style={{ flex: 1 }}
       >
-        {activeTab === 'book' ? (
-          <View>
-             <GroundsSearchBar lightMode={true} />
-             <LandingBookingForm fullWidth noCard bookGroundScreenNative hideTitle lightAppTheme />
-          </View>
-        ) : (
-          renderFavorites()
-        )}
-      </ScrollView>
+        {/* Slide 1: Book a Ground */}
+        <View style={{ width }}>
+          <Animated.ScrollView
+            onScroll={verticalScrollHandler}
+            scrollEventThrottle={16}
+            style={styles.page}
+            contentContainerStyle={{ paddingTop: HEADER_HEIGHT + insets.top + 16, paddingBottom: 100 }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="always"
+          >
+            <GroundsSearchBar lightMode={true} />
+            <LandingBookingForm fullWidth noCard bookGroundScreenNative hideTitle lightAppTheme />
+          </Animated.ScrollView>
+        </View>
+
+        {/* Slide 2: Find an Opponent */}
+        <View style={{ width }}>
+          <FindAnOpponentScreen
+            hideHeader={true}
+            externalScrollHandler={verticalScrollHandler}
+          />
+        </View>
+
+        {/* Slide 3: Favourite */}
+        <View style={{ width }}>
+          <FavoritesScreen
+            hideHeader={true}
+            externalScrollHandler={verticalScrollHandler}
+          />
+        </View>
+      </Animated.ScrollView>
     </View>
   );
 }

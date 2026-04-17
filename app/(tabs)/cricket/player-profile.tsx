@@ -650,11 +650,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileName: {
-    fontSize: 22,
-    fontWeight: '900',
+    fontFamily: 'Inter',
+    fontSize: 20,
+    fontWeight: '500',
     color: '#043529',
-    letterSpacing: -0.5,
+    letterSpacing: 1.2,
     marginBottom: 4,
+    textTransform: 'uppercase',
   },
   locationRow: {
     flexDirection: 'row',
@@ -680,7 +682,7 @@ const styles = StyleSheet.create({
   },
   styleTagText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '500',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -701,7 +703,7 @@ const styles = StyleSheet.create({
   },
   roleTagText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#1E40AF',
   },
   headerDivider: {
@@ -719,12 +721,12 @@ const styles = StyleSheet.create({
   },
   headerStatValue: {
     fontSize: 20,
-    fontWeight: '900',
+    fontWeight: '500',
     color: '#043529',
   },
   headerStatLabel: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#94A3B8',
     textTransform: 'uppercase',
     marginTop: 2,
@@ -745,13 +747,13 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '900',
+    fontWeight: '500',
     color: '#1E293B',
     letterSpacing: -0.5,
   },
   viewAllBtn: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#01b854',
   },
   statsGrid: {
@@ -779,12 +781,12 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 16,
-    fontWeight: '900',
+    fontWeight: '500',
     color: '#043529',
   },
   statLabel: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#94A3B8',
     textTransform: 'uppercase',
   },
@@ -811,7 +813,7 @@ const styles = StyleSheet.create({
   },
   matchOpponent: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#1E293B',
     marginBottom: 2,
   },
@@ -825,12 +827,12 @@ const styles = StyleSheet.create({
   },
   scoreText: {
     fontSize: 15,
-    fontWeight: '900',
+    fontWeight: '500',
     color: '#043529',
   },
   perfLabel: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#64748B',
     textTransform: 'uppercase',
   },
@@ -847,7 +849,7 @@ const styles = StyleSheet.create({
   },
   badgeTitle: {
     fontSize: 15,
-    fontWeight: '900',
+    fontWeight: '500',
     color: '#1E293B',
     textAlign: 'center',
   },
@@ -871,7 +873,7 @@ const styles = StyleSheet.create({
   },
   editInput: {
     fontSize: 22,
-    fontWeight: '900',
+    fontWeight: '500',
     color: '#043529',
     letterSpacing: -0.5,
     borderBottomWidth: 1,
@@ -898,7 +900,7 @@ const styles = StyleSheet.create({
   },
   editSectionTitle: {
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#94A3B8',
     textTransform: 'uppercase',
   },
@@ -921,7 +923,7 @@ const styles = StyleSheet.create({
   },
   editChipText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#64748B',
   },
   editChipTextActive: {
@@ -944,7 +946,7 @@ const styles = StyleSheet.create({
   },
   cancelBtnText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#64748B',
   },
   saveBtn: {
@@ -959,7 +961,7 @@ const styles = StyleSheet.create({
   },
   saveBtnText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#FFFFFF',
   },
   stateSelectorTrigger: {
@@ -1000,7 +1002,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: '900',
+    fontWeight: '500',
     color: '#1E293B',
   },
   modalSearchContainer: {
@@ -1038,7 +1040,7 @@ const styles = StyleSheet.create({
   },
   stateItemTextActive: {
     color: '#01b854',
-    fontWeight: '700',
+    fontWeight: '500',
   },
   activeDot: {
     width: 8,
@@ -1065,7 +1067,7 @@ const styles = StyleSheet.create({
   },
   loginTitle: {
     fontSize: 24,
-    fontWeight: '900',
+    fontWeight: '500',
     color: '#0F172A',
     marginBottom: 12,
   },
@@ -1091,6 +1093,6 @@ const styles = StyleSheet.create({
   loginBtnText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '500',
   },
 });

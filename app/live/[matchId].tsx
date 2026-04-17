@@ -1,11 +1,43 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView as RNScrollView, ActivityIndicator, useWindowDimensions, Platform, TouchableOpacity, Image, Share, PanResponder } from 'react-native';
+import { View, Text, StyleSheet, ScrollView as RNScrollView, ActivityIndicator, useWindowDimensions, Platform, TouchableOpacity, Image, Share, PanResponder, Dimensions } from 'react-native';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withSpring, 
+  withTiming,
+  runOnJS,
+  useAnimatedScrollHandler,
+  interpolate,
+  Easing
+} from 'react-native-reanimated';
+import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { useUI } from '@/contexts/UIContext';
 import WebLayout from '@/components/web/WebLayout';
-import { ChevronRight, ChevronLeft, ChevronDown, Award, MessageCircle, Share2, Trophy, BarChart3, Settings, Sliders, HelpCircle, ImagePlus, Camera } from 'lucide-react-native';
+import { ChevronRight, ChevronLeft, ChevronDown, Award, MessageCircle, Share2, Trophy, BarChart3, Settings, Sliders, HelpCircle, ImagePlus, Camera, Zap, Flame, Star, Activity, Target, Shield } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
+
+const DynamicSportsLoader = () => {
+  const [iconIndex, setIconIndex] = useState(0);
+  const icons = [Trophy, Award, Zap, Flame, Star, Activity, Target, Shield];
+  
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setIconIndex((prev) => (prev + 1) % icons.length);
+    }, 150);
+    return () => clearInterval(timer);
+  }, []);
+
+  const ActiveIcon = icons[iconIndex];
+  
+  return (
+    <View style={{ marginBottom: 20 }}>
+      <ActiveIcon size={48} color="#0D9488" strokeWidth={2} />
+    </View>
+  );
+};
 
 // ─── Helpers ──────────────────────────────────────────────
 const fmtOvers = (legalBalls: number, total: number) =>
@@ -303,8 +335,11 @@ const getRunTypesData = (innLogs: any[]) => {
   return counts;
 };
 
+const TABS_ARRAY = ['info', 'summary', 'scoreboard', 'comms', 'squads', 'analysis', 'mvp', 'gallery'];
+
 export default function LiveScorecard() {
   const insets = useSafeAreaInsets();
+  const { setTabBarVisible } = useUI();
   const { matchId } = useLocalSearchParams<{ matchId: string }>();
   const [live, setLive] = useState<any>(null);
   const [match, setMatch] = useState<any>(null);
@@ -322,28 +357,91 @@ export default function LiveScorecard() {
   const [showCommsDropdown, setShowCommsDropdown] = useState(false);
   const [activeTab, setActiveTab] = useState('info');
 
-  const TABS_ARRAY = ['info', 'summary', 'scoreboard', 'comms', 'squads', 'analysis', 'mvp', 'gallery'];
+  const { width: windowWidth } = useWindowDimensions();
+  const translateX = useSharedValue(0);
+  const activeIndex = useSharedValue(0);
+  const isScrollingHeader = useSharedValue(false);
+  const headerTranslateY = useSharedValue(0);
+  const lastScrollY = useSharedValue(0);
 
-  const myPanResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => false,
-    onMoveShouldSetPanResponder: (_, gesture) => {
-      return Math.abs(gesture.dx) > 40 && Math.abs(gesture.dy) < 40;
-    },
-    onPanResponderRelease: (_, gesture) => {
-      const idx = TABS_ARRAY.indexOf(activeTab);
-      if (gesture.dx < -50) {
-        // Swipe Left (Next tab)
-        if (idx < TABS_ARRAY.length - 1) {
-          setActiveTab(TABS_ARRAY[idx + 1]);
-        }
-      } else if (gesture.dx > 50) {
-        // Swipe Right (Prev tab)
-        if (idx > 0) {
-          setActiveTab(TABS_ARRAY[idx - 1]);
-        }
+  useEffect(() => {
+    // Ensure tab bar is restored if user navs away while hidden
+    return () => setTabBarVisible(true);
+  }, []);
+
+  const onTabChange = (index: number) => {
+    const tab = TABS_ARRAY[index];
+    if (tab && activeTab !== tab) {
+      setActiveTab(tab);
+    }
+  };
+
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      translateX.value = event.contentOffset.x;
+      const index = Math.round(event.contentOffset.x / windowWidth);
+      if (activeIndex.value !== index) {
+        activeIndex.value = index;
+        runOnJS(onTabChange)(index);
       }
     },
   });
+
+  const verticalScrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      const currentY = event.contentOffset.y;
+      const diff = currentY - lastScrollY.value;
+      
+      if (diff > 1 && currentY > 50) {
+        // Swiping UP (scrolling down) -> Hide
+        if (headerTranslateY.value === 0) {
+          headerTranslateY.value = withTiming(-(66 + insets.top + 56), { 
+            duration: 600,
+            easing: Easing.out(Easing.exp)
+          });
+          runOnJS(setTabBarVisible)(false);
+        }
+      } else if (diff < -2 || currentY < 20) {
+        // Swiping DOWN (scrolling up) -> Show
+        if (headerTranslateY.value < 0) {
+          headerTranslateY.value = withTiming(0, { 
+            duration: 600,
+            easing: Easing.out(Easing.exp)
+          });
+          runOnJS(setTabBarVisible)(true);
+        }
+      }
+      lastScrollY.value = currentY;
+    },
+  });
+
+  const headerAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: headerTranslateY.value }],
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+  }));
+
+  const contentAnimatedStyle = useAnimatedStyle(() => ({
+    flex: 1,
+  }));
+
+  const contentRef = React.useRef<Animated.ScrollView>(null);
+  const headerRef = React.useRef<RNScrollView>(null);
+
+  const scrollToIndex = (index: number) => {
+    contentRef.current?.scrollTo({ x: index * windowWidth, animated: true });
+    // activeTab will be updated by the onScroll handler
+  };
+
+  useEffect(() => {
+    const idx = TABS_ARRAY.indexOf(activeTab);
+    if (idx !== -1) {
+      headerRef.current?.scrollTo({ x: idx * 80 - 100, animated: true });
+    }
+  }, [activeTab]);
 
   const handlePickImage = async () => {
     if (matchImages.length >= 4) {
@@ -477,12 +575,10 @@ export default function LiveScorecard() {
 
   if (!live || !match) return (
     <View style={styles.loadingContainer}>
-      <Trophy size={48} color="#0D9488" style={{ marginBottom: 20 }} />
-      <ActivityIndicator size="small" color="#0D9488" />
+      <DynamicSportsLoader />
       <Text style={{ color: '#111827', marginTop: 16, fontWeight: '700', fontSize: 18, textAlign: 'center', paddingHorizontal: 40 }}>
         {["Third Umpire is checking the ultra-edge...", "Waiting for the heavy roller to finish...", "Groundsman is painting the creases...", "The ball is being returned from the parking lot..."][Math.floor(Date.now() / 2000) % 4]}
       </Text>
-      <Text style={{ color: '#6B7280', marginTop: 8 }}>Loading match data...</Text>
     </View>
   );
 
@@ -687,11 +783,15 @@ export default function LiveScorecard() {
     );
   };
 
-  const renderTabContent = () => {
-    switch (activeTab) {
+  const renderTabContentForKey = (key: string, onScroll: any, paddingTop: number) => {
+    switch (key) {
       case 'scoreboard':
         return (
-          <RNScrollView style={{ flex: 1, backgroundColor: '#F6F4F0' }} contentContainerStyle={{ paddingVertical: 12 }}>
+          <Animated.ScrollView 
+            onScroll={onScroll}
+            scrollEventThrottle={16}
+            style={{ flex: 1, backgroundColor: '#F6F4F0' }} 
+            contentContainerStyle={{ paddingTop, paddingVertical: 12, paddingBottom: 100 }}>
             {/* Main Score Display in Scoreboard Tab */}
             <View style={[styles.scoreCard, { backgroundColor: '#043529', margin: 12, borderRadius: 12 }]}>
               <View style={styles.scoreRow}>
@@ -732,7 +832,7 @@ export default function LiveScorecard() {
             {renderInningsScorecard(1)}
             {renderInningsScorecard(2)}
             <View style={{ height: 40 }} />
-          </RNScrollView>
+          </Animated.ScrollView>
         );
       case 'info':
         return (
@@ -956,7 +1056,11 @@ export default function LiveScorecard() {
              </View>
 
              <View style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB' }}>
-               <RNScrollView style={{ flex: 1 }}>
+               <Animated.ScrollView 
+                 onScroll={onScroll}
+                 scrollEventThrottle={16}
+                 style={{ flex: 1 }}
+                 contentContainerStyle={{ paddingTop }}>
 
                   {ballLogs
                     .filter(ball => {
@@ -1023,7 +1127,7 @@ export default function LiveScorecard() {
                         <Text style={{ color: '#9CA3AF' }}>Waiting for first ball...</Text>
                      </View>
                   )}
-               </RNScrollView>
+               </Animated.ScrollView>
              </View>
           </View>
         );
@@ -1044,7 +1148,11 @@ export default function LiveScorecard() {
         const rt1 = getRunTypesData(inn1Logs);
 
         return (
-          <RNScrollView style={{ flex: 1, backgroundColor: '#F6F4F0' }} contentContainerStyle={{ padding: 12 }}>
+          <Animated.ScrollView 
+            onScroll={onScroll}
+            scrollEventThrottle={16}
+            style={{ flex: 1, backgroundColor: '#F6F4F0' }} 
+            contentContainerStyle={{ paddingTop, padding: 12, paddingBottom: 100 }}>
              {/* Insights Banner */}
              <View style={[styles.insightsBanner, { borderRadius: 12, marginBottom: 12, borderBottomWidth: 0 }]}>
                 <Text style={styles.insightsMsg}>Analyse this match in-depth with</Text>
@@ -1241,7 +1349,7 @@ export default function LiveScorecard() {
                    ))}
                 </View>
              </View>
-          </RNScrollView>
+          </Animated.ScrollView>
         );
       }
       case 'mvp':
@@ -1259,7 +1367,11 @@ export default function LiveScorecard() {
              </View>
 
              <View style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB' }}>
-               <RNScrollView style={{ flex: 1 }}>
+               <Animated.ScrollView 
+                 onScroll={onScroll}
+                 scrollEventThrottle={16}
+                 style={{ flex: 1 }}
+                 contentContainerStyle={{ paddingTop }}>
                   {mvpData.map((player, idx) => (
                     <View key={idx} style={styles.mvpPlayerRow}>
                        <View style={styles.mvpRankBox}>
@@ -1284,7 +1396,7 @@ export default function LiveScorecard() {
                        <Text style={{ color: '#9CA3AF', marginTop: 12, textAlign: 'center' }}>Match points will appear as game progresses.</Text>
                     </View>
                   )}
-               </RNScrollView>
+               </Animated.ScrollView>
              </View>
           </View>
         );
@@ -1316,7 +1428,11 @@ export default function LiveScorecard() {
                </View>
              ) : (
                <View style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB' }}>
-                 <RNScrollView style={{ flex: 1 }} contentContainerStyle={styles.galleryGrid}>
+                 <Animated.ScrollView 
+                   onScroll={onScroll}
+                   scrollEventThrottle={16}
+                   style={{ flex: 1 }} 
+                   contentContainerStyle={[styles.galleryGrid, { paddingTop }]}>
                     {matchImages.map((img, idx) => (
                       <View key={img.id || idx} style={styles.galleryItem}>
                          <Image source={{ uri: img.url }} style={styles.galleryImage} />
@@ -1332,7 +1448,7 @@ export default function LiveScorecard() {
                          <Text style={styles.galleryAddMoreText}>Add More</Text>
                       </TouchableOpacity>
                     )}
-                 </RNScrollView>
+                 </Animated.ScrollView>
                </View>
              )}
           </View>
@@ -1411,81 +1527,125 @@ export default function LiveScorecard() {
   };
 
   return (
-    <WebLayout noCard>
-      <Stack.Screen options={{ title: `${match.team_a} vs ${match.team_b} - Live Score` }} />
-      <View style={[
-        styles.topHeader, 
-        Platform.OS !== 'web' && { 
-          paddingTop: insets.top + 10, 
-          height: 66 + insets.top 
-        }
-      ]}>
-        <View style={styles.headerLeft}>
-           <TouchableOpacity 
-             onPress={() => router.canGoBack() ? router.back() : router.push('/cricket')}
-             style={{ padding: 8, marginLeft: -8 }}
-           >
-             <ChevronLeft size={24} color="#111827" />
-           </TouchableOpacity>
-           <Text style={styles.headerMainTitle}>{match.team_a} vs {match.team_b}</Text>
-        </View>
-        <View style={styles.headerRight}>
-           <TouchableOpacity 
-             style={styles.headerAction}
-             onPress={async () => {
-               try {
-                 await Share.share({
-                   url: `https://bookyourground.com/live/${match.id}`,
-                   message: `Follow ${match.team_a} vs ${match.team_b} LIVE on Book My Ground!\nhttps://bookyourground.com/live/${match.id}`,
-                   title: `${match.team_a} vs ${match.team_b} Live Score`
-                 });
-               } catch (e) {
-                 console.log(e);
-               }
-             }}
-           >
-             <Share2 size={20} color="#111827" />
-           </TouchableOpacity>
-           <TouchableOpacity style={styles.headerAction}><Settings size={20} color="#111827" /></TouchableOpacity>
-        </View>
-      </View>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <WebLayout noCard>
+        <Stack.Screen options={{ title: `${match.team_a} vs ${match.team_b} - Live Score` }} />
+        
+        <Animated.View style={headerAnimatedStyle}>
+          <View style={[
+            styles.topHeader, 
+            Platform.OS !== 'web' && { 
+              paddingTop: insets.top + 10, 
+              height: 66 + insets.top 
+            }
+          ]}>
+            <View style={styles.headerLeft}>
+               <TouchableOpacity 
+                 onPress={() => router.canGoBack() ? router.back() : router.push('/cricket')}
+                 style={{ padding: 8, marginLeft: -8 }}
+               >
+                 <ChevronLeft size={24} color="#111827" />
+               </TouchableOpacity>
+               <Text style={styles.headerMainTitle}>{match.team_a} vs {match.team_b}</Text>
+            </View>
+            <View style={styles.headerRight}>
+               <TouchableOpacity 
+                 style={styles.headerAction}
+                 onPress={async () => {
+                   try {
+                     await Share.share({
+                       url: `https://bookyourground.com/live/${match.id}`,
+                       message: `Follow ${match.team_a} vs ${match.team_b} LIVE on Book My Ground!\nhttps://bookyourground.com/live/${match.id}`,
+                       title: `${match.team_a} vs ${match.team_b} Live Score`
+                     });
+                   } catch (e) {
+                     console.log(e);
+                   }
+                 }}
+               >
+                 <Share2 size={20} color="#111827" />
+               </TouchableOpacity>
+               <TouchableOpacity style={styles.headerAction}><Settings size={20} color="#111827" /></TouchableOpacity>
+            </View>
+          </View>
 
-      <View style={styles.tabWrapper}>
-        <RNScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false} 
-          style={styles.tabScroll} 
-          contentContainerStyle={styles.tabContainerStyle}
-        >
-          {['Info', 'Summary', 'Scoreboard', 'Comms', 'Squads', 'Analysis', 'MVP', 'Gallery'].map((tab) => (
-             <TouchableOpacity 
-               key={tab} 
-               style={[styles.tabBtnRaw, activeTab === tab.toLowerCase() && styles.tabBtnActiveRaw]}
-               onPress={() => setActiveTab(tab.toLowerCase())}
-               activeOpacity={0.7}
-             >
-                <Text style={[styles.tabBtnTextRaw, activeTab === tab.toLowerCase() && styles.tabBtnTextActiveRaw]}>{tab}</Text>
-             </TouchableOpacity>
-          ))}
-        </RNScrollView>
-      </View>
+          <View style={styles.tabWrapper}>
+            <RNScrollView 
+              ref={headerRef}
+              horizontal 
+              showsHorizontalScrollIndicator={false} 
+              style={styles.tabScroll} 
+              contentContainerStyle={styles.tabContainerStyle}
+            >
+              {['Info', 'Summary', 'Scoreboard', 'Comms', 'Squads', 'Analysis', 'MVP', 'Gallery'].map((tab, idx) => (
+                 <TouchableOpacity 
+                   key={tab} 
+                   style={[styles.tabBtnRaw, activeTab === tab.toLowerCase() && styles.tabBtnActiveRaw]}
+                   onPress={() => scrollToIndex(idx)}
+                   activeOpacity={0.7}
+                 >
+                    <Text style={[styles.tabBtnTextRaw, activeTab === tab.toLowerCase() && styles.tabBtnTextActiveRaw]}>{tab}</Text>
+                 </TouchableOpacity>
+              ))}
+            </RNScrollView>
+          </View>
+        </Animated.View>
 
-      <RNScrollView 
-        style={styles.container} 
-        contentContainerStyle={{ paddingBottom: 40 }}
-        showsVerticalScrollIndicator={false}
-        {...myPanResponder.panHandlers}
-      >
-        {renderTabContent()}
-
-      </RNScrollView>
-    </WebLayout>
+        <Animated.View style={[styles.container, contentAnimatedStyle]}>
+          <Animated.ScrollView
+            ref={contentRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onScroll={scrollHandler}
+            scrollEventThrottle={16}
+            decelerationRate="fast"
+            style={{ flex: 1 }}
+          >
+            {TABS_ARRAY.map((tabKey) => (
+              <View key={tabKey} style={{ width: windowWidth }}>
+                {tabKey === 'info' ? (
+                  <Animated.ScrollView 
+                    onScroll={verticalScrollHandler}
+                    scrollEventThrottle={16}
+                    style={{ flex: 1, backgroundColor: '#F6F4F0' }} 
+                    contentContainerStyle={{ paddingTop: 66 + insets.top + 56, paddingBottom: 100 }}
+                  >
+                    {renderTabContentForKey('info', verticalScrollHandler, 0)}
+                  </Animated.ScrollView>
+                ) : tabKey === 'summary' ? (
+                   <Animated.ScrollView 
+                    onScroll={verticalScrollHandler}
+                    scrollEventThrottle={16}
+                    style={{ flex: 1, backgroundColor: '#F6F4F0' }} 
+                    contentContainerStyle={{ paddingTop: 66 + insets.top + 56, paddingBottom: 100 }}
+                  >
+                    {renderTabContentForKey('summary', verticalScrollHandler, 0)}
+                  </Animated.ScrollView>
+                ) : tabKey === 'squads' ? (
+                   <Animated.ScrollView 
+                    onScroll={verticalScrollHandler}
+                    scrollEventThrottle={16}
+                    style={{ flex: 1, backgroundColor: '#F6F4F0' }} 
+                    contentContainerStyle={{ paddingTop: 66 + insets.top + 56, paddingBottom: 100 }}
+                  >
+                    {renderTabContentForKey('squads', verticalScrollHandler, 0)}
+                  </Animated.ScrollView>
+                ) : (
+                  renderTabContentForKey(tabKey, verticalScrollHandler, 66 + insets.top + 56)
+                )}
+              </View>
+            ))}
+          </Animated.ScrollView>
+        </Animated.View>
+      </WebLayout>
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
   loadingContainer: { flex: 1, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center' },
-  container: { flex: 1, backgroundColor: '#F6F4F0' },
+  container: { flex: 1 },
   topHeader: { height: 56, backgroundColor: '#FFFFFF', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12 },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   headerMainTitle: { fontSize: 17, fontWeight: '700', color: '#111827' },

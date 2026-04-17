@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, TextInput, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, TextInput, useWindowDimensions, Share, PanResponder, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ChevronRight, History, Calendar, Search, Radio, Trophy, Clock } from 'lucide-react-native';
+import { ChevronRight, History, Calendar, Search, Radio, Trophy, Clock, Share2, Settings, ChevronLeft } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useCricketScoring } from '@/hooks/useCricketScoring';
 import { useAuth } from '@/contexts/AuthContext';
@@ -68,8 +68,6 @@ export default function CricketMatches() {
   const [fetchedMatches, setFetchedMatches] = useState<any[]>([]);
   const [userTeams, setUserTeams] = useState<string[]>([]);
   const [userPlayedMatches, setUserPlayedMatches] = useState<string[]>([]);
-  const { resumeMatch } = useCricketScoring();
-
   useEffect(() => {
     fetchMatches();
     if (session?.user?.id) {
@@ -94,13 +92,11 @@ export default function CricketMatches() {
   const fetchUserCricketContext = async () => {
     if (!session?.user?.id) return;
 
-    // 1. Teams where I am a member (profile_id matches my auth id)
     const { data: memberEntries } = await supabase
       .from('team_members')
       .select('id, team_id')
       .eq('profile_id', session.user.id);
 
-    // 2. Teams where I am the owner
     const { data: ownedTeams } = await supabase
       .from('teams')
       .select('id')
@@ -112,7 +108,6 @@ export default function CricketMatches() {
       ...(ownedTeams?.map(t => t.id) || [])
     ]));
 
-    // 3. Matches where I specifically played (for "Played" tab)
     if (myProfileIds.length > 0) {
       const { data: playedInXi } = await supabase
         .from('match_playing_xi')
@@ -220,22 +215,18 @@ export default function CricketMatches() {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
     return allMatches.filter(m => {
-      // 1. Category logic
-      // ALL category now shows all matches globally
       if (category === 'played') {
          if (!userPlayedMatches.includes(m.id)) {
             if (typeof m.id === 'string' && !m.id.startsWith('static-')) return false;
          }
       }
 
-      // 2. Status filter
       if (status !== 'all') {
         if (status === 'live' && m.status !== 'Live') return false;
         if (status === 'upcoming' && m.status !== 'Upcoming') return false;
         if (status === 'result' && (m.status !== 'Result' && m.status !== 'completed')) return false;
       }
 
-      // Date filter
       const matchDate = m.rawDate ? new Date(m.rawDate) : null;
       if (matchDate) {
         if (dateFilter === 'today' && matchDate < startOfToday) return false;
@@ -243,7 +234,6 @@ export default function CricketMatches() {
         if (dateFilter === 'this_month' && matchDate < startOfMonth) return false;
       }
 
-      // Search filter
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         return (
@@ -258,7 +248,6 @@ export default function CricketMatches() {
     });
   }, [allMatches, category, status, userPlayedMatches, dateFilter, searchQuery]);
 
-  // Dropdown states
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
   const FilterDropdown = ({ 
@@ -320,17 +309,6 @@ export default function CricketMatches() {
       </View>
     );
   };
-
-  const liveCount = useMemo(() => {
-    return allMatches.filter(m => {
-      if (category === 'played') {
-         if (!userPlayedMatches.includes(m.id)) {
-            if (typeof m.id === 'string' && !m.id.startsWith('static-')) return false;
-         }
-      }
-      return m.status === 'Live';
-    }).length;
-  }, [allMatches, category, userTeams, userPlayedMatches]);
 
   const MatchCard = ({ match }: { match: any }) => (
     <TouchableOpacity
@@ -442,7 +420,7 @@ export default function CricketMatches() {
   );
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+    <View style={{ flex: 1 }}>
       {/* Search Bar */}
       <View style={styles.searchBar}>
         <Search size={16} color="#94A3B8" />
@@ -452,10 +430,6 @@ export default function CricketMatches() {
           placeholderTextColor="#94A3B8"
           value={searchQuery}
           onChangeText={setSearchQuery}
-          // @ts-ignore
-          outlineStyle="none"
-          // @ts-ignore
-          boxShadow="none"
         />
       </View>
 
@@ -490,7 +464,7 @@ export default function CricketMatches() {
       </View>
 
       {/* Matches List */}
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.matchesList} showsVerticalScrollIndicator={false}>
+      <View style={styles.matchesList}>
         {filteredMatches.length === 0 ? (
           <View style={styles.emptyState}>
             <Radio size={40} color="#CBD5E1" />
@@ -502,7 +476,7 @@ export default function CricketMatches() {
             <MatchCard key={match.id} match={match} />
           ))
         )}
-      </ScrollView>
+      </View>
     </View>
   );
 }
@@ -530,16 +504,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#1E293B',
     fontWeight: '500',
-    // @ts-ignore
-    outlineWidth: 0,
-    // @ts-ignore
-    outlineStyle: 'none',
-  },
-  tabsScroll: {
-    marginBottom: 12,
-  },
-  tabsScrollContent: {
-    paddingHorizontal: 16,
   },
   filtersWrapper: {
     marginBottom: 20,
