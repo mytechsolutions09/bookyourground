@@ -295,11 +295,13 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   heroTitle: {
+    fontFamily: 'Inter',
     fontSize: 28,
     fontWeight: '900',
     color: '#00ea6b',
   },
   heroSubtitle: {
+    fontFamily: 'Inter',
     fontSize: 14,
     color: '#9CA3AF',
   },
@@ -313,6 +315,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   heroActionText: {
+    fontFamily: 'Inter',
     color: '#043529',
     fontWeight: '700',
     fontSize: 13,
@@ -345,12 +348,14 @@ const styles = StyleSheet.create({
     minWidth: 140,
   },
   title: {
+    fontFamily: 'Inter',
     fontSize: 22,
     fontWeight: '900',
     color: '#111827',
     letterSpacing: -0.5,
   },
   subtitle: {
+    fontFamily: 'Inter',
     fontSize: 12,
     color: '#6B7280',
     marginTop: 1,
@@ -365,11 +370,13 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   badgePillNumber: {
+    fontFamily: 'Inter',
     fontSize: 18,
     fontWeight: '800',
     color: '#166534',
   },
   badgePillLabel: {
+    fontFamily: 'Inter',
     fontSize: 11,
     fontWeight: '700',
     color: '#166534',
@@ -406,23 +413,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   emptyText: {
+    fontFamily: 'Inter',
     fontSize: 18,
     fontWeight: '700',
     color: '#374151',
     textAlign: 'center',
   },
   emptySubtext: {
+    fontFamily: 'Inter',
     fontSize: 14,
     color: '#6B7280',
     marginTop: 8,
     textAlign: 'center',
   },
   emptyTextNative: {
+    fontFamily: 'Inter',
     fontSize: 20,
     fontWeight: '800',
     color: '#00ea6b',
   },
   emptySubtextNative: {
+    fontFamily: 'Inter',
     fontSize: 14,
     color: '#9CA3AF',
     marginTop: 8,

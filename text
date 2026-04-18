@@ -1,11 +1,6 @@
-#dc8d3c
-#2b2f4b
-#043529
-#00ea6b
-#06392e
-#01e669
-#02c259
+
 #01b854
+#06392e
 #dcc093
 #518167
 
@@ -16,3 +11,5 @@ npx expo start --web
 commit changes to git
 git push
  add changes to git.md
+
+

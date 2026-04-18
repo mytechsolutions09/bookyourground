@@ -180,6 +180,7 @@ export default function TeamDetailsPage() {
           member:team_members(
             id,
             player_name,
+            profile_id,
             profile:profiles(avatar_url)
           )
         `)
@@ -323,6 +324,7 @@ export default function TeamDetailsPage() {
           member:team_members(
             id,
             player_name,
+            profile_id,
             profile:profiles(avatar_url)
           )
         `)
@@ -800,7 +802,11 @@ export default function TeamDetailsPage() {
                                     <RNText style={styles.sectionTitle}>Top Batters (Runs)</RNText>
                                     <View style={styles.leaderboardCard}>
                                       {[...leaderboardData].sort((a,b) => b.total_runs - a.total_runs).slice(0, 10).map((stat, idx) => (
-                                        <View key={stat.id} style={[styles.leaderboardRow, idx === 9 && { borderBottomWidth: 0 }]}>
+                                        <TouchableOpacity 
+                                          key={stat.id} 
+                                          style={[styles.leaderboardRow, idx === 9 && { borderBottomWidth: 0 }]}
+                                          onPress={() => stat.member?.profile_id && router.push(`/players/${stat.member.profile_id}` as any)}
+                                        >
                                           <View style={styles.leaderboardPlayerInfo}>
                                             <RNText style={styles.leaderboardRank}>{idx + 1}</RNText>
                                             <View style={styles.leaderboardAvatar}>
@@ -813,7 +819,7 @@ export default function TeamDetailsPage() {
                                             <RNText style={styles.leaderboardName} numberOfLines={1}>{stat.member?.player_name}</RNText>
                                           </View>
                                           <View style={styles.leaderboardValueContainer}><RNText style={styles.leaderboardValue}>{stat.total_runs}</RNText><RNText style={styles.leaderboardUnit}>Runs</RNText></View>
-                                        </View>
+                                        </TouchableOpacity>
                                       ))}
                                     </View>
                                   </View>
@@ -823,7 +829,11 @@ export default function TeamDetailsPage() {
                                     <RNText style={styles.sectionTitle}>Top Bowlers (Wkts)</RNText>
                                     <View style={styles.leaderboardCard}>
                                       {[...leaderboardData].sort((a,b) => b.total_wickets - a.total_wickets).slice(0, 10).map((stat, idx) => (
-                                        <View key={stat.id} style={[styles.leaderboardRow, idx === 9 && { borderBottomWidth: 0 }]}>
+                                        <TouchableOpacity 
+                                          key={stat.id} 
+                                          style={[styles.leaderboardRow, idx === 9 && { borderBottomWidth: 0 }]}
+                                          onPress={() => stat.member?.profile_id && router.push(`/players/${stat.member.profile_id}` as any)}
+                                        >
                                           <View style={styles.leaderboardPlayerInfo}>
                                             <RNText style={styles.leaderboardRank}>{idx + 1}</RNText>
                                             <View style={styles.leaderboardAvatar}>
@@ -836,7 +846,7 @@ export default function TeamDetailsPage() {
                                             <RNText style={styles.leaderboardName} numberOfLines={1}>{stat.member?.player_name}</RNText>
                                           </View>
                                           <View style={styles.leaderboardValueContainer}><RNText style={styles.leaderboardValue}>{stat.total_wickets}</RNText><RNText style={styles.leaderboardUnit}>Wkt</RNText></View>
-                                        </View>
+                                        </TouchableOpacity>
                                       ))}
                                     </View>
                                   </View>
@@ -853,7 +863,11 @@ export default function TeamDetailsPage() {
                             scrollEventThrottle={16}
                           >
                              {members.map((member) => (
-                               <View key={member.id} style={styles.memberRow}>
+                               <TouchableOpacity 
+                                 key={member.id} 
+                                 style={styles.memberRow}
+                                 onPress={() => router.push(`/players/${member.profile_id}` as any)}
+                               >
                                   <View style={styles.memberAvatar}>
                                     {member.profile?.avatar_url ? (
                                       <Image source={{ uri: member.profile.avatar_url }} style={styles.avatarImg} />
@@ -865,7 +879,7 @@ export default function TeamDetailsPage() {
                                     <RNText style={styles.memberName}>{member.player_name}</RNText>
                                     <RNText style={styles.memberRole}>{member.role.toUpperCase()}</RNText>
                                   </View>
-                               </View>
+                               </TouchableOpacity>
                              ))}
                           </ScrollView>
                         );
@@ -1165,13 +1179,13 @@ const styles = StyleSheet.create({
   matchHistoryTeamName: {
     fontFamily: 'Inter',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#1E293B',
   },
   matchHistoryTeamScore: {
     fontFamily: 'Inter',
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#043529',
   },
   matchHistoryVS: {
@@ -1189,7 +1203,8 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
     fontSize: 12,
     fontWeight: '600',
-    color: '#01b854',
+    color: '#64748B',
+    fontStyle: 'italic',
     textAlign: 'center',
     paddingTop: 12,
     borderTopWidth: 1,

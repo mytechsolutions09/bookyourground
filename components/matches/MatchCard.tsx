@@ -221,6 +221,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   statusText: {
+    fontFamily: 'Inter',
     color: '#fff',
     fontSize: 10,
     fontWeight: '700',
@@ -236,16 +237,19 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   name: {
+    fontFamily: 'Inter',
     flex: 1,
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   price: {
+    fontFamily: 'Inter',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#02c259',
   },
   priceUnit: {
+    fontFamily: 'Inter',
     fontSize: 11,
     fontWeight: '400',
     color: '#6B7280',
@@ -267,6 +271,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   ratingText: {
+    fontFamily: 'Inter',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -276,6 +281,7 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   location: {
+    fontFamily: 'Inter',
     fontSize: 14,
   },
   opponentSection: {
@@ -301,16 +307,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   opponentLabel: {
+    fontFamily: 'Inter',
     fontSize: 9,
     fontWeight: '800',
     letterSpacing: 0.5,
     marginBottom: 1,
   },
   opponentName: {
+    fontFamily: 'Inter',
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '500',
   },
   teamNameHighlight: {
+    fontFamily: 'Inter',
     fontWeight: '800',
     color: '#10b981',
   },
@@ -329,6 +338,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   scheduleText: {
+    fontFamily: 'Inter',
     flex: 1,
     fontSize: 12,
     fontWeight: '600',
@@ -349,6 +359,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   mapsLink: {
+    fontFamily: 'Inter',
     fontSize: 12,
     fontWeight: '600',
     textTransform: 'uppercase',
@@ -360,6 +371,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#00ea6b',
   },
   joinButtonText: {
+    fontFamily: 'Inter',
     color: '#043529',
     fontWeight: '700',
     fontSize: 13,

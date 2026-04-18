@@ -16,7 +16,8 @@ export function MobileTabBarHost() {
     root === 'welcome' ||
     root === '(auth)' ||
     root === '(owner)' ||
-    root === '(admin)'
+    root === '(admin)' ||
+    root === 'players'
   ) {
     return null;
   }

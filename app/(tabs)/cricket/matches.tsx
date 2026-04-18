@@ -326,13 +326,12 @@ export default function CricketMatches() {
             {match.type}, <Text style={styles.matchTournament}>{match.tournament}</Text>
           </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
-            <Calendar size={11} color="#94A3B8" />
-            <Text style={styles.matchMeta}>{match.date}</Text>
+            {match.status !== 'Upcoming' && <Text style={styles.matchMeta}>{match.date}</Text>}
+            {match.status !== 'Upcoming' && match.location ? (
+              <Text style={{ color: '#CBD5E1', fontSize: 10 }}>•</Text>
+            ) : null}
             {match.location ? (
-              <>
-                <Text style={{ color: '#CBD5E1', fontSize: 10 }}>•</Text>
-                <Text style={styles.matchMeta} numberOfLines={1}>{match.location}</Text>
-              </>
+              <Text style={styles.matchMeta} numberOfLines={1}>{match.location}</Text>
             ) : null}
           </View>
         </View>
@@ -383,27 +382,24 @@ export default function CricketMatches() {
       </View>
 
       {match.status === 'Live' && (
-        <View style={{ flexDirection: 'row', gap: 10, marginTop: 14, borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 12 }}>
+        <View style={{ flexDirection: 'row', gap: 10, marginTop: 10, borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 8 }}>
           <TouchableOpacity
-            style={[styles.liveActionBtn, { flex: 1, backgroundColor: '#F0FDF4', borderRadius: 10 }]}
+            style={[styles.liveActionBtn, { flex: 1, borderRadius: 10 }]}
             onPress={() => router.push(`/live/${match.match_id}`)}
           >
             <Text style={styles.liveActionBtnText}>View</Text>
-            <ChevronRight size={14} color="#01b854" />
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.liveActionBtn, { flex: 1.5, backgroundColor: '#06392e', borderRadius: 10 }]}
+            style={[styles.liveActionBtn, { flex: 1.5, borderRadius: 10 }]}
             onPress={() => router.push(`/cricket/scoring?matchId=${match.match_id}`)}
           >
-            <Text style={[styles.liveActionBtnText, { color: '#FFFFFF' }]}>Resume Scoring</Text>
-            <History size={14} color="#FFFFFF" />
+            <Text style={styles.liveActionBtnText}>Resume Scoring</Text>
           </TouchableOpacity>
         </View>
       )}
       {match.status === 'Result' && match.result && (
         <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 12 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Trophy size={12} color="#01b854" />
             <Text style={styles.resultText}>{match.result}</Text>
           </View>
         </View>
@@ -411,7 +407,6 @@ export default function CricketMatches() {
       {match.status === 'Upcoming' && (
         <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 12 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Clock size={12} color="#94A3B8" />
             <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '500' }}>Scheduled · {match.date}</Text>
           </View>
         </View>
@@ -500,6 +495,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   searchInput: {
+    fontFamily: 'Inter',
     flex: 1,
     fontSize: 14,
     color: '#1E293B',
@@ -529,6 +525,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0FDF4',
   },
   dropdownTriggerText: {
+    fontFamily: 'Inter',
     flex: 1,
     fontSize: 13,
     fontWeight: '600',
@@ -577,6 +574,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   dropdownOptionText: {
+    fontFamily: 'Inter',
     fontSize: 14,
     color: '#64748B',
     fontWeight: '500',
@@ -597,7 +595,7 @@ const styles = StyleSheet.create({
   },
   matchCard: {
     backgroundColor: '#FFFFFF',
-    padding: 16,
+    padding: 12,
     borderRadius: 18,
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -608,9 +606,9 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   matchCardLive: {
-    borderColor: '#01b85430',
-    borderWidth: 1.5,
-    backgroundColor: '#fafffe',
+    borderColor: '#E2E8F0',
+    borderWidth: 1,
+    backgroundColor: '#FFFFFF',
   },
   matchHeader: {
     flexDirection: 'row',
@@ -619,6 +617,7 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   matchType: {
+    fontFamily: 'Inter',
     fontSize: 11,
     fontWeight: '700',
     color: '#334155',
@@ -626,10 +625,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   matchTournament: {
+    fontFamily: 'Inter',
     color: '#64748B',
     fontWeight: '500',
   },
   matchMeta: {
+    fontFamily: 'Inter',
     fontSize: 11,
     color: '#94A3B8',
   },
@@ -641,20 +642,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 5,
   },
-  statusBadgeLive: { backgroundColor: '#F0FDF4' },
-  statusBadgeResult: { backgroundColor: '#F1F5F9' },
-  statusBadgeUpcoming: { backgroundColor: '#EFF6FF' },
-  statusBadgeText: { fontSize: 10, fontWeight: '800' },
-  statusBadgeTextLive: { color: '#01b854' },
-  statusBadgeTextResult: { color: '#64748B' },
-  statusBadgeTextUpcoming: { color: '#518167' },
+  statusBadgeLive: { backgroundColor: '#01b854' },
+  statusBadgeResult: { backgroundColor: '#005b80' },
+  statusBadgeUpcoming: { backgroundColor: '#4f2c63' },
+  statusBadgeText: { 
+    fontFamily: 'Inter',
+    fontSize: 10, 
+    fontWeight: '800' 
+  },
+  statusBadgeTextLive: { color: '#FFFFFF' },
+  statusBadgeTextResult: { color: '#FFFFFF' },
+  statusBadgeTextUpcoming: { color: '#FFFFFF' },
   pulseDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#01b854',
+    backgroundColor: '#FFFFFF',
   },
-  matchTeams: { gap: 12 },
+  matchTeams: { gap: 8 },
   matchTeamRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -674,17 +679,20 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   teamNameText: {
+    fontFamily: 'Inter',
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#1E293B',
     flex: 1,
   },
   teamScoreText: {
+    fontFamily: 'Inter',
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#06392e',
   },
   teamOversText: {
+    fontFamily: 'Inter',
     fontSize: 12,
     fontWeight: '500',
     color: '#94A3B8',
@@ -699,19 +707,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
+    paddingVertical: 6,
     gap: 6,
   },
   liveActionBtnText: {
+    fontFamily: 'Inter',
     fontSize: 13,
     fontWeight: '700',
-    color: '#01b854',
+    color: '#2a533a',
   },
   resultText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#518167',
+    color: '#64748B',
     fontStyle: 'italic',
+    fontFamily: 'Inter',
     flex: 1,
   },
   emptyState: {
@@ -720,11 +730,13 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   emptyTitle: {
+    fontFamily: 'Inter',
     fontSize: 16,
     fontWeight: '700',
     color: '#94A3B8',
   },
   emptyDesc: {
+    fontFamily: 'Inter',
     fontSize: 13,
     color: '#CBD5E1',
     textAlign: 'center',

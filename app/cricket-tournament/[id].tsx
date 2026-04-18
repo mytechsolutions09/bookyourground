@@ -435,14 +435,16 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   statusText: {
+    fontFamily: 'Inter',
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '800',
     textTransform: 'uppercase',
   },
   tournamentName: {
+    fontFamily: 'Inter',
     fontSize: 28,
-    fontWeight: '900',
+    fontWeight: '800',
     color: '#FFFFFF',
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 0, height: 2 },
@@ -467,12 +469,14 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   infoBarLabel: {
+    fontFamily: 'Inter',
     fontSize: 10,
     color: '#64748B',
     fontWeight: '600',
     textTransform: 'uppercase',
   },
   infoBarValue: {
+    fontFamily: 'Inter',
     fontSize: 13,
     color: '#1E293B',
     fontWeight: '700',
@@ -499,6 +503,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#01b854',
   },
   tabText: {
+    fontFamily: 'Inter',
     fontSize: 15,
     fontWeight: '600',
     color: '#64748B',
@@ -519,11 +524,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sectionTitle: {
+    fontFamily: 'Inter',
     fontSize: 18,
     fontWeight: '700',
     color: '#1E293B',
   },
   description: {
+    fontFamily: 'Inter',
     fontSize: 15,
     color: '#475569',
     lineHeight: 24,
@@ -542,11 +549,13 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   detailLabel: {
+    fontFamily: 'Inter',
     fontSize: 11,
     color: '#64748B',
     fontWeight: '600',
   },
   detailValue: {
+    fontFamily: 'Inter',
     fontSize: 14,
     color: '#1E293B',
     fontWeight: '700',
@@ -555,6 +564,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   teamsCountText: {
+    fontFamily: 'Inter',
     fontSize: 15,
     fontWeight: '700',
     color: '#1E293B',
@@ -580,8 +590,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   teamName: {
+    fontFamily: 'Inter',
     fontSize: 16,
-    fontWeight: 'normal',
+    fontWeight: '500',
     color: '#1E293B',
     marginBottom: 4,
   },
@@ -591,6 +602,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   regStatusText: {
+    fontFamily: 'Inter',
     fontSize: 11,
     fontWeight: '700',
     textTransform: 'capitalize',
@@ -601,6 +613,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   emptyText: {
+    fontFamily: 'Inter',
     color: '#94A3B8',
     fontSize: 14,
   },
@@ -621,13 +634,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   feeLabel: {
+    fontFamily: 'Inter',
     fontSize: 12,
     color: '#64748B',
     fontWeight: '500',
   },
   feeValue: {
+    fontFamily: 'Inter',
     fontSize: 22,
-    fontWeight: '900',
+    fontWeight: '800',
     color: '#1E293B',
   },
   registerBtn: {
@@ -644,8 +659,9 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
   registerBtnText: {
+    fontFamily: 'Inter',
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
   },
 });
