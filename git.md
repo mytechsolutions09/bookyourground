@@ -1,3 +1,31 @@
+# Mobile Web Navigation Optimization & Light-Theme Transition
+
+This update modernizes the mobile web experience by standardizing a light-themed UI and refining navigation architecture. It eliminates redundant navigation elements, restores tab visibility, and optimizes the visual hierarchy for smaller screens.
+
+## Key Changes
+
+### 1. Navigation & Layout Optimization
+- **Redundant Navigator Cleanup**: Implemented conditional rendering in `WebLayout.tsx` to hide the global bottom bar on tab-based routes (`/grounds`, `/shop`), preventing duplicate navigation bars on mobile web.
+- **Universal Tab Visibility**: Restored the **"Shop"** tab visibility for all users (including ground owners) in both the web footer and native tab-bar, ensuring consistent access to the marketplace.
+- **Compact Navigation Height**: Reduced the bottom bar height from **85px to 64px** across the platform to maximize vertical content space on mobile devices.
+
+### 2. Platform-Wide Light Theme Transition
+- **Mobile Web Modernization**: Successfully transitioned critical navigation components—including the **Header, Sidebar, and Bottom Bar**—to a premium white-themed aesthetic on small screens.
+- **Dashboard & Booking Refinement**: Migrated the **Player Dashboard** and **Booking Details** pages to the new light-themed design system specifically for mobile web users.
+- **Marketing & Footer Overhaul**: Transitioned the **Call to Action** and **Site Footer** to a clean, high-contrast light theme with Emerald accents and Slate typography.
+- **High-Contrast Iconography**: Updated navigation icons (Burger, X, Logout, Nav links) to high-contrast navy/slate colors to ensure perfect legibility on light backgrounds.
+
+### 3. Hero Section & Landing Optimization
+- **Vertical Space Efficiency**: Reduced the padding beneath the mobile logo and halved the vertical padding in the **Hero section** (from 48px to 24px) for a tighter, more cohesive landing page layout.
+- **Responsive Layout logic**: Integrated dynamic window dimension checks to ensure padding and spacing adapt perfectly to narrow browser windows.
+
+### 4. Technical Stabilizations & Fixes
+- **Duplicate Declaration Repair**: Resolved a critical `ReferenceError` caused by a duplicate `IS_DARK` variable declaration in the dashboard.
+- **Dynamic Style Scope Fix**: Moved the responsive padding logic in the Hero component from static `StyleSheet` definitions into the render scope, resolving a `width is not defined` runtime error.
+- **CSS Variable Cleanup**: Standardized background colors using `#FFFFFF` and `#F8FAFC` to replace legacy forest-green and dark-slate backgrounds on mobile.
+
+---
+
 # Light-Theme Modernization & Discovery Hub Refinement
 
 This update completes the comprehensive transition of the "Book a Ground" discovery and booking workflow to a high-fidelity, premium light-themed design system. Every interactive element—from search fields to result cards—has been meticulously refined for visual clarity and professional-grade polish.
@@ -178,7 +206,7 @@ This update significantly enhances the cricket scoring engine with global player
 
 ### 4. Technical Infrastructure
 - **Database Migrations**: Executed new migrations (`20260415000000_relax_squad_rls.sql`, `20260414180000_scoring_rls_fix.sql`) to synchronize database permissions with the new scoring features.
-- **Scoreboard Data Integrity**: Updated the link-officials logic to ensure umpires and scorers are correctly associated with match IDs even when added mid-game.
+- **Scoreboard Player Alignment**: Fixed the scoreboard player display logic to ensure players are correctly assigned to their respective batting or bowling teams upon match resumption.
 
 ---
 
@@ -298,4 +326,4 @@ This update delivers a professional-grade overhaul of the platform's booking man
 - **Utility Expansion**: Extended the core helper library with `formatDateDDMMYYYY` and refined sorting algorithms to handle complex multi-field comparisons.
 
 ---
-*Last Updated and Pushed on April 18, 2026, at 18:15:00+05:30*
+*Last Updated and Pushed on April 18, 2026, at 18:38:00+05:30*

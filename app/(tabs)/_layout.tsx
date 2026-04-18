@@ -256,10 +256,10 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   customTabBar: {
     flexDirection: 'row',
-    backgroundColor: '#043529',
-    height: 85,
+    backgroundColor: '#FFFFFF',
+    height: 64,
     borderTopWidth: 1,
-    borderTopColor: '#06392e',
+    borderTopColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'space-around',
     width: '100%',

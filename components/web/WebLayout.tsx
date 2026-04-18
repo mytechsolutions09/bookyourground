@@ -299,9 +299,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
         ? hrefSegments.length === segments.length &&
         hrefSegments.every((seg, i) => segments[i] === seg)
         : currentPath === targetHref;
-    const iconColor = isActive
-      ? (!isCompact ? '#374151' : '#00ea6b')
-      : (isCompact ? '#dcc093' : '#6B7280');
+    const iconColor = isCompact ? (isActive ? '#10B981' : '#6B7280') : (isActive ? '#111827' : '#4B5563');
     const activeStyle = isCompact ? styles.navLinkActiveMobile : styles.navLinkActive;
 
     return (
@@ -650,7 +648,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
               />
               <View style={styles.sidebarMobile}>
                 <View style={styles.mobileSidebarSearch}>
-                  <Search size={18} color="#dcc093" />
+                  <Search size={18} color="#6B7280" />
                   <RNTextInput
                     style={styles.mobileSidebarSearchInput}
                     placeholder="Search venues or matches..."
@@ -1010,7 +1008,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
         </View>
       </View>
 
-      {isCompact && (
+      {isCompact && !segments.includes('(tabs)') && cleanPath !== '/grounds' && cleanPath !== '/shop' && (
         <View style={styles.bottomBar}>
           {[
             { label: 'Home', icon: House, href: '/' },
@@ -1018,10 +1016,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
             { label: 'Cricket', icon: Trophy, href: '/cricket/player-profile' },
             { label: 'Shop', icon: ShoppingBag, href: '/shop' },
             { label: 'Profile', icon: CircleUser, href: '/(tabs)/profile' },
-          ].filter(item => {
-            if (item.label === 'Shop' && isGroundOwner) return false;
-            return true;
-          }).map((item) => {
+          ].map((item) => {
             const Icon = item.icon;
             const isActive = cleanPath === item.href ||
               (item.href === '/grounds' && cleanPath === '/book-my-ground') ||
@@ -1060,9 +1055,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
   },
   header: {
-    backgroundColor: '#043529',
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#06392e',
+    borderBottomColor: '#F3F4F6',
     ...Platform.select({
       web: {
         position: 'sticky' as any,
@@ -1072,12 +1067,12 @@ const styles = StyleSheet.create({
     }),
   },
   ownerHeader: {
-    backgroundColor: '#043529',
-    borderBottomColor: '#06392e',
+    backgroundColor: '#FFFFFF',
+    borderBottomColor: '#F3F4F6',
   },
   userHeader: {
-    backgroundColor: '#043529',
-    borderBottomColor: '#06392e',
+    backgroundColor: '#FFFFFF',
+    borderBottomColor: '#F3F4F6',
   },
   heroHeader: {
     position: 'absolute' as any,
@@ -1117,7 +1112,8 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   headerContentCompact: {
-    paddingVertical: 8, // Smaller screen
+    paddingTop: 8,
+    paddingBottom: 2, // Smaller screen
   },
   logo: {
     flexDirection: 'row',
@@ -1157,7 +1153,7 @@ const styles = StyleSheet.create({
     maxWidth: 360,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#06392e',
+    backgroundColor: '#F3F4F6',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
@@ -1170,7 +1166,7 @@ const styles = StyleSheet.create({
   headerSearchInput: {
     flex: 1,
     height: 40,
-    color: '#f9fafb',
+    color: '#111827',
     fontSize: 13,
     fontFamily: 'Inter',
     backgroundColor: 'transparent',
@@ -1344,9 +1340,9 @@ const styles = StyleSheet.create({
     left: 'auto' as any,
     width: 280,
     bottom: 0,
-    backgroundColor: '#043529',
+    backgroundColor: '#FFFFFF',
     borderLeftWidth: 1,
-    borderLeftColor: 'rgba(220,192,147,0.15)',
+    borderLeftColor: '#F3F4F6',
     borderRightWidth: 0,
     padding: 24,
     paddingTop: 80,
@@ -1388,7 +1384,7 @@ const styles = StyleSheet.create({
     color: '#4B5563',
   },
   navLinkTextMobile: {
-    color: '#dcc093',
+    color: '#1F2937',
   },
   navLinkTextActive: {
     color: '#374151',
@@ -1405,7 +1401,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1418,7 +1414,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
     fontSize: 12,
     fontWeight: '600',
-    color: '#dcc093',
+    color: '#6B7280',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     marginBottom: 16,
@@ -1577,7 +1573,7 @@ const styles = StyleSheet.create({
   mobileSidebarSearch: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: '#F3F4F6',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(220,192,147,0.2)',
@@ -1589,7 +1585,7 @@ const styles = StyleSheet.create({
   mobileSidebarSearchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#dcc093',
+    color: '#111827',
     fontFamily: 'Inter',
     outlineStyle: 'none' as any,
   },
@@ -1598,11 +1594,11 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 85,
-    backgroundColor: '#043529',
+    height: 64,
+    backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     borderTopWidth: 1,
-    borderTopColor: '#06392e',
+    borderTopColor: '#F3F4F6',
     zIndex: 3000,
     paddingHorizontal: 10,
     paddingBottom: 2,

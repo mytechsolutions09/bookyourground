@@ -73,7 +73,7 @@ export default function Hero() {
   };
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, Platform.OS === 'web' && { paddingVertical: width < 900 ? 24 : 48 }]}>
       <View style={styles.backgroundGlow} />
 
       <View style={styles.container}>
@@ -217,7 +217,7 @@ export default function Hero() {
 const styles = StyleSheet.create({
   root: {
     backgroundColor: '#F8FAFC',
-    paddingVertical: Platform.OS === 'web' ? 48 : 40,
+    paddingVertical: 40,
     paddingHorizontal: 24,
     justifyContent: 'center',
     alignItems: 'center',

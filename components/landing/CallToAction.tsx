@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, useWindowDimensions } from 'react-native';
 import { router } from 'expo-router';
 import { ArrowRight } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,13 +7,16 @@ import { useAuth } from '@/contexts/AuthContext';
 export default function CallToAction() {
   const { user, profile } = useAuth();
   const isLoggedIn = !!user || !!profile;
+  const { width } = useWindowDimensions();
+  const isCompact = width < 900;
+  const isLight = Platform.OS === 'web' && isCompact;
 
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        <View style={styles.card}>
-          <Text style={styles.title}>Ready to Get Started?</Text>
-          <Text style={styles.subtitle}>
+        <View style={[styles.card, isLight && styles.cardLight]}>
+          <Text style={[styles.title, isLight && styles.titleLight]}>Ready to Get Started?</Text>
+          <Text style={[styles.subtitle, isLight && styles.subtitleLight]}>
             Join thousands of sports enthusiasts who book their favorite grounds with ease
           </Text>
 
@@ -40,7 +43,7 @@ export default function CallToAction() {
                   style={styles.linkButton}
                   onPress={() => router.push('/(auth)/login')}
                 >
-                  <Text style={styles.linkButtonText}>Already have an account? Sign in</Text>
+                  <Text style={[styles.linkButtonText, isLight && styles.linkButtonTextLight]}>Already have an account? Sign in</Text>
                 </Pressable>
               </>
             )}
@@ -75,6 +78,12 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
   },
+  cardLight: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowOpacity: 0.1,
+  },
   title: {
     fontSize: Platform.OS === 'web' ? 42 : 32,
     fontWeight: '800',
@@ -84,6 +93,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     letterSpacing: -1,
   },
+  titleLight: {
+    color: '#111827',
+  },
   subtitle: {
     fontSize: 18,
     fontFamily: 'Inter',
@@ -92,6 +104,9 @@ const styles = StyleSheet.create({
     lineHeight: 28,
     marginBottom: 40,
     maxWidth: 600,
+  },
+  subtitleLight: {
+    color: '#64748B',
   },
   buttonGroup: {
     alignItems: 'center',
@@ -126,5 +141,8 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.5)',
     fontSize: 15,
     fontWeight: '600',
+  },
+  linkButtonTextLight: {
+    color: '#10B981',
   },
 });

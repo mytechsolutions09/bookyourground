@@ -138,7 +138,9 @@ const styles = StyleSheet.create({
     marginTop: 40,
     paddingHorizontal: 16,
     paddingBottom: 32,
-    backgroundColor: '#043529',
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
   },
   footerMain: {
     maxWidth: 1280,
@@ -153,12 +155,12 @@ const styles = StyleSheet.create({
   footerBrandTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#01b854',
+    color: '#10B981',
   },
   footerBrandSubtitle: {
     marginTop: 6,
     fontSize: 13,
-    color: '#9CA3AF',
+    color: '#64748B',
     maxWidth: 480,
   },
   footerColumns: {
@@ -175,25 +177,25 @@ const styles = StyleSheet.create({
   footerHeading: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#E5E7EB',
+    color: '#111827',
     textTransform: 'uppercase',
     letterSpacing: 0.7,
     marginBottom: 10,
   },
   footerLink: {
     fontSize: 13,
-    color: '#CBD5F5',
+    color: '#4B5563',
     marginBottom: 6,
   },
   footerBottom: {
     marginTop: 18,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(148,163,184,0.25)',
+    borderTopColor: '#F1F5F9',
   },
   footerBottomText: {
     fontSize: 12,
-    color: '#6B7280',
+    color: '#94A3B8',
     textAlign: 'center',
   },
 });

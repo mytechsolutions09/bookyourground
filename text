@@ -3,13 +3,19 @@
 #06392e
 #dcc093
 #518167
-
+#005b80
+#4f2c63
+#2a533a
 npx expo start
 npx expo start --web
 
 
 commit changes to git
 git push
- add changes to git.md
+ add changes to git.md, dont delete anything
 
 
+git status
+git add . && git commit -m
+git add .; git commit -m
+git push

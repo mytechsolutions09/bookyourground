@@ -196,7 +196,7 @@ export default function BookingDetailsScreen() {
   );
 
   const isWeb = Platform.OS === 'web';
-  const IS_DARK = !isWeb || (width < 900);
+  const IS_DARK = !isWeb;
 
   const detailsSection = (
     <View style={isNarrow ? styles.detailsColumnNarrow : styles.detailsColumn}>
