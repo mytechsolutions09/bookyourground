@@ -40,6 +40,8 @@ export default function LoginScreen() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const emailRef = React.useRef<TextInput>(null);
+  const passwordRef = React.useRef<TextInput>(null);
 
   const { signIn, profile, user, resetPassword } = useAuth();
   const os = Platform.OS as string;
@@ -255,7 +257,7 @@ export default function LoginScreen() {
   // ── Mobile layout ─────────────────────────────────────────────────────────
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.screen}
     >
       <ScrollView
@@ -273,31 +275,27 @@ export default function LoginScreen() {
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >
-          <ArrowLeft size={20} color="#f9fafb" strokeWidth={2.5} />
+          <ArrowLeft size={20} color="#1E293B" strokeWidth={2.5} />
         </Pressable>
-
-        {/* Logo */}
-        <View style={styles.logoWrap}>
-          <Image
-            source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
-            style={styles.logo}
-            resizeMode="contain"
-            accessibilityLabel="BookYourGround"
-          />
-        </View>
-
-        {/* Heading */}
-        <View style={styles.headingWrap}>
-          <Text style={styles.title}>Welcome back</Text>
-          <Text style={styles.subtitle}>Sign in to book your next game</Text>
-        </View>
 
         {/* Form card */}
         <View style={styles.card}>
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
+              style={styles.logo}
+              resizeMode="contain"
+              accessibilityLabel="BookYourGround"
+            />
+          </View>
+          
+          <View style={{ height: 16 }} />
           {/* Email field */}
-          <View style={styles.fieldWrap}>
-            <Text style={styles.fieldLabel}>Email</Text>
-            <View
+            <Pressable style={styles.fieldLabel} onPress={() => emailRef.current?.focus()}>
+              <Text style={styles.fieldLabel}>Email</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => emailRef.current?.focus()}
               style={[
                 styles.inputRow,
                 emailFocused && styles.inputRowFocused,
@@ -305,24 +303,27 @@ export default function LoginScreen() {
             >
               <Mail size={17} color={emailFocused ? '#01b854' : '#6b7280'} strokeWidth={2} />
               <TextInput
+                ref={emailRef}
                 style={styles.textInput}
                 value={email}
                 onChangeText={setEmail}
                 placeholder="Enter your email"
-                placeholderTextColor="#4b5563"
+                placeholderTextColor="#94A3B8"
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoComplete="email"
                 onFocus={() => setEmailFocused(true)}
                 onBlur={() => setEmailFocused(false)}
               />
-            </View>
-          </View>
+            </Pressable>
 
           {/* Password field */}
           <View style={styles.fieldWrap}>
-            <Text style={styles.fieldLabel}>Password</Text>
-            <View
+            <Pressable style={styles.fieldLabel} onPress={() => passwordRef.current?.focus()}>
+              <Text style={styles.fieldLabel}>Password</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => passwordRef.current?.focus()}
               style={[
                 styles.inputRow,
                 passwordFocused && styles.inputRowFocused,
@@ -330,11 +331,12 @@ export default function LoginScreen() {
             >
               <Lock size={17} color={passwordFocused ? '#01b854' : '#6b7280'} strokeWidth={2} />
               <TextInput
+                ref={passwordRef}
                 style={styles.textInput}
                 value={password}
                 onChangeText={setPassword}
                 placeholder="Enter your password"
-                placeholderTextColor="#4b5563"
+                placeholderTextColor="#94A3B8"
                 secureTextEntry={!showPassword}
                 autoComplete="password"
                 onFocus={() => setPasswordFocused(true)}
@@ -347,7 +349,7 @@ export default function LoginScreen() {
                   <Eye size={17} color="#6b7280" strokeWidth={2} />
                 )}
               </Pressable>
-            </View>
+            </Pressable>
           </View>
   
           <TouchableOpacity onPress={() => router.push('/(auth)/forgot-password')} style={styles.forgotWrap}>
@@ -460,12 +462,12 @@ function WebInput(props: any) {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#043529',
+    backgroundColor: '#F8FAFC',
   },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 56,
+    paddingTop: 140,
     paddingBottom: 40,
   },
   backBtn: {
@@ -475,77 +477,83 @@ const styles = StyleSheet.create({
     zIndex: 10,
     width: 40,
     height: 40,
-    borderRadius: 999,
-    backgroundColor: '#06392e',
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.25)',
+    borderColor: '#E2E8F0',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
-  logoWrap: {
+  logoContainer: {
     alignItems: 'center',
-    marginTop: 48,
+    justifyContent: 'center',
+    paddingVertical: 10,
+    width: '100%',
     marginBottom: 8,
   },
   logo: {
-    width: 180,
-    height: 48,
+    width: 260,
+    height: 65,
   },
   headingWrap: {
     alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 32,
-  },
-  title: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#f9fafb',
-    letterSpacing: -0.4,
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#9ca3af',
-    fontWeight: '400',
+    marginTop: 0,
+    marginBottom: 16,
   },
   card: {
-    backgroundColor: '#06392e',
-    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 28,
     padding: 24,
     borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.12)',
+    borderColor: '#F1F5F9',
     gap: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.04,
+    shadowRadius: 20,
+    elevation: 4,
   },
   fieldWrap: {
     marginBottom: 16,
   },
   fieldLabel: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#e5e7eb',
+    fontWeight: '700',
+    color: '#334155',
     marginBottom: 8,
     letterSpacing: 0.2,
+    fontFamily: 'Inter',
   },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#043529',
-    borderRadius: 14,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: 'rgba(0,234,107,0.18)',
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    gap: 10,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 12,
   },
   inputRowFocused: {
-    borderColor: '#01b854',
-    backgroundColor: 'rgba(4,53,41,0.9)',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 2,
   },
   textInput: {
     flex: 1,
     fontSize: 15,
-    color: '#f9fafb',
-    paddingVertical: 0,
+    color: '#0F172A',
+    fontFamily: 'Inter',
+    fontWeight: '500',
   },
   buttonRow: {
     flexDirection: 'row',
@@ -566,10 +574,11 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   signInBtnText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '700',
-    color: '#043529',
+    color: '#FFFFFF',
     letterSpacing: 0.5,
+    fontFamily: 'Inter',
   },
   outlineBtn: {
     flex: 1,
@@ -583,8 +592,9 @@ const styles = StyleSheet.create({
   outlineBtnText: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#01b854',
+    color: '#059669',
     letterSpacing: 0.5,
+    fontFamily: 'Inter',
   },
   forgotWrap: {
     alignSelf: 'flex-end',
@@ -593,8 +603,9 @@ const styles = StyleSheet.create({
   },
   forgotText: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#01b854',
+    fontWeight: '700',
+    color: '#059669',
+    fontFamily: 'Inter',
   },
 });
 
@@ -715,25 +726,23 @@ const webStyles = StyleSheet.create({
 const modalStyles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(4,53,41,0.85)',
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
   },
   card: {
-    backgroundColor: '#06392e',
-    borderRadius: 28,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 32,
     padding: 32,
     width: '100%',
     maxWidth: 400,
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,234,107,0.25)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 15 },
-    shadowOpacity: 0.4,
-    shadowRadius: 25,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.15,
+    shadowRadius: 30,
+    elevation: 10,
   },
   iconBg: {
     width: 80,
@@ -746,32 +755,30 @@ const modalStyles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#f9fafb',
+    color: '#0F172A',
     marginBottom: 12,
+    fontFamily: 'Inter',
   },
   message: {
     fontSize: 15,
-    color: '#9ca3af',
+    color: '#64748B',
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 28,
+    fontFamily: 'Inter',
   },
   button: {
-    backgroundColor: '#01b854',
-    paddingVertical: 14,
-    paddingHorizontal: 40,
-    borderRadius: 14,
+    backgroundColor: '#10B981',
+    paddingVertical: 16,
+    borderRadius: 16,
     width: '100%',
     alignItems: 'center',
-    shadowColor: '#01b854',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
   },
   buttonText: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#043529',
+    color: '#FFFFFF',
     letterSpacing: 1,
+    fontFamily: 'Inter',
   },
 });

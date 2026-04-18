@@ -12,6 +12,7 @@ import {
   useWindowDimensions,
   TextInput,
   ActivityIndicator,
+  Pressable,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,6 +21,8 @@ import { Mail, ArrowLeft } from 'lucide-react-native';
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [emailFocused, setEmailFocused] = useState(false);
+  const emailRef = React.useRef<TextInput>(null);
 
   const { resetPassword } = useAuth();
   const { width } = useWindowDimensions();
@@ -134,41 +137,55 @@ export default function ForgotPasswordScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <TouchableOpacity style={styles.backBtn} onPress={() => {
-          if (router.canGoBack()) router.back();
-          else router.replace('/(auth)/login');
-        }}>
-          <ArrowLeft size={20} color="#f9fafb" />
-        </TouchableOpacity>
-
-        <View style={styles.logoWrap}>
-          <Image
-            source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </View>
-
-        <View style={styles.headingWrap}>
-          <Text style={styles.title}>Forgot Password</Text>
-          <Text style={styles.subtitle}>Enter your email to recover your account</Text>
-        </View>
+        <Pressable
+          style={styles.backBtn}
+          onPress={() => {
+            if (router.canGoBack()) router.back();
+            else router.replace('/(auth)/login');
+          }}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
+          <ArrowLeft size={20} color="#1E293B" strokeWidth={2.5} />
+        </Pressable>
 
         <View style={styles.card}>
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
+              style={styles.logo}
+              resizeMode="contain"
+              accessibilityLabel="BookYourGround"
+            />
+          </View>
+          
+          <View style={{ height: 16 }} />
+
           <View style={styles.fieldWrap}>
-            <Text style={styles.fieldLabel}>Email</Text>
-            <View style={styles.inputRow}>
-              <Mail size={17} color="#6b7280" />
+            <Pressable style={styles.fieldLabel} onPress={() => emailRef.current?.focus()}>
+              <Text style={styles.fieldLabel}>Email</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => emailRef.current?.focus()}
+              style={[
+                styles.inputRow,
+                emailFocused && styles.inputRowFocused,
+              ]}
+            >
+              <Mail size={17} color={emailFocused ? '#10B981' : '#6b7280'} strokeWidth={2} />
               <TextInput
+                ref={emailRef}
                 style={styles.textInput}
                 value={email}
                 onChangeText={setEmail}
                 placeholder="Enter your email"
-                placeholderTextColor="#4b5563"
+                placeholderTextColor="#94A3B8"
                 keyboardType="email-address"
                 autoCapitalize="none"
+                onFocus={() => setEmailFocused(true)}
+                onBlur={() => setEmailFocused(false)}
               />
-            </View>
+            </Pressable>
           </View>
 
           <TouchableOpacity
@@ -176,7 +193,7 @@ export default function ForgotPasswordScreen() {
             onPress={handleSendReset}
             disabled={loading}
           >
-            {loading ? <ActivityIndicator color="#043529" /> : <Text style={styles.resetBtnText}>Send Reset Link</Text>}
+            {loading ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.resetBtnText}>SEND RESET LINK</Text>}
           </TouchableOpacity>
         </View>
 
@@ -216,23 +233,107 @@ function WebInput(props: any) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#043529' },
-  scrollContent: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 60 },
-  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#06392e', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
-  logoWrap: { alignItems: 'center', marginBottom: 20 },
-  logo: { width: 180, height: 48 },
-  headingWrap: { alignItems: 'center', marginBottom: 30 },
-  title: { fontSize: 26, fontWeight: '800', color: '#f9fafb', marginBottom: 8 },
-  subtitle: { fontSize: 14, color: '#9ca3af', textAlign: 'center' },
-  card: { backgroundColor: '#06392e', borderRadius: 24, padding: 24, borderWidth: 1, borderColor: 'rgba(0,234,107,0.12)' },
+  screen: { flex: 1, backgroundColor: '#F8FAFC' },
+  scrollContent: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 140, paddingBottom: 40 },
+  backBtn: { 
+    position: 'absolute', 
+    top: 52, 
+    left: 20, 
+    zIndex: 10, 
+    width: 40, 
+    height: 40, 
+    borderRadius: 20, 
+    backgroundColor: '#FFFFFF', 
+    borderWidth: 1, 
+    borderColor: '#E2E8F0', 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  logoContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    width: '100%',
+    marginBottom: 8,
+  },
+  logo: { width: 260, height: 65 },
+  card: { 
+    backgroundColor: '#FFFFFF', 
+    borderRadius: 28, 
+    padding: 24, 
+    borderWidth: 1, 
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.04,
+    shadowRadius: 20,
+    elevation: 4,
+  },
   fieldWrap: { marginBottom: 16 },
-  fieldLabel: { fontSize: 13, fontWeight: '600', color: '#e5e7eb', marginBottom: 8 },
-  inputRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#043529', borderRadius: 14, borderWidth: 1.5, borderColor: 'rgba(0,234,107,0.18)', paddingHorizontal: 14, paddingVertical: 12, gap: 10 },
-  textInput: { flex: 1, fontSize: 15, color: '#f9fafb' },
-  resetBtn: { marginTop: 8, backgroundColor: '#01b854', borderRadius: 14, paddingVertical: 15, alignItems: 'center' },
-  resetBtnText: { fontSize: 16, fontWeight: '700', color: '#043529' },
+  fieldLabel: { 
+    fontSize: 13, 
+    fontWeight: '700', 
+    color: '#334155', 
+    marginBottom: 8,
+    fontFamily: 'Inter',
+  },
+  inputRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#F8FAFC', 
+    borderRadius: 14, 
+    borderWidth: 1.5, 
+    borderColor: '#E2E8F0', 
+    paddingHorizontal: 14, 
+    paddingVertical: 14, 
+    gap: 10 
+  },
+  inputRowFocused: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  textInput: { 
+    flex: 1, 
+    fontSize: 15, 
+    color: '#0F172A', 
+    fontFamily: 'Inter',
+    fontWeight: '500',
+  },
+  resetBtn: { 
+    marginTop: 8, 
+    backgroundColor: '#10B981', 
+    borderRadius: 14, 
+    paddingVertical: 16, 
+    alignItems: 'center',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  resetBtnText: { 
+    fontSize: 16, 
+    fontWeight: '800', 
+    color: '#FFFFFF', 
+    letterSpacing: 0.5,
+    fontFamily: 'Inter',
+  },
   loginLink: { marginTop: 30, alignItems: 'center' },
-  loginLinkText: { fontSize: 14, fontWeight: '700', color: '#01b854' },
+  loginLinkText: { 
+    fontSize: 14, 
+    fontWeight: '700', 
+    color: '#059669',
+    fontFamily: 'Inter',
+  },
 });
 
 const webStyles = StyleSheet.create({

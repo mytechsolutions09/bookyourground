@@ -334,9 +334,9 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   activeTabText: {
-    color: '#01b854',
+    color: '#10B981',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '800',
     fontFamily: 'Inter',
   },
   favoritesContainer: {

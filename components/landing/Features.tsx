@@ -53,8 +53,8 @@ export default function Features() {
                 <View style={styles.iconContainer}>
                   <IconComponent
                     size={24}
-                    color="#02c259"
-                    strokeWidth={2}
+                    color="#10B981"
+                    strokeWidth={2.5}
                   />
                 </View>
                 <Text style={styles.cardTitle}>{feature.title}</Text>
@@ -70,7 +70,7 @@ export default function Features() {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F8FAFC',
     paddingVertical: Platform.OS === 'web' ? 80 : 60,
     paddingHorizontal: 24,
   },
@@ -81,11 +81,11 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
     fontFamily: 'Inter',
-    color: '#02c259',
+    color: '#059669',
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 1.2,
     textAlign: 'center',
     marginBottom: 12,
   },
@@ -93,15 +93,15 @@ const styles = StyleSheet.create({
     fontSize: Platform.OS === 'web' ? 40 : 32,
     fontWeight: '800',
     fontFamily: 'Inter',
-    color: '#043529',
+    color: '#0F172A',
     textAlign: 'center',
     marginBottom: 16,
-    letterSpacing: -0.5,
+    letterSpacing: -1,
   },
   subtitle: {
     fontSize: 18,
     fontFamily: 'Inter',
-    color: '#6B7280',
+    color: '#64748B',
     textAlign: 'center',
     lineHeight: 28,
     marginBottom: 56,
@@ -116,38 +116,38 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 32,
     width: Platform.OS === 'web' ? 360 : '100%',
     maxWidth: 360,
     borderWidth: 1,
-    borderColor: 'rgba(0, 234, 107, 0.25)',
+    borderColor: '#F1F5F9',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowRadius: 20,
+    elevation: 3,
   },
   iconContainer: {
     width: 56,
     height: 56,
-    borderRadius: 12,
-    backgroundColor: 'rgba(4,53,41,0.12)', // #043529 tint
+    borderRadius: 14,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
   },
   cardTitle: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: '800',
     fontFamily: 'Inter',
-    color: '#043529',
+    color: '#0F172A',
     marginBottom: 12,
   },
   cardDescription: {
     fontSize: 15,
     fontFamily: 'Inter',
-    color: '#6B7280',
+    color: '#64748B',
     lineHeight: 24,
   },
 });

@@ -113,7 +113,7 @@ function GroundCardMobile({ ground, index }: { ground: any; index: number }) {
             {ground.name}
           </Text>
           <View style={styles.groundLocationRow}>
-            <MapPin size={11} color="#dcc093" strokeWidth={2} />
+            <MapPin size={11} color="#10B981" strokeWidth={2} />
             <Text style={styles.groundLocation} numberOfLines={1}>
               {ground.city}, {ground.state}
             </Text>
@@ -126,7 +126,7 @@ function GroundCardMobile({ ground, index }: { ground: any; index: number }) {
           <Text style={styles.groundType}>{ground.pitch_type || 'Standard'}</Text>
           {avgRating > 0 ? (
             <View style={styles.ratingRow}>
-              <Star size={11} color="#dcc093" fill="#dcc093" />
+              <Star size={11} color="#FFA000" fill="#FFA000" />
               <Text style={styles.ratingText}>{avgRating.toFixed(1)}</Text>
             </View>
           ) : null}
@@ -140,7 +140,7 @@ function GroundCardMobile({ ground, index }: { ground: any; index: number }) {
           </Text>
           <View style={styles.bookNowBtn}>
             <Text style={styles.bookNowText}>Book</Text>
-            <ArrowRight size={13} color="#043529" strokeWidth={2.5} />
+            <ArrowRight size={13} color="#FFFFFF" strokeWidth={2.5} />
           </View>
         </View>
       </View>
@@ -275,8 +275,8 @@ export default function HomeScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#01b854"
-            colors={['#01b854']}
+            tintColor="#10B981"
+            colors={['#10B981']}
           />
         }
       >
@@ -335,12 +335,12 @@ export default function HomeScreen() {
               onPress={() => router.push('/(tabs)/grounds' as any)}
             >
               <Text style={styles.seeAllText}>See all</Text>
-              <ChevronRight size={14} color="#01b854" strokeWidth={2.5} />
+              <ChevronRight size={14} color="#10B981" strokeWidth={2.5} />
             </Pressable>
           </View>
 
           {loading ? (
-            <ActivityIndicator color="#01b854" style={{ marginTop: 24, marginBottom: 8 }} />
+            <ActivityIndicator color="#10B981" style={{ marginTop: 24, marginBottom: 8 }} />
           ) : popularGrounds.length === 0 ? (
             <Text style={styles.emptyText}>No grounds found</Text>
           ) : (
@@ -417,7 +417,7 @@ export default function HomeScreen() {
             </View>
 
             {loading ? (
-              <ActivityIndicator color="#01b854" style={{ marginTop: 16 }} />
+              <ActivityIndicator color="#10B981" style={{ marginTop: 16 }} />
             ) : filteredGrounds.length === 0 ? (
               <Text style={styles.emptyText}>No grounds match your search.</Text>
             ) : (
@@ -475,7 +475,7 @@ export default function HomeScreen() {
               return (
                 <View key={i} style={styles.featureCard}>
                   <View style={styles.featureIconWrap}>
-                    <Icon size={22} color="#01b854" strokeWidth={2} />
+                    <Icon size={22} color="#10B981" strokeWidth={2} />
                   </View>
                   <Text style={styles.featureLabel}>{f.label}</Text>
                   <Text style={styles.featureDesc}>{f.desc}</Text>
@@ -499,7 +499,7 @@ export default function HomeScreen() {
             <Text style={styles.ctaButtonText}>
               {user ? 'Book a Ground' : 'Get Started Free'}
             </Text>
-            <ArrowRight size={18} color="#043529" strokeWidth={2.5} />
+            <ArrowRight size={18} color="#FFFFFF" strokeWidth={2.5} />
           </Pressable>
           {!user && (
             <Pressable onPress={() => router.push('/(auth)/login' as any)} style={styles.ctaSignIn}>
@@ -517,11 +517,11 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#043529',
+    backgroundColor: '#F8FAFC',
   },
   scroll: {
     flex: 1,
-    backgroundColor: '#043529',
+    backgroundColor: '#F8FAFC',
   },
   scrollContent: {
     paddingBottom: 24,
@@ -529,7 +529,7 @@ const styles = StyleSheet.create({
 
   // ── Hero ──────────────────────────────────────
   hero: {
-    backgroundColor: '#043529',
+    backgroundColor: '#FFFFFF',
     paddingTop: 24,
     paddingBottom: 36,
     paddingHorizontal: 20,
@@ -542,52 +542,61 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 999,
-    backgroundColor: 'rgba(0,234,107,0.1)',
+    backgroundColor: 'rgba(16, 185, 129, 0.05)',
   },
   heroTitle: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#f9fafb',
+    color: '#0F172A',
     lineHeight: 40,
-    letterSpacing: -0.5,
+    letterSpacing: -1,
     marginBottom: 10,
+    fontFamily: 'Inter',
   },
   heroTitleAccent: {
-    color: '#00ea6b',
+    color: '#10B981',
   },
   heroSubtitle: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: '#64748B',
     lineHeight: 22,
     marginBottom: 20,
+    fontFamily: 'Inter',
   },
   heroSearch: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#06392e',
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.2)',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
     marginBottom: 20,
-    gap: 10,
+    gap: 12,
   },
   heroSearchInput: {
     flex: 1,
     fontSize: 15,
-    color: '#f9fafb',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+    fontWeight: '500',
   },
   statsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 0,
-    backgroundColor: 'rgba(6,57,46,0.6)',
-    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
     paddingVertical: 12,
     paddingHorizontal: 8,
     borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.15)',
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
   },
   statItem: {
     flex: 1,
@@ -596,7 +605,8 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#f9fafb',
+    color: '#10B981',
+    fontFamily: 'Inter',
   },
   statLabel: {
     fontSize: 11,
@@ -606,7 +616,7 @@ const styles = StyleSheet.create({
   statDivider: {
     width: 1,
     height: 28,
-    backgroundColor: 'rgba(107,114,128,0.4)',
+    backgroundColor: '#F1F5F9',
   },
 
   // ── Sections ──────────────────────────────────
@@ -614,7 +624,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingTop: 20,
     paddingBottom: 4,
-    backgroundColor: '#043529',
+    backgroundColor: 'transparent',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -625,18 +635,20 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     fontSize: 11,
-    fontWeight: '700',
-    color: '#00ea6b',
+    fontWeight: '800',
+    color: '#059669',
     textTransform: 'uppercase',
     letterSpacing: 1.2,
     marginBottom: 4,
     paddingHorizontal: 20,
+    fontFamily: 'Inter',
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '800',
-    color: '#f9fafb',
-    letterSpacing: -0.3,
+    color: '#0F172A',
+    letterSpacing: -0.6,
+    fontFamily: 'Inter',
   },
   seeAllBtn: {
     flexDirection: 'row',
@@ -646,8 +658,9 @@ const styles = StyleSheet.create({
   },
   seeAllText: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#00ea6b',
+    fontWeight: '700',
+    color: '#10B981',
+    fontFamily: 'Inter',
   },
 
   // ── Sport Categories ──────────────────────────
@@ -660,24 +673,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 999,
-    backgroundColor: '#06392e',
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.15)',
+    borderColor: '#E2E8F0',
   },
   categoryChipActive: {
-    backgroundColor: '#00ea6b',
-    borderColor: '#00ea6b',
+    backgroundColor: '#10B981',
+    borderColor: '#10B981',
   },
   categoryLabel: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#9ca3af',
+    fontWeight: '700',
+    color: '#64748B',
+    fontFamily: 'Inter',
   },
   categoryLabelActive: {
-    color: '#043529',
+    color: '#FFFFFF',
   },
 
   // ── Ground cards (horizontal) ─────────────────
@@ -690,14 +704,16 @@ const styles = StyleSheet.create({
     width: 240,
   },
   groundCard: {
-    borderRadius: 20,
-    backgroundColor: '#06392e',
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.06,
+    shadowRadius: 20,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
   groundImageWrap: {
     position: 'relative',
@@ -709,21 +725,28 @@ const styles = StyleSheet.create({
   },
   groundImageOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(4,53,41,0.55)',
+    backgroundColor: 'rgba(15, 23, 42, 0.3)',
   },
   popularBadge: {
     position: 'absolute',
     top: 10,
     left: 10,
-    backgroundColor: 'rgba(0,234,107,0.9)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    backgroundColor: '#10B981',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 999,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 4,
   },
   popularBadgeText: {
     fontSize: 10,
-    fontWeight: '700',
-    color: '#043529',
+    fontWeight: '900',
+    color: '#FFFFFF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   groundImageContent: {
     position: 'absolute',
@@ -734,7 +757,8 @@ const styles = StyleSheet.create({
   groundName: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#ffffff',
+    color: '#FFFFFF',
+    fontFamily: 'Inter',
   },
   groundLocationRow: {
     flexDirection: 'row',
@@ -743,8 +767,10 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   groundLocation: {
-    fontSize: 11,
-    color: '#dcc093',
+    fontSize: 12,
+    color: '#64748B',
+    fontFamily: 'Inter',
+    fontWeight: '500',
   },
   groundCardBody: {
     padding: 12,
@@ -757,9 +783,10 @@ const styles = StyleSheet.create({
   },
   groundType: {
     fontSize: 11,
-    color: '#6b7280',
-    fontWeight: '600',
-    textTransform: 'capitalize',
+    color: '#64748B',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   ratingRow: {
     flexDirection: 'row',
@@ -768,8 +795,9 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     fontSize: 12,
-    fontWeight: '700',
-    color: '#dcc093',
+    fontWeight: '800',
+    color: '#B45309',
+    fontFamily: 'Inter',
   },
   groundFooter: {
     flexDirection: 'row',
@@ -779,41 +807,42 @@ const styles = StyleSheet.create({
   groundPrice: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#f9fafb',
+    color: '#0F172A',
+    fontFamily: 'Inter',
   },
   groundPriceUnit: {
     fontSize: 11,
-    fontWeight: '500',
-    color: '#6b7280',
+    fontWeight: '600',
+    color: '#64748B',
+    fontFamily: 'Inter',
   },
   bookNowBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#00ea6b',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
+    backgroundColor: '#10B981',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 14,
   },
-  bookNowText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#043529',
-  },
-
   // ── Vertical list (search results) ───────────
   verticalList: {
     paddingHorizontal: 20,
-    gap: 10,
+    gap: 12,
   },
   listRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#06392e',
-    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.1)',
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    elevation: 1,
   },
   listRowImage: {
     width: 80,
@@ -826,10 +855,11 @@ const styles = StyleSheet.create({
     paddingRight: 4,
   },
   listRowName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#f9fafb',
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0F172A',
     marginBottom: 3,
+    fontFamily: 'Inter',
   },
   listRowMeta: {
     flexDirection: 'row',
@@ -838,14 +868,16 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   listRowCity: {
-    fontSize: 11,
-    color: '#9ca3af',
+    fontSize: 12,
+    color: '#64748B',
+    fontFamily: 'Inter',
   },
   listRowType: {
     fontSize: 11,
-    color: '#00ea6b',
-    fontWeight: '700',
+    color: '#10B981',
+    fontWeight: '800',
     textTransform: 'capitalize',
+    fontFamily: 'Inter',
   },
   listRowRight: {
     paddingRight: 14,
@@ -854,132 +886,150 @@ const styles = StyleSheet.create({
   listRowPrice: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#dcc093',
+    color: '#0F172A',
+    fontFamily: 'Inter',
   },
   listRowPriceUnit: {
-    fontSize: 10,
-    color: '#6b7280',
+    fontSize: 11,
+    color: '#64748B',
     marginTop: 1,
   },
 
   // ── Features ─────────────────────────────────
   featuresSection: {
     marginTop: 16,
-    paddingTop: 28,
-    paddingBottom: 28,
+    paddingTop: 32,
+    paddingBottom: 32,
     paddingHorizontal: 20,
-    backgroundColor: '#06392e',
+    backgroundColor: '#FFFFFF',
     marginHorizontal: 16,
-    borderRadius: 24,
+    borderRadius: 28,
     borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.12)',
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
+    elevation: 2,
   },
   featuresGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
-    marginTop: 16,
+    marginTop: 20,
   },
   featureCard: {
     width: '47%',
-    backgroundColor: 'rgba(4,53,41,0.7)',
-    borderRadius: 16,
-    padding: 14,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 20,
+    padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.1)',
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
   },
   featureIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: 'rgba(0,234,107,0.1)',
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 12,
   },
   featureLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#f9fafb',
-    marginBottom: 3,
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 4,
+    fontFamily: 'Inter',
+    textAlign: 'center',
   },
   featureDesc: {
     fontSize: 11,
-    color: '#6b7280',
+    color: '#64748B',
     lineHeight: 16,
+    fontFamily: 'Inter',
+    textAlign: 'center',
   },
 
   // ── CTA ──────────────────────────────────────
   ctaBanner: {
     margin: 16,
-    marginTop: 20,
-    backgroundColor: '#043529',
-    borderRadius: 24,
-    padding: 28,
+    marginTop: 32,
+    backgroundColor: '#0F172A',
+    borderRadius: 32,
+    padding: 32,
     alignItems: 'center',
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.25)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.2,
+    shadowRadius: 30,
+    elevation: 10,
   },
   ctaBannerGlow: {
     position: 'absolute',
-    top: -60,
-    right: -40,
-    width: 180,
-    height: 180,
+    top: -100,
+    right: -100,
+    width: 300,
+    height: 300,
     borderRadius: 999,
-    backgroundColor: 'rgba(0,234,107,0.12)',
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
   },
   ctaTitle: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: '800',
-    color: '#f9fafb',
-    marginBottom: 8,
-    letterSpacing: -0.3,
+    color: '#FFFFFF',
+    marginBottom: 12,
+    letterSpacing: -0.6,
     textAlign: 'center',
+    fontFamily: 'Inter',
   },
   ctaSubtitle: {
-    fontSize: 14,
-    color: '#9ca3af',
+    fontSize: 15,
+    color: 'rgba(255, 255, 255, 0.7)',
     lineHeight: 22,
     textAlign: 'center',
-    marginBottom: 24,
-    maxWidth: 260,
+    marginBottom: 32,
+    maxWidth: 280,
+    fontFamily: 'Inter',
   },
   ctaButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#00ea6b',
-    paddingHorizontal: 28,
-    paddingVertical: 14,
-    borderRadius: 999,
-    shadowColor: '#00ea6b',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 14,
-    elevation: 6,
+    backgroundColor: '#10B981',
+    paddingHorizontal: 32,
+    paddingVertical: 18,
+    borderRadius: 20,
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 8,
   },
   ctaButtonText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#043529',
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    fontFamily: 'Inter',
   },
   ctaSignIn: {
-    marginTop: 14,
-    paddingVertical: 6,
+    marginTop: 20,
   },
   ctaSignInText: {
-    fontSize: 13,
-    color: '#6b7280',
-    fontWeight: '500',
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.4)',
+    fontWeight: '600',
+    fontFamily: 'Inter',
   },
 
   emptyText: {
     fontSize: 14,
-    color: '#6b7280',
+    color: '#64748B',
     textAlign: 'center',
-    paddingVertical: 20,
+    paddingVertical: 24,
     paddingHorizontal: 20,
+    fontFamily: 'Inter',
   },
 });

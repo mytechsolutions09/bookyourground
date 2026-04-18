@@ -181,15 +181,14 @@ export default function LandingBookingForm({
   groundPageAccent = false,
   bookGroundScreenNative = false,
   lockSlot = false,
-  lightAppTheme = false,
+  lightAppTheme = true,
 }: LandingBookingFormProps) {
   const { user } = useAuth();
   const { width: windowWidth } = useWindowDimensions();
   const isWeb = Platform.OS === 'web';
   const IS_DARK = !isWeb || windowWidth < 900;
   
-  // Web is always light theme (including small screens); Native follows lightAppTheme prop.
-  const isEffectiveLight = isWeb || lightAppTheme;
+  const isEffectiveLight = true;
   const styles = React.useMemo(() => getStyles(isWeb, isEffectiveLight), [isWeb, isEffectiveLight]);
 
   /** Landing: Search → pick ground → Book Now. Skip when booking a known ground. */
@@ -2312,12 +2311,17 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
     paddingHorizontal: 8,
   },
   card: {
-    backgroundColor: isLight ? '#FFFFFF' : '#043529',
-    borderRadius: 14,
-    padding: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
     marginTop: 0,
-    borderWidth: isLight ? 0 : 0,
-    borderColor: '#E5E7EB',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.04,
+    shadowRadius: 20,
+    elevation: 2,
   },
   /** Native-only full-screen card (no rounding, no side margins). */
   cardNativeFull: {
@@ -2362,32 +2366,34 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '700',
+    fontWeight: '800',
     fontFamily: 'Inter',
-    color: isLight ? '#111827' : '#F9FAFB',
+    color: '#0F172A',
     marginBottom: 4,
   },
   /** Native-only title accent colour. */
   titleMobile: {
-    color: '#02c259',
+    color: '#0F172A',
   },
   subtitle: {
     fontSize: 14,
     fontFamily: 'Inter',
-    color: isLight ? '#6B7280' : '#E5E7EB',
+    color: '#64748B',
     marginBottom: 12,
   },
   authRequired: {
     marginBottom: 16,
-    padding: 12,
-    borderRadius: 12,
-    backgroundColor: 'rgba(6,57,46,0.12)', // #06392e
+    padding: 16,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   authTitle: {
     fontSize: 16,
-    fontWeight: '400',
+    fontWeight: '700',
     fontFamily: 'Inter',
-    color: '#043529',
+    color: '#0F172A',
     marginBottom: 4,
   },
   authText: {
@@ -2420,9 +2426,9 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
   },
   label: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '800',
     fontFamily: 'Inter',
-    color: isLight ? '#000000' : '#E5E7EB',
+    color: '#0F172A',
     marginBottom: 6,
     textTransform: isWeb ? 'uppercase' : 'none',
     letterSpacing: isWeb ? 0.5 : 0,
@@ -2431,9 +2437,9 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
   labelBookGroundNative: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#4B5563',
+    color: '#64748B',
     textTransform: 'uppercase',
-    letterSpacing: 1.5,
+    letterSpacing: 1.2,
     marginBottom: 6,
   },
   /** `separateSearchResults` — heading on light card (e.g. /book-my-ground). */
@@ -2446,15 +2452,15 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: isLight ? '#E5E7EB' : '#00ea6b',
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    minHeight: 44,
-    fontSize: 14,
+    borderColor: '#E2E8F0',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    minHeight: 48,
+    fontSize: 15,
     fontFamily: 'Inter',
-    backgroundColor: isLight ? '#FFFFFF' : '#06392e',
-    color: isLight ? '#111827' : '#F9FAFB',
+    backgroundColor: '#F8FAFC',
+    color: '#0F172A',
   },
   inputWide: {
     width: '100%',
@@ -2463,20 +2469,20 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
   },
   inputBookGroundNative: {
     borderWidth: 1,
-    borderColor: isLight ? '#E5E7EB' : 'rgba(0,234,107,0.2)',
-    backgroundColor: isLight ? '#FFFFFF' : '#06392e',
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
   },
   inputDisabled: {
     borderWidth: 1,
-    borderColor: '#64748B',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    minHeight: 44,
-    fontSize: 14,
+    borderColor: '#F1F5F9',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    minHeight: 48,
+    fontSize: 15,
     fontFamily: 'Inter',
-    backgroundColor: '#022c22',
-    color: '#9CA3AF',
+    backgroundColor: '#F1F5F9',
+    color: '#94A3B8',
   },
   groundsRow: {
     flexDirection: 'row',
@@ -2487,13 +2493,13 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 10,
     borderRadius: 999,
-    borderWidth: isLight ? 0 : 1,
-    borderColor: 'transparent',
-    backgroundColor: isLight ? '#FFFFFF' : '#06392e',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
   },
   groundChipActive: {
-    borderColor: '#00ea6b',
-    backgroundColor: 'rgba(0,234,107,0.12)',
+    borderColor: '#F1F5F9',
+    backgroundColor: 'rgba(16, 185, 129, 0.08)',
   },
   groundChipText: {
     fontSize: 13,
@@ -2502,7 +2508,8 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
     color: '#374151',
   },
   groundChipTextActive: {
-    color: isLight ? '#518167' : '#00ea6b',
+    color: '#10B981',
+    fontWeight: '700',
   },
   teamToggle: {
     flexDirection: 'row',
@@ -2519,12 +2526,12 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
   teamToggleOption: {
     flex: 1,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    minHeight: 44,
-    borderWidth: isLight ? 0 : 1,
-    borderColor: isLight ? 'transparent' : '#FFFFFF',
-    borderRadius: 14,
-    backgroundColor: isLight ? '#F3F4F6' : '#043529',
+    paddingVertical: 12,
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 16,
+    backgroundColor: '#F8FAFC',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2543,27 +2550,24 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
     lineHeight: 18,
   },
   teamToggleOptionActive: {
-    borderColor: isLight ? '#518167' : '#00ea6b',
-    backgroundColor: isLight ? '#FFFFFF' : '#043529',
-    borderWidth: isLight ? 0.8 : (isWeb ? 2 : 1),
-    // Add shadow/elevation for active tab in light mode to make it pop
-    ...(isLight ? {
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 2,
-    } : {}),
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   teamToggleText: {
     fontSize: 14,
-    fontWeight: '400',
+    fontWeight: '600',
     fontFamily: 'Inter',
-    color: isLight ? '#6B7280' : '#E5E7EB',
+    color: '#64748B',
   },
   teamToggleTextActive: {
-    color: isLight ? '#518167' : '#00ea6b',
-    fontWeight: isWeb ? '700' : '400',
+    color: isLight ? '#10B981' : '#00ea6b',
+    fontWeight: '800',
   },
   teamToggleTextDisabled: {
     color: '#9CA3AF',
@@ -2582,7 +2586,7 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
     minHeight: 44,
     paddingVertical: 10,
     paddingHorizontal: 24,
-    backgroundColor: isLight ? '#518167' : '#02c259',
+    backgroundColor: '#10B981',
   },
   summary: {
     marginTop: 12,
@@ -2606,8 +2610,8 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
     color: '#9CA3AF',
   },
   summaryAccent: {
-    color: '#01b854',
-    fontWeight: '700',
+    color: '#10B981',
+    fontWeight: '800',
   },
   /** Ground detail on native: large capsule (tan border/text on mobile only). */
   summaryGroundPageMobile: {
@@ -2625,10 +2629,10 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
     }),
   },
   summaryAccentGroundMobile: {
-    fontWeight: '700',
+    fontWeight: '800',
     ...Platform.select({
-      web: { color: '#02c259' },
-      default: { color: isLight ? '#518167' : '#dcc093' },
+      web: { color: '#10B981' },
+      default: { color: isLight ? '#10B981' : '#dcc093' },
     }),
   },
   summaryMutedGroundMobile: {
@@ -2644,7 +2648,7 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
     marginTop: 4,
   },
   applyBtn: {
-    backgroundColor: '#00ea6b',
+    backgroundColor: '#10B981',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,
@@ -2661,8 +2665,8 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
     backgroundColor: '#10b981',
   },
   applyBtnText: {
-    color: '#043529',
-    fontWeight: '700',
+    color: '#FFFFFF',
+    fontWeight: '800',
     fontSize: 14,
   },
   applyBtnTextApplied: {
@@ -2703,13 +2707,13 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
   },
   changeGroundText: {
     fontSize: 14,
-    fontWeight: '400',
+    fontWeight: '800',
     fontFamily: 'Inter',
-    color: '#00ea6b',
+    color: '#10B981',
   },
   dateChipPressed: {
-    backgroundColor: isLight ? '#F3F4F6' : '#06392e',
-    borderColor: isLight ? '#00ea6b' : '#FFFFFF',
+    backgroundColor: '#F1F5F9',
+    borderColor: '#10B981',
   },
   searchResultsSection: {
     marginTop: 4,
@@ -2717,11 +2721,16 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
   /** Second card below the form when `separateSearchResults` (e.g. /book-my-ground). */
   searchResultsCard: {
     marginTop: 20,
-    backgroundColor: isLight ? '#FFFFFF' : '#043529',
-    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     padding: 20,
-    borderWidth: isLight ? 0 : 1,
-    borderColor: isLight ? '#E5E7EB' : 'rgba(0,234,107,0.15)',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
+    elevation: 3,
   },
   searchResultsTitle: {
     fontSize: 20,
@@ -2778,25 +2787,26 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
   },
   dropdownButton: {
     borderWidth: 1,
-    borderColor: isLight ? '#E5E7EB' : '#FFFFFF',
-    backgroundColor: isLight ? '#FFFFFF' : '#043529',
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    minHeight: 44,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    minHeight: 48,
     justifyContent: 'center',
   },
   dropdownButtonOpen: {
-    borderColor: '#00ea6b',
-    backgroundColor: isLight ? '#FFFFFF' : '#043529',
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
   },
   /** After user picks Location / Type — match chip “selected” accent */
   dropdownButtonSelected: {
-    borderColor: '#00ea6b',
-    backgroundColor: isLight ? '#FFFFFF' : '#043529',
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
   },
   dropdownButtonDisabled: {
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F1F5F9',
+    borderColor: '#F1F5F9',
   },
   dropdownButtonText: {
     fontSize: 14,
@@ -2805,8 +2815,8 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
     color: isLight ? '#111827' : '#FFFFFF',
   },
   dropdownButtonTextSelected: {
-    color: isLight ? '#518167' : '#00ea6b',
-    fontWeight: isLight ? '700' : '400',
+    color: '#10B981',
+    fontWeight: '800',
   },
   dropdownButtonTextDisabled: {
     color: '#6B7280',
@@ -2863,15 +2873,15 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
   },
   portalMenu: {
     position: 'absolute',
-    backgroundColor: isLight ? '#FFFFFF' : '#043529',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: isLight ? '#E5E7EB' : '#00ea6b',
-    borderRadius: 12,
-    padding: 8,
+    borderColor: '#F1F5F9',
+    borderRadius: 20,
+    padding: 12,
     shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 12 },
     elevation: 60,
   },
   dropdownOption: {
@@ -2879,16 +2889,17 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
     paddingVertical: 10,
   },
   dropdownOptionActive: {
-    backgroundColor: isLight ? '#F9FAFB' : '#043529',
+    backgroundColor: '#F8FAFC',
   },
   dropdownOptionText: {
     fontSize: 14,
     fontWeight: '400',
     fontFamily: 'Inter',
-    color: isLight ? '#1F2937' : '#FFFFFF',
+    color: '#0F172A',
   },
   dropdownOptionTextActive: {
-    color: '#00ea6b',
+    color: '#10B981',
+    fontWeight: '800',
   },
   /** Ground detail: Location / Type — web keeps green accent; native uses tan (#dcc093). */
   dropdownButtonGroundPage: {
@@ -2902,8 +2913,8 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
   dropdownButtonOpenGroundPage: {
     backgroundColor: isLight ? 'transparent' : '#043529',
     ...Platform.select({
-      web: { borderColor: isLight ? '#02c259' : '#02c259' },
-      default: { borderColor: isLight ? '#518167' : '#dcc093' },
+      web: { borderColor: isLight ? '#10B981' : '#02c259' },
+      default: { borderColor: isLight ? '#10B981' : '#dcc093' },
     }),
     borderWidth: isLight ? 0 : 1,
   },
@@ -2924,21 +2935,21 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
   },
   dropdownButtonTextGroundPage: {
     ...Platform.select({
-      web: { color: isLight ? '#518167' : '#02c259' },
-      default: { color: isLight ? '#518167' : '#dcc093' },
+      web: { color: isLight ? '#10B981' : '#02c259' },
+      default: { color: isLight ? '#10B981' : '#dcc093' },
     }),
   },
   dropdownButtonTextSelectedGroundPage: {
-    fontWeight: '600',
+    fontWeight: '800',
     ...Platform.select({
-      web: { color: isLight ? '#518167' : '#02c259' },
-      default: { color: isLight ? '#518167' : '#dcc093' },
+      web: { color: isLight ? '#10B981' : '#02c259' },
+      default: { color: isLight ? '#10B981' : '#dcc093' },
     }),
   },
   dropdownButtonTextDisabledGroundPage: {
     ...Platform.select({
-      web: { color: isLight ? '#518167' : '#06392e' },
-      default: { color: isLight ? '#518167' : 'rgba(220,192,147,0.55)' },
+      web: { color: isLight ? '#94A3B8' : '#06392e' },
+      default: { color: isLight ? '#94A3B8' : 'rgba(220,192,147,0.55)' },
     }),
   },
   dropdownMenuGroundPage: {
@@ -2950,8 +2961,8 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
   },
   dropdownOptionActiveGroundPage: {
     ...Platform.select({
-      web: { backgroundColor: 'rgba(2,194,89,0.12)' },
-      default: { backgroundColor: 'rgba(220,192,147,0.12)' },
+      web: { backgroundColor: 'rgba(16, 185, 129, 0.1)' },
+      default: { backgroundColor: 'rgba(220,192,147,0.1)' },
     }),
   },
   dropdownOptionTextGroundPage: {
@@ -2961,10 +2972,10 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
     }),
   },
   dropdownOptionTextActiveGroundPage: {
-    fontWeight: '600',
+    fontWeight: '800',
     ...Platform.select({
-      web: { color: '#02c259' },
-      default: { color: isLight ? '#518167' : '#dcc093' },
+      web: { color: '#10B981' },
+      default: { color: isLight ? '#10B981' : '#dcc093' },
     }),
   },
   dateChipsWrap: {
@@ -3006,9 +3017,9 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
     gap: 2,
   },
   dateChipActive: {
-    borderColor: isLight ? '#518167' : '#00ea6b',
-    backgroundColor: isLight ? '#FFFFFF' : '#043529',
-    borderWidth: isLight ? 0.8 : 2,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
   },
   dateChipDisabled: {
     opacity: 0.5,
@@ -3029,8 +3040,8 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
     fontSize: 11,
   },
   dateChipTextActive: {
-    color: isLight ? '#518167' : '#00ea6b',
-    fontWeight: isLight ? '700' : '500',
+    color: isLight ? '#10B981' : '#00ea6b',
+    fontWeight: '800',
   },
   dateChipTextBookGroundNative: {
     color: Platform.OS === 'web' ? '#374151' : '#9ca3af',
@@ -3046,8 +3057,8 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
     fontSize: 9,
   },
   dateChipWeekdayActive: {
-    color: isLight ? '#518167' : '#00ea6b',
-    fontWeight: isLight ? '700' : '600',
+    color: isLight ? '#10B981' : '#00ea6b',
+    fontWeight: '800',
   },
   dateChipWeekdayBookGroundNative: {
     color: Platform.OS === 'web' ? '#6B7280' : '#9ca3af',
@@ -3074,9 +3085,9 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
   },
   dateArrowText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
     fontFamily: 'Inter',
-    color: '#02c259',
+    color: '#10B981',
   },
   dateArrowTextDisabled: {
     color: '#9CA3AF',
@@ -3122,9 +3133,9 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
     paddingHorizontal: 8,
   },
   timeSlotChipActive: {
-    borderWidth: isLight ? 0.8 : 2,
-    borderColor: isLight ? '#518167' : '#00ea6b',
-    backgroundColor: isLight ? '#FFFFFF' : '#043529',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
   },
   timeSlotChipDisabled: {
     opacity: 0.5,
@@ -3155,8 +3166,8 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
     fontSize: 11,
   },
   timeSlotTextActive: {
-    color: isLight ? '#518167' : '#00ea6b',
-    fontWeight: isLight ? '700' : '400',
+    color: isLight ? '#10B981' : '#00ea6b',
+    fontWeight: isLight ? '800' : '400',
   },
   timeSlotTextBookGroundNative: {
     color: Platform.OS === 'web' ? '#374151' : '#9ca3af',
@@ -3167,8 +3178,8 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
   },
   /** Book Now CTA fill neon green — dark label for classic premium look. */
   bookNowPrimaryButtonText: {
-    color: '#043529',
-    fontWeight: '700',
+    color: '#FFFFFF',
+    fontWeight: '800',
   },
 });
 

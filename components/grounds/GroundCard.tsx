@@ -94,7 +94,11 @@ export default function GroundCard({
           <Image source={{ uri: primaryImage }} style={[styles.image, compact && styles.imageCompact]} />
           {onToggleFavorite && (
             <TouchableOpacity
-              style={[styles.favBtn, isFavorite && styles.favBtnActive]}
+              style={[
+                styles.favBtn, 
+                isFavorite && styles.favBtnActive,
+                isLight && styles.favBtnLight
+              ]}
               onPress={(e) => {
                 e.stopPropagation();
                 onToggleFavorite();
@@ -104,8 +108,8 @@ export default function GroundCard({
             >
               <Heart
                 size={compact ? 16 : 20}
-                color={isFavorite ? '#00ea6b' : '#f9fafb'}
-                fill={isFavorite ? '#00ea6b' : 'rgba(0,0,0,0.3)'}
+                color={isFavorite ? '#10B981' : (isLight ? '#64748B' : '#f9fafb')}
+                fill={isFavorite ? '#10B981' : (isLight ? 'transparent' : 'rgba(0,0,0,0.3)')}
                 strokeWidth={2.5}
               />
             </TouchableOpacity>
@@ -231,7 +235,12 @@ const styles = StyleSheet.create({
   cardWeb: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
+    elevation: 3,
   },
   image: {
     width: '100%',
@@ -254,11 +263,20 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(4,53,41,0.75)',
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.2)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  favBtnLight: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   favBtnActive: {
     borderColor: 'rgba(0,234,107,0.5)',
@@ -277,8 +295,9 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     fontSize: 18,
-    fontWeight: '700',
-    color: '#043529',
+    fontWeight: '800',
+    color: '#0F172A',
+    fontFamily: 'Inter',
   },
   nameCompact: {
     fontSize: 14,
@@ -321,16 +340,18 @@ const styles = StyleSheet.create({
   },
   location: {
     fontSize: 14,
-    color: '#666',
+    color: '#64748B',
+    fontFamily: 'Inter',
   },
   locationNative: {
     color: NATIVE_TEXT,
   },
   rating: {
     fontSize: 12,
-    color: '#666',
-    fontWeight: '600',
+    color: '#64748B',
+    fontWeight: '700',
     textAlign: 'right',
+    fontFamily: 'Inter',
   },
   ratingCompact: {
     fontSize: 11,
@@ -351,8 +372,9 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     fontWeight: '600',
-    color: '#4B5563',
+    color: '#64748B',
     lineHeight: 16,
+    fontFamily: 'Inter',
   },
   scheduleTextNative: {
     color: NATIVE_TEXT,
@@ -371,13 +393,15 @@ const styles = StyleSheet.create({
   },
   price: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#02c259',
+    fontWeight: '800',
+    color: '#0F172A',
+    fontFamily: 'Inter',
   },
   priceUnit: {
     fontSize: 11,
-    fontWeight: '400',
-    color: '#6B7280',
+    fontWeight: '500',
+    color: '#64748B',
+    fontFamily: 'Inter',
   },
   priceCompact: {
     fontSize: 13,
@@ -397,8 +421,9 @@ const styles = StyleSheet.create({
   },
   mapsLink: {
     fontSize: 12,
-    color: Platform.OS === 'web' ? '#6B7280' : '#4B5563',
-    fontWeight: '600',
+    color: '#10B981',
+    fontWeight: '800',
+    fontFamily: 'Inter',
   },
   mapsLinkNative: {
     color: NATIVE_BORDER,
@@ -412,12 +437,16 @@ const styles = StyleSheet.create({
     minWidth: 120,
   },
   amenity: {
-    fontSize: 12,
-    color: '#666',
-    backgroundColor: '#F5F5F5',
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#475569',
+    backgroundColor: '#F1F5F9',
     paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    paddingVertical: 5,
+    borderRadius: 8,
+    fontFamily: 'Inter',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   amenityNative: {
     color: NATIVE_TEXT,

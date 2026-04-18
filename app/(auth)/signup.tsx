@@ -55,6 +55,13 @@ export default function SignupScreen() {
   const [playerType, setPlayerType] = useState('Player');
   const [showPlayerTypePicker, setShowPlayerTypePicker] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const firstNameRef = React.useRef<TextInput>(null);
+  const lastNameRef = React.useRef<TextInput>(null);
+  const emailRef = React.useRef<TextInput>(null);
+  const phoneRef = React.useRef<TextInput>(null);
+  const teamRef = React.useRef<TextInput>(null);
+  const addressRef = React.useRef<TextInput>(null);
+  const passwordRef = React.useRef<TextInput>(null);
 
   // Focus states
   const [focusedField, setFocusedField] = useState<string | null>(null);
@@ -262,7 +269,7 @@ export default function SignupScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.screen}
     >
       <ScrollView
@@ -274,7 +281,7 @@ export default function SignupScreen() {
           if (router.canGoBack()) router.back();
           else router.replace('/(auth)/login');
         }}>
-          <ArrowLeft size={20} color="#f9fafb" strokeWidth={2.5} />
+          <ArrowLeft size={20} color="#1E293B" strokeWidth={2.5} />
         </Pressable>
 
         <View style={styles.logoWrap}>
@@ -285,94 +292,122 @@ export default function SignupScreen() {
           />
         </View>
 
-        <View style={styles.headingWrap}>
-          <Text style={styles.title}>Create account</Text>
-          <Text style={styles.subtitle}>Join thousands booking their game</Text>
-        </View>
+        {/* Spacing between logo and card */}
+        <View style={{ height: 16 }} />
 
         <View style={styles.card}>
           <View style={styles.nameRow}>
             <View style={[styles.fieldWrap, { flex: 1 }]}>
-              <Text style={styles.fieldLabel}>First Name</Text>
-              <View style={[styles.inputRow, isFocused('firstName') && styles.inputRowFocused]}>
+              <Pressable onPress={() => firstNameRef.current?.focus()}>
+                <Text style={styles.fieldLabel}>First Name</Text>
+              </Pressable>
+              <Pressable 
+                onPress={() => firstNameRef.current?.focus()}
+                style={[styles.inputRow, isFocused('firstName') && styles.inputRowFocused]}
+              >
                 <User size={15} color={isFocused('firstName') ? '#01b854' : '#6b7280'} strokeWidth={2} />
                 <TextInput
+                  ref={firstNameRef}
                   style={styles.textInput}
                   value={firstName}
                   onChangeText={setFirstName}
                   placeholder="First"
-                  placeholderTextColor="#4b5563"
+                  placeholderTextColor="#94A3B8"
                   onFocus={() => setFocusedField('firstName')}
                   onBlur={() => setFocusedField(null)}
                 />
-              </View>
+              </Pressable>
             </View>
             <View style={[styles.fieldWrap, { flex: 1 }]}>
-              <Text style={styles.fieldLabel}>Last Name</Text>
-              <View style={[styles.inputRow, isFocused('lastName') && styles.inputRowFocused]}>
+              <Pressable onPress={() => lastNameRef.current?.focus()}>
+                <Text style={styles.fieldLabel}>Last Name</Text>
+              </Pressable>
+              <Pressable 
+                onPress={() => lastNameRef.current?.focus()}
+                style={[styles.inputRow, isFocused('lastName') && styles.inputRowFocused]}
+              >
                 <TextInput
+                  ref={lastNameRef}
                   style={[styles.textInput, { paddingLeft: 2 }]}
                   value={lastName}
                   onChangeText={setLastName}
                   placeholder="Last"
-                  placeholderTextColor="#4b5563"
+                  placeholderTextColor="#94A3B8"
                   onFocus={() => setFocusedField('lastName')}
                   onBlur={() => setFocusedField(null)}
                 />
-              </View>
+              </Pressable>
             </View>
           </View>
 
           <View style={styles.fieldWrap}>
-            <Text style={styles.fieldLabel}>Email</Text>
-            <View style={[styles.inputRow, isFocused('email') && styles.inputRowFocused]}>
+            <Pressable onPress={() => emailRef.current?.focus()}>
+              <Text style={styles.fieldLabel}>Email</Text>
+            </Pressable>
+            <Pressable 
+              onPress={() => emailRef.current?.focus()}
+              style={[styles.inputRow, isFocused('email') && styles.inputRowFocused]}
+            >
               <Mail size={17} color={isFocused('email') ? '#01b854' : '#6b7280'} strokeWidth={2} />
               <TextInput
+                ref={emailRef}
                 style={styles.textInput}
                 value={email}
                 onChangeText={setEmail}
                 placeholder="Enter your email"
-                placeholderTextColor="#4b5563"
+                placeholderTextColor="#94A3B8"
                 keyboardType="email-address"
                 autoCapitalize="none"
                 onFocus={() => setFocusedField('email')}
                 onBlur={() => setFocusedField(null)}
               />
-            </View>
+            </Pressable>
           </View>
 
           <View style={styles.fieldWrap}>
-            <Text style={styles.fieldLabel}>Mobile</Text>
-            <View style={[styles.inputRow, isFocused('phone') && styles.inputRowFocused]}>
+            <Pressable onPress={() => phoneRef.current?.focus()}>
+              <Text style={styles.fieldLabel}>Mobile</Text>
+            </Pressable>
+            <Pressable 
+              onPress={() => phoneRef.current?.focus()}
+              style={[styles.inputRow, isFocused('phone') && styles.inputRowFocused]}
+            >
               <Phone size={15} color={isFocused('phone') ? '#01b854' : '#6b7280'} strokeWidth={2} />
               <TextInput
+                ref={phoneRef}
                 style={styles.textInput}
                 value={phone}
                 onChangeText={setPhone}
                 placeholder="..."
-                placeholderTextColor="#4b5563"
+                placeholderTextColor="#94A3B8"
                 keyboardType="phone-pad"
                 onFocus={() => setFocusedField('phone')}
                 onBlur={() => setFocusedField(null)}
               />
-            </View>
+            </Pressable>
           </View>
 
           <View style={styles.nameRow}>
             <View style={[styles.fieldWrap, { flex: 1.5 }]}>
-              <Text style={styles.fieldLabel}>Team Name (Squad)</Text>
-              <View style={[styles.inputRow, isFocused('teamName') && styles.inputRowFocused]}>
+              <Pressable onPress={() => teamRef.current?.focus()}>
+                <Text style={styles.fieldLabel}>Team Name (Squad)</Text>
+              </Pressable>
+              <Pressable 
+                onPress={() => teamRef.current?.focus()}
+                style={[styles.inputRow, isFocused('teamName') && styles.inputRowFocused]}
+              >
                 <Users size={15} color={isFocused('teamName') ? '#01b854' : '#6b7280'} strokeWidth={2} />
                 <TextInput
+                  ref={teamRef}
                   style={styles.textInput}
                   value={teamName}
                   onChangeText={setTeamName}
                   placeholder="Yankees XI"
-                  placeholderTextColor="#4b5563"
+                  placeholderTextColor="#94A3B8"
                   onFocus={() => setFocusedField('teamName')}
                   onBlur={() => setFocusedField(null)}
                 />
-              </View>
+              </Pressable>
             </View>
             <View style={[styles.fieldWrap, { flex: 1 }]}>
                <Text style={styles.fieldLabel}>Role</Text>
@@ -388,19 +423,25 @@ export default function SignupScreen() {
 
           <View style={styles.nameRow}>
             <View style={[styles.fieldWrap, { flex: 1.5 }]}>
-              <Text style={styles.fieldLabel}>Address</Text>
-              <View style={[styles.inputRow, isFocused('address') && styles.inputRowFocused]}>
+              <Pressable onPress={() => addressRef.current?.focus()}>
+                <Text style={styles.fieldLabel}>Address</Text>
+              </Pressable>
+              <Pressable 
+                onPress={() => addressRef.current?.focus()}
+                style={[styles.inputRow, isFocused('address') && styles.inputRowFocused]}
+              >
                 <MapPin size={15} color={isFocused('address') ? '#01b854' : '#6b7280'} strokeWidth={2} />
                 <TextInput
+                  ref={addressRef}
                   style={styles.textInput}
                   value={address}
                   onChangeText={setAddress}
                   placeholder="Street/Locality"
-                  placeholderTextColor="#4b5563"
+                  placeholderTextColor="#94A3B8"
                   onFocus={() => setFocusedField('address')}
                   onBlur={() => setFocusedField(null)}
                 />
-              </View>
+              </Pressable>
             </View>
             <View style={[styles.fieldWrap, { flex: 1 }]}>
               <Text style={styles.fieldLabel}>State</Text>
@@ -408,7 +449,7 @@ export default function SignupScreen() {
                 onPress={() => setShowStatePicker(true)}
                 style={[styles.inputRow, isFocused('state') && styles.inputRowFocused]}
               >
-                <Text style={[styles.textInput, !stateName && { color: '#4b5563' }]}>
+                <Text style={[styles.textInput, !stateName && { color: '#94A3B8' }]}>
                   {stateName || "State"}
                 </Text>
                 <ChevronDown size={15} color="#6b7280" />
@@ -417,15 +458,21 @@ export default function SignupScreen() {
           </View>
 
           <View style={styles.fieldWrap}>
-            <Text style={styles.fieldLabel}>Password</Text>
-            <View style={[styles.inputRow, isFocused('password') && styles.inputRowFocused]}>
+            <Pressable onPress={() => passwordRef.current?.focus()}>
+              <Text style={styles.fieldLabel}>Password</Text>
+            </Pressable>
+            <Pressable 
+              onPress={() => passwordRef.current?.focus()}
+              style={[styles.inputRow, isFocused('password') && styles.inputRowFocused]}
+            >
               <Lock size={17} color={isFocused('password') ? '#01b854' : '#6b7280'} strokeWidth={2} />
               <TextInput
+                ref={passwordRef}
                 style={styles.textInput}
                 value={password}
                 onChangeText={setPassword}
                 placeholder="Min 6 characters"
-                placeholderTextColor="#4b5563"
+                placeholderTextColor="#94A3B8"
                 secureTextEntry={!showPassword}
                 onFocus={() => setFocusedField('password')}
                 onBlur={() => setFocusedField(null)}
@@ -437,7 +484,7 @@ export default function SignupScreen() {
                   <Eye size={17} color="#6b7280" strokeWidth={2} />
                 )}
               </Pressable>
-            </View>
+            </Pressable>
           </View>
 
           <View style={styles.buttonRow}>
@@ -508,7 +555,7 @@ export default function SignupScreen() {
                     backgroundColor: playerType === type ? 'rgba(0,234,107,0.1)' : 'transparent',
                   }}
                 >
-                  <Text style={{ color: playerType === type ? '#01b854' : '#f9fafb', fontSize: 16 }}>{type}</Text>
+                  <Text style={{ color: playerType === type ? '#10B981' : '#1E293B', fontSize: 16, fontFamily: 'Inter', fontWeight: '500' }}>{type}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -541,7 +588,7 @@ export default function SignupScreen() {
                     backgroundColor: stateName === state ? 'rgba(0,234,107,0.1)' : 'transparent',
                   }}
                 >
-                  <Text style={{ color: stateName === state ? '#01b854' : '#f9fafb', fontSize: 16 }}>{state}</Text>
+                  <Text style={{ color: stateName === state ? '#10B981' : '#1E293B', fontSize: 16, fontFamily: 'Inter', fontWeight: '500' }}>{state}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -627,26 +674,110 @@ function WebInput(props: any) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#043529' },
+  screen: { flex: 1, backgroundColor: '#F8FAFC' },
   scrollContent: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 56, paddingBottom: 40 },
-  backBtn: { position: 'absolute', top: 52, left: 20, zIndex: 10, width: 40, height: 40, borderRadius: 999, backgroundColor: '#06392e', borderWidth: 1, borderColor: 'rgba(0,234,107,0.25)', justifyContent: 'center', alignItems: 'center' },
+  backBtn: { 
+    position: 'absolute', 
+    top: 52, 
+    left: 20, 
+    zIndex: 10, 
+    width: 40, 
+    height: 40, 
+    borderRadius: 20, 
+    backgroundColor: '#FFFFFF', 
+    borderWidth: 1, 
+    borderColor: '#E2E8F0', 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
   logoWrap: { alignItems: 'center', marginTop: 48, marginBottom: 8 },
-  logo: { width: 180, height: 48 },
-  headingWrap: { alignItems: 'center', marginTop: 16, marginBottom: 28 },
-  title: { fontSize: 26, fontWeight: '800', color: '#f9fafb', letterSpacing: -0.4, marginBottom: 6 },
-  subtitle: { fontSize: 14, color: '#9ca3af' },
-  card: { backgroundColor: '#06392e', borderRadius: 24, padding: 20, borderWidth: 1, borderColor: 'rgba(0,234,107,0.12)' },
+  logo: { width: 240, height: 60 },
+  headingWrap: { alignItems: 'center', marginTop: 0, marginBottom: 16 },
+  card: { 
+    backgroundColor: '#FFFFFF', 
+    borderRadius: 28, 
+    padding: 24, 
+    borderWidth: 1, 
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.04,
+    shadowRadius: 20,
+    elevation: 4,
+  },
   nameRow: { flexDirection: 'row', gap: 10 },
   fieldWrap: { marginBottom: 14 },
-  fieldLabel: { fontSize: 12, fontWeight: '600', color: '#e5e7eb', marginBottom: 6, letterSpacing: 0.2 },
-  inputRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#043529', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(0,234,107,0.18)', paddingHorizontal: 12, paddingVertical: 11, gap: 8 },
-  inputRowFocused: { borderColor: '#01b854' },
-  textInput: { flex: 1, fontSize: 14, color: '#f9fafb', paddingVertical: 0 },
+  fieldLabel: { 
+    fontSize: 12, 
+    fontWeight: '700', 
+    color: '#334155', 
+    marginBottom: 6, 
+    letterSpacing: 0.2,
+    fontFamily: 'Inter',
+  },
+  inputRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#F8FAFC', 
+    borderRadius: 12, 
+    borderWidth: 1.5, 
+    borderColor: '#E2E8F0', 
+    paddingHorizontal: 12, 
+    paddingVertical: 11, 
+    gap: 8 
+  },
+  inputRowFocused: { 
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  textInput: { 
+    flex: 1, 
+    fontSize: 14, 
+    color: '#0F172A', 
+    fontFamily: 'Inter',
+    fontWeight: '500',
+  },
   buttonRow: { flexDirection: 'row', gap: 12, marginTop: 16 },
-  signUpBtn: { flex: 1, backgroundColor: '#01b854', borderRadius: 12, height: 48, alignItems: 'center', justifyContent: 'center' },
-  signUpBtnText: { fontSize: 15, fontWeight: '700', color: '#043529', letterSpacing: 0.5 },
-  outlineBtn: { flex: 1, borderRadius: 12, height: 48, borderWidth: 1.5, borderColor: '#01b854', alignItems: 'center', justifyContent: 'center' },
-  outlineBtnText: { fontSize: 15, fontWeight: '700', color: '#01b854', letterSpacing: 0.5 },
+  signUpBtn: { 
+    flex: 1, 
+    backgroundColor: '#10B981', 
+    borderRadius: 12, 
+    height: 48, 
+    alignItems: 'center', 
+    justifyContent: 'center' 
+  },
+  signUpBtnText: { 
+    fontSize: 15, 
+    fontWeight: '700', 
+    color: '#FFFFFF', 
+    letterSpacing: 0.5,
+    fontFamily: 'Inter',
+  },
+  outlineBtn: { 
+    flex: 1, 
+    borderRadius: 12, 
+    height: 48, 
+    borderWidth: 1.5, 
+    borderColor: '#10B981', 
+    alignItems: 'center', 
+    justifyContent: 'center' 
+  },
+  outlineBtnText: { 
+    fontSize: 15, 
+    fontWeight: '700', 
+    color: '#059669', 
+    letterSpacing: 0.5,
+    fontFamily: 'Inter',
+  },
 });
 
 const webStyles = StyleSheet.create({
@@ -670,11 +801,23 @@ const webStyles = StyleSheet.create({
 });
 
 const modalStyles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(4,53,41,0.85)', justifyContent: 'center', alignItems: 'center', padding: 24 },
-  card: { backgroundColor: '#06392e', borderRadius: 28, padding: 32, width: '100%', maxWidth: 400, alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(0,234,107,0.25)', shadowColor: '#000', shadowOffset: { width: 0, height: 15 }, shadowOpacity: 0.4, shadowRadius: 25, elevation: 10 },
-  iconBg: { width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(0,234,107,0.1)', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
-  title: { fontSize: 24, fontWeight: '800', color: '#f9fafb', marginBottom: 12 },
-  message: { fontSize: 15, color: '#9ca3af', textAlign: 'center', lineHeight: 22, marginBottom: 28 },
-  button: { backgroundColor: '#01b854', paddingVertical: 14, paddingHorizontal: 40, borderRadius: 14, width: '100%', alignItems: 'center', shadowColor: '#01b854', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10 },
-  buttonText: { fontSize: 15, fontWeight: '800', color: '#043529', letterSpacing: 1 },
+  overlay: { flex: 1, backgroundColor: 'rgba(15, 23, 42, 0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  card: { 
+    backgroundColor: '#FFFFFF', 
+    borderRadius: 32, 
+    padding: 32, 
+    width: '100%', 
+    maxWidth: 400, 
+    alignItems: 'center', 
+    shadowColor: '#000', 
+    shadowOffset: { width: 0, height: 20 }, 
+    shadowOpacity: 0.15, 
+    shadowRadius: 30, 
+    elevation: 10 
+  },
+  iconBg: { width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(16, 185, 129, 0.1)', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
+  title: { fontSize: 24, fontWeight: '800', color: '#0F172A', marginBottom: 12, fontFamily: 'Inter' },
+  message: { fontSize: 15, color: '#64748B', textAlign: 'center', lineHeight: 22, marginBottom: 28, fontFamily: 'Inter' },
+  button: { backgroundColor: '#10B981', paddingVertical: 16, borderRadius: 16, width: '100%', alignItems: 'center' },
+  buttonText: { fontSize: 15, fontWeight: '800', color: '#FFFFFF', letterSpacing: 1, fontFamily: 'Inter' },
 });

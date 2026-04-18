@@ -223,18 +223,15 @@ export default function PlayerProfile() {
   if (!user) {
     return (
       <View style={styles.loginRequired}>
-        <View style={styles.loginIconBox}>
-          <User size={48} color="#01b854" />
-        </View>
-        <RNText style={styles.loginTitle}>Profile Not Available</RNText>
+        <RNText style={styles.loginTitle}>Unlock Your Profile</RNText>
         <RNText style={styles.loginSubtitle}>
-          Please login to view your cricket profile, track elite stats, and manage teams.
+          Sign in to track your elite stats, manage your team, and join the leaderboards.
         </RNText>
         <TouchableOpacity 
-          style={styles.loginBtn}
+          style={styles.loginBtnOutlined}
           onPress={() => router.push('/(auth)/login' as any)}
         >
-          <RNText style={styles.loginBtnText}>Login / Sign Up</RNText>
+          <RNText style={styles.loginBtnTextOutlined}>Login or Sign Up</RNText>
         </TouchableOpacity>
       </View>
     );
@@ -1054,45 +1051,35 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 32,
     backgroundColor: '#F8FAFC',
-    marginTop: 60,
-  },
-  loginIconBox: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#F0FDF4',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
   },
   loginTitle: {
-    fontSize: 24,
-    fontWeight: '500',
+    fontSize: 22,
+    fontWeight: '600',
     color: '#0F172A',
-    marginBottom: 12,
+    marginBottom: 8,
+    fontFamily: 'Inter',
   },
   loginSubtitle: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#64748B',
     textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 32,
-    paddingHorizontal: 20,
+    lineHeight: 20,
+    marginBottom: 24,
+    paddingHorizontal: 10,
+    fontFamily: 'Inter',
   },
-  loginBtn: {
-    backgroundColor: '#01b854',
-    paddingHorizontal: 32,
-    paddingVertical: 16,
-    borderRadius: 16,
-    shadowColor: '#01b854',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
-    elevation: 8,
+  loginBtnOutlined: {
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
   },
-  loginBtnText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '500',
+  loginBtnTextOutlined: {
+    color: '#0F172A',
+    fontSize: 15,
+    fontWeight: '600',
+    fontFamily: 'Inter',
   },
 });

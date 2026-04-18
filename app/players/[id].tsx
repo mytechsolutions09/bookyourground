@@ -88,6 +88,8 @@ export default function PlayerProfile() {
   const [highlights, setHighlights] = useState<any[]>([]);
   const [photos, setPhotos] = useState<any[]>([]);
   const [showQR, setShowQR] = useState(false);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
   const qrRef = useRef<any>(null);
 
   const isOwnProfile = user?.id === id;
@@ -283,8 +285,75 @@ export default function PlayerProfile() {
           setStats(statsByBall);
         }
       }
+
+      // 4. Fetch Connections (Followers/Following)
+      const { data: followData } = await supabase
+        .from('profiles_follows')
+        .select('*')
+        .eq('following_id', id);
+      
+      setFollowerCount(followData?.length || 0);
+      
+      if (user) {
+        const { data: currentFollow } = await supabase
+          .from('profiles_follows')
+          .select('id')
+          .eq('follower_id', user.id)
+          .eq('following_id', id)
+          .single();
+        setIsFollowing(!!currentFollow);
+      }
+
+      // 5. Increment View Count (Skip if own profile)
+      if (!isOwnProfile) {
+        await supabase.rpc('increment_profile_views', { target_profile_id: id });
+      }
+    } catch (error) {
+      console.error('Error loading player data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFollow = async () => {
+    if (!user) {
+      Alert.alert('Login Required', 'Please login to follow players');
+      return;
+    }
+
+    if (isOwnProfile) {
+      Alert.alert('Info', 'You cannot follow yourself');
+      return;
+    }
+
+    try {
+      if (isFollowing) {
+        // Unfollow
+        const { error } = await supabase
+          .from('profiles_follows')
+          .delete()
+          .eq('follower_id', user.id)
+          .eq('following_id', id);
+        
+        if (error) throw error;
+        setIsFollowing(false);
+        setFollowerCount(prev => Math.max(0, prev - 1));
+      } else {
+        // Follow
+        const { error } = await supabase
+          .from('profiles_follows')
+          .insert({
+            follower_id: user.id,
+            following_id: id
+          });
+        
+        if (error) throw error;
+        setIsFollowing(true);
+        setFollowerCount(prev => prev + 1);
+      }
+    } catch (error) {
+      console.error('Error toggling follow:', error);
+      Alert.alert('Error', 'Failed to update follow status');
     }
   };
 
@@ -706,7 +775,11 @@ export default function PlayerProfile() {
                 </Text>
                 <View style={styles.dot} />
                 <View style={styles.viewCount}>
-                  <Text style={styles.viewCountText}>384 Views</Text>
+                  <Text style={styles.viewCountText}>{profile?.views_count || 0} Views</Text>
+                </View>
+                <View style={styles.dot} />
+                <View style={styles.viewCount}>
+                  <Text style={styles.viewCountText}>{followerCount} Followers</Text>
                 </View>
               </View>
               <Text style={styles.playerStyles}>
@@ -722,9 +795,14 @@ export default function PlayerProfile() {
 
           {/* Action Buttons */}
           <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.followBtn}>
-              <UserPlus size={18} color="#fcd34d" />
-              <Text style={styles.followBtnText}>Follow</Text>
+            <TouchableOpacity 
+              style={[styles.followBtn, isFollowing && styles.followingBtn]} 
+              onPress={handleFollow}
+            >
+              <UserPlus size={18} color={isFollowing ? '#FFFFFF' : '#fcd34d'} />
+              <Text style={[styles.followBtnText, isFollowing && styles.followingBtnText]}>
+                {isFollowing ? 'Following' : 'Follow'}
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.insightsBtn}>
               <BarChart2 size={18} color="#1e1b4b" />
@@ -1301,6 +1379,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontFamily: 'Inter',
   },
+  followingBtn: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'transparent',
+  },
+  followingBtnText: {
+    color: '#FFFFFF',
+  },
   insightsBtn: {
     flex: 1,
     flexDirection: 'row',
@@ -1348,6 +1433,7 @@ const styles = StyleSheet.create({
   activeTabLabel: {
     color: '#431043',
     fontWeight: '500',
+    fontFamily: 'Inter',
   },
   contentContainer: {
     paddingHorizontal: 16,
@@ -1805,6 +1891,7 @@ const styles = StyleSheet.create({
   },
   toggleLabelActive: {
     color: '#1e1b4b',
+    fontFamily: 'Inter',
   },
   recordSection: {
     backgroundColor: '#FFFFFF',
@@ -1835,7 +1922,7 @@ const styles = StyleSheet.create({
   recordTitle: {
     flex: 1,
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#1e2030',
     fontFamily: 'Inter',
     letterSpacing: -0.5,
@@ -1863,7 +1950,7 @@ const styles = StyleSheet.create({
   },
   dataValue: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#1e293b',
     fontFamily: 'Inter',
   },
