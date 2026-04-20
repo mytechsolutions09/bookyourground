@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   activeTabText: {
-    color: '#10B981',
+    color: '#01b854',
     fontSize: 13,
     fontWeight: '800',
     fontFamily: 'Inter',

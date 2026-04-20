@@ -278,8 +278,8 @@ export default function GroundDetailsPrettyUrlScreen() {
               >
                 <Heart
                   size={22}
-                  color={isFavorite ? '#00ea6b' : '#f9fafb'}
-                  fill={isFavorite ? '#00ea6b' : 'rgba(0,0,0,0.2)'}
+                  color={isFavorite ? '#01b854' : '#f9fafb'}
+                  fill={isFavorite ? '#01b854' : 'rgba(0,0,0,0.2)'}
                   strokeWidth={2}
                 />
               </Pressable>
@@ -326,7 +326,7 @@ export default function GroundDetailsPrettyUrlScreen() {
                 onPress={() => { void Linking.openURL(mapsUrl); }}
                 style={styles.mapsLinkWrap}
               >
-                <MapPin size={14} color="#518167" strokeWidth={2.5} />
+                <MapPin size={14} color="#01b854" strokeWidth={2.5} />
                 <Text style={styles.mapsLinkText}>Get Directions</Text>
               </Pressable>
             )}
@@ -451,7 +451,7 @@ export default function GroundDetailsPrettyUrlScreen() {
                 <View style={styles.amenitiesGrid}>
                   {items.map((label) => (
                     <View key={label} style={styles.amenityChip}>
-                      <CheckCircle2 size={15} color="#00ea6b" strokeWidth={2.5} />
+                      <CheckCircle2 size={15} color="#01b854" strokeWidth={2.5} />
                       <Text style={styles.amenityText}>{label}</Text>
                     </View>
                   ))}
@@ -575,8 +575,8 @@ export default function GroundDetailsPrettyUrlScreen() {
               >
                 <Heart
                   size={22}
-                  color={isFavorite ? '#518167' : '#64748B'}
-                  fill={isFavorite ? '#518167' : 'none'}
+                  color={isFavorite ? '#01b854' : '#64748B'}
+                  fill={isFavorite ? '#01b854' : 'none'}
                   strokeWidth={2}
                 />
               </Pressable>
@@ -630,7 +630,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.3)',
+    borderColor: 'rgba(1, 184, 84, 0.3)',
   },
   favBtn: {
     width: 44,
@@ -640,7 +640,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.15)',
+    borderColor: 'rgba(1, 184, 84, 0.15)',
     ...Platform.select({
       web: {
         position: 'absolute',
@@ -652,7 +652,7 @@ const styles = StyleSheet.create({
     }),
   },
   favBtnActive: {
-    borderColor: 'rgba(0,234,107,0.6)',
+    borderColor: 'rgba(1, 184, 84, 0.6)',
   },
 
   // ── Content wrapper ───────────────────────────────────
@@ -710,7 +710,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   thumbPressableSelected: {
-    borderColor: IS_WEB ? '#2563EB' : '#00ea6b',
+    borderColor: IS_WEB ? '#2563EB' : '#01b854',
   },
   thumbPressablePressed: {
     opacity: 0.8,
@@ -782,7 +782,7 @@ const styles = StyleSheet.create({
   mapsLinkText: {
     fontFamily: 'Inter',
     fontSize: 12,
-    color: '#518167',
+    color: '#01b854',
     fontWeight: '600',
   },
   starsSummaryRow: {
@@ -805,7 +805,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
     paddingTop: 14,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0,234,107,0.15)',
+    borderTopColor: 'rgba(1, 184, 84, 0.15)',
   },
   priceLabel: {
     fontFamily: 'Inter',
@@ -1098,8 +1098,8 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   sortChipActive: {
-    backgroundColor: '#518167',
-    borderColor: '#518167',
+    backgroundColor: '#01b854',
+    borderColor: '#01b854',
   },
   sortChipText: {
     fontFamily: 'Inter',

@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: 'rgba(1, 184, 84, 0.1)',
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#01b854',
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
   },
   addTeamDesc: {
     fontSize: 12,
-    color: '#166534',
+    color: '#01b854',
     opacity: 0.8,
   },
   modalOverlay: {

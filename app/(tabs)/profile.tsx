@@ -135,11 +135,7 @@ export default function ProfileScreen() {
           },
         ]}
       >
-        <View style={styles.avatarContainer}>
-          <View style={[styles.avatar, { backgroundColor: isLight ? '#f1f5f9' : DARK_BG, borderColor: themeAccent }]}>
-            <User size={40} color={themeAccent} />
-          </View>
-        </View>
+        <View style={{ height: 8 }} />
         <RNText style={[styles.name, { color: themeText }]}>{profile?.full_name}</RNText>
         <View style={[styles.roleBadge, { borderColor: themeAccent, backgroundColor: isLight ? 'rgba(16, 185, 129, 0.08)' : 'transparent', marginBottom: 16 }]}>
           <RNText style={[styles.roleText, { color: isLight ? themeAccent : themeText }]}>

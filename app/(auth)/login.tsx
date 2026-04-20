@@ -84,25 +84,9 @@ export default function LoginScreen() {
 
       setTimeout(() => {
         setShowSuccessModal(false);
-        if (!isSuperAdmin && !isGroundOwner && redirectPath) {
-          let finalUrl = redirectPath;
-          const extraParams = new URLSearchParams();
-          if (typeof date === 'string' && date) extraParams.set('date', date);
-          if (typeof time === 'string' && time) extraParams.set('time', time);
-          if (typeof teams === 'string' && teams) extraParams.set('teams', teams);
-
-          if (Array.from(extraParams.keys()).length > 0) {
-            const hasQuery = redirectPath.includes('?');
-            finalUrl += (hasQuery ? '&' : '?') + extraParams.toString();
-          }
-
-          router.replace(finalUrl as any);
-          return;
-        }
-
-        if (isSuperAdmin) router.replace('/(admin)/dashboard');
-        else if (isGroundOwner) router.replace('/(owner)/grounds');
-        else router.replace('/(tabs)/bookings');
+        
+        // Redirection logic is now handled centraly in the useEffect above 
+        // to avoid duplicate transitions and ensure consistency across platforms.
       }, 1500);
     }
   };
@@ -133,14 +117,40 @@ export default function LoginScreen() {
   };
 
   useEffect(() => {
-    if (os !== 'web') return;
-    if (!user) return;
-    if (!profile) return;
+    if (!user || !profile) return;
 
+    // Check for redirect param
+    const redirectPath = typeof redirect === 'string' ? redirect : null;
+    
+    if (redirectPath) {
+      // Re-construct the full URL if params were passed
+      let finalUrl = redirectPath;
+      const extraParams = new URLSearchParams();
+      if (typeof date === 'string' && date) extraParams.set('date', date);
+      if (typeof time === 'string' && time) extraParams.set('time', time);
+      if (typeof teams === 'string' && teams) extraParams.set('teams', teams);
+
+      if (Array.from(extraParams.keys()).length > 0) {
+        const hasQuery = redirectPath.includes('?');
+        finalUrl += (hasQuery ? '&' : '?') + extraParams.toString();
+      }
+      
+      router.replace(finalUrl as any);
+      return;
+    }
+
+    // Role-based defaults if no redirect path
     if (profile.role === 'super_admin') router.replace('/(admin)/dashboard');
     else if (profile.role === 'ground_owner') router.replace('/(owner)/grounds');
-    else router.replace('/(tabs)/bookings');
-  }, [os, user, profile]);
+    else {
+      // For regular users, if we can go back, go back to where they were
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/(tabs)/dashboard');
+      }
+    }
+  }, [user, profile, redirect, date, time, teams]);
 
   // ── Web layout (unchanged split design) ──────────────────────────────────
   if (os === 'web') {
@@ -265,28 +275,28 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Back button */}
-        <Pressable
-          style={styles.backBtn}
-          onPress={() => {
-            if (router.canGoBack()) router.back();
-            else router.replace('/');
-          }}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-        >
-          <ArrowLeft size={20} color="#1E293B" strokeWidth={2.5} />
-        </Pressable>
-
-        {/* Form card */}
         <View style={styles.card}>
-          <View style={styles.logoContainer}>
-            <Image
-              source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
-              style={styles.logo}
-              resizeMode="contain"
-              accessibilityLabel="BookYourGround"
-            />
+          <View style={styles.cardHeaderRow}>
+            <Pressable
+              style={styles.backBtnRelative}
+              onPress={() => {
+                if (router.canGoBack()) router.back();
+                else router.replace('/');
+              }}
+              accessibilityRole="button"
+              accessibilityLabel="Go back"
+            >
+              <ArrowLeft size={20} color="#1E293B" strokeWidth={2.5} />
+            </Pressable>
+            <View style={styles.logoContainer}>
+              <Image
+                source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
+                style={styles.logo}
+                resizeMode="contain"
+                accessibilityLabel="BookYourGround"
+              />
+            </View>
+            <View style={{ width: 40 }} />
           </View>
           
           <View style={{ height: 16 }} />
@@ -412,7 +422,7 @@ export default function LoginScreen() {
       >
         <View style={modalStyles.overlay}>
           <View style={modalStyles.card}>
-            <View style={[modalStyles.iconBg, { backgroundColor: 'rgba(16,185,129,0.1)' }]}>
+            <View style={[modalStyles.iconBg, { backgroundColor: 'rgba(1, 184, 84, 0.1)' }]}>
               <Send size={40} color="#01b854" strokeWidth={2.5} />
             </View>
             <Text style={modalStyles.title}>Email Sent!</Text>
@@ -467,39 +477,31 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 140,
+    paddingTop: 180,
     paddingBottom: 40,
   },
-  backBtn: {
-    position: 'absolute',
-    top: 52,
-    left: 20,
-    zIndex: 10,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    justifyContent: 'center',
+  cardHeaderRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  logoContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
+    justifyContent: 'space-between',
     width: '100%',
     marginBottom: 8,
   },
-  logo: {
-    width: 260,
-    height: 65,
+  backBtnRelative: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
+  logoContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+  },
+  logo: { width: 160, height: 40 },
   headingWrap: {
     alignItems: 'center',
     marginTop: 0,
@@ -508,10 +510,10 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 28,
-    padding: 24,
+    padding: 20,
     borderWidth: 1,
     borderColor: '#F1F5F9',
-    gap: 4,
+    gap: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.04,
@@ -519,13 +521,13 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   fieldWrap: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   fieldLabel: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '700',
     color: '#334155',
-    marginBottom: 8,
+    marginBottom: 4,
     letterSpacing: 0.2,
     fontFamily: 'Inter',
   },
@@ -533,16 +535,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F8FAFC',
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 10,
   },
   inputRowFocused: {
     backgroundColor: '#FFFFFF',
-    shadowColor: '#10B981',
+    shadowColor: '#01b854',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.1,
     shadowRadius: 10,
@@ -550,7 +552,7 @@ const styles = StyleSheet.create({
   },
   textInput: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 13,
     color: '#0F172A',
     fontFamily: 'Inter',
     fontWeight: '500',
@@ -564,7 +566,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#01b854',
     borderRadius: 12,
-    height: 48,
+    height: 42,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#01b854',
@@ -574,7 +576,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   signInBtnText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
     color: '#FFFFFF',
     letterSpacing: 0.5,
@@ -583,16 +585,16 @@ const styles = StyleSheet.create({
   outlineBtn: {
     flex: 1,
     borderRadius: 12,
-    height: 48,
+    height: 42,
     borderWidth: 1.5,
     borderColor: '#01b854',
     alignItems: 'center',
     justifyContent: 'center',
   },
   outlineBtnText: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '700',
-    color: '#059669',
+    color: '#01b854',
     letterSpacing: 0.5,
     fontFamily: 'Inter',
   },
@@ -602,9 +604,9 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   forgotText: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '700',
-    color: '#059669',
+    color: '#01b854',
     fontFamily: 'Inter',
   },
 });
@@ -652,7 +654,7 @@ const webStyles = StyleSheet.create({
     maxWidth: 420,
     backgroundColor: '#06392e',
     borderRadius: 20,
-    padding: 32,
+    padding: 24,
     borderWidth: 1,
     borderColor: 'rgba(0,234,107,0.12)',
     shadowColor: '#000',
@@ -661,14 +663,16 @@ const webStyles = StyleSheet.create({
     shadowRadius: 20,
   },
   formTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '800',
     color: '#f9fafb',
     marginTop: 4,
     marginBottom: 2,
+    fontFamily: 'Inter',
   },
   formSubtitle: {
-    fontSize: 14,
+    fontSize: 12,
+    fontFamily: 'Inter',
     color: '#9ca3af',
     marginBottom: 4,
     textAlign: 'center',
@@ -687,7 +691,7 @@ const webStyles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#01b854',
     borderRadius: 8,
-    height: 40,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -700,7 +704,7 @@ const webStyles = StyleSheet.create({
   outlineButton: {
     flex: 1,
     borderRadius: 8,
-    height: 40,
+    height: 36,
     borderWidth: 1.5,
     borderColor: '#01b854',
     alignItems: 'center',
@@ -768,7 +772,7 @@ const modalStyles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   button: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#01b854',
     paddingVertical: 16,
     borderRadius: 16,
     width: '100%',

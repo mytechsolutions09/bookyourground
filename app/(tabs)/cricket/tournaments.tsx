@@ -9,9 +9,12 @@ import {
   ScrollView, 
   FlatList,
   ActivityIndicator,
-  RefreshControl
+  RefreshControl,
+  useWindowDimensions
 } from 'react-native';
-import { Crown, MapPin, Calendar, Users, Trophy, ChevronRight, Plus, Search, Filter } from 'lucide-react-native';
+import { Crown, MapPin, Calendar, Users, Trophy, ChevronRight, Plus, Search, Filter, QrCode } from 'lucide-react-native';
+import QRCode from 'react-native-qrcode-svg';
+import { Modal } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -32,10 +35,15 @@ interface Tournament {
 
 export default function CricketTournaments() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isWide = width > 500;
+
   const [subTab, setSubTab] = useState('all');
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isQRModalOpen, setIsQRModalOpen] = useState(false);
+  const [selectedTournament, setSelectedTournament] = useState<Tournament | null>(null);
 
   const fetchTournaments = async () => {
     try {
@@ -99,7 +107,7 @@ export default function CricketTournaments() {
 
     return (
       <TouchableOpacity 
-        style={styles.tournamentCard}
+        style={[styles.tournamentCard, isWide && { width: '47%', marginHorizontal: '1.5%' }]}
         onPress={() => router.push(`/cricket-tournament/${item.id}`)}
         activeOpacity={0.9}
       >
@@ -141,13 +149,24 @@ export default function CricketTournaments() {
               <Users size={14} color="#64748B" />
               <Text style={styles.infoText}>Max {item.max_teams} Teams</Text>
             </View>
-            <TouchableOpacity 
-              style={styles.viewBtn}
-              onPress={() => router.push(`/cricket-tournament/${item.id}`)}
-            >
-              <Text style={styles.viewBtnText}>Details</Text>
-              <ChevronRight size={16} color="#01b854" />
-            </TouchableOpacity>
+            <View style={styles.footerActions}>
+              <TouchableOpacity 
+                style={styles.qrIconBtn}
+                onPress={() => {
+                  setSelectedTournament(item);
+                  setIsQRModalOpen(true);
+                }}
+              >
+                <QrCode size={18} color="#64748B" />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.viewBtn}
+                onPress={() => router.push(`/cricket-tournament/${item.id}`)}
+              >
+                <Text style={styles.viewBtnText}>Details</Text>
+                <ChevronRight size={16} color="#01b854" />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </TouchableOpacity>
@@ -187,35 +206,69 @@ export default function CricketTournaments() {
           <ActivityIndicator size="large" color="#01b854" />
         </View>
       ) : (
-        <FlatList
-          data={tournaments}
-          renderItem={TournamentCard}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-          ListHeaderComponent={renderHeader}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#01b854']} />
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Trophy size={48} color="#E2E8F0" />
-              <Text style={styles.emptyText}>No tournaments found</Text>
-              <TouchableOpacity style={styles.hostBtn} onPress={() => router.push('/cricket-tournament/create')}>
-                <Text style={styles.hostBtnText}>Host a Tournament</Text>
-              </TouchableOpacity>
-            </View>
-          }
-          ListFooterComponent={
-            <View style={styles.adBanner}>
-              <Image source={{ uri: 'https://images.pexels.com/photos/1103970/pexels-photo-1103970.jpeg' }} style={styles.adImage} />
-              <View style={styles.adOverlay}>
-                <Text style={styles.adTitle}>Promote your{'\n'}<Text style={styles.adTitleBold}>Tournament</Text></Text>
-                <TouchableOpacity style={styles.adBtn}><Text style={styles.adBtnText}>Learn More</Text></TouchableOpacity>
+        <View style={styles.listContent}>
+          {renderHeader()}
+          
+          <View style={[styles.tournamentsGrid, isWide && styles.tournamentsGridWide]}>
+            {tournaments.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Trophy size={48} color="#E2E8F0" />
+                <Text style={styles.emptyText}>No tournaments found</Text>
+                <TouchableOpacity style={styles.hostBtn} onPress={() => router.push('/cricket-tournament/create')}>
+                  <Text style={styles.hostBtnText}>Host a Tournament</Text>
+                </TouchableOpacity>
               </View>
+            ) : (
+              tournaments.map((item) => (
+                <TournamentCard key={item.id} item={item} />
+              ))
+            )}
+          </View>
+
+          <View style={styles.adBanner}>
+            <Image source={{ uri: 'https://images.pexels.com/photos/1103970/pexels-photo-1103970.jpeg' }} style={styles.adImage} />
+            <View style={styles.adOverlay}>
+              <Text style={styles.adTitle}>Promote your{'\n'}<Text style={styles.adTitleBold}>Tournament</Text></Text>
+              <TouchableOpacity style={styles.adBtn}><Text style={styles.adBtnText}>Learn More</Text></TouchableOpacity>
             </View>
-          }
-        />
+          </View>
+        </View>
       )}
+
+      {/* QR Modal */}
+      <Modal
+        visible={isQRModalOpen}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setIsQRModalOpen(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setIsQRModalOpen(false)}
+        >
+          <View style={styles.qrModalContent}>
+            <Text style={styles.qrModalTitle}>{selectedTournament?.name}</Text>
+            <View style={styles.qrModalWrapper}>
+              {selectedTournament && (
+                <QRCode
+                  value={`https://bookyourground.com/cricket-tournament/${selectedTournament.id}`}
+                  size={200}
+                  color="#01b854"
+                  backgroundColor="white"
+                />
+              )}
+            </View>
+            <Text style={styles.qrModalHint}>Scan to registered tournament</Text>
+            <TouchableOpacity 
+              style={styles.qrModalCloseBtn}
+              onPress={() => setIsQRModalOpen(false)}
+            >
+              <Text style={styles.qrModalCloseText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
       
       <TouchableOpacity 
         style={styles.fab}
@@ -304,6 +357,13 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 100,
+  },
+  tournamentsGrid: {
+    width: '100%',
+  },
+  tournamentsGridWide: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
   },
   tournamentCard: {
     backgroundColor: '#FFFFFF',
@@ -417,6 +477,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
+  footerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  qrIconBtn: {
+    padding: 6,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 8,
+  },
   viewBtnText: {
     fontSize: 14,
     fontWeight: '700',
@@ -500,6 +570,54 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: '#000000',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  qrModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 32,
+    alignItems: 'center',
+    width: '85%',
+    maxWidth: 320,
+  },
+  qrModalTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#1E293B',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  qrModalWrapper: {
+    padding: 16,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 16,
+  },
+  qrModalHint: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748B',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  qrModalCloseBtn: {
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 99,
+  },
+  qrModalCloseText: {
+    color: '#64748B',
+    fontWeight: '800',
+    fontSize: 14,
   },
 });
 

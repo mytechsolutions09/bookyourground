@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Pressable, StyleSheet, Platform, Text } from 'react-native';
+import { View, Pressable, StyleSheet, Platform, Text, useWindowDimensions } from 'react-native';
 import { useRouter, useSegments } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -50,11 +50,13 @@ export default function MobileTabBar() {
   const segments = useSegments();
   const { isTabBarVisible } = useUI();
   const { user } = useAuth();
+  const { width } = useWindowDimensions();
+  const isFold = width < 330 || width > 600;
   
   const translateY = useSharedValue(0);
 
   React.useEffect(() => {
-    translateY.value = withTiming(isTabBarVisible ? 0 : 100, {
+    translateY.value = withTiming(isTabBarVisible ? 0 : 120, {
       duration: 600,
       easing: Easing.out(Easing.exp),
     });
@@ -74,6 +76,8 @@ export default function MobileTabBar() {
   const activeTab = getActiveTab(segments as string[]);
   const size = 22;
 
+  const barHeight = isFold ? 110 : 85;
+
   const go = (href: string) => {
     router.push(href as any);
   };
@@ -86,6 +90,7 @@ export default function MobileTabBar() {
         {
           paddingBottom: Math.max(insets.bottom, 8),
           borderTopColor: '#06392e',
+          height: barHeight,
         },
       ]}
     >
@@ -155,7 +160,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#043529',
     borderTopWidth: 1,
     paddingTop: 8,
-    height: 85,
   },
   item: {
     flex: 1,

@@ -11,6 +11,7 @@ import {
   Image,
   TouchableOpacity,
   ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import Animated, { 
   useSharedValue, 
@@ -27,6 +28,7 @@ import { router, usePathname } from 'expo-router';
 import {
   Search,
   MapPin,
+  Trophy,
   Star,
   ChevronRight,
   Shield,
@@ -113,8 +115,8 @@ function GroundCardMobile({ ground, index }: { ground: any; index: number }) {
             {ground.name}
           </Text>
           <View style={styles.groundLocationRow}>
-            <MapPin size={11} color="#10B981" strokeWidth={2} />
-            <Text style={styles.groundLocation} numberOfLines={1}>
+            <MapPin size={12} color="#FFFFFF" strokeWidth={2} />
+            <Text style={styles.cardLocation} numberOfLines={1}>
               {ground.city}, {ground.state}
             </Text>
           </View>
@@ -150,6 +152,10 @@ function GroundCardMobile({ ground, index }: { ground: any; index: number }) {
 
 export default function HomeScreen() {
   const isFocused = useIsFocused();
+  const { width } = useWindowDimensions();
+  const isWide = width > 500;
+  const isTablet = width > 768;
+
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
   const { user } = useAuth();
@@ -256,6 +262,25 @@ export default function HomeScreen() {
     });
   }, [grounds, searchQuery, sportFilter]);
 
+  const stats = useMemo(() => {
+    const venueCount = grounds.length;
+    const cities = new Set(grounds.map(g => g.city).filter(Boolean));
+    const cityCount = cities.size;
+    
+    let totalScore = 0;
+    let totalReviews = 0;
+    grounds.forEach((g: any) => {
+      const reviews = (g.reviews || []) as { rating: number }[];
+      reviews.forEach(r => {
+        totalScore += (r.rating || 0);
+        totalReviews += 1;
+      });
+    });
+    const avgRating = totalReviews > 0 ? (totalScore / totalReviews).toFixed(1) : '0';
+    
+    return { venueCount, cityCount, avgRating };
+  }, [grounds]);
+
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     loadGrounds();
@@ -270,119 +295,67 @@ export default function HomeScreen() {
         scrollEventThrottle={16}
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#10B981"
-            colors={['#10B981']}
+            tintColor="#01b854"
+            colors={['#01b854']}
           />
         }
       >
         {/* ── Hero Section ─────────────────────────────── */}
-        <View style={[styles.hero, { paddingTop: Math.max(insets.top + 32, 40) }]}>
+        <View style={[
+          styles.hero, 
+          { paddingTop: Math.max(insets.top + 32, 40) },
+          isWide && { alignItems: 'center', textAlign: 'center' }
+        ]}>
           <View style={styles.heroBgGlow} />
 
-          <Text style={styles.heroTitle}>
+          <Text style={[styles.heroTitle, isWide && { textAlign: 'center' }]}>
             Find your perfect{'\n'}
             <Text style={styles.heroTitleAccent}>ground, today.</Text>
           </Text>
-          <Text style={styles.heroSubtitle}>
-            Book cricket, football & multi-sport grounds near you — instantly.
-          </Text>
-
-          {/* Search bar in hero */}
-          <View style={styles.heroSearch}>
-            <Search size={18} color="#9ca3af" strokeWidth={2} />
-            <TextInput
-              style={styles.heroSearchInput}
-              placeholder="Search grounds, city..."
-              placeholderTextColor="#6b7280"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-          </View>
 
           {/* Stats row */}
-          <View style={styles.statsRow}>
+          <View style={[styles.statsRow, { marginBottom: 28 }, isWide && { maxWidth: 660, alignSelf: 'center', width: '100%', paddingHorizontal: 32 }]}>
             <View style={styles.statItem}>
-              <Text style={styles.statNumber}>200+</Text>
-              <Text style={styles.statLabel}>Venues</Text>
+              <View style={styles.statIconBadge}>
+                 <Trophy size={14} color="#01b854" fill="rgba(1, 184, 84, 0.1)" />
+              </View>
+              <View style={styles.statInfo}>
+                <Text style={styles.statNumber}>{stats.venueCount}+</Text>
+                <Text style={styles.statLabel}>Venues</Text>
+              </View>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statNumber}>30+</Text>
-              <Text style={styles.statLabel}>Cities</Text>
+              <View style={styles.statIconBadge}>
+                 <MapPin size={14} color="#01b854" fill="rgba(1, 184, 84, 0.1)" />
+              </View>
+              <View style={styles.statInfo}>
+                <Text style={styles.statNumber}>{stats.cityCount}+</Text>
+                <Text style={styles.statLabel}>Cities</Text>
+              </View>
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statNumber}>4.9 ⭐</Text>
-              <Text style={styles.statLabel}>Rating</Text>
+              <View style={styles.statIconBadge}>
+                 <Star size={14} color="#F59E0B" fill="rgba(245, 158, 11, 0.1)" />
+              </View>
+              <View style={styles.statInfo}>
+                <Text style={styles.statNumber}>{stats.avgRating}/5</Text>
+                <Text style={styles.statLabel}>Ratings</Text>
+              </View>
             </View>
           </View>
-        </View>
 
-        {/* ── Popular Grounds ───────────────────────────── */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text style={styles.sectionLabel}>Popular Grounds</Text>
-              <Text style={styles.sectionTitle}>Trending near you</Text>
-            </View>
-            <Pressable
-              style={styles.seeAllBtn}
-              onPress={() => router.push('/(tabs)/grounds' as any)}
-            >
-              <Text style={styles.seeAllText}>See all</Text>
-              <ChevronRight size={14} color="#10B981" strokeWidth={2.5} />
-            </Pressable>
-          </View>
-
-          {loading ? (
-            <ActivityIndicator color="#10B981" style={{ marginTop: 24, marginBottom: 8 }} />
-          ) : popularGrounds.length === 0 ? (
-            <Text style={styles.emptyText}>No grounds found</Text>
-          ) : (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.horizontalList}
-            >
-              {popularGrounds.map((g: any, i: number) => (
-                <View key={g.id} style={styles.horizontalItem}>
-                  <GroundCardMobile ground={g} index={i} />
-                </View>
-              ))}
-            </ScrollView>
-          )}
-        </View>
-
-        {/* ── Book a Ground Section ────────────────────── */}
-        <View style={[styles.section, { marginBottom: 20 }]}>
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text style={styles.sectionLabel}>Direct Booking</Text>
-              <Text style={styles.sectionTitle}>Book a Ground</Text>
-            </View>
-          </View>
-          <View style={{ paddingHorizontal: 20 }}>
-            <LandingBookingForm 
-              fullWidth 
-              noCard 
-              hideTitle 
-              bookGroundScreenNative
-            />
-          </View>
-        </View>
-
-        {/* ── Sport Categories ──────────────────────────── */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Browse by Sport</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoriesRow}
+            contentContainerStyle={[styles.categoriesRow, { paddingHorizontal: 0, marginBottom: 12 }]}
           >
             {SPORT_CATEGORIES.map((cat) => (
               <Pressable
@@ -404,9 +377,25 @@ export default function HomeScreen() {
               </Pressable>
             ))}
           </ScrollView>
+
+          <View style={[styles.heroSearch, isWide && { maxWidth: 660, alignSelf: 'center', width: '100%' }]}>
+            <Search size={18} color="#9ca3af" strokeWidth={2} />
+            <TextInput
+              style={styles.heroSearchInput}
+              placeholder="Search grounds, city..."
+              placeholderTextColor="#6b7280"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+          <Text style={[styles.heroSubtitle, isWide && { textAlign: 'center', maxWidth: 660, alignSelf: 'center' }]}>
+            Book cricket, football & multi-sport grounds near you — instantly.
+          </Text>
         </View>
 
-        {/* ── All / Filtered Grounds ───────────────────── */}
+
+
+        {/* ── Search Results (Show at top when active) ── */}
         {(searchQuery.trim() || sportFilter !== 'all') && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
@@ -417,17 +406,17 @@ export default function HomeScreen() {
             </View>
 
             {loading ? (
-              <ActivityIndicator color="#10B981" style={{ marginTop: 16 }} />
+              <ActivityIndicator color="#01b854" style={{ marginTop: 16 }} />
             ) : filteredGrounds.length === 0 ? (
               <Text style={styles.emptyText}>No grounds match your search.</Text>
             ) : (
-              <View style={styles.verticalList}>
+              <View style={[styles.verticalList, isWide && styles.wideGrid]}>
                 {filteredGrounds.map((g: any, i: number) => (
                   <TouchableOpacity
                     key={g.id}
                     activeOpacity={0.88}
                     onPress={() => router.push(makeGroundPath(g) as any)}
-                    style={styles.listRow}
+                    style={[styles.listRow, isWide && styles.gridItem]}
                   >
                     <Image
                       source={{
@@ -436,7 +425,7 @@ export default function HomeScreen() {
                           g.ground_images?.[0]?.image_url ||
                           'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg',
                       }}
-                      style={styles.listRowImage}
+                      style={isWide ? styles.gridRowImage : styles.listRowImage}
                     />
                     <View style={styles.listRowInfo}>
                       <Text style={styles.listRowName} numberOfLines={1}>
@@ -450,20 +439,64 @@ export default function HomeScreen() {
                       </View>
                       <Text style={styles.listRowType}>{g.pitch_type || 'Standard'}</Text>
                     </View>
-                    <View style={styles.listRowRight}>
-                      <Text style={styles.listRowPrice}>
-                        ₹{Number(g.base_price_per_hour || 0).toLocaleString('en-IN')}
-                      </Text>
-                      <Text style={styles.listRowPriceUnit}>
-                        {String(g.pitch_type ?? '').toLowerCase().includes('box') ? '/hr' : '/match'}
-                      </Text>
-                    </View>
+                    {!isWide && (
+                      <View style={styles.listRowRight}>
+                        <Text style={styles.listRowPrice}>
+                          ₹{Number(g.base_price_per_hour || 0).toLocaleString('en-IN')}
+                        </Text>
+                        <View style={styles.bookSmallBtn}>
+                          <ArrowRight size={14} color="#FFFFFF" strokeWidth={2.5} />
+                        </View>
+                      </View>
+                    )}
                   </TouchableOpacity>
                 ))}
               </View>
             )}
+            <View style={styles.sectionDivider} />
           </View>
         )}
+
+        {/* ── Popular Grounds ───────────────────────────── */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View>
+              <Text style={styles.sectionLabel}>Popular Grounds</Text>
+              <Text style={styles.sectionTitle}>Trending near you</Text>
+            </View>
+            <Pressable
+              style={styles.seeAllBtn}
+              onPress={() => router.push('/(tabs)/grounds' as any)}
+            >
+              <Text style={styles.seeAllText}>See all</Text>
+              <ChevronRight size={14} color="#01b854" strokeWidth={2.5} />
+            </Pressable>
+          </View>
+
+          {loading ? (
+            <ActivityIndicator color="#01b854" style={{ marginTop: 24, marginBottom: 8 }} />
+          ) : popularGrounds.length === 0 ? (
+            <Text style={styles.emptyText}>No grounds found</Text>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalList}
+            >
+              {popularGrounds.map((g: any, i: number) => (
+                <View key={g.id} style={[styles.horizontalItem, isWide && { width: 300 }]}>
+                  <GroundCardMobile ground={g} index={i} />
+                </View>
+              ))}
+            </ScrollView>
+          )}
+        </View>
+
+
+
+
+
+
 
         {/* ── Features Strip ───────────────────────────── */}
         <View style={styles.featuresSection}>
@@ -473,9 +506,15 @@ export default function HomeScreen() {
             {FEATURES.map((f, i) => {
               const Icon = f.icon;
               return (
-                <View key={i} style={styles.featureCard}>
+                <View 
+                  key={i} 
+                  style={[
+                    styles.featureCard, 
+                    isWide && { width: isTablet ? '23%' : '47%' }
+                  ]}
+                >
                   <View style={styles.featureIconWrap}>
-                    <Icon size={22} color="#10B981" strokeWidth={2} />
+                    <Icon size={22} color="#01b854" strokeWidth={2} />
                   </View>
                   <Text style={styles.featureLabel}>{f.label}</Text>
                   <Text style={styles.featureDesc}>{f.desc}</Text>
@@ -488,8 +527,8 @@ export default function HomeScreen() {
         {/* ── CTA Banner ───────────────────────────────── */}
         <View style={styles.ctaBanner}>
           <View style={styles.ctaBannerGlow} />
-          <Text style={styles.ctaTitle}>Ready to play?</Text>
-          <Text style={styles.ctaSubtitle}>
+          <Text style={[styles.ctaTitle, isWide && { fontSize: 36 }]}>Ready to play?</Text>
+          <Text style={[styles.ctaSubtitle, isWide && { maxWidth: 500 }]}>
             Join thousands booking their favourite grounds every day.
           </Text>
           <Pressable
@@ -542,7 +581,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 999,
-    backgroundColor: 'rgba(16, 185, 129, 0.05)',
+    backgroundColor: 'rgba(1, 184, 84, 0.05)',
   },
   heroTitle: {
     fontSize: 32,
@@ -554,7 +593,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   heroTitleAccent: {
-    color: '#10B981',
+    color: '#01b854',
   },
   heroSubtitle: {
     fontSize: 14,
@@ -572,8 +611,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
+    marginTop: 12,
     marginBottom: 20,
     gap: 12,
+    zIndex: 10,
+    width: '100%',
   },
   heroSearchInput: {
     flex: 1,
@@ -600,18 +642,34 @@ const styles = StyleSheet.create({
   },
   statItem: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  statIconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
+    justifyContent: 'center',
     alignItems: 'center',
   },
+  statInfo: {
+    alignItems: 'flex-start',
+  },
   statNumber: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#10B981',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0F172A',
     fontFamily: 'Inter',
   },
   statLabel: {
-    fontSize: 11,
-    color: '#6b7280',
-    marginTop: 2,
+    fontSize: 10,
+    color: '#64748B',
+    fontWeight: '400',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   statDivider: {
     width: 1,
@@ -635,8 +693,8 @@ const styles = StyleSheet.create({
   },
   sectionLabel: {
     fontSize: 11,
-    fontWeight: '800',
-    color: '#059669',
+    fontWeight: '600',
+    color: '#01b854',
     textTransform: 'uppercase',
     letterSpacing: 1.2,
     marginBottom: 4,
@@ -645,7 +703,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 22,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#0F172A',
     letterSpacing: -0.6,
     fontFamily: 'Inter',
@@ -659,7 +717,7 @@ const styles = StyleSheet.create({
   seeAllText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#10B981',
+    color: '#01b854',
     fontFamily: 'Inter',
   },
 
@@ -681,8 +739,8 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
   categoryChipActive: {
-    backgroundColor: '#10B981',
-    borderColor: '#10B981',
+    backgroundColor: '#01b854',
+    borderColor: '#01b854',
   },
   categoryLabel: {
     fontSize: 13,
@@ -731,7 +789,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 10,
     left: 10,
-    backgroundColor: '#10B981',
+    backgroundColor: '#01b854',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
@@ -756,7 +814,7 @@ const styles = StyleSheet.create({
   },
   groundName: {
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#FFFFFF',
     fontFamily: 'Inter',
   },
@@ -766,11 +824,10 @@ const styles = StyleSheet.create({
     gap: 3,
     marginTop: 2,
   },
-  groundLocation: {
+  cardLocation: {
     fontSize: 12,
-    color: '#64748B',
+    color: '#FFFFFF',
     fontFamily: 'Inter',
-    fontWeight: '500',
   },
   groundCardBody: {
     padding: 12,
@@ -806,7 +863,7 @@ const styles = StyleSheet.create({
   },
   groundPrice: {
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
@@ -820,10 +877,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#10B981',
+    backgroundColor: '#01b854',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 14,
+  },
+  bookNowText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
+    fontFamily: 'Inter',
   },
   // ── Vertical list (search results) ───────────
   verticalList: {
@@ -856,7 +919,7 @@ const styles = StyleSheet.create({
   },
   listRowName: {
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#0F172A',
     marginBottom: 3,
     fontFamily: 'Inter',
@@ -874,7 +937,7 @@ const styles = StyleSheet.create({
   },
   listRowType: {
     fontSize: 11,
-    color: '#10B981',
+    color: '#01b854',
     fontWeight: '800',
     textTransform: 'capitalize',
     fontFamily: 'Inter',
@@ -885,7 +948,7 @@ const styles = StyleSheet.create({
   },
   listRowPrice: {
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
@@ -931,7 +994,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    backgroundColor: 'rgba(1, 184, 84, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
@@ -974,7 +1037,7 @@ const styles = StyleSheet.create({
     width: 300,
     height: 300,
     borderRadius: 999,
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    backgroundColor: 'rgba(1, 184, 84, 0.15)',
   },
   ctaTitle: {
     fontSize: 28,
@@ -998,11 +1061,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#10B981',
+    backgroundColor: '#01b854',
     paddingHorizontal: 32,
     paddingVertical: 18,
     borderRadius: 20,
-    shadowColor: '#10B981',
+    shadowColor: '#01b854',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 15,
@@ -1031,5 +1094,28 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     paddingHorizontal: 20,
     fontFamily: 'Inter',
+  },
+  // Wide screen specific styles
+  wideGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    paddingHorizontal: 16,
+  },
+  gridItem: {
+    width: '48%',
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    height: 240,
+  },
+  gridRowImage: {
+    width: '100%',
+    height: 140,
+  },
+  gridRowPriceBox: {
+    padding: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    alignItems: 'center',
   },
 });

@@ -6,9 +6,9 @@ import { supabase } from '@/lib/supabase';
 
 type SubTab = 'batting' | 'bowling' | 'fielding' | 'captain' | 'leaders';
 
-export default function CricketStats() {
+export default function CricketStats({ activeSubTab }: { activeSubTab: string }) {
   const router = useRouter();
-  const [subTab, setSubTab] = useState<SubTab>('batting');
+  const subTab = (activeSubTab || 'batting') as SubTab;
   const [loading, setLoading] = useState(true);
   const [statsData, setStatsData] = useState<any[]>([]);
   const [leaders, setLeaders] = useState<any>({ batting: [], bowling: [] });
@@ -202,7 +202,7 @@ export default function CricketStats() {
       <View key={format}>
         <View style={styles.formatSectionHeader}>
             <View style={styles.formatIndicator}>
-                <View style={[styles.ballDot, { backgroundColor: format === 'leather' ? '#991B1B' : (format === 'tennis' ? '#EA580C' : '#4B5563') }]} />
+                <View style={[styles.ballDot, { backgroundColor: format === 'leather' ? '#01b854' : (format === 'tennis' ? '#EA580C' : '#4B5563') }]} />
                 <Text style={styles.formatTitle}>{label} Ball Records</Text>
             </View>
             {!hasData && <Text style={styles.noDataLabel}>No match data</Text>}
@@ -252,29 +252,7 @@ export default function CricketStats() {
 
   return (
     <View style={styles.container}>
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false} 
-        style={styles.statsFilterBarScroll}
-        contentContainerStyle={styles.statsFilterBarContainer}
-      >
-        {[
-            { id: 'batting', label: 'Batting', icon: Swords },
-            { id: 'bowling', label: 'Bowling', icon: Zap },
-            { id: 'fielding', label: 'Fielding', icon: Target },
-            { id: 'captain', label: 'Captain', icon: Award },
-            { id: 'leaders', label: 'Leaders', icon: Users2 },
-        ].map((item) => (
-          <TouchableOpacity 
-            key={item.id}
-            style={[styles.statPill, subTab === item.id && styles.statPillActive]} 
-            onPress={() => setSubTab(item.id as SubTab)}
-          >
-            <item.icon size={14} color={subTab === item.id ? '#FFFFFF' : '#64748B'} />
-            <Text style={[styles.statPillText, subTab === item.id && styles.statPillTextActive]}>{item.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+
 
       <View style={styles.statsContent}>
 

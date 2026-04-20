@@ -99,7 +99,7 @@ export default function GroundsSearchBar({ lightMode = true }: GroundsSearchBarP
           </Pressable>
         )}
         {loading && (
-          <ActivityIndicator size="small" color="#00ea6b" style={styles.loader} />
+          <ActivityIndicator size="small" color="#01b854" style={styles.loader} />
         )}
       </View>
 
@@ -114,7 +114,7 @@ export default function GroundsSearchBar({ lightMode = true }: GroundsSearchBarP
                 onPress={() => handleSelect(item)}
               >
                 <View style={[styles.iconBox, lightMode ? styles.iconBoxLight : styles.iconBoxDark]}>
-                  <Building2 size={16} color={lightMode ? '#4B5563' : '#00ea6b'} />
+                  <Building2 size={16} color={lightMode ? '#4B5563' : '#01b854'} />
                 </View>
                 <View style={styles.suggestionTextWrapper}>
                   <Text style={[styles.suggestionName, { color: lightMode ? '#111827' : '#FFFFFF' }]} numberOfLines={1}>

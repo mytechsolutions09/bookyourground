@@ -102,10 +102,10 @@ export default function CricketMatches() {
       .select('id')
       .eq('owner_id', session.user.id);
 
-    const myProfileIds = memberEntries?.map(p => p.id) || [];
+    const myProfileIds = memberEntries?.map(p => p.id).filter(id => !!id) || [];
     const myTeamIds = Array.from(new Set([
-      ...(memberEntries?.map(m => m.team_id) || []),
-      ...(ownedTeams?.map(t => t.id) || [])
+      ...(memberEntries?.map(m => m.team_id).filter(id => !!id) || []),
+      ...(ownedTeams?.map(t => t.id).filter(id => !!id) || [])
     ]));
 
     if (myProfileIds.length > 0) {
@@ -274,7 +274,6 @@ export default function CricketMatches() {
           style={[styles.dropdownTrigger, isOpen && styles.dropdownTriggerActive]}
           onPress={() => setActiveDropdown(isOpen ? null : id)}
         >
-          <Icon size={14} color={isOpen ? '#01b854' : '#64748B'} />
           <Text style={[styles.dropdownTriggerText, isOpen && styles.dropdownTriggerTextActive]} numberOfLines={1}>
             {selectedLabel}
           </Text>
@@ -287,7 +286,11 @@ export default function CricketMatches() {
               activeOpacity={1} 
               onPress={() => setActiveDropdown(null)} 
             />
-            <View style={styles.dropdownMenu}>
+            <View style={[
+              styles.dropdownMenu, 
+              id === 'date' ? { right: 0 } : { left: 0 },
+              { width: 140 }
+            ]}>
               {options.map((opt) => (
                 <TouchableOpacity
                   key={opt.key}
@@ -416,46 +419,45 @@ export default function CricketMatches() {
 
   return (
     <View style={{ flex: 1 }}>
-      {/* Search Bar */}
-      <View style={styles.searchBar}>
-        <Search size={16} color="#94A3B8" />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search teams, venue..."
-          placeholderTextColor="#94A3B8"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
+      {/* Consolidated Search & Filters Row */}
+      <View style={styles.controlsRow}>
+        <View style={styles.searchBox}>
+          <Search size={14} color="#94A3B8" />
+          <TextInput
+            style={styles.searchBoxInput}
+            placeholder="Search..."
+            placeholderTextColor="#94A3B8"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
 
-      {/* Refined Filters Row */}
-      <View style={styles.filtersWrapper}>
-         <View style={styles.filtersRow}>
-            <FilterDropdown 
-              id="category" 
-              label="Category" 
-              value={category} 
-              options={CATEGORY_TABS} 
-              onSelect={setCategory} 
-              icon={Trophy}
-            />
-            <FilterDropdown 
-              id="status" 
-              label="Status" 
-              value={status} 
-              options={STATUS_FILTERS} 
-              onSelect={setStatus} 
-              icon={Radio}
-            />
-            <FilterDropdown 
-              id="date" 
-              label="Date" 
-              value={dateFilter} 
-              options={DATE_FILTERS} 
-              onSelect={setDateFilter} 
-              icon={Calendar}
-            />
-         </View>
+        <View style={styles.filtersContainer}>
+          <FilterDropdown 
+            id="category" 
+            label="Cat" 
+            value={category} 
+            options={CATEGORY_TABS} 
+            onSelect={setCategory} 
+            icon={Trophy}
+          />
+          <FilterDropdown 
+            id="status" 
+            label="Stat" 
+            value={status} 
+            options={STATUS_FILTERS} 
+            onSelect={setStatus} 
+            icon={Radio}
+          />
+          <FilterDropdown 
+            id="date" 
+            label="Date" 
+            value={dateFilter} 
+            options={DATE_FILTERS} 
+            onSelect={setDateFilter} 
+            icon={Calendar}
+          />
+        </View>
       </View>
 
       {/* Matches List */}
@@ -477,57 +479,55 @@ export default function CricketMatches() {
 }
 
 const styles = StyleSheet.create({
-  searchBar: {
+  controlsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    marginBottom: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 10,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  searchInput: {
-    fontFamily: 'Inter',
-    flex: 1,
-    fontSize: 14,
-    color: '#1E293B',
-    fontWeight: '500',
-  },
-  filtersWrapper: {
+    gap: 8,
     marginBottom: 20,
     zIndex: 100,
   },
-  filtersRow: {
+  searchBox: {
+    flex: 1.5,
     flexDirection: 'row',
-    gap: 10,
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8, // Slightly tighter corners for smaller height
+    paddingHorizontal: 10,
+    height: 34, // Reduced to match filters
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 6,
+  },
+  searchBoxInput: {
+    fontFamily: 'Inter',
+    flex: 1,
+    fontSize: 12,
+    color: '#1E293B',
+    fontWeight: '500',
+  },
+  filtersContainer: {
+    flex: 2.5,
+    flexDirection: 'row',
+    gap: 6,
   },
   dropdownTrigger: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 12,
+    paddingHorizontal: 8,
+    height: 34, // Fixed height to match search
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    gap: 8,
+    justifyContent: 'center',
   },
   dropdownTriggerActive: {
     borderColor: '#01b854',
-    backgroundColor: '#F0FDF4',
+    backgroundColor: 'rgba(1, 184, 84, 0.1)',
   },
   dropdownTriggerText: {
     fontFamily: 'Inter',
-    flex: 1,
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '600',
     color: '#64748B',
   },
@@ -547,8 +547,6 @@ const styles = StyleSheet.create({
   dropdownMenu: {
     position: 'absolute',
     top: '100%',
-    left: 0,
-    right: 0,
     marginTop: 6,
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
@@ -575,7 +573,7 @@ const styles = StyleSheet.create({
   },
   dropdownOptionText: {
     fontFamily: 'Inter',
-    fontSize: 14,
+    fontSize: 12,
     color: '#64748B',
     fontWeight: '500',
   },
@@ -643,7 +641,7 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   statusBadgeLive: { backgroundColor: '#01b854' },
-  statusBadgeResult: { backgroundColor: '#005b80' },
+  statusBadgeResult: { backgroundColor: '#01b85480' },
   statusBadgeUpcoming: { backgroundColor: '#4f2c63' },
   statusBadgeText: { 
     fontFamily: 'Inter',

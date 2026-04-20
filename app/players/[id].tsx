@@ -13,7 +13,8 @@ import {
   Alert,
   Modal,
   Pressable,
-  Animated
+  Animated,
+  StatusBar
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { 
@@ -46,9 +47,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const { width } = Dimensions.get('window');
+const { width: windowWidth, height: windowHeight } = Dimensions.get('window');
 const HEADER_MAX_HEIGHT = 280;
 const HEADER_MIN_HEIGHT = 110;
+const CONTENT_MIN_HEIGHT = windowHeight - HEADER_MIN_HEIGHT;
 
 const TABS = [
   { id: 'matches', label: 'Matches' },
@@ -91,6 +93,16 @@ export default function PlayerProfile() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
   const qrRef = useRef<any>(null);
+  const mainPagerRef = useRef<ScrollView>(null);
+  const tabBarRef = useRef<ScrollView>(null);
+  const statsPagerRef = useRef<ScrollView>(null);
+  const trophiesPagerRef = useRef<ScrollView>(null);
+  const badgesPagerRef = useRef<ScrollView>(null);
+  const highlightsPagerRef = useRef<ScrollView>(null);
+  const connectionsPagerRef = useRef<ScrollView>(null);
+
+  const [isInnerSwiping, setIsInnerSwiping] = useState(false);
+  const [mainScrollEnabled, setMainScrollEnabled] = useState(true);
 
   const isOwnProfile = user?.id === id;
 
@@ -119,6 +131,13 @@ export default function PlayerProfile() {
   };
 
   useEffect(() => {
+    const idx = TABS.findIndex(t => t.id === activeTab);
+    if (idx !== -1) {
+      tabBarRef.current?.scrollTo({ x: idx * 90 - (windowWidth / 2) + 45, animated: true });
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
     if (id) {
       loadPlayerData();
     }
@@ -137,6 +156,13 @@ export default function PlayerProfile() {
       
       if (profileError) throw profileError;
       setProfile(profileData);
+
+      // Scroll to 'matches' tab (index 0) if not already there
+      if (activeTab !== 'matches') {
+        setActiveTab('matches');
+        mainPagerRef.current?.scrollTo({ x: 0, animated: false });
+        tabBarRef.current?.scrollTo({ x: 0, animated: false });
+      }
 
       // Initialize with empty states to ensure UI renders
       setMatches([]);
@@ -534,8 +560,14 @@ export default function PlayerProfile() {
     );
   };
 
-  const renderStatsGrid = (type: string, discipline: string) => {
-    const data = stats[type]?.[discipline];
+  const onSubPagerBegin = () => setMainScrollEnabled(false);
+  const onSubPagerEnd = (type: string, e: any) => {
+    setMainScrollEnabled(true);
+    onSubPagerScrollEnd(type, e);
+  };
+
+  const renderStatsGrid = (recordType: string, discipline: string) => {
+    const data = stats[recordType]?.[discipline];
     if (!data) return null;
 
     const DataCard = ({ label, value }: { label: string, value: string | number }) => (
@@ -548,7 +580,7 @@ export default function PlayerProfile() {
     if (discipline === 'batting') {
       return (
         <>
-          <DataCard label="MAT" value={stats[type].matches} />
+          <DataCard label="MAT" value={stats[recordType].matches} />
           <DataCard label="INNS" value={data.innings} />
           <DataCard label="NO" value={data.not_outs || 0} />
           <DataCard label="RUNS" value={data.runs} />
@@ -568,7 +600,7 @@ export default function PlayerProfile() {
     if (discipline === 'bowling') {
       return (
         <>
-          <DataCard label="MAT" value={stats[type].matches} />
+          <DataCard label="MAT" value={stats[recordType].matches} />
           <DataCard label="INNS" value={data.innings} />
           <DataCard label="WKTS" value={data.wickets} />
           <DataCard label="ECON" value={data.economy.toFixed(2)} />
@@ -586,7 +618,7 @@ export default function PlayerProfile() {
     if (discipline === 'fielding') {
       return (
         <>
-          <DataCard label="MAT" value={stats[type].matches} />
+          <DataCard label="MAT" value={stats[recordType].matches} />
           <DataCard label="CATCHES" value={data.catches} />
           <DataCard label="STUMPS" value={data.stumpings} />
           <DataCard label="RUN OUTS" value={data.runouts} />
@@ -596,7 +628,7 @@ export default function PlayerProfile() {
     }
 
     if (discipline === 'captain') {
-      const capData = stats[type].captain;
+      const capData = stats[recordType].captain;
       return (
         <>
           <DataCard label="MAT" value={capData.matches} />
@@ -609,6 +641,73 @@ export default function PlayerProfile() {
     }
 
     return null;
+  };
+
+  const onTabPress = (tabId: string, index: number) => {
+    setActiveTab(tabId);
+    mainPagerRef.current?.scrollTo({ x: index * windowWidth, animated: true });
+  };
+
+  const onSubTabPress = (type: string, tabId: string, index: number) => {
+    switch (type) {
+      case 'stats':
+        setStatsTab(tabId);
+        statsPagerRef.current?.scrollTo({ x: index * windowWidth, animated: true });
+        break;
+      case 'trophies':
+        setTrophiesTab(tabId);
+        trophiesPagerRef.current?.scrollTo({ x: index * windowWidth, animated: true });
+        break;
+      case 'badges':
+        setBadgesTab(tabId);
+        badgesPagerRef.current?.scrollTo({ x: index * windowWidth, animated: true });
+        break;
+      case 'highlights':
+        setHighlightsTab(tabId);
+        highlightsPagerRef.current?.scrollTo({ x: index * windowWidth, animated: true });
+        break;
+      case 'connections':
+        setConnectionsTab(tabId);
+        connectionsPagerRef.current?.scrollTo({ x: index * windowWidth, animated: true });
+        break;
+    }
+  };
+
+  const onMainPagerScrollEnd = (e: any) => {
+    const offset = e.nativeEvent.contentOffset.x;
+    const index = Math.round(offset / windowWidth);
+    if (TABS[index]) {
+      setActiveTab(TABS[index].id);
+    }
+  };
+
+  const onSubPagerScrollEnd = (type: string, e: any) => {
+    const offset = e.nativeEvent.contentOffset.x;
+    const index = Math.round(offset / windowWidth);
+    
+    let subTabs: any[] = [];
+    switch (type) {
+      case 'stats': 
+        subTabs = [{ id: 'batting' }, { id: 'bowling' }, { id: 'fielding' }, { id: 'captain' }];
+        if (subTabs[index]) setStatsTab(subTabs[index].id);
+        break;
+      case 'trophies':
+        subTabs = [{ id: 'matches' }, { id: 'tournaments' }];
+        if (subTabs[index]) setTrophiesTab(subTabs[index].id);
+        break;
+      case 'badges':
+        subTabs = [{ id: 'batting' }, { id: 'bowling' }, { id: 'fielding' }];
+        if (subTabs[index]) setBadgesTab(subTabs[index].id);
+        break;
+      case 'highlights':
+        subTabs = [{ id: 'recent' }, { id: 'batting' }, { id: 'bowling' }];
+        if (subTabs[index]) setHighlightsTab(subTabs[index].id);
+        break;
+      case 'connections':
+        subTabs = [{ id: 'followers' }, { id: 'following' }];
+        if (subTabs[index]) setConnectionsTab(subTabs[index].id);
+        break;
+    }
   };
 
   const renderQRModal = () => (
@@ -830,14 +929,16 @@ export default function PlayerProfile() {
         <View style={styles.stickyPillsContainer}>
           <View style={styles.tabBarContainer}>
             <ScrollView 
+              ref={tabBarRef}
               horizontal 
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.tabContentContainer}
+              scrollEnabled={true}
             >
-              {TABS.map((tab) => (
+              {TABS.map((tab, idx) => (
                 <TouchableOpacity 
                   key={tab.id} 
-                  onPress={() => setActiveTab(tab.id)}
+                  onPress={() => onTabPress(tab.id, idx)}
                   style={[styles.tabItem, activeTab === tab.id && styles.activeTabItem]}
                 >
                   <Text style={[styles.tabLabel, activeTab === tab.id && styles.activeTabLabel]}>
@@ -857,10 +958,10 @@ export default function PlayerProfile() {
                   { id: 'bowling', label: 'Bowling' },
                   { id: 'fielding', label: 'Fielding' },
                   { id: 'captain', label: 'Captain' },
-                ].map((chip) => (
+                ].map((chip, idx) => (
                   <TouchableOpacity
                     key={chip.id}
-                    onPress={() => setStatsTab(chip.id)}
+                    onPress={() => onSubTabPress('stats', chip.id, idx)}
                     style={[
                       styles.toggleTab,
                       statsTab === chip.id && styles.toggleTabActive
@@ -884,10 +985,10 @@ export default function PlayerProfile() {
                 {[
                   { id: 'matches', label: 'Matches' },
                   { id: 'tournaments', label: 'Tournaments' },
-                ].map((chip) => (
+                ].map((chip, idx) => (
                   <TouchableOpacity
                     key={chip.id}
-                    onPress={() => setTrophiesTab(chip.id)}
+                    onPress={() => onSubTabPress('trophies', chip.id, idx)}
                     style={[
                       styles.toggleTab,
                       trophiesTab === chip.id && styles.toggleTabActive
@@ -989,222 +1090,246 @@ export default function PlayerProfile() {
           )}
         </View>
 
-        {/* Tab Content */}
-        <View style={styles.contentContainer}>
-          {activeTab === 'matches' && (
-            <View style={styles.matchesList}>
-              {(matches && matches.length > 0) ? (
-                matches.map(renderMatchCard)
-              ) : (
-                <View style={styles.emptyState}>
-                  <Clock size={48} color="#E2E8F0" />
-                  <Text style={styles.emptyText}>No matches played yet</Text>
-                </View>
-              )}
+
+
+
+        {/* Tab Content Pager */}
+        <View style={styles.mainPagerWrapper}>
+          <ScrollView
+            ref={mainPagerRef}
+            horizontal
+            pagingEnabled
+            scrollEnabled={mainScrollEnabled}
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={onMainPagerScrollEnd}
+            scrollEventThrottle={16}
+          >
+            {/* Slide 1: Matches */}
+            <View style={{ width: windowWidth }}>
+              <View style={styles.tabSlideContent}>
+                {(matches && matches.length > 0) ? (
+                  matches.map(renderMatchCard)
+                ) : (
+                  <View style={styles.emptyState}>
+                    <Clock size={48} color="#E2E8F0" />
+                    <Text style={styles.emptyText}>No matches played yet</Text>
+                  </View>
+                )}
+              </View>
             </View>
-          )}
 
-          {activeTab === 'stats' && (
-            <View style={styles.statsContainer}>
-              {/* Stats Content */}
-              {['overall', 'leather', 'tennis', 'other'].map((recordType, index) => {
-                const getDotColor = () => {
-                  switch(recordType) {
-                    case 'overall': return '#1e2030';
-                    case 'leather': return '#ef4444';
-                    case 'tennis': return '#01b854';
-                    default: return '#f59e0b';
-                  }
-                };
-
-                return (
-                  <View key={recordType}>
-                    {index > 0 && <View style={styles.recordDivider} />}
-                    <View style={styles.recordSection}>
-                      <View style={styles.recordTitleRow}>
-                        <View style={[styles.titleDot, { backgroundColor: getDotColor() }]} />
-                        <Text style={styles.recordTitle}>
-                          {recordType.charAt(0).toUpperCase() + recordType.slice(1)} Ball Records
-                        </Text>
-                        {(!stats[recordType] || stats[recordType].matches === 0) && (
-                          <Text style={styles.noDataNote}>No match data</Text>
-                        )}
-                      </View>
-
-                      <View style={styles.statsGrid}>
-                        {renderStatsGrid(recordType, statsTab)}
+            {/* Slide 2: Stats */}
+            <View style={{ width: windowWidth }}>
+              <View style={styles.fullWidthSlide}>
+                <ScrollView
+                  ref={statsPagerRef}
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  onScrollBeginDrag={onSubPagerBegin}
+                  onScrollEndDrag={() => setMainScrollEnabled(true)}
+                  onMomentumScrollEnd={(e) => onSubPagerEnd('stats', e)}
+                >
+                  {['batting', 'bowling', 'fielding', 'captain'].map((sub) => (
+                    <View key={sub} style={{ width: windowWidth, paddingHorizontal: 16 }}>
+                      <View style={styles.statsContainer}>
+                        {['overall', 'leather', 'tennis', 'other'].map((recordType, index) => (
+                          <View key={recordType}>
+                            {index > 0 && <View style={styles.recordDivider} />}
+                            <View style={styles.recordSection}>
+                              <View style={styles.recordTitleRow}>
+                                <View style={[styles.titleDot, { backgroundColor: recordType === 'overall' ? '#1e2030' : (recordType === 'leather' ? '#ef4444' : (recordType === 'tennis' ? '#01b854' : '#f59e0b')) }]} />
+                                <Text style={styles.recordTitle}>
+                                  {recordType.charAt(0).toUpperCase() + recordType.slice(1)} Ball Records
+                                </Text>
+                              </View>
+                              <View style={styles.statsGrid}>
+                                {renderStatsGrid(recordType, sub)}
+                              </View>
+                            </View>
+                          </View>
+                        ))}
                       </View>
                     </View>
-                  </View>
-                );
-              })}
-            </View>
-          )}
-          
-          {activeTab === 'trophies' && (
-            <View style={styles.statsContainer}>
-              <View style={styles.emptyState}>
-                <Trophy size={48} color="#E2E8F0" />
-                <Text style={styles.emptyText}>No {trophiesTab} trophies yet</Text>
+                  ))}
+                </ScrollView>
               </View>
             </View>
-          )}
 
-          {activeTab === 'badges' && (
-            <View style={styles.statsContainer}>
-              <View style={styles.emptyState}>
-                <Award size={48} color="#E2E8F0" />
-                <Text style={styles.emptyText}>No {badgesTab} badges earned yet</Text>
+            {/* Slide 3: Trophies */}
+            <View style={{ width: windowWidth }}>
+              <View style={styles.fullWidthSlide}>
+                <ScrollView
+                  ref={trophiesPagerRef}
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  onScrollBeginDrag={onSubPagerBegin}
+                  onScrollEndDrag={() => setMainScrollEnabled(true)}
+                  onMomentumScrollEnd={(e) => onSubPagerEnd('trophies', e)}
+                >
+                  {['matches', 'tournaments'].map((sub) => (
+                    <View key={sub} style={{ width: windowWidth, paddingHorizontal: 16 }}>
+                      <View style={styles.emptyState}>
+                        <Trophy size={48} color="#E2E8F0" />
+                        <Text style={styles.emptyText}>No {sub} trophies won yet</Text>
+                      </View>
+                    </View>
+                  ))}
+                </ScrollView>
               </View>
             </View>
-          )}
 
-          {activeTab === 'teams' && (
-            <View style={styles.matchesList}>
-              {teams.length > 0 ? (
-                teams.map(renderTeamCard)
-              ) : (
-                <View style={styles.emptyState}>
-                  <Users size={48} color="#E2E8F0" />
-                  <Text style={styles.emptyText}>Not joined any teams yet</Text>
-                </View>
-              )}
-            </View>
-          )}
-
-          {activeTab === 'highlights' && (
-            <View style={styles.statsContainer}>
-              <View style={styles.highlightsGrid}>
-                {[
-                  {
-                    id: 'h1',
-                    title: 'Stunning Cover Drive for Four',
-                    thumbnail: 'https://images.pexels.com/photos/3628912/pexels-photo-3628912.jpeg',
-                    duration: '0:15',
-                    views: '1.2K',
-                    date: '2d ago'
-                  },
-                  {
-                    id: 'h2',
-                    title: 'Wicket: Perfect Yorker dismissal',
-                    thumbnail: 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg',
-                    duration: '0:22',
-                    views: '850',
-                    date: '5d ago'
-                  },
-                  {
-                    id: 'h3',
-                    title: 'Athletic Catch at Long-On',
-                    thumbnail: 'https://images.pexels.com/photos/3760259/pexels-photo-3760259.jpeg',
-                    duration: '0:18',
-                    views: '2.4K',
-                    date: '1w ago'
-                  },
-                  {
-                    id: 'h4',
-                    title: 'Brisk 50 in 25 Balls',
-                    thumbnail: 'https://images.pexels.com/photos/3628912/pexels-photo-3628912.jpeg',
-                    duration: '2:45',
-                    views: '4.1K',
-                    date: '2w ago'
-                  }
-                ].map(renderHighlightCard)}
+            {/* Slide 4: Badges */}
+            <View style={{ width: windowWidth }}>
+              <View style={styles.fullWidthSlide}>
+                <ScrollView
+                  ref={badgesPagerRef}
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  onScrollBeginDrag={onSubPagerBegin}
+                  onScrollEndDrag={() => setMainScrollEnabled(true)}
+                  onMomentumScrollEnd={(e) => onSubPagerEnd('badges', e)}
+                >
+                  {['batting', 'bowling', 'fielding'].map((sub) => (
+                    <View key={sub} style={{ width: windowWidth, paddingHorizontal: 16 }}>
+                      <View style={styles.emptyState}>
+                        <Award size={48} color="#E2E8F0" />
+                        <Text style={styles.emptyText}>No {sub} badges earned yet</Text>
+                      </View>
+                    </View>
+                  ))}
+                </ScrollView>
               </View>
             </View>
-          )}
 
-          {activeTab === 'connections' && (
-            <View style={styles.statsContainer}>
-              <View style={styles.connectionsList}>
-                <View style={styles.emptyState}>
-                  <Users size={48} color="#E2E8F0" />
-                  <Text style={styles.emptyText}>No {connectionsTab} yet</Text>
-                </View>
-              </View>
-            </View>
-          )}
-
-          {activeTab === 'photos' && (
-            <View style={styles.photosWrapper}>
-              <View style={styles.photosGrid}>
-                {isOwnProfile && photos.length < 10 && (
-                  <TouchableOpacity 
-                    style={styles.addPhotoTile}
-                    onPress={() => Alert.alert('Add Photo', 'Image picker integration coming soon!')}
-                  >
-                    <Plus size={32} color="#CBD5E1" />
-                    <Text style={styles.addPhotoText}>Add Photo</Text>
-                    <Text style={styles.photoCountText}>{photos.length}/10</Text>
-                  </TouchableOpacity>
-                )}
-                
-                {[
-                  { id: 'p1', url: 'https://images.pexels.com/photos/3628912/pexels-photo-3628912.jpeg' },
-                  { id: 'p2', url: 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg' },
-                  { id: 'p3', url: 'https://images.pexels.com/photos/3760259/pexels-photo-3760259.jpeg' },
-                  { id: 'p4', url: 'https://images.pexels.com/photos/3628912/pexels-photo-3628912.jpeg' },
-                  { id: 'p5', url: 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg' },
-                ].map((photo) => (
-                  <TouchableOpacity 
-                    key={photo.id} 
-                    style={styles.photoTile}
-                    onPress={() => Alert.alert('View Photo', 'Full-screen viewer coming soon!')}
-                  >
-                    <Image source={{ uri: photo.url }} style={styles.photoImage} />
-                  </TouchableOpacity>
-                ))}
-              </View>
-              {photos.length === 0 && !isOwnProfile && (
-                <View style={styles.emptyState}>
-                  <ImageIcon size={48} color="#E2E8F0" />
-                  <Text style={styles.emptyText}>No photos uploaded yet</Text>
-                </View>
-              )}
-            </View>
-          )}
-
-          {activeTab === 'profile' && (
-            <View style={styles.statsContainer}>
-              <View style={styles.profileDetailsCard}>
-                <Text style={styles.sectionTitle}>Personal Details</Text>
-                <View style={styles.detailsGrid}>
-                  <View style={styles.detailItem}>
-                    <Text style={styles.detailLabel}>Age</Text>
-                    <Text style={styles.detailValue}>{profile?.age || 'N/A'} Years</Text>
-                  </View>
-                  <View style={styles.detailItem}>
-                    <Text style={styles.detailLabel}>Locality</Text>
-                    <Text style={styles.detailValue}>{profile?.city || 'N/A'}</Text>
-                  </View>
-                  <View style={styles.detailItem}>
-                    <Text style={styles.detailLabel}>Batting Style</Text>
-                    <Text style={styles.detailValue}>{profile?.batting_style || 'N/A'}</Text>
-                  </View>
-                  <View style={styles.detailItem}>
-                    <Text style={styles.detailLabel}>Bowling Style</Text>
-                    <Text style={styles.detailValue}>{profile?.bowling_style || 'N/A'}</Text>
-                  </View>
-                  <View style={styles.detailItem}>
-                    <Text style={styles.detailLabel}>Playing Role</Text>
-                    <Text style={styles.detailValue}>{profile?.player_type || 'N/A'}</Text>
-                  </View>
-                </View>
-
-                {profile?.bio && (
-                  <View style={styles.aboutSection}>
-                    <Text style={styles.sectionTitle}>About</Text>
-                    <Text style={styles.aboutText}>{profile.bio}</Text>
+            {/* Slide 5: Teams */}
+            <View style={{ width: windowWidth }}>
+              <View style={styles.tabSlideContent}>
+                {teams.length > 0 ? (
+                  teams.map(renderTeamCard)
+                ) : (
+                  <View style={styles.emptyState}>
+                    <Users size={48} color="#E2E8F0" />
+                    <Text style={styles.emptyText}>No teams joined yet</Text>
                   </View>
                 )}
               </View>
             </View>
-          )}
 
-          {activeTab !== 'matches' && activeTab !== 'stats' && activeTab !== 'trophies' && activeTab !== 'badges' && activeTab !== 'teams' && activeTab !== 'highlights' && activeTab !== 'connections' && activeTab !== 'photos' && activeTab !== 'profile' && (
-            <View style={styles.comingSoon}>
-              <Text style={styles.comingSoonText}>{activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} content coming soon!</Text>
+            {/* Slide 6: Highlights */}
+            <View style={{ width: windowWidth }}>
+              <View style={styles.fullWidthSlide}>
+                <ScrollView
+                  ref={highlightsPagerRef}
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  onScrollBeginDrag={onSubPagerBegin}
+                  onScrollEndDrag={() => setMainScrollEnabled(true)}
+                  onMomentumScrollEnd={(e) => onSubPagerEnd('highlights', e)}
+                >
+                  {['recent', 'batting', 'bowling'].map((sub) => (
+                    <View key={sub} style={{ width: windowWidth, paddingHorizontal: 16 }}>
+                      <View style={styles.highlightsGrid}>
+                        {[
+                          {
+                            id: 'h1',
+                            title: 'Stunning Cover Drive for Four',
+                            thumbnail: 'https://images.pexels.com/photos/3628912/pexels-photo-3628912.jpeg',
+                            duration: '0:15',
+                            views: '1.2K',
+                            date: '2d ago'
+                          },
+                          {
+                            id: 'h2',
+                            title: 'Wicket: Perfect Yorker dismissal',
+                            thumbnail: 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg',
+                            duration: '0:22',
+                            views: '850',
+                            date: '5d ago'
+                          }
+                        ].map(renderHighlightCard)}
+                      </View>
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
             </View>
-          )}
+
+            {/* Slide 7: Photos */}
+            <View style={{ width: windowWidth }}>
+              <View style={styles.tabSlideContent}>
+                <View style={styles.photosGrid}>
+                  {[
+                    { id: 'p1', url: 'https://images.pexels.com/photos/3628912/pexels-photo-3628912.jpeg' },
+                    { id: 'p2', url: 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg' },
+                    { id: 'p3', url: 'https://images.pexels.com/photos/3760259/pexels-photo-3760259.jpeg' }
+                  ].map((photo) => (
+                    <TouchableOpacity key={photo.id} style={styles.photoTile}>
+                      <Image source={{ uri: photo.url }} style={styles.photoImage} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </View>
+
+            {/* Slide 8: Connections */}
+            <View style={{ width: windowWidth }}>
+              <View style={styles.fullWidthSlide}>
+                <ScrollView
+                  ref={connectionsPagerRef}
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  onScrollBeginDrag={onSubPagerBegin}
+                  onScrollEndDrag={() => setMainScrollEnabled(true)}
+                  onMomentumScrollEnd={(e) => onSubPagerEnd('connections', e)}
+                >
+                  {['followers', 'following'].map((sub) => (
+                    <View key={sub} style={{ width: windowWidth, paddingHorizontal: 16 }}>
+                      <View style={styles.emptyState}>
+                        <Users size={48} color="#E2E8F0" />
+                        <Text style={styles.emptyText}>No {sub} yet</Text>
+                      </View>
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+
+            {/* Slide 9: Profile Details */}
+            <View style={{ width: windowWidth }}>
+              <View style={styles.tabSlideContent}>
+                <View style={styles.profileDetailsCard}>
+                  <Text style={styles.sectionTitle}>Personal Details</Text>
+                  <View style={styles.detailsGrid}>
+                    <View style={styles.detailItem}>
+                      <Text style={styles.detailLabel}>Age</Text>
+                      <Text style={styles.detailValue}>{profile?.age || 'N/A'} Years</Text>
+                    </View>
+                    <View style={styles.detailItem}>
+                      <Text style={styles.detailLabel}>Locality</Text>
+                      <Text style={styles.detailValue}>{profile?.city || 'N/A'}</Text>
+                    </View>
+                    <View style={styles.detailItem}>
+                      <Text style={styles.detailLabel}>Batting Style</Text>
+                      <Text style={styles.detailValue}>{profile?.batting_style || 'N/A'}</Text>
+                    </View>
+                    <View style={styles.detailItem}>
+                      <Text style={styles.detailLabel}>Bowling Style</Text>
+                      <Text style={styles.detailValue}>{profile?.bowling_style || 'N/A'}</Text>
+                    </View>
+                    <View style={styles.detailItem}>
+                      <Text style={styles.detailLabel}>Playing Role</Text>
+                      <Text style={styles.detailValue}>{profile?.player_type || 'N/A'}</Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </View>
+          </ScrollView>
         </View>
         
         <View style={{ height: 100 }} />
@@ -1940,7 +2065,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   dataCard: {
-    width: (width - 32 - 32 - 20) / 3, // (Available width [width-32 outer -32 inner] - 2 gaps) / 3
+    width: (windowWidth - 32 - 32 - 20) / 3, // (Available width [windowWidth-32 outer -32 inner] - 2 gaps) / 3
     backgroundColor: '#F8FAFC',
     borderRadius: 14,
     paddingVertical: 16,
@@ -2069,5 +2194,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     fontFamily: 'Inter',
-  }
+  },
+  mainPagerWrapper: {
+    width: windowWidth,
+    overflow: 'hidden',
+  },
+  tabSlideContent: {
+    width: windowWidth,
+    paddingHorizontal: 16,
+    paddingBottom: 24,
+  },
+  fullWidthSlide: {
+    width: windowWidth,
+    paddingBottom: 24,
+  },
+  statsTabInner: {
+    width: windowWidth,
+  },
 });

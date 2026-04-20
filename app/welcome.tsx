@@ -12,6 +12,8 @@ async function markWelcomeSeen() {
   await AsyncStorage.setItem(WELCOME_SEEN_KEY, '1');
 }
 
+import { Trophy, ChevronRight } from 'lucide-react-native';
+
 export default function WelcomeScreen() {
   const insets = useSafeAreaInsets();
   const finishedRef = useRef(false);
@@ -41,7 +43,16 @@ export default function WelcomeScreen() {
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: '#000' }]} />
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: '#043529' }]}>
+        <View style={styles.fallbackContent}>
+          <View style={styles.logoCircle}>
+             <Trophy size={48} color="#10B981" />
+          </View>
+          <Text style={styles.welcomeTitle}>BOOK YOUR GROUND</Text>
+          <Text style={styles.welcomeSubtitle}>Your game, your ground, instantly.</Text>
+        </View>
+      </View>
+      
       <Video
         source={require('../assets/videos/welcome.mp4')}
         style={StyleSheet.absoluteFill}
@@ -55,18 +66,31 @@ export default function WelcomeScreen() {
           }
         }}
         onError={(error) => {
-          console.error('Welcome video error:', error);
-          finish(); // Skip on fatal error
+          console.warn('Welcome video error:', error);
+          // Don't auto-finish immediately on error unless it's fatal, 
+          // allow user to see the fallback UI for a second.
+          setTimeout(finish, 2000); 
         }}
       />
-      <Pressable
-        style={[styles.skip, { paddingBottom: Math.max(insets.bottom, 16) }]}
-        onPress={finish}
-        accessibilityRole="button"
-        accessibilityLabel="Skip intro"
-      >
-        <Text style={styles.skipText}>Skip</Text>
-      </Pressable>
+
+      <View style={[styles.bottomActions, { paddingBottom: Math.max(insets.bottom + 20, 40) }]}>
+        <Pressable
+          style={styles.getStartedBtn}
+          onPress={finish}
+          accessibilityRole="button"
+        >
+          <Text style={styles.getStartedText}>Get Started</Text>
+          <ChevronRight size={20} color="#043529" strokeWidth={3} />
+        </Pressable>
+        
+        <Pressable
+          style={styles.skipBtn}
+          onPress={finish}
+          accessibilityRole="button"
+        >
+          <Text style={styles.skipText}>Skip Intro</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -74,18 +98,79 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000000',
+    backgroundColor: '#043529',
   },
-  skip: {
+  fallbackContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  logoCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+  },
+  welcomeTitle: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 2,
+    textAlign: 'center',
+    fontFamily: 'Inter',
+  },
+  welcomeSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255,255,255,0.7)',
+    marginTop: 12,
+    textAlign: 'center',
+    fontFamily: 'Inter',
+  },
+  bottomActions: {
     position: 'absolute',
-    right: 0,
     bottom: 0,
-    paddingHorizontal: 20,
-    paddingTop: 12,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    gap: 16,
+  },
+  getStartedBtn: {
+    backgroundColor: '#10B981',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    paddingHorizontal: 32,
+    borderRadius: 20,
+    width: '100%',
+    gap: 8,
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 8,
+  },
+  getStartedText: {
+    color: '#043529',
+    fontSize: 18,
+    fontWeight: '800',
+    fontFamily: 'Inter',
+  },
+  skipBtn: {
+    paddingVertical: 12,
   },
   skipText: {
-    color: '#ffffff',
-    fontSize: 16,
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 14,
     fontWeight: '600',
+    fontFamily: 'Inter',
+    textDecorationLine: 'underline',
   },
 });

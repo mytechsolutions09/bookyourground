@@ -7,9 +7,16 @@ ON CONFLICT (id) DO NOTHING;
 -- Storage Policies for avatars
 -- Allow public viewing
 DROP POLICY IF EXISTS "avatars_public_view" ON storage.objects;
-CREATE POLICY "avatars_public_view" 
+-- Restrict SELECT to only allow users to list their own files (prevents broad bucket listing)
+-- Public access to actual files is still maintained via the bucket's "public" property
+DROP POLICY IF EXISTS "avatars_public_view" ON storage.objects;
+CREATE POLICY "avatars_owner_select" 
 ON storage.objects FOR SELECT 
-USING (bucket_id = 'avatars');
+TO authenticated 
+USING (
+    bucket_id = 'avatars' AND 
+    (storage.foldername(name))[1] = auth.uid()::text
+);
 
 -- Allow authenticated users to upload their own avatar
 DROP POLICY IF EXISTS "avatars_owner_insert" ON storage.objects;

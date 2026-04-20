@@ -277,25 +277,26 @@ export default function SignupScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <Pressable style={styles.backBtn} onPress={() => {
-          if (router.canGoBack()) router.back();
-          else router.replace('/(auth)/login');
-        }}>
-          <ArrowLeft size={20} color="#1E293B" strokeWidth={2.5} />
-        </Pressable>
-
-        <View style={styles.logoWrap}>
-          <Image
-            source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </View>
-
-        {/* Spacing between logo and card */}
-        <View style={{ height: 16 }} />
-
         <View style={styles.card}>
+          <View style={styles.cardHeaderRow}>
+            <Pressable 
+              style={styles.backBtnRelative}
+              onPress={() => {
+                if (router.canGoBack()) router.back();
+                else router.replace('/(auth)/login');
+              }}
+            >
+              <ArrowLeft size={20} color="#1E293B" strokeWidth={2.5} />
+            </Pressable>
+            <View style={styles.logoContainer}>
+              <Image
+                source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
+                style={styles.logo}
+                resizeMode="contain"
+              />
+            </View>
+            <View style={{ width: 40 }} />
+          </View>
           <View style={styles.nameRow}>
             <View style={[styles.fieldWrap, { flex: 1 }]}>
               <Pressable onPress={() => firstNameRef.current?.focus()}>
@@ -555,7 +556,7 @@ export default function SignupScreen() {
                     backgroundColor: playerType === type ? 'rgba(0,234,107,0.1)' : 'transparent',
                   }}
                 >
-                  <Text style={{ color: playerType === type ? '#10B981' : '#1E293B', fontSize: 16, fontFamily: 'Inter', fontWeight: '500' }}>{type}</Text>
+                  <Text style={{ color: playerType === type ? '#01b854' : '#1E293B', fontSize: 16, fontFamily: 'Inter', fontWeight: '500' }}>{type}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -588,7 +589,7 @@ export default function SignupScreen() {
                     backgroundColor: stateName === state ? 'rgba(0,234,107,0.1)' : 'transparent',
                   }}
                 >
-                  <Text style={{ color: stateName === state ? '#10B981' : '#1E293B', fontSize: 16, fontFamily: 'Inter', fontWeight: '500' }}>{state}</Text>
+                  <Text style={{ color: stateName === state ? '#01b854' : '#1E293B', fontSize: 16, fontFamily: 'Inter', fontWeight: '500' }}>{state}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -625,7 +626,7 @@ function WebGenericPicker(props: any) {
           style={{
             width: '100%',
             appearance: 'none',
-            border: '1px solid rgba(0, 234, 107, 0.12)',
+            border: '1px solid rgba(1, 184, 84, 0.12)',
             borderRadius: '8px',
             padding: '8px 10px',
             fontSize: '14px',
@@ -658,7 +659,7 @@ function WebInput(props: any) {
       <TextInput
         style={{
           borderWidth: 1,
-          borderColor: 'rgba(0, 234, 107, 0.12)',
+          borderColor: 'rgba(1, 184, 84, 0.12)',
           borderRadius: 8,
           paddingHorizontal: 10,
           paddingVertical: 8,
@@ -675,28 +676,34 @@ function WebInput(props: any) {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: '#F8FAFC' },
-  scrollContent: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 56, paddingBottom: 40 },
-  backBtn: { 
-    position: 'absolute', 
-    top: 52, 
-    left: 20, 
-    zIndex: 10, 
-    width: 40, 
-    height: 40, 
-    borderRadius: 20, 
-    backgroundColor: '#FFFFFF', 
-    borderWidth: 1, 
-    borderColor: '#E2E8F0', 
-    justifyContent: 'center', 
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 100,
+    paddingBottom: 40,
   },
-  logoWrap: { alignItems: 'center', marginTop: 48, marginBottom: 8 },
-  logo: { width: 240, height: 60 },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 8,
+  },
+  backBtnRelative: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+  },
+  logo: { width: 160, height: 40 },
   headingWrap: { alignItems: 'center', marginTop: 0, marginBottom: 16 },
   card: { 
     backgroundColor: '#FFFFFF', 
@@ -713,10 +720,10 @@ const styles = StyleSheet.create({
   nameRow: { flexDirection: 'row', gap: 10 },
   fieldWrap: { marginBottom: 14 },
   fieldLabel: { 
-    fontSize: 12, 
+    fontSize: 11, 
     fontWeight: '700', 
     color: '#334155', 
-    marginBottom: 6, 
+    marginBottom: 4, 
     letterSpacing: 0.2,
     fontFamily: 'Inter',
   },
@@ -728,12 +735,12 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, 
     borderColor: '#E2E8F0', 
     paddingHorizontal: 12, 
-    paddingVertical: 11, 
+    paddingVertical: 10, 
     gap: 8 
   },
   inputRowFocused: { 
     backgroundColor: '#FFFFFF',
-    shadowColor: '#10B981',
+    shadowColor: '#01b854',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.1,
     shadowRadius: 10,
@@ -741,7 +748,7 @@ const styles = StyleSheet.create({
   },
   textInput: { 
     flex: 1, 
-    fontSize: 14, 
+    fontSize: 13, 
     color: '#0F172A', 
     fontFamily: 'Inter',
     fontWeight: '500',
@@ -749,14 +756,14 @@ const styles = StyleSheet.create({
   buttonRow: { flexDirection: 'row', gap: 12, marginTop: 16 },
   signUpBtn: { 
     flex: 1, 
-    backgroundColor: '#10B981', 
+    backgroundColor: '#01b854', 
     borderRadius: 12, 
-    height: 48, 
+    height: 42, 
     alignItems: 'center', 
     justifyContent: 'center' 
   },
   signUpBtnText: { 
-    fontSize: 15, 
+    fontSize: 14, 
     fontWeight: '700', 
     color: '#FFFFFF', 
     letterSpacing: 0.5,
@@ -765,16 +772,16 @@ const styles = StyleSheet.create({
   outlineBtn: { 
     flex: 1, 
     borderRadius: 12, 
-    height: 48, 
+    height: 42, 
     borderWidth: 1.5, 
-    borderColor: '#10B981', 
+    borderColor: '#01b854', 
     alignItems: 'center', 
     justifyContent: 'center' 
   },
   outlineBtnText: { 
-    fontSize: 15, 
+    fontSize: 13, 
     fontWeight: '700', 
-    color: '#059669', 
+    color: '#01b854', 
     letterSpacing: 0.5,
     fontFamily: 'Inter',
   },
@@ -789,15 +796,34 @@ const webStyles = StyleSheet.create({
   heroColumn: { flex: 1, width: '50%' as any },
   formContainer: { flex: 1, width: '100%', backgroundColor: '#043529', paddingHorizontal: 24, paddingVertical: 32, justifyContent: 'center', alignItems: 'center' },
   formCard: { width: '100%', maxWidth: 580, backgroundColor: '#06392e', borderRadius: 20, paddingHorizontal: 24, paddingVertical: 20, borderWidth: 1, borderColor: 'rgba(0,234,107,0.12)', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.2, shadowRadius: 20 },
-  formTitle: { fontSize: 22, fontWeight: '800', color: '#f9fafb', marginTop: 4, marginBottom: 4 },
+  formTitle: { 
+    fontSize: 20, 
+    fontWeight: '800', 
+    color: '#f9fafb', 
+    marginTop: 4, 
+    marginBottom: 4,
+    fontFamily: 'Inter',
+  },
   heroImage: { flex: 1, width: '50%' as any, overflow: 'hidden' },
   row: { flexDirection: 'row', gap: 12, marginBottom: 0 },
   col: { flex: 1 },
   buttonRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
   button: { flex: 1, backgroundColor: '#01b854', borderRadius: 8, height: 40, alignItems: 'center', justifyContent: 'center' },
-  buttonText: { fontSize: 13, fontWeight: '700', color: '#043529', letterSpacing: 0.5 },
+  buttonText: { 
+    fontSize: 12, 
+    fontWeight: '700', 
+    color: '#043529', 
+    letterSpacing: 0.5,
+    fontFamily: 'Inter',
+  },
   outlineButton: { flex: 1, borderRadius: 8, height: 40, borderWidth: 1.5, borderColor: '#01b854', alignItems: 'center', justifyContent: 'center' },
-  outlineButtonText: { fontSize: 13, fontWeight: '700', color: '#01b854', textTransform: 'uppercase' as any },
+  outlineButtonText: { 
+    fontSize: 12, 
+    fontWeight: '700', 
+    color: '#01b854', 
+    textTransform: 'uppercase' as any,
+    fontFamily: 'Inter',
+  },
 });
 
 const modalStyles = StyleSheet.create({
@@ -818,6 +844,6 @@ const modalStyles = StyleSheet.create({
   iconBg: { width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(16, 185, 129, 0.1)', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
   title: { fontSize: 24, fontWeight: '800', color: '#0F172A', marginBottom: 12, fontFamily: 'Inter' },
   message: { fontSize: 15, color: '#64748B', textAlign: 'center', lineHeight: 22, marginBottom: 28, fontFamily: 'Inter' },
-  button: { backgroundColor: '#10B981', paddingVertical: 16, borderRadius: 16, width: '100%', alignItems: 'center' },
+  button: { backgroundColor: '#01b854', paddingVertical: 16, borderRadius: 16, width: '100%', alignItems: 'center' },
   buttonText: { fontSize: 15, fontWeight: '800', color: '#FFFFFF', letterSpacing: 1, fontFamily: 'Inter' },
 });

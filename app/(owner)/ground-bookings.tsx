@@ -66,11 +66,12 @@ export default function OwnerBookingsScreen() {
   const [loading, setLoading] = useState(true);
   const isWeb = Platform.OS === 'web';
   const isSmallScreen = width < 900;
-  const isLight = isWeb;
+  const isLight = true; // Uniform light theme across platforms
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'all' | 'upcoming' | 'past'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'upcoming' | 'past' | 'cancelled'>('all');
   const [ownerScope, setOwnerScope] = useState<'all' | 'own' | 'other'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<'date' | 'ground' | 'amount' | 'status' | 'booked_at' | 'paid' | 'teams' | 'name'>('date');
   const [sortAsc, setSortAsc] = useState(false);
   const [showDatePickerMobile, setShowDatePickerMobile] = useState(false);
@@ -364,171 +365,103 @@ export default function OwnerBookingsScreen() {
     [bookings, ownerScope, user?.id],
   );
 
+  const FilterDropdown = ({ id, label, value, options, onSelect }: any) => {
+    const isOpen = activeDropdown === id;
+    const selectedLabel = options.find((o: any) => o.key === value)?.label || label;
+    
+    return (
+      <View style={{ flex: 1, position: 'relative', zIndex: isOpen ? 100 : 1 }}>
+        <TouchableOpacity 
+          style={[styles.dropdownTrigger, isOpen && styles.dropdownTriggerActive, value !== 'all' && value !== null && styles.dropdownTriggerSelected]}
+          onPress={() => setActiveDropdown(isOpen ? null : id)}
+        >
+          <Text style={[styles.dropdownTriggerText, isOpen && styles.dropdownTriggerTextActive, (value !== 'all' && value !== null) && styles.dropdownTriggerTextSelected]} numberOfLines={1}>
+            {selectedLabel}
+          </Text>
+        </TouchableOpacity>
+
+        {isOpen && (
+          <>
+            <TouchableOpacity 
+              style={styles.dropdownOverlay} 
+              activeOpacity={1} 
+              onPress={() => setActiveDropdown(null)} 
+            />
+            <View style={[
+              styles.dropdownMenu, 
+              id === 'date' ? { right: 0 } : { left: 0 }
+            ]}>
+              <ScrollView bounces={false} style={{ maxHeight: 250 }}>
+                {options.map((opt: any) => (
+                  <TouchableOpacity
+                    key={opt.key}
+                    style={[styles.dropdownOption, value === opt.key && styles.dropdownOptionActive]}
+                    onPress={() => {
+                      onSelect(opt.key);
+                      setActiveDropdown(null);
+                    }}
+                  >
+                    <Text style={[styles.dropdownOptionText, value === opt.key && styles.dropdownOptionTextActive]}>
+                      {opt.label}
+                    </Text>
+                    {value === opt.key && <View style={styles.dropdownOptionDot} />}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </>
+        )}
+      </View>
+    );
+  };
+
   const content = (
     <View style={[styles.container, isSmallScreen && styles.containerMobile]}>
-      {(isSmallScreen) && (
-        <View style={[styles.header, isWeb && styles.headerWebMobile]}>
-          <TextInput
-            style={[styles.searchBarMobile, isWeb && styles.searchBarWebMobile]}
-            placeholder="Search bookings..."
-            placeholderTextColor={isWeb ? "#9ca3af" : "#9ca3af"}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
+        <View style={styles.controlsRow}>
+          <View style={styles.searchBoxMobileWrapper}>
+            <TextInput
+              style={styles.searchBarMobile}
+              placeholder="Search..."
+              placeholderTextColor="#94A3B8"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+          
+          <FilterDropdown 
+            id="status" 
+            label="Stat" 
+            value={activeTab} 
+            options={[
+              { key: 'all', label: 'All Status' },
+              { key: 'upcoming', label: 'Upcoming' },
+              { key: 'past', label: 'Past' },
+              { key: 'cancelled', label: 'Cancelled' },
+            ]} 
+            onSelect={setActiveTab} 
           />
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false} 
-            contentContainerStyle={styles.tabRow}
-            style={styles.tabScrollWrap}
-          >
-            <TouchableOpacity
-              onPress={() => setActiveTab('all')}
-              style={[
-                styles.tabChip,
-                activeTab === 'all' && styles.tabChipActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.tabChipText,
-                  activeTab === 'all' && styles.tabChipTextActive,
-                ]}
-              >
-                {`All (${timeAllCount})`}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setActiveTab('upcoming')}
-              style={[
-                styles.tabChip,
-                activeTab === 'upcoming' && styles.tabChipActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.tabChipText,
-                  activeTab === 'upcoming' && styles.tabChipTextActive,
-                ]}
-              >
-                {`Upcoming (${upcomingCount})`}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setActiveTab('past')}
-              style={[
-                styles.tabChip,
-                activeTab === 'past' && styles.tabChipActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.tabChipText,
-                  activeTab === 'past' && styles.tabChipTextActive,
-                ]}
-              >
-                {`Past (${pastCount})`}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setActiveTab('cancelled' as any)}
-              style={[
-                styles.tabChip,
-                activeTab === ('cancelled' as any) && styles.tabChipActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.tabChipText,
-                  activeTab === ('cancelled' as any) && styles.tabChipTextActive,
-                ]}
-              >
-                {`Cancelled (${bookings.filter(b => b.status === 'cancelled').length})`}
-              </Text>
-            </TouchableOpacity>
-            <View style={styles.verticalDivider} />
-            <TouchableOpacity
-              onPress={() => setOwnerScope('all')}
-              style={[
-                styles.tabChip,
-                ownerScope === 'all' && styles.tabChipActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.tabChipText,
-                  ownerScope === 'all' && styles.tabChipTextActive,
-                ]}
-              >
-                All grounds
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setOwnerScope('own')}
-              style={[
-                styles.tabChip,
-                ownerScope === 'own' && styles.tabChipActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.tabChipText,
-                  ownerScope === 'own' && styles.tabChipTextActive,
-                ]}
-              >
-                Own grounds
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setOwnerScope('other')}
-              style={[
-                styles.tabChip,
-                ownerScope === 'other' && styles.tabChipActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.tabChipText,
-                  ownerScope === 'other' && styles.tabChipTextActive,
-                ]}
-              >
-                Other grounds
-              </Text>
-            </TouchableOpacity>
-          </ScrollView>
-
-          {/* Mobile Date Filter Row */}
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false} 
-            contentContainerStyle={styles.dateRow}
-            style={styles.dateScrollWrap}
-          >
-            <TouchableOpacity
-              onPress={() => setSelectedDate(null)}
-              style={[
-                styles.tabChip,
-                !selectedDate && styles.tabChipActive,
-              ]}
-            >
-              <Text style={[styles.tabChipText, !selectedDate && styles.tabChipTextActive]}>Any Date</Text>
-            </TouchableOpacity>
-            {availableDates.map(date => (
-              <TouchableOpacity
-                key={date}
-                onPress={() => setSelectedDate(date)}
-                style={[
-                  styles.tabChip,
-                  selectedDate === date && styles.tabChipActive,
-                ]}
-              >
-                <Text style={[styles.tabChipText, selectedDate === date && styles.tabChipTextActive]}>
-                  {formatDateDDMMYY(date)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          <FilterDropdown 
+            id="scope" 
+            label="Scope" 
+            value={ownerScope} 
+            options={[
+              { key: 'all', label: 'All Grounds' },
+              { key: 'own', label: 'Own Grounds' },
+              { key: 'other', label: 'Others' },
+            ]} 
+            onSelect={setOwnerScope} 
+          />
+          <FilterDropdown 
+            id="date" 
+            label="Date" 
+            value={selectedDate || 'all'} 
+            options={[
+              { key: 'all', label: 'Any Date' },
+              ...availableDates.map(d => ({ key: d, label: formatDateDDMMYY(d) }))
+            ]} 
+            onSelect={(val: string) => setSelectedDate(val === 'all' ? null : val)} 
+          />
         </View>
-      )}
 
       {isWeb && !isSmallScreen && bookings.length > 0 && (
         <View style={styles.filterContainer}>
@@ -969,14 +902,12 @@ export default function OwnerBookingsScreen() {
               activeOpacity={0.7}
             >
               <View style={styles.compactTopRow}>
-                <View style={[styles.compactDateBlock, !isLight && styles.compactDateBlockNative]}>
-                  <Text style={[styles.compactDateDay, !isLight && styles.compactDateDayNative]}>
-                    {new Date(item.booking_date).getDate()}
-                  </Text>
-                  <Text style={[styles.compactDateMonth, !isLight && styles.compactDateMonthNative]}>
-                    {new Date(item.booking_date).toLocaleString('default', { month: 'short' }).toUpperCase()}
-                  </Text>
-                </View>
+                <Image 
+                  source={{ 
+                    uri: item.ground.ground_images?.[0]?.image_url || 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg'
+                  }} 
+                  style={styles.compactGroundImage} 
+                />
                 
                 <View style={styles.compactMainInfo}>
                   <Text style={[styles.compactGroundName, !isLight && styles.compactGroundNameNative]} numberOfLines={1}>
@@ -987,6 +918,9 @@ export default function OwnerBookingsScreen() {
                       {`${normalizeDbTimeToHHMM(item.start_time)} – ${normalizeDbTimeToHHMM(item.end_time)}`}
                     </Text>
                   </View>
+                  <Text style={styles.compactDateTextSub}>
+                    {formatDateDDMMYY(item.booking_date)}
+                  </Text>
                 </View>
 
                 <View style={styles.compactStatusInfoAx}>
@@ -1080,7 +1014,7 @@ export default function OwnerBookingsScreen() {
 
   return (
     <View style={styles.nativeContainer}>
-      <MobileAppNavbar title="Ground Bookings" titleColor="#00ea6b" />
+      <MobileAppNavbar title="Ground Bookings" titleColor="#059669" />
       {content}
     </View>
   );
@@ -1091,21 +1025,21 @@ const IS_WEB = Platform.OS === 'web';
 const styles = StyleSheet.create({
   nativeContainer: {
     flex: 1,
-    backgroundColor: '#043529',
+    backgroundColor: '#F8FAFC',
   },
   container: {
     flex: 1,
-    backgroundColor: IS_WEB ? '#F5F5F5' : '#043529',
+    backgroundColor: '#F5F5F5',
   },
   containerMobile: {
-    backgroundColor: IS_WEB ? '#F8FAFC' : '#043529',
+    backgroundColor: '#F8FAFC',
   },
   header: {
-    backgroundColor: IS_WEB ? '#FFFFFF' : '#043529',
+    backgroundColor: '#FFFFFF',
     padding: 16,
     paddingTop: IS_WEB ? 16 : 0,
     borderBottomWidth: 1,
-    borderBottomColor: IS_WEB ? '#E2E8F0' : 'rgba(0,234,107,0.15)',
+    borderBottomColor: '#E2E8F0',
   },
   headerWebMobile: {
     paddingTop: 16,
@@ -1115,7 +1049,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '800',
-    color: IS_WEB ? '#212121' : '#f9fafb',
+    color: '#212121',
     letterSpacing: -0.3,
   },
   list: {
@@ -1128,7 +1062,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: IS_WEB ? '#666' : '#9ca3af',
+    color: '#666',
   },
   tableHeaderContainer: {
     marginHorizontal: 16,
@@ -1325,29 +1259,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: IS_WEB ? 11 : 16,
     paddingVertical: IS_WEB ? 6 : 10,
     borderRadius: IS_WEB ? 8 : 10,
-    borderWidth: 1.5,
-    borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.25)',
-    backgroundColor: IS_WEB ? '#F9FAFB' : 'rgba(4,53,41,0.6)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 6,
-    overflow: 'hidden',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    marginRight: 6,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   tabChipActive: {
-    backgroundColor: IS_WEB ? 'transparent' : '#00ea6b',
-    borderColor: IS_WEB ? '#01b854' : '#00ea6b',
+    backgroundColor: '#059669',
+    borderColor: '#059669',
   },
   tabChipText: {
     fontFamily: 'Inter',
-    fontSize: IS_WEB ? 11.5 : 13,
-    fontWeight: '500',
-    color: IS_WEB ? '#6B7280' : '#f9fafb',
-    letterSpacing: -0.2,
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '600',
   },
   tabChipTextActive: {
-    color: IS_WEB ? '#01b854' : '#043529',
-    fontWeight: '600',
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   verticalDivider: {
     width: 1,
@@ -1432,15 +1364,19 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   searchBarMobile: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.2)',
+    borderColor: '#E2E8F0',
     borderRadius: 12,
     paddingHorizontal: 16,
     height: 48,
-    color: '#FFFFFF',
+    color: '#1E293B',
     marginBottom: 16,
     fontSize: 14,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 2 },
   },
   searchBarWebMobile: {
     backgroundColor: '#F1F5F9',
@@ -1454,11 +1390,11 @@ const styles = StyleSheet.create({
   nameInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: IS_WEB ? '#f8fafc' : 'rgba(255,255,255,0.05)',
+    backgroundColor: '#f8fafc',
     borderRadius: 8,
     paddingHorizontal: 8,
     borderWidth: 1,
-    borderColor: IS_WEB ? '#E2E8F0' : 'rgba(0,234,107,0.1)',
+    borderColor: '#E2E8F0',
   },
   nameInputIcon: {
     marginRight: 6,
@@ -1466,7 +1402,7 @@ const styles = StyleSheet.create({
   nameInput: {
     flex: 1,
     fontSize: 13,
-    color: IS_WEB ? '#1E293B' : '#f9fafb',
+    color: '#1E293B',
     paddingVertical: 8,
     fontWeight: '600',
   },
@@ -1494,26 +1430,24 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
   },
   compactRowNative: {
-    backgroundColor: '#06392e',
-    borderColor: 'rgba(0,234,107,0.15)',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#F1F5F9',
   },
   compactTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  compactDateBlock: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: '#F0FDF4',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#DCFCE7',
+  compactGroundImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
   },
-  compactDateBlockNative: {
-    backgroundColor: 'rgba(0,234,107,0.1)',
-    borderColor: 'rgba(0,234,107,0.3)',
+  compactDateTextSub: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '500',
+    marginTop: 2,
   },
   compactDateDay: {
     fontFamily: 'Inter',
@@ -1522,7 +1456,7 @@ const styles = StyleSheet.create({
     color: '#166534',
   },
   compactDateDayNative: {
-    color: '#00ea6b',
+    color: '#166534',
   },
   compactDateMonth: {
     fontFamily: 'Inter',
@@ -1533,7 +1467,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   compactDateMonthNative: {
-    color: '#dcc093',
+    color: '#15803d',
   },
   compactMainInfo: {
     flex: 1,
@@ -1548,7 +1482,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   compactGroundNameNative: {
-    color: '#FFFFFF',
+    color: '#0F172A',
   },
   compactSlotRow: {
     flexDirection: 'row',
@@ -1563,7 +1497,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   compactSlotTimeNative: {
-    color: '#00ea6b',
+    color: '#059669',
   },
   compactBookedAt: {
     fontSize: 10,
@@ -1582,7 +1516,7 @@ const styles = StyleSheet.create({
     color: '#0F172A',
   },
   compactAmountNative: {
-    color: '#00ea6b',
+    color: '#059669',
   },
   statusBadgeCompact: {
     paddingHorizontal: 10,
@@ -1622,29 +1556,106 @@ const styles = StyleSheet.create({
     color: '#64748B',
     letterSpacing: 0.8,
   },
-  searchFilterWrap: {
-    marginRight: 12,
-  },
-  dateRow: {
-    paddingHorizontal: 0,
-    gap: 8,
-  },
-  dateScrollWrap: {
-    marginTop: 12,
-  },
-  dateClearBtn: {
-    position: 'absolute',
-    right: 8,
-    top: '50%',
-    marginTop: -10,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#F3F4F6',
+  controlsRow: {
+    flexDirection: 'row',
+    padding: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
     alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
+    gap: 6,
+  },
+  searchBoxMobileWrapper: {
+    flex: 1.5,
+  },
+  searchBarMobile: {
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    height: 34,
+    color: '#1E293B',
+    fontSize: 12,
+  },
+  dropdownTrigger: {
+    height: 34,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dropdownTriggerActive: {
+    borderColor: '#059669',
+    backgroundColor: '#F0FDF4',
+  },
+  dropdownTriggerSelected: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#059669',
+  },
+  dropdownTriggerText: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '600',
+    fontFamily: 'Inter',
+  },
+  dropdownTriggerTextActive: {
+    color: '#059669',
+  },
+  dropdownTriggerTextSelected: {
+    color: '#059669',
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    top: 40,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    zIndex: 1000,
+    minWidth: 140,
+    overflow: 'hidden',
+  },
+  dropdownOverlay: {
+    position: 'absolute',
+    top: -500,
+    left: -500,
+    right: -500,
+    bottom: -1000,
+    zIndex: 999,
+  },
+  dropdownOption: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  dropdownOptionActive: {
+    backgroundColor: '#F0FDF4',
+  },
+  dropdownOptionText: {
+    fontSize: 12,
+    color: '#1E293B',
+    fontWeight: '500',
+  },
+  dropdownOptionTextActive: {
+    color: '#059669',
+    fontWeight: '700',
+  },
+  dropdownOptionDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#059669',
   },
 });

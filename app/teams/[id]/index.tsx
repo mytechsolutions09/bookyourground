@@ -35,7 +35,14 @@ import {
   ArrowLeft,
   Settings,
   Share2,
-  Shield
+  Shield,
+  QrCode,
+  Crown,
+  Target,
+  Zap,
+  Sword,
+  ShieldCheck,
+  UserPlus
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
@@ -70,28 +77,36 @@ interface TeamMember {
 }
 
 const TABS = [
-  { key: 'info', label: 'Info' },
+  { key: 'info', label: 'Info', hidden: true },
+  { key: 'members', label: 'Members' },
   { key: 'chat', label: 'Chat' },
   { key: 'matches', label: 'Matches' },
   { key: 'stats', label: 'Stats' },
   { key: 'leaderboard', label: 'Leaderboard' },
-  { key: 'members', label: 'Members' },
 ];
 
 export default function TeamDetailsPage() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const { setTabBarVisible } = useUI();
+  const { width } = useWindowDimensions();
+  const isFold = width < 330 || width > 600;
+  const isWide = width > 500;
+  const isTablet = width > 768;
+
   const insets = useSafeAreaInsets();
   const [team, setTeam] = useState<Team | null>(null);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<string>('info');
+  const [activeTab, setActiveTab] = useState<string>('members');
   const [memberStatus, setMemberStatus] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editLocation, setEditLocation] = useState('');
+  const [editCaptain, setEditCaptain] = useState('');
   const [isQRModalOpen, setIsQRModalOpen] = useState(false);
+  const [isAssigningRole, setIsAssigningRole] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   const [teamMatches, setTeamMatches] = useState<any[]>([]);
   const [matchesLoading, setMatchesLoading] = useState(false);
   const [rpcStats, setRpcStats] = useState<any>(null);
@@ -124,19 +139,22 @@ export default function TeamDetailsPage() {
 
   const handleScroll = (event: any) => {
     const currentY = event.nativeEvent.contentOffset.y;
-    // Show on scroll up, hide on scroll down
-    if (currentY <= 0) {
-      setTabBarVisible(true);
-    } else if (currentY > lastScrollY.current && currentY > 60) {
-      setTabBarVisible(false);
-    } else if (currentY < lastScrollY.current) {
-      setTabBarVisible(true);
-    }
+    // Removed scroll-based tab bar visibility toggling
     lastScrollY.current = currentY;
   };
 
   useEffect(() => {
+    // Hide tab bar on mount
+    setTabBarVisible(false);
+    // Restore on unmount
+    return () => setTabBarVisible(true);
+  }, []);
+
+  useEffect(() => {
     if (id) {
+      setTeam(null);
+      setMemberStatus(null);
+      setMembers([]);
       loadTeamData();
       loadMatches();
       loadLeaderboard();
@@ -457,7 +475,7 @@ export default function TeamDetailsPage() {
     try {
       const { error } = await supabase
         .from('teams')
-        .update({ name: editName, location: editLocation })
+        .update({ name: editName, location: editLocation, captain: editCaptain })
         .eq('id', id);
       
       if (error) throw error;
@@ -472,6 +490,7 @@ export default function TeamDetailsPage() {
   const openEditModal = () => {
     setEditName(team?.name || '');
     setEditLocation(team?.location || '');
+    setEditCaptain(team?.captain || '');
     setIsEditing(true);
   };
 
@@ -537,6 +556,40 @@ export default function TeamDetailsPage() {
     }
   };
 
+  const handleToggleRole = (roleId: string) => {
+    if (!selectedMember) return;
+    const currentRoles = selectedMember.role ? selectedMember.role.split(',') : [];
+    let newRoles: string[];
+    
+    if (currentRoles.includes(roleId)) {
+      newRoles = currentRoles.filter(r => r !== roleId);
+    } else {
+      newRoles = [...currentRoles, roleId];
+    }
+    
+    setSelectedMember({
+      ...selectedMember,
+      role: newRoles.join(',')
+    });
+  };
+
+  const saveMemberRoles = async () => {
+    if (!selectedMember) return;
+    try {
+      const { error } = await supabase
+        .from('team_members')
+        .update({ role: selectedMember.role })
+        .eq('id', selectedMember.id);
+      
+      if (error) throw error;
+      setIsAssigningRole(false);
+      loadTeamData();
+    } catch (err: any) {
+      if (Platform.OS === 'web') alert(err.message);
+      else Alert.alert('Error', err.message);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.center}>
@@ -558,7 +611,7 @@ export default function TeamDetailsPage() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.canGoBack() ? router.back() : router.push('/cricket/teams' as any)}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.navigate('/cricket/teams' as any)}>
           <ArrowLeft size={24} color="#1E293B" strokeWidth={2.5} />
         </TouchableOpacity>
         <RNText style={styles.headerTitle} numberOfLines={1}>{team.name}</RNText>
@@ -566,12 +619,15 @@ export default function TeamDetailsPage() {
           <TouchableOpacity style={styles.headerActionBtn} onPress={onShare}>
             <Share2 size={20} color="#1E293B" />
           </TouchableOpacity>
+          <TouchableOpacity style={styles.headerActionBtn} onPress={() => setIsQRModalOpen(true)}>
+            <QrCode size={20} color="#1E293B" />
+          </TouchableOpacity>
           {team.owner_id === user?.id && (
             <TouchableOpacity 
               style={styles.headerActionBtn}
-              onPress={() => setActiveTab('settings')}
+              onPress={openEditModal}
             >
-              <Settings size={20} color={activeTab === 'settings' ? '#01b854' : '#1E293B'} />
+              <Settings size={20} color={isEditing ? '#01b854' : '#1E293B'} />
             </TouchableOpacity>
           )}
         </View>
@@ -585,17 +641,20 @@ export default function TeamDetailsPage() {
           style={styles.tabBar}
           contentContainerStyle={styles.tabBarContent}
         >
-          {TABS.map((tab, idx) => (
-            <TouchableOpacity 
-              key={tab.key}
-              style={[styles.tab, activeTab === tab.key && styles.activeTab]} 
-              onPress={() => onTabPress(tab.key, idx)}
-            >
-              <RNText style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
-                {tab.label}
-              </RNText>
-            </TouchableOpacity>
-          ))}
+          {TABS.filter(t => !t.hidden).map((tab, idx) => {
+            const actualIdx = TABS.findIndex(t => t.key === tab.key);
+            return (
+              <TouchableOpacity 
+                key={tab.key}
+                style={[styles.tab, activeTab === tab.key && styles.activeTab]} 
+                onPress={() => onTabPress(tab.key, actualIdx)}
+              >
+                <RNText style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
+                  {tab.label}
+                </RNText>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
       </View>
 
@@ -638,29 +697,13 @@ export default function TeamDetailsPage() {
                                   </View>
                                 </View>
                               </View>
-                              <View style={styles.profileRightActions}>
-                                 <TouchableOpacity 
-                                   style={styles.miniQRContainer}
-                                   onPress={() => setIsQRModalOpen(true)}
-                                 >
-                                    <QRCode
-                                       value={`https://bookyourground.com/teams/${id}`}
-                                       size={50}
-                                       color="#043529"
-                                       backgroundColor="transparent"
-                                    />
-                                 </TouchableOpacity>
-                              </View>
+                              <TouchableOpacity onPress={() => setIsQRModalOpen(true)} style={styles.miniQRContainer}>
+                                <QrCode size={32} color="#01b854" strokeWidth={2.5} />
+                              </TouchableOpacity>
                             </View>
                             <View style={styles.section}>
                               <RNText style={styles.sectionTitle}>About Team</RNText>
                               
-                              {!memberStatus && !isOwner && (
-                                <TouchableOpacity style={styles.fullJoinBtn} onPress={handleJoinTeam}>
-                                  <Users size={18} color="#FFFFFF" strokeWidth={2.5} />
-                                  <RNText style={styles.fullJoinBtnText}>JOIN TEAM SQUAD</RNText>
-                                </TouchableOpacity>
-                              )}
 
                               <View style={styles.infoCard}>
                                 <View style={styles.infoRow}>
@@ -688,6 +731,12 @@ export default function TeamDetailsPage() {
                                 </View>
                               </View>
                             </View>
+
+                            {isAcceptedMember && !isOwner && (
+                              <TouchableOpacity style={styles.leaveTeamTextBtn} onPress={handleLeaveTeam}>
+                                <RNText style={styles.leaveTeamText}>Leave this team</RNText>
+                              </TouchableOpacity>
+                            )}
                           </ScrollView>
                         );
                       case 'matches':
@@ -876,9 +925,44 @@ export default function TeamDetailsPage() {
                                     )}
                                   </View>
                                   <View style={styles.memberInfo}>
-                                    <RNText style={styles.memberName}>{member.player_name}</RNText>
-                                    <RNText style={styles.memberRole}>{member.role.toUpperCase()}</RNText>
+                                    <View style={styles.memberNameRow}>
+                                      <RNText style={styles.memberName}>{member.player_name}</RNText>
+                                      {(member.role?.includes('captain') || member.player_name === team.captain) && (
+                                        <View style={[styles.roleMiniTag, { backgroundColor: '#F0FDF4' }]}>
+                                          <RNText style={[styles.roleMiniTagText, { color: '#01b854' }]}>C</RNText>
+                                        </View>
+                                      )}
+                                      {(member.role?.includes('admin') || member.role?.includes('owner') || member.profile_id === team.owner_id) && (
+                                        <View style={[styles.roleMiniTag, { backgroundColor: '#EFF6FF' }]}>
+                                          <RNText style={[styles.roleMiniTagText, { color: '#3B82F6' }]}>A</RNText>
+                                        </View>
+                                      )}
+                                    </View>
+                                    <RNText style={styles.memberRole}>{member.role?.split(',').map(r => r.replace('_', ' ').toUpperCase()).join(', ')}</RNText>
                                   </View>
+                                  {isOwner && member.profile_id !== user?.id && (
+                                    <View style={styles.memberActions}>
+                                      <TouchableOpacity 
+                                        onPress={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedMember(member);
+                                          setIsAssigningRole(true);
+                                        }}
+                                        style={styles.memberActionTextBtn}
+                                      >
+                                        <RNText style={styles.memberActionText}>Assign Role</RNText>
+                                      </TouchableOpacity>
+                                      <TouchableOpacity 
+                                        onPress={(e) => {
+                                          e.stopPropagation();
+                                          handleUpdateMember(member.profile_id, 'removed');
+                                        }}
+                                        style={styles.memberActionTextBtn}
+                                      >
+                                        <RNText style={[styles.memberActionText, { color: '#EF4444' }]}>Remove</RNText>
+                                      </TouchableOpacity>
+                                    </View>
+                                  )}
                                </TouchableOpacity>
                              ))}
                           </ScrollView>
@@ -926,7 +1010,30 @@ export default function TeamDetailsPage() {
               />
             </View>
 
-            <View style={styles.modalBtnRow}>
+            <View style={styles.inputGroup}>
+              <RNText style={styles.inputLabel}>Captain Name</RNText>
+              <RNTextInput
+                style={styles.textInput}
+                value={editCaptain}
+                onChangeText={setEditCaptain}
+                placeholder="Enter captain name"
+              />
+            </View>
+
+            <View style={[styles.modalBtnRow, { marginTop: 20 }]}>
+              <TouchableOpacity 
+                style={styles.addMemberFullBtn}
+                onPress={() => {
+                  setIsEditing(false);
+                  setIsQRModalOpen(true);
+                }}
+              >
+                <UserPlus size={20} color="#FFFFFF" strokeWidth={2.5} />
+                <RNText style={styles.addMemberFullBtnText}>Invite New Member</RNText>
+              </TouchableOpacity>
+            </View>
+
+            <View style={[styles.modalBtnRow, { marginTop: 20 }]}>
               <TouchableOpacity 
                 style={[styles.modalBtn, styles.cancelBtn]} 
                 onPress={() => setIsEditing(false)}
@@ -976,6 +1083,98 @@ export default function TeamDetailsPage() {
           </View>
         </TouchableOpacity>
       </Modal>
+
+      {/* Assign Role Modal */}
+      <Modal
+        visible={isAssigningRole}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsAssigningRole(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setIsAssigningRole(false)}
+        >
+          <View style={styles.roleModalContent}>
+            <View style={styles.modalHandle} />
+            <RNText style={styles.roleModalTitle}>Assign Role to {selectedMember?.player_name}</RNText>
+            
+             <View style={styles.roleOptionsGrid}>
+              {[
+                { id: 'admin', label: 'Admin', icon: Shield },
+                { id: 'captain', label: 'Team Captain', icon: Crown },
+                { id: 'wicket_keeper', label: 'Wicket Keeper', icon: ShieldCheck },
+                { id: 'batter', label: 'Batter', icon: Sword },
+                { id: 'bowler', label: 'Bowler', icon: Target },
+                { id: 'all_rounder', label: 'All Rounder', icon: Zap },
+              ].map((role) => {
+                const IconComponent = role.icon;
+                const isActive = selectedMember?.role?.split(',').includes(role.id);
+                
+                return (
+                  <TouchableOpacity 
+                    key={role.id}
+                    style={[
+                      styles.roleOption,
+                      isActive && styles.activeRoleOption
+                    ]}
+                    onPress={() => handleToggleRole(role.id)}
+                  >
+                    <View style={[styles.roleIconCircle, isActive && { backgroundColor: '#F0FDF4' }]}>
+                      <IconComponent size={24} color={isActive ? '#01b854' : '#64748B'} />
+                    </View>
+                    <RNText style={[
+                      styles.roleOptionText,
+                      isActive && styles.activeRoleOptionText
+                    ]}>
+                      {role.label}
+                    </RNText>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <View style={styles.modalBtnRow}>
+              <TouchableOpacity 
+                style={[styles.modalBtn, styles.cancelBtn, { flex: 1 }]}
+                onPress={() => setIsAssigningRole(false)}
+              >
+                <RNText style={styles.cancelBtnText}>Cancel</RNText>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.modalBtn, styles.saveBtn, { flex: 2 }]}
+                onPress={saveMemberRoles}
+              >
+                <RNText style={styles.saveBtnText}>Save Roles</RNText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {!memberStatus && !isOwner && (activeTab === 'info' || activeTab === 'members') && (
+        <View style={[
+          styles.bottomJoinContainer, 
+          { paddingBottom: Math.max(insets.bottom, 16) },
+          isFold && { paddingTop: 28 }
+        ]}>
+          <TouchableOpacity 
+            style={[styles.infoBottomBtn, isFold && { paddingVertical: 22 }]} 
+            onPress={() => onTabPress('info', 0)}
+          >
+            <Info size={18} color="#64748B" />
+            <RNText style={styles.infoBottomBtnText}>TEAM INFO</RNText>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.fullJoinBtn, isFold && { paddingVertical: 22 }]} 
+            onPress={handleJoinTeam}
+          >
+            <Users size={18} color="#FFFFFF" strokeWidth={2.5} />
+            <RNText style={styles.fullJoinBtnText}>JOIN TEAM</RNText>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
@@ -1261,22 +1460,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 10,
   },
-  statGridLabel: {
-    fontFamily: 'Inter', fontSize: 10,
-    fontFamily: 'Inter', fontWeight: '700',
-    color: '#64748B',
-    textAlign: 'center',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  statGridValue: {
-    fontFamily: 'Inter',
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#043529',
-    textAlign: 'center',
-  },
   formCardGrid: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
@@ -1441,6 +1624,7 @@ const styles = StyleSheet.create({
   tabContent: {
     flex: 1,
     paddingHorizontal: 16,
+    paddingBottom: 100,
   },
   section: {
     marginBottom: 24,
@@ -1624,16 +1808,34 @@ const styles = StyleSheet.create({
   memberInfo: {
     flex: 1,
   },
-  memberName: {
+  memberNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  roleMiniTag: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  roleMiniTagText: {
+    fontSize: 10,
+    fontWeight: '900',
     fontFamily: 'Inter',
+  },
+  memberName: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#1E293B',
+    fontWeight: '500',
+    color: '#1e293b',
+    fontFamily: 'Inter',
   },
   memberRole: {
     fontFamily: 'Inter',
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#94A3B8',
     marginTop: 2,
   },
@@ -1680,7 +1882,8 @@ const styles = StyleSheet.create({
     color: '#1E293B',
   },
   settingsItemDesc: {
-    fontFamily: 'Inter', fontSize: 12,
+    fontFamily: 'Inter',
+    fontSize: 12,
     color: '#64748B',
     marginTop: 2,
   },
@@ -1733,6 +1936,15 @@ const styles = StyleSheet.create({
     color: '#64748B',
     textAlign: 'center',
     marginTop: 4,
+  },
+  headerTitle: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1E293B',
+    textAlign: 'center',
+    marginHorizontal: 12,
+    fontFamily: 'Inter',
   },
   memberActionBtn: {
     paddingHorizontal: 10,
@@ -1814,6 +2026,28 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '800',
   },
+  addMemberFullBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    backgroundColor: '#431043',
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#431043',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  addMemberFullBtnText: {
+    color: '#FFFFFF',
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
   qrModalContent: {
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
@@ -1873,15 +2107,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    borderRadius: 16,
-    marginBottom: 16,
-    gap: 10,
+    paddingVertical: 14,
+    borderRadius: 14,
+    flex: 2,
+    gap: 8,
     shadowColor: '#01b854',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 3,
+  },
+  infoBottomBtn: {
+    backgroundColor: '#F8FAFC',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 14,
+    flex: 1,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  infoBottomBtnText: {
+    color: '#64748B',
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   fullJoinBtnText: {
     color: '#FFFFFF',
@@ -1889,5 +2142,127 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     letterSpacing: 0.5,
+  },
+  bottomJoinContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    gap: 12,
+  },
+  leaveTeamTextBtn: {
+    marginTop: 40,
+    padding: 16,
+    alignItems: 'center',
+    marginBottom: 40,
+  },
+  leaveTeamText: {
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#EF4444',
+    textDecorationLine: 'underline',
+  },
+  memberActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  memberActionTextBtn: {
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+  },
+  memberActionText: {
+    fontFamily: 'Inter',
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#01b854',
+  },
+  roleModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    padding: 24,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    width: '100%',
+    position: 'absolute',
+    bottom: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 20,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 20,
+  },
+  roleModalTitle: {
+    fontFamily: 'Inter',
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#043529',
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  roleOptionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 24,
+  },
+  roleOption: {
+    width: '48%',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    marginBottom: 8,
+  },
+  roleIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  activeRoleOption: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#01b854',
+  },
+  roleOptionText: {
+    fontFamily: 'Inter',
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#64748B',
+    textAlign: 'center',
+  },
+  activeRoleOptionText: {
+    color: '#01b854',
+  },
+  roleModalCloseBtn: {
+    backgroundColor: '#F1F5F9',
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+  },
+  roleModalCloseText: {
+    fontFamily: 'Inter',
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#64748B',
   },
 });

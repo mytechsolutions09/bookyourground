@@ -10,7 +10,8 @@ import {
   Platform,
   TextInput as RNTextInput,
   Modal,
-  FlatList
+  FlatList,
+  Alert
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { 
@@ -31,9 +32,13 @@ import {
   Flame,
   Database,
   Plus,
+  Trophy,
   ChevronDown,
   Search
 } from 'lucide-react-native';
+import { 
+  useFocusEffect 
+} from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { getPlayerTags } from '@/lib/stats-logic';
 import { useAuth } from '@/contexts/AuthContext';
@@ -49,553 +54,25 @@ const INDIAN_STATES = [
   "Ladakh", "Lakshadweep", "Puducherry"
 ];
 
-export default function PlayerProfile() {
-  const router = useRouter();
-  const { user } = useAuth();
-  const [profile, setProfile] = useState<any>(null);
-  const [stats, setStats] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedData, setEditedData] = useState<any>({});
-  const [showStatePicker, setShowStatePicker] = useState(false);
-  const [stateSearch, setStateSearch] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
-
-  useEffect(() => {
-    if (user) {
-      loadPlayerData();
-    } else {
-      setLoading(false);
-    }
-  }, [user]);
-
-  const loadPlayerData = async () => {
-    try {
-      setLoading(true);
-      
-      // 1. Fetch Profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user?.id)
-        .single();
-      
-      if (profileError) throw profileError;
-      setProfile(profileData);
-
-      // 2. Fetch Aggregated Stats (Leather by default)
-      // We look for any team member record associated with this profile
-      const { data: memberRecords } = await supabase
-        .from('team_members')
-        .select('id')
-        .eq('profile_id', user?.id);
-
-      if (memberRecords && memberRecords.length > 0) {
-        const memberIds = memberRecords.map(m => m.id);
-        const { data: statsData } = await supabase
-          .from('player_ball_stats')
-          .select('*')
-          .in('member_id', memberIds)
-          .eq('ball_type', 'leather');
-        
-        if (statsData && statsData.length > 0) {
-            const agg = statsData.reduce((acc, curr) => ({
-              matches: acc.matches + curr.matches_played,
-              runs: acc.runs + curr.total_runs,
-              wickets: acc.wickets + curr.total_wickets,
-              catches: acc.catches + (curr.total_catches || 0),
-              sr: Math.max(acc.sr, curr.strike_rate),
-              highest: Math.max(acc.highest, curr.highest_score),
-              innings_batted: acc.innings_batted + (curr.innings_batted || 0),
-              innings_bowled: acc.innings_bowled + (curr.innings_bowled || 0),
-              not_outs: acc.not_outs + (curr.not_outs || 0),
-              runs_conceded: acc.runs_conceded + (curr.runs_conceded || 0),
-              overs_bowled: acc.overs_bowled + (Number(curr.overs_bowled) || 0),
-              strike_rate: acc.strike_rate // Just use the max SR for tagging logic if ambiguous, or calculate weighted
-            }), { 
-              matches: 0, runs: 0, wickets: 0, catches: 0, sr: 0, highest: 0,
-              innings_batted: 0, innings_bowled: 0, not_outs: 0, runs_conceded: 0,
-              overs_bowled: 0, strike_rate: 0
-            });
-            
-            // Recalculate average strike rate for tagging logic
-            agg.strike_rate = agg.matches > 0 ? (statsData[0].strike_rate) : 0; 
-            
-            setStats(agg);
-          }
-      }
-    } catch (err) {
-      console.error('Error loading player data:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleEdit = () => {
-    setEditedData({
-      full_name: profile?.full_name || '',
-      address: profile?.address || '',
-      state: profile?.state || '',
-      player_type: profile?.player_type || 'All Rounder',
-      batting_style: profile?.batting_style || 'Right Hand Bat',
-      bowling_style: profile?.bowling_style || 'Right Arm Fast'
-    });
-    setIsEditing(true);
-  };
-
-  const handleSave = async () => {
-    try {
-      setSaving(true);
-      const { error } = await supabase
-        .from('profiles')
-        .update(editedData)
-        .eq('id', user?.id);
-      
-      if (error) throw error;
-      setProfile({ ...profile, ...editedData });
-      setIsEditing(false);
-    } catch (err) {
-      console.error('Error saving profile:', err);
-      alert('Failed to save profile. Please try again.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const pickImage = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.5,
-      });
-
-      if (!result.canceled && result.assets[0].uri) {
-        uploadAvatar(result.assets[0].uri);
-      }
-    } catch (err) {
-      console.error('Error picking image:', err);
-    }
-  };
-
-  const uploadAvatar = async (uri: string) => {
-    try {
-      setUploading(true);
-      const fileExt = uri.split('.').pop();
-      const fileName = `${user?.id}/${Math.random()}.${fileExt}`;
-      const filePath = `${fileName}`;
-
-      // Convert URI to Blob
-      const response = await fetch(uri);
-      const blob = await response.blob();
-
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, blob);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
-      setEditedData({ ...editedData, avatar_url: publicUrl });
-      // Also update immediate profile view for feedback
-      setProfile({ ...profile, avatar_url: publicUrl });
-    } catch (err) {
-      console.error('Error uploading avatar:', err);
-      alert('Failed to upload image.');
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#01b854" />
-      </View>
-    );
-  }
-
-  if (!user) {
-    return (
-      <View style={styles.loginRequired}>
-        <RNText style={styles.loginTitle}>Unlock Your Profile</RNText>
-        <RNText style={styles.loginSubtitle}>
-          Sign in to track your elite stats, manage your team, and join the leaderboards.
-        </RNText>
-        <TouchableOpacity 
-          style={styles.loginBtnOutlined}
-          onPress={() => router.push('/(auth)/login' as any)}
-        >
-          <RNText style={styles.loginBtnTextOutlined}>Login or Sign Up</RNText>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  const StatItem = ({ label, value, icon: Icon, color }: any) => (
-    <View style={styles.statCard}>
-      <View style={[styles.statIconBox, { backgroundColor: color + '15' }]}>
-        <Icon size={20} color={color} />
-      </View>
-      <View>
-        <RNText style={styles.statValue}>{value}</RNText>
-        <RNText style={styles.statLabel}>{label}</RNText>
-      </View>
-    </View>
-  );
-
-  const playerTags = getPlayerTags(stats);
-
-  const renderTagIcon = (iconName: string, color: string) => {
-    const props = { size: 14, color };
-    switch (iconName) {
-      case 'zap': return <Zap {...props} />;
-      case 'flame': return <Flame {...props} />;
-      case 'trending-up': return <TrendingUp {...props} />;
-      case 'target': return <Target {...props} />;
-      case 'shield': return <Shield {...props} />;
-      case 'database': return <Database {...props} />;
-      case 'plus': return <Plus {...props} />;
-      case 'star': return <Star {...props} />;
-      default: return <Award {...props} />;
-    }
-  };
-
-  const filteredStates = INDIAN_STATES.filter(s => 
-    s.toLowerCase().includes(stateSearch.toLowerCase())
-  );
-
-  return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* State Picker Modal */}
-      <Modal
-        visible={showStatePicker}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowStatePicker(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.stateModalContent}>
-            <View style={styles.modalHeader}>
-              <RNText style={styles.modalTitle}>Select State</RNText>
-              <TouchableOpacity onPress={() => setShowStatePicker(false)}>
-                <X size={24} color="#1E293B" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.modalSearchContainer}>
-              <Search size={18} color="#94A3B8" />
-              <RNTextInput
-                style={styles.modalSearchInput}
-                placeholder="Search state..."
-                value={stateSearch}
-                onChangeText={setStateSearch}
-                autoFocus
-                // @ts-ignore
-                outlineStyle="none"
-              />
-            </View>
-
-            <FlatList
-              data={filteredStates}
-              keyExtractor={(item) => item}
-              renderItem={({ item }) => (
-                <TouchableOpacity 
-                  style={styles.stateItem}
-                  onPress={() => {
-                    setEditedData({ ...editedData, state: item });
-                    setShowStatePicker(false);
-                    setStateSearch('');
-                  }}
-                >
-                  <RNText style={[styles.stateItemText, editedData.state === item && styles.stateItemTextActive]}>
-                    {item}
-                  </RNText>
-                  {editedData.state === item && <View style={styles.activeDot} />}
-                </TouchableOpacity>
-              )}
-              contentContainerStyle={{ paddingBottom: 20 }}
-            />
-          </View>
-        </View>
-      </Modal>
-
-      {/* Profile Header Card */}
-      <View style={styles.headerCard}>
-        <View style={styles.profileMain}>
-          <TouchableOpacity 
-            style={styles.avatarContainer} 
-            disabled={!isEditing || uploading}
-            onPress={pickImage}
-          >
-            {profile?.avatar_url ? (
-              <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
-            ) : (
-              <View style={styles.avatarPlaceholder}>
-                <User size={40} color="#94A3B8" />
-              </View>
-            )}
-            
-            {uploading ? (
-              <View style={styles.avatarOverlay}>
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              </View>
-            ) : isEditing && (
-              <View style={styles.avatarOverlay}>
-                <Camera size={20} color="#FFFFFF" />
-              </View>
-            )}
-
-          </TouchableOpacity>
-          
-          <View style={styles.profileInfo}>
-            {isEditing ? (
-              <View style={styles.editForm}>
-                <RNTextInput
-                  style={styles.editInput}
-                  value={editedData.full_name}
-                  onChangeText={(t) => setEditedData({ ...editedData, full_name: t })}
-                  placeholder="Full Name"
-                  // @ts-ignore
-                  outlineStyle="none"
-                />
-                <View style={[styles.locationRow, { marginTop: 8 }]}>
-                  <MapPin size={14} color="#64748B" />
-                  <TouchableOpacity 
-                    style={[styles.stateSelectorTrigger, { marginLeft: 0, flex: 1, justifyContent: 'space-between' }]}
-                    onPress={() => setShowStatePicker(true)}
-                  >
-                    <RNText style={[styles.stateSelectorText, !editedData.state && { color: '#94A3B8' }]}>
-                      {editedData.state || 'Select Your State'}
-                    </RNText>
-                    <ChevronDown size={14} color="#64748B" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ) : (
-              <>
-                <View style={styles.nameRow}>
-                  <RNText style={styles.profileName}>{profile?.full_name || 'Cricket Player'}</RNText>
-                  <TouchableOpacity onPress={handleEdit} style={styles.editBtn}>
-                    <Edit3 size={16} color="#01b854" />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Dynamic Player Tags */}
-                {playerTags.length > 0 && (
-                  <View style={styles.tagSection}>
-                     {playerTags.map(tag => (
-                       <View key={tag.id} style={[styles.styleTag, { backgroundColor: tag.color + '10', borderColor: tag.color + '30' }]}>
-                          {renderTagIcon(tag.icon, tag.color)}
-                          <RNText style={[styles.styleTagText, { color: tag.color }]}>{tag.label}</RNText>
-                       </View>
-                     ))}
-                  </View>
-                )}
-
-                <View style={styles.locationRow}>
-                  <MapPin size={14} color="#64748B" />
-                  <RNText style={styles.locationText}>
-                    {profile?.state || 'Location not set'}
-                  </RNText>
-                </View>
-              </>
-            )}
-
-            <View style={styles.roleTags}>
-              {isEditing ? (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 10 }}>
-                   {['All Rounder', 'Batter', 'Bowler', 'Wicket Keeper'].map(role => (
-                     <TouchableOpacity 
-                        key={role} 
-                        style={[styles.editChip, editedData.player_type === role && styles.editChipActive]}
-                        onPress={() => setEditedData({ ...editedData, player_type: role })}
-                     >
-                       <RNText style={[styles.editChipText, editedData.player_type === role && styles.editChipTextActive]}>{role}</RNText>
-                     </TouchableOpacity>
-                   ))}
-                </ScrollView>
-              ) : (
-                <View style={styles.roleTag}>
-                  <RNText style={styles.roleTagText}>{profile?.player_type || 'All Rounder'}</RNText>
-                </View>
-              )}
-            </View>
-
-            {!isEditing && (
-              <View style={[styles.roleTags, { marginTop: 6 }]}>
-                <View style={[styles.roleTag, { backgroundColor: '#F0FDF4' }]}>
-                  <RNText style={[styles.roleTagText, { color: '#166534' }]}>{profile?.batting_style || 'Right Hand Bat'}</RNText>
-                </View>
-                <View style={[styles.roleTag, { backgroundColor: '#FEF2F2' }]}>
-                  <RNText style={[styles.roleTagText, { color: '#991B1B' }]}>{profile?.bowling_style || 'Right Arm Fast'}</RNText>
-                </View>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {isEditing && (
-          <View style={styles.editSections}>
-             <View style={styles.editSection}>
-                <RNText style={styles.editSectionTitle}>Batting Style</RNText>
-                <View style={styles.chipRow}>
-                  {['Right Hand Bat', 'Left Hand Bat'].map(s => (
-                    <TouchableOpacity 
-                      key={s} 
-                      style={[styles.editChip, editedData.batting_style === s && styles.editChipActive]}
-                      onPress={() => setEditedData({ ...editedData, batting_style: s })}
-                    >
-                      <RNText style={[styles.editChipText, editedData.batting_style === s && styles.editChipTextActive]}>{s}</RNText>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-             </View>
-
-             <View style={styles.editSection}>
-                <RNText style={styles.editSectionTitle}>Bowling Style</RNText>
-                <View style={styles.chipRow}>
-                  {['Right Arm Fast', 'Left Arm Fast', 'Right Arm Spin', 'Left Arm Spin'].map(s => (
-                    <TouchableOpacity 
-                      key={s} 
-                      style={[styles.editChip, editedData.bowling_style === s && styles.editChipActive]}
-                      onPress={() => setEditedData({ ...editedData, bowling_style: s })}
-                    >
-                      <RNText style={[styles.editChipText, editedData.bowling_style === s && styles.editChipTextActive]}>{s}</RNText>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-             </View>
-
-             <View style={styles.editActions}>
-               <TouchableOpacity 
-                 style={styles.cancelBtn}
-                 onPress={() => setIsEditing(false)}
-               >
-                 <X size={20} color="#64748B" />
-                 <RNText style={styles.cancelBtnText}>Cancel</RNText>
-               </TouchableOpacity>
-               <TouchableOpacity 
-                 style={styles.saveBtn}
-                 onPress={handleSave}
-                 disabled={saving}
-               >
-                 {saving ? (
-                   <ActivityIndicator size="small" color="#FFFFFF" />
-                 ) : (
-                   <>
-                     <Save size={20} color="#FFFFFF" />
-                     <RNText style={styles.saveBtnText}>Save Changes</RNText>
-                   </>
-                 )}
-               </TouchableOpacity>
-             </View>
-          </View>
-        )}
-
-        <View style={styles.headerDivider} />
-
-        <View style={styles.headerStats}>
-          <View style={styles.headerStatItem}>
-            <RNText style={styles.headerStatValue}>{stats?.matches || 0}</RNText>
-            <RNText style={styles.headerStatLabel}>Matches</RNText>
-          </View>
-          <View style={styles.headerStatDivider} />
-          <View style={styles.headerStatItem}>
-            <RNText style={styles.headerStatValue}>{stats?.runs || 0}</RNText>
-            <RNText style={styles.headerStatLabel}>Runs</RNText>
-          </View>
-          <View style={styles.headerStatDivider} />
-          <View style={styles.headerStatItem}>
-            <RNText style={styles.headerStatValue}>{stats?.wickets || 0}</RNText>
-            <RNText style={styles.headerStatLabel}>Wickets</RNText>
-          </View>
-        </View>
-      </View>
-
-      {/* Career Excellence Grid */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <RNText style={styles.sectionTitle}>Career Excellence</RNText>
-          <TrendingUp size={20} color="#01b854" />
-        </View>
-        
-        <View style={styles.statsGrid}>
-          <StatItem label="Highest Score" value={stats?.highest || 0} icon={Target} color="#F59E0B" />
-          <StatItem label="Strike Rate" value={stats?.sr || '0.00'} icon={Zap} color="#8B5CF6" />
-          <StatItem label="Catches" value={stats?.catches || 0} icon={Shield} color="#3B82F6" />
-          <StatItem label="Consistency" value="78%" icon={Star} color="#EC4899" />
-        </View>
-      </View>
-
-      {/* Recent Activity */}
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <RNText style={styles.sectionTitle}>Recent Forms</RNText>
-          <TouchableOpacity>
-            <RNText style={styles.viewAllBtn}>History</RNText>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.formCard}>
-          <View style={styles.formRow}>
-             <View style={styles.matchInfo}>
-                <RNText style={styles.matchOpponent}>vs Ggn Titans</RNText>
-                <RNText style={styles.matchDate}>15 Apr 2026 • Won</RNText>
-             </View>
-             <View style={styles.matchScore}>
-                <RNText style={styles.scoreText}>42 (28)</RNText>
-                <RNText style={styles.perfLabel}>Batting</RNText>
-             </View>
-          </View>
-          <View style={styles.formDivider} />
-          <View style={styles.formRow}>
-             <View style={styles.matchInfo}>
-                <RNText style={styles.matchOpponent}>vs SL Titans</RNText>
-                <RNText style={styles.matchDate}>12 Apr 2026 • Lost</RNText>
-             </View>
-             <View style={styles.matchScore}>
-                <RNText style={styles.scoreText}>1/18 (4.0)</RNText>
-                <RNText style={styles.perfLabel}>Bowling</RNText>
-             </View>
-          </View>
-        </View>
-      </View>
-
-      {/* Achievements Banners */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.badgesScroll}>
-        <View style={[styles.badgeCard, { backgroundColor: '#FFF7ED' }]}>
-          <Award size={32} color="#F97316" />
-          <RNText style={styles.badgeTitle}>Century Maker</RNText>
-          <RNText style={styles.badgeDesc}>Scored 100+ in a match</RNText>
-        </View>
-        <View style={[styles.badgeCard, { backgroundColor: '#F0FDF4' }]}>
-          <Zap size={32} color="#166534" />
-          <RNText style={styles.badgeTitle}>Quick Fire</RNText>
-          <RNText style={styles.badgeDesc}>200+ Strike rate match</RNText>
-        </View>
-      </ScrollView>
-
-      <View style={{ height: 40 }} />
-    </ScrollView>
-  );
-}
-
+// Re-established Centralized Stylesheet
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
-  center: {
+  monoLoadingContainer: {
     flex: 1,
+    height: 600,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 100,
+    backgroundColor: '#FFFFFF',
+  },
+  monoLoadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
+    fontFamily: 'Inter',
   },
   headerCard: {
     backgroundColor: '#FFFFFF',
@@ -614,6 +91,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 20,
     flexWrap: 'wrap',
+  },
+  profileDetailsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 20,
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  detailsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 15,
+  },
+  detailItem: {
+    width: '50%',
+    marginBottom: 16,
+  },
+  detailLabel: {
+    fontSize: 12,
+    color: '#94A3B8',
+    fontFamily: 'Inter',
+    marginBottom: 4,
+  },
+  detailValue: {
+    fontSize: 14,
+    color: '#1E293B',
+    fontWeight: '600',
+    fontFamily: 'Inter',
+  },
+  editBtnText: {
+    fontSize: 12,
+    color: '#01b854',
+    fontWeight: '600',
+    marginLeft: 6,
   },
   avatarContainer: {
     position: 'relative',
@@ -641,7 +153,7 @@ const styles = StyleSheet.create({
     borderRadius: 45,
     justifyContent: 'center',
     alignItems: 'center',
-    margin: 4, // Match avatar border
+    margin: 4,
   },
   profileInfo: {
     flex: 1,
@@ -888,78 +400,174 @@ const styles = StyleSheet.create({
     // @ts-ignore
     outlineStyle: 'none',
   },
-  editSections: {
+  detailsCardMinimal: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
     marginTop: 20,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  detailsHeaderMinimal: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  detailsTitleMinimal: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#000000',
+    fontFamily: 'Inter',
+    letterSpacing: -0.5,
+  },
+  editLinkMinimal: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  editLinkTextMinimal: {
+    fontSize: 12,
+    color: '#000000',
+    fontWeight: '700',
+  },
+  detailsRowsMinimal: {
     gap: 16,
   },
-  editSection: {
-    gap: 8,
-  },
-  editSectionTitle: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#94A3B8',
-    textTransform: 'uppercase',
-  },
-  chipRow: {
+  detailRowMinimal: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8FAFC',
   },
-  editChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
+  detailLabelMinimal: {
+    fontSize: 13,
+    color: '#94A3B8',
+    fontWeight: '500',
+    fontFamily: 'Inter',
+  },
+  detailValueMinimal: {
+    fontSize: 14,
+    color: '#000000',
+    fontWeight: '700',
+    fontFamily: 'Inter',
+  },
+  inlineEditForm: {
+    marginTop: 8,
+  },
+  formTitleMinimal: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#000000',
+    textTransform: 'uppercase',
+    marginBottom: 24,
+    letterSpacing: 2,
+  },
+  monoInputGroup: {
+    marginBottom: 20,
+  },
+  monoInputRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  monoLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#000000',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  monoInput: {
     backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: '#000000',
+    fontWeight: '600',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    // @ts-ignore
+    outlineStyle: 'none',
+  },
+  monoSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
-  editChipActive: {
-    backgroundColor: '#043529',
-    borderColor: '#043529',
+  monoSelectorText: {
+    fontSize: 14,
+    color: '#000000',
+    fontWeight: '600',
   },
-  editChipText: {
+  monoSection: {
+    marginBottom: 20,
+  },
+  monoChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  monoChip: {
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+  },
+  monoChipActive: {
+    backgroundColor: '#334155',
+    borderColor: '#334155',
+  },
+  monoChipText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '700',
     color: '#64748B',
   },
-  editChipTextActive: {
+  monoChipTextActive: {
     color: '#FFFFFF',
   },
-  editActions: {
+  monoActions: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
+    justifyContent: 'flex-end',
+    gap: 10,
+    marginTop: 24,
   },
-  cancelBtn: {
-    flex: 1,
-    flexDirection: 'row',
+  monoBtnCancel: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: 8,
     backgroundColor: '#F1F5F9',
   },
-  cancelBtnText: {
-    fontSize: 14,
-    fontWeight: '500',
+  monoBtnCancelText: {
+    fontSize: 13,
+    fontWeight: '700',
     color: '#64748B',
   },
-  saveBtn: {
-    flex: 2,
-    flexDirection: 'row',
+  monoBtnSave: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: '#01b854',
+    borderRadius: 8,
+    backgroundColor: '#334155',
   },
-  saveBtnText: {
-    fontSize: 14,
-    fontWeight: '500',
+  monoBtnSaveText: {
+    fontSize: 13,
+    fontWeight: '800',
     color: '#FFFFFF',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   stateSelectorTrigger: {
     flexDirection: 'row',
@@ -1036,14 +644,14 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   stateItemTextActive: {
-    color: '#01b854',
-    fontWeight: '500',
+    color: '#000000',
+    fontWeight: '700',
   },
   activeDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#01b854',
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#000000',
   },
   loginRequired: {
     flex: 1,
@@ -1083,3 +691,487 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
 });
+
+function PlayerProfileView() {
+  const router = useRouter();
+  const { user } = useAuth();
+  const [profile, setProfile] = useState<any>(null);
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedData, setEditedData] = useState<any>({});
+  const [showStatePicker, setShowStatePicker] = useState(false);
+  const [stateSearch, setStateSearch] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      loadProfile();
+    } else {
+      setLoading(false);
+    }
+  }, [user]);
+
+  // Re-fetch profile whenever the screen is focused to stay in sync with layout changes
+  useFocusEffect(
+    React.useCallback(() => {
+      loadProfile();
+    }, [user?.id])
+  );
+
+  const loadProfile = async () => {
+    try {
+      if (!user?.id) return;
+      setLoading(true);
+      
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      if (profileError) throw profileError;
+      setProfile(profileData);
+
+      const { data: memberRecords } = await supabase
+        .from('team_members')
+        .select('id')
+        .eq('profile_id', user.id);
+
+      if (memberRecords && memberRecords.length > 0) {
+        const memberIds = memberRecords.map(m => m.id).filter(id => !!id);
+        if (memberIds.length === 0) return;
+
+        const { data: statsData } = await supabase
+          .from('player_ball_stats')
+          .select('*')
+          .in('member_id', memberIds)
+          .eq('ball_type', 'leather');
+        
+        if (statsData && statsData.length > 0) {
+            const agg = statsData.reduce((acc, curr) => ({
+              matches: acc.matches + curr.matches_played,
+              runs: acc.runs + curr.total_runs,
+              wickets: acc.wickets + curr.total_wickets,
+              catches: acc.catches + (curr.total_catches || 0),
+              sr: Math.max(acc.sr, curr.strike_rate),
+              highest: Math.max(acc.highest, curr.highest_score),
+              innings_batted: acc.innings_batted + (curr.innings_batted || 0),
+              innings_bowled: acc.innings_bowled + (curr.innings_bowled || 0),
+              not_outs: acc.not_outs + (curr.not_outs || 0),
+              runs_conceded: acc.runs_conceded + (curr.runs_conceded || 0),
+              overs_bowled: acc.overs_bowled + (Number(curr.overs_bowled) || 0),
+              strike_rate: acc.strike_rate 
+            }), { 
+              matches: 0, runs: 0, wickets: 0, catches: 0, sr: 0, highest: 0,
+              innings_batted: 0, innings_bowled: 0, not_outs: 0, runs_conceded: 0,
+              overs_bowled: 0, strike_rate: 0
+            });
+            
+            agg.strike_rate = agg.matches > 0 ? (statsData[0].strike_rate) : 0; 
+            setStats(agg);
+          }
+      }
+    } catch (err) {
+      console.error('Error loading player data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEdit = React.useCallback(() => {
+    setEditedData({
+      full_name: profile?.full_name || '',
+      address: profile?.address || '',
+      state: profile?.state || '',
+      dob: profile?.dob || '',
+      player_type: profile?.player_type || 'All Rounder',
+      batting_style: profile?.batting_style || 'Right Hand Bat',
+      bowling_style: profile?.bowling_style || 'Right Arm Fast'
+    });
+    setIsEditing(true);
+  }, [profile]);
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      const { error } = await supabase
+        .from('profiles')
+        .update(editedData)
+        .eq('id', user?.id);
+      
+      if (error) throw error;
+      setProfile({ ...profile, ...editedData });
+      setIsEditing(false);
+    } catch (err) {
+      console.error('Error saving profile:', err);
+      alert('Failed to save profile. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const pickImage = React.useCallback(async () => {
+    try {
+      // Launch picker directly - modern Expo handles permissions automatically
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        uploadAvatar(result.assets[0].uri);
+      }
+    } catch (err: any) {
+      console.error('Error picking image:', err);
+      Alert.alert('Gallery Error', 'Could not open image gallery. Please ensure permissions are granted.');
+    }
+  }, [uploadAvatar]);
+
+  const uploadAvatar = React.useCallback(async (uri: string) => {
+    if (!user?.id) return;
+    try {
+      setUploading(true);
+      const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+      const contentType = `image/${fileExt === 'png' ? 'png' : 'jpeg'}`;
+
+      // Use ArrayBuffer for better reliability in React Native
+      const response = await fetch(uri);
+      const arrayBuffer = await response.arrayBuffer();
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, arrayBuffer, {
+          contentType,
+          upsert: true
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      setEditedData((prev: any) => ({ ...prev, avatar_url: publicUrl }));
+      setProfile((prev: any) => ({ ...prev, avatar_url: publicUrl }));
+      
+      // Update the profile in the database
+      await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', user.id);
+        
+      Alert.alert('Success', 'Profile photo updated successfully!');
+    } catch (err: any) {
+      console.error('Error uploading avatar:', err);
+      Alert.alert('Upload Failed', err.message || 'Failed to upload image. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  }, [user?.id]);
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center', minHeight: 400 }}>
+        <ActivityIndicator size="large" color="#000000" />
+        <RNText style={{ marginTop: 12, fontSize: 14, color: '#64748B', fontWeight: '500' }}>Curating your elite stats...</RNText>
+      </View>
+    );
+  }
+
+  if (!user) {
+    return (
+      <View style={styles.loginRequired}>
+        <RNText style={styles.loginTitle}>Unlock Your Profile</RNText>
+        <RNText style={styles.loginSubtitle}>
+          Sign in to track your elite stats, manage your team, and join the leaderboards.
+        </RNText>
+        <TouchableOpacity 
+          style={styles.loginBtnOutlined}
+          onPress={() => router.push('/(auth)/login' as any)}
+        >
+          <RNText style={styles.loginBtnTextOutlined}>Login or Sign Up</RNText>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const StatItem = ({ label, value, icon: Icon, color }: any) => (
+    <View style={styles.statCard}>
+      <View style={[styles.statIconBox, { backgroundColor: color + '15' }]}>
+        <Icon size={20} color={color} />
+      </View>
+      <View>
+        <RNText style={styles.statValue}>{value}</RNText>
+        <RNText style={styles.statLabel}>{label}</RNText>
+      </View>
+    </View>
+  );
+
+  const playerTags = getPlayerTags(stats);
+
+  const filteredStates = INDIAN_STATES.filter(s => 
+    s.toLowerCase().includes(stateSearch.toLowerCase())
+  );
+
+  if (!profile) return null;
+
+  return (
+    <View style={styles.container}>
+
+      <Modal
+        visible={showStatePicker}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowStatePicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.stateModalContent}>
+            <View style={styles.modalHeader}>
+              <RNText style={styles.modalTitle}>Select State</RNText>
+              <TouchableOpacity onPress={() => setShowStatePicker(false)}>
+                <X size={24} color="#1E293B" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalSearchContainer}>
+              <Search size={18} color="#94A3B8" />
+              <RNTextInput
+                style={styles.modalSearchInput}
+                placeholder="Search state..."
+                value={stateSearch}
+                onChangeText={setStateSearch}
+                autoFocus
+              />
+            </View>
+
+            <FlatList
+              data={filteredStates}
+              keyExtractor={(item) => item}
+              renderItem={({ item }) => (
+                <TouchableOpacity 
+                  style={styles.stateItem}
+                  onPress={() => {
+                    setEditedData({ ...editedData, state: item });
+                    setShowStatePicker(false);
+                    setStateSearch('');
+                  }}
+                >
+                  <RNText style={[styles.stateItemText, editedData.state === item && styles.stateItemTextActive]}>
+                    {item}
+                  </RNText>
+                  {editedData.state === item && <View style={styles.activeDot} />}
+                </TouchableOpacity>
+              )}
+              contentContainerStyle={{ paddingBottom: 20 }}
+            />
+          </View>
+        </View>
+      </Modal>
+
+
+      <View style={styles.sectionHeader}>
+        <RNText style={styles.sectionTitle}>Career Excellence</RNText>
+        <TrendingUp size={20} color="#01b854" />
+      </View>
+      
+      <View style={styles.statsGrid}>
+        <StatItem label="Matches" value={stats?.matches || 0} icon={Award} color="#64748B" />
+        <StatItem label="Runs" value={stats?.runs || 0} icon={Flame} color="#EF4444" />
+        <StatItem label="Wickets" value={stats?.wickets || 0} icon={Target} color="#3B82F6" />
+        <StatItem label="Highest Score" value={stats?.highest || 0} icon={Trophy} color="#F59E0B" />
+        <StatItem label="Strike Rate" value={stats?.sr || '0.00'} icon={Zap} color="#8B5CF6" />
+        <StatItem label="Catches" value={stats?.catches || 0} icon={Shield} color="#10B981" />
+        <StatItem label="Innings" value={stats?.innings_batted || 0} icon={Circle} color="#EC4899" />
+      </View>
+
+      <View style={styles.detailsCardMinimal}>
+        <View style={styles.detailsHeaderMinimal}>
+          <RNText style={styles.detailsTitleMinimal}>
+            {isEditing ? 'Update Player Profile' : 'Personal Details'}
+          </RNText>
+          {!isEditing && (
+            <TouchableOpacity onPress={handleEdit} style={styles.editLinkMinimal}>
+              <Edit3 size={16} color="#334155" />
+            </TouchableOpacity>
+          )}
+        </View>
+        
+        {isEditing ? (
+          <View style={styles.inlineEditForm}>
+            <View style={styles.monoInputGroup}>
+              <RNText style={styles.monoLabel}>Full Name</RNText>
+              <RNTextInput
+                style={styles.monoInput}
+                value={editedData.full_name}
+                onChangeText={(t) => setEditedData({ ...editedData, full_name: t })}
+                placeholder="Name"
+                placeholderTextColor="#94A3B8"
+              />
+            </View>
+
+            <View style={styles.monoInputRow}>
+               <View style={[styles.monoInputGroup, { flex: 1.5 }]}>
+                  <RNText style={styles.monoLabel}>Date of Birth</RNText>
+                  <RNTextInput
+                    style={styles.monoInput}
+                    value={editedData.dob}
+                    onChangeText={(t) => {
+                      const clean = t.replace(/[^0-9]/g, '');
+                      let formatted = clean;
+                      if (clean.length > 2) {
+                        formatted = clean.slice(0, 2) + '-' + clean.slice(2);
+                      }
+                      if (clean.length > 4) {
+                        formatted = formatted.slice(0, 5) + '-' + clean.slice(4, 8);
+                      }
+                      setEditedData({ ...editedData, dob: formatted.slice(0, 10) });
+                    }}
+                    placeholder="DD-MM-YYYY"
+                    placeholderTextColor="#94A3B8"
+                    keyboardType="numeric"
+                    maxLength={10}
+                  />
+               </View>
+            </View>
+
+            <View style={styles.monoInputGroup}>
+                <RNText style={styles.monoLabel}>State / Territory</RNText>
+                <TouchableOpacity 
+                  style={styles.monoSelector}
+                  onPress={() => setShowStatePicker(true)}
+                >
+                  <RNText style={[styles.monoSelectorText, !editedData.state && { color: '#94A3B8' }]}>
+                    {editedData.state || 'Select State'}
+                  </RNText>
+                  <ChevronDown size={16} color="#000000" />
+                </TouchableOpacity>
+            </View>
+
+            <View style={styles.monoSection}>
+              <RNText style={styles.monoLabel}>Playing Role</RNText>
+              <View style={styles.monoChips}>
+                {['All Rounder', 'Batter', 'Bowler', 'Wicket Keeper'].map(role => (
+                   <TouchableOpacity 
+                      key={role} 
+                      style={[styles.monoChip, editedData.player_type === role && styles.monoChipActive]}
+                      onPress={() => setEditedData({ ...editedData, player_type: role })}
+                   >
+                     <RNText style={[styles.monoChipText, editedData.player_type === role && styles.monoChipTextActive]}>{role}</RNText>
+                   </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.monoSection}>
+              <RNText style={styles.monoLabel}>Batting Style</RNText>
+              <View style={styles.monoChips}>
+                {['Right Hand Bat', 'Left Hand Bat'].map(s => (
+                  <TouchableOpacity 
+                    key={s} 
+                    style={[styles.monoChip, editedData.batting_style === s && styles.monoChipActive]}
+                    onPress={() => setEditedData({ ...editedData, batting_style: s })}
+                  >
+                    <RNText style={[styles.monoChipText, editedData.batting_style === s && styles.monoChipTextActive]}>{s}</RNText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.monoSection}>
+              <RNText style={styles.monoLabel}>Bowling Style</RNText>
+              <View style={styles.monoChips}>
+                {['Right Arm Fast', 'Left Arm Fast', 'Right Arm Spin', 'Left Arm Spin'].map(s => (
+                  <TouchableOpacity 
+                    key={s} 
+                    style={[styles.monoChip, editedData.bowling_style === s && styles.monoChipActive]}
+                    onPress={() => setEditedData({ ...editedData, bowling_style: s })}
+                  >
+                    <RNText style={[styles.monoChipText, editedData.bowling_style === s && styles.monoChipTextActive]}>{s}</RNText>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.monoActions}>
+               <TouchableOpacity style={styles.monoBtnCancel} onPress={() => setIsEditing(false)}>
+                 <RNText style={styles.monoBtnCancelText}>Cancel</RNText>
+               </TouchableOpacity>
+               <TouchableOpacity style={styles.monoBtnSave} onPress={handleSave} disabled={saving}>
+                 {saving ? <ActivityIndicator size="small" color="#FFFFFF" /> : <RNText style={styles.monoBtnSaveText}>Update</RNText>}
+               </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.detailsRowsMinimal}>
+            {[
+              { label: 'Birthday', value: profile?.dob || 'Not Set' },
+              { label: 'State', value: profile?.state || 'Not Set' },
+              { label: 'Role', value: profile?.player_type || 'Not Set' },
+              { label: 'Batting', value: profile?.batting_style || 'Not Set' },
+              { label: 'Bowling', value: profile?.bowling_style || 'Not Set' },
+            ].map((item, idx) => (
+              <View key={idx} style={styles.detailRowMinimal}>
+                <RNText style={styles.detailLabelMinimal}>{item.label}</RNText>
+                <RNText style={styles.detailValueMinimal}>{item.value}</RNText>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <RNText style={styles.sectionTitle}>Recent Forms</RNText>
+          <TouchableOpacity>
+            <RNText style={styles.viewAllBtn}>History</RNText>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.formCard}>
+          <View style={styles.formRow}>
+             <View style={styles.matchInfo}>
+                <RNText style={styles.matchOpponent}>vs Ggn Titans</RNText>
+                <RNText style={styles.matchDate}>15 Apr 2026 • Won</RNText>
+             </View>
+             <View style={styles.matchScore}>
+                <RNText style={styles.scoreText}>42 (28)</RNText>
+                <RNText style={styles.perfLabel}>Batting</RNText>
+             </View>
+          </View>
+          <View style={styles.formDivider} />
+          <View style={styles.formRow}>
+             <View style={styles.matchInfo}>
+                <RNText style={styles.matchOpponent}>vs SL Titans</RNText>
+                <RNText style={styles.matchDate}>12 Apr 2026 • Lost</RNText>
+             </View>
+             <View style={styles.matchScore}>
+                <RNText style={styles.scoreText}>1/18 (4.0)</RNText>
+                <RNText style={styles.perfLabel}>Bowling</RNText>
+             </View>
+          </View>
+        </View>
+      </View>
+
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.badgesScroll}>
+        <View style={[styles.badgeCard, { backgroundColor: '#FFF7ED' }]}>
+          <Award size={32} color="#F97316" />
+          <RNText style={styles.badgeTitle}>Century Maker</RNText>
+          <RNText style={styles.badgeDesc}>Scored 100+ in a match</RNText>
+        </View>
+        <View style={[styles.badgeCard, { backgroundColor: 'rgba(1, 184, 84, 0.1)' }]}>
+          <Zap size={32} color="#01b854" />
+          <RNText style={styles.badgeTitle}>Quick Fire</RNText>
+          <RNText style={styles.badgeDesc}>200+ Strike rate match</RNText>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+export default PlayerProfileView;

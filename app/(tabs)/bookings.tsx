@@ -990,11 +990,12 @@ const styles = StyleSheet.create({
     color: '#043529',
   },
   header: {
-    backgroundColor: '#043529',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
     paddingTop: 14,
     paddingBottom: 14,
-    borderBottomWidth: 0,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
   webHeader: {
     backgroundColor: '#FFFFFF',

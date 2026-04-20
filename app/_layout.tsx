@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Platform, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as SplashScreen from 'expo-splash-screen';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { UIProvider } from '@/contexts/UIContext';
@@ -9,6 +10,11 @@ import { MobileTabBarHost } from '@/components/navigation/MobileTabBarHost';
 
 export default function RootLayout() {
   useFrameworkReady();
+
+  useEffect(() => {
+    // Hide the splash screen as soon as the root layout is mounted and framework is ready
+    SplashScreen.hideAsync().catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;

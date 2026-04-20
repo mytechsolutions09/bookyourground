@@ -250,7 +250,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
               </View>
 
               <View style={styles.badgePill}>
-                <Swords size={20} color="#00ea6b" />
+                <Swords size={20} color="#01b854" />
                 <Text style={styles.badgePillNumber}>{filteredMatches.length}</Text>
                 <Text style={styles.badgePillLabel}>Available</Text>
               </View>
@@ -368,8 +368,8 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
                 <RefreshControl
                   refreshing={loading}
                   onRefresh={loadOpenSlots}
-                  tintColor="#00ea6b"
-                  colors={['#00ea6b']}
+                  tintColor="#01b854"
+                  colors={['#01b854']}
                   progressViewOffset={HEADER_HEIGHT + insets.top + 20}
                 />
               }
@@ -470,8 +470,8 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
                 <RefreshControl
                   refreshing={loading}
                   onRefresh={loadOpenSlots}
-                  tintColor="#00ea6b"
-                  colors={['#00ea6b']}
+                  tintColor="#01b854"
+                  colors={['#01b854']}
                   progressViewOffset={110 + insets.top}
                 />
               }
@@ -601,8 +601,8 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
             <RefreshControl
               refreshing={loading}
               onRefresh={loadOpenSlots}
-              tintColor="#00ea6b"
-              colors={['#00ea6b']}
+              tintColor="#01b854"
+              colors={['#01b854']}
               progressViewOffset={100 + insets.top}
             />
           }
@@ -672,7 +672,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: 'rgba(0,234,107,0.1)',
+    backgroundColor: 'rgba(1, 184, 84, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -714,8 +714,8 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
   nativeFilterButtonActive: {
-    backgroundColor: '#00ea6b',
-    borderColor: '#00ea6b',
+    backgroundColor: '#01b854',
+    borderColor: '#01b854',
   },
   nativeFiltersDrawer: {
     paddingVertical: 8,
@@ -737,8 +737,8 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
   nativeFilterTagActive: {
-    backgroundColor: '#00ea6b',
-    borderColor: '#00ea6b',
+    backgroundColor: '#01b854',
+    borderColor: '#01b854',
   },
   nativeFilterTagText: {
     color: '#9CA3AF',
@@ -812,7 +812,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
   },
   filterTagActive: {
-    backgroundColor: '#00ea6b',
+    backgroundColor: '#01b854',
   },
   filterTagText: {
     fontSize: 12,
@@ -848,7 +848,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: 'rgba(1, 184, 84, 0.1)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
@@ -856,12 +856,12 @@ const styles = StyleSheet.create({
   badgePillNumber: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#166534',
+    color: '#01b854',
   },
   badgePillLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#166534',
+    color: '#01b854',
     textTransform: 'uppercase',
   },
   webList: {

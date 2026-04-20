@@ -44,7 +44,8 @@ function DashboardContent() {
               name,
               city,
               state,
-              pitch_type
+              pitch_type,
+              ground_images(image_url)
             )
           `,
           )
@@ -128,7 +129,7 @@ function DashboardContent() {
     [bookings],
   );
 
-  const IS_DARK = Platform.OS !== 'web';
+  const IS_DARK = false; // Forced light theme for modern mobile UI
 
   const content = (
     <ScrollView
@@ -253,7 +254,7 @@ function DashboardContent() {
             >
               <BookingCard
                 booking={b}
-                lightMode={!IS_DARK}
+                lightMode={true}
                 onPress={() => router.push(`/bookings/${b.id}`)}
               />
             </View>
