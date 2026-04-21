@@ -21,9 +21,12 @@ This update delivers a comprehensive modernization of the web dashboard and grou
 - **Visual Polish**: Added high-quality Lucide icons (Wallet, Landmark, TrendingUp) to all financial stats to improve visual scanning and dashboard quality.
 - **Wallet Database Migration**: Created `20260421100000_create_wallet_system.sql` to implement a robust wallet infrastructure, including automatic wallet creation for new users, transaction logging (Credit/Debit/Refund/Payout), and secure RLS policies.
 
-### 4. Interactive & Aesthetic Refinements
-- **Symmetrical Summary Stats**: Restructured the "Booking Summary" component to be perfectly symmetrical, replacing asymmetrical circles with clean, professionally aligned typographic statistics.
-- **Dynamic Profile Pill**: Updated the user profile pill to dynamically display the user's first and last name with proper **Title Case** capitalization.
+- **Admin Wallet Visibility**: Added a dedicated "Wallet" column to the user management table, allowing admins to view real-time balances for all platform users at a glance.
+- **Admin Wallet Credit**: Integrated a secure administrative balance adjustment tool within the "Manage Users" dashboard. Admins can now instantly credit user wallets via an atomic database RPC, complete with transaction logging and real-time success feedback.
+- **Messenger Reply System**: Replaced the "Reply via Email" external link with a native, in-app messaging interface for support tickets. Integrated a dedicated database-backed reply system (`admin_reply`, `replied_at`) to track and display official responses directly within the Admin dashboard.
+- **Admin Sidebar Centering**: Precisely aligned navigation icons in the collapsed sidebar by removing layout gaps and conditionally rendering labels, ensuring a perfectly symmetrical and professional appearance.
+- **Bookings Filter Compactness**: Reduced font sizes to 11px, optimized padding, and simplified the date filter to an icon-only view for a higher-density, modern dashboard experience.
+- **Search Bar Modernization**: Redesigned the bookings search bar with a slightly larger, chip-compatible aesthetic and fixed truncation issues for longer search placeholders.
 - **Custom Underline Positioning**: Implemented a custom border-bottom approach for active navigation items, allowing for precise control over the underline's distance from the text.
 
 ---

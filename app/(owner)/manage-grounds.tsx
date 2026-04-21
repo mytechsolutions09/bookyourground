@@ -332,13 +332,190 @@ export default function OwnerGroundsScreen() {
     }
   };
 
+  const handleImportGround = async () => {
+    if (Platform.OS !== 'web') {
+      Alert.alert('Import', 'Import feature is currently available on Web only.');
+      return;
+    }
+
+    try {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.onchange = async (e: any) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (event: any) => {
+          try {
+            const data = JSON.parse(event.target.result);
+            if (!data.Name || !data.Address || !data.City) {
+              alert('Invalid ground data format. Missing Name, Address, or City.');
+              return;
+            }
+
+            const ok = window.confirm(`Import ground "${data.Name}" to your account?`);
+            if (!ok) return;
+
+            setLoading(true);
+            const payload: any = {
+              owner_id: user?.id,
+              name: data.Name,
+              description: data.Description,
+              address: data.Address,
+              city: data.City,
+              state: data.State,
+              pincode: data.Pincode,
+              base_price_per_hour: data.Price_per_hour || 0,
+              pitch_type: data.Pitch_Type,
+              cricket_pitch_surface: data.Pitch_Surface,
+              ground_size: data.Ground_Size,
+              capacity: data.Capacity,
+              has_floodlights: data.Floodlights === 'Yes',
+              has_parking: data.Parking === 'Yes',
+              has_changing_rooms: data.Changing_Rooms === 'Yes',
+              has_pavilion: data.Pavilion === 'Yes',
+              has_washrooms: data.Washrooms === 'Yes',
+              verified: false,
+              approved: false,
+              active: true,
+              latitude: data.Latitude,
+              longitude: data.Longitude,
+            };
+
+            const { data: created, error } = await supabase
+              .from('grounds')
+              .insert(payload)
+              .select('id')
+              .single();
+
+            if (error) throw error;
+
+            if (data.Time_Slots && Array.isArray(data.Time_Slots) && data.Time_Slots.length > 0) {
+               // Delete defaults if any
+               await supabase.from('time_slots').delete().eq('ground_id', created.id);
+               
+               const slotsToInsert = data.Time_Slots.map((s: any) => ({
+                 ground_id: created.id,
+                 day_of_week: s.day_of_week,
+                 start_time: s.start_time,
+                 end_time: s.end_time,
+                 custom_price: s.custom_price,
+                 is_available: s.is_available,
+               }));
+               
+               await supabase.from('time_slots').insert(slotsToInsert);
+            } else {
+               await createTimeSlotsForGround(created.id, payload.pitch_type);
+            }
+
+            if (data.Images && Array.isArray(data.Images) && data.Images.length > 0) {
+               const imagesToInsert = data.Images.map((img: any) => ({
+                 ground_id: created.id,
+                 image_url: img.url,
+                 is_primary: img.is_primary,
+                 display_order: img.display_order
+               }));
+               await supabase.from('ground_images').insert(imagesToInsert);
+            }
+
+            alert(`Ground "${data.Name}" imported successfully! It will be visible once approved by an admin.`);
+            loadGrounds();
+          } catch (err: any) {
+            alert('Error: ' + err.message);
+          } finally {
+            setLoading(false);
+          }
+        };
+        reader.readAsText(file);
+      };
+      input.click();
+    } catch (err: any) {
+      alert('Error: ' + err.message);
+    }
+  };
+
+  const handleExportGround = async (ground: GroundWithImages) => {
+    // Fetch time slots
+    const { data: slots } = await supabase
+      .from('time_slots')
+      .select('day_of_week, start_time, end_time, custom_price, is_available')
+      .eq('ground_id', ground.id);
+
+    const exportData: any = {
+      Id: ground.id,
+      Name: ground.name,
+      Description: ground.description,
+      Address: ground.address,
+      City: ground.city,
+      State: ground.state,
+      Pincode: ground.pincode,
+      Price_per_hour: ground.base_price_per_hour,
+      Pitch_Type: ground.pitch_type,
+      Pitch_Surface: (ground as any).cricket_pitch_surface,
+      Ground_Size: ground.ground_size,
+      Capacity: ground.capacity,
+      Floodlights: (ground as any).has_floodlights ? 'Yes' : 'No',
+      Parking: (ground as any).has_parking ? 'Yes' : 'No',
+      Changing_Rooms: (ground as any).has_changing_rooms ? 'Yes' : 'No',
+      Pavilion: (ground as any).has_pavilion ? 'Yes' : 'No',
+      Washrooms: (ground as any).has_washrooms ? 'Yes' : 'No',
+      Active: (ground as any).active ? 'Yes' : 'No',
+      Latitude: (ground as any).latitude,
+      Longitude: (ground as any).longitude,
+      Created_At: (ground as any).created_at,
+      Time_Slots: slots || [],
+      Images: (ground.ground_images ?? []).map(img => ({
+        url: img.image_url,
+        is_primary: img.is_primary,
+        display_order: img.display_order
+      }))
+    };
+
+    if (Platform.OS === 'web') {
+      const jsonStr = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `ground_${ground.name?.replace(/\s+/g, '_')}_export.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } else {
+      Alert.alert('Export', 'JSON export for this ground:\n\n' + JSON.stringify(exportData, null, 2).substring(0, 400) + '...');
+    }
+  };
+
   const content = (
     <View style={styles.container}>
-      {Platform.OS !== 'web' && (
+      {Platform.OS !== 'web' ? (
         <MobileAppNavbar 
           title="My Grounds" 
           titleColor="#01b854" 
         />
+      ) : (
+        <View style={styles.webHeader}>
+          <Text style={styles.webTitle}>My Grounds</Text>
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <Button
+              title="Import Ground"
+              onPress={handleImportGround}
+              variant="outline"
+              size="small"
+              style={{ borderColor: '#BBF7D0', backgroundColor: '#F0FDF4' }}
+              textStyle={{ color: '#16A34A' }}
+            />
+            <Button
+              title="Add Ground"
+              onPress={() => router.push('/(owner)/add-ground')}
+              variant="primary"
+              size="small"
+            />
+          </View>
+        </View>
       )}
 
       <FlatList
@@ -373,14 +550,22 @@ export default function OwnerGroundsScreen() {
                     style={{ flex: 1 }}
                   />
                 </View>
-                <Button
-                  title="Manage bookings"
-                  onPress={() => router.push('/(owner)/bookings')}
-                  variant="outline"
-                  size="small"
-                  fullWidth
-                  style={styles.viewDetailsButton}
-                />
+                <View style={[styles.actionsRow, { marginTop: 10 }]}>
+                    <Button
+                    title="Manage bookings"
+                    onPress={() => router.push('/(owner)/bookings')}
+                    variant="outline"
+                    size="small"
+                    style={{ flex: 1 }}
+                    />
+                    <Button
+                    title="Export Ground"
+                    onPress={() => handleExportGround(item)}
+                    variant="outline"
+                    size="small"
+                    style={{ flex: 1 }}
+                    />
+                </View>
               </Card>
             ) : null}
           </View>
@@ -674,6 +859,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  webHeader: {
+    paddingVertical: 32,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    marginBottom: 16,
+  },
+  webTitle: {
+    fontFamily: 'Inter',
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#0F172A',
+    letterSpacing: -0.5,
   },
   title: {
     fontFamily: 'Inter',

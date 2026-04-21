@@ -27,6 +27,8 @@ interface ContactQuery {
   message: string;
   resolved: boolean;
   role: string | null;
+  admin_reply: string | null;
+  replied_at: string | null;
 }
 
 export default function AdminMessagesScreen() {
@@ -36,6 +38,8 @@ export default function AdminMessagesScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<'all' | 'pending' | 'resolved'>('all');
   const [selectedMessage, setSelectedMessage] = useState<ContactQuery | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [sendingReply, setSendingReply] = useState(false);
 
   useEffect(() => {
     loadMessages();
@@ -87,6 +91,37 @@ export default function AdminMessagesScreen() {
       }
     } catch (error) {
       console.error('Error updating message status:', error);
+    }
+  };
+  
+  const handleSendReply = async () => {
+    if (!selectedMessage || !replyText.trim() || sendingReply) return;
+    
+    try {
+      setSendingReply(true);
+      const { error } = await supabase
+        .from('contact_queries')
+        .update({ 
+          admin_reply: replyText, 
+          replied_at: new Date().toISOString(),
+          // resolved: true // Optionally mark resolved on reply
+        })
+        .eq('id', selectedMessage.id);
+        
+      if (error) throw error;
+      
+      setMessages(prev => prev.map(m => m.id === selectedMessage.id ? { ...m, admin_reply: replyText, replied_at: new Date().toISOString() } : m));
+      setSelectedMessage(prev => prev ? { ...prev, admin_reply: replyText, replied_at: new Date().toISOString() } : null);
+      setReplyText('');
+      
+      if (Platform.OS === 'web') {
+        alert('Reply sent successfully!');
+      }
+    } catch (error: any) {
+      console.error('Error sending reply:', error);
+      alert(error.message || 'Failed to send reply');
+    } finally {
+      setSendingReply(false);
     }
   };
 
@@ -221,16 +256,45 @@ export default function AdminMessagesScreen() {
                 <Text style={styles.messageText}>{selectedMessage.message}</Text>
               </View>
 
-              <View style={styles.detailActions}>
-                <TouchableOpacity 
-                  style={styles.replyButton}
-                  onPress={() => {
-                    const mailto = `mailto:${selectedMessage.email}?subject=Re: ${selectedMessage.subject || 'Support'}`;
-                    Platform.OS === 'web' ? window.open(mailto) : null;
-                  }}
-                >
-                  <Text style={styles.replyButtonText}>Reply via Email</Text>
-                </TouchableOpacity>
+              <View style={styles.replySection}>
+                <Text style={styles.sectionLabel}>Admin Reply</Text>
+                
+                {selectedMessage.admin_reply ? (
+                  <View style={styles.existingReplyBox}>
+                    <Text style={styles.existingReplyText}>{selectedMessage.admin_reply}</Text>
+                    <Text style={styles.repliedAtText}>
+                      Sent on {new Date(selectedMessage.replied_at!).toLocaleString()}
+                    </Text>
+                    <TouchableOpacity 
+                      onPress={() => setReplyText(selectedMessage.admin_reply || '')}
+                      style={styles.editReplyBtn}
+                    >
+                      <Text style={styles.editReplyBtnText}>Edit Reply</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={styles.replyInputBox}>
+                    <TextInput
+                      style={styles.replyInput}
+                      placeholder="Type your reply here..."
+                      placeholderTextColor="#9CA3AF"
+                      multiline
+                      value={replyText}
+                      onChangeText={setReplyText}
+                    />
+                    <TouchableOpacity 
+                      style={[styles.replyButton, (!replyText.trim() || sendingReply) && styles.replyButtonDisabled]}
+                      onPress={handleSendReply}
+                      disabled={!replyText.trim() || sendingReply}
+                    >
+                      {sendingReply ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Text style={styles.replyButtonText}>Send Reply</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
             </ScrollView>
           ) : (
@@ -460,20 +524,81 @@ const styles = StyleSheet.create({
     color: '#374151',
     lineHeight: 24,
   },
-  detailActions: {
-    flexDirection: 'row',
-    gap: 16,
+  replySection: {
+    marginTop: 8,
+  },
+  sectionLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#374151',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  replyInputBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  replyInput: {
+    fontSize: 15,
+    color: '#111827',
+    minHeight: 120,
+    textAlignVertical: 'top',
+    marginBottom: 16,
+    fontFamily: 'Inter',
   },
   replyButton: {
     backgroundColor: '#111827',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
+    alignSelf: 'flex-end',
+    minWidth: 120,
+    alignItems: 'center',
+  },
+  replyButtonDisabled: {
+    opacity: 0.5,
   },
   replyButtonText: {
     color: '#FFFFFF',
     fontWeight: '700',
+    fontSize: 14,
+  },
+  existingReplyBox: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+  },
+  existingReplyText: {
     fontSize: 15,
+    color: '#166534',
+    lineHeight: 22,
+    marginBottom: 12,
+    fontFamily: 'Inter',
+  },
+  repliedAtText: {
+    fontSize: 12,
+    color: '#15803D',
+    fontWeight: '500',
+  },
+  editReplyBtn: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+  },
+  editReplyBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#059669',
+    textDecorationLine: 'underline',
   },
   placeholderText: {
     marginTop: 16,

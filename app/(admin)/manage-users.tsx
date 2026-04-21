@@ -10,11 +10,15 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export default function ManageUsersScreen() {
   const { user } = useAuth();
-  const [users, setUsers] = useState<Profile[]>([]);
+  const [users, setUsers] = useState<(Profile & { wallets?: { balance: number }[] })[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [creditAmount, setCreditAmount] = useState('');
+  const [isCrediting, setIsCrediting] = useState(false);
+  const [roleFilter, setRoleFilter] = useState<'all' | UserRole>('all');
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) loadUsers();
@@ -24,13 +28,31 @@ export default function ManageUsersScreen() {
     try {
       setErrorMessage(null);
       setLoading(true);
-      const { data, error } = await supabase
+      
+      // 1. Fetch profiles
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setUsers((data || []) as Profile[]);
+      if (profileError) throw profileError;
+
+      // 2. Fetch wallets separately to bypass join/recursion RLS issues
+      const { data: walletData, error: walletError } = await supabase
+        .from('wallets')
+        .select('user_id, balance');
+
+      if (walletError) {
+        console.warn('Could not fetch wallets:', walletError);
+      }
+
+      // 3. Merge data
+      const merged = (profileData || []).map(p => ({
+        ...p,
+        wallets: walletData?.filter(w => w.user_id === p.id) || []
+      }));
+
+      setUsers(merged as any);
     } catch (error) {
       console.error('Error loading users:', error);
       setErrorMessage('Failed to load users. Please check your connection.');
@@ -41,21 +63,65 @@ export default function ManageUsersScreen() {
 
   const filteredUsers = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
-    if (!query) return users;
     return users.filter(u => {
       const name = u.full_name?.toLowerCase() || '';
       const email = u.email?.toLowerCase() || '';
       const phone = u.phone || '';
       const business = u.business_name?.toLowerCase() || '';
       const team = u.team_name?.toLowerCase() || '';
+      const serial = (u as any).serial_id?.toLowerCase() || '';
+      const uuid = u.id?.toLowerCase() || '';
       
-      return name.includes(query) || 
+      const matchesSearch = query === '' || 
+             name.includes(query) || 
              email.includes(query) || 
              phone.includes(query) || 
              business.includes(query) ||
-             team.includes(query);
+             team.includes(query) ||
+             serial.includes(query) ||
+             uuid.includes(query);
+             
+      const matchesRole = roleFilter === 'all' || u.role === roleFilter;
+      
+      return matchesSearch && matchesRole;
     });
-  }, [users, searchQuery]);
+  }, [users, searchQuery, roleFilter]);
+
+  const FilterDropdown = ({ id, label, value, options, onSelect }: any) => {
+    const isOpen = activeDropdown === id;
+    const selectedLabel = options.find((o: any) => o.key === value)?.label || label;
+
+    return (
+      <View style={{ zIndex: isOpen ? 1000 : 1 }}>
+        <TouchableOpacity
+          style={[styles.dropdownTrigger, isOpen && styles.dropdownTriggerActive]}
+          onPress={() => setActiveDropdown(isOpen ? null : id)}
+        >
+          <Text style={[styles.dropdownLabel, value !== 'all' && styles.dropdownLabelActive]}>{selectedLabel}</Text>
+          <ChevronRight size={14} color={value !== 'all' ? '#10b981' : '#6B7280'} style={{ transform: [{ rotate: '90deg' }] }} />
+        </TouchableOpacity>
+
+        {isOpen && (
+          <View style={styles.dropdownMenu}>
+            {options.map((opt: any) => (
+              <TouchableOpacity
+                key={opt.key}
+                style={styles.dropdownOption}
+                onPress={() => {
+                  onSelect(opt.key);
+                  setActiveDropdown(null);
+                }}
+              >
+                <Text style={[styles.dropdownOptionText, value === opt.key && styles.dropdownOptionTextActive]}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </View>
+    );
+  };
 
   const updateUserRole = async (userId: string, newRole: UserRole) => {
     const roleLabel = getRoleLabel(newRole);
@@ -101,6 +167,41 @@ export default function ManageUsersScreen() {
     }
   };
 
+  const handleCreditWallet = async (userId: string) => {
+    const amount = parseFloat(creditAmount);
+    if (!creditAmount || isNaN(amount) || amount <= 0) {
+      if (Platform.OS === 'web') alert('Please enter a valid positive amount');
+      else Alert.alert('Invalid Amount', 'Please enter a valid positive amount');
+      return;
+    }
+    
+    try {
+      setIsCrediting(true);
+      const { data, error } = await supabase.rpc('add_money_to_wallet', {
+          target_user_id: userId,
+          amount_to_add: amount,
+          description_text: 'Admin System Credit'
+      });
+      
+      if (error) throw error;
+      
+      if (data && data.success) {
+          const msg = `Successfully credited ₹${amount} to user's wallet. New balance: ₹${data.new_balance}`;
+          if (Platform.OS === 'web') alert(msg);
+          else Alert.alert('Success', msg);
+          setCreditAmount('');
+          loadUsers(); // Refresh the list to show new balance
+      } else {
+          throw new Error(data?.error || 'Unknown error');
+      }
+    } catch (error: any) {
+      if (Platform.OS === 'web') alert('Error: ' + error.message);
+      else Alert.alert('Error', error.message);
+    } finally {
+      setIsCrediting(false);
+    }
+  };
+
   const renderWebUser = ({ item }: { item: Profile }) => {
     const isExpanded = selectedUserId === item.id;
     
@@ -113,11 +214,9 @@ export default function ManageUsersScreen() {
         >
           <View style={[styles.cell, styles.colUser]}>
             <View style={styles.userProfileInfo}>
-               <View style={styles.avatarCircle}>
-                  <User size={18} color="#10b981" />
-               </View>
                <View>
                   <Text style={styles.userNameText}>{item.full_name}</Text>
+                  <Text style={styles.userIdText}>{item.serial_id || item.id}</Text>
                   {item.business_name && <Text style={styles.userBusinessText}>{item.business_name}</Text>}
                </View>
             </View>
@@ -130,6 +229,10 @@ export default function ManageUsersScreen() {
           
           <View style={[styles.cell, styles.colTeam]}>
              <Text style={styles.teamText}>{item.team_name || 'Individual'}</Text>
+          </View>
+
+          <View style={[styles.cell, styles.colWallet]}>
+             <Text style={styles.walletValue}>₹{item.wallets?.[0]?.balance?.toFixed(2) || '0.00'}</Text>
           </View>
 
           <View style={[styles.cell, styles.colRole]}>
@@ -156,28 +259,56 @@ export default function ManageUsersScreen() {
 
         {isExpanded && (
           <View style={styles.expandedContent}>
-             <Text style={styles.expandedTitle}>Change Access Level</Text>
-             <View style={styles.roleGrid}>
-                {[
-                  { id: 'user' as UserRole, label: 'Player', icon: UserCircle2, color: '#6B7280' },
-                  { id: 'ground_owner' as UserRole, label: 'Ground Owner', icon: Building2, color: '#10b981' },
-                  { id: 'super_admin' as UserRole, label: 'Super Admin', icon: Shield, color: '#EF4444' }
-                ].map(role => (
-                  <TouchableOpacity
-                    key={role.id}
-                    style={[styles.roleOption, item.role === role.id && styles.activeRoleOption]}
-                    onPress={() => item.role !== role.id && updateUserRole(item.id, role.id)}
-                  >
-                     <Text style={[styles.roleOptionLabel, item.role === role.id && styles.activeRoleOptionLabel]}>
+            <View style={styles.expandedPanels}>
+              <View style={styles.rolesPanel}>
+                <Text style={styles.expandedTitle}>Change Access Level</Text>
+                <View style={styles.roleGrid}>
+                  {[
+                    { id: 'user' as UserRole, label: 'Player', color: '#6B7280' },
+                    { id: 'ground_owner' as UserRole, label: 'Ground Owner', color: '#10b981' },
+                    { id: 'super_admin' as UserRole, label: 'Super Admin', color: '#EF4444' }
+                  ].map(role => (
+                    <TouchableOpacity
+                      key={role.id}
+                      style={[styles.roleOption, item.role === role.id && styles.activeRoleOption]}
+                      onPress={() => item.role !== role.id && updateUserRole(item.id, role.id)}
+                    >
+                      <Text style={[styles.roleOptionLabel, item.role === role.id && styles.activeRoleOptionLabel]}>
                         Set as {role.label}
-                     </Text>
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <View style={styles.walletPanel}>
+                <Text style={[styles.expandedTitle, { color: '#B45309' }]}>Wallet Credit</Text>
+                <View style={styles.creditInputRow}>
+                  <View style={styles.creditInputWrapper}>
+                    <Text style={styles.currencyPrefix}>₹</Text>
+                    <TextInput
+                      style={styles.creditInput}
+                      placeholder="0.00"
+                      value={creditAmount}
+                      onChangeText={setCreditAmount}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                  <TouchableOpacity 
+                    style={[styles.creditButton, isCrediting && { opacity: 0.7 }]}
+                    onPress={() => handleCreditWallet(item.id)}
+                    disabled={isCrediting}
+                  >
+                    <Text style={styles.creditButtonText}>{isCrediting ? '...' : 'Credit Wallet'}</Text>
                   </TouchableOpacity>
-                ))}
-             </View>
-             <View style={styles.footerMeta}>
-                <Calendar size={12} color="#94A3B8" />
-                <Text style={styles.footerMetaText}>Account Created: {new Date(item.created_at).toLocaleDateString()}</Text>
-             </View>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.footerMeta}>
+              <Calendar size={12} color="#94A3B8" />
+              <Text style={styles.footerMetaText}>Account Created: {new Date(item.created_at).toLocaleDateString()}</Text>
+            </View>
           </View>
         )}
       </View>
@@ -188,11 +319,9 @@ export default function ManageUsersScreen() {
     <View style={styles.mobileContainer}>
       <Card style={styles.userCard}>
         <View style={styles.userHeader}>
-          <View style={styles.avatarCircleMobile}>
-            <User size={24} color="#10b981" />
-          </View>
           <View style={styles.userInfo}>
             <Text style={styles.userName}>{item.full_name}</Text>
+            <Text style={styles.userIdTextMobile}>{item.serial_id || item.id}</Text>
             <Text style={styles.userEmail}>{item.email}</Text>
             {item.team_name && <Text style={styles.mobileTeamText}>Team: {item.team_name}</Text>}
           </View>
@@ -213,10 +342,31 @@ export default function ManageUsersScreen() {
         </View>
 
         {selectedUserId === item.id && (
-            <View style={styles.mobileRolePicker}>
-                <TouchableOpacity onPress={() => updateUserRole(item.id, 'user')} style={styles.pickerItem}><Text>Player</Text></TouchableOpacity>
-                <TouchableOpacity onPress={() => updateUserRole(item.id, 'ground_owner')} style={styles.pickerItem}><Text>Owner</Text></TouchableOpacity>
-                <TouchableOpacity onPress={() => updateUserRole(item.id, 'super_admin')} style={styles.pickerItem}><Text>Admin</Text></TouchableOpacity>
+            <View style={styles.mobileExpanded}>
+                <View style={styles.mobileRolePicker}>
+                    <TouchableOpacity onPress={() => updateUserRole(item.id, 'user')} style={styles.pickerItem}><Text style={styles.pickerText}>Player</Text></TouchableOpacity>
+                    <TouchableOpacity onPress={() => updateUserRole(item.id, 'ground_owner')} style={styles.pickerItem}><Text style={styles.pickerText}>Owner</Text></TouchableOpacity>
+                    <TouchableOpacity onPress={() => updateUserRole(item.id, 'super_admin')} style={styles.pickerItem}><Text style={styles.pickerText}>Admin</Text></TouchableOpacity>
+                </View>
+                
+                <View style={styles.mobileWalletCredit}>
+                   <View style={styles.mobileCreditInputRow}>
+                      <TextInput
+                        style={styles.mobileCreditInput}
+                        placeholder="Amount (₹)"
+                        value={creditAmount}
+                        onChangeText={setCreditAmount}
+                        keyboardType="numeric"
+                      />
+                      <TouchableOpacity 
+                         style={styles.mobileCreditButton}
+                         onPress={() => handleCreditWallet(item.id)}
+                         disabled={isCrediting}
+                      >
+                         <Text style={styles.mobileCreditButtonText}>Add Cash</Text>
+                      </TouchableOpacity>
+                   </View>
+                </View>
             </View>
         )}
       </Card>
@@ -226,17 +376,12 @@ export default function ManageUsersScreen() {
   const content = (
     <View style={styles.container}>
       <View style={styles.headerArea}>
-        <View style={styles.headerTop}>
-          <View>
-            <Text style={styles.title}>Manage Users</Text>
-            <Text style={styles.subtitle}>{users.length} registered platform users</Text>
-          </View>
-          
+        <View style={styles.headerFiltersRow}>
           <View style={styles.searchContainer}>
-            <Search size={18} color="#6B7280" style={styles.searchIcon} />
+            <Search size={16} color="#6B7280" style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search by name, email or phone..."
+              placeholder="Search users..."
               value={searchQuery}
               onChangeText={setSearchQuery}
               autoCapitalize="none"
@@ -244,10 +389,23 @@ export default function ManageUsersScreen() {
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
-                <X size={16} color="#9CA3AF" />
+                <X size={14} color="#9CA3AF" />
               </TouchableOpacity>
             )}
           </View>
+
+          <FilterDropdown 
+            id="role" 
+            label="System Role" 
+            value={roleFilter}
+            options={[
+              { key: 'all', label: 'All Roles' },
+              { key: 'user', label: 'Players' },
+              { key: 'ground_owner', label: 'Owners' },
+              { key: 'super_admin', label: 'Admins' },
+            ]}
+            onSelect={setRoleFilter}
+          />
         </View>
       </View>
 
@@ -256,6 +414,7 @@ export default function ManageUsersScreen() {
            <Text style={[styles.headerLabel, styles.colUser]}>User Profile</Text>
            <Text style={[styles.headerLabel, styles.colContact]}>Contact info</Text>
            <Text style={[styles.headerLabel, styles.colTeam]}>Team</Text>
+           <Text style={[styles.headerLabel, styles.colWallet]}>Wallet</Text>
            <Text style={[styles.headerLabel, styles.colRole]}>System Role</Text>
            <Text style={[styles.headerLabel, styles.colActions, { textAlign: 'right' }]}>Manage</Text>
         </View>
@@ -297,17 +456,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   headerArea: {
-    padding: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
+    zIndex: 10,
   },
-  headerTop: {
+  headerFiltersRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 20,
-    flexWrap: 'wrap',
+    gap: 12,
   },
   title: {
     fontSize: 24,
@@ -323,40 +482,93 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     flex: 1,
-    minWidth: 300,
-    maxWidth: 450,
-    height: 42,
+    maxWidth: 300,
+    height: 36,
     backgroundColor: '#F3F4F6',
-    borderRadius: 12,
+    borderRadius: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
   },
   searchIcon: {
-    marginRight: 10,
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     color: '#111827',
     fontWeight: '500',
-    outlineStyle: 'none', // Removed web focus ring
+    outlineStyle: 'none',
   } as any,
   clearButton: {
+    padding: 2,
+    marginLeft: 4,
+  },
+  // Dropdown Styles
+  dropdownTrigger: {
+    height: 36,
+    paddingHorizontal: 12,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  dropdownTriggerActive: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#10b981',
+  },
+  dropdownLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  dropdownLabelActive: {
+    color: '#059669',
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    top: 40,
+    left: 0,
+    minWidth: 160,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
     padding: 4,
-    marginLeft: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  dropdownOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  dropdownOptionText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#374151',
+  },
+  dropdownOptionTextActive: {
+    color: '#10b981',
+    fontWeight: '700',
   },
   tableHeader: {
     flexDirection: 'row',
     marginHorizontal: 16,
     marginTop: 16,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 8,
     backgroundColor: '#F3F4F6',
     borderRadius: 10,
   },
   headerLabel: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
     color: '#6B7280',
     textTransform: 'uppercase',
@@ -365,6 +577,7 @@ const styles = StyleSheet.create({
   colUser: { flex: 2 },
   colContact: { flex: 1.5 },
   colTeam: { flex: 1 },
+  colWallet: { flex: 0.8 },
   colRole: { flex: 1, alignItems: 'center' },
   colActions: { flex: 1 },
   
@@ -375,7 +588,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 10,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     marginBottom: 8,
@@ -407,29 +620,40 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   userNameText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: '#111827',
   },
+  userIdText: {
+    fontSize: 9,
+    color: '#9CA3AF',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    marginTop: 1,
+  },
   userBusinessText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#10b981',
     fontWeight: '600',
   },
   contactText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: '#374151',
   },
   subContactText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#6B7280',
     marginTop: 2,
   },
   teamText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: '#10b981',
+  },
+  walletValue: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#B45309',
   },
   roleBadge: {
     paddingHorizontal: 10,
@@ -441,7 +665,7 @@ const styles = StyleSheet.create({
   badgeOwner: { backgroundColor: '#ECFDF5' },
   badgePlayer: { backgroundColor: '#EFF6FF' },
   roleText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
   },
   textAdmin: { color: '#EF4444' },
@@ -455,7 +679,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   webIconButtonText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: '#10b981',
   },
@@ -508,11 +732,68 @@ const styles = StyleSheet.create({
   activeRoleOptionLabel: {
     color: '#FFFFFF',
   },
+  expandedPanels: {
+    flexDirection: 'row',
+    gap: 32,
+  },
+  rolesPanel: {
+    flex: 1.5,
+  },
+  walletPanel: {
+    flex: 1,
+    paddingLeft: 24,
+    borderLeftWidth: 1,
+    borderLeftColor: '#D1FAE5',
+  },
+  creditInputRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  creditInputWrapper: {
+    flex: 1,
+    height: 38,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D1FAE5',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+  },
+  currencyPrefix: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#065F46',
+    marginRight: 4,
+  },
+  creditInput: {
+    flex: 1,
+    height: '100%',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#065F46',
+  } as any,
+  creditButton: {
+    backgroundColor: '#059669',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  creditButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
   footerMeta: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 16,
+    marginTop: 20,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(16, 185, 129, 0.1)',
   },
   footerMetaText: {
     fontSize: 11,
@@ -547,6 +828,12 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 16,
     fontWeight: '700',
+  },
+  userIdTextMobile: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    marginBottom: 2,
   },
   userEmail: {
     fontSize: 12,
@@ -586,6 +873,9 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontWeight: '700',
   },
+  mobileExpanded: {
+    gap: 12,
+  },
   mobileRolePicker: {
     marginTop: 12,
     flexDirection: 'row',
@@ -593,11 +883,51 @@ const styles = StyleSheet.create({
   },
   pickerItem: {
     flex: 1,
-    height: 32,
+    height: 36,
     backgroundColor: '#F3F4F6',
-    borderRadius: 6,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  pickerText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  mobileWalletCredit: {
+    backgroundColor: '#FFFBEB',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#FEF3C7',
+  },
+  mobileCreditInputRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  mobileCreditInput: {
+    flex: 1,
+    height: 40,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    paddingHorizontal: 12,
+    fontSize: 14,
+  },
+  mobileCreditButton: {
+    backgroundColor: '#D97706',
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mobileCreditButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
   },
   errorBanner: {
     backgroundColor: '#FEF2F2',

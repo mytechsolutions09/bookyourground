@@ -340,6 +340,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
           styles.navLink,
           isActive && activeStyle,
           hideLabel && styles.navLinkCollapsed,
+          hideLabel && { gap: 0 },
         ]}
         onPress={() => {
           if (href === '/' || href === '') {
@@ -360,18 +361,19 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
             <RNText style={styles.tooltipText}>{label}</RNText>
           </View>
         )}
-        <RNText
-          numberOfLines={1}
-          style={[
-            styles.navLinkText,
-            isCompact && styles.navLinkTextMobile,
-            isActive && styles.navLinkTextActive,
-            !isCompact && hideLabel && { opacity: 0, width: 0, marginLeft: 0 } as any,
-            !isCompact && { transition: 'all 0.3s ease-in-out' } as any,
-          ]}
-        >
-          {label}
-        </RNText>
+        {(!hideLabel || isCompact) && (
+          <RNText
+            numberOfLines={1}
+            style={[
+              styles.navLinkText,
+              isCompact && styles.navLinkTextMobile,
+              isActive && styles.navLinkTextActive,
+              !isCompact && { transition: 'all 0.3s ease-in-out' } as any,
+            ]}
+          >
+            {label}
+          </RNText>
+        )}
         {badge !== undefined && !hideLabel && (
           <View style={styles.badge}>
             <RNText style={styles.badgeText}>{badge}</RNText>
@@ -1332,7 +1334,8 @@ const styles = StyleSheet.create({
   },
   signOutButtonCollapsed: {
     justifyContent: 'center',
-    paddingHorizontal: 8,
+    paddingHorizontal: 0,
+    gap: 0,
   },
   signOutText: {
     fontSize: 14,

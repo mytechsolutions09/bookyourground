@@ -716,6 +716,66 @@ export default function GroundsAdminScreen() {
     }
   };
 
+  const handleExportGround = async (ground: GroundWithImages) => {
+    const ownerName = (ground as any).owner?.business_name || (ground as any).owner?.full_name || 'N/A';
+    
+    // Fetch time slots for detailed export
+    const { data: slots } = await supabase
+      .from('time_slots')
+      .select('day_of_week, start_time, end_time, custom_price, is_available')
+      .eq('ground_id', ground.id);
+
+    // Construct simplified object for export
+    const exportData: any = {
+      Id: ground.id,
+      Name: ground.name,
+      Description: ground.description,
+      Address: ground.address,
+      City: ground.city,
+      State: ground.state,
+      Pincode: ground.pincode,
+      Price_per_hour: ground.base_price_per_hour,
+      Pitch_Type: ground.pitch_type,
+      Pitch_Surface: (ground as any).cricket_pitch_surface,
+      Ground_Size: ground.ground_size,
+      Capacity: ground.capacity,
+      Floodlights: (ground as any).has_floodlights ? 'Yes' : 'No',
+      Parking: (ground as any).has_parking ? 'Yes' : 'No',
+      Changing_Rooms: (ground as any).has_changing_rooms ? 'Yes' : 'No',
+      Pavilion: (ground as any).has_pavilion ? 'Yes' : 'No',
+      Washrooms: (ground as any).has_washrooms ? 'Yes' : 'No',
+      Verified: (ground as any).verified ? 'Yes' : 'No',
+      Approved: (ground as any).approved ? 'Yes' : 'No',
+      Active: (ground as any).active ? 'Yes' : 'No',
+      Latitude: (ground as any).latitude,
+      Longitude: (ground as any).longitude,
+      Owner_Name: ownerName,
+      Owner_Phone: (ground as any).owner?.phone || 'N/A',
+      Created_At: (ground as any).created_at,
+      Time_Slots: slots || [],
+      Images: (ground.ground_images ?? []).map(img => ({
+        url: img.image_url,
+        is_primary: img.is_primary,
+        display_order: img.display_order
+      }))
+    };
+
+    if (Platform.OS === 'web') {
+      const jsonStr = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonStr], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `ground_${ground.name?.replace(/\s+/g, '_')}_export.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } else {
+      Alert.alert('Export', 'JSON export for this ground:\n\n' + JSON.stringify(exportData, null, 2).substring(0, 400) + '...');
+    }
+  };
+
   const renderGroundActions = (ground: GroundWithImages, isApproved: boolean) => {
     const ownerName = (ground as any).owner?.business_name || (ground as any).owner?.full_name;
 
@@ -776,9 +836,141 @@ export default function GroundsAdminScreen() {
             size="small"
             style={{ flex: 1 }}
           />
+
+          <Button
+            title="Export"
+            onPress={() => handleExportGround(ground)}
+            variant="outline"
+            size="small"
+            style={{ flex: 1 }}
+          />
         </View>
       </Card>
     );
+  };
+
+  const handleImportGround = async () => {
+    if (Platform.OS !== 'web') {
+      Alert.alert('Import', 'Import feature is currently available on Web only.');
+      return;
+    }
+
+    try {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.onchange = async (e: any) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (event: any) => {
+          try {
+            const data = JSON.parse(event.target.result);
+            
+            if (!data.Name || !data.Address || !data.City) {
+              alert('Invalid ground data format. Missing Name, Address, or City.');
+              return;
+            }
+
+            const ok = window.confirm(`Import ground "${data.Name}" by owner "${data.Owner_Name}"?`);
+            if (!ok) return;
+
+            setLoading(true);
+            
+            let targetOwnerId = user?.id;
+            
+            if (data.Owner_Phone && data.Owner_Phone !== 'N/A') {
+               const { data: ownerProfile, error: ownerErr } = await supabase
+                 .from('profiles')
+                 .select('id')
+                 .eq('phone', data.Owner_Phone)
+                 .limit(1)
+                 .maybeSingle();
+               if (ownerProfile) targetOwnerId = ownerProfile.id;
+            }
+
+            const payload: any = {
+              owner_id: targetOwnerId,
+              name: data.Name,
+              description: data.Description,
+              address: data.Address,
+              city: data.City,
+              state: data.State,
+              pincode: data.Pincode,
+              base_price_per_hour: data.Price_per_hour || 0,
+              pitch_type: data.Pitch_Type,
+              cricket_pitch_surface: data.Pitch_Surface,
+              ground_size: data.Ground_Size,
+              capacity: data.Capacity,
+              has_floodlights: data.Floodlights === 'Yes',
+              has_parking: data.Parking === 'Yes',
+              has_changing_rooms: data.Changing_Rooms === 'Yes',
+              has_pavilion: data.Pavilion === 'Yes',
+              has_washrooms: data.Washrooms === 'Yes',
+              verified: data.Verified === 'Yes',
+              approved: data.Approved === 'Yes',
+              active: data.Active === 'Yes',
+              latitude: data.Latitude,
+              longitude: data.Longitude,
+            };
+
+            const { data: created, error } = await supabase
+              .from('grounds')
+              .insert(payload)
+              .select('id')
+              .single();
+
+            if (error) throw error;
+
+            if (data.Time_Slots && Array.isArray(data.Time_Slots) && data.Time_Slots.length > 0) {
+               // We might have some slots already from a trigger or ensureDefault? 
+               // Delete just in case to avoid duplicates
+               await supabase.from('time_slots').delete().eq('ground_id', created.id);
+               
+               const slotsToInsert = data.Time_Slots.map((s: any) => ({
+                 ground_id: created.id,
+                 day_of_week: s.day_of_week,
+                 start_time: s.start_time,
+                 end_time: s.end_time,
+                 custom_price: s.custom_price,
+                 is_available: s.is_available,
+               }));
+               
+               const { error: slotsErr } = await supabase.from('time_slots').insert(slotsToInsert);
+               if (slotsErr) console.warn('Error importing time slots:', slotsErr);
+            } else {
+               await ensureDefaultTimeSlotsForGround({
+                 groundId: created.id,
+                 pitchType: payload.pitch_type,
+                 supabaseClient: supabase,
+               });
+            }
+
+            if (data.Images && Array.isArray(data.Images) && data.Images.length > 0) {
+               const imagesToInsert = data.Images.map((img: any) => ({
+                 ground_id: created.id,
+                 image_url: img.url,
+                 is_primary: img.is_primary,
+                 display_order: img.display_order
+               }));
+               await supabase.from('ground_images').insert(imagesToInsert);
+            }
+
+            alert(`Ground "${data.Name}" imported successfully!`);
+            loadGrounds();
+          } catch (err: any) {
+            alert('Error parsing or importing file: ' + err.message);
+          } finally {
+            setLoading(false);
+          }
+        };
+        reader.readAsText(file);
+      };
+      input.click();
+    } catch (err: any) {
+      alert('Error: ' + err.message);
+    }
   };
 
   const headerSubtitle = ownerIdParam
@@ -831,6 +1023,13 @@ export default function GroundsAdminScreen() {
 
           {Platform.OS === 'web' && (
             <View style={styles.viewToggle}>
+              <TouchableOpacity
+                onPress={handleImportGround}
+                style={[styles.viewToggleOption, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' }]}
+              >
+                <Text style={[styles.viewToggleText, { color: '#16A34A', fontWeight: '700' }]}>Import</Text>
+              </TouchableOpacity>
+
               <Pressable
                 onPress={() => setViewMode('tiles')}
                 style={[
@@ -1145,6 +1344,12 @@ export default function GroundsAdminScreen() {
                               {duplicatingId === latestGround.id ? '...' : 'DUPLICATE'}
                             </Text>
                         </TouchableOpacity>
+                        <TouchableOpacity 
+                            style={[styles.iconButton, { backgroundColor: '#fef3c7' }]}
+                            onPress={() => handleExportGround(latestGround)}
+                        >
+                            <Text style={{ color: '#d97706', fontWeight: '800', fontSize: 10 }}>EXPORT</Text>
+                        </TouchableOpacity>
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -1198,6 +1403,13 @@ export default function GroundsAdminScreen() {
                                 title="Delete Ground"
                                 onPress={() => handleDeleteGround(latestGround.id)}
                                 variant="danger"
+                                size="small"
+                                style={{ marginBottom: 8 }}
+                            />
+                            <Button
+                                title="Export Info"
+                                onPress={() => handleExportGround(latestGround)}
+                                variant="outline"
                                 size="small"
                             />
                         </View>
@@ -1345,6 +1557,13 @@ export default function GroundsAdminScreen() {
                       title="Delete"
                       onPress={() => handleDeleteGround(latestGround.id)}
                       variant="danger"
+                      size="small"
+                      style={{ flex: 1 }}
+                    />
+                    <Button
+                      title="Export"
+                      onPress={() => handleExportGround(latestGround)}
+                      variant="outline"
                       size="small"
                       style={{ flex: 1 }}
                     />

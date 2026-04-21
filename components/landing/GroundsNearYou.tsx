@@ -81,9 +81,6 @@ export default function GroundsNearYou() {
         return { ...g, _avgRating: avg, _reviewsCount: reviews.length };
       });
       setGrounds(withReviews);
-      if (withReviews.length > 0) {
-        setFocusedGroundId(withReviews[0].id);
-      }
     } catch (err) {
       console.error('Error loading nearby grounds:', err);
     } finally {
@@ -131,7 +128,7 @@ export default function GroundsNearYou() {
   }, [grounds, searchQuery, locationFilter, userLocation]);
 
   const focusedGround = useMemo(() => 
-    filteredGrounds.find(g => g.id === focusedGroundId) || filteredGrounds[0], 
+    filteredGrounds.find(g => g.id === focusedGroundId), 
   [filteredGrounds, focusedGroundId]);
 
   const freeMapEmbed = useMemo(() => {

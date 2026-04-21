@@ -608,16 +608,19 @@ export default function OwnerBookingsScreen() {
               >
                 <Calendar 
                   size={14} 
-                  color={selectedDate ? (isWeb ? '#01b854' : '#043529') : '#6B7280'} 
+                  color={selectedDate ? '#FFFFFF' : '#64748B'} 
                 />
-                <Text 
-                  style={[
-                    styles.tabChipText, 
-                    selectedDate && styles.tabChipTextActive
-                  ]}
-                >
-                  {selectedDate ? selectedDate : 'Filter by Date'}
-                </Text>
+                {selectedDate && (
+                  <Text 
+                    style={[
+                      styles.tabChipText, 
+                      styles.tabChipTextActive,
+                      { marginLeft: 6 }
+                    ]}
+                  >
+                    {formatDateDDMMYY(selectedDate)}
+                  </Text>
+                )}
                 
                 {/* Native input overlay for web picker triggering */}
                 {isWeb && (
@@ -1188,10 +1191,10 @@ const styles = StyleSheet.create({
   filterContainer: {
     marginTop: 8,
     marginHorizontal: 16,
-    marginBottom: 8,
+    marginBottom: 4,
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 14,
+    paddingVertical: 6,
+    borderRadius: 12,
     backgroundColor: '#FFFFFF',
     borderWidth: 0,
   },
@@ -1258,14 +1261,11 @@ const styles = StyleSheet.create({
   },
   tabChip: {
     position: 'relative',
-    paddingHorizontal: IS_WEB ? 11 : 16,
-    paddingVertical: IS_WEB ? 6 : 10,
-    borderRadius: IS_WEB ? 8 : 10,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
+    paddingHorizontal: IS_WEB ? 10 : 16,
+    paddingVertical: IS_WEB ? 5 : 8,
+    borderRadius: IS_WEB ? 6 : 8,
     backgroundColor: '#F1F5F9',
-    marginRight: 6,
+    marginRight: 4,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
@@ -1275,7 +1275,7 @@ const styles = StyleSheet.create({
   },
   tabChipText: {
     fontFamily: 'Inter',
-    fontSize: 13,
+    fontSize: 11,
     color: '#64748B',
     fontWeight: '600',
   },
@@ -1355,15 +1355,19 @@ const styles = StyleSheet.create({
     color: '#166534',
   },
   searchBarWeb: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 8,
-    paddingHorizontal: 16,
+    borderColor: '#E2E8F0',
+    borderRadius: 6,
+    paddingHorizontal: 12,
     height: 32,
-    fontSize: 13,
-    width: 200,
-    color: '#111827',
+    fontSize: 11,
+    width: 240,
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  searchFilterWrap: {
+    marginLeft: 'auto',
   },
   searchBarMobile: {
     backgroundColor: '#FFFFFF',

@@ -61,21 +61,45 @@ CREATE TABLE IF NOT EXISTS public.wallet_transactions (
 ALTER TABLE public.wallets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.wallet_transactions ENABLE ROW LEVEL SECURITY;
 
--- Wallets policies
-CREATE POLICY "Users can view own wallet"
-    ON public.wallets FOR SELECT
-    TO authenticated
-    USING (auth.uid() = user_id);
+-- Safe Policy Creation
+DO $$ 
+BEGIN
+    -- 1. Wallets: User View (Own Wallet)
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE tablename = 'wallets' AND policyname = 'Users can view own wallet'
+    ) THEN
+        CREATE POLICY "Users can view own wallet"
+            ON public.wallets FOR SELECT
+            TO authenticated
+            USING (auth.uid() = user_id);
+    END IF;
 
--- Wallet transactions policies
-CREATE POLICY "Users can view own wallet transactions"
-    ON public.wallet_transactions FOR SELECT
-    TO authenticated
-    USING (EXISTS (
-        SELECT 1 FROM public.wallets 
-        WHERE public.wallets.id = wallet_id 
-        AND public.wallets.user_id = auth.uid()
-    ));
+    -- 2. Wallets: Super Admin View (All Wallets)
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE tablename = 'wallets' AND policyname = 'Super admins can view all wallets'
+    ) THEN
+        CREATE POLICY "Super admins can view all wallets"
+            ON public.wallets FOR SELECT
+            TO authenticated
+            USING (
+                (SELECT role FROM public.profiles WHERE id = auth.uid()) = 'super_admin'
+            );
+    END IF;
+
+    -- 3. Wallet transactions: User View
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies WHERE tablename = 'wallet_transactions' AND policyname = 'Users can view own wallet transactions'
+    ) THEN
+        CREATE POLICY "Users can view own wallet transactions"
+            ON public.wallet_transactions FOR SELECT
+            TO authenticated
+            USING (EXISTS (
+                SELECT 1 FROM public.wallets 
+                WHERE public.wallets.id = wallet_id 
+                AND public.wallets.user_id = auth.uid()
+            ));
+    END IF;
+END $$;
 
 -- Function to create wallet for new user
 CREATE OR REPLACE FUNCTION public.handle_new_profile_wallet()
@@ -162,4 +186,11 @@ EXCEPTION WHEN OTHERS THEN
     );
 END;
 $$;
+
+-- Grant execute permission to authenticated users
+GRANT EXECUTE ON FUNCTION public.add_money_to_wallet(uuid, decimal, text, text, uuid) TO authenticated;
+
+-- Refresh PostgREST cache
+NOTIFY pgrst, 'reload schema';
+
 
