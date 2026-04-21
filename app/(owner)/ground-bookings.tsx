@@ -417,51 +417,53 @@ export default function OwnerBookingsScreen() {
 
   const content = (
     <View style={[styles.container, isSmallScreen && styles.containerMobile]}>
-        <View style={styles.controlsRow}>
-          <View style={styles.searchBoxMobileWrapper}>
-            <TextInput
-              style={styles.searchBarMobile}
-              placeholder="Search..."
-              placeholderTextColor="#94A3B8"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
+        {isSmallScreen && (
+          <View style={styles.controlsRow}>
+            <View style={styles.searchBoxMobileWrapper}>
+              <TextInput
+                style={styles.searchBarMobile}
+                placeholder="Search..."
+                placeholderTextColor="#94A3B8"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+            </View>
+            
+            <FilterDropdown 
+              id="status" 
+              label="Stat" 
+              value={activeTab} 
+              options={[
+                { key: 'all', label: 'All Status' },
+                { key: 'upcoming', label: 'Upcoming' },
+                { key: 'past', label: 'Past' },
+                { key: 'cancelled', label: 'Cancelled' },
+              ]} 
+              onSelect={setActiveTab} 
+            />
+            <FilterDropdown 
+              id="scope" 
+              label="Scope" 
+              value={ownerScope} 
+              options={[
+                { key: 'all', label: 'All Grounds' },
+                { key: 'own', label: 'Own Grounds' },
+                { key: 'other', label: 'Others' },
+              ]} 
+              onSelect={setOwnerScope} 
+            />
+            <FilterDropdown 
+              id="date" 
+              label="Date" 
+              value={selectedDate || 'all'} 
+              options={[
+                { key: 'all', label: 'Any Date' },
+                ...availableDates.map(d => ({ key: d, label: formatDateDDMMYY(d) }))
+              ]} 
+              onSelect={(val: string) => setSelectedDate(val === 'all' ? null : val)} 
             />
           </View>
-          
-          <FilterDropdown 
-            id="status" 
-            label="Stat" 
-            value={activeTab} 
-            options={[
-              { key: 'all', label: 'All Status' },
-              { key: 'upcoming', label: 'Upcoming' },
-              { key: 'past', label: 'Past' },
-              { key: 'cancelled', label: 'Cancelled' },
-            ]} 
-            onSelect={setActiveTab} 
-          />
-          <FilterDropdown 
-            id="scope" 
-            label="Scope" 
-            value={ownerScope} 
-            options={[
-              { key: 'all', label: 'All Grounds' },
-              { key: 'own', label: 'Own Grounds' },
-              { key: 'other', label: 'Others' },
-            ]} 
-            onSelect={setOwnerScope} 
-          />
-          <FilterDropdown 
-            id="date" 
-            label="Date" 
-            value={selectedDate || 'all'} 
-            options={[
-              { key: 'all', label: 'Any Date' },
-              ...availableDates.map(d => ({ key: d, label: formatDateDDMMYY(d) }))
-            ]} 
-            onSelect={(val: string) => setSelectedDate(val === 'all' ? null : val)} 
-          />
-        </View>
+        )}
 
       {isWeb && !isSmallScreen && bookings.length > 0 && (
         <View style={styles.filterContainer}>

@@ -19,6 +19,7 @@ This update delivers a comprehensive modernization of the web dashboard and grou
 - **Wallet Balance Section**: Integrated a dedicated "Wallet Balance" card into the earnings dashboard, highlighting online revenue with a distinct theme and professional iconography.
 - **Responsive Earnings Grid**: Refactored the earnings summary into a responsive grid (up to 3 columns on web), replacing full-width rows with more efficient and scannable cards.
 - **Visual Polish**: Added high-quality Lucide icons (Wallet, Landmark, TrendingUp) to all financial stats to improve visual scanning and dashboard quality.
+- **Wallet Database Migration**: Created `20260421100000_create_wallet_system.sql` to implement a robust wallet infrastructure, including automatic wallet creation for new users, transaction logging (Credit/Debit/Refund/Payout), and secure RLS policies.
 
 ### 4. Interactive & Aesthetic Refinements
 - **Symmetrical Summary Stats**: Restructured the "Booking Summary" component to be perfectly symmetrical, replacing asymmetrical circles with clean, professionally aligned typographic statistics.
