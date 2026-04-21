@@ -337,7 +337,7 @@ export default function OwnerGroundsScreen() {
       {Platform.OS !== 'web' && (
         <MobileAppNavbar 
           title="My Grounds" 
-          titleColor="#00ea6b" 
+          titleColor="#01b854" 
         />
       )}
 
@@ -398,7 +398,7 @@ export default function OwnerGroundsScreen() {
             <Button
               title="Add Your First Ground"
               onPress={() => router.push('/(owner)/add-ground')}
-              style={[styles.emptyButton, { backgroundColor: '#043529', borderWidth: 1.5, borderColor: '#01b854' }]}
+              style={[styles.emptyButton, { backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#01b854' }]}
               textStyle={{ color: '#01b854' }}
               loadingIndicatorColor="#01b854"
             />
@@ -662,15 +662,15 @@ const IS_WEB = Platform.OS === 'web';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: IS_WEB ? '#F5F5F5' : '#043529',
-    paddingHorizontal: IS_WEB ? 24 : 0,
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: Platform.OS === 'web' ? 24 : 0,
   },
   header: {
-    backgroundColor: IS_WEB ? '#FFFFFF' : '#043529',
+    backgroundColor: '#FFFFFF',
     padding: 16,
-    paddingTop: IS_WEB ? 48 : 64,
+    paddingTop: Platform.OS === 'web' ? 48 : 64,
     borderBottomWidth: 1,
-    borderBottomColor: IS_WEB ? '#E0E0E0' : 'rgba(0,234,107,0.15)',
+    borderBottomColor: '#F1F5F9',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -686,9 +686,14 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: IS_WEB ? '#10b981' : '#00ea6b',
+    backgroundColor: '#01b854',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#01b854',
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   list: {
     padding: 16,
@@ -698,18 +703,24 @@ const styles = StyleSheet.create({
   },
   editorCard: {
     marginBottom: 16,
-    padding: 14,
-    backgroundColor: IS_WEB ? '#FFF9E6' : '#06392e',
-    borderWidth: IS_WEB ? 0 : 1,
-    borderColor: 'rgba(0,234,107,0.15)',
-    borderRadius: 16,
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
   },
   editorTitle: {
     fontFamily: 'Inter',
-    fontSize: 14,
-    fontWeight: '600',
-    color: IS_WEB ? '#212121' : '#f9fafb',
-    marginBottom: 10,
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   actionsRow: {
     flexDirection: 'row',
@@ -735,12 +746,16 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     maxHeight: '90%',
-    padding: 14,
-    borderRadius: 14,
+    padding: 20,
+    borderRadius: 24,
     overflow: 'visible',
-    backgroundColor: IS_WEB ? '#FFFFFF' : '#06392e',
-    borderWidth: IS_WEB ? 0 : 1,
-    borderColor: 'rgba(0,234,107,0.25)',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 30,
+    shadowOffset: { width: 0, height: 10 },
   },
   modalHeader: {
     flexDirection: 'row',
@@ -751,21 +766,24 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontFamily: 'Inter',
-    fontSize: 16,
-    fontWeight: '600',
-    color: IS_WEB ? '#212121' : '#f9fafb',
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F172A',
     flex: 1,
+    letterSpacing: -0.5,
   },
   modalScroll: {
     overflow: 'visible',
   },
   modalSectionTitle: {
     fontFamily: 'Inter',
-    fontSize: 12,
-    fontWeight: '500',
-    color: IS_WEB ? '#374151' : '#f9fafb',
-    marginTop: 12,
-    marginBottom: 6,
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginTop: 20,
+    marginBottom: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   modalFooter: {
     marginTop: 12,
@@ -773,15 +791,15 @@ const styles = StyleSheet.create({
   formInput: {
     fontFamily: 'Inter',
     borderWidth: 1,
-    borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.25)',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: IS_WEB ? '#FFFFFF' : 'rgba(4,53,41,0.6)',
-    fontSize: 14,
-    fontWeight: '400',
-    color: IS_WEB ? '#111827' : '#f9fafb',
-    marginBottom: 10,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#F8FAFC',
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#0F172A',
+    marginBottom: 12,
   },
   formRow2: {
     flexDirection: 'row',

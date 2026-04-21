@@ -1,14 +1,32 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Platform, TouchableOpacity, useWindowDimensions, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Platform, TouchableOpacity, useWindowDimensions, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import WebLayout from '@/components/web/WebLayout';
 import { supabase } from '@/lib/supabase';
 import { router } from 'expo-router';
-import { LayoutDashboard, Calendar, Star, Users, IndianRupee, ChevronRight } from 'lucide-react-native';
+import { 
+  LayoutDashboard, 
+  Calendar, 
+  Star, 
+  Users, 
+  IndianRupee, 
+  ChevronRight, 
+  Search, 
+  Sun, 
+  MapPin, 
+  Heart,
+  MessageSquare,
+  Wallet,
+  Bell,
+  Clock,
+  Maximize,
+  Map as MapIcon,
+  Info,
+} from 'lucide-react-native';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import { formatBookingSlotSummary } from '@/utils/bookingSlotFormat';
 import BookingCard from '@/components/bookings/BookingCard';
-import { ActivityIndicator } from 'react-native';
+import { useUI } from '@/contexts/UIContext';
 
 const THEME_BG = '#043529';
 const THEME_CARD_BG = '#06392e';
@@ -23,47 +41,61 @@ function DashboardContent() {
   const [loading, setLoading] = useState(false);
   const [bookings, setBookings] = useState<any[]>([]);
 
-  useEffect(() => {
-    const loadBookings = async () => {
-      if (!user) return;
-      try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from('bookings')
-          .select(
-            `
+  const { setTabBarVisible } = useUI();
+  const lastScrollY = React.useRef(0);
+
+  const onScroll = (event: any) => {
+    if (Platform.OS === 'web') return;
+    const currentY = event.nativeEvent.contentOffset.y;
+    const diff = currentY - lastScrollY.current;
+
+    if (diff > 10 && currentY > 50) {
+      setTabBarVisible(false);
+    } else if (diff < -10) {
+      setTabBarVisible(true);
+    }
+    lastScrollY.current = currentY;
+  };
+
+  const loadBookings = async () => {
+    if (!user) return;
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('bookings')
+        .select(`
+          id,
+          booking_date,
+          start_time,
+          end_time,
+          ground_id,
+          total_amount,
+          status,
+          ground:grounds(
             id,
-            booking_date,
-            start_time,
-            end_time,
-            ground_id,
-            total_amount,
-            status,
-            ground:grounds(
-              id,
-              name,
-              city,
-              state,
-              pitch_type,
-              ground_images(image_url)
-            )
-          `,
+            name,
+            city,
+            state,
+            pitch_type,
+            ground_images(image_url)
           )
-          .eq('status', 'confirmed')
-          .eq('user_id', user.id)
-          .order('booking_date', { ascending: true })
-          .order('start_time', { ascending: true });
+        `)
+        .eq('status', 'confirmed')
+        .eq('user_id', user.id)
+        .order('booking_date', { ascending: true })
+        .order('start_time', { ascending: true });
 
-        if (error) throw error;
-        setBookings(data || []);
-      } catch (err) {
-        console.error('Error loading dashboard bookings:', err);
-        setBookings([]);
-      } finally {
-        setLoading(false);
-      }
-    };
+      if (error) throw error;
+      setBookings(data || []);
+    } catch (err) {
+      console.error('Error loading dashboard bookings:', err);
+      setBookings([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadBookings();
   }, [user]);
 
@@ -131,151 +163,182 @@ function DashboardContent() {
 
   const IS_DARK = false; // Forced light theme for modern mobile UI
 
+  const renderRightPanel = () => (
+    <View style={styles.rightPanel}>
+      <View style={styles.panelCard}>
+        <View style={styles.panelHeader}>
+          <Text style={styles.panelTitle}>Quick Book</Text>
+          <View style={styles.calendarNav}>
+            <ChevronRight size={16} color="#64748B" style={{ transform: [{ rotate: '180deg' }] }} />
+            <ChevronRight size={16} color="#64748B" />
+          </View>
+        </View>
+        <Text style={styles.panelMonth}>April 2026</Text>
+        <View style={styles.calendarGrid}>
+          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
+            <Text key={i} style={styles.calendarDayLabel}>{day}</Text>
+          ))}
+          {Array.from({ length: 30 }).map((_, i) => {
+            const day = i + 1;
+            const isToday = day === 21;
+            const isBooked = day === 22 || day === 25;
+            return (
+              <View 
+                key={i} 
+                style={[
+                  styles.calendarDay,
+                  isToday && styles.calendarDayToday,
+                  isBooked && styles.calendarDayBooked
+                ]}
+              >
+                <Text style={[
+                  styles.calendarDayText,
+                  isToday && styles.calendarDayTextToday,
+                  isBooked && styles.calendarDayTextBooked
+                ]}>{day}</Text>
+              </View>
+            );
+          })}
+        </View>
+
+        <Text style={styles.panelSubTitle}>Popular slots today</Text>
+        <View style={styles.slotItem}>
+          <View style={styles.slotTimeBox}>
+            <Text style={styles.slotTime}>5:00</Text>
+            <Text style={styles.slotAmPm}>PM</Text>
+          </View>
+          <View style={styles.slotInfo}>
+            <Text style={styles.slotName}>Football - Elite Turf</Text>
+            <Text style={styles.slotStatus}>3 slots left</Text>
+          </View>
+          <TouchableOpacity style={styles.slotAction}><Text style={styles.slotActionText}>Book</Text></TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.panelCard}>
+        <Text style={styles.panelTitle}>Balance & Stats</Text>
+        <View style={styles.statsDonutContainer}>
+          <View style={styles.donutPlaceholder}>
+            <Text style={styles.donutPercent}>72%</Text>
+          </View>
+          <View style={styles.statsInfo}>
+            <Text style={styles.statsValueMain}>18 hrs</Text>
+            <Text style={styles.statsLabelMain}>Played this month</Text>
+            <View style={styles.tag}><Text style={styles.tagText}>Cricket</Text></View>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+
   const content = (
     <ScrollView
       style={[styles.root, IS_DARK && styles.rootDark]}
       contentContainerStyle={[styles.scrollContent, (Platform.OS === 'web' && !isCompact) && styles.scrollContentWeb]}
+      refreshControl={<RefreshControl refreshing={loading} onRefresh={loadBookings} tintColor="#01b854" />}
+      onScroll={onScroll}
+      scrollEventThrottle={16}
     >
-      {/* Header section removed */}
-
-      <View style={styles.grid}>
-        <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
-          <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
-            <Users size={20} color="#01b854" />
-          </View>
-          <View style={styles.statContent}>
-            <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Total Bookings</Text>
-            <Text style={[styles.statsValue, IS_DARK && styles.statsValueDark]}>
-              {loading ? '—' : bookings.length}
-            </Text>
-          </View>
-        </View>
-
-        <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
-          <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
-            <IndianRupee size={20} color="#01b854" />
-          </View>
-          <View style={styles.statContent}>
-            <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Total Spent</Text>
-            <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]}>
-              {loading ? '—' : `₹${bookings.reduce((sum, b) => sum + (b.total_amount || 0), 0).toLocaleString('en-IN')}`}
-            </Text>
-          </View>
-        </View>
-
-        <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
-          <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
-            <Calendar size={20} color="#01b854" />
-          </View>
-          <View style={styles.statContent}>
-            <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Next booking</Text>
-            {loading ? (
-              <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>Loading…</Text>
-            ) : nextBooking ? (
-              <>
-                <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]} numberOfLines={1}>
-                  {nextBooking.ground?.name ?? 'Ground'}
-                </Text>
-                <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>
-                  {nextBooking.booking_date}
-                </Text>
-              </>
-            ) : (
-              <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>No upcoming</Text>
-            )}
-          </View>
-        </View>
-
-        <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
-          <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
-            <Calendar size={20} color="#01b854" />
-          </View>
-          <View style={styles.statContent}>
-            <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Last booking</Text>
-            {loading ? (
-              <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>Loading…</Text>
-            ) : lastBooking ? (
-              <>
-                <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]} numberOfLines={1}>
-                  {lastBooking.ground?.name ?? 'Ground'}
-                </Text>
-                <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>
-                  {lastBooking.booking_date}
-                </Text>
-              </>
-            ) : (
-              <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>None yet</Text>
-            )}
-          </View>
-        </View>
-
-        <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
-          <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
-            <Star size={20} color="#01b854" />
-          </View>
-          <View style={styles.statContent}>
-            <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Favorite</Text>
-            {loading ? (
-              <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>Loading…</Text>
-            ) : favoriteGround ? (
-              <>
-                <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]} numberOfLines={1}>
-                  {favoriteGround.name}
-                </Text>
-                <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>
-                  {favoriteGround.count} {favoriteGround.count === 1 ? 'visit' : 'visits'}
-                </Text>
-              </>
-            ) : (
-              <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>TBD</Text>
-            )}
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionTitle, IS_DARK && styles.sectionTitleDark]}>Upcoming Matches</Text>
-        <TouchableOpacity onPress={() => router.push('/bookings')}>
-          <Text style={[styles.seeAllText, IS_DARK && styles.seeAllTextDark]}>See all</Text>
-        </TouchableOpacity>
-      </View>
-
-      {loading ? (
-        <ActivityIndicator size="large" color="#01b854" style={{ marginTop: 40 }} />
-      ) : upcomingBookings.length > 0 ? (
-        <View style={styles.matchesGrid}>
-          {upcomingBookings.slice(0, 3).map((b) => (
-            <View 
-              key={b.id} 
-              style={[
-                styles.dashboardMatchItem,
-                { maxWidth: isCompact ? '100%' : width < 1200 ? '48.5%' : '32.5%'}
-              ]}
-            >
-              <BookingCard
-                booking={b}
-                lightMode={true}
-                onPress={() => router.push(`/bookings/${b.id}`)}
-              />
+      <View style={styles.mainLayout}>
+        <View style={styles.centerContent}>
+          {/* Greeting Row */}
+          <View style={styles.greetingRow}>
+            <View>
+              <Text style={styles.greetingText}>Good morning, {profile?.full_name?.split(' ')[0] || 'Alex'} 👋</Text>
+              <Text style={styles.dateText}>Thursday, 21 Apr 2026</Text>
             </View>
-          ))}
-        </View>
-      ) : (
-        <View style={[styles.emptyMatches, IS_DARK && styles.emptyMatchesDark]}>
-          <Calendar size={40} color={IS_DARK ? 'rgba(255,255,255,0.1)' : '#E5E7EB'} />
-          <Text style={[styles.emptyMatchesText, IS_DARK && styles.emptyMatchesTextDark]}>
-            No upcoming games scheduled.
-          </Text>
-          <TouchableOpacity 
-            style={styles.bookNowLink}
-            onPress={() => router.push('/book-my-ground' as any)}
-          >
-            <Text style={styles.bookNowLinkText}>Book your first ground</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </ScrollView>
+            <View style={styles.weatherBadge}>
+              <Sun size={18} color="#F59E0B" />
+              <Text style={styles.weatherText}>22°C • Clear • Gurgaon</Text>
+            </View>
+          </View>
 
+          {/* Search Hero */}
+          <View style={styles.searchHero}>
+            <View style={styles.searchHeroText}>
+              <Text style={styles.searchHeroTitle}>Book your next game</Text>
+              <Text style={styles.searchHeroSub}>Search grounds near you...</Text>
+              <View style={styles.dashboardSearch}>
+                <Search size={18} color="#94A3B8" />
+                <Text style={styles.searchPlaceholder}>Football turf in Gurgaon</Text>
+                <TouchableOpacity style={styles.searchBtn}>
+                  <Text style={styles.searchBtnText}>Search</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            <View style={styles.searchHeroImagePlaceholder}>
+              <LayoutDashboard size={120} color="rgba(255,255,255,0.1)" />
+            </View>
+          </View>
+
+          {/* Cards Row */}
+          <View style={styles.cardsRow}>
+            <View style={styles.contentCardLarge}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardHeaderTitle}>Upcoming Booking</Text>
+                <TouchableOpacity><Text style={styles.cardActionText}>Cancel</Text></TouchableOpacity>
+              </View>
+              {nextBooking ? (
+                <>
+                  <Text style={styles.bookingTime}>{nextBooking.booking_date} • {nextBooking.start_time}</Text>
+                  <View style={styles.bookingImagePlaceholder}>
+                     <MapIcon size={40} color="#E2E8F0" />
+                  </View>
+                  <View style={styles.bookingFooter}>
+                    <View>
+                      <Text style={styles.bookingName}>{nextBooking.ground?.name}</Text>
+                      <Text style={styles.bookingMeta}>{nextBooking.ground?.pitch_type} • {nextBooking.ground?.city}</Text>
+                    </View>
+                    <TouchableOpacity style={styles.qrButton}>
+                      <Maximize size={18} color="#FFFFFF" />
+                      <Text style={styles.qrButtonText}>View QR</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              ) : (
+                <View style={styles.emptyCardInner}>
+                  <Calendar size={32} color="#CBD5E1" />
+                  <Text style={styles.emptyCardText}>No upcoming bookings</Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.contentCardSmall}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardHeaderTitle}>Recent Ground</Text>
+                <TouchableOpacity><Text style={styles.cardActionText}>View</Text></TouchableOpacity>
+              </View>
+              {lastBooking ? (
+                <View style={styles.recentGroundItem}>
+                   <View style={styles.recentGroundImage}>
+                      <MapIcon size={24} color="#CBD5E1" />
+                   </View>
+                   <View>
+                      <Text style={styles.recentGroundName}>{lastBooking.ground?.name}</Text>
+                      <Text style={styles.recentGroundPrice}>₹{lastBooking.total_amount?.toLocaleString()} total</Text>
+                   </View>
+                </View>
+              ) : (
+                 <View style={styles.emptyCardInner}>
+                   <Star size={32} color="#CBD5E1" />
+                   <Text style={styles.emptyCardText}>Explore venues</Text>
+                 </View>
+              )}
+            </View>
+          </View>
+
+          {/* Map Placeholder */}
+          <View style={styles.mapContainer}>
+             <View style={styles.mapPlaceholder}>
+                <MapPin size={40} color="#00ea6b" />
+                <Text style={styles.mapLabel}>Explore venues near you (Map)</Text>
+             </View>
+          </View>
+        </View>
+
+        {!isCompact && renderRightPanel()}
+      </View>
+    </ScrollView>
   );
 
   if (Platform.OS === 'web' && !isCompact) {
@@ -305,213 +368,456 @@ const styles = StyleSheet.create({
   },
   root: {
     flex: 1,
-    backgroundColor: Platform.OS === 'web' ? 'transparent' : '#F9FAFB',
+    backgroundColor: Platform.OS === 'web' ? 'transparent' : '#F5F5F7',
   },
   rootDark: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F5F5F7',
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
-    maxWidth: 1200,
-    alignSelf: 'center',
+    padding: 0,
     width: '100%',
   },
   scrollContentWeb: {
     paddingTop: 0,
   },
-  headerRow: {
+  mainLayout: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-    gap: 12,
-    flexWrap: 'wrap',
-  },
-  headerTitleWrap: {
-    flex: 1,
-    minWidth: 200,
-  },
-  welcomeTitle: {
-    fontSize: 26,
-    fontWeight: '900',
-    color: '#111827',
-    letterSpacing: -0.5,
-  },
-  welcomeTitleDark: {
-    color: THEME_TEXT,
-  },
-  welcomeSubtitle: {
-    marginTop: 4,
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  welcomeSubtitleDark: {
-    color: '#9ca3af',
-  },
-  primaryButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 999,
-    backgroundColor: '#10b981',
-  },
-  primaryButtonDark: {
-    backgroundColor: THEME_ACCENT,
-  },
-  primaryButtonText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  primaryButtonTextDark: {
-    color: '#043529',
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  statBox: {
-    flex: 1,
-    minWidth: 160,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.02,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  statBoxDark: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderColor: 'rgba(0,234,107,0.1)',
-  },
-  iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#F9FAFB',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statContent: {
-    flex: 1,
-  },
-  iconCircleDark: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-  },
-  statsLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#6B7280',
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-    marginBottom: 2,
-  },
-  statsLabelDark: {
-    color: '#9ca3af',
-    opacity: 0.8,
-  },
-  statsValue: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: '#111827',
-    letterSpacing: -0.5,
-  },
-  statsValueDark: {
-    color: THEME_TEXT,
-  },
-  statsValueSmall: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#111827',
-    letterSpacing: -0.2,
-  },
-  statsValueSmallDark: {
-    color: THEME_GOLD,
-  },
-  statsCaption: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#9CA3AF',
-  },
-  statsCaptionDark: {
-    color: '#9ca3af',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 32,
-    marginBottom: 16,
-    paddingHorizontal: 4,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
-  },
-  sectionTitleDark: {
-    color: THEME_TEXT,
-  },
-  seeAllText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#01b854',
-  },
-  seeAllTextDark: {
-    color: THEME_ACCENT,
-  },
-  matchesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
     width: '100%',
   },
-  dashboardMatchItem: {
+  centerContent: {
     flex: 1,
-    minWidth: 300,
-    maxWidth: Platform.OS === 'web' ? '32.5%' : '100%',
+    padding: 24,
   },
-  emptyMatches: {
-    padding: 40,
+  rightPanel: {
+    width: 340,
+    padding: 24,
+    paddingLeft: 0,
+    gap: 20,
+  },
+  greetingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    marginTop: 8,
+    marginBottom: 24,
   },
-  emptyMatchesDark: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderColor: 'rgba(255,255,255,0.05)',
+  greetingText: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#0F172A',
+    fontFamily: 'Inter',
   },
-  emptyMatchesText: {
-    marginTop: 12,
+  dateText: {
     fontSize: 14,
     color: '#64748B',
-    fontWeight: '500',
+    marginTop: 2,
+    fontFamily: 'Inter',
   },
-  emptyMatchesTextDark: {
-    color: '#9CA3AF',
+  weatherBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 99,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
-  bookNowLink: {
-    marginTop: 16,
+  weatherText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  searchHero: {
+    backgroundColor: '#043529',
+    borderRadius: 24,
+    padding: 32,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+    overflow: 'hidden',
+  },
+  searchHeroText: {
+    flex: 1,
+    zIndex: 2,
+  },
+  searchHeroTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 4,
+    fontFamily: 'Inter',
+  },
+  searchHeroSub: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.7)',
+    marginBottom: 20,
+    fontFamily: 'Inter',
+  },
+  dashboardSearch: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    maxWidth: 450,
+  },
+  searchPlaceholder: {
+    flex: 1,
+    fontSize: 15,
+    color: '#94A3B8',
+    fontFamily: 'Inter',
+  },
+  searchBtn: {
+    backgroundColor: '#00ea6b',
     paddingHorizontal: 20,
     paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: '#F0FDF4',
+    borderRadius: 10,
   },
-  bookNowLinkText: {
+  searchBtnText: {
+    color: '#043529',
+    fontWeight: '700',
+    fontSize: 14,
+    fontFamily: 'Inter',
+  },
+  searchHeroImagePlaceholder: {
+    position: 'absolute',
+    right: -20,
+    bottom: -20,
+    opacity: 0.8,
+  },
+  cardsRow: {
+    flexDirection: 'row',
+    gap: 20,
+    marginBottom: 24,
+  },
+  contentCardLarge: {
+    flex: 1.6,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
+  },
+  contentCardSmall: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  cardHeaderTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  cardActionText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#01b854',
+    color: '#EF4444',
+    fontFamily: 'Inter',
+  },
+  bookingTime: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+    marginBottom: 16,
+    fontFamily: 'Inter',
+  },
+  bookingImagePlaceholder: {
+    height: 180,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  bookingFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  bookingName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  bookingMeta: {
+    fontSize: 13,
+    color: '#64748B',
+    marginTop: 2,
+    fontFamily: 'Inter',
+  },
+  qrButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#0F172A',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    gap: 8,
+  },
+  qrButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: 'Inter',
+  },
+  recentGroundItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginTop: 16,
+  },
+  recentGroundImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recentGroundName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  recentGroundPrice: {
+    fontSize: 13,
+    color: '#64748B',
+    marginTop: 2,
+    fontFamily: 'Inter',
+  },
+  mapContainer: {
+    height: 300,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    overflow: 'hidden',
+    borderWidth: 8,
+    borderColor: '#FFFFFF',
+  },
+  mapPlaceholder: {
+    flex: 1,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    borderRadius: 16,
+  },
+  mapLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748B',
+    fontFamily: 'Inter',
+  },
+  rightPanel: {
+    gap: 20,
+  },
+  panelCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
+    width: 340,
+  },
+  panelHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  panelTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  calendarNav: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  panelMonth: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 12,
+    fontFamily: 'Inter',
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  calendarDayLabel: {
+    width: 32,
+    textAlign: 'center',
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#94A3B8',
+    marginBottom: 4,
+    fontFamily: 'Inter',
+  },
+  calendarDay: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 8,
+  },
+  calendarDayText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  calendarDayToday: {
+    backgroundColor: '#00ea6b',
+  },
+  calendarDayTextToday: {
+    color: '#043529',
+    fontWeight: '800',
+  },
+  calendarDayBooked: {
+    backgroundColor: '#F1F5F9',
+  },
+  panelSubTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginTop: 24,
+    marginBottom: 12,
+    fontFamily: 'Inter',
+  },
+  slotItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#F8FAFC',
+    padding: 12,
+    borderRadius: 16,
+  },
+  slotTimeBox: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    padding: 8,
+    borderRadius: 10,
+    minWidth: 44,
+  },
+  slotTime: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  slotAmPm: {
+    fontSize: 9,
+    color: '#64748B',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    fontFamily: 'Inter',
+  },
+  slotInfo: {
+    flex: 1,
+  },
+  slotName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  slotStatus: {
+    fontSize: 11,
+    color: '#00ea6b',
+    fontWeight: '600',
+    marginTop: 1,
+    fontFamily: 'Inter',
+  },
+  slotAction: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  slotActionText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  statsDonutContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 20,
+    marginTop: 16,
+  },
+  donutPlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 10,
+    borderColor: '#00ea6b',
+    borderLeftColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  donutPercent: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  statsInfo: {
+    flex: 1,
+  },
+  statsValueMain: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  statsLabelMain: {
+    fontSize: 12,
+    color: '#64748B',
+    fontFamily: 'Inter',
+  },
+  tag: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginTop: 8,
+  },
+  tagText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#64748B',
+    textTransform: 'uppercase',
+    fontFamily: 'Inter',
+  },
+  emptyCardInner: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    gap: 12,
+  },
+  emptyCardText: {
+    fontSize: 14,
+    color: '#94A3B8',
+    fontWeight: '600',
+    fontFamily: 'Inter',
   },
 });
 

@@ -13,6 +13,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { GroundWithImages } from '@/types';
 import GroundsSearchBar from '@/components/grounds/GroundsSearchBar';
+import GroundCard from '@/components/grounds/GroundCard';
 import FindAnOpponentScreen from './find-an-opponent';
 import FavoritesScreen from './favorites';
 import { useUI } from '@/contexts/UIContext';
@@ -46,8 +47,14 @@ export default function GroundsTabScreen() {
   const TABS_LIST = [
     { id: 'book', label: 'Book a Ground', index: 0 },
     { id: 'opponent', label: 'Find an Opponent', index: 1 },
-    { id: 'favorite', label: 'Favourite', index: 2 },
   ];
+
+  // If arriving with ?tab=favorite (old deep-link), send to the dedicated page
+  useEffect(() => {
+    if (tab === 'favorite') {
+      router.replace('/favorites' as any);
+    }
+  }, [tab]);
 
   const onTabPress = (tabId: 'book' | 'opponent' | 'favorite', idx: number) => {
     setActiveTab(tabId);
@@ -255,14 +262,6 @@ export default function GroundsTabScreen() {
         {/* Slide 2: Find an Opponent */}
         <View style={{ width }}>
           <FindAnOpponentScreen
-            hideHeader={true}
-            externalScrollHandler={verticalScrollHandler}
-          />
-        </View>
-
-        {/* Slide 3: Favourite */}
-        <View style={{ width }}>
-          <FavoritesScreen
             hideHeader={true}
             externalScrollHandler={verticalScrollHandler}
           />

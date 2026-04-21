@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Image, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
-import { router } from 'expo-router';
+import { router, useNavigation } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 
 type MobileAppNavbarProps = {
@@ -14,13 +14,28 @@ type MobileAppNavbarProps = {
 
 /** Green top bar with logo — use on native-only screens (not web). */
 export default function MobileAppNavbar({ title, titleColor = '#01b854', rightAction, lightBg, smallerTitle }: MobileAppNavbarProps) {
-  const canGoBack = router.canGoBack();
+  const navigation = useNavigation();
+  const [canGoBack, setCanGoBack] = React.useState(false);
+
+  React.useEffect(() => {
+    // Check if we can go back within the current navigator
+    setCanGoBack(navigation.canGoBack());
+  }, [navigation]);
+
+  const handleBack = () => {
+    if (navigation.canGoBack()) {
+      router.back();
+    } else {
+      // Fallback: If we can't go back but button was shown, just skip or go to home
+      console.warn('Cannot go back from this screen');
+    }
+  };
 
   return (
     <View style={[styles.navbar, lightBg && styles.navbarLight]} accessibilityRole="header">
       {canGoBack && (
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={handleBack}
           style={styles.backButton}
           accessibilityLabel="Go back"
           accessibilityRole="button"
@@ -45,9 +60,9 @@ export default function MobileAppNavbar({ title, titleColor = '#01b854', rightAc
 
 const styles = StyleSheet.create({
   navbar: {
-    minHeight: Platform.OS === 'web' ? 64 : 92,
+    minHeight: Platform.OS === 'web' ? 60 : 80,
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'web' ? 12 : 32,
+    paddingTop: Platform.OS === 'web' ? 10 : 28,
     paddingBottom: 8,
     justifyContent: 'flex-end',
     alignItems: 'center',
@@ -58,7 +73,7 @@ const styles = StyleSheet.create({
   backButton: {
     position: 'absolute',
     left: 16,
-    bottom: 12,
+    bottom: 8,
     padding: 4,
   },
   logo: {
@@ -71,16 +86,16 @@ const styles = StyleSheet.create({
   titleText: {
     marginTop: 8,
     marginBottom: 6,
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '800',
     fontFamily: 'Inter',
-    letterSpacing: 1.2,
+    letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
   rightActionContainer: {
     position: 'absolute',
     right: 16,
-    bottom: 12,
+    bottom: 8,
   },
   navbarLight: {
     backgroundColor: '#FFFFFF',

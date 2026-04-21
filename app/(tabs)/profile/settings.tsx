@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import ProfileHeaderTabs from '@/components/profile/ProfileHeaderTabs';
+import { useUI } from '@/contexts/UIContext';
 
 const IS_WEB = Platform.OS === 'web';
 
@@ -19,6 +20,22 @@ function UserSettingsInner() {
   const [teamName, setTeamName] = useState(profile?.team_name || '');
   const [submitting, setSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  const { setTabBarVisible } = useUI();
+  const lastScrollY = React.useRef(0);
+
+  const onScroll = (event: any) => {
+    if (Platform.OS === 'web') return;
+    const currentY = event.nativeEvent.contentOffset.y;
+    const diff = currentY - lastScrollY.current;
+
+    if (diff > 10 && currentY > 50) {
+      setTabBarVisible(false);
+    } else if (diff < -10) {
+      setTabBarVisible(true);
+    }
+    lastScrollY.current = currentY;
+  };
 
   useEffect(() => {
     if (profile) {
@@ -60,12 +77,16 @@ function UserSettingsInner() {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView 
+      style={styles.container}
+      onScroll={onScroll}
+      scrollEventThrottle={16}
+    >
       <View style={styles.inner}>
         {IS_WEB && (
           <ProfileHeaderTabs
-            themeAccent="#00ea6b"
-            themeText={IS_WEB ? '#111827' : '#FFFFFF'}
+            themeAccent="#01b854"
+            themeText={IS_WEB ? '#111827' : '#0F172A'}
             isCompact={!IS_WEB}
           />
         )}
@@ -168,7 +189,7 @@ function UserSettingsInner() {
         <View style={modalStyles.overlay}>
           <View style={modalStyles.card}>
             <View style={modalStyles.iconBg}>
-              <CheckCircle size={40} color="#00ea6b" strokeWidth={2.5} />
+              <CheckCircle size={40} color="#01b854" strokeWidth={2.5} />
             </View>
             <Text style={modalStyles.title}>Update Successful!</Text>
             <Text style={modalStyles.message}>Your profile information has been saved successfully.</Text>
@@ -199,7 +220,7 @@ export default function UserSettingsScreen() {
 
   return (
     <View style={styles.nativeRoot}>
-      <MobileAppNavbar title="Settings" titleColor="#00ea6b" />
+      <MobileAppNavbar title="Settings" titleColor="#01b854" />
       <UserSettingsInner />
     </View>
   );
@@ -208,7 +229,7 @@ export default function UserSettingsScreen() {
 const styles = StyleSheet.create({
   nativeRoot: {
     flex: 1,
-    backgroundColor: '#043529',
+    backgroundColor: '#F8FAFC',
   },
   container: {
     flex: 1,
@@ -219,58 +240,70 @@ const styles = StyleSheet.create({
     maxWidth: 900,
     alignSelf: 'flex-start',
     paddingHorizontal: 16,
-    paddingTop: 0,
+    paddingTop: 16,
     paddingBottom: 24,
   },
   pageTitle: {
+    fontFamily: 'Inter',
     fontSize: 20,
     fontWeight: '900',
-    color: IS_WEB ? '#111827' : '#FFFFFF',
+    color: '#0F172A',
     marginBottom: 2,
   },
   pageSubtitle: {
+    fontFamily: 'Inter',
     fontSize: 12,
-    color: IS_WEB ? '#6B7280' : '#9ca3af',
+    color: '#64748B',
     marginBottom: 16,
   },
   panel: {
     padding: 24,
-    backgroundColor: IS_WEB ? '#FFFFFF' : '#06392e',
-    borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.15)',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#F1F5F9',
     borderWidth: 1,
-    borderRadius: 20,
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
   sectionTitle: {
+    fontFamily: 'Inter',
     fontSize: 18,
-    fontWeight: '700',
-    color: IS_WEB ? '#111827' : '#FFFFFF',
+    fontWeight: '800',
+    color: '#0F172A',
     marginBottom: 6,
   },
   sectionSubtitle: {
+    fontFamily: 'Inter',
     fontSize: 13,
-    color: IS_WEB ? '#6B7280' : '#9ca3af',
+    color: '#64748B',
     marginBottom: 24,
   },
   formRow: {
     marginBottom: 20,
   },
   label: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: IS_WEB ? '#374151' : '#9ca3af',
+    fontFamily: 'Inter',
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#64748B',
     marginBottom: 8,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
   },
   input: {
+    fontFamily: 'Inter',
     borderWidth: 1,
-    borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.2)',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: Platform.OS === 'web' ? 10 : 12,
-    backgroundColor: IS_WEB ? '#F9FAFB' : '#043529',
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: '#F8FAFC',
     fontSize: 15,
-    color: IS_WEB ? '#111827' : '#FFF',
+    fontWeight: '500',
+    color: '#0F172A',
   },
   actionsRow: {
     flexDirection: 'row',
@@ -281,11 +314,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#01b854',
     borderWidth: 0,
     paddingHorizontal: 32,
+    borderRadius: 16,
+    height: 52,
   },
   infoMuted: {
+    fontFamily: 'Inter',
     fontSize: 14,
     fontStyle: 'italic',
-    color: IS_WEB ? '#9CA3AF' : '#6B7280',
+    color: '#94A3B8',
   },
   desktopHeaderRow: {
     flexDirection: 'row',
@@ -296,83 +332,91 @@ const styles = StyleSheet.create({
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: IS_WEB ? '#F3F4F6' : 'rgba(0,234,107,0.1)',
+    borderBottomColor: '#F1F5F9',
   },
   menuItemTitle: {
+    fontFamily: 'Inter',
     fontSize: 15,
-    fontWeight: '600',
-    color: IS_WEB ? '#111827' : '#FFFFFF',
+    fontWeight: '700',
+    color: '#0F172A',
     marginBottom: 2,
   },
   menuItemSubtitle: {
+    fontFamily: 'Inter',
     fontSize: 13,
-    color: IS_WEB ? '#6B7280' : '#9CA3AF',
+    color: '#64748B',
   },
 });
 
 const modalStyles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(4,53,41,0.85)',
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
   },
   card: {
-    backgroundColor: '#06392e',
+    backgroundColor: '#FFFFFF',
     borderRadius: 28,
     padding: 32,
     width: '100%',
     maxWidth: 400,
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,234,107,0.25)',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 15 },
-    shadowOpacity: 0.4,
-    shadowRadius: 25,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 5,
   },
   iconBg: {
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(0,234,107,0.1)',
+    backgroundColor: '#F0FDF4',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
   },
   title: {
+    fontFamily: 'Inter',
     fontSize: 22,
-    fontWeight: '800',
-    color: '#f9fafb',
+    fontWeight: '900',
+    color: '#0F172A',
     marginBottom: 12,
   },
   message: {
+    fontFamily: 'Inter',
     fontSize: 14,
-    color: '#9ca3af',
+    color: '#64748B',
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 28,
   },
   button: {
-    backgroundColor: '#00ea6b',
-    paddingVertical: 14,
+    backgroundColor: '#01b854',
+    paddingVertical: 16,
     paddingHorizontal: 40,
-    borderRadius: 14,
+    borderRadius: 16,
     width: '100%',
     alignItems: 'center',
-    shadowColor: '#00ea6b',
+    shadowColor: '#01b854',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 10,
   },
   buttonText: {
-    fontSize: 15,
+    fontFamily: 'Inter',
+    fontSize: 14,
     fontWeight: '800',
-    color: '#043529',
+    color: '#FFFFFF',
     letterSpacing: 1,
+    textTransform: 'uppercase',
   },
 });

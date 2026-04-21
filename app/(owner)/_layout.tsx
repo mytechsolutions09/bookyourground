@@ -55,7 +55,7 @@ export default function OwnerLayout() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <Stack screenOptions={{ headerShown: false, gestureEnabled: true }}>
       <Stack.Screen name="owner-dashboard" />
       <Stack.Screen name="manage-grounds" />
       <Stack.Screen name="add-ground" />

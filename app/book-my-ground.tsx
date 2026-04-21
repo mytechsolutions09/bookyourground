@@ -94,6 +94,7 @@ export default function BookMyGroundPage() {
                 }}
                 isFavorite={true}
                 onToggleFavorite={() => toggleFavorite(item.id)}
+                lightMode={true}
               />
             </View>
           ))}
@@ -132,13 +133,7 @@ export default function BookMyGroundPage() {
               >
                 <Text style={styles.tabText}>Find an Opponent</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.tab, activeTab === 'favorite' && styles.activeTab]}
-                activeOpacity={0.8}
-                onPress={() => setActiveTab('favorite')}
-              >
-                <Text style={[styles.tabText, activeTab === 'favorite' && styles.activeTabText]}>Favourite</Text>
-              </TouchableOpacity>
+
             </View>
 
             {activeTab === 'book' ? (
@@ -158,7 +153,7 @@ export default function BookMyGroundPage() {
 
   // Native (iOS / Android): full-screen booking form with simple navbar.
   return (
-    <View style={styles.nativeRoot}>
+    <View style={[styles.nativeRoot, activeTab === 'favorite' && { backgroundColor: '#F8FAFC' }]}>
       <MobileAppNavbar title="Book a ground" />
       <View style={styles.page}>
         <LandingBookingForm
@@ -252,13 +247,13 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#111827',
+    color: '#0F172A',
     marginBottom: 8,
     fontFamily: 'Inter',
   },
   emptyText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: '#64748B',
     textAlign: 'center',
     fontFamily: 'Inter',
   },

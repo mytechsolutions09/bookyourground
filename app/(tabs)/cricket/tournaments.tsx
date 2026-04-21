@@ -33,12 +33,12 @@ interface Tournament {
   max_teams: number;
 }
 
-export default function CricketTournaments() {
+export default function CricketTournaments({ activeSubTab }: { activeSubTab?: string }) {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isWide = width > 500;
 
-  const [subTab, setSubTab] = useState('all');
+  const subTab = activeSubTab || 'all';
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -175,17 +175,6 @@ export default function CricketTournaments() {
 
   const renderHeader = () => (
     <View style={styles.header}>
-      <View style={styles.subTabContainer}>
-        {['All', 'Participate', 'Network', 'Nearby'].map((label) => (
-          <TouchableOpacity 
-            key={label} 
-            style={[styles.subTab, subTab === label.toLowerCase() && styles.subTabActive]} 
-            onPress={() => setSubTab(label.toLowerCase())}
-          >
-            <Text style={[styles.subTabText, subTab === label.toLowerCase() && styles.subTabTextActive]}>{label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
       
       <View style={styles.searchBarContainer}>
         <View style={styles.searchBar}>
@@ -294,35 +283,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 8,
-  },
-  subTabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 16,
-  },
-  subTab: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 8,
-  },
-  subTabActive: {
-    backgroundColor: '#FFFFFF',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  subTabText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-  subTabTextActive: {
-    color: '#01b854',
   },
   searchBarContainer: {
     flexDirection: 'row',

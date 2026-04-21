@@ -190,30 +190,6 @@ export default function FavoritesScreen({ hideHeader = false, externalScrollHand
   
   const content = (isWeb: boolean) => (
     <View style={{ flex: 1 }}>
-       {!hideHeader && (
-         <View style={[styles.tabContainer, isWebWithTabs && styles.webTabContainer]}>
-            <TouchableOpacity 
-              style={styles.tab}
-              onPress={() => router.push('/grounds')}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.tabText}>Book a Ground</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.tab}
-              onPress={() => router.push('/find-an-opponent')}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.tabText}>Find an Opponent</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.tab, styles.activeTab]}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.activeTabText}>Favourite</Text>
-            </TouchableOpacity>
-          </View>
-       )}
         <FavoritesInner 
           onScroll={isWeb ? null : (externalScrollHandler || verticalScrollHandler)} 
           headerHeight={hideHeader ? 0 : HEADER_HEIGHT}
@@ -237,30 +213,6 @@ export default function FavoritesScreen({ hideHeader = false, externalScrollHand
     <View style={styles.nativeRoot}>
       <Animated.View style={headerAnimatedStyle}>
         <MobileAppNavbar title="My Favorites" titleColor="#043529" lightBg />
-        {!hideHeader && (
-           <View style={[styles.tabContainer, isWebWithTabs && styles.webTabContainer]}>
-            <TouchableOpacity 
-              style={styles.tab}
-              onPress={() => router.push('/grounds')}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.tabText}>Book a Ground</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.tab}
-              onPress={() => router.push('/find-an-opponent')}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.tabText}>Find an Opponent</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.tab, styles.activeTab]}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.activeTabText}>Favourite</Text>
-            </TouchableOpacity>
-          </View>
-        )}
       </Animated.View>
       <FavoritesInner 
         onScroll={externalScrollHandler || verticalScrollHandler} 

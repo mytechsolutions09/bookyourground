@@ -9,11 +9,13 @@ import { router } from 'expo-router';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import { formatBookingSlotSummary } from '@/utils/bookingSlotFormat';
 
-const THEME_BG = '#043529';
-const THEME_CARD_BG = '#06392e';
-const THEME_ACCENT = '#00ea6b';
-const THEME_TEXT = '#FFFFFF';
-const THEME_GOLD = '#dcc093';
+const THEME_BG = '#F8FAFC';
+const THEME_CARD_BG = '#FFFFFF';
+const THEME_ACCENT = '#01b854';
+const THEME_TEXT = '#0F172A';
+const THEME_GOLD = '#10B981';
+const THEME_BORDER = '#F1F5F9';
+const THEME_MUTED = '#64748B';
 
 interface DashboardStats {
   totalGrounds: number;
@@ -210,33 +212,32 @@ export default function OwnerDashboardScreen() {
     }
   };
 
-  const IS_DARK = Platform.OS !== 'web' || isCompact;
-
   const content = (
     <ScrollView
-      style={[styles.container, IS_DARK && styles.containerDark]}
+      style={styles.container}
       contentContainerStyle={styles.scrollContent}
-      refreshControl={<RefreshControl refreshing={loading} onRefresh={loadStats} tintColor={IS_DARK ? THEME_ACCENT : '#01b854'} />}
+      showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={loading} onRefresh={loadStats} tintColor={THEME_ACCENT} />}
     >
       <View style={styles.mainWrapper}>
         <View style={styles.tabContainer}>
           <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'owner' && styles.activeTabButton, IS_DARK && activeTab === 'owner' && styles.activeTabButtonDark]} 
+            style={[styles.tabButton, activeTab === 'owner' && styles.activeTabButton]} 
             onPress={() => setActiveTab('owner')}
           >
             <Text style={[styles.tabText, activeTab === 'owner' && styles.activeTabText]}>Owner Hub</Text>
           </TouchableOpacity>
           <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'personal' && styles.activeTabButton, IS_DARK && activeTab === 'personal' && styles.activeTabButtonDark]} 
+            style={[styles.tabButton, activeTab === 'personal' && styles.activeTabButton]} 
             onPress={() => setActiveTab('personal')}
           >
             <Text style={[styles.tabText, activeTab === 'personal' && styles.activeTabText]}>Personal Activity</Text>
           </TouchableOpacity>
           <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'profile' && styles.activeTabButton, IS_DARK && activeTab === 'profile' && styles.activeTabButtonDark]} 
+            style={[styles.tabButton, activeTab === 'profile' && styles.activeTabButton]} 
             onPress={() => setActiveTab('profile')}
           >
-            <Text style={[styles.tabText, activeTab === 'profile' && styles.activeTabText]}>My Profile</Text>
+            <Text style={[styles.tabText, activeTab === 'profile' && styles.activeTabText]}>Profile</Text>
           </TouchableOpacity>
         </View>
 
@@ -244,125 +245,125 @@ export default function OwnerDashboardScreen() {
           <>
             <View style={styles.grid}>
               <View style={styles.statBoxWrapper}>
-                <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
-                  <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
-                    <Building2 size={24} color="#01b854" />
+                <View style={styles.statBox}>
+                  <View style={styles.iconCircle}>
+                    <Building2 size={22} color="#01b854" />
                   </View>
-                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>My grounds</Text>
-                  <Text style={[styles.statsValue, IS_DARK && styles.statsValueDark]}>{stats.totalGrounds}</Text>
-                  <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>{stats.totalGrounds === 1 ? '1 active ground' : `${stats.totalGrounds} active grounds`}</Text>
+                  <Text style={styles.statsLabel}>My grounds</Text>
+                  <Text style={styles.statsValue}>{stats.totalGrounds}</Text>
+                  <Text style={styles.statsCaption}>{stats.totalGrounds === 1 ? '1 active ground' : `${stats.totalGrounds} active grounds`}</Text>
                 </View>
               </View>
 
-              <TouchableOpacity style={styles.statBoxWrapper} onPress={() => router.push('/(owner)/bookings' as any)}>
-                <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
-                  <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
-                    <Calendar size={24} color="#01b854" />
+              <TouchableOpacity style={styles.statBoxWrapper} onPress={() => router.push('/(owner)/ground-bookings' as any)}>
+                <View style={styles.statBox}>
+                  <View style={styles.iconCircle}>
+                    <Calendar size={22} color="#01b854" />
                   </View>
-                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Bookings on my grounds</Text>
-                  <Text style={[styles.statsValue, IS_DARK && styles.statsValueDark]}>{stats.totalBookingsOnMyGrounds}</Text>
-                  <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>Confirmed games</Text>
+                  <Text style={styles.statsLabel}>Ground Bookings</Text>
+                  <Text style={styles.statsValue}>{stats.totalBookingsOnMyGrounds}</Text>
+                  <Text style={styles.statsCaption}>Confirmed games</Text>
                 </View>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.statBoxWrapper} onPress={() => router.push('/(owner)/inventory' as any)}>
-                <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
-                  <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
-                    <CalendarClock size={24} color="#00ea6b" />
+                <View style={styles.statBox}>
+                  <View style={styles.iconCircle}>
+                    <CalendarClock size={22} color="#01b854" />
                   </View>
-                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Manage Slots</Text>
-                  <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]}>Inventory</Text>
-                  <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>Check availability</Text>
+                  <Text style={styles.statsLabel}>Manage Slots</Text>
+                  <Text style={styles.statsValueSmall}>Inventory</Text>
+                  <Text style={styles.statsCaption}>Check availability</Text>
                 </View>
               </TouchableOpacity>
 
               <View style={styles.statBoxWrapper}>
-                <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
-                  <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
-                    <Calendar size={24} color="#01b854" />
+                <View style={styles.statBox}>
+                  <View style={styles.iconCircle}>
+                    <Swords size={24} color="#01b854" />
                   </View>
-                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Other ground bookings</Text>
-                  <Text style={[styles.statsValue, IS_DARK && styles.statsValueDark]}>{stats.myOwnBookingsCount}</Text>
-                  <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>Personal games</Text>
+                  <Text style={styles.statsLabel}>Other ground bookings</Text>
+                  <Text style={styles.statsValue}>{stats.myOwnBookingsCount}</Text>
+                  <Text style={styles.statsCaption}>Personal games</Text>
                 </View>
               </View>
 
               <View style={styles.statBoxWrapper}>
-                <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
-                  <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
-                    <IndianRupee size={24} color="#01b854" />
+                <View style={styles.statBox}>
+                  <View style={styles.iconCircle}>
+                    <IndianRupee size={22} color="#01b854" />
                   </View>
-                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Total earnings</Text>
-                  <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]}>₹{stats.totalEarningsOnMyGrounds.toLocaleString('en-IN')}</Text>
-                  <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>Total revenue</Text>
+                  <Text style={styles.statsLabel}>Total earnings</Text>
+                  <Text style={styles.statsValueSmall}>₹{stats.totalEarningsOnMyGrounds.toLocaleString('en-IN')}</Text>
+                  <Text style={styles.statsCaption}>Total revenue</Text>
                 </View>
               </View>
 
               <View style={styles.statBoxWrapper}>
-                <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
-                  <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
-                    <IndianRupee size={24} color="#01b854" />
+                <View style={styles.statBox}>
+                  <View style={styles.iconCircle}>
+                    <IndianRupee size={22} color="#01b854" />
                   </View>
-                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Amount withdrawn</Text>
-                  <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]}>₹{stats.totalWithdrawn.toLocaleString('en-IN')}</Text>
-                  <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>Successfully paid</Text>
+                  <Text style={styles.statsLabel}>Paid Out</Text>
+                  <Text style={styles.statsValueSmall}>₹{stats.totalWithdrawn.toLocaleString('en-IN')}</Text>
+                  <Text style={styles.statsCaption}>Successfully paid</Text>
                 </View>
               </View>
 
               <View style={styles.statBoxWrapper}>
-                <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
-                  <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
+                <View style={styles.statBox}>
+                  <View style={styles.iconCircle}>
                     <IndianRupee size={24} color="#01b854" />
                   </View>
-                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Total spent</Text>
-                  <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]}>₹{stats.totalSpentOnOtherGrounds.toLocaleString('en-IN')}</Text>
-                  <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>On other grounds</Text>
+                  <Text style={styles.statsLabel}>Total spent</Text>
+                  <Text style={styles.statsValueSmall}>₹{stats.totalSpentOnOtherGrounds.toLocaleString('en-IN')}</Text>
+                  <Text style={styles.statsCaption}>On other grounds</Text>
                 </View>
               </View>
 
 
 
               <TouchableOpacity style={styles.statBoxWrapper} onPress={() => router.push('/(tabs)/bookings' as any)}>
-                <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
-                  <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
+                <View style={styles.statBox}>
+                  <View style={styles.iconCircle}>
                     <Calendar size={24} color="#01b854" />
                   </View>
-                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>My Bookings</Text>
-                  <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]}>Player History</Text>
-                  <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>Your personal bookings</Text>
+                  <Text style={styles.statsLabel}>My Bookings</Text>
+                  <Text style={styles.statsValueSmall}>Player History</Text>
+                  <Text style={styles.statsCaption}>Your personal bookings</Text>
                 </View>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.statBoxWrapper} onPress={() => router.push('/(owner)/add-ground' as any)}>
-                <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
-                  <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
+                <View style={styles.statBox}>
+                  <View style={styles.iconCircle}>
                     <PlusCircle size={24} color="#01b854" />
                   </View>
-                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Add Ground</Text>
-                  <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]}>Register</Text>
-                  <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>List new property</Text>
+                  <Text style={styles.statsLabel}>Add Ground</Text>
+                  <Text style={styles.statsValueSmall}>Register</Text>
+                  <Text style={styles.statsCaption}>List new property</Text>
                 </View>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.statBoxWrapper} onPress={() => router.push('/(owner)/settings' as any)}>
-                <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
-                  <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
+                <View style={styles.statBox}>
+                  <View style={styles.iconCircle}>
                     <Settings size={24} color="#01b854" />
                   </View>
-                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Settings</Text>
-                  <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]}>Account</Text>
-                  <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>Business settings</Text>
+                  <Text style={styles.statsLabel}>Settings</Text>
+                  <Text style={styles.statsValueSmall}>Account</Text>
+                  <Text style={styles.statsCaption}>Business settings</Text>
                 </View>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.statBoxWrapper} onPress={() => router.push('/(tabs)/support' as any)}>
-                <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
-                  <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
+                <View style={styles.statBox}>
+                  <View style={styles.iconCircle}>
                     <LifeBuoy size={24} color="#01b854" />
                   </View>
-                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Support</Text>
-                  <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]}>Contact Us</Text>
-                  <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>Get help</Text>
+                  <Text style={styles.statsLabel}>Support</Text>
+                  <Text style={styles.statsValueSmall}>Contact Us</Text>
+                  <Text style={styles.statsCaption}>Get help</Text>
                 </View>
               </TouchableOpacity>
             </View>
@@ -373,65 +374,65 @@ export default function OwnerDashboardScreen() {
           <View>
             <View style={styles.grid}>
               <View style={styles.statBoxWrapper}>
-                <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
-                  <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
-                    <Users size={24} color="#01b854" />
+                <View style={styles.statBox}>
+                  <View style={styles.iconCircle}>
+                    <Users size={22} color="#01b854" />
                   </View>
-                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Total Bookings</Text>
-                  <Text style={[styles.statsValue, IS_DARK && styles.statsValueDark]}>{stats.myOwnBookingsCount}</Text>
-                  <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>{stats.myOwnBookingsCount === 1 ? '1 booking made' : `${stats.myOwnBookingsCount} bookings made`}</Text>
+                  <Text style={styles.statsLabel}>Total Bookings</Text>
+                  <Text style={styles.statsValue}>{stats.myOwnBookingsCount}</Text>
+                  <Text style={styles.statsCaption}>{stats.myOwnBookingsCount === 1 ? '1 booking made' : `${stats.myOwnBookingsCount} bookings made`}</Text>
                 </View>
               </View>
 
               <View style={styles.statBoxWrapper}>
-                <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
-                  <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
-                    <Calendar size={24} color="#01b854" />
+                <View style={styles.statBox}>
+                  <View style={styles.iconCircle}>
+                    <Calendar size={22} color="#01b854" />
                   </View>
-                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Next booking</Text>
+                  <Text style={styles.statsLabel}>Next booking</Text>
                   {stats.nextBooking ? (
                     <>
-                      <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]} numberOfLines={1}>{stats.nextBooking.ground?.name}</Text>
-                      <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>{stats.nextBooking.booking_date}</Text>
-                      <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark, { fontSize: 10 }]}>{formatBookingSlotSummary(stats.nextBooking.start_time, stats.nextBooking.end_time, stats.nextBooking.ground?.pitch_type)}</Text>
+                      <Text style={styles.statsValueSmall} numberOfLines={1}>{stats.nextBooking.ground?.name}</Text>
+                      <Text style={styles.statsCaption}>{stats.nextBooking.booking_date}</Text>
+                      <Text style={[styles.statsCaption, { fontSize: 10 }]}>{formatBookingSlotSummary(stats.nextBooking.start_time, stats.nextBooking.end_time, stats.nextBooking.ground?.pitch_type)}</Text>
                     </>
                   ) : (
-                    <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>No upcoming</Text>
+                    <Text style={styles.statsCaption}>No upcoming</Text>
                   )}
                 </View>
               </View>
 
               <View style={styles.statBoxWrapper}>
-                <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
-                  <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
-                    <Calendar size={24} color="#01b854" />
+                <View style={styles.statBox}>
+                  <View style={styles.iconCircle}>
+                    <Calendar size={22} color="#01b854" />
                   </View>
-                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Last booking</Text>
+                  <Text style={styles.statsLabel}>Last booking</Text>
                   {stats.lastBooking ? (
                     <>
-                      <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]} numberOfLines={1}>{stats.lastBooking.ground?.name}</Text>
-                      <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>{stats.lastBooking.booking_date}</Text>
-                      <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark, { fontSize: 10 }]}>{formatBookingSlotSummary(stats.lastBooking.start_time, stats.lastBooking.end_time, stats.lastBooking.ground?.pitch_type)}</Text>
+                      <Text style={styles.statsValueSmall} numberOfLines={1}>{stats.lastBooking.ground?.name}</Text>
+                      <Text style={styles.statsCaption}>{stats.lastBooking.booking_date}</Text>
+                      <Text style={[styles.statsCaption, { fontSize: 10 }]}>{formatBookingSlotSummary(stats.lastBooking.start_time, stats.lastBooking.end_time, stats.lastBooking.ground?.pitch_type)}</Text>
                     </>
                   ) : (
-                    <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>No history</Text>
+                    <Text style={styles.statsCaption}>No history</Text>
                   )}
                 </View>
               </View>
 
               <View style={styles.statBoxWrapper}>
-                <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
-                  <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
-                    <Star size={24} color="#01b854" />
+                <View style={styles.statBox}>
+                  <View style={styles.iconCircle}>
+                    <Star size={22} color="#FFA000" />
                   </View>
-                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Favorite</Text>
+                  <Text style={styles.statsLabel}>Favorite</Text>
                   {stats.favoriteGround ? (
                     <>
-                      <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]} numberOfLines={1}>{stats.favoriteGround.name}</Text>
-                      <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>{stats.favoriteGround.count} {stats.favoriteGround.count === 1 ? 'visit' : 'visits'}</Text>
+                      <Text style={styles.statsValueSmall} numberOfLines={1}>{stats.favoriteGround.name}</Text>
+                      <Text style={styles.statsCaption}>{stats.favoriteGround.count} {stats.favoriteGround.count === 1 ? 'visit' : 'visits'}</Text>
                     </>
                   ) : (
-                    <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>N/A</Text>
+                    <Text style={styles.statsCaption}>N/A</Text>
                   )}
                 </View>
               </View>
@@ -443,24 +444,24 @@ export default function OwnerDashboardScreen() {
           <View>
             <View style={styles.grid}>
               <View style={styles.statBoxWrapper}>
-                <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
+                <View style={styles.statBox}>
                   {editingField !== 'full_name' && (
                     <TouchableOpacity 
                       style={styles.editBtn} 
                       onPress={() => startEditing('full_name', profile?.full_name || '')}
                     >
-                      <Pencil size={12} color={IS_DARK ? THEME_ACCENT : '#01b854'} />
+                      <Pencil size={12} color="#01b854" />
                     </TouchableOpacity>
                   )}
-                  <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
-                    <User size={24} color="#01b854" />
+                  <View style={styles.iconCircle}>
+                    <User size={22} color="#01b854" />
                   </View>
-                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Full Name</Text>
+                  <Text style={styles.statsLabel}>Full Name</Text>
                   
                   {editingField === 'full_name' ? (
                     <View style={styles.editContainer}>
                       <TextInput
-                        style={[styles.editInput, IS_DARK && styles.editInputDark]}
+                        style={styles.editInput}
                         value={editValue}
                         onChangeText={setEditValue}
                         autoFocus
@@ -476,42 +477,42 @@ export default function OwnerDashboardScreen() {
                       </View>
                     </View>
                   ) : (
-                    <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]} numberOfLines={1}>{profile?.full_name || 'N/A'}</Text>
+                    <Text style={styles.statsValueSmall} numberOfLines={1}>{profile?.full_name || 'N/A'}</Text>
                   )}
-                  <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>Primary Account holder</Text>
+                  <Text style={styles.statsCaption}>Primary Account holder</Text>
                 </View>
               </View>
 
               <View style={styles.statBoxWrapper}>
-                <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
-                  <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
-                    <Mail size={24} color="#01b854" />
+                <View style={styles.statBox}>
+                  <View style={styles.iconCircle}>
+                    <Mail size={22} color="#01b854" />
                   </View>
-                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Email Address</Text>
-                  <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]} numberOfLines={1}>{user?.email || 'N/A'}</Text>
-                  <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>Login Email</Text>
+                  <Text style={styles.statsLabel}>Email Address</Text>
+                  <Text style={styles.statsValueSmall} numberOfLines={1}>{user?.email || 'N/A'}</Text>
+                  <Text style={styles.statsCaption}>Login Email</Text>
                 </View>
               </View>
 
               <View style={styles.statBoxWrapper}>
-                <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
+                <View style={styles.statBox}>
                   {editingField !== 'phone' && (
                     <TouchableOpacity 
                       style={styles.editBtn} 
                       onPress={() => startEditing('phone', profile?.phone || '')}
                     >
-                      <Pencil size={12} color={IS_DARK ? THEME_ACCENT : '#01b854'} />
+                      <Pencil size={12} color="#01b854" />
                     </TouchableOpacity>
                   )}
-                  <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
-                    <Phone size={24} color="#01b854" />
+                  <View style={styles.iconCircle}>
+                    <Phone size={22} color="#01b854" />
                   </View>
-                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Phone Number</Text>
+                  <Text style={styles.statsLabel}>Phone Number</Text>
                   
                   {editingField === 'phone' ? (
                     <View style={styles.editContainer}>
                       <TextInput
-                        style={[styles.editInput, IS_DARK && styles.editInputDark]}
+                        style={styles.editInput}
                         value={editValue}
                         onChangeText={setEditValue}
                         autoFocus
@@ -528,31 +529,31 @@ export default function OwnerDashboardScreen() {
                       </View>
                     </View>
                   ) : (
-                    <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]}>{profile?.phone || 'Not provided'}</Text>
+                    <Text style={styles.statsValueSmall}>{profile?.phone || 'Not provided'}</Text>
                   )}
-                  <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>Contact information</Text>
+                  <Text style={styles.statsCaption}>Contact information</Text>
                 </View>
               </View>
 
               <View style={styles.statBoxWrapper}>
-                <View style={[styles.statBox, IS_DARK && styles.statBoxDark]}>
+                <View style={styles.statBox}>
                   {editingField !== 'business_name' && (
                     <TouchableOpacity 
                       style={styles.editBtn} 
                       onPress={() => startEditing('business_name', profile?.business_name || '')}
                     >
-                      <Pencil size={12} color={IS_DARK ? THEME_ACCENT : '#01b854'} />
+                      <Pencil size={12} color="#01b854" />
                     </TouchableOpacity>
                   )}
-                  <View style={[styles.iconCircle, IS_DARK && styles.iconCircleDark]}>
-                    <ShieldCheck size={24} color="#01b854" />
+                  <View style={styles.iconCircle}>
+                    <ShieldCheck size={22} color="#01b854" />
                   </View>
-                  <Text style={[styles.statsLabel, IS_DARK && styles.statsLabelDark]}>Business</Text>
+                  <Text style={styles.statsLabel}>Business</Text>
                   
                   {editingField === 'business_name' ? (
                     <View style={styles.editContainer}>
                       <TextInput
-                        style={[styles.editInput, IS_DARK && styles.editInputDark]}
+                        style={styles.editInput}
                         value={editValue}
                         onChangeText={setEditValue}
                         autoFocus
@@ -568,9 +569,9 @@ export default function OwnerDashboardScreen() {
                       </View>
                     </View>
                   ) : (
-                    <Text style={[styles.statsValueSmall, IS_DARK && styles.statsValueSmallDark]} numberOfLines={1}>{profile?.business_name || 'Personal Account'}</Text>
+                    <Text style={styles.statsValueSmall} numberOfLines={1}>{profile?.business_name || 'Personal Account'}</Text>
                   )}
-                  <Text style={[styles.statsCaption, IS_DARK && styles.statsCaptionDark]}>{profile?.business_verified ? 'Verified Partner' : 'Verification pending'}</Text>
+                  <Text style={styles.statsCaption}>{profile?.business_verified ? 'Verified Partner' : 'Verification pending'}</Text>
                 </View>
               </View>
             </View>
@@ -596,14 +597,11 @@ export default function OwnerDashboardScreen() {
 const styles = StyleSheet.create({
   nativeContainer: {
     flex: 1,
-    backgroundColor: THEME_BG,
+    backgroundColor: '#FFFFFF',
   },
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
-  },
-  containerDark: {
-    backgroundColor: THEME_BG,
+    backgroundColor: '#F8FAFC',
   },
   scrollContent: {
     paddingBottom: 40,
@@ -622,23 +620,23 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     letterSpacing: -0.5,
   },
-  sectionTitleDark: {
-    color: THEME_TEXT,
-  },
+
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(0,0,0,0.03)',
-    borderRadius: 999,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 20,
     padding: 6,
-    marginBottom: 24,
-    alignSelf: 'flex-start',
+    marginBottom: 32,
+    width: '100%',
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.02)',
+    borderColor: '#E2E8F0',
   },
   tabButton: {
-    paddingHorizontal: 24,
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 10,
-    borderRadius: 999,
+    borderRadius: 16,
   },
   activeTabButton: {
     backgroundColor: '#FFFFFF',
@@ -647,106 +645,85 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
   },
-  activeTabButtonDark: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
+
   tabText: {
     fontFamily: 'Inter',
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: 12,
+    fontWeight: '600',
     color: '#64748B',
   },
   activeTabText: {
     color: '#01b854',
-    fontWeight: '600',
+    fontWeight: '800',
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    justifyContent: 'space-between',
     width: '100%',
   },
   statBoxWrapper: {
-    flex: 1,
-    minWidth: '45%',
-    maxWidth: '50%',
+    width: '48%',
+    marginBottom: 12,
   },
   statBox: {
-    flex: 1,
     borderRadius: 24,
     backgroundColor: '#FFFFFF',
-    padding: 16,
+    paddingVertical: 24,
+    paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: '#F1F5F9',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOpacity: 0.02,
+    shadowOpacity: 0.04,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
-  },
-  statBoxDark: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderColor: 'rgba(0,234,107,0.1)',
+    elevation: 2,
   },
   iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F9FAFB',
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#F8FAFC',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
-  },
-  iconCircleDark: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
   statsLabel: {
     fontFamily: 'Inter',
     fontSize: 11,
-    fontWeight: '600',
-    color: '#4B5563',
-    paddingVertical: 2,
+    fontWeight: '800',
+    color: '#64748B',
     textTransform: 'uppercase',
-    letterSpacing: 1.2,
-    marginBottom: 4,
+    letterSpacing: 0.8,
+    marginBottom: 8,
     textAlign: 'center',
-  },
-  statsLabelDark: {
-    color: '#9ca3af',
   },
   statsValue: {
     fontFamily: 'Inter',
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 2,
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#0F172A',
+    marginBottom: 6,
     letterSpacing: -1,
-  },
-  statsValueDark: {
-    color: THEME_TEXT,
   },
   statsValueSmall: {
     fontFamily: 'Inter',
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 2,
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 4,
     textAlign: 'center',
     letterSpacing: -0.5,
   },
-  statsValueSmallDark: {
-    color: THEME_GOLD,
-  },
   statsCaption: {
     fontFamily: 'Inter',
-    fontSize: 12,
-    fontWeight: '400',
-    color: '#6B7280',
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#94A3B8',
     textAlign: 'center',
-  },
-  statsCaptionDark: {
-    color: '#9ca3af',
-    opacity: 0.8,
   },
   editBtn: {
     position: 'absolute',
@@ -772,19 +749,15 @@ const styles = StyleSheet.create({
   editInput: {
     flex: 1,
     fontSize: 13,
-    fontWeight: '300',
-    color: '#111827',
-    paddingVertical: 6,
-    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
-    outlineStyle: 'none',
+    fontWeight: '600',
+    color: '#0F172A',
+    paddingVertical: 10,
+    fontFamily: 'Inter',
   } as any,
-  editInputDark: {
-    color: THEME_TEXT,
-  },
   editActions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginLeft: 4,
+    marginLeft: 8,
   },
 });

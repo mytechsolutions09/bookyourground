@@ -25,6 +25,7 @@ import Button from '@/components/ui/Button';
 import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '../../components/MobileAppNavbar';
 import ProfileHeaderTabs from '@/components/profile/ProfileHeaderTabs';
+import { useUI } from '@/contexts/UIContext';
 
 const IS_WEB = Platform.OS === 'web';
 const IS_DARK = Platform.OS !== 'web' || (typeof window !== 'undefined' && window.innerWidth < 900);
@@ -109,8 +110,29 @@ export default function ProfileScreen() {
     }
   };
 
+  const { setTabBarVisible } = useUI();
+  const lastScrollY = React.useRef(0);
+
+  const onScroll = (event: any) => {
+    if (Platform.OS === 'web') return;
+    const currentY = event.nativeEvent.contentOffset.y;
+    const diff = currentY - lastScrollY.current;
+
+    if (diff > 10 && currentY > 50) {
+      setTabBarVisible(false);
+    } else if (diff < -10) {
+      setTabBarVisible(true);
+    }
+    lastScrollY.current = currentY;
+  };
+
   const iconMuted = themeAccent;
   const chevronColor = isLight ? '#94a3b8' : themeAccent;
+
+  const getFormattedName = (name?: string) => {
+    if (!name) return '';
+    return name.split(' ').map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()).join(' ');
+  };
 
   const profileBody = (
     <View style={[styles.content]}>
@@ -136,7 +158,7 @@ export default function ProfileScreen() {
         ]}
       >
         <View style={{ height: 8 }} />
-        <RNText style={[styles.name, { color: themeText }]}>{profile?.full_name}</RNText>
+        <RNText style={[styles.name, { color: themeText }]}>{getFormattedName(profile?.full_name)}</RNText>
         <View style={[styles.roleBadge, { borderColor: themeAccent, backgroundColor: isLight ? 'rgba(16, 185, 129, 0.08)' : 'transparent', marginBottom: 16 }]}>
           <RNText style={[styles.roleText, { color: isLight ? themeAccent : themeText }]}>
             {profile && getRoleLabel(profile.role)}
@@ -214,16 +236,7 @@ export default function ProfileScreen() {
             </View>
             <ChevronRight size={20} color={chevronColor} />
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => router.push('/(tabs)/bookings' as any)}
-          >
-            <View style={styles.menuItemLeft}>
-              <Calendar size={20} color={themeAccent} />
-              <RNText style={[styles.menuItemText, { color: themeText }]}>My Bookings</RNText>
-            </View>
-            <ChevronRight size={20} color={chevronColor} />
-          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.menuItem}
             onPress={() => router.push('/(owner)/earnings' as any)}
@@ -398,7 +411,12 @@ export default function ProfileScreen() {
   return (
     <View style={styles.nativeScreen}>
       <MobileAppNavbar title="Profile" />
-      <ScrollView style={styles.container} contentContainerStyle={styles.nativeScrollContent}>
+      <ScrollView 
+        style={styles.container} 
+        contentContainerStyle={styles.nativeScrollContent}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+      >
         {profileBody}
       </ScrollView>
     </View>

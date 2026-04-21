@@ -46,6 +46,11 @@ import {
   ClipboardList,
   Phone,
   ShoppingBag,
+  Wallet,
+  MessageSquare,
+  Bell,
+  Sun,
+  Info,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -69,6 +74,26 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
   const [searchResults, setSearchResults] = useState<{ grounds: any[], matches: any[] }>({ grounds: [], matches: [] });
   const [isSearching, setIsSearching] = useState(false);
   const [signOutHovered, setSignOutHovered] = useState(false);
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchSidebarData() {
+      if (!user?.id) return;
+      try {
+        const { data } = await supabase
+          .from('bookings')
+          .select('id')
+          .eq('user_id', user.id);
+        if (data) setBookings(data);
+      } catch (err) {
+        console.error('Sidebar fetch error:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchSidebarData();
+  }, [user?.id]);
 
   const performSearch = useCallback(async (query: string) => {
     if (query.length < 2) {
@@ -246,9 +271,9 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
   const isUserRoute =
     !isGroundOwner &&
     !isSuperAdmin &&
-    (cleanPath === '/(tabs)/dashboard' ||
-      cleanPath === '/(tabs)/bookings' ||
-      cleanPath === '/(tabs)/profile');
+    (cleanPath.includes('/dashboard') ||
+      cleanPath.includes('/bookings') ||
+      cleanPath.includes('/profile'));
 
   // On ground info (/grounds/[id]) and booking info (/bookings/[id]) pages,
   // hide the left sidebar for all roles so the content can take full width.
@@ -275,11 +300,17 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
     icon: Icon,
     label,
     hideLabel = false,
+    badge,
+    meta,
+    isActiveOverride,
   }: {
     href: string;
     icon: any;
     label: string;
     hideLabel?: boolean;
+    badge?: number | string;
+    meta?: string;
+    isActiveOverride?: boolean;
   }) => {
     const [hovered, setHovered] = useState(false);
     const normalize = (value: string) => {
@@ -294,13 +325,14 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
     const targetHref = clean(normalize(href));
 
     const hrefSegments = href.split('/').filter(Boolean);
-    const isActive =
+    const isActive = isActiveOverride ?? (
       hrefSegments.length > 0
         ? hrefSegments.length === segments.length &&
         hrefSegments.every((seg, i) => segments[i] === seg)
-        : currentPath === targetHref;
-    const iconColor = isCompact ? (isActive ? '#10B981' : '#6B7280') : (isActive ? '#111827' : '#4B5563');
-    const activeStyle = isCompact ? styles.navLinkActiveMobile : styles.navLinkActive;
+        : currentPath === targetHref
+    );
+    const iconColor = isActive ? '#00ea6b' : 'rgba(255,255,255,0.7)';
+    const activeStyle = styles.navLinkActive;
 
     return (
       <TouchableOpacity
@@ -333,13 +365,21 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
           style={[
             styles.navLinkText,
             isCompact && styles.navLinkTextMobile,
-            isActive && (isCompact ? styles.navLinkTextActiveMobile : styles.navLinkTextActive),
+            isActive && styles.navLinkTextActive,
             !isCompact && hideLabel && { opacity: 0, width: 0, marginLeft: 0 } as any,
             !isCompact && { transition: 'all 0.3s ease-in-out' } as any,
           ]}
         >
           {label}
         </RNText>
+        {badge !== undefined && !hideLabel && (
+          <View style={styles.badge}>
+            <RNText style={styles.badgeText}>{badge}</RNText>
+          </View>
+        )}
+        {meta !== undefined && !hideLabel && (
+          <RNText style={styles.navLinkMeta}>{meta}</RNText>
+        )}
       </TouchableOpacity>
     );
   };
@@ -558,18 +598,18 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
               onPress={() => router.replace('/')}
               style={styles.logo}
               accessibilityRole="link"
-              accessibilityLabel="Book my ground — home"
+              accessibilityLabel="Groundly — home"
             >
-              <Image
-                source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
-                style={styles.logoImage}
-                resizeMode="contain"
-                accessibilityIgnoresInvertColors
-              />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={{ backgroundColor: '#00ea6b', padding: 6, borderRadius: 8 }}>
+                  <LandPlot size={20} color="#043529" />
+                </View>
+                <RNText style={{ fontSize: 22, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.5, fontFamily: 'Inter' }}>Groundly</RNText>
+              </View>
             </TouchableOpacity>
 
             <View style={styles.headerRight}>
-              {(!isCompact && (isAuthenticated || isPublicNoSidebar)) ? (
+              {(!isCompact && !isAuthenticated && (isPublicNoSidebar || isMarketing)) ? (
                 <TouchableOpacity
                   style={styles.burgerButton}
                   onPress={() => setMenuOpen((prev) => !prev)}
@@ -581,28 +621,22 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                   )}
                 </TouchableOpacity>
               ) : (
-                !isCompact && (
-                  <View style={{ flexDirection: 'row', gap: 24 }}>
+                !isCompact && !isAdminLayout && (
+                  <View style={{ flexDirection: 'row', gap: 32, alignItems: 'center' }}>
                     <RNText
-                      style={styles.headerPrimaryButtonText}
-                      onPress={() => router.push('/cricket/player-profile' as any)}
+                      style={[styles.headerNavLink, (cleanPath === '/(tabs)/dashboard' || cleanPath === '/dashboard') && styles.headerNavLinkActive]}
+                      onPress={() => router.push('/(tabs)/dashboard' as any)}
                     >
-                      Cricket
+                      Dashboard
                     </RNText>
-                    {!isGroundOwner && (
-                      <RNText
-                        style={styles.headerPrimaryButtonText}
-                        onPress={() => router.push('/shop' as any)}
-                      >
-                        Shop
-                      </RNText>
-                    )}
                     <RNText
-                      style={styles.headerPrimaryButtonText}
-                      onPress={() => router.push('/book-my-ground' as any)}
+                      style={[styles.headerNavLink, cleanPath === '/(tabs)/bookings' && styles.headerNavLinkActive]}
+                      onPress={() => router.push('/(tabs)/bookings' as any)}
                     >
-                      Grounds
+                      Bookings
                     </RNText>
+
+
                     {!isAuthenticated ? (
                       <RNText
                         style={styles.headerSecondaryButtonText}
@@ -611,20 +645,32 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                         Sign in
                       </RNText>
                     ) : (
-                      <RNText
-                        style={styles.headerPrimaryButtonText}
-                        onPress={() => {
-                          if (isSuperAdmin) {
-                            router.push('/(admin)/dashboard' as any);
-                          } else if (isGroundOwner) {
-                            router.push('/(owner)/owner-dashboard' as any);
-                          } else {
-                            router.push('/(tabs)/dashboard' as any);
-                          }
-                        }}
-                      >
-                        Dashboard
-                      </RNText>
+                      <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
+                        <TouchableOpacity 
+                          style={styles.userProfilePill}
+                          onPress={() => router.push('/(tabs)/profile' as any)}
+                        >
+                          <Image 
+                            source={{ uri: profile?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex' }} 
+                            style={styles.userAvatar} 
+                          />
+                          <RNText style={styles.userName}>
+                            {(() => {
+                              const rawName = profile?.full_name?.split(' ')[0] || 'Alex';
+                              return rawName.charAt(0).toUpperCase() + rawName.slice(1).toLowerCase();
+                            })()}
+                          </RNText>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity style={styles.notificationPill}>
+                           <Bell size={20} color="#FFFFFF" />
+                           <View style={styles.headerNotificationBadge}>
+                             <RNText style={styles.headerBadgeText}>3</RNText>
+                           </View>
+                        </TouchableOpacity>
+
+
+                      </View>
                     )}
                   </View>
                 )
@@ -972,23 +1018,48 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                       </>
                     ) : (
                       <>
-                        <RNText style={styles.sidebarSectionTitle}>My Account</RNText>
                         <NavLink
                           href="/(tabs)/dashboard"
                           icon={LayoutDashboard}
                           label="Dashboard"
+                          isActiveOverride={cleanPath === '/(tabs)/dashboard' || cleanPath === '/dashboard'}
                         />
-                        <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
-                        <NavLink href="/grounds?tab=favorite" icon={Star} label="Favorites" />
-                        <NavLink href="/(tabs)/profile" icon={User} label="Profile" />
-                        <NavLink href="/(tabs)/support" icon={Phone} label="Contact Us" />
+
+                        <NavLink 
+                          href="/(tabs)/bookings" 
+                          icon={ClipboardList} 
+                          label="My Bookings" 
+                          badge={loading ? undefined : bookings.length} 
+                        />
+                        <NavLink 
+                          href="/favorites" 
+                          icon={Heart} 
+                          label="Favorites" 
+                          badge={4}
+                        />
+                        <NavLink 
+                          href="/wallet" 
+                          icon={Wallet} 
+                          label="Wallet" 
+                          meta="₹2,840"
+                        />
+                        <NavLink 
+                          href="/cricket/player-profile" 
+                          icon={Trophy} 
+                          label="Cricket Hub" 
+                        />
+                        <NavLink 
+                          href="/(tabs)/support" 
+                          icon={Info} 
+                          label="Help" 
+                        />
 
                         <View style={styles.sidebarDivider} />
                         <TouchableOpacity
                           style={styles.signOutButton}
                           onPress={handleSignOut}
                         >
-                          <LogOut size={18} color="#01b854" />
+                          <LogOut size={18} color="#00ea6b" />
                           <RNText style={styles.signOutText}>Sign out</RNText>
                         </TouchableOpacity>
                       </>
@@ -1002,6 +1073,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
 
         <View style={[
           styles.main,
+          (isLanding || isMarketing || isPublicNoSidebar) && { padding: 0 },
           !isPublicNoSidebar && !isCompact && !noCard && (isGroundOwner || isSuperAdmin) && styles.mainAppCard
         ]}>
           {children}
@@ -1013,13 +1085,14 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
           {[
             { label: 'Home', icon: House, href: '/' },
             { label: 'Grounds', icon: LandPlot, href: '/grounds' },
-            { label: 'Cricket', icon: Trophy, href: '/cricket/player-profile' },
             { label: 'Shop', icon: ShoppingBag, href: '/shop' },
+            { label: 'Cricket', icon: Trophy, href: '/cricket/player-profile' },
             { label: 'Profile', icon: CircleUser, href: '/(tabs)/profile' },
           ].map((item) => {
             const Icon = item.icon;
             const isActive = cleanPath === item.href ||
               (item.href === '/grounds' && cleanPath === '/book-my-ground') ||
+              (item.href === '/favorites' && cleanPath === '/favorites') ||
               (item.href === '/' && cleanPath === '');
             return (
               <TouchableOpacity
@@ -1055,24 +1128,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
   },
   header: {
-    backgroundColor: '#FFFFFF',
+    height: 72,
+    backgroundColor: '#043529',
+    justifyContent: 'center',
+    zIndex: 100,
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderColor: 'rgba(255,255,255,0.05)',
     ...Platform.select({
       web: {
         position: 'sticky' as any,
         top: 0,
-        zIndex: 1,
       },
     }),
   },
   ownerHeader: {
-    backgroundColor: '#FFFFFF',
-    borderBottomColor: '#F3F4F6',
+    backgroundColor: '#043529',
+    borderBottomColor: 'rgba(255,255,255,0.05)',
   },
   userHeader: {
-    backgroundColor: '#FFFFFF',
-    borderBottomColor: '#F3F4F6',
+    backgroundColor: '#043529',
+    borderBottomColor: 'rgba(255,255,255,0.05)',
   },
   heroHeader: {
     position: 'absolute' as any,
@@ -1108,7 +1183,7 @@ const styles = StyleSheet.create({
     maxWidth: 1400,
     marginHorizontal: 'auto',
     paddingHorizontal: 24,
-    paddingVertical: 14, // Standard desktop
+    paddingTop: 16,
     width: '100%',
   },
   headerContentCompact: {
@@ -1130,19 +1205,6 @@ const styles = StyleSheet.create({
     width: 200,
     maxWidth: '100%' as any,
   },
-  sidebarBrand: {
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    marginBottom: 8,
-  },
-  sidebarBrandText: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#10b981',
-    fontFamily: 'Inter',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1153,7 +1215,7 @@ const styles = StyleSheet.create({
     maxWidth: 360,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
@@ -1165,14 +1227,14 @@ const styles = StyleSheet.create({
   },
   headerSearchInput: {
     flex: 1,
-    height: 40,
-    color: '#111827',
+    height: 32,
+    color: '#FFFFFF',
     fontSize: 13,
     fontFamily: 'Inter',
     backgroundColor: 'transparent',
     borderWidth: 0,
     padding: 0,
-    paddingVertical: 8,
+    paddingVertical: 4,
     ...Platform.select({
       web: {
         outlineStyle: 'none',
@@ -1204,6 +1266,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     padding: 20,
     textAlign: 'center',
+    fontFamily: 'Inter',
   },
   searchSection: {
     paddingBottom: 8,
@@ -1216,6 +1279,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 4,
     letterSpacing: 0.8,
+    fontFamily: 'Inter',
   },
   searchItem: {
     flexDirection: 'row',
@@ -1240,16 +1304,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#111827',
+    fontFamily: 'Inter',
   },
   searchItemMeta: {
     fontSize: 12,
     color: '#6B7280',
     marginTop: 1,
+    fontFamily: 'Inter',
   },
   userName: {
     fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
+    fontFamily: 'Inter',
   },
   signOutButton: {
     flexDirection: 'row',
@@ -1269,8 +1336,9 @@ const styles = StyleSheet.create({
   },
   signOutText: {
     fontSize: 14,
-    color: '#01b854',
+    color: 'rgba(255,255,255,0.7)',
     fontWeight: '700',
+    fontFamily: 'Inter',
   },
   signOutTextMobile: {
     color: '#dcc093',
@@ -1281,12 +1349,10 @@ const styles = StyleSheet.create({
   body: {
     flex: 1,
     flexDirection: 'row',
-    maxWidth: 1400,
-    marginHorizontal: 'auto',
     width: '100%',
     position: 'relative',
-    paddingTop: 32,
-    paddingHorizontal: 24,
+    paddingTop: 0,
+    backgroundColor: '#F5F5F7',
   },
   bodyAdmin: {
     flex: 1,
@@ -1299,30 +1365,28 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     position: 'relative',
-    overflow: 'hidden',
+    backgroundColor: '#F5F5F7',
   },
   sidebarContainer: {
-    paddingRight: 16, // Added gap back for Owners and Users
+    paddingRight: 0,
   },
   sidebarContainerAdmin: {
     paddingRight: 0, // Keep it flush for Super Admin
   },
   sidebar: {
-    width: 200,
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
+    width: 240,
+    backgroundColor: '#043529',
+    paddingVertical: 24,
+    paddingHorizontal: 16,
+    borderRightWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+    height: '100%',
     ...Platform.select({
       web: {
         position: 'sticky' as any,
-        top: 96,
+        top: 0,
         alignSelf: 'flex-start',
-        maxHeight: 'calc(100vh - 80px)' as any,
+        maxHeight: '100vh' as any,
         transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
         overflow: 'hidden',
       },
@@ -1367,35 +1431,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
   },
   navLinkActive: {
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(0,234,107,0.1)',
   },
   sidebarHeaderOffset: {
     // Keep sidebar content below the landing hero header (logo + burger).
     // Prevents visual overlap when hero header is absolute.
     paddingTop: 78,
   },
-  itemSpacer: {
-    height: 14,
-  },
   navLinkText: {
     fontFamily: 'Inter',
     fontSize: 14,
-    fontWeight: '500',
-    color: '#4B5563',
-  },
-  navLinkTextMobile: {
-    color: '#1F2937',
+    fontWeight: '400',
+    color: 'rgba(255,255,255,0.7)',
+    marginLeft: 12,
+    flex: 1,
   },
   navLinkTextActive: {
-    color: '#374151',
-    fontWeight: '600',
-  },
-  navLinkTextActiveMobile: {
     color: '#00ea6b',
-    fontWeight: '700',
-  },
-  navLinkActiveMobile: {
-    backgroundColor: 'rgba(52, 211, 153, 0.12)',
+    fontWeight: '600',
   },
   burgerButton: {
     width: 40,
@@ -1405,43 +1458,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  divider: {
-    height: 1,
-    backgroundColor: '#E0E0E0',
-    marginVertical: 16,
-  },
   sidebarTitle: {
     fontFamily: 'Inter',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#6B7280',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     marginBottom: 16,
-    marginLeft: 12,
+    textAlign: 'center',
+    width: '100%',
     opacity: 0.8,
   },
   main: {
     flex: 1,
+    padding: 20,
     ...Platform.select({
       web: {
-        minHeight: 'calc(100vh - 65px)' as any,
+        minHeight: '100vh' as any,
       },
     }),
   },
   mainAppCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 32,
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    marginBottom: 24,
+    shadowOpacity: 0.05,
+    shadowRadius: 15,
+    shadowOffset: { width: 0, height: 8 },
+    marginBottom: 0,
     overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
-    borderTopLeftRadius: 0, // Flush with sidebar/subbar
-    borderBottomLeftRadius: 0,
+    height: '100%',
   },
   mobileOverlay: {
     position: 'absolute' as any,
@@ -1454,12 +1501,14 @@ const styles = StyleSheet.create({
   },
   sidebarSectionTitle: {
     fontSize: 11,
-    fontWeight: '700',
-    color: '#9CA3AF',
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.5)',
     textTransform: 'uppercase',
     letterSpacing: 0.6,
-    marginBottom: 6,
-    marginLeft: 4,
+    marginBottom: 10,
+    textAlign: 'center',
+    width: '100%',
+    fontFamily: 'Inter',
   },
   sidebarHeaderRow: {
     flexDirection: 'row',
@@ -1510,26 +1559,12 @@ const styles = StyleSheet.create({
       }
     }) as any,
   },
-  headerPrimaryButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 999,
-    backgroundColor: '#10b981',
-  },
   headerPrimaryButtonText: {
     fontSize: 14,
     fontWeight: '400',
     color: '#dcc093',
     fontFamily: 'Inter',
     textTransform: 'uppercase' as any,
-  },
-  headerSecondaryButton: {
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: 'rgba(249,250,251,0.6)',
-    backgroundColor: 'rgba(15,23,42,0.75)',
   },
   headerSecondaryButtonText: {
     fontSize: 14,
@@ -1545,6 +1580,98 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     backgroundColor: '#10b981',
     width: '100%',
+  },
+  headerNavLink: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.7)',
+    fontFamily: 'Inter',
+  },
+  headerNavLinkActive: {
+    color: '#00ea6b',
+    borderBottomWidth: 2,
+    borderBottomColor: '#00ea6b',
+    paddingBottom: 4,
+  },
+  badge: {
+    backgroundColor: '#00ea6b',
+    borderRadius: 99,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 'auto',
+    minWidth: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: {
+    color: '#043529',
+    fontSize: 11,
+    fontWeight: '800',
+    fontFamily: 'Inter',
+  },
+  navLinkMeta: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+    marginLeft: 'auto',
+    fontFamily: 'Inter',
+  },
+  userProfilePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 99,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+  },
+  userAvatar: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#F1F5F9',
+  },
+  notificationPill: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  headerNotificationBadge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    backgroundColor: '#EF4444',
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#043529',
+  },
+  headerBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '800',
+    fontFamily: 'Inter',
+  },
+  hostButton: {
+    backgroundColor: '#00ea6b',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  hostButtonText: {
+    color: '#043529',
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: 'Inter',
   },
   mobilePrimaryButtonText: {
     fontSize: 15,

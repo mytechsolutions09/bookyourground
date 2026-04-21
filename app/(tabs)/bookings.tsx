@@ -26,6 +26,7 @@ import Modal from '@/components/ui/Modal';
 import { slugifyGroundSegment } from '@/utils/groundSlug';
 import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
 import { Calendar, X, Swords, Save, CheckCircle2, Circle } from 'lucide-react-native';
+import { useUI } from '@/contexts/UIContext';
 
 function NameInputCell({ booking, onSave }: { booking: BookingWithDetails, onSave: (id: string, name: string) => Promise<void> }) {
   const [localName, setLocalName] = useState(booking.booked_for_name || '');
@@ -92,6 +93,22 @@ export default function BookingsScreen() {
   const [bookingToCancel, setBookingToCancel] = useState<BookingWithDetails | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [cancelSuccess, setCancelSuccess] = useState(false);
+
+  const { setTabBarVisible } = useUI();
+  const lastScrollY = React.useRef(0);
+
+  const onScroll = (event: any) => {
+    if (Platform.OS === 'web') return;
+    const currentY = event.nativeEvent.contentOffset.y;
+    const diff = currentY - lastScrollY.current;
+
+    if (diff > 10 && currentY > 50) {
+      setTabBarVisible(false);
+    } else if (diff < -10) {
+      setTabBarVisible(true);
+    }
+    lastScrollY.current = currentY;
+  };
 
   useEffect(() => {
     if (user) {
@@ -361,328 +378,195 @@ export default function BookingsScreen() {
   const content = (
     <View style={[styles.container, isWeb && !IS_DARK && styles.webContainerRoot]}>
       {isWeb && !IS_DARK ? (
-        <View style={styles.webCard}>
-          <View style={[styles.header, styles.webHeader]}>
-            <View>
-              <View style={styles.tabRow}>
-                <TouchableOpacity
-                  onPress={() => setActiveTab('all' as any)}
-                  style={[styles.tabChip, activeTab === 'all' && styles.tabChipActive]}
-                >
-                  <Text style={[styles.tabChipText, activeTab === 'all' && styles.tabChipTextActive]}>
-                    {`All (${bookings.length})`}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setActiveTab('upcoming')}
-                  style={[styles.tabChip, activeTab === 'upcoming' && styles.tabChipActive]}
-                >
-                  <Text style={[styles.tabChipText, activeTab === 'upcoming' && styles.tabChipTextActive]}>
-                    Upcoming
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setActiveTab('past')}
-                  style={[styles.tabChip, activeTab === 'past' && styles.tabChipActive]}
-                >
-                  <Text style={[styles.tabChipText, activeTab === 'past' && styles.tabChipTextActive]}>
-                    Past
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setActiveTab('cancelled')}
-                  style={[styles.tabChip, activeTab === 'cancelled' && styles.tabChipActive]}
-                >
-                  <Text style={[styles.tabChipText, activeTab === 'cancelled' && styles.tabChipTextActive]}>
-                    Cancelled
-                  </Text>
-                </TouchableOpacity>
+        <View style={styles.webTwoCol}>
+          {/* LEFT: bookings list */}
+          <View style={styles.webLeft}>
+            <View style={styles.webPageHeader}>
+              <Text style={styles.webPageTitle}>My Bookings</Text>
+              <Text style={styles.webPageSub}>Manage your upcoming games and view history</Text>
+            </View>
 
-                {profile?.role === 'ground_owner' && (
-                  <>
-                    <View style={styles.verticalDivider} />
+            {/* Tabs */}
+            <View style={styles.webTabRow}>
+              {([
+                { id: 'upcoming', label: 'Upcoming' },
+                { id: 'past', label: 'Past' },
+                { id: 'cancelled', label: 'Cancelled' },
+              ] as const).map(tab => (
+                <TouchableOpacity
+                  key={tab.id}
+                  onPress={() => setActiveTab(tab.id)}
+                  style={[styles.webTab, activeTab === tab.id && styles.webTabActive]}
+                >
+                  <Text style={[styles.webTabText, activeTab === tab.id && styles.webTabTextActive]}>
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              {profile?.role === 'ground_owner' && (
+                <>
+                  <View style={styles.verticalDivider} />
+                  {(['all', 'own', 'other'] as const).map(scope => (
                     <TouchableOpacity
-                      onPress={() => setOwnerScope('all')}
-                      style={[styles.tabChip, ownerScope === 'all' && styles.tabChipActive]}
+                      key={scope}
+                      onPress={() => setOwnerScope(scope)}
+                      style={[styles.webTab, ownerScope === scope && styles.webTabActive]}
                     >
-                      <Text style={[styles.tabChipText, ownerScope === 'all' && styles.tabChipTextActive]}>
-                        All grounds
+                      <Text style={[styles.webTabText, ownerScope === scope && styles.webTabTextActive]}>
+                        {scope === 'all' ? 'All' : scope === 'own' ? 'Own' : 'Other'}
                       </Text>
                     </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => setOwnerScope('own')}
-                      style={[styles.tabChip, ownerScope === 'own' && styles.tabChipActive]}
-                    >
-                      <Text style={[styles.tabChipText, ownerScope === 'own' && styles.tabChipTextActive]}>
-                        Own grounds
+                  ))}
+                </>
+              )}
+            </View>
+
+            {/* Cards */}
+            <FlatList
+              data={visibleBookings}
+              keyExtractor={item => item.id}
+              contentContainerStyle={styles.cardList}
+              refreshControl={<RefreshControl refreshing={loading} onRefresh={loadBookings} />}
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Text style={styles.emptyText}>No bookings found</Text>
+                </View>
+              }
+              renderItem={({ item }) => {
+                const primaryImage =
+                  item.ground?.ground_images?.find((img: any) => img.is_primary)?.image_url ||
+                  item.ground?.ground_images?.[0]?.image_url ||
+                  'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
+                const isPast = isDateInPast(item.booking_date);
+                const isConfirmed = item.status === 'confirmed';
+                const isCancelled = item.status === 'cancelled';
+                const isCompleted = isConfirmed && isPast;
+                const isActive = isConfirmed && !isPast;
+                const teamsLabel = cricketTeamsLabelFromBooking(item.ground?.pitch_type, item.notes);
+                const canCancel = isCancellable(item);
+                const alreadyReviewed = reviewedBookingIds.includes(item.id);
+                const statusLabel = isCancelled ? 'CANCELLED' : isCompleted ? 'COMPLETED' : 'CONFIRMED';
+                const statusBg = isCancelled ? '#FDE8E8' : isCompleted ? '#E0E7FF' : '#DCFCE7';
+                const statusColor = isCancelled ? '#991B1B' : isCompleted ? '#3730A3' : '#15803D';
+
+                return (
+                  <TouchableOpacity
+                    style={styles.bCard}
+                    onPress={() => router.push(`/bookings/${item.id}`)}
+                    activeOpacity={0.88}
+                  >
+                    {/* Thumbnail */}
+                    <View style={styles.bImageWrap}>
+                      <View style={[styles.bStatusBadge, { backgroundColor: statusBg }]}>
+                        <Text style={[styles.bStatusText, { color: statusColor }]}>{statusLabel}</Text>
+                      </View>
+                      {/* @ts-ignore */}
+                      <img
+                        src={primaryImage}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 12 }}
+                        alt={item.ground?.name}
+                      />
+                    </View>
+
+                    {/* Details */}
+                    <View style={styles.bInfo}>
+                      <View style={styles.bTopRow}>
+                        <Text style={styles.bGroundName} numberOfLines={1}>
+                          {item.ground?.name} – {item.ground?.city}
+                        </Text>
+                        <TouchableOpacity onPress={(e: any) => e.stopPropagation()} style={{ padding: 4 }}>
+                          <Text style={{ color: '#9CA3AF', fontSize: 18, fontFamily: 'Inter' }}>⋮</Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      <Text style={styles.bMeta}>
+                        {new Date(item.booking_date).toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short' })}
+                        {' · '}
+                        {normalizeDbTimeToHHMM(item.start_time)} – {normalizeDbTimeToHHMM(item.end_time)}
                       </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => setOwnerScope('other')}
-                      style={[styles.tabChip, ownerScope === 'other' && styles.tabChipActive]}
-                    >
-                      <Text style={[styles.tabChipText, ownerScope === 'other' && styles.tabChipTextActive]}>
-                        Other grounds
-                      </Text>
-                    </TouchableOpacity>
-                  </>
-                )}
+                      {teamsLabel ? <Text style={styles.bMeta}>{teamsLabel}</Text> : null}
+
+                      {/* CTAs */}
+                      <View style={styles.bActions}>
+                        {isActive && (
+                          <TouchableOpacity style={styles.bBtnGreen} onPress={() => router.push(`/bookings/${item.id}`)}>
+                            <Text style={styles.bBtnGreenText}>View QR Code</Text>
+                          </TouchableOpacity>
+                        )}
+                        {isActive && canCancel && (
+                          <TouchableOpacity style={styles.bBtnTextLink} onPress={(e: any) => { e.stopPropagation(); handleCancelBooking(item); }}>
+                            <Text style={styles.bBtnTextLinkText}>Cancel Booking</Text>
+                          </TouchableOpacity>
+                        )}
+                        {!isActive && !isCancelled && (
+                          <TouchableOpacity style={styles.bBtnGreen} onPress={() => router.push(`/bookings/${item.id}`)}>
+                            <Text style={styles.bBtnGreenText}>View Details</Text>
+                          </TouchableOpacity>
+                        )}
+                        {isCompleted && !alreadyReviewed && (
+                          <TouchableOpacity style={styles.bBtnTextLink} onPress={(e: any) => { e.stopPropagation(); router.push(`/bookings/${item.id}`); }}>
+                            <Text style={styles.bBtnTextLinkText}>Leave a Review</Text>
+                          </TouchableOpacity>
+                        )}
+                        {isCancelled && (
+                          <TouchableOpacity style={styles.bBtnGreen} onPress={() => router.push('/book-my-ground' as any)}>
+                            <Text style={styles.bBtnGreenText}>Book Again</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          </View>
+
+          {/* RIGHT: summary panels */}
+          <View style={styles.webRight}>
+            {/* Booking Summary */}
+            <View style={styles.panelCard}>
+              <Text style={styles.panelTitle}>Booking Summary</Text>
+              <View style={styles.summaryCountRow}>
+                <View style={styles.summaryCount}>
+                  <Text style={[styles.summaryValue, { color: '#00ea6b' }]}>
+                    {bookings.filter(b => !isDateInPast(b.booking_date) && b.status === 'confirmed').length}
+                  </Text>
+                  <Text style={styles.summaryLabel}>Upcoming</Text>
+                </View>
+                <View style={styles.summaryCount}>
+                  <Text style={styles.summaryValue}>
+                    {bookings.filter(b => isDateInPast(b.booking_date) && b.status === 'confirmed').length}
+                  </Text>
+                  <Text style={styles.summaryLabel}>Past</Text>
+                </View>
+              </View>
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Total Spent:</Text>
+                <Text style={styles.totalAmount}>
+                  {formatCurrency(bookings.reduce((s, b) => s + (b.total_amount || 0), 0))}
+                </Text>
               </View>
             </View>
 
-            <View style={styles.webHeaderRight}>
-              <View style={styles.searchFilterWrap}>
-                <TextInput
-                  style={styles.searchBarWeb}
-                  placeholder="Search ground, city or name..."
-                  placeholderTextColor="#9ca3af"
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                />
-              </View>
-
-              <View style={styles.dateFilterWrap}>
-                <View 
-                  style={[
-                    styles.tabChip, 
-                    selectedDate && styles.tabChipActive,
-                    { paddingRight: selectedDate ? 32 : 12 }
-                  ]}
-                >
-                  <Calendar size={14} color={selectedDate ? '#01b854' : '#6B7280'} />
-                  <Text style={[styles.tabChipText, selectedDate && styles.tabChipTextActive]}>
-                    {selectedDate ? selectedDate : 'Filter by Date'}
-                  </Text>
-                  
-                  {Platform.OS === 'web' && (
-                    // @ts-ignore
-                    <input
-                      type="date"
-                      value={selectedDate ?? ''}
-                      onChange={(e: any) => setSelectedDate(e.target.value || null)}
-                      style={styles.webDatePicker}
-                    />
-                  )}
+            {/* Balance & Stats */}
+            <View style={styles.panelCard}>
+              <Text style={styles.panelTitle}>Balance & Stats</Text>
+              <View style={styles.statsRow}>
+                <View style={styles.donutWrap}>
+                  <View style={styles.donut} />
+                  <View style={styles.donutCenter}>
+                    <Text style={styles.donutPct}>72%</Text>
+                  </View>
                 </View>
-                {selectedDate && (
-                  <TouchableOpacity onPress={() => setSelectedDate(null)} style={styles.dateClearBtn}>
-                    <X size={12} color="#6B7280" />
-                  </TouchableOpacity>
-                )}
+                <View style={styles.statsText}>
+                  <Text style={styles.statsSmall}>of monthly</Text>
+                  <Text style={styles.statsBold}>games booked</Text>
+                  <Text style={[styles.statsBold, { color: '#00ea6b', marginTop: 8 }]}>18 hrs</Text>
+                  <Text style={styles.statsSmall}>played this month</Text>
+                </View>
               </View>
             </View>
           </View>
-
-          {visibleBookings.length > 0 && (
-            <View style={styles.tableHeaderContainer}>
-              <View style={styles.tableHeaderRow}>
-                <TouchableOpacity 
-                  onPress={() => {
-                    if (sortKey === 'booked_at') setSortAsc(!sortAsc);
-                    else { setSortKey('booked_at'); setSortAsc(true); }
-                  }}
-                  style={[styles.tableHeaderCell, styles.colBookedAt, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
-                >
-                  <Text style={styles.tableHeaderCell}>Booked at</Text>
-                  {sortKey === 'booked_at' && (
-                    <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  onPress={() => {
-                    if (sortKey === 'ground') setSortAsc(!sortAsc);
-                    else { setSortKey('ground'); setSortAsc(true); }
-                  }}
-                  style={[styles.tableHeaderCell, styles.colGround, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
-                >
-                  <Text style={styles.tableHeaderCell}>Ground</Text>
-                  {sortKey === 'ground' && (
-                    <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  onPress={() => {
-                    if (sortKey === 'date') setSortAsc(!sortAsc);
-                    else { setSortKey('date'); setSortAsc(true); }
-                  }}
-                  style={[styles.tableHeaderCell, styles.colDateTime, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
-                >
-                  <Text style={styles.tableHeaderCell}>Slot Date & time</Text>
-                  {sortKey === 'date' && (
-                    <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  onPress={() => {
-                    if (sortKey === 'teams') setSortAsc(!sortAsc);
-                    else { setSortKey('teams'); setSortAsc(true); }
-                  }}
-                  style={[styles.tableHeaderCell, styles.colTeams, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
-                >
-                  <Text style={styles.tableHeaderCell}>Teams</Text>
-                  {sortKey === 'teams' && (
-                    <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  onPress={() => {
-                    if (sortKey === 'status') setSortAsc(!sortAsc);
-                    else { setSortKey('status'); setSortAsc(true); }
-                  }}
-                  style={[styles.tableHeaderCell, styles.colStatus, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
-                >
-                  <Text style={styles.tableHeaderCell}>Status</Text>
-                  {sortKey === 'status' && (
-                    <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  onPress={() => {
-                    if (sortKey === 'amount') setSortAsc(!sortAsc);
-                    else { setSortKey('amount'); setSortAsc(true); }
-                  }}
-                  style={[styles.tableHeaderCell, styles.colAmount, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
-                >
-                  <Text style={styles.tableHeaderCell}>Amount</Text>
-                  {sortKey === 'amount' && (
-                    <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
-                  )}
-                </TouchableOpacity>
-                {showAdminColumns && (
-                  <TouchableOpacity 
-                    onPress={() => {
-                      if (sortKey === 'name') setSortAsc(!sortAsc);
-                      else { setSortKey('name'); setSortAsc(true); }
-                    }}
-                    style={[styles.tableHeaderCell, styles.colName, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
-                  >
-                    <Text style={styles.tableHeaderCell}>Name</Text>
-                    {sortKey === 'name' && (
-                      <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
-                    )}
-                  </TouchableOpacity>
-                )}
-                {showAdminColumns && (
-                  <TouchableOpacity 
-                    onPress={() => {
-                      if (sortKey === 'paid') setSortAsc(!sortAsc);
-                      else { setSortKey('paid'); setSortAsc(true); }
-                    }}
-                    style={[styles.tableHeaderCell, styles.colPaymentReceived, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
-                  >
-                    <Text style={styles.tableHeaderCell}>Paid</Text>
-                    {sortKey === 'paid' && (
-                      <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
-                    )}
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
-          )}
-
-          <FlatList
-            data={visibleBookings}
-            renderItem={({ item }) => {
-              return (
-                <TouchableOpacity
-                  onPress={() => router.push(`/bookings/${item.id}`)}
-                  activeOpacity={0.8}
-                  style={styles.tableRow}
-                >
-                  <View style={[styles.tableCell, styles.colBookedAt]}>
-                    <Text style={styles.bookedDateText}>
-                      {new Date(item.created_at).toLocaleDateString()}
-                    </Text>
-                    <Text style={styles.bookedTimeText}>
-                      {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </Text>
-                  </View>
-
-                  <View style={[styles.tableCell, styles.colGround]}>
-                    <Text style={styles.groundName}>{item.ground.name}</Text>
-                    <Text style={styles.groundLocation}>
-                      {item.ground.city}, {item.ground.state}
-                    </Text>
-                  </View>
-
-                  <View style={[styles.tableCell, styles.colDateTime]}>
-                    <Text style={styles.dateText}>{formatDateDDMMYY(item.booking_date)}</Text>
-                    <Text style={styles.timeText}>
-                      {`${normalizeDbTimeToHHMM(item.start_time)} – ${normalizeDbTimeToHHMM(item.end_time)}`}
-                    </Text>
-                  </View>
-
-                  <View style={[styles.tableCell, styles.colTeams]}>
-                    <Text style={styles.teamsText}>
-                      {((item as any).opponent ? 'MATCHED' : (cricketTeamsLabelFromBooking(item.ground.pitch_type, item.notes) || '1 Team')).toUpperCase()}
-                    </Text>
-                    {(item as any).opponent && (
-                      <Text style={styles.opponentMiniText} numberOfLines={1}>
-                        vs {(item as any).opponent.team_name || (item as any).opponent.full_name}
-                      </Text>
-                    )}
-                  </View>
-
-                  <View style={[styles.tableCell, styles.colStatus]}>
-                    <TouchableOpacity 
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        if (item.status === 'confirmed') handleCancelBooking(item);
-                      }}
-                      disabled={item.status !== 'confirmed'}
-                    >
-                      <Text style={[
-                        styles.statusBadgeText,
-                        item.status === 'confirmed' ? styles.statusConfirmed : styles.statusCancelled
-                      ]}>
-                        {item.status === 'confirmed' ? (isDateInPast(item.booking_date) ? 'DONE' : 'ACTIVE') : item.status.toUpperCase()}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={[styles.tableCell, styles.colAmount]}>
-                    <Text style={styles.amount}>{formatCurrency(item.total_amount)}</Text>
-                  </View>
-
-                  {showAdminColumns && (
-                    <View style={[styles.tableCell, styles.colName]}>
-                      <NameInputCell booking={item} onSave={saveBookingName} />
-                    </View>
-                  )}
-
-                  {showAdminColumns && (
-                    <View style={[styles.tableCell, styles.colPaymentReceived]}>
-                      <TouchableOpacity 
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          togglePaymentReceived(item);
-                        }}
-                        style={styles.paymentToggle}
-                      >
-                        {item.payment_received ? (
-                          <CheckCircle2 size={20} color="#00ea6b" />
-                        ) : (
-                          <Circle size={20} color="#9CA3AF" />
-                        )}
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              );
-            }}
-            keyExtractor={item => item.id}
-            style={styles.webFlatList}
-            contentContainerStyle={styles.webList}
-            showsVerticalScrollIndicator
-            refreshControl={
-              <RefreshControl refreshing={loading} onRefresh={loadBookings} />
-            }
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No bookings found</Text>
-              </View>
-            }
-          />
         </View>
 
       ) : (
@@ -775,6 +659,8 @@ export default function BookingsScreen() {
                 colors={['#00ea6b']}
               />
             }
+            onScroll={onScroll}
+            scrollEventThrottle={16}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Text style={styles.emptyTextNative}>No bookings found</Text>
@@ -790,7 +676,7 @@ export default function BookingsScreen() {
 
   if (Platform.OS === 'web' && !isCompact) {
     return (
-      <WebLayout>
+      <WebLayout noCard>
         {content}
         <Modal
           visible={cancelModalVisible}
@@ -935,11 +821,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     color: '#111827',
+    fontFamily: 'Inter',
   },
   nativeActionSubtitle: {
     fontSize: 12,
     color: '#6B7280',
     marginTop: 2,
+    fontFamily: 'Inter',
   },
   nativeActionButton: {
     flexDirection: 'row',
@@ -958,6 +846,7 @@ const styles = StyleSheet.create({
     color: '#043529',
     fontWeight: '700',
     fontSize: 13,
+    fontFamily: 'Inter',
   },
   nativeTabRow: {
     flexDirection: 'row',
@@ -985,9 +874,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#4B5563',
+    fontFamily: 'Inter',
   },
   nativeTabChipTextActive: {
     color: '#043529',
+    fontFamily: 'Inter',
   },
   header: {
     backgroundColor: '#FFFFFF',
@@ -1015,10 +906,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#111827',
     marginBottom: 4,
+    fontFamily: 'Inter',
   },
   subtitle: {
     fontSize: 13,
     color: '#6B7280',
+    fontFamily: 'Inter',
   },
   webContainer: {
     paddingHorizontal: 20,
@@ -1081,10 +974,12 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 15,
     color: '#6B7280',
+    fontFamily: 'Inter',
   },
   emptyTextNative: {
     fontSize: 15,
     color: '#9ca3af',
+    fontFamily: 'Inter',
   },
   badgePill: {
     paddingHorizontal: 14,
@@ -1101,12 +996,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     color: '#00ea6b',
+    fontFamily: 'Inter',
   },
   badgePillLabel: {
     fontSize: 11,
     textTransform: 'uppercase',
     letterSpacing: 0.7,
     color: '#9CA3AF',
+    fontFamily: 'Inter',
   },
   tabRow: {
     marginTop: 12,
@@ -1134,6 +1031,7 @@ const styles = StyleSheet.create({
   tabChipTextActive: {
     color: '#00ea6b',
     fontWeight: '600',
+    fontFamily: 'Inter',
   },
   nativeItemContainer: {
     marginBottom: 0,
@@ -1146,6 +1044,7 @@ const styles = StyleSheet.create({
     color: '#4B5563',
     lineHeight: 24,
     textAlign: 'center',
+    fontFamily: 'Inter',
   },
   modalActions: {
     flexDirection: 'row',
@@ -1176,6 +1075,7 @@ const styles = StyleSheet.create({
     height: 36,
     fontSize: 13,
     color: '#111827',
+    fontFamily: 'Inter',
   },
   dateFilterWrap: {
     position: 'relative',
@@ -1284,10 +1184,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#111827',
     marginBottom: 2,
+    fontFamily: 'Inter',
   },
   metaInline: {
     fontSize: 12,
     color: '#6B7280',
+    fontFamily: 'Inter',
   },
   colName: {
     width: 150,
@@ -1355,6 +1257,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
     marginTop: 2,
+    fontFamily: 'Inter',
   },
   amount: {
     fontFamily: 'Inter',
@@ -1370,6 +1273,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     textAlign: 'center',
     width: 'fit-content' as any,
+    fontFamily: 'Inter',
   },
   statusConfirmed: {
     backgroundColor: '#DEF7EC',
@@ -1383,6 +1287,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     color: '#111827',
+    fontFamily: 'Inter',
   },
   opponentMiniText: {
     fontSize: 10,
@@ -1390,6 +1295,7 @@ const styles = StyleSheet.create({
     color: '#01b854',
     marginTop: 2,
     textTransform: 'uppercase',
+    fontFamily: 'Inter',
   },
   paymentBadgeText: {
     fontSize: 10,
@@ -1399,6 +1305,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     textAlign: 'center',
     width: 'fit-content' as any,
+    fontFamily: 'Inter',
   },
   paymentCash: {
     backgroundColor: '#FEF3C7',
@@ -1412,36 +1319,43 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#111827',
+    fontFamily: 'Inter',
   },
   groundLocation: {
     fontSize: 12,
     color: '#6B7280',
     marginTop: 2,
+    fontFamily: 'Inter',
   },
   bookedDateText: {
     fontSize: 13,
     color: '#111827',
     fontWeight: '600',
+    fontFamily: 'Inter',
   },
   bookedTimeText: {
     fontSize: 11,
     color: '#6B7280',
     marginTop: 1,
+    fontFamily: 'Inter',
   },
   dateText: {
     fontSize: 13,
     color: '#111827',
     fontWeight: '600',
+    fontFamily: 'Inter',
   },
   timeText: {
     fontSize: 12,
     color: '#6B7280',
     marginTop: 2,
+    fontFamily: 'Inter',
   },
   teamsText: {
     fontSize: 10,
     fontWeight: '700',
     color: '#111827',
+    fontFamily: 'Inter',
   },
   statusBadgeText: {
     fontSize: 10,
@@ -1451,6 +1365,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     textAlign: 'center',
     width: 'fit-content' as any,
+    fontFamily: 'Inter',
   },
   statusConfirmed: {
     backgroundColor: '#DEF7EC',
@@ -1468,6 +1383,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     textAlign: 'center',
     width: 'fit-content' as any,
+    fontFamily: 'Inter',
   },
   paymentCash: {
     backgroundColor: '#FEF3C7',
@@ -1476,6 +1392,298 @@ const styles = StyleSheet.create({
   paymentOnline: {
     backgroundColor: '#DBEAFE',
     color: '#1E40AF',
+  },
+
+  /* ── New card-based web layout ── */
+  webTwoCol: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 20,
+    paddingTop: 0,
+    paddingBottom: 24,
+    paddingLeft: 0,
+    paddingRight: 0,
+    flex: 1,
+  },
+  webLeft: {
+    flex: 1,
+    minWidth: 0,
+  },
+  webRight: {
+    width: 300,
+    flexShrink: 0,
+    gap: 16,
+  },
+  webPageHeader: {
+    marginBottom: 20,
+  },
+  webPageTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+    marginBottom: 4,
+  },
+  webPageSub: {
+    fontSize: 14,
+    color: '#64748B',
+    fontFamily: 'Inter',
+  },
+  webTabRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 20,
+    flexWrap: 'wrap',
+  },
+  webTab: {
+    paddingHorizontal: 12,
+    paddingTop: 8,
+    paddingBottom: 10,
+    backgroundColor: 'transparent',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  webTabActive: {
+    borderBottomColor: '#00ea6b',
+  },
+  webTabText: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: '#64748B',
+    fontFamily: 'Inter',
+  },
+  webTabTextActive: {
+    color: '#00ea6b',
+    fontWeight: '600',
+    fontFamily: 'Inter',
+  },
+  cardList: {
+    gap: 12,
+    paddingBottom: 40,
+  },
+  bCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    padding: 12,
+    gap: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  bImageWrap: {
+    width: 180,
+    height: 110,
+    borderRadius: 12,
+    backgroundColor: '#E2E8F0',
+    flexShrink: 0,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  bStatusBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    zIndex: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  bStatusText: {
+    fontSize: 10,
+    fontWeight: '800',
+    fontFamily: 'Inter',
+    letterSpacing: 0.4,
+  },
+  bInfo: {
+    flex: 1,
+    justifyContent: 'space-between',
+    paddingVertical: 2,
+  },
+  bTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 4,
+  },
+  bGroundName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+    flex: 1,
+    marginRight: 8,
+  },
+  bMeta: {
+    fontSize: 13,
+    color: '#64748B',
+    fontFamily: 'Inter',
+    marginTop: 2,
+  },
+  bActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+    flexWrap: 'wrap',
+  },
+  bBtnGreen: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#00ea6b',
+  },
+  bBtnGreenText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#043529',
+    fontFamily: 'Inter',
+  },
+  bBtnOutline: {
+    paddingHorizontal: 4,
+    paddingVertical: 8,
+    borderRadius: 0,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+  },
+  bBtnOutlineText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#475569',
+    fontFamily: 'Inter',
+    textDecorationLine: 'underline',
+  },
+  bBtnTextLink: {
+    paddingHorizontal: 4,
+    paddingVertical: 8,
+    backgroundColor: 'transparent',
+  },
+  bBtnTextLinkText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#475569',
+    fontFamily: 'Inter',
+    textDecorationLine: 'underline',
+  },
+  panelCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    gap: 16,
+  },
+  panelTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  summaryCountRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  summaryCount: {
+    flex: 1,
+    alignItems: 'flex-start',
+  },
+  summaryValue: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  summaryLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+    fontFamily: 'Inter',
+    marginTop: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  summaryCountLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    fontFamily: 'Inter',
+    fontWeight: '500',
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  totalLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    fontFamily: 'Inter',
+  },
+  totalAmount: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  donutWrap: {
+    width: 80,
+    height: 80,
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  donut: {
+    position: 'absolute',
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 10,
+    borderColor: '#00ea6b',
+    borderTopColor: '#E2E8F0',
+    borderRightColor: '#E2E8F0',
+  },
+  donutCenter: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  donutPct: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  statsText: {
+    flex: 1,
+  },
+  statsSmall: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontFamily: 'Inter',
+  },
+  statsBold: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#374151',
+    fontFamily: 'Inter',
   },
 });
 

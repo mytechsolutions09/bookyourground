@@ -34,8 +34,8 @@ const INITIAL_TEAMS_DATA = [
   }
 ];
 
-export default function CricketTeams() {
-  const [subTab, setSubTab] = useState('your');
+export default function CricketTeams({ activeSubTab }: { activeSubTab?: string }) {
+  const subTab = activeSubTab || 'your';
   const [fetchedTeams, setFetchedTeams] = useState<any[]>([]);
   const [selectedQRTeam, setSelectedQRTeam] = useState<any>(null);
 
@@ -111,31 +111,6 @@ export default function CricketTeams() {
 
   return (
     <View style={{ flex: 1 }}>
-      <View style={styles.tabsHeaderRow}>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false} 
-          contentContainerStyle={styles.tabsScroll} 
-          style={styles.tabsWrapper}
-        >
-          {['Your', 'All', 'Top Teams', 'Networks'].map((label) => (
-            <TouchableOpacity 
-              key={label} 
-              style={[styles.subTab, subTab === label.toLowerCase() && styles.subTabActive]} 
-              onPress={() => setSubTab(label.toLowerCase())}
-            >
-              <Text style={[styles.subTabText, subTab === label.toLowerCase() && styles.subTabTextActive]}>{label}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-        <TouchableOpacity 
-          style={styles.miniPlusBtn}
-          onPress={() => router.push('/cricket/scoring?createTeam=true')}
-        >
-          <Plus size={20} color="#01b854" strokeWidth={3} />
-        </TouchableOpacity>
-      </View>
-      
       <View style={styles.teamList}>
          {(() => {
            const allTeams = [...fetchedTeams, ...INITIAL_TEAMS_DATA];
@@ -197,52 +172,6 @@ export default function CricketTeams() {
 }
 
 const styles = StyleSheet.create({
-  tabsHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    paddingRight: 8,
-  },
-  tabsWrapper: {
-    flex: 1,
-    maxHeight: 50,
-  },
-  tabsScroll: {
-    paddingHorizontal: 0,
-    gap: 8,
-  },
-  miniPlusBtn: {
-    width: 32,
-    height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 8,
-  },
-  subTab: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 10,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  subTabActive: {
-    backgroundColor: '#01b854',
-    borderColor: '#01b854',
-    shadowColor: '#01b854',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  subTabText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#64748B',
-  },
-  subTabTextActive: {
-    color: '#FFFFFF',
-  },
   teamList: {
     paddingHorizontal: 0,
     gap: 12,

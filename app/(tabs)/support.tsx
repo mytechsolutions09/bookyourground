@@ -39,6 +39,7 @@ interface Ticket {
 }
 
 import MobileAppNavbar from '../../components/MobileAppNavbar';
+import { useUI } from '@/contexts/UIContext';
 
 export default function SupportScreen() {
   const { profile, user } = useAuth();
@@ -48,6 +49,22 @@ export default function SupportScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const { setTabBarVisible } = useUI();
+  const lastScrollY = React.useRef(0);
+
+  const onScroll = (event: any) => {
+    if (Platform.OS === 'web') return;
+    const currentY = event.nativeEvent.contentOffset.y;
+    const diff = currentY - lastScrollY.current;
+
+    if (diff > 10 && currentY > 50) {
+      setTabBarVisible(false);
+    } else if (diff < -10) {
+      setTabBarVisible(true);
+    }
+    lastScrollY.current = currentY;
+  };
 
   useEffect(() => {
     if (user) {
@@ -106,7 +123,12 @@ export default function SupportScreen() {
   };
 
   const mainContent = (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView 
+      style={styles.container} 
+      contentContainerStyle={styles.content}
+      onScroll={onScroll}
+      scrollEventThrottle={16}
+    >
       {/* Segmented Control - Styled like Settings */}
       <View style={styles.tabContainer}>
         <View style={styles.tabBackground}>

@@ -812,25 +812,6 @@ function PlayerProfileView() {
     }
   };
 
-  const pickImage = React.useCallback(async () => {
-    try {
-      // Launch picker directly - modern Expo handles permissions automatically
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.5,
-      });
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        uploadAvatar(result.assets[0].uri);
-      }
-    } catch (err: any) {
-      console.error('Error picking image:', err);
-      Alert.alert('Gallery Error', 'Could not open image gallery. Please ensure permissions are granted.');
-    }
-  }, [uploadAvatar]);
-
   const uploadAvatar = React.useCallback(async (uri: string) => {
     if (!user?.id) return;
     try {
@@ -874,6 +855,25 @@ function PlayerProfileView() {
       setUploading(false);
     }
   }, [user?.id]);
+
+  const pickImage = React.useCallback(async () => {
+    try {
+      // Launch picker directly - modern Expo handles permissions automatically
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        uploadAvatar(result.assets[0].uri);
+      }
+    } catch (err: any) {
+      console.error('Error picking image:', err);
+      Alert.alert('Gallery Error', 'Could not open image gallery. Please ensure permissions are granted.');
+    }
+  }, [uploadAvatar]);
 
   if (loading) {
     return (

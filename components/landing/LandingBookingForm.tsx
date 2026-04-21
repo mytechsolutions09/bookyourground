@@ -2815,7 +2815,7 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
     color: isLight ? '#111827' : '#FFFFFF',
   },
   dropdownButtonTextSelected: {
-    color: '#01b854',
+    color: '#64748B',
     fontWeight: '800',
   },
   dropdownButtonTextDisabled: {
@@ -2942,8 +2942,8 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
   dropdownButtonTextSelectedGroundPage: {
     fontWeight: '800',
     ...Platform.select({
-      web: { color: isLight ? '#01b854' : '#01b854' },
-      default: { color: isLight ? '#01b854' : '#dcc093' },
+      web: { color: isLight ? '#64748B' : '#64748B' },
+      default: { color: isLight ? '#64748B' : '#dcc093' },
     }),
   },
   dropdownButtonTextDisabledGroundPage: {

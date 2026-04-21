@@ -137,32 +137,32 @@ function OwnerSettingsInner() {
     }
   };
 
-  const IS_DARK = Platform.OS !== 'web';
+
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.inner}>
         <View style={styles.tabContainer}>
           <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'payout' && styles.activeTabButton, IS_DARK && activeTab === 'payout' && styles.activeTabButtonDark]} 
+            style={[styles.tabButton, activeTab === 'payout' && styles.activeTabButton]} 
             onPress={() => setActiveTab('payout')}
           >
             <Text style={[styles.tabText, activeTab === 'payout' && styles.activeTabText]}>Payouts</Text>
           </TouchableOpacity>
           <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'bank' && styles.activeTabButton, IS_DARK && activeTab === 'bank' && styles.activeTabButtonDark]} 
+            style={[styles.tabButton, activeTab === 'bank' && styles.activeTabButton]} 
             onPress={() => setActiveTab('bank')}
           >
-            <Text style={[styles.tabText, activeTab === 'bank' && styles.activeTabText]}>Bank Account</Text>
+            <Text style={[styles.tabText, activeTab === 'bank' && styles.activeTabText]}>Bank</Text>
           </TouchableOpacity>
           <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'coupons' && styles.activeTabButton, IS_DARK && activeTab === 'coupons' && styles.activeTabButtonDark]} 
+            style={[styles.tabButton, activeTab === 'coupons' && styles.activeTabButton]} 
             onPress={() => setActiveTab('coupons')}
           >
             <Text style={[styles.tabText, activeTab === 'coupons' && styles.activeTabText]}>Coupons</Text>
           </TouchableOpacity>
           <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'help' && styles.activeTabButton, IS_DARK && activeTab === 'help' && styles.activeTabButtonDark]} 
+            style={[styles.tabButton, activeTab === 'help' && styles.activeTabButton]} 
             onPress={() => setActiveTab('help')}
           >
             <Text style={[styles.tabText, activeTab === 'help' && styles.activeTabText]}>Help</Text>
@@ -421,7 +421,7 @@ function OwnerSettingsInner() {
               ) : (
                 <View style={styles.couponList}>
                   {coupons.map((c) => (
-                    <View key={c.id} style={[styles.couponItem, IS_DARK && styles.couponItemDark]}>
+                    <View key={c.id} style={styles.couponItem}>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.couponCodeText}>{c.code}</Text>
                         <Text style={styles.couponDetsText}>
@@ -515,7 +515,7 @@ export default function OwnerSettingsScreen() {
 
   return (
     <View style={styles.nativeRoot}>
-      <MobileAppNavbar title="Ground owner settings" titleColor="#00ea6b" />
+      <MobileAppNavbar title="Settings" titleColor="#01b854" />
       <OwnerSettingsInner />
     </View>
   );
@@ -524,11 +524,11 @@ export default function OwnerSettingsScreen() {
 const styles = StyleSheet.create({
   nativeRoot: {
     flex: 1,
-    backgroundColor: '#043529',
+    backgroundColor: '#F8FAFC',
   },
   container: {
     flex: 1,
-    backgroundColor: IS_WEB ? '#F5F5F5' : '#043529',
+    backgroundColor: '#F8FAFC',
     padding: 16,
     ...Platform.select({
       web: {
@@ -546,11 +546,16 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   panel: {
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    backgroundColor: IS_WEB ? '#FFFFFF' : '#06392e',
-    borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.15)',
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#F1F5F9',
     borderWidth: 1,
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
   },
   title: {
     fontSize: 24,
@@ -565,14 +570,16 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontFamily: 'Inter',
     fontSize: 18,
-    fontWeight: '600',
-    color: IS_WEB ? '#111827' : '#FFFFFF',
+    fontWeight: '800',
+    color: '#0F172A',
     marginBottom: 6,
+    letterSpacing: -0.5,
   },
   sectionSubtitle: {
-    fontSize: 13,
-    color: IS_WEB ? '#6B7280' : '#9ca3af',
-    marginBottom: 16,
+    fontSize: 14,
+    color: '#64748B',
+    marginBottom: 20,
+    fontFamily: 'Inter',
   },
   formRow: {
     marginBottom: 12,
@@ -587,22 +594,24 @@ const styles = StyleSheet.create({
   },
   label: {
     fontFamily: 'Inter',
-    fontSize: 13,
-    fontWeight: '500',
-    color: IS_WEB ? '#4B5563' : '#9ca3af',
-    marginBottom: 4,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748B',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   input: {
     fontFamily: 'Inter',
     borderWidth: 1,
-    borderColor: IS_WEB ? '#D1D5DB' : 'rgba(0,234,107,0.2)',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: Platform.OS === 'web' ? 8 : 10,
-    backgroundColor: IS_WEB ? '#FFFFFF' : '#043529',
-    fontSize: 14,
-    fontWeight: '400',
-    color: IS_WEB ? '#000' : '#FFF',
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#F8FAFC',
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#0F172A',
   },
   multilineInput: {
     minHeight: 72,
@@ -618,18 +627,20 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(0,0,0,0.03)',
-    borderRadius: 999,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 20,
     padding: 6,
-    marginBottom: 24,
-    alignSelf: 'flex-start',
+    marginBottom: 32,
+    width: '100%',
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.02)',
+    borderColor: '#E2E8F0',
   },
   tabButton: {
-    paddingHorizontal: 24,
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 10,
-    borderRadius: 999,
+    borderRadius: 16,
   },
   activeTabButton: {
     backgroundColor: '#FFFFFF',
@@ -638,18 +649,16 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
   },
-  activeTabButtonDark: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
+
   tabText: {
     fontFamily: 'Inter',
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: 12,
+    fontWeight: '600',
     color: '#64748B',
   },
   activeTabText: {
     color: '#01b854',
-    fontWeight: '600',
+    fontWeight: '800',
   },
   tabContentGap: {
     gap: 16,
@@ -733,14 +742,11 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     gap: 12,
   },
-  couponItemDark: {
-    backgroundColor: '#06392e',
-    borderColor: 'rgba(0,234,107,0.1)',
-  },
+
   couponCodeText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '900',
-    color: '#111827',
+    color: '#0F172A',
     letterSpacing: 1,
   },
   couponDetsText: {
@@ -799,12 +805,12 @@ const styles = StyleSheet.create({
   helpTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: IS_WEB ? '#111827' : '#FFFFFF',
+    color: '#0F172A',
     marginBottom: 4,
   },
   helpText: {
     fontSize: 13,
-    color: IS_WEB ? '#6B7280' : '#9ca3af',
+    color: '#64748B',
     lineHeight: 18,
   },
 });

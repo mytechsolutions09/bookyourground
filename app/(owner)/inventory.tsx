@@ -153,8 +153,8 @@ export default function OwnerInventoryScreen() {
           let textColor = '#6B7280';
 
           if (statusText === 'FULL') {
-            statusColor = '#ECFDF5';
-            textColor = '#043529';
+            statusColor = '#F0FDF4';
+            textColor = '#166534';
           } else if (statusText === 'PARTIAL') {
             statusColor = '#FFFBEB';
             textColor = '#92400E';
@@ -333,7 +333,7 @@ export default function OwnerInventoryScreen() {
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
         ListEmptyComponent={
           loading ? (
-            <ActivityIndicator size="large" color="#00ea6b" style={{ marginTop: 40 }} />
+            <ActivityIndicator size="large" color="#01b854" style={{ marginTop: 40 }} />
           ) : (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>No grounds found in your inventory</Text>
@@ -346,7 +346,7 @@ export default function OwnerInventoryScreen() {
 
   return (
     <>
-      {!isWeb && <MobileAppNavbar title="Inventory Plan" titleColor="#00ea6b" />}
+      {!isWeb && <MobileAppNavbar title="Inventory Plan" titleColor="#01b854" />}
       {isWeb ? <WebLayout noCard>{content}</WebLayout> : <View style={styles.screen}>{content}</View>}
     </>
   );
@@ -355,7 +355,7 @@ export default function OwnerInventoryScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F8FAFC',
   },
   content: {
     flex: 1,
@@ -405,16 +405,16 @@ const styles = StyleSheet.create({
   },
   statusFilters: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(0,0,0,0.04)',
-    borderRadius: 999,
-    padding: 4,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 16,
+    padding: 6,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.02)',
+    borderColor: '#E2E8F0',
   },
   filterTag: {
     paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 999,
+    paddingVertical: 10,
+    borderRadius: 12,
   },
   filterTagActive: {
     backgroundColor: '#FFFFFF',
@@ -430,8 +430,8 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   filterTagTextActive: {
-    color: '#01b854',
-    fontWeight: '600',
+    color: '#0F172A',
+    fontWeight: '800',
   },
   dateSearchContainer: {
     flexDirection: 'row',
@@ -476,7 +476,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   rangeBtnTextActive: {
-    color: '#00ea6b',
+    color: '#01b854',
   },
   list: {
     padding: 16,
@@ -533,13 +533,14 @@ const styles = StyleSheet.create({
   },
   dateLabel: {
     fontFamily: 'Inter',
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#111827',
-    backgroundColor: '#E5E7EB',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0F172A',
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    textTransform: 'uppercase',
   },
   noSlotsText: {
     fontSize: 12,
@@ -567,9 +568,10 @@ const styles = StyleSheet.create({
   },
   slotStatus: {
     fontFamily: 'Inter',
-    fontSize: 9,
-    fontWeight: '600',
+    fontSize: 8,
+    fontWeight: '800',
     marginTop: 2,
+    textTransform: 'uppercase',
   },
   emptyContainer: {
     alignItems: 'center',

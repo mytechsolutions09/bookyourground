@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, Platform, TouchableOpacity, ScrollView, TextInput, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, Platform, TouchableOpacity, ScrollView, TextInput, useWindowDimensions, Image } from 'react-native';
 import { Calendar, Filter, X, Save, CheckCircle2, Circle, User, Clock } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,13 +33,13 @@ function NameInputCell({ booking, onSave }: { booking: BookingWithDetails, onSav
         onPress={(e) => e.stopPropagation()} 
         style={styles.nameInputRow}
       >
-        <User size={14} color="#00ea6b" style={styles.nameInputIcon} />
+        <User size={14} color="#01b854" style={styles.nameInputIcon} />
         <TextInput
           style={styles.nameInput}
           value={localName}
           onChangeText={setLocalName}
           placeholder="Player name..."
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor="#94A3B8"
           onSubmitEditing={handleSave}
         />
         {hasChanged && (
@@ -1407,15 +1407,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   saveBadge: {
-    backgroundColor: '#00ea6b',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    backgroundColor: '#01b854',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   saveBadgeText: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: '#043529',
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    fontFamily: 'Inter',
   },
   compactRow: {
     backgroundColor: '#FFFFFF',
@@ -1569,32 +1570,33 @@ const styles = StyleSheet.create({
     flex: 1.5,
   },
   searchBarMobile: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    height: 34,
-    color: '#1E293B',
-    fontSize: 12,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 38,
+    color: '#0F172A',
+    fontSize: 13,
+    fontFamily: 'Inter',
   },
   dropdownTrigger: {
-    height: 34,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 8,
+    height: 38,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
   dropdownTriggerActive: {
-    borderColor: '#059669',
+    borderColor: '#01b854',
     backgroundColor: '#F0FDF4',
   },
   dropdownTriggerSelected: {
     backgroundColor: '#F0FDF4',
-    borderColor: '#059669',
+    borderColor: '#01b854',
   },
   dropdownTriggerText: {
     fontSize: 11,
@@ -1603,10 +1605,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   dropdownTriggerTextActive: {
-    color: '#059669',
+    color: '#01b854',
   },
   dropdownTriggerTextSelected: {
-    color: '#059669',
+    color: '#01b854',
   },
   dropdownMenu: {
     position: 'absolute',
@@ -1644,18 +1646,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0FDF4',
   },
   dropdownOptionText: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#1E293B',
     fontWeight: '500',
+    fontFamily: 'Inter',
   },
   dropdownOptionTextActive: {
-    color: '#059669',
-    fontWeight: '700',
+    color: '#01b854',
+    fontWeight: '800',
   },
   dropdownOptionDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#059669',
+    backgroundColor: '#01b854',
   },
 });

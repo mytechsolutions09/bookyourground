@@ -36,26 +36,28 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '300',
-    color: Platform.OS === 'web' ? '#374151' : '#E5E7EB',
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748B',
     marginBottom: 8,
-    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   input: {
+    fontFamily: 'Inter',
     borderWidth: 1,
-    borderColor: Platform.OS === 'web' ? '#D1D5DB' : '#00ea6b',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 14,
-    fontWeight: '300',
-    backgroundColor: Platform.OS === 'web' ? '#FFFFFF' : '#06392e',
-    color: Platform.OS === 'web' ? '#111827' : '#00ea6b',
-    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 15,
+    fontWeight: '500',
+    backgroundColor: '#F8FAFC',
+    color: '#0F172A',
     ...Platform.select({
-        web: {
-            outlineStyle: 'none',
-        } as any
+      web: {
+        outlineStyle: 'none',
+      } as any
     })
   },
   inputError: {

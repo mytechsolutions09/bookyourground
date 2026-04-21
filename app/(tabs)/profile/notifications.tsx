@@ -27,6 +27,7 @@ import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import { useUI } from '@/contexts/UIContext';
 
 const IS_WEB = Platform.OS === 'web';
 
@@ -34,6 +35,22 @@ function NotificationsInner() {
   const { user, profile } = useAuth();
   const [loading, setLoading] = useState(true);
   const [reminders, setReminders] = useState<any[]>([]);
+
+  const { setTabBarVisible } = useUI();
+  const lastScrollY = React.useRef(0);
+
+  const onScroll = (event: any) => {
+    if (Platform.OS === 'web') return;
+    const currentY = event.nativeEvent.contentOffset.y;
+    const diff = currentY - lastScrollY.current;
+
+    if (diff > 10 && currentY > 50) {
+      setTabBarVisible(false);
+    } else if (diff < -10) {
+      setTabBarVisible(true);
+    }
+    lastScrollY.current = currentY;
+  };
 
   const getRoleLabel = (role: string) => {
     switch (role) {
@@ -109,7 +126,7 @@ function NotificationsInner() {
         onPress={() => router.push(`/bookings/${b.id}` as any)}
       >
         <View style={[styles.iconWrap, isMatch ? styles.matchIcon : styles.bookingIcon]}>
-          {isMatch ? <Trophy size={18} color="#00ea6b" /> : <Calendar size={18} color="#10b981" />}
+          {isMatch ? <Trophy size={18} color="#01b854" /> : <Calendar size={18} color="#01b854" />}
         </View>
         
         <View style={styles.reminderContent}>
@@ -145,19 +162,21 @@ function NotificationsInner() {
     <ScrollView 
       style={styles.container}
       refreshControl={<RefreshControl refreshing={loading} onRefresh={loadReminders} />}
+      onScroll={onScroll}
+      scrollEventThrottle={16}
     >
       <View style={styles.inner}>
         {IS_WEB && (
           <ProfileHeaderTabs
-            themeAccent="#00ea6b"
-            themeText={IS_WEB ? '#111827' : '#FFFFFF'}
+            themeAccent="#01b854"
+            themeText={IS_WEB ? '#111827' : '#0F172A'}
             isCompact={!IS_WEB}
           />
         )}
 
         {loading ? (
           <View style={styles.loader}>
-            <ActivityIndicator size="large" color="#00ea6b" />
+            <ActivityIndicator size="large" color="#01b854" />
           </View>
         ) : reminders.length === 0 ? (
           <View style={styles.emptyWrap}>
@@ -197,7 +216,7 @@ export default function NotificationsScreen() {
 
   return (
     <View style={styles.nativeRoot}>
-      <MobileAppNavbar title="Notifications" titleColor="#00ea6b" />
+      <MobileAppNavbar title="Notifications" titleColor="#01b854" />
       <NotificationsInner />
     </View>
   );
@@ -206,7 +225,7 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   nativeRoot: {
     flex: 1,
-    backgroundColor: '#043529',
+    backgroundColor: '#F8FAFC',
   },
   container: {
     flex: 1,
@@ -217,7 +236,7 @@ const styles = StyleSheet.create({
     maxWidth: 900,
     alignSelf: 'flex-start',
     paddingHorizontal: 16,
-    paddingTop: 0,
+    paddingTop: 16,
     paddingBottom: 24,
   },
   headerRow: {
@@ -227,23 +246,27 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   pageTitle: {
+    fontFamily: 'Inter',
     fontSize: 20,
     fontWeight: '900',
-    color: IS_WEB ? '#111827' : '#FFFFFF',
+    color: '#0F172A',
     marginBottom: 2,
   },
   pageSubtitle: {
+    fontFamily: 'Inter',
     fontSize: 12,
-    color: IS_WEB ? '#6B7280' : '#9ca3af',
+    color: '#64748B',
   },
   bellBadge: {
     width: 48,
     height: 48,
     borderRadius: 14,
-    backgroundColor: IS_WEB ? '#F0FDF4' : 'rgba(0,234,107,0.1)',
+    backgroundColor: '#F0FDF4',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
   },
   redDot: {
     position: 'absolute',
@@ -266,37 +289,50 @@ const styles = StyleSheet.create({
      width: 80,
      height: 80,
      borderRadius: 40,
-     backgroundColor: IS_WEB ? '#F9FAFB' : 'rgba(255,255,255,0.03)',
+     backgroundColor: '#FFFFFF',
      borderWidth: 2,
-     borderColor: IS_WEB ? '#F3F4F6' : 'rgba(255,255,255,0.05)',
+     borderColor: '#F1F5F9',
      alignItems: 'center',
      justifyContent: 'center',
      marginBottom: 20,
+     shadowColor: '#000',
+     shadowOpacity: 0.04,
+     shadowRadius: 10,
+     shadowOffset: { width: 0, height: 4 },
   },
   emptyTitle: {
+     fontFamily: 'Inter',
      fontSize: 20,
      fontWeight: '800',
-     color: IS_WEB ? '#111827' : '#FFFFFF',
+     color: '#0F172A',
      marginBottom: 8,
   },
   emptyText: {
+     fontFamily: 'Inter',
      fontSize: 14,
-     color: IS_WEB ? '#6B7280' : '#9ca3af',
+     color: '#64748B',
      textAlign: 'center',
      maxWidth: 240,
      lineHeight: 20,
   },
   exploreBtn: {
      marginTop: 24,
-     paddingHorizontal: 20,
-     paddingVertical: 12,
-     borderRadius: 12,
-     backgroundColor: '#00ea6b',
+     paddingHorizontal: 24,
+     paddingVertical: 14,
+     borderRadius: 16,
+     backgroundColor: '#01b854',
+     shadowColor: '#01b854',
+     shadowOpacity: 0.2,
+     shadowRadius: 10,
+     shadowOffset: { width: 0, height: 4 },
   },
   exploreBtnText: {
-     color: '#043529',
-     fontWeight: '700',
+     fontFamily: 'Inter',
+     color: '#FFFFFF',
+     fontWeight: '800',
      fontSize: 14,
+     textTransform: 'uppercase',
+     letterSpacing: 0.5,
   },
   list: {
     gap: 12,
@@ -305,14 +341,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: IS_WEB ? '#FFFFFF' : '#06392e',
-    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: IS_WEB ? '#F3F4F6' : 'rgba(0,234,107,0.1)',
+    borderColor: '#F1F5F9',
     shadowColor: '#000',
-    shadowOpacity: 0.02,
+    shadowOpacity: 0.04,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
   iconWrap: {
     width: 44,
@@ -323,10 +360,10 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   matchIcon: {
-    backgroundColor: IS_WEB ? '#F0FDF4' : 'rgba(0,234,107,0.15)',
+    backgroundColor: '#DCFCE7',
   },
   bookingIcon: {
-    backgroundColor: IS_WEB ? '#F0FDF4' : 'rgba(16,185,129,0.15)',
+    backgroundColor: '#DCFCE7',
   },
   reminderContent: {
     flex: 1,
@@ -338,21 +375,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   reminderType: {
+    fontFamily: 'Inter',
     fontSize: 11,
     fontWeight: '800',
-    color: '#00ea6b',
+    color: '#01b854',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },
   timeAgo: {
+    fontFamily: 'Inter',
     fontSize: 11,
-    color: '#9CA3AF',
+    color: '#94A3B8',
     fontWeight: '600',
   },
   reminderTitle: {
+    fontFamily: 'Inter',
     fontSize: 16,
     fontWeight: '800',
-    color: IS_WEB ? '#111827' : '#FFFFFF',
+    color: '#0F172A',
   },
   metaRow: {
     flexDirection: 'row',
@@ -365,13 +405,15 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   metaText: {
+    fontFamily: 'Inter',
     fontSize: 12,
-    color: '#6B7280',
+    color: '#64748B',
     fontWeight: '500',
   },
   alertText: {
+    fontFamily: 'Inter',
     fontSize: 13,
-    color: IS_WEB ? '#4B5563' : '#9CA3AF',
+    color: '#64748B',
     lineHeight: 18,
     marginTop: 4,
   },

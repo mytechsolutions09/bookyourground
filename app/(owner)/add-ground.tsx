@@ -457,7 +457,7 @@ export default function AddGroundScreen() {
   const content = (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={IS_WEB ? styles.container : styles.nativeRoot}
+      style={styles.container}
     >
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <Card style={styles.section}>
@@ -1058,7 +1058,7 @@ export default function AddGroundScreen() {
 
   return (
     <View style={styles.nativeRoot}>
-      <MobileAppNavbar title="Add Ground" titleColor="#00ea6b" />
+      <MobileAppNavbar title="Add Ground" titleColor="#01b854" />
       {content}
     </View>
   );
@@ -1070,11 +1070,13 @@ const IS_WEB = Platform.OS === 'web';
 const styles = StyleSheet.create({
   nativeRoot: {
     flex: 1,
-    backgroundColor: '#043529',
+    backgroundColor: '#F8FAFC',
   },
   container: {
     flex: 1,
-    backgroundColor: IS_WEB ? '#F5F5F5' : '#043529',
+    backgroundColor: '#F8FAFC',
+    width: '100%',
+    alignSelf: 'center',
   },
   scrollContent: {
     padding: 16,
@@ -1089,32 +1091,43 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#212121',
+    color: '#0F172A',
     marginBottom: 24,
+    fontFamily: 'Inter',
   },
   section: {
     marginBottom: 16,
-    backgroundColor: IS_WEB ? '#FFFFFF' : '#06392e',
-    borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.15)',
+    padding: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
     borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: IS_WEB ? '#212121' : '#FFFFFF',
+    fontFamily: 'Inter',
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0F172A',
     marginBottom: 16,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   subLabel: {
     fontSize: 14,
-    fontWeight: '300',
-    color: IS_WEB ? '#374151' : '#9ca3af',
-    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
+    fontWeight: '500',
+    color: '#64748B',
+    fontFamily: 'Inter',
     marginBottom: 8,
   },
   helperText: {
     fontSize: 12,
-    color: IS_WEB ? '#6B7280' : '#9ca3af',
+    color: '#64748B',
     marginBottom: 8,
+    fontFamily: 'Inter',
   },
   switchRow: {
     flexDirection: 'row',
@@ -1122,11 +1135,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: '#F1F5F9',
   },
   switchLabel: {
     fontSize: 16,
-    color: IS_WEB ? '#333' : '#E5E7EB',
+    color: '#334155',
+    fontFamily: 'Inter',
   },
   typeChipsRow: {
     flexDirection: 'row',
@@ -1135,25 +1149,30 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   typeChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
     borderRadius: 999,
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
-    borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.2)',
-    backgroundColor: IS_WEB ? '#FFFFFF' : '#043529',
+    borderColor: '#E2E8F0',
   },
   typeChipActive: {
-    borderColor: '#00ea6b',
-    backgroundColor: 'rgba(0,234,107,0.10)',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#01b854',
+    shadowColor: '#01b854',
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
   },
   typeChipText: {
+    fontFamily: 'Inter',
     fontSize: 13,
-    fontWeight: '300',
-    color: IS_WEB ? '#374151' : '#9ca3af',
-    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
+    fontWeight: '500',
+    color: '#64748B',
   },
   typeChipTextActive: {
-    color: '#00ea6b',
+    color: '#01b854',
+    fontWeight: '800',
   },
   mediaRow: {
     flexDirection: 'row',
@@ -1164,15 +1183,15 @@ const styles = StyleSheet.create({
   mediaInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.2)',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: IS_WEB ? '#FFFFFF' : '#043529',
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#F8FAFC',
     fontSize: 14,
-    fontWeight: '300',
-    color: IS_WEB ? '#000' : '#FFF',
-    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
+    fontWeight: '400',
+    color: '#0F172A',
+    fontFamily: 'Inter',
   },
   mediaRemove: {
     paddingHorizontal: 8,
@@ -1181,7 +1200,7 @@ const styles = StyleSheet.create({
   mediaRemoveText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#B91C1C',
+    color: '#EF4444',
   },
   mediaAddButton: {
     marginTop: 4,
@@ -1189,22 +1208,22 @@ const styles = StyleSheet.create({
   mediaAddText: {
     fontSize: 13,
     fontWeight: '600',
-    color: IS_WEB ? '#2563EB' : '#00ea6b',
+    color: '#01b854',
   },
   mediaUploadButton: {
     alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.3)',
-    backgroundColor: '#043529',
+    borderColor: '#01b854',
+    backgroundColor: '#FFFFFF',
     marginBottom: 8,
   },
   mediaUploadText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#00ea6b',
+    color: '#01b854',
   },
   locationRow: {
     flexDirection: 'row',
@@ -1217,7 +1236,7 @@ const styles = StyleSheet.create({
   },
   timeSlotsNote: {
     fontSize: 12,
-    color: IS_WEB ? '#6B7280' : '#9ca3af',
+    color: '#64748B',
     marginTop: 4,
     marginBottom: 24,
   },
@@ -1227,18 +1246,18 @@ const styles = StyleSheet.create({
   },
   addAnotherBtn: {
     alignSelf: 'flex-start',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.3)',
-    backgroundColor: IS_WEB ? '#FFFFFF' : '#043529',
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
     marginBottom: 16,
   },
   addAnotherBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: IS_WEB ? '#2563EB' : '#00ea6b',
+    color: '#01b854',
   },
   addTimeSlotsRow: {
     flexDirection: 'row',
@@ -1252,7 +1271,6 @@ const styles = StyleSheet.create({
   addTimeSlotsLeft: {
     flex: 1,
     minWidth: 0,
-    // Left column must stack above the “Saved slots” panel or its overflow can cover open dropdowns.
     ...Platform.select({
       web: {
         position: 'relative' as const,
@@ -1263,11 +1281,11 @@ const styles = StyleSheet.create({
   addTimeSlotsRight: {
     flex: 1,
     minWidth: 0,
-    backgroundColor: IS_WEB ? '#F9FAFB' : '#043529',
-    borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.2)',
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
     borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 16,
+    padding: 16,
     alignSelf: 'flex-start',
     ...Platform.select({
       web: {
@@ -1278,7 +1296,7 @@ const styles = StyleSheet.create({
   previewTitle: {
     fontSize: 13,
     fontWeight: '900',
-    color: IS_WEB ? '#111827' : '#FFFFFF',
+    color: '#0F172A',
     marginBottom: 8,
   },
   previewList: {
@@ -1286,10 +1304,10 @@ const styles = StyleSheet.create({
   },
   previewRow: {
     borderWidth: 1,
-    borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.2)',
-    backgroundColor: IS_WEB ? '#FFFFFF' : '#06392e',
-    borderRadius: 10,
-    padding: 10,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 12,
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
@@ -1319,29 +1337,29 @@ const styles = StyleSheet.create({
   },
   previewMain: {
     fontSize: 13,
-    fontWeight: '300',
-    color: IS_WEB ? '#111827' : '#FFFFFF',
-    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
+    fontWeight: '500',
+    color: '#0F172A',
+    fontFamily: 'Inter',
   },
   previewSub: {
     fontSize: 12,
-    fontWeight: '300',
-    color: '#6B7280',
-    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
+    fontWeight: '400',
+    color: '#64748B',
+    fontFamily: 'Inter',
     marginTop: 4,
   },
   previewEditInput: {
     marginTop: 8,
     borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    backgroundColor: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '300',
-    color: '#111827',
-    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#F8FAFC',
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#0F172A',
+    fontFamily: 'Inter',
   },
   previewEmpty: {
     fontSize: 12,
@@ -1365,7 +1383,7 @@ const styles = StyleSheet.create({
   mapsLinkButtonText: {
     fontSize: 12,
     fontWeight: '800',
-    color: IS_WEB ? '#2563EB' : '#00ea6b',
+    color: '#01b854',
   },
   mapsFetchBlock: {
     marginTop: 10,
@@ -1409,7 +1427,7 @@ const styles = StyleSheet.create({
   actionBtnText: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#2563EB',
+    color: '#01b854',
   },
   actionDangerBtn: {
     borderColor: '#FEE2E2',
@@ -1526,32 +1544,32 @@ const stylesDropdown = StyleSheet.create({
   },
   button: {
     borderWidth: 1,
-    borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.2)',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    backgroundColor: IS_WEB ? '#FFFFFF' : '#043529',
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#F8FAFC',
   },
   buttonOpen: {
-    borderColor: '#00ea6b',
-    backgroundColor: 'rgba(0,234,107,0.05)',
+    borderColor: '#01b854',
+    backgroundColor: '#FFFFFF',
   },
   buttonText: {
     fontSize: 14,
-    fontWeight: '300',
-    color: IS_WEB ? '#111827' : '#FFFFFF',
-    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
+    fontWeight: '500',
+    color: '#0F172A',
+    fontFamily: 'Inter',
   },
   menu: {
     position: 'absolute',
-    top: 46,
+    top: 52,
     left: 0,
     right: 0,
     maxHeight: 260,
-    backgroundColor: IS_WEB ? '#FFFFFF' : '#06392e',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.3)',
-    borderRadius: 10,
+    borderColor: '#F1F5F9',
+    borderRadius: 16,
     zIndex: 99999,
     elevation: 50,
     shadowColor: '#000',
@@ -1565,8 +1583,8 @@ const stylesDropdown = StyleSheet.create({
   },
   optionText: {
     fontSize: 14,
-    fontWeight: '300',
-    color: IS_WEB ? '#111827' : '#FFFFFF',
-    fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
+    fontWeight: '500',
+    color: '#0F172A',
+    fontFamily: 'Inter',
   },
 });

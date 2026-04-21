@@ -1603,7 +1603,7 @@ export default function LiveScorecard() {
             style={{ flex: 1 }}
           >
             {TABS_ARRAY.map((tabKey) => (
-              <View key={tabKey} style={{ width: windowWidth }}>
+              <View key={tabKey} style={{ width: windowWidth, flex: 1 }}>
                 {tabKey === 'info' ? (
                   <Animated.ScrollView 
                     onScroll={verticalScrollHandler}

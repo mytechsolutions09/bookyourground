@@ -111,7 +111,7 @@ export default function CricketLayout() {
   const animatedScrollY = useSharedValue(0);
   const lastScrollY = useSharedValue(0);
 
-  const HEADER_MAX_HEIGHT = 320;
+  const HEADER_MAX_HEIGHT = 280;
   const HEADER_MIN_HEIGHT = 105;
 
   React.useEffect(() => {
@@ -166,29 +166,6 @@ export default function CricketLayout() {
     }
   };
 
-  const pickImage = React.useCallback(async () => {
-    try {
-      // Launch picker directly - modern Expo handles permissions automatically
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.5,
-      });
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const selectedUri = result.assets[0].uri;
-        // Close modal AFTER we have the image to avoid animation/lock issues
-        setIsAvatarOptionsVisible(false);
-        // Small delay ensures modal dismissal doesn't interrupt the subsequent upload state change
-        setTimeout(() => uploadImage(selectedUri), 300);
-      }
-    } catch (error: any) {
-      console.error('Image picking error:', error);
-      Alert.alert('Gallery Error', 'Could not open image gallery. Please ensure you have given permission in Settings.');
-    }
-  }, [uploadImage]);
-
   const uploadImage = React.useCallback(async (uri: string) => {
     if (!user?.id) return;
     
@@ -232,6 +209,29 @@ export default function CricketLayout() {
       setUploading(false);
     }
   }, [user?.id]);
+
+  const pickImage = React.useCallback(async () => {
+    try {
+      // Launch picker directly - modern Expo handles permissions automatically
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const selectedUri = result.assets[0].uri;
+        // Close modal AFTER we have the image to avoid animation/lock issues
+        setIsAvatarOptionsVisible(false);
+        // Small delay ensures modal dismissal doesn't interrupt the subsequent upload state change
+        setTimeout(() => uploadImage(selectedUri), 300);
+      }
+    } catch (error: any) {
+      console.error('Image picking error:', error);
+      Alert.alert('Gallery Error', 'Could not open image gallery. Please ensure you have given permission in Settings.');
+    }
+  }, [uploadImage]);
 
   const removeAvatar = React.useCallback(async () => {
     setIsAvatarOptionsVisible(false);
@@ -374,6 +374,8 @@ export default function CricketLayout() {
   };
 
   const [statsTab, setStatsTab] = React.useState('batting');
+  const [teamsTab, setTeamsTab] = React.useState('your');
+  const [tournamentsTab, setTournamentsTab] = React.useState('all');
   const [trophiesTab, setTrophiesTab] = React.useState('matches');
   const [badgesTab, setBadgesTab] = React.useState('batting');
   const [connectionsTab, setConnectionsTab] = React.useState('followers');
@@ -422,9 +424,11 @@ export default function CricketLayout() {
   });
 
   const headerHeight = useAnimatedStyle(() => {
+    const hasSubBar = activeTabId === 'stats' || activeTabId === 'trophies' || activeTabId === 'badges' || activeTabId === 'connections' || activeTabId === 'teams' || activeTabId === 'tournaments';
+    const currentMinHeight = hasSubBar ? HEADER_MIN_HEIGHT + 48 : HEADER_MIN_HEIGHT;
     const height = 260 - animatedScrollY.value;
     return {
-      height: Math.max(105, height),
+      height: Math.max(currentMinHeight, height),
     };
   });
 
@@ -442,11 +446,12 @@ export default function CricketLayout() {
   });
 
   const headerContainerStyle = useAnimatedStyle(() => {
-    const hasSubBar = activeTabId === 'stats' || activeTabId === 'trophies' || activeTabId === 'badges' || activeTabId === 'connections';
+    const hasSubBar = activeTabId === 'stats' || activeTabId === 'trophies' || activeTabId === 'badges' || activeTabId === 'connections' || activeTabId === 'teams' || activeTabId === 'tournaments';
     const currentMaxHeight = hasSubBar ? HEADER_MAX_HEIGHT + 48 : HEADER_MAX_HEIGHT;
+    const currentMinHeight = hasSubBar ? HEADER_MIN_HEIGHT + 48 : HEADER_MIN_HEIGHT;
     
     return {
-      height: Math.max(HEADER_MIN_HEIGHT + insets.top, currentMaxHeight + insets.top - animatedScrollY.value),
+      height: Math.max(currentMinHeight + insets.top, currentMaxHeight + insets.top - animatedScrollY.value),
       position: 'absolute',
       top: 0,
       left: 0,
@@ -572,7 +577,7 @@ export default function CricketLayout() {
       {renderQrModal()}
       <Animated.View style={headerContainerStyle}>
         <LinearGradient
-          colors={['#00ea6b', '#06392e']}
+          colors={['#01b854', '#06392e']}
           start={{ x: 0.1, y: 0.8 }}
           end={{ x: 0.9, y: 0.2 }}
           style={StyleSheet.absoluteFill}
@@ -582,7 +587,7 @@ export default function CricketLayout() {
         <Animated.View style={[
           styles.profileHeaderContent, 
           profileInfoOpacity, 
-          { paddingTop: insets.top + 80 }
+          { paddingTop: insets.top + 70 }
         ]}>
           <View style={styles.headerTopRow}>
             <TouchableOpacity 
@@ -712,9 +717,39 @@ export default function CricketLayout() {
             </View>
 
             {/* Sub-bar injection - Fixed height for all tabs to ensure consistent content alignment */}
-            {(activeTabId === 'stats' || activeTabId === 'trophies' || activeTabId === 'badges' || activeTabId === 'connections') ? (
+            {(activeTabId === 'stats' || activeTabId === 'trophies' || activeTabId === 'badges' || activeTabId === 'connections' || activeTabId === 'teams' || activeTabId === 'tournaments') ? (
               <View style={styles.subBarInjection}>
                 <View style={styles.toggleGroup}>
+                  {activeTabId === 'tournaments' && [
+                    { id: 'all', label: 'All' },
+                    { id: 'participate', label: 'Participate' },
+                    { id: 'network', label: 'Network' },
+                    { id: 'nearby', label: 'Nearby' },
+                  ].map((chip) => (
+                    <TouchableOpacity
+                      key={chip.id}
+                      onPress={() => setTournamentsTab(chip.id)}
+                      style={[styles.toggleBtn, tournamentsTab === chip.id && styles.toggleBtnActive]}
+                    >
+                      <Text style={[styles.toggleBtnText, tournamentsTab === chip.id && styles.toggleBtnTextActive]}>{chip.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+
+                  {activeTabId === 'teams' && [
+                    { id: 'your', label: 'Your' },
+                    { id: 'all', label: 'All' },
+                    { id: 'top teams', label: 'Top Teams' },
+                    { id: 'networks', label: 'Networks' },
+                  ].map((chip) => (
+                    <TouchableOpacity
+                      key={chip.id}
+                      onPress={() => setTeamsTab(chip.id)}
+                      style={[styles.toggleBtn, teamsTab === chip.id && styles.toggleBtnActive]}
+                    >
+                      <Text style={[styles.toggleBtnText, teamsTab === chip.id && styles.toggleBtnTextActive]}>{chip.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                  
                   {activeTabId === 'stats' && [
                     { id: 'batting', label: 'Batting' },
                     { id: 'bowling', label: 'Bowling' },
@@ -789,12 +824,21 @@ export default function CricketLayout() {
         style={{ flex: 1 }}
       >
         {TABS.map((tab) => (
-          <View key={tab.id} style={{ width: windowWidth }}>
+          <View key={tab.id} style={{ width: windowWidth, flex: 1 }}>
             <Animated.ScrollView 
               onScroll={verticalScrollHandler}
               scrollEventThrottle={16}
               style={styles.mainScroll} 
-              contentContainerStyle={[styles.mainScrollContent, { paddingTop: (activeTabId === 'stats' || activeTabId === 'trophies' || activeTabId === 'badges' || activeTabId === 'connections' ? HEADER_MAX_HEIGHT + 48 + insets.top : HEADER_MAX_HEIGHT + insets.top) }]} 
+              contentContainerStyle={[
+                styles.mainScrollContent, 
+                { 
+                  paddingTop: (activeTabId === 'stats' || activeTabId === 'trophies' || activeTabId === 'badges' || activeTabId === 'connections' || activeTabId === 'teams' || activeTabId === 'tournaments' 
+                    ? HEADER_MAX_HEIGHT + 48 + insets.top 
+                    : HEADER_MAX_HEIGHT + insets.top
+                  ),
+                  paddingBottom: 100 // Add some bottom padding for better scroll feel
+                }
+              ]} 
               showsVerticalScrollIndicator={false}
             >
               <View style={styles.contentContainer}>
@@ -803,8 +847,8 @@ export default function CricketLayout() {
                 {tab.id === 'stats' && <CricketStats activeSubTab={statsTab} />}
                 {tab.id === 'trophies' && <CricketTrophies />}
                 {tab.id === 'badges' && <CricketBadges />}
-                {tab.id === 'tournaments' && <CricketTournaments />}
-                {tab.id === 'teams' && <CricketTeams />}
+                {tab.id === 'tournaments' && <CricketTournaments activeSubTab={tournamentsTab} />}
+                {tab.id === 'teams' && <CricketTeams activeSubTab={teamsTab} />}
                 {tab.id === 'highlights' && <CricketHighlights />}
                 {tab.id === 'photos' && <CricketPhotos />}
                 {tab.id === 'connections' && <CricketConnections />}
@@ -1077,6 +1121,7 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   tabTextActive: {
+    fontFamily: 'Inter',
     fontWeight: '700',
     color: '#01b854',
   },
@@ -1122,6 +1167,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   toggleBtnTextActive: {
+    fontFamily: 'Inter',
     color: '#334155', // Dark text on light background
     fontWeight: '700',
   },

@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency } from '@/utils/helpers';
 import Card from '@/components/ui/Card';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
+import { Wallet, Landmark, TrendingUp, Calendar as CalendarIcon, History } from 'lucide-react-native';
 
 const IS_WEB = Platform.OS === 'web';
 
@@ -108,22 +109,34 @@ function OwnerEarningsScreenInner() {
 
           <View style={styles.cardsRow}>
             <View style={styles.card}>
-              <Text style={styles.cardLabel}>Total earnings</Text>
+              <View style={styles.cardHeader}>
+                <TrendingUp size={16} color="#64748B" />
+                <Text style={styles.cardLabel}>Total earnings</Text>
+              </View>
               <Text style={styles.cardValue}>{formatCurrency(stats.totalEarnings)}</Text>
             </View>
 
-            <View style={[styles.card, styles.cardHighlighted]}>
-              <Text style={styles.cardLabel}>Online payments</Text>
-              <Text style={[styles.cardValue, { color: '#3b82f6' }]}>{formatCurrency(stats.onlineEarnings)}</Text>
+            <View style={[styles.card, styles.highlightCard]}>
+              <View style={styles.cardHeader}>
+                <Wallet size={16} color="#10b981" />
+                <Text style={styles.cardLabel}>Wallet Balance</Text>
+              </View>
+              <Text style={[styles.cardValue, { color: '#10b981' }]}>{formatCurrency(stats.onlineEarnings)}</Text>
             </View>
 
             <View style={styles.card}>
-              <Text style={styles.cardLabel}>Cash (On site)</Text>
+              <View style={styles.cardHeader}>
+                <Landmark size={16} color="#f59e0b" />
+                <Text style={styles.cardLabel}>Cash (On site)</Text>
+              </View>
               <Text style={[styles.cardValue, { color: '#f59e0b' }]}>{formatCurrency(stats.cashEarnings)}</Text>
             </View>
 
             <View style={styles.card}>
-              <Text style={styles.cardLabel}>Total bookings</Text>
+              <View style={styles.cardHeader}>
+                <History size={16} color="#64748B" />
+                <Text style={styles.cardLabel}>Total bookings</Text>
+              </View>
               <Text style={styles.cardValue}>{stats.totalConfirmedBookings}</Text>
             </View>
           </View>
@@ -144,10 +157,12 @@ function OwnerEarningsScreenInner() {
                     value={selectedDate ?? ''}
                     onChange={(e: any) => setSelectedDate(e.target.value || null)}
                     style={{
-                      padding: 6,
-                      borderRadius: 6,
-                      border: '1px solid #D1D5DB',
-                      fontSize: 12,
+                      padding: 10,
+                      borderRadius: 10,
+                      border: '1px solid #E2E8F0',
+                      fontSize: 13,
+                      fontFamily: 'Inter',
+                      backgroundColor: '#F8FAFC',
                     }}
                   />
                   {selectedDate && (
@@ -214,7 +229,7 @@ export default function OwnerEarningsScreen() {
 
   return (
     <View style={styles.nativeContainer}>
-      <MobileAppNavbar title="Earnings" titleColor="#00ea6b" />
+      <MobileAppNavbar title="Earnings" titleColor="#01b854" />
       <OwnerEarningsScreenInner />
     </View>
   );
@@ -223,13 +238,13 @@ export default function OwnerEarningsScreen() {
 const styles = StyleSheet.create({
   nativeContainer: {
     flex: 1,
-    backgroundColor: '#043529',
+    backgroundColor: '#F8FAFC',
   },
   container: {
     flex: 1,
-    backgroundColor: IS_WEB ? '#F5F5F5' : '#043529',
+    backgroundColor: '#F8FAFC',
     padding: 16,
-    paddingTop: IS_WEB ? 0 : 16,
+    paddingTop: Platform.OS === 'web' ? 0 : 16,
     ...Platform.select({
       web: {
         paddingLeft: 0,
@@ -246,19 +261,29 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   panel: {
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    backgroundColor: IS_WEB ? '#FFFFFF' : '#06392e',
-    borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.2)',
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#F1F5F9',
     borderWidth: 1,
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
   },
   panelSecondary: {
     marginTop: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: IS_WEB ? '#FFFFFF' : '#06392e',
-    borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.2)',
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    backgroundColor: '#FFFFFF',
+    borderColor: '#F1F5F9',
     borderWidth: 1,
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
   },
   title: {
     fontFamily: 'Inter',
@@ -269,7 +294,8 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: IS_WEB ? '#6B7280' : '#9ca3af',
+    color: '#64748B',
+    fontFamily: 'Inter',
   },
   filterRow: {
     flexDirection: 'row',
@@ -295,24 +321,36 @@ const styles = StyleSheet.create({
   },
   card: {
     flex: 1,
-    minWidth: 220,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: IS_WEB ? '#FFFFFF' : '#043529',
-    borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.3)',
+    minWidth: IS_WEB ? 220 : '100%',
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    backgroundColor: '#F8FAFC',
+    borderColor: '#E2E8F0',
     borderWidth: 1,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
   },
   cardLabel: {
     fontSize: 13,
-    color: IS_WEB ? '#6B7280' : '#9ca3af',
-    marginBottom: 6,
+    color: '#64748B',
+    fontWeight: '600',
+    fontFamily: 'Inter',
   },
   cardValue: {
     fontFamily: 'Inter',
-    fontSize: 20,
-    fontWeight: '600',
-    color: IS_WEB ? '#111827' : '#00ea6b',
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.5,
+  },
+  highlightCard: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#86EFAC',
   },
   transactionsSection: {
     marginTop: 20,
@@ -342,10 +380,11 @@ const styles = StyleSheet.create({
   },
   transactionsHeaderCell: {
     fontFamily: 'Inter',
-    fontSize: 11,
-    fontWeight: '600',
-    color: IS_WEB ? '#6B7280' : '#00ea6b',
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#64748B',
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   transactionsRow: {
     flexDirection: 'row',

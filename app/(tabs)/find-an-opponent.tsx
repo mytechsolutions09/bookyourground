@@ -219,13 +219,6 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
           >
             <Text style={styles.activeTabText}>Find an Opponent</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.tab}
-            onPress={() => router.push('/(tabs)/grounds?tab=favorite')}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.tabText}>Favourite</Text>
-          </TouchableOpacity>
         </View>
       )}
       {isWeb && !IS_DARK ? (
@@ -514,18 +507,6 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
             activeOpacity={0.7}
           >
             <Text style={styles.activeTabText}>Find an Opponent</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.tab}
-            onPress={() => {
-              if (Platform.OS !== 'web' && LayoutAnimation) {
-                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-              }
-              router.push('/(tabs)/grounds?tab=favorite');
-            }}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.tabText}>Favourite</Text>
           </TouchableOpacity>
         </View>
       </Animated.View>

@@ -6,6 +6,7 @@
 #005b80
 #4f2c63
 #2a533a
+
 npx expo start
 npx expo start --web
 
@@ -19,3 +20,8 @@ git status
 git add . && git commit -m
 git add .; git commit -m
 git push
+
+pull from git
+
+
+
