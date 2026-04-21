@@ -12,13 +12,16 @@ import {
   PlusCircle,
   Settings,
   Bell,
-  Swords,
   Shield,
   CalendarClock,
-  LifeBuoy,
   Star,
+  ShoppingCart,
+  LifeBuoy,
+  Info,
+  X,
+  Swords,
 } from 'lucide-react-native';
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -26,6 +29,7 @@ import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '../../components/MobileAppNavbar';
 import ProfileHeaderTabs from '@/components/profile/ProfileHeaderTabs';
 import { useUI } from '@/contexts/UIContext';
+import { Modal } from 'react-native';
 
 const IS_WEB = Platform.OS === 'web';
 const IS_DARK = Platform.OS !== 'web' || (typeof window !== 'undefined' && window.innerWidth < 900);
@@ -61,6 +65,8 @@ export default function ProfileScreen() {
   const themeBorder = isLight ? LIGHT_BORDER : DARK_BORDER;
   const themeMuted = isLight ? LIGHT_MUTED : DARK_TEXT;
 
+  const [showInfoModal, setShowInfoModal] = useState(false);
+
   const handleSignOut = () => {
     if (isWeb) {
       if (confirm('Are you sure you want to sign out?')) {
@@ -81,23 +87,7 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleDeleteAccount = () => {
-    Alert.alert(
-      'Delete Account',
-      'This action is permanent and will delete all your data. Are you sure you want to proceed?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete Permanently',
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert('Request Sent', 'Your account deletion request has been submitted. Our team will process it within 24 hours. You will be signed out now.');
-            void signOut().then(() => router.replace('/'));
-          },
-        },
-      ]
-    );
-  };
+
 
   const getRoleLabel = (role: string) => {
     switch (role) {
@@ -143,53 +133,79 @@ export default function ProfileScreen() {
           isCompact={isCompact}
         />
       )}
-      <Card
-        style={[
-          styles.profileCard,
-          {
-            backgroundColor: themeCard,
-            borderColor: themeBorder,
-            borderWidth: isLight ? 1 : styles.cardThemed.borderWidth,
-            shadowColor: isLight ? '#000' : 'transparent',
-            shadowOpacity: isLight ? 0.04 : 0,
-            shadowRadius: 12,
-            shadowOffset: { width: 0, height: 4 },
-          },
-        ]}
-      >
-        <View style={{ height: 8 }} />
-        <RNText style={[styles.name, { color: themeText }]}>{getFormattedName(profile?.full_name)}</RNText>
-        <View style={[styles.roleBadge, { borderColor: themeAccent, backgroundColor: isLight ? 'rgba(16, 185, 129, 0.08)' : 'transparent', marginBottom: 16 }]}>
-          <RNText style={[styles.roleText, { color: isLight ? themeAccent : themeText }]}>
-            {profile && getRoleLabel(profile.role)}
-          </RNText>
-        </View>
 
-        <View style={styles.overviewInfo}>
-          <View style={styles.overviewInfoItem}>
-            <Mail size={14} color={themeAccent} />
-            <RNText style={[styles.overviewInfoText, { color: isLight ? '#475569' : themeText }]}>
-              {user?.email}
-            </RNText>
+      <Modal
+        visible={showInfoModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowInfoModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity 
+            style={styles.modalBackdrop} 
+            activeOpacity={1} 
+            onPress={() => setShowInfoModal(false)} 
+          />
+          <View style={[styles.modalContent, { backgroundColor: themeBg }]}>
+            <View style={styles.modalHeader}>
+              <RNText style={[styles.modalTitle, { color: themeText }]}>Profile Info</RNText>
+              <TouchableOpacity onPress={() => setShowInfoModal(false)}>
+                <X size={24} color={themeText} />
+              </TouchableOpacity>
+            </View>
+
+            <Card
+              style={[
+                styles.profileCard,
+                {
+                  backgroundColor: themeCard,
+                  borderColor: themeBorder,
+                  borderWidth: isLight ? 1 : styles.cardThemed.borderWidth,
+                  shadowColor: isLight ? '#000' : 'transparent',
+                  shadowOpacity: isLight ? 0.04 : 0,
+                  shadowRadius: 12,
+                  shadowOffset: { width: 0, height: 4 },
+                },
+              ]}
+            >
+              <View style={{ height: 8 }} />
+              <RNText style={[styles.name, { color: themeText }]}>{getFormattedName(profile?.full_name)}</RNText>
+              <View style={[styles.roleBadge, { borderColor: themeAccent, backgroundColor: isLight ? 'rgba(16, 185, 129, 0.08)' : 'transparent', marginBottom: 16 }]}>
+                <RNText style={[styles.roleText, { color: isLight ? themeAccent : themeText }]}>
+                  {profile && getRoleLabel(profile.role)}
+                </RNText>
+              </View>
+
+              <View style={styles.overviewInfo}>
+                <View style={styles.overviewInfoItem}>
+                  <Mail size={14} color={themeAccent} />
+                  <RNText style={[styles.overviewInfoText, { color: isLight ? '#475569' : themeText }]}>
+                    {user?.email}
+                  </RNText>
+                </View>
+                {profile?.phone && (
+                  <View style={styles.overviewInfoItem}>
+                    <Phone size={14} color={themeAccent} />
+                    <RNText style={[styles.overviewInfoText, { color: isLight ? '#475569' : themeText }]}>
+                      {profile.phone}
+                    </RNText>
+                  </View>
+                )}
+                {profile?.team_name && (
+                  <View style={styles.overviewInfoItem}>
+                    <Swords size={14} color={themeAccent} />
+                    <RNText style={[styles.overviewInfoText, { color: isLight ? '#475569' : themeText }]}>
+                      Team: {profile.team_name}
+                    </RNText>
+                  </View>
+                )}
+              </View>
+            </Card>
+            
+            <View style={{ height: 40 }} />
           </View>
-          {profile?.phone && (
-            <View style={styles.overviewInfoItem}>
-              <Phone size={14} color={themeAccent} />
-              <RNText style={[styles.overviewInfoText, { color: isLight ? '#475569' : themeText }]}>
-                {profile.phone}
-              </RNText>
-            </View>
-          )}
-          {profile?.team_name && (
-            <View style={styles.overviewInfoItem}>
-              <Swords size={14} color={themeAccent} />
-              <RNText style={[styles.overviewInfoText, { color: isLight ? '#475569' : themeText }]}>
-                Team: {profile.team_name}
-              </RNText>
-            </View>
-          )}
         </View>
-      </Card>
+      </Modal>
 
 
       {(profile?.role === 'ground_owner' && (!isWeb || isCompact)) ? (
@@ -292,7 +308,6 @@ export default function ProfileScreen() {
 
       {(isCompact || !isWeb) && (
         <View style={styles.menuContainer}>
-          <RNText style={styles.ownerNavTitle}>MY ACCOUNT</RNText>
           <View style={[styles.menuCard, { backgroundColor: themeCard, borderColor: themeBorder }]}>
             {isSuperAdmin && (
             <TouchableOpacity
@@ -331,7 +346,18 @@ export default function ProfileScreen() {
 
           <TouchableOpacity
             style={styles.menuItem}
-            onPress={() => router.push('/grounds?tab=favorite' as any)}
+            onPress={() => router.push('/shop/cart' as any)}
+          >
+            <View style={styles.menuItemLeft}>
+              <ShoppingCart size={20} color={themeAccent} />
+              <RNText style={[styles.menuItemText, { color: themeText }]}>My Shopping Cart</RNText>
+            </View>
+            <ChevronRight size={20} color={chevronColor} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => router.push('/favorites' as any)}
           >
             <View style={styles.menuItemLeft}>
               <Star size={20} color={themeAccent} />
@@ -373,17 +399,7 @@ export default function ProfileScreen() {
             <ChevronRight size={20} color={chevronColor} />
           </TouchableOpacity>
 
-          {!isWeb && (
-            <TouchableOpacity 
-              style={styles.menuItem}
-              onPress={handleDeleteAccount}
-            >
-              <View style={styles.menuItemLeft}>
-                <RNText style={[styles.menuItemText, { color: '#EF4444' }]}>Delete Account</RNText>
-              </View>
-              <ChevronRight size={20} color="#EF4444" />
-            </TouchableOpacity>
-          )}
+
           </View>
         </View>
       )}
@@ -410,7 +426,14 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.nativeScreen}>
-      <MobileAppNavbar title="Profile" />
+      <MobileAppNavbar 
+        title="Profile" 
+        rightAction={
+          <TouchableOpacity onPress={() => setShowInfoModal(true)}>
+            <Info size={22} color="#01b854" strokeWidth={2.5} />
+          </TouchableOpacity>
+        }
+      />
       <ScrollView 
         style={styles.container} 
         contentContainerStyle={styles.nativeScrollContent}
@@ -616,5 +639,30 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    padding: 24,
+    minHeight: 300,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    fontFamily: 'Inter',
   },
 });

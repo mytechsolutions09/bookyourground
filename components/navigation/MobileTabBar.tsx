@@ -49,15 +49,12 @@ export default function MobileTabBar() {
   const router = useRouter();
   const segments = useSegments();
   const { isTabBarVisible } = useUI();
-  const { user } = useAuth();
-  const { width } = useWindowDimensions();
-  const isFold = width < 330 || width > 600;
   
   const translateY = useSharedValue(0);
 
   React.useEffect(() => {
     translateY.value = withTiming(isTabBarVisible ? 0 : 120, {
-      duration: 600,
+      duration: 500,
       easing: Easing.out(Easing.exp),
     });
   }, [isTabBarVisible]);
@@ -74,9 +71,7 @@ export default function MobileTabBar() {
   if (Platform.OS === 'web') return null;
 
   const activeTab = getActiveTab(segments as string[]);
-  const size = 22;
-
-  const barHeight = isFold ? 110 : 85;
+  const size = 24;
 
   const go = (href: string) => {
     router.push(href as any);
@@ -87,65 +82,46 @@ export default function MobileTabBar() {
       style={[
         styles.bar,
         animatedStyle,
-        {
-          paddingBottom: Math.max(insets.bottom, 8),
-          borderTopColor: '#06392e',
-          height: barHeight,
-        },
+        { paddingBottom: Math.max(insets.bottom, 12) }
       ]}
     >
       <Pressable
         style={styles.item}
         onPress={() => go('/(tabs)/home_tab')}
-        accessibilityRole="button"
-        accessibilityLabel="Home"
-        accessibilityState={{ selected: activeTab === 'home' }}
       >
-        <House size={size} color={activeTab === 'home' ? ACTIVE : INACTIVE} />
+        <House size={size} color={activeTab === 'home' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'home' ? 2.5 : 2} />
         <Text style={[styles.label, { color: activeTab === 'home' ? ACTIVE : INACTIVE }]}>Home</Text>
       </Pressable>
       
       <Pressable
         style={styles.item}
         onPress={() => go('/(tabs)/grounds')}
-        accessibilityRole="button"
-        accessibilityLabel="Grounds"
-        accessibilityState={{ selected: activeTab === 'grounds' }}
       >
-        <LandPlot size={size} color={activeTab === 'grounds' ? ACTIVE : INACTIVE} />
+        <LandPlot size={size} color={activeTab === 'grounds' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'grounds' ? 2.5 : 2} />
         <Text style={[styles.label, { color: activeTab === 'grounds' ? ACTIVE : INACTIVE }]}>Grounds</Text>
       </Pressable>
 
       <Pressable
         style={styles.item}
         onPress={() => go('/(tabs)/cricket')}
-        accessibilityRole="button"
-        accessibilityLabel="Cricket"
-        accessibilityState={{ selected: activeTab === 'cricket' }}
       >
-        <Trophy size={size} color={activeTab === 'cricket' ? ACTIVE : INACTIVE} />
-        <Text style={[styles.label, { color: activeTab === 'cricket' ? ACTIVE : INACTIVE }]}>Cricket</Text>
+        <Trophy size={size} color={activeTab === 'cricket' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'cricket' ? 2.5 : 2} />
+        <Text style={[styles.label, { color: activeTab === 'cricket' ? ACTIVE : INACTIVE }]}>Play</Text>
       </Pressable>
 
       <Pressable
         style={styles.item}
         onPress={() => go('/(tabs)/shop')}
-        accessibilityRole="button"
-        accessibilityLabel="Shop"
-        accessibilityState={{ selected: activeTab === 'shop' }}
       >
-        <ShoppingBag size={size} color={activeTab === 'shop' ? ACTIVE : INACTIVE} />
+        <ShoppingBag size={size} color={activeTab === 'shop' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'shop' ? 2.5 : 2} />
         <Text style={[styles.label, { color: activeTab === 'shop' ? ACTIVE : INACTIVE }]}>Shop</Text>
       </Pressable>
 
       <Pressable
         style={styles.item}
         onPress={() => go('/(tabs)/profile')}
-        accessibilityRole="button"
-        accessibilityLabel="Profile"
-        accessibilityState={{ selected: activeTab === 'profile' }}
       >
-        <CircleUser size={size} color={activeTab === 'profile' ? ACTIVE : INACTIVE} />
+        <CircleUser size={size} color={activeTab === 'profile' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'profile' ? 2.5 : 2} />
         <Text style={[styles.label, { color: activeTab === 'profile' ? ACTIVE : INACTIVE }]}>Profile</Text>
       </Pressable>
     </Animated.View>
@@ -157,19 +133,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
-    backgroundColor: '#043529',
+    backgroundColor: '#FFFFFF',
+    paddingTop: 12,
     borderTopWidth: 1,
-    paddingTop: 8,
+    borderTopColor: '#F1F5F9',
+    // Premium shadow for depth
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 8,
   },
   item: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 4,
   },
   label: {
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: '700',
     marginTop: 4,
   },
 });
+

@@ -426,6 +426,7 @@ export default function BookingsScreen() {
               data={visibleBookings}
               keyExtractor={item => item.id}
               contentContainerStyle={styles.cardList}
+              showsVerticalScrollIndicator={false}
               refreshControl={<RefreshControl refreshing={loading} onRefresh={loadBookings} />}
               ListEmptyComponent={
                 <View style={styles.emptyContainer}>
@@ -523,49 +524,54 @@ export default function BookingsScreen() {
 
           {/* RIGHT: summary panels */}
           <View style={styles.webRight}>
-            {/* Booking Summary */}
-            <View style={styles.panelCard}>
-              <Text style={styles.panelTitle}>Booking Summary</Text>
-              <View style={styles.summaryCountRow}>
-                <View style={styles.summaryCount}>
-                  <Text style={[styles.summaryValue, { color: '#00ea6b' }]}>
-                    {bookings.filter(b => !isDateInPast(b.booking_date) && b.status === 'confirmed').length}
-                  </Text>
-                  <Text style={styles.summaryLabel}>Upcoming</Text>
-                </View>
-                <View style={styles.summaryCount}>
-                  <Text style={styles.summaryValue}>
-                    {bookings.filter(b => isDateInPast(b.booking_date) && b.status === 'confirmed').length}
-                  </Text>
-                  <Text style={styles.summaryLabel}>Past</Text>
-                </View>
-              </View>
-              <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>Total Spent:</Text>
-                <Text style={styles.totalAmount}>
-                  {formatCurrency(bookings.reduce((s, b) => s + (b.total_amount || 0), 0))}
-                </Text>
-              </View>
-            </View>
-
-            {/* Balance & Stats */}
-            <View style={styles.panelCard}>
-              <Text style={styles.panelTitle}>Balance & Stats</Text>
-              <View style={styles.statsRow}>
-                <View style={styles.donutWrap}>
-                  <View style={styles.donut} />
-                  <View style={styles.donutCenter}>
-                    <Text style={styles.donutPct}>72%</Text>
+            <ScrollView 
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ gap: 16 }}
+            >
+              {/* Booking Summary */}
+              <View style={styles.panelCard}>
+                <Text style={styles.panelTitle}>Booking Summary</Text>
+                <View style={styles.summaryCountRow}>
+                  <View style={styles.summaryCount}>
+                    <Text style={[styles.summaryValue, { color: '#00ea6b' }]}>
+                      {bookings.filter(b => !isDateInPast(b.booking_date) && b.status === 'confirmed').length}
+                    </Text>
+                    <Text style={styles.summaryLabel}>Upcoming</Text>
+                  </View>
+                  <View style={styles.summaryCount}>
+                    <Text style={styles.summaryValue}>
+                      {bookings.filter(b => isDateInPast(b.booking_date) && b.status === 'confirmed').length}
+                    </Text>
+                    <Text style={styles.summaryLabel}>Past</Text>
                   </View>
                 </View>
-                <View style={styles.statsText}>
-                  <Text style={styles.statsSmall}>of monthly</Text>
-                  <Text style={styles.statsBold}>games booked</Text>
-                  <Text style={[styles.statsBold, { color: '#00ea6b', marginTop: 8 }]}>18 hrs</Text>
-                  <Text style={styles.statsSmall}>played this month</Text>
+                <View style={styles.totalRow}>
+                  <Text style={styles.totalLabel}>Total Spent:</Text>
+                  <Text style={styles.totalAmount}>
+                    {formatCurrency(bookings.reduce((s, b) => s + (b.total_amount || 0), 0))}
+                  </Text>
                 </View>
               </View>
-            </View>
+
+              {/* Balance & Stats */}
+              <View style={styles.panelCard}>
+                <Text style={styles.panelTitle}>Balance & Stats</Text>
+                <View style={styles.statsRow}>
+                  <View style={styles.donutWrap}>
+                    <View style={styles.donut} />
+                    <View style={styles.donutCenter}>
+                      <Text style={styles.donutPct}>72%</Text>
+                    </View>
+                  </View>
+                  <View style={styles.statsText}>
+                    <Text style={styles.statsSmall}>of monthly</Text>
+                    <Text style={styles.statsBold}>games booked</Text>
+                    <Text style={[styles.statsBold, { color: '#00ea6b', marginTop: 8 }]}>18 hrs</Text>
+                    <Text style={styles.statsSmall}>played this month</Text>
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
           </View>
         </View>
 
@@ -632,6 +638,7 @@ export default function BookingsScreen() {
           </View>
 
           <FlatList
+            style={{ flex: 1 }}
             data={visibleBookings}
             renderItem={({ item }) => (
               <View style={styles.nativeItemContainer}>
@@ -651,6 +658,7 @@ export default function BookingsScreen() {
             key="bookings-1-col"
             numColumns={1}
             contentContainerStyle={styles.listNative}
+            showsVerticalScrollIndicator={false}
             refreshControl={
               <RefreshControl
                 refreshing={loading}
@@ -676,7 +684,7 @@ export default function BookingsScreen() {
 
   if (Platform.OS === 'web' && !isCompact) {
     return (
-      <WebLayout noCard>
+      <WebLayout>
         {content}
         <Modal
           visible={cancelModalVisible}
@@ -786,18 +794,19 @@ export default function BookingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'transparent',
+    padding: 0,
   },
   webContainerRoot: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: 'transparent',
   },
   nativeScreen: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'transparent',
   },
   nativeBody: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: 'transparent',
   },
   nativeFilterBar: {
     backgroundColor: '#FFFFFF',
@@ -890,7 +899,7 @@ const styles = StyleSheet.create({
   },
   webHeader: {
     backgroundColor: '#FFFFFF',
-    paddingTop: 22,
+    paddingTop: 0,
     paddingHorizontal: 24,
     paddingBottom: 18,
     borderBottomWidth: 1,
@@ -924,12 +933,12 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   listNative: {
-    padding: 16,
-    paddingBottom: 24,
+    padding: 24,
+    paddingBottom: 32,
     flexGrow: 1,
   },
   webList: {
-    padding: 24,
+    padding: 32,
     gap: 20,
     width: '100%',
   },

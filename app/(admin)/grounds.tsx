@@ -115,6 +115,7 @@ export default function GroundsAdminScreen() {
   const { width } = useWindowDimensions();
   const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
   const [loading, setLoading] = useState(true);
+  const [occupancyRates, setOccupancyRates] = useState<Record<string, number>>({});
   const [selectedGround, setSelectedGround] = useState<GroundWithImages | null>(null);
   const [viewMode, setViewMode] = useState<'tiles' | 'list'>('tiles');
   const [locationFilter, setLocationFilter] = useState<string>('all');
@@ -231,6 +232,16 @@ export default function GroundsAdminScreen() {
       const { data, error } = await query;
       if (error) throw error;
       setGrounds((data || []) as GroundWithImages[]);
+
+      // Fetch global occupancy for admin
+      const { data: occData, error: occError } = await supabase.rpc('get_all_grounds_occupancy');
+      if (!occError && occData) {
+        const mapping: Record<string, number> = {};
+        occData.forEach((row: any) => {
+          mapping[row.ground_id] = row.occupancy_percentage;
+        });
+        setOccupancyRates(mapping);
+      }
     } catch (error) {
       console.error('Error loading grounds:', error);
       if (Platform.OS === 'web') alert('Error loading grounds');
@@ -1426,6 +1437,7 @@ export default function GroundsAdminScreen() {
                 <GroundCard
                   ground={latestGround}
                   showBookingSchedule
+                  occupancyRate={occupancyRates[item.id] ?? null}
                   onPress={() =>
                     setSelectedGround(selectedGround?.id === item.id ? null : latestGround)
                   }

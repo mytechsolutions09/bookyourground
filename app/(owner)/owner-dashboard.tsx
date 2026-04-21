@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, Platform, TouchableOpacity, useWindowDimensions, TextInput, ActivityIndicator } from 'react-native';
-import { Building2, Calendar, IndianRupee, Star, LayoutDashboard, User, Mail, Phone, ShieldCheck, Pencil, Check, X, CalendarClock, Users, Swords, PlusCircle, Settings, LifeBuoy } from 'lucide-react-native';
+import { Building2, Calendar, IndianRupee, Star, LayoutDashboard, User, Mail, Phone, ShieldCheck, Pencil, Check, X, CalendarClock, Users, Swords, PlusCircle, Settings, LifeBuoy, PieChart } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import Card from '@/components/ui/Card';
@@ -29,6 +29,7 @@ interface DashboardStats {
   nextBooking: any;
   lastBooking: any;
   favoriteGround: any;
+  occupancyRate: number;
 }
 
 export default function OwnerDashboardScreen() {
@@ -50,6 +51,7 @@ export default function OwnerDashboardScreen() {
     nextBooking: null,
     lastBooking: null,
     favoriteGround: null,
+    occupancyRate: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -63,30 +65,33 @@ export default function OwnerDashboardScreen() {
     try {
       setLoading(true);
 
+      const groundsRes = await supabase.from('grounds').select('id', { count: 'exact' }).eq('owner_id', user.id);
+      const ownerGroundIds = (groundsRes.data || []).map(g => g.id);
+
       const [
-        groundsRes,
         bookingsOnMyGroundsRes,
         myBookingsRes,
         earningsRes,
         withdrawalsRes,
         userAllBookingsRes,
+        timeSlotsRes,
+        occupancyRes,
       ] = await Promise.all([
-        supabase.from('grounds').select('id', { count: 'exact', head: true }).eq('owner_id', user.id),
         supabase
           .from('bookings')
-          .select('id, ground:grounds!inner(owner_id)', { count: 'exact', head: true })
-          .eq('ground.owner_id', user.id)
+          .select('id', { count: 'exact', head: true })
+          .in('ground_id', ownerGroundIds)
           .eq('status', 'confirmed'),
         supabase
           .from('bookings')
-          .select('id, total_amount, status, ground:grounds!inner(owner_id)')
+          .select('id, total_amount, status')
           .eq('user_id', user.id)
-          .neq('ground.owner_id', user.id)
+          .not('ground_id', 'in', `(${ownerGroundIds.join(',')})`)
           .eq('status', 'confirmed'),
         supabase
           .from('bookings')
-          .select('total_amount, status, ground:grounds!inner(owner_id)')
-          .eq('ground.owner_id', user.id)
+          .select('total_amount, status')
+          .in('ground_id', ownerGroundIds)
           .eq('status', 'confirmed'),
         supabase
           .from('withdrawals')
@@ -112,7 +117,17 @@ export default function OwnerDashboardScreen() {
           .eq('user_id', user.id)
           .order('booking_date', { ascending: true })
           .order('start_time', { ascending: true }),
+        supabase
+          .from('time_slots')
+          .select('id, ground_id, day_of_week')
+          .in('ground_id', ownerGroundIds),
+        supabase.rpc('get_owner_occupancy_rate', { target_owner_id: user.id }),
       ]);
+      
+      const timeSlotsData = timeSlotsRes.data || [];
+      const occupancyData = (occupancyRes as any).data?.[0] || { occupancy_percentage: 0 };
+      const occupancyRate = occupancyData.occupancy_percentage || 0;
+
 
       const earningsRows =
         (earningsRes.data as { total_amount: number | null; status: string }[] | null) ?? [];
@@ -183,6 +198,7 @@ export default function OwnerDashboardScreen() {
         nextBooking,
         lastBooking,
         favoriteGround,
+        occupancyRate,
       });
     } catch (e) {
       console.error('Error loading owner stats:', e);
@@ -266,16 +282,7 @@ export default function OwnerDashboardScreen() {
                 </View>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.statBoxWrapper} onPress={() => router.push('/(owner)/inventory' as any)}>
-                <View style={styles.statBox}>
-                  <View style={styles.iconCircle}>
-                    <CalendarClock size={22} color="#01b854" />
-                  </View>
-                  <Text style={styles.statsLabel}>Manage Slots</Text>
-                  <Text style={styles.statsValueSmall}>Inventory</Text>
-                  <Text style={styles.statsCaption}>Check availability</Text>
-                </View>
-              </TouchableOpacity>
+
 
               <View style={styles.statBoxWrapper}>
                 <View style={styles.statBox}>
@@ -296,6 +303,17 @@ export default function OwnerDashboardScreen() {
                   <Text style={styles.statsLabel}>Total earnings</Text>
                   <Text style={styles.statsValueSmall}>₹{stats.totalEarningsOnMyGrounds.toLocaleString('en-IN')}</Text>
                   <Text style={styles.statsCaption}>Total revenue</Text>
+                </View>
+              </View>
+
+              <View style={styles.statBoxWrapper}>
+                <View style={styles.statBox}>
+                  <View style={styles.iconCircle}>
+                    <PieChart size={22} color="#01b854" />
+                  </View>
+                  <Text style={styles.statsLabel}>Occupancy</Text>
+                  <Text style={styles.statsValue}>{stats.occupancyRate}%</Text>
+                  <Text style={styles.statsCaption}>Monthly utilization</Text>
                 </View>
               </View>
 
@@ -583,7 +601,7 @@ export default function OwnerDashboardScreen() {
   );
 
   if (Platform.OS === 'web') {
-    return <WebLayout noCard>{content}</WebLayout>;
+    return <WebLayout>{content}</WebLayout>;
   }
 
   return (
@@ -597,11 +615,11 @@ export default function OwnerDashboardScreen() {
 const styles = StyleSheet.create({
   nativeContainer: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
   },
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'transparent',
   },
   scrollContent: {
     paddingBottom: 40,
@@ -610,7 +628,7 @@ const styles = StyleSheet.create({
   mainWrapper: {
     width: '100%',
     alignSelf: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 0,
   },
   sectionTitle: {
     fontSize: 20,

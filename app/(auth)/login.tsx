@@ -140,14 +140,15 @@ export default function LoginScreen() {
     }
 
     // Role-based defaults if no redirect path
-    if (profile.role === 'super_admin') router.replace('/(admin)/dashboard');
-    else if (profile.role === 'ground_owner') router.replace('/(owner)/grounds');
-    else {
-      // For regular users, if we can go back, go back to where they were
+    if (profile.role === 'super_admin') {
+      router.replace('/(admin)/dashboard');
+    } else {
+      // For all other users (players & ground owners), take to home screen
+      // If we can go back, go back to where they were intended to go
       if (router.canGoBack()) {
         router.back();
       } else {
-        router.replace('/(tabs)/dashboard');
+        router.replace('/(tabs)/home_tab');
       }
     }
   }, [user, profile, redirect, date, time, teams]);

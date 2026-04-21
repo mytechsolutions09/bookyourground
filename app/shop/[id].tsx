@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text as RNText, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, Share } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text as RNText, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, Share, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { 
   ChevronLeft, 
@@ -16,121 +16,148 @@ import {
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import WebLayout from '@/components/web/WebLayout';
-
-const PRODUCTS_DATA: Record<string, any> = {
-  '1': {
-    id: '1',
-    name: 'SS Ton Reserve Edition',
-    category: 'Bats',
-    price: '₹24,500',
-    originalPrice: '₹28,000',
-    discount: '12% OFF',
-    rating: 4.9,
-    reviews: 124,
-    description: 'The SS Ton Reserve Edition is a professional-grade cricket bat made from the finest Grade 1+ English Willow. Crafted for the ultimate performance, this bat features a mammoth sweet spot and exceptional balance, allowing for effortless power hitting and precision stroke play.',
-    image: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=800&q=80',
-    tag: 'Premium',
-    features: [
-      'Hand-selected Grade 1+ English Willow',
-      'Air Dried Willow for absolute performance',
-      'Latest shape with massive edges for power',
-      'Specially designed Aqua Grip for superior feel'
-    ],
-    specifications: {
-      'Weight': '1180 - 1240 grams',
-      'Willow Type': 'English Willow Grade 1+',
-      'Hand Orientation': 'Right & Left',
-      'Sweet Spot': 'Mid to Low'
-    }
-  },
-  '2': {
-    id: '2',
-    name: 'SG Pro Soft Balls (Pack of 6)',
-    category: 'Balls',
-    price: '₹1,200',
-    originalPrice: '₹1,500',
-    discount: '20% OFF',
-    rating: 4.7,
-    reviews: 89,
-    description: 'High-quality four-piece leather balls suitable for club and tournament matches. These balls are made from genuine alum-tanned leather and feature a high-quality cork core for consistent bounce and durability.',
-    image: 'https://images.unsplash.com/photo-1593766788306-285610866ea4?w=800&q=80',
-    tag: 'Best Seller',
-    features: [
-      'Waterproofed alum-tanned leather',
-      'Four-piece construction',
-      'High-quality center cork core',
-      'Exceptional shape retention'
-    ],
-    specifications: {
-      'Quantity': 'Pack of 6',
-      'Material': 'Genuine Leather',
-      'Stitching': '80-85 stitches',
-      'Usage': 'Match Play'
-    }
-  },
-  '3': {
-    id: '3',
-    name: 'Adidas Adipower Vector',
-    category: 'Shoes',
-    price: '₹8,990',
-    originalPrice: '₹10,500',
-    discount: '14% OFF',
-    rating: 4.8,
-    reviews: 56,
-    description: 'Designed for fast bowlers, the Adidas Adipower Vector provides ultimate stability and cushioning during the landing phase. The mid-cut design offers ankle support, while the innovative outsole ensures maximum traction on the pitch.',
-    image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80',
-    features: [
-      'Revolutionary BOA closure system',
-      'Mid-cut construction for ankle support',
-      'Durable Adiwear outsole',
-      'Maximum cushioning for high impact'
-    ],
-    specifications: {
-      'Type': 'Bowling Spikes',
-      'Outer Material': 'Synthetic / Mesh',
-      'Sole Material': 'TPU with Steel Spikes',
-      'Fit': 'Regular Fit'
-    }
-  }
-};
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
+import { useUI } from '@/contexts/UIContext';
 
 export default function ProductDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const product = PRODUCTS_DATA[id as string] || PRODUCTS_DATA['1'];
+  const { user } = useAuth();
+  const { setTabBarVisible } = useUI();
+  const [product, setProduct] = useState<any>(null);
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setTabBarVisible(false);
+    return () => setTabBarVisible(true);
+  }, []);
+
+  useEffect(() => {
+    if (id) {
+      loadProduct();
+      checkIfFavorited();
+    }
+  }, [id, user?.id]);
+
+  const loadProduct = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('shop_products')
+        .select(`
+          *,
+          category:shop_categories(name)
+        `)
+        .eq('id', id)
+        .single();
+      
+      if (error) throw error;
+      setProduct(data);
+    } catch (err) {
+      console.error('Error loading product:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const checkIfFavorited = async () => {
+    if (!user || !id) return;
+    try {
+      const { data, error } = await supabase
+        .from('shop_favorites')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('product_id', id)
+        .single();
+      
+      setIsFavorited(!!data);
+    } catch (err) {
+      // Not favorited
+      setIsFavorited(false);
+    }
+  };
+
+  const toggleFavorite = async () => {
+    if (!user) {
+      router.push('/(auth)/login');
+      return;
+    }
+    try {
+      if (isFavorited) {
+        await supabase
+          .from('shop_favorites')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('product_id', id);
+        setIsFavorited(false);
+      } else {
+        await supabase
+          .from('shop_favorites')
+          .upsert({ user_id: user.id, product_id: id });
+        setIsFavorited(true);
+      }
+    } catch (err) {
+      console.error('Error toggling favorite:', err);
+    }
+  };
 
   const handleShare = async () => {
+    if (!product) return;
     try {
+      const shareUrl = Platform.OS === 'web' ? window.location.href : `https://bookyourground.com/shop/${id}`;
       await Share.share({
-        message: `Check out this ${product.name} on Cricket Hub!`,
-        url: window.location.href,
+        message: `Check out this ${product.name} on Cricket Hub!\n${shareUrl}`,
       });
     } catch (error) {
       console.error(error);
     }
   };
 
+  const addToCart = async () => {
+    if (!user) {
+      router.push('/(auth)/login');
+      return;
+    }
+    if (!product) return;
+    try {
+      const { error } = await supabase
+        .from('shop_cart')
+        .upsert({ user_id: user.id, product_id: product.id }, { onConflict: 'user_id,product_id' });
+      
+      if (error) throw error;
+      router.push('/shop/cart');
+    } catch (err) {
+      console.error('Error adding to cart:', err);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' }}>
+        <ActivityIndicator color="#01b854" />
+      </View>
+    );
+  }
+
+  if (!product) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' }}>
+        <RNText>Product not found</RNText>
+        <TouchableOpacity onPress={() => router.back()}><RNText style={{ color: '#01b854', marginTop: 12 }}>Go Back</RNText></TouchableOpacity>
+      </View>
+    );
+  }
+
   const content = (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Product Image Section */}
-      <View style={styles.imageSection}>
-        <Image source={{ uri: product.image }} style={styles.mainImage} />
-        <View style={styles.imageOverlay}>
-          <TouchableOpacity 
-            style={styles.backBtn} 
-            onPress={() => router.back()}
-          >
-            <ChevronLeft size={24} color="#043529" />
-          </TouchableOpacity>
-          <View style={styles.rightActions}>
-            <TouchableOpacity style={styles.actionCircle} onPress={handleShare}>
-              <Share2 size={20} color="#043529" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionCircle}>
-              <Heart size={20} color="#043529" />
-            </TouchableOpacity>
-          </View>
-        </View>
+    <View style={{ flex: 1 }}>
+      {/* Fixed Background Image */}
+      <View style={styles.fixedImageContainer}>
+        <Image 
+          source={{ uri: product.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80' }} 
+          style={styles.mainImage} 
+        />
         {product.tag && (
           <View style={styles.heroTag}>
             <RNText style={styles.heroTagText}>{product.tag}</RNText>
@@ -138,96 +165,135 @@ export default function ProductDetailScreen() {
         )}
       </View>
 
-      <View style={styles.contentWrapper}>
-        {/* Basic Info */}
-        <View style={styles.infoSection}>
-          <RNText style={styles.categoryText}>{product.category}</RNText>
-          <RNText style={styles.productName}>{product.name}</RNText>
-          
-          <View style={styles.ratingRow}>
-            {[1, 2, 3, 4, 5].map((_, i) => (
-              <Star 
-                key={i} 
-                size={16} 
-                color={i < Math.floor(product.rating) ? "#FBBF24" : "#D1D5DB"} 
-                fill={i < Math.floor(product.rating) ? "#FBBF24" : "none"} 
-              />
-            ))}
-            <RNText style={styles.reviewsText}>{product.rating} ({product.reviews} reviews)</RNText>
-          </View>
+      <ScrollView 
+        style={styles.scroll} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        <View style={styles.contentWrapper}>
+          {/* Basic Info */}
+          <View style={styles.infoSection}>
+            <RNText style={styles.categoryText}>{product.category?.name || 'Equipment'}</RNText>
+            <RNText style={styles.productName}>{product.name}</RNText>
+            
+            <View style={styles.ratingRow}>
+              {[1, 2, 3, 4, 5].map((_, i) => (
+                <Star 
+                  key={i} 
+                  size={16} 
+                  color={i < Math.floor(product.rating || 0) ? "#FBBF24" : "#D1D5DB"} 
+                  fill={i < Math.floor(product.rating || 0) ? "#FBBF24" : "none"} 
+                />
+              ))}
+              <RNText style={styles.reviewsText}>{Number(product.rating || 0).toFixed(1)} ({product.review_count || 0} reviews)</RNText>
+            </View>
 
-          <View style={styles.priceContainer}>
-            <RNText style={styles.currentPrice}>{product.price}</RNText>
-            <RNText style={styles.originalPrice}>{product.originalPrice}</RNText>
-            <View style={styles.discountBadge}>
-              <RNText style={styles.discountText}>{product.discount}</RNText>
+            <View style={styles.priceContainer}>
+              <RNText style={styles.currentPrice}>₹{Number(product.price).toLocaleString('en-IN')}</RNText>
+              {product.discount_price && (
+                <RNText style={styles.originalPrice}>₹{Number(product.discount_price).toLocaleString('en-IN')}</RNText>
+              )}
             </View>
           </View>
-        </View>
 
-        {/* trust badges */}
-        <View style={styles.trustRow}>
-          <View style={styles.trustItem}>
-            <ShieldCheck size={20} color="#043529" />
-            <RNText style={styles.trustText}>Authentic</RNText>
+          {/* trust badges */}
+          <View style={styles.trustRow}>
+            <View style={styles.trustItem}>
+              <ShieldCheck size={20} color="#043529" />
+              <RNText style={styles.trustText}>Authentic</RNText>
+            </View>
+            <View style={[styles.trustItem, styles.trustDivider]}>
+              <Truck size={20} color="#043529" />
+              <RNText style={styles.trustText}>Free Delivery</RNText>
+            </View>
+            <View style={styles.trustItem}>
+              <RotateCcw size={20} color="#043529" />
+              <RNText style={styles.trustText}>7 Day Return</RNText>
+            </View>
           </View>
-          <View style={[styles.trustItem, styles.trustDivider]}>
-            <Truck size={20} color="#043529" />
-            <RNText style={styles.trustText}>Free Delivery</RNText>
-          </View>
-          <View style={styles.trustItem}>
-            <RotateCcw size={20} color="#043529" />
-            <RNText style={styles.trustText}>7 Day Return</RNText>
-          </View>
-        </View>
 
-        {/* Description */}
-        <View style={styles.section}>
-          <RNText style={styles.sectionTitle}>Description</RNText>
-          <RNText style={styles.descriptionText}>{product.description}</RNText>
-        </View>
+          {/* Description */}
+          <View style={styles.section}>
+            <RNText style={styles.sectionTitle}>Description</RNText>
+            <RNText style={styles.descriptionText}>{product.description}</RNText>
+          </View>
 
-        {/* Features */}
-        <View style={styles.section}>
-          <RNText style={styles.sectionTitle}>Key Features</RNText>
-          <View style={styles.featureList}>
-            {product.features.map((feature: string, index: number) => (
-              <View key={index} style={styles.featureItem}>
-                <CheckCircle2 size={18} color="#00ea6b" />
-                <RNText style={styles.featureText}>{feature}</RNText>
+          {/* Features */}
+          {product.features && product.features.length > 0 && (
+            <View style={styles.section}>
+              <RNText style={styles.sectionTitle}>Key Features</RNText>
+              <View style={styles.featureList}>
+                {product.features.map((feature: string, index: number) => (
+                  <View key={index} style={styles.featureItem}>
+                    <CheckCircle2 size={18} color="#00ea6b" />
+                    <RNText style={styles.featureText}>{feature}</RNText>
+                  </View>
+                ))}
               </View>
-            ))}
-          </View>
-        </View>
+            </View>
+          )}
 
-        {/* Specifications */}
-        <View style={styles.section}>
-          <RNText style={styles.sectionTitle}>Specifications</RNText>
-          <View style={styles.specTable}>
-            {Object.entries(product.specifications).map(([key, value]: [string, any], index) => (
-              <View key={key} style={[styles.specRow, index % 2 === 0 && styles.specRowAlt]}>
-                <RNText style={styles.specKey}>{key}</RNText>
-                <RNText style={styles.specValue}>{value}</RNText>
+          {/* Specifications */}
+          {product.specifications && Object.keys(product.specifications).length > 0 && (
+            <View style={styles.section}>
+              <RNText style={styles.sectionTitle}>Specifications</RNText>
+              <View style={styles.specTable}>
+                {Object.entries(product.specifications).map(([key, value]: [string, any], index) => (
+                  <View key={key} style={[styles.specRow, index % 2 === 0 && styles.specRowAlt]}>
+                    <RNText style={styles.specKey}>{key}</RNText>
+                    <RNText style={styles.specValue}>{value}</RNText>
+                  </View>
+                ))}
               </View>
-            ))}
-          </View>
-        </View>
+            </View>
+          )}
 
-        <View style={styles.footerGap} />
+          <View style={styles.footerGap} />
+        </View>
+      </ScrollView>
+
+      {/* Header Overlay - Absolute and rendered last to sit on top of everything */}
+      <View style={styles.imageOverlay}>
+        <TouchableOpacity 
+          style={styles.backBtn} 
+          onPress={() => router.back()}
+        >
+          <ChevronLeft size={24} color="#043529" />
+        </TouchableOpacity>
+        <View style={styles.rightActions}>
+          <TouchableOpacity style={styles.actionCircle} onPress={handleShare}>
+            <Share2 size={20} color="#043529" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionCircle} onPress={toggleFavorite}>
+            <Heart 
+              size={20} 
+              color={isFavorited ? "#EF4444" : "#043529"} 
+              fill={isFavorited ? "#EF4444" : "none"} 
+            />
+          </TouchableOpacity>
+        </View>
       </View>
-    </ScrollView>
+    </View>
   );
 
   const bottomActions = (
     <View style={styles.bottomBar}>
-      <TouchableOpacity style={styles.cartIconBtn}>
+      <TouchableOpacity 
+        style={styles.cartIconBtn}
+        onPress={() => router.push('/shop/cart')}
+      >
         <ShoppingCart size={24} color="#043529" />
-        <View style={styles.cartBadge} />
       </TouchableOpacity>
-      <TouchableOpacity style={styles.addToCartSecondary}>
+      <TouchableOpacity 
+        style={styles.addToCartSecondary}
+        onPress={addToCart}
+      >
         <RNText style={styles.addToCartSecondaryText}>Add to Cart</RNText>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.buyNowBtn}>
+      <TouchableOpacity 
+        style={styles.buyNowBtn}
+        onPress={addToCart}
+      >
         <RNText style={styles.buyNowText}>Buy Now</RNText>
       </TouchableOpacity>
     </View>
@@ -352,10 +418,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#FFFFFF',
   },
-  imageSection: {
-    height: 400,
+  fixedImageContainer: {
+    height: 440,
     backgroundColor: '#F9FAFB',
-    position: 'relative',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 0,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingTop: 400,
   },
   mainImage: {
     width: '100%',
@@ -413,6 +489,7 @@ const styles = StyleSheet.create({
     color: '#00ea6b',
     fontWeight: '800',
     fontSize: 12,
+    fontFamily: 'Inter',
   },
   contentWrapper: {
     padding: 24,
@@ -431,13 +508,15 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
     textTransform: 'uppercase',
     marginBottom: 8,
+    fontFamily: 'Inter',
   },
   productName: {
     fontSize: 26,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#043529',
     marginBottom: 12,
     lineHeight: 32,
+    fontFamily: 'Inter',
   },
   ratingRow: {
     flexDirection: 'row',
@@ -450,6 +529,7 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontWeight: '500',
     marginLeft: 8,
+    fontFamily: 'Inter',
   },
   priceContainer: {
     flexDirection: 'row',
@@ -458,13 +538,15 @@ const styles = StyleSheet.create({
   },
   currentPrice: {
     fontSize: 28,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#043529',
+    fontFamily: 'Inter',
   },
   originalPrice: {
     fontSize: 18,
     color: '#9CA3AF',
     textDecorationLine: 'line-through',
+    fontFamily: 'Inter',
   },
   discountBadge: {
     backgroundColor: '#F0FDF4',
@@ -476,6 +558,7 @@ const styles = StyleSheet.create({
     color: '#16A34A',
     fontSize: 12,
     fontWeight: '700',
+    fontFamily: 'Inter',
   },
   trustRow: {
     flexDirection: 'row',
@@ -500,6 +583,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: '#4B5563',
+    fontFamily: 'Inter',
   },
   section: {
     marginBottom: 32,
@@ -509,11 +593,13 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#043529',
     marginBottom: 16,
+    fontFamily: 'Inter',
   },
   descriptionText: {
     fontSize: 15,
     color: '#4B5563',
     lineHeight: 24,
+    fontFamily: 'Inter',
   },
   featureList: {
     gap: 12,
@@ -527,6 +613,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#4B5563',
     fontWeight: '500',
+    fontFamily: 'Inter',
   },
   specTable: {
     borderWidth: 1,
@@ -548,12 +635,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     fontWeight: '600',
+    fontFamily: 'Inter',
   },
   specValue: {
     flex: 1.5,
     fontSize: 14,
     color: '#043529',
     fontWeight: '700',
+    fontFamily: 'Inter',
   },
   footerGap: {
     height: 100,
@@ -564,12 +653,12 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 12,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
     shadowColor: '#000',
@@ -579,9 +668,9 @@ const styles = StyleSheet.create({
     elevation: 20,
   },
   cartIconBtn: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
@@ -589,19 +678,19 @@ const styles = StyleSheet.create({
   },
   cartBadge: {
     position: 'absolute',
-    top: 15,
-    right: 15,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    top: 12,
+    right: 12,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: '#00ea6b',
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: '#F3F4F6',
   },
   addToCartSecondary: {
     flex: 1,
-    height: 60,
-    borderRadius: 30,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
@@ -609,12 +698,13 @@ const styles = StyleSheet.create({
   addToCartSecondaryText: {
     color: '#043529',
     fontWeight: '700',
-    fontSize: 16,
+    fontSize: 14,
+    fontFamily: 'Inter',
   },
   buyNowBtn: {
     flex: 1.2,
-    height: 60,
-    borderRadius: 30,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: '#043529',
     alignItems: 'center',
     justifyContent: 'center',
@@ -622,7 +712,8 @@ const styles = StyleSheet.create({
   buyNowText: {
     color: '#FFFFFF',
     fontWeight: '800',
-    fontSize: 16,
+    fontSize: 14,
+    fontFamily: 'Inter',
   },
 
   // Web Styles

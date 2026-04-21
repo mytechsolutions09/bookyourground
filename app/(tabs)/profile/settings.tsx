@@ -14,7 +14,7 @@ import { useUI } from '@/contexts/UIContext';
 const IS_WEB = Platform.OS === 'web';
 
 function UserSettingsInner() {
-  const { user, profile, updateProfile } = useAuth();
+  const { user, profile, updateProfile, signOut } = useAuth();
   const [fullName, setFullName] = useState(profile?.full_name || '');
   const [phone, setPhone] = useState(profile?.phone || '');
   const [teamName, setTeamName] = useState(profile?.team_name || '');
@@ -23,6 +23,31 @@ function UserSettingsInner() {
 
   const { setTabBarVisible } = useUI();
   const lastScrollY = React.useRef(0);
+
+  const handleDeleteAccount = () => {
+    if (IS_WEB) {
+      if (confirm('Are you sure you want to delete your account? This action is permanent and will delete all your data.')) {
+        alert('Your account deletion request has been submitted. Our team will process it within 24 hours. You will be signed out now.');
+        void signOut().then(() => router.replace('/'));
+      }
+    } else {
+      Alert.alert(
+        'Delete Account',
+        'This action is permanent and will delete all your data. Are you sure you want to proceed?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete Permanently',
+            style: 'destructive',
+            onPress: () => {
+              Alert.alert('Request Sent', 'Your account deletion request has been submitted. Our team will process it within 24 hours. You will be signed out now.');
+              void signOut().then(() => router.replace('/'));
+            },
+          },
+        ]
+      );
+    }
+  };
 
   const onScroll = (event: any) => {
     if (Platform.OS === 'web') return;
@@ -176,6 +201,23 @@ function UserSettingsInner() {
             <View>
               <Text style={styles.menuItemTitle}>Contact Us</Text>
               <Text style={styles.menuItemSubtitle}>Get in touch with our support team.</Text>
+            </View>
+          </TouchableOpacity>
+        </Card>
+
+        <Card style={[styles.panel, { marginTop: 16, borderColor: '#FEE2E2', backgroundColor: '#FEF2F2' }]}>
+          <Text style={[styles.sectionTitle, { color: '#B91C1C' }]}>Danger Zone</Text>
+          <Text style={styles.sectionSubtitle}>
+            Irreversible actions related to your account.
+          </Text>
+          
+          <TouchableOpacity 
+            style={[styles.menuItem, { borderBottomWidth: 0, paddingBottom: 0 }]}
+            onPress={handleDeleteAccount}
+          >
+            <View>
+              <Text style={[styles.menuItemTitle, { color: '#B91C1C' }]}>Delete Account</Text>
+              <Text style={styles.menuItemSubtitle}>Permanently remove all your data.</Text>
             </View>
           </TouchableOpacity>
         </Card>

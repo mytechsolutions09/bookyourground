@@ -1001,6 +1001,7 @@ export default function OwnerBookingsScreen() {
         }}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={loadBookings} />
         }
@@ -1014,7 +1015,7 @@ export default function OwnerBookingsScreen() {
   );
 
   if (Platform.OS === 'web') {
-    return <WebLayout noCard>{content}</WebLayout>;
+    return <WebLayout>{content}</WebLayout>;
   }
 
   return (
@@ -1030,11 +1031,11 @@ const IS_WEB = Platform.OS === 'web';
 const styles = StyleSheet.create({
   nativeContainer: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'transparent',
   },
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: 'transparent',
   },
   containerMobile: {
     backgroundColor: '#F8FAFC',
@@ -1042,7 +1043,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#FFFFFF',
     padding: 16,
-    paddingTop: IS_WEB ? 16 : 0,
+    paddingTop: 0,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
   },
@@ -1058,7 +1059,8 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   list: {
-    padding: 16,
+    padding: 0,
+    paddingBottom: 80,
   },
   emptyContainer: {
     alignItems: 'center',

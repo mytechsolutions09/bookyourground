@@ -1,46 +1,37 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  RefreshControl,
-  Platform,
-  TouchableOpacity,
-  useWindowDimensions,
-} from 'react-native';
-import Animated, { 
-  useSharedValue, 
-  useAnimatedStyle, 
-  withTiming, 
-  Easing, 
-  useAnimatedScrollHandler,
-  runOnJS
-} from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useUI } from '@/contexts/UIContext';
-import { router } from 'expo-router';
-import { Heart } from 'lucide-react-native';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/contexts/AuthContext';
-import { GroundWithImages } from '@/types';
-import GroundCard from '@/components/grounds/GroundCard';
+import { View, Text, StyleSheet, Platform, TouchableOpacity, useWindowDimensions, ScrollView, Image, ActivityIndicator } from 'react-native';
 import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
+import { MoreVertical, Star, Heart } from 'lucide-react-native';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
+import { router } from 'expo-router';
 
-function FavoritesInner({ onScroll, headerHeight, insets }: { onScroll?: any, headerHeight: number, insets: any }) {
+import GroundCard from '@/components/grounds/GroundCard';
+
+const ACCENT = '#c8f35c'; 
+
+export default function FavoritesScreen() {
+  const { width } = useWindowDimensions();
+  const isCompact = width < 900;
+  
   const { user } = useAuth();
-  const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
+  const [activeTab, setActiveTab] = useState<'grounds' | 'merchandise'>('grounds');
+  const [favorites, setFavorites] = useState<any[]>([]);
+  const [shopFavorites, setShopFavorites] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    if (user?.id) {
+      loadFavorites();
+      loadShopFavorites();
+    } else {
+      setLoading(false);
+    }
+  }, [user?.id]);
 
   const loadFavorites = async () => {
-    if (!user?.id) {
-      setGrounds([]);
-      setLoading(false);
-      return;
-    }
-
+    if (!user?.id) return;
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -48,262 +39,510 @@ function FavoritesInner({ onScroll, headerHeight, insets }: { onScroll?: any, he
         .select(`
           ground:grounds (
             *,
-            ground_images(*)
+            ground_images(*),
+            reviews(rating)
           )
         `)
         .eq('user_id', user.id);
 
       if (error) throw error;
       
-      const favoritedGrounds = (data || [])
+      const mapped = (data || [])
         .map((f: any) => f.ground)
         .filter(Boolean);
         
-      setGrounds(favoritedGrounds);
-    } catch (error) {
-      console.error('Error loading favorites:', error);
+      setFavorites(mapped);
+    } catch (err) {
+      console.error('Error loading favorites:', err);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
-  useEffect(() => {
-    loadFavorites();
-  }, [user?.id]);
+  const loadShopFavorites = async () => {
+    if (!user?.id) return;
+    try {
+      const { data, error } = await supabase
+        .from('shop_favorites')
+        .select(`
+          product:shop_products (
+            *,
+            category:shop_categories(name)
+          )
+        `)
+        .eq('user_id', user.id);
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    loadFavorites();
+      if (error) throw error;
+      
+      const mapped = (data || [])
+        .map((f: any) => {
+          const p = f.product;
+          if (!p) return null;
+          return {
+            id: p.id,
+            name: p.name,
+            rating: Number(p.rating || 0),
+            reviews: p.review_count || 0,
+            location: p.category?.name || 'Equipment',
+            price: p.price,
+            image: p.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80'
+          };
+        })
+        .filter(Boolean);
+        
+      setShopFavorites(mapped);
+    } catch (err) {
+      console.error('Error loading shop favorites:', err);
+    }
   };
 
-  const toggleFavorite = async (groundId: string) => {
-    if (!user) return;
+  const removeFavorite = async (groundId: string) => {
+    if (!user?.id) return;
     try {
-      const { error } = await supabase
+      await supabase
         .from('favorites')
         .delete()
         .eq('user_id', user.id)
         .eq('ground_id', groundId);
-      if (error) throw error;
-      
-      // Update local state by removing the ground
-      setGrounds(prev => prev.filter(g => g.id !== groundId));
+      setFavorites(prev => prev.filter(f => f.id !== groundId));
     } catch (e) {
-      console.error('Error removing favorite:', e);
+      console.error('Failed to remove favorite', e);
     }
   };
 
-  const renderItem = ({ item }: { item: GroundWithImages }) => (
-    <GroundCard
-      ground={item}
-      onPress={() => {
-        const citySlug = (item.city || 'city').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-        const nameSlug = (item.name || 'ground').toLowerCase().replace(/[^a-z0-9]+/g, '-');
-        router.push(`/ground/${citySlug}/${nameSlug}`);
-      }}
-      isFavorite={true}
-      onToggleFavorite={() => toggleFavorite(item.id)}
-    />
-  );
+  const removeShopFavorite = async (productId: string) => {
+    if (!user?.id) return;
+    try {
+      await supabase
+        .from('shop_favorites')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('product_id', productId);
+      setShopFavorites(prev => prev.filter(f => f.id !== productId));
+    } catch (e) {
+      console.error('Failed to remove shop favorite', e);
+    }
+  };
 
-  return (
-    <View style={styles.container}>
-      <Animated.FlatList
-        onScroll={onScroll}
-        scrollEventThrottle={16}
-        data={grounds}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={[styles.list, { paddingTop: Platform.OS !== 'web' ? headerHeight + insets.top + 8 : 0 }]}
-        refreshControl={
-          <RefreshControl 
-            refreshing={refreshing} 
-            onRefresh={onRefresh} 
-            tintColor="#00ea6b" 
-            progressViewOffset={Platform.OS !== 'web' ? headerHeight + insets.top + 10 : 0}
+  const renderStars = (rating: number) => {
+    return Array.from({ length: 5 }).map((_, i) => (
+      <Star key={i} size={14} color={i < Math.floor(rating) ? '#F59E0B' : '#E2E8F0'} fill={i < Math.floor(rating) ? '#F59E0B' : 'transparent'} />
+    ));
+  };
+
+  const renderItem = (item: any) => {
+    if (activeTab === 'grounds') {
+      return (
+        <View key={item.id} style={{ marginBottom: 12 }}>
+          <GroundCard
+            ground={item}
+            isFavorite={true}
+            onPress={() => {
+              const citySlug = (item.city || 'city').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+              const nameSlug = (item.name || 'ground').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+              router.push(`/ground/${citySlug}/${nameSlug}`);
+            }}
+            onToggleFavorite={() => removeFavorite(item.id)}
+            lightMode={true}
           />
-        }
-        ListEmptyComponent={
-          !loading ? (
-            <View style={styles.emptyContainer}>
-              <Heart size={48} color="#D1D5DB" strokeWidth={1.5} style={{ marginBottom: 16 }} />
-              <Text style={styles.emptyTitle}>No Favorites Yet</Text>
-              <Text style={styles.emptyText}>Grounds you heart will appear here.</Text>
+        </View>
+      );
+    }
+
+    return (
+      <TouchableOpacity 
+        key={item.id} 
+        style={[styles.favCard, isCompact && styles.favCardCompact]}
+        activeOpacity={0.9}
+        onPress={() => router.push(`/shop/${item.id}`)}
+      >
+        <Image source={{ uri: item.image }} style={[styles.favImage, isCompact && styles.favImageCompact]} />
+        <View style={[styles.favInfo, isCompact && styles.favInfoCompact]}>
+          <View style={styles.favTopRow}>
+            <Text style={styles.favName} numberOfLines={1}>{item.name}</Text>
+            <TouchableOpacity onPress={() => removeShopFavorite(item.id)}>
+              <Heart size={20} color="#EF4444" fill="#EF4444" />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.favMetaRow}>
+            <Text style={styles.favRatingNum}>{item.rating.toFixed(1)}</Text>
+            <View style={styles.starsContainer}>{renderStars(item.rating)}</View>
+            <Text style={styles.favMetaText}>({item.reviews} tests)</Text>
+            <Text style={styles.favMetaBullet}>•</Text>
+            <Text style={styles.favMetaText}>{item.location}</Text>
+          </View>
+          <View style={styles.favBottomRow}>
+            <Text style={styles.favPriceBig}>₹{Number(item.price).toLocaleString('en-IN')}</Text>
+            <View style={styles.favActions}>
+              <TouchableOpacity style={styles.bookBtn} onPress={() => router.push(`/shop/${item.id}`)}>
+                <Text style={styles.bookBtnTxt}>Buy Now</Text>
+              </TouchableOpacity>
             </View>
-          ) : null
-        }
-      />
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderRightPanel = () => (
+    <View style={styles.rightPanel}>
+      <View style={styles.panelCard}>
+        <Text style={styles.panelTitle}>Favorites Summary</Text>
+        <View style={styles.summaryBox}>
+          <Text style={styles.summaryBigNumber}>{(activeTab === 'grounds' ? favorites : shopFavorites).length}</Text>
+          <View style={styles.summarySubContainer}>
+            <Text style={styles.summarySubText}>{activeTab === 'grounds' ? 'Venues' : 'Products'}</Text>
+            <Text style={styles.summarySubTextSaved}>Saved</Text>
+          </View>
+        </View>
+      </View>
     </View>
   );
-}
 
-export default function FavoritesScreen({ hideHeader = false, externalScrollHandler }: { hideHeader?: boolean, externalScrollHandler?: any }) {
-  const { width } = useWindowDimensions();
-  const isWebWithTabs = Platform.OS === 'web' && width >= 900;
-  const insets = useSafeAreaInsets();
-  const { setTabBarVisible } = useUI();
-  
-  const headerTranslateY = useSharedValue(0);
-  const lastScrollY = useSharedValue(0);
-  const HEADER_HEIGHT = 100;
-
-  useEffect(() => {
-    return () => setTabBarVisible(true);
-  }, []);
-
-  const verticalScrollHandler = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      const currentY = event.contentOffset.y;
-      const diff = currentY - lastScrollY.value;
-      
-      if (diff > 1 && currentY > 50) {
-        if (headerTranslateY.value === 0) {
-          headerTranslateY.value = withTiming(-HEADER_HEIGHT - insets.top, { 
-            duration: 600,
-            easing: Easing.out(Easing.exp)
-          });
-          runOnJS(setTabBarVisible)(false);
-        }
-      } else if (diff < -2 || currentY < 20) {
-        if (headerTranslateY.value < 0) {
-          headerTranslateY.value = withTiming(0, { 
-            duration: 600,
-            easing: Easing.out(Easing.exp)
-          });
-          runOnJS(setTabBarVisible)(true);
-        }
-      }
-      lastScrollY.value = currentY;
-    },
-  });
-
-  const headerAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: headerTranslateY.value }],
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 1000,
-    backgroundColor: '#F9FAFB',
-  }));
-  
-  const content = (isWeb: boolean) => (
+  const content = (
     <View style={{ flex: 1 }}>
-        <FavoritesInner 
-          onScroll={isWeb ? null : (externalScrollHandler || verticalScrollHandler)} 
-          headerHeight={hideHeader ? 0 : HEADER_HEIGHT}
-          insets={insets}
-        />
+      <View style={styles.headerContainer}>
+        {/* Toggle Buttons Section - Fixed at top */}
+        <View style={styles.toggleContainer}>
+          <TouchableOpacity 
+            style={[styles.toggleBtn, activeTab === 'grounds' && styles.toggleBtnActive]}
+            onPress={() => setActiveTab('grounds')}
+          >
+            <View style={styles.btnContent}>
+              <Text style={[styles.toggleBtnTxt, activeTab === 'grounds' && styles.toggleBtnTxtActive]}>Grounds</Text>
+              {favorites.length > 0 && (
+                <View style={[styles.dot, activeTab === 'grounds' && styles.dotActive]}>
+                  <Text style={styles.dotTxt}>{favorites.length}</Text>
+                </View>
+              )}
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.toggleBtn, activeTab === 'merchandise' && styles.toggleBtnActive]}
+            onPress={() => setActiveTab('merchandise')}
+          >
+            <View style={styles.btnContent}>
+              <Text style={[styles.toggleBtnTxt, activeTab === 'merchandise' && styles.toggleBtnTxtActive]}>Merchandise</Text>
+              {shopFavorites.length > 0 && (
+                <View style={[styles.dot, activeTab === 'merchandise' && styles.dotActive]}>
+                  <Text style={styles.dotTxt}>{shopFavorites.length}</Text>
+                </View>
+              )}
+            </View>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <ScrollView
+        style={styles.root}
+        contentContainerStyle={[styles.scrollContent, (Platform.OS === 'web' && !isCompact) && styles.scrollContentWeb]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.mainLayout}>
+          <View style={styles.centerContent}>
+            <View style={styles.favoritesList}>
+              {loading ? (
+                <ActivityIndicator size="large" color="#01b854" style={{ marginTop: 40 }} />
+              ) : (activeTab === 'grounds' ? favorites : shopFavorites).length === 0 ? (
+                <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 80 }}>
+                  <Heart size={48} color="#D1D5DB" strokeWidth={1.5} style={{ marginBottom: 16 }} />
+                  <Text style={{ fontSize: 20, fontWeight: '700', color: '#111827', fontFamily: 'Inter' }}>No Favorites Yet</Text>
+                  <Text style={{ fontSize: 15, color: '#6B7280', fontFamily: 'Inter', marginTop: 8 }}>
+                    Items you heart in {activeTab === 'grounds' ? 'Grounds' : 'Merchandise'} will appear here.
+                  </Text>
+                </View>
+              ) : (
+                (activeTab === 'grounds' ? favorites : shopFavorites).map(item => renderItem(item))
+              )}
+            </View>
+          </View>
+          {!isCompact && renderRightPanel()}
+        </View>
+      </ScrollView>
     </View>
   );
-
 
   if (Platform.OS === 'web') {
-    return (
-      <WebLayout>
-        <View style={styles.webWrapper}>
-          {content(true)}
-        </View>
-      </WebLayout>
-    );
+    return <WebLayout>{content}</WebLayout>;
   }
 
   return (
-    <View style={styles.nativeRoot}>
-      <Animated.View style={headerAnimatedStyle}>
-        <MobileAppNavbar title="My Favorites" titleColor="#043529" lightBg />
-      </Animated.View>
-      <FavoritesInner 
-        onScroll={externalScrollHandler || verticalScrollHandler} 
-        headerHeight={HEADER_HEIGHT}
-        insets={insets}
-      />
+    <View style={styles.nativeWrapper}>
+      <MobileAppNavbar title="Favorites" titleColor="#043529" lightBg />
+      {content}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  nativeRoot: {
+  nativeWrapper: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F3F4F6',
   },
-  webWrapper: {
+  root: {
     flex: 1,
-    paddingTop: 96,
+    backgroundColor: '#F3F4F6',
   },
-  container: {
-    flex: 1,
-  },
-  list: {
+  scrollContent: {
+    flexGrow: 1,
     padding: 16,
-    maxWidth: 1200,
-    alignSelf: 'center',
-    width: '100%',
+    paddingTop: 0,
     paddingBottom: 40,
   },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 100,
+  scrollContentWeb: {
+    padding: 0,
   },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 8,
-    fontFamily: 'Inter',
+  headerContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    backgroundColor: '#F3F4F6',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
-  emptyText: {
-    fontSize: 14,
-    color: '#6B7280',
-    textAlign: 'center',
-    fontFamily: 'Inter',
-  },
-  tabContainer: {
+  mainLayout: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.04)',
-    borderRadius: 999,
-    padding: 6,
-    marginHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.02)',
-  },
-  webTabContainer: {
+    alignItems: 'flex-start',
+    gap: 24,
+    maxWidth: 1400,
     width: '100%',
-    maxWidth: 600,
-    alignSelf: 'center',
+  },
+  centerContent: {
+    flex: 1,
+  },
+  rightPanel: {
+    width: 320,
+    flexShrink: 0,
+    gap: 20,
+  },
+  headerArea: {
     marginBottom: 24,
   },
-  tab: {
+  pageTitle: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+    marginBottom: 4,
+  },
+  pageSubtitle: {
+    fontSize: 13,
+    color: '#64748B',
+    fontFamily: 'Inter',
+    fontWeight: '500',
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#E2E8F0',
+    padding: 4,
+    borderRadius: 14,
+    marginBottom: 24,
+    width: '100%',
+    alignSelf: 'stretch',
+  },
+  toggleBtn: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+  },
+  toggleBtnActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  toggleBtnTxt: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  toggleBtnTxtActive: {
+    color: '#043529',
+  },
+  btnContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dot: {
+    backgroundColor: '#94A3B8',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  activeTab: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+  dotActive: {
+    backgroundColor: '#043529',
   },
-  tabText: {
-    color: '#334155',
-    fontSize: 13,
+  dotTxt: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  favoritesList: {
+    gap: 16,
+  },
+  favCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    padding: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  favCardCompact: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+  },
+  favImage: {
+    width: 240,
+    height: 140,
+    borderRadius: 12,
+    backgroundColor: '#E2E8F0',
+  },
+  favImageCompact: {
+    width: '100%',
+    height: 180,
+  },
+  favInfo: {
+    flex: 1,
+    marginLeft: 16,
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  favInfoCompact: {
+    marginLeft: 0,
+    marginTop: 12,
+  },
+  favTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  favName: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+    flex: 1,
+    marginRight: 12,
+  },
+  favMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    flexWrap: 'wrap',
+  },
+  favRatingNum: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+    marginRight: 6,
+  },
+  starsContainer: {
+    flexDirection: 'row',
+    marginRight: 6,
+  },
+  favMetaText: {
+    fontSize: 14,
+    color: '#475569',
+    fontFamily: 'Inter',
     fontWeight: '500',
+  },
+  favMetaBullet: {
+    marginHorizontal: 6,
+    color: '#94A3B8',
+    fontSize: 14,
+  },
+  favBottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginTop: 16,
+  },
+  favPriceBig: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#0F172A',
     fontFamily: 'Inter',
   },
-  activeTabText: {
-    color: '#01b854',
-    fontSize: 13,
+  favActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  bookBtn: {
+    backgroundColor: ACCENT,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  bookBtnTxt: {
+    color: '#043529',
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: 'Inter',
+  },
+  removeBtn: {
+    backgroundColor: '#E2E8F0',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  removeBtnTxt: {
+    color: '#475569',
+    fontSize: 14,
     fontWeight: '600',
+    fontFamily: 'Inter',
+  },
+  panelCard: {
+    backgroundColor: '#E2E8F0',
+    borderRadius: 20,
+    padding: 20,
+  },
+  panelTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 16,
+    fontFamily: 'Inter',
+  },
+  summaryBox: {
+    backgroundColor: '#cbd5e1',
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  summaryBigNumber: {
+    fontSize: 48,
+    fontWeight: '800',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  summarySubContainer: {
+    justifyContent: 'center',
+  },
+  summarySubText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  summarySubTextSaved: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#15803d',
     fontFamily: 'Inter',
   },
 });

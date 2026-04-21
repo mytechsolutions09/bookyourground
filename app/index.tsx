@@ -10,7 +10,7 @@ import WebLayout from '@/components/web/WebLayout';
 const WELCOME_SEEN_KEY = 'welcome_seen_v1';
 
 export default function IndexScreen() {
-  const { user, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
   const os = Platform.OS as string;
   const [welcomeChecked, setWelcomeChecked] = useState(Platform.OS === 'web');
 
@@ -48,12 +48,18 @@ export default function IndexScreen() {
     // skip marketing homepage on mobile: go to app tabs immediately.
     if (!loading && welcomeChecked && os !== 'web') {
       if (user) {
-        router.replace('/(tabs)/dashboard');
+        if (profile?.role === 'super_admin') {
+          router.replace('/(admin)/dashboard');
+        } else if (profile?.role === 'ground_owner') {
+          router.replace('/(owner)/manage-grounds');
+        } else {
+          router.replace('/(tabs)/dashboard');
+        }
       } else {
         router.replace('/(tabs)/home_tab');
       }
     }
-  }, [user, loading, welcomeChecked, os]);
+  }, [user, profile, loading, welcomeChecked, os]);
 
   if (!welcomeChecked || (loading && os !== 'web')) {
     return <HomePageSkeleton />;

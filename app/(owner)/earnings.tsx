@@ -1,33 +1,93 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Platform, ScrollView, RefreshControl } from 'react-native';
+import React, { useEffect, useState, useMemo } from 'react';
+import { View, Text, StyleSheet, Platform, ScrollView, RefreshControl, TouchableOpacity, Dimensions } from 'react-native';
+import MobileAppNavbar from '@/components/MobileAppNavbar';
 import WebLayout from '@/components/web/WebLayout';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency } from '@/utils/helpers';
-import Card from '@/components/ui/Card';
-import MobileAppNavbar from '@/components/MobileAppNavbar';
-import { Wallet, Landmark, TrendingUp, Calendar as CalendarIcon, History } from 'lucide-react-native';
+import { TrendingUp, Download, ArrowRight, Wallet, History, Info, ChevronRight } from 'lucide-react-native';
+import Svg, { Path, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 
 const IS_WEB = Platform.OS === 'web';
 
 interface EarningsStats {
   totalEarnings: number;
-  cashEarnings: number;
-  onlineEarnings: number;
+  thisMonthEarnings: number;
   totalConfirmedBookings: number;
+}
+
+interface VenueBreakdown {
+  name: string;
+  amount: number;
+  percent: number;
+}
+
+interface ChartPoint {
+  label: string;
+  value: number;
+}
+
+function LineChart({ data }: { data: ChartPoint[] }) {
+  if (data.length === 0) return null;
+
+  const [containerWidth, setContainerWidth] = useState(300);
+  const height = 150;
+  const padding = 30;
+  
+  const maxValue = Math.max(...data.map(d => d.value), 1000);
+  const points = data.map((d, i) => ({
+    x: padding + (i * (containerWidth - 2 * padding)) / (data.length - 1),
+    y: height - padding - (d.value / maxValue) * (height - 2 * padding)
+  }));
+
+  const pathData = points.reduce((acc, p, i) => 
+    acc + (i === 0 ? `M ${p.x} ${p.y}` : ` L ${p.x} ${p.y}`), ''
+  );
+
+  return (
+    <View 
+      style={styles.chartContainer} 
+      onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
+    >
+      <Svg width={containerWidth} height={height}>
+        <Defs>
+          <LinearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0%" stopColor="#01b854" stopOpacity="0.2" />
+            <Stop offset="100%" stopColor="#01b854" stopOpacity="0" />
+          </LinearGradient>
+        </Defs>
+        <Path
+          d={pathData}
+          fill="none"
+          stroke="#01b854"
+          strokeWidth="4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        {points.map((p, i) => (
+          <Circle key={i} cx={p.x} cy={p.y} r="5" fill="#01b854" />
+        ))}
+      </Svg>
+      <View style={styles.chartLabels}>
+        {data.map((d, i) => (
+          <Text key={i} style={styles.chartLabelText}>{d.label}</Text>
+        ))}
+      </View>
+    </View>
+  );
 }
 
 function OwnerEarningsScreenInner() {
   const { user } = useAuth();
   const [stats, setStats] = useState<EarningsStats>({
     totalEarnings: 0,
-    cashEarnings: 0,
-    onlineEarnings: 0,
+    thisMonthEarnings: 0,
     totalConfirmedBookings: 0,
   });
+  const [venueBreakdown, setVenueBreakdown] = useState<VenueBreakdown[]>([]);
+  const [chartData, setChartData] = useState<ChartPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<any[]>([]);
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -42,177 +102,216 @@ function OwnerEarningsScreenInner() {
       setLoading(true);
       const { data, error } = await supabase
         .from('bookings')
-        .select(
-          `
+        .select(`
+          id,
           total_amount,
           status,
           booking_date,
           payment_method,
-          ground:grounds!inner(owner_id, name, city, state)
-        `,
-        )
+          ground:grounds!inner(name, city, owner_id)
+        `)
         .eq('ground.owner_id', user.id)
-        .in('status', ['confirmed', 'completed']);
+        .in('status', ['confirmed', 'completed'])
+        .order('booking_date', { ascending: false });
 
       if (error) throw error;
 
-      let total = 0;
-      let cash = 0;
-      let online = 0;
-      let count = 0;
       const rows = (data ?? []) as any[];
+      let total = 0;
+      let thisMonthTotal = 0;
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+
+      const venueMap = new Map<string, number>();
+      const monthMap = new Map<string, number>();
+
       rows.forEach((row) => {
         const amt = row.total_amount || 0;
         total += amt;
-        if (row.payment_method === 'cash') {
-          cash += amt;
-        } else {
-          online += amt;
+        
+        const date = new Date(row.booking_date);
+        const m = date.getMonth();
+        const y = date.getFullYear();
+        
+        if (m === currentMonth && y === currentYear) {
+          thisMonthTotal += amt;
         }
-        count += 1;
+
+        const groundName = row.ground?.name || 'Other';
+        venueMap.set(groundName, (venueMap.get(groundName) || 0) + amt);
+
+        const monthKey = `${y}-${m}`;
+        monthMap.set(monthKey, (monthMap.get(monthKey) || 0) + amt);
       });
 
       setStats({
         totalEarnings: total,
-        cashEarnings: cash,
-        onlineEarnings: online,
-        totalConfirmedBookings: count,
+        thisMonthEarnings: thisMonthTotal,
+        totalConfirmedBookings: rows.length,
       });
-      setTransactions(rows);
+
+      setVenueBreakdown(
+        Array.from(venueMap.entries())
+          .map(([name, amount]) => ({ name, amount, percent: total > 0 ? (amount / total) * 100 : 0 }))
+          .sort((a, b) => b.amount - a.amount)
+          .slice(0, 4)
+      );
+
+      const trend: ChartPoint[] = [];
+      for (let i = 4; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const mk = `${d.getFullYear()}-${d.getMonth()}`;
+        trend.push({
+          label: d.toLocaleString('default', { month: 'short' }),
+          value: monthMap.get(mk) || 0
+        });
+      }
+      setChartData(trend);
+      setTransactions(rows.slice(0, 5));
     } catch (e) {
-      console.error('Error loading owner earnings:', e);
+      console.error('Error loading earnings:', e);
     } finally {
       setLoading(false);
     }
   };
 
-  const visibleTransactions = selectedDate
-    ? transactions.filter((tx) => {
-        const date = (tx.booking_date || '').slice(0, 10);
-        return date === selectedDate;
-      })
-    : transactions;
+  const renderLeftColumn = () => (
+    <View style={styles.leftCol}>
+      <View style={styles.totalEarningsCard}>
+        <View>
+          <Text style={styles.totalEarningsLabel}>Total Earnings</Text>
+          <Text style={styles.totalEarningsValue}>{formatCurrency(stats.totalEarnings)}</Text>
+          <Text style={styles.monthlySubtext}>
+            This Month: <Text style={{ fontWeight: '700' }}>{formatCurrency(stats.thisMonthEarnings)}</Text>
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>Recent Transactions</Text>
+        <View style={styles.table}>
+          <View style={styles.tableHeader}>
+            <Text style={[styles.headerText, { width: 100 }]}>Date</Text>
+            <Text style={[styles.headerText, { flex: 1 }]}>Description</Text>
+            <Text style={[styles.headerText, { width: 80, textAlign: 'right' }]}>Status</Text>
+          </View>
+          {transactions.map((tx) => (
+            <View key={tx.id} style={styles.tableRow}>
+              <Text style={[styles.cellText, { width: 100 }]}>
+                {new Date(tx.booking_date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
+              </Text>
+              <Text style={[styles.cellText, { flex: 1 }]} numberOfLines={1}>
+                Booking - {tx.ground?.name}
+              </Text>
+              <View style={[styles.statusBadge, { width: 80 }]}>
+                <View style={styles.statusDot} />
+                <Text style={styles.statusText}>Paid</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+        <TouchableOpacity style={styles.withdrawBtn}>
+          <Text style={styles.withdrawBtnText}>Withdraw Funds</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>Upcoming Payouts</Text>
+        <View style={styles.table}>
+          <View style={styles.tableHeader}>
+            <Text style={[styles.headerText, { width: 140 }]}>Scheduled Date</Text>
+            <Text style={[styles.headerText, { flex: 1 }]}>Amount</Text>
+            <Text style={[styles.headerText, { width: 100, textAlign: 'right' }]}>Status</Text>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={[styles.cellText, { width: 140 }]}>Nov 15, 2024</Text>
+            <Text style={[styles.cellText, { flex: 1 }]}>₹15,000</Text>
+            <View style={[styles.statusBadge, { width: 100 }]}>
+              <View style={[styles.statusDot, { backgroundColor: '#F59E0B' }]} />
+              <Text style={styles.statusText}>Pending</Text>
+            </View>
+          </View>
+          <View style={styles.tableRow}>
+            <Text style={[styles.cellText, { width: 140 }]}>Dec 01, 2024</Text>
+            <Text style={[styles.cellText, { flex: 1 }]}>₹28,500</Text>
+            <View style={[styles.statusBadge, { width: 100 }]}>
+              <View style={[styles.statusDot, { backgroundColor: '#3B82F6' }]} />
+              <Text style={styles.statusText}>Scheduled</Text>
+            </View>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+
+  const renderRightColumn = () => (
+    <View style={styles.rightCol}>
+      <View style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>Earnings Analytics</Text>
+        <LineChart data={chartData} />
+        
+        <View style={styles.divider} />
+        
+        <Text style={styles.sectionTitle}>Breakdown by Venue</Text>
+        <View style={styles.venueList}>
+          {venueBreakdown.map((v, i) => (
+            <View key={i} style={styles.venueItem}>
+               <View style={styles.venueInfo}>
+                 <Text style={styles.venueName} numberOfLines={1}>{v.name}:</Text>
+                 <Text style={styles.venueAmount}>{formatCurrency(v.amount)} ({Math.round(v.percent)}%)</Text>
+               </View>
+               <View style={styles.progressBg}>
+                 <View style={[styles.progressFill, { width: `${v.percent}%`, backgroundColor: i === 3 ? '#EF4444' : '#01b854' }]} />
+               </View>
+            </View>
+          ))}
+        </View>
+
+        <TouchableOpacity style={styles.downloadBtn}>
+          <Text style={styles.downloadBtnText}>Download Report</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>Recent Activity Feed</Text>
+        <View style={styles.activityFeed}>
+          <View style={styles.activityItem}>
+            <View style={styles.activityDot} />
+            <Text style={styles.activityText}>
+              <Text style={{ fontWeight: '700' }}>Today, 11:23 AM:</Text> New booking received for Metro Sports Complex (₹3,500)
+            </Text>
+          </View>
+          <View style={styles.activityItem}>
+            <View style={styles.activityDot} />
+            <Text style={styles.activityText}>
+              <Text style={{ fontWeight: '700' }}>Yesterday, 08:15 PM:</Text> Payout of ₹10,000 processed to your bank account
+            </Text>
+          </View>
+          <View style={styles.activityItem}>
+            <View style={styles.activityDot} />
+            <Text style={styles.activityText}>
+              <Text style={{ fontWeight: '700' }}>Nov 01, 2024:</Text> Lakeside Turf maintenance scheduled for next week
+            </Text>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
 
   return (
-    <ScrollView
-      style={styles.container}
-      refreshControl={<RefreshControl refreshing={loading} onRefresh={loadEarnings} />}
+    <ScrollView 
+      style={styles.root}
+      showsVerticalScrollIndicator={false}
+      // @ts-ignore - web-only style to hide scrollbar
+      contentContainerStyle={[
+        styles.scrollContent,
+        Platform.OS === 'web' && { scrollbarWidth: 'none', msOverflowStyle: 'none' } as any
+      ]}
     >
-      <View style={styles.inner}>
-        <Card style={styles.panel}>
-          {Platform.OS === 'web' && (
-            <Text style={styles.title}>Earnings</Text>
-          )}
-          <Text style={styles.subtitle}>
-            Confirmed and completed bookings on your grounds.
-          </Text>
-
-          <View style={styles.cardsRow}>
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <TrendingUp size={16} color="#64748B" />
-                <Text style={styles.cardLabel}>Total earnings</Text>
-              </View>
-              <Text style={styles.cardValue}>{formatCurrency(stats.totalEarnings)}</Text>
-            </View>
-
-            <View style={[styles.card, styles.highlightCard]}>
-              <View style={styles.cardHeader}>
-                <Wallet size={16} color="#10b981" />
-                <Text style={styles.cardLabel}>Wallet Balance</Text>
-              </View>
-              <Text style={[styles.cardValue, { color: '#10b981' }]}>{formatCurrency(stats.onlineEarnings)}</Text>
-            </View>
-
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <Landmark size={16} color="#f59e0b" />
-                <Text style={styles.cardLabel}>Cash (On site)</Text>
-              </View>
-              <Text style={[styles.cardValue, { color: '#f59e0b' }]}>{formatCurrency(stats.cashEarnings)}</Text>
-            </View>
-
-            <View style={styles.card}>
-              <View style={styles.cardHeader}>
-                <History size={16} color="#64748B" />
-                <Text style={styles.cardLabel}>Total bookings</Text>
-              </View>
-              <Text style={styles.cardValue}>{stats.totalConfirmedBookings}</Text>
-            </View>
-          </View>
-        </Card>
-
-        <Card style={styles.panelSecondary}>
-          <View style={styles.transactionsSection}>
-            <View style={styles.transactionsHeader}>
-              <Text style={styles.transactionsTitle}>Transactions</Text>
-              {Platform.OS === 'web' ? (
-                <View style={styles.filterRow}>
-                  <Text style={styles.filterLabel}>Filter by date</Text>
-                  {
-                    // @ts-ignore - web-only input
-                  }
-                  <input
-                    type="date"
-                    value={selectedDate ?? ''}
-                    onChange={(e: any) => setSelectedDate(e.target.value || null)}
-                    style={{
-                      padding: 10,
-                      borderRadius: 10,
-                      border: '1px solid #E2E8F0',
-                      fontSize: 13,
-                      fontFamily: 'Inter',
-                      backgroundColor: '#F8FAFC',
-                    }}
-                  />
-                  {selectedDate && (
-                    <Text style={styles.clearFilter} onPress={() => setSelectedDate(null)}>
-                      Clear
-                    </Text>
-                  )}
-                </View>
-              ) : null}
-            </View>
-            {visibleTransactions.length === 0 ? (
-              <Text style={styles.transactionsEmpty}>
-                {selectedDate ? 'No transactions for this date.' : 'No transactions yet.'}
-              </Text>
-            ) : (
-              <View style={styles.transactionsTable}>
-                <View style={styles.transactionsHeaderRow}>
-                  <Text style={[styles.transactionsHeaderCell, styles.txColDate]}>Date</Text>
-                  <Text style={[styles.transactionsHeaderCell, styles.txColGround]}>Ground</Text>
-                  <Text style={[styles.transactionsHeaderCell, styles.txColMethod]}>Method</Text>
-                  <Text style={[styles.transactionsHeaderCell, styles.txColAmount]}>Amount</Text>
-                  <Text style={[styles.transactionsHeaderCell, styles.txColStatus]}>Status</Text>
-                </View>
-
-                {visibleTransactions.map((tx) => (
-                  <View key={tx.id} style={styles.transactionsRow}>
-                    <Text style={[styles.transactionsCell, styles.txColDate]}>
-                      {tx.booking_date}
-                    </Text>
-                    <View style={styles.txColGround}>
-                      <Text style={styles.transactionsCell}>{tx.ground?.name ?? 'Unknown ground'}</Text>
-                      <Text style={styles.txGroundSub}>
-                        {tx.ground?.city}, {tx.ground?.state}
-                      </Text>
-                    </View>
-                    <Text style={[styles.transactionsCell, styles.txColMethod]}>
-                      {tx.payment_method === 'cash' ? 'CASH' : 'ONLINE'}
-                    </Text>
-                    <Text style={[styles.transactionsCell, styles.txColAmount]}>
-                      {formatCurrency(tx.total_amount)}
-                    </Text>
-                    <Text style={[styles.transactionsCell, styles.txColStatus]}>
-                      {tx.status}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
-        </Card>
+      <View style={[styles.layoutRow, !IS_WEB && { flexDirection: 'column' }]}>
+        {renderLeftColumn()}
+        {renderRightColumn()}
       </View>
     </ScrollView>
   );
@@ -229,8 +328,10 @@ export default function OwnerEarningsScreen() {
 
   return (
     <View style={styles.nativeContainer}>
-      <MobileAppNavbar title="Earnings" titleColor="#01b854" />
-      <OwnerEarningsScreenInner />
+      <MobileAppNavbar title="Earnings" titleColor="#043529" lightBg />
+      <ScrollView refreshControl={<RefreshControl refreshing={false} />}>
+        <OwnerEarningsScreenInner />
+      </ScrollView>
     </View>
   );
 }
@@ -238,189 +339,234 @@ export default function OwnerEarningsScreen() {
 const styles = StyleSheet.create({
   nativeContainer: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F1F5F9',
   },
-  container: {
+  root: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
-    padding: 16,
-    paddingTop: Platform.OS === 'web' ? 0 : 16,
-    ...Platform.select({
-      web: {
-        paddingLeft: 0,
-        paddingRight: 0,
-        paddingTop: 0,
-      },
-    }),
+    backgroundColor: '#F1F5F9',
   },
-  inner: {
-    width: '100%',
-    alignSelf: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 24,
+  scrollContent: {
+    // Moved padding to individual columns
+    paddingBottom: 60,
   },
-  panel: {
-    paddingVertical: 20,
-    paddingHorizontal: 20,
-    backgroundColor: '#FFFFFF',
-    borderColor: '#F1F5F9',
-    borderWidth: 1,
-    borderRadius: 24,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-  },
-  panelSecondary: {
-    marginTop: 16,
-    paddingVertical: 20,
-    paddingHorizontal: 20,
-    backgroundColor: '#FFFFFF',
-    borderColor: '#F1F5F9',
-    borderWidth: 1,
-    borderRadius: 24,
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-  },
-  title: {
-    fontFamily: 'Inter',
-    fontSize: 24,
-    fontWeight: '600',
-    color: IS_WEB ? '#111827' : '#FFFFFF',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#64748B',
-    fontFamily: 'Inter',
-  },
-  filterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  filterLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#4B5563',
-  },
-  clearFilter: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#10b981',
-  },
-  cardsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-    marginTop: 16,
-    paddingRight: 16,
-  },
-  card: {
-    flex: 1,
-    minWidth: IS_WEB ? 220 : '100%',
-    paddingVertical: 18,
-    paddingHorizontal: 20,
-    borderRadius: 16,
-    backgroundColor: '#F8FAFC',
-    borderColor: '#E2E8F0',
-    borderWidth: 1,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-  },
-  cardLabel: {
-    fontSize: 13,
-    color: '#64748B',
-    fontWeight: '600',
-    fontFamily: 'Inter',
-  },
-  cardValue: {
-    fontFamily: 'Inter',
-    fontSize: 24,
+  pageTitle: {
+    fontSize: 32,
     fontWeight: '800',
     color: '#0F172A',
-    letterSpacing: -0.5,
+    marginBottom: 24,
+    fontFamily: 'Inter',
   },
-  highlightCard: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#86EFAC',
-  },
-  transactionsSection: {
-    marginTop: 20,
-  },
-  transactionsHeader: {
+  layoutRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    gap: 24,
+  },
+  leftCol: {
+    flex: 1.5,
+    gap: 24,
+    paddingLeft: 0,
+    paddingTop: 0,
+    paddingRight: 12, // Half of gap to keep spacing even
+  },
+  rightCol: {
+    flex: 1,
+    gap: 24,
+    paddingTop: 0,
+    paddingLeft: 0,
+    paddingRight: 0,
+    paddingBottom: IS_WEB ? 24 : 16,
+  },
+  totalEarningsCard: {
+    backgroundColor: '#d9f99d', // Light lime green
+    borderRadius: 24,
+    padding: 32,
+    flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    alignItems: 'center',
   },
-  transactionsTitle: {
-    fontFamily: 'Inter',
-    fontSize: 16,
+  totalEarningsLabel: {
+    fontSize: 18,
     fontWeight: '600',
-    color: IS_WEB ? '#111827' : '#FFFFFF',
-  },
-  transactionsEmpty: {
-    fontSize: 13,
-    color: IS_WEB ? '#6B7280' : '#9ca3af',
-  },
-  transactionsTable: {
-    marginTop: 4,
-  },
-  transactionsHeaderRow: {
-    flexDirection: 'row',
-    paddingVertical: 6,
-  },
-  transactionsHeaderCell: {
+    color: '#043529',
+    marginBottom: 8,
     fontFamily: 'Inter',
-    fontSize: 10,
+  },
+  totalEarningsValue: {
+    fontSize: 48,
     fontWeight: '800',
+    color: '#043529',
+    marginBottom: 8,
+    fontFamily: 'Inter',
+  },
+  monthlySubtext: {
+    fontSize: 16,
+    color: '#043529',
+    opacity: 0.8,
+    fontFamily: 'Inter',
+  },
+  sectionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 20,
+    fontFamily: 'Inter',
+  },
+  table: {
+    width: '100%',
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    marginBottom: 12,
+  },
+  headerText: {
+    fontSize: 13,
+    fontWeight: '600',
     color: '#64748B',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  transactionsRow: {
+  tableRow: {
     flexDirection: 'row',
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: IS_WEB ? '#F3F4F6' : 'rgba(0,234,107,0.15)',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8FAFC',
   },
-  transactionsCell: {
+  cellText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1E293B',
     fontFamily: 'Inter',
-    fontSize: 13,
-    color: IS_WEB ? '#111827' : '#E5E7EB',
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    justifyContent: 'flex-end',
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#22C55E',
+  },
+  statusText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  withdrawBtn: {
+    backgroundColor: '#d9f99d',
+    marginTop: 24,
+    paddingVertical: 14,
+    borderRadius: 16,
+    alignItems: 'center',
+  },
+  withdrawBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#043529',
+  },
+  downloadBtn: {
+    backgroundColor: '#d9f99d',
+    marginTop: 32,
+    paddingVertical: 14,
+    borderRadius: 16,
+    alignItems: 'center',
+  },
+  downloadBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#043529',
+  },
+  chartContainer: {
+    height: 150,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  chartLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: 20,
+    marginTop: 8,
+  },
+  chartLabelText: {
+    fontSize: 12,
+    color: '#64748B',
     fontWeight: '500',
   },
-  txColDate: {
+  divider: {
+    height: 1,
+    backgroundColor: '#F1F5F9',
+    marginVertical: 24,
+  },
+  venueList: {
+    gap: 16,
+  },
+  venueItem: {
+    gap: 8,
+  },
+  venueInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  venueName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E293B',
     flex: 1,
   },
-  txColGround: {
-    flex: 2,
+  venueAmount: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1E293B',
   },
-  txColMethod: {
-    width: 80,
+  progressBg: {
+    height: 10,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 5,
+    overflow: 'hidden',
   },
-  txColAmount: {
-    width: 100,
+  progressFill: {
+    height: '100%',
+    borderRadius: 5,
   },
-  txColStatus: {
-    width: 100,
-    textTransform: 'capitalize',
+  activityFeed: {
+    gap: 16,
+    backgroundColor: '#fefce8', // Very light greenish/yellow tint like mockup
+    padding: 16,
+    borderRadius: 16,
   },
-  txGroundSub: {
-    fontSize: 12,
-    color: IS_WEB ? '#6B7280' : '#9ca3af',
+  activityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
-  cardHighlighted: {
-    borderColor: 'rgba(59, 130, 246, 0.3)',
-    backgroundColor: IS_WEB ? '#f0f7ff' : '#043529',
+  activityDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#3B82F6',
+  },
+  activityText: {
+    fontSize: 14,
+    color: '#1E293B',
+    fontFamily: 'Inter',
+    lineHeight: 20,
+    flex: 1,
   },
 });
+
 

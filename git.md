@@ -1,3 +1,32 @@
+# Cricket Shop & Favorites Modernization - Mobile UI/UX Overhaul
+
+This update delivers a complete modernization of the mobile application's Cricket Shop and Favorites ecosystems. Key improvements include a premium merchandise discovery experience, a high-performance favorites dashboard, and refined profile identity management.
+
+## Key Changes
+
+### 1. Cricket Shop & Product Experience
+- **Typography & Visual Hierarchy**: Re-engineered the product detail page with a clean **'Inter'** font system. Balanced font weights (700 for names and prices) to create a premium, balanced aesthetic.
+- **Compact Action Bar**: Implemented a floating, compact action bar (48px height) for product pages, ensuring "Buy Now" and "Favorite" actions are always accessible.
+- **Interactive Features**: Fully activated the sharing and heart icons on product pages, providing users with native sharing capabilities and seamless wishlist management.
+- **Skeleton Loaders**: Integrated shimmer-effect skeleton loaders across the shop grid to improve perceived performance during data fetching.
+
+### 2. Dual-Category Favorites Dashboard
+- **Segmented Control**: Transformed the favorites screen into a dual-category hub (Grounds vs. Merchandise) with real-time item count indicators on the toggle buttons.
+- **Persistent Navigation**: Implemented a fixed, sticky header for category toggles, ensuring high usability even when scrolling through long lists of saved items.
+- **Card UI Synchronization**: Re-architected the grounds favorites to use the standard high-fidelity `GroundCard` component, ensuring 100% design consistency across the discovery and wishlist views.
+
+### 3. Profile Identity & Personal Info Modal
+- **Minimalist Profile View**: Redesigned the primary profile tab to focus on utility (Dashboard, Bookings, Settings), significantly reducing visual clutter.
+- **Identity info Modal**: Moved sensitive personal data (Email, Phone, Role) into a dedicated slide-up modal triggered by a new 'Info' icon in the top navigation bar.
+- **Safety-First Redirects**: Unified the post-login experience. Both players and ground owners are now automatically redirected to the Home screen, creating a consistent entry point for finding venues.
+
+### 4. Technical Stabilization & Data Safety
+- **Robust Helper Library**: Hardened the `formatCurrency` and `formatDateDDMMYY` utility functions with strict null-checks and fallback logic to prevent application crashes on malformed data.
+- **Redundancy Cleanup**: Synchronized the tab-based routing by consolidating legacy favorites files and ensuring the app uses a single, performant source of truth.
+- **Danger Zone Relocation**: Moved the 'Delete Account' functionality into the Settings menu under a dedicated 'Danger Zone' section, preventing accidental account loss while simplifying the main profile menu.
+
+---
+
 # Web Dashboard Modernization & Ground Owner Interface Refinement
 
 This update delivers a comprehensive modernization of the web dashboard and ground owner interface, focusing on typographic standardization, layout refinement, and a more sophisticated "light-theme" aesthetic.

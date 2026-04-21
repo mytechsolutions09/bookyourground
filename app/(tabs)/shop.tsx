@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text as RNText, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, TextInput as RNTextInput, useWindowDimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text as RNText, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, TextInput as RNTextInput, useWindowDimensions, ActivityIndicator } from 'react-native';
 import { ShoppingBag, Search, Filter, ArrowRight, Star, ShoppingCart } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -11,50 +11,63 @@ import Animated, {
   withTiming, 
   Easing, 
   useAnimatedScrollHandler,
-  runOnJS
+  runOnJS,
+  withRepeat,
+  withSequence
 } from 'react-native-reanimated';
 import { useUI } from '@/contexts/UIContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 
-const FEATURED_PRODUCTS = [
-  {
-    id: '1',
-    name: 'SS Ton Reserve Edition',
-    category: 'Bats',
-    price: '₹24,500',
-    rating: 4.9,
-    reviews: 124,
-    image: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=400&q=80',
-    tag: 'Premium'
-  },
-  {
-    id: '2',
-    name: 'SG Pro Soft Balls (Pack of 6)',
-    category: 'Balls',
-    price: '₹1,200',
-    rating: 4.7,
-    reviews: 89,
-    image: 'https://images.unsplash.com/photo-1593766788306-285610866ea4?w=400&q=80',
-    tag: 'Best Seller'
-  },
-  {
-    id: '3',
-    name: 'Adidas Adipower Vector',
-    category: 'Shoes',
-    price: '₹8,990',
-    rating: 4.8,
-    reviews: 56,
-    image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80',
-  }
-];
+const Skeleton = ({ width, height, style }: any) => {
+  const opacity = useSharedValue(0.4);
 
-const CATEGORIES = [
-  { id: '1', name: 'Bats', icon: '🏏' },
-  { id: '2', name: 'Balls', icon: '⚾' },
-  { id: '3', name: 'Shoes', icon: '👟' },
-  { id: '4', name: 'Apparel', icon: '👕' },
-  { id: '5', name: 'Safety', icon: '🛡️' },
-];
+  useEffect(() => {
+    opacity.value = withRepeat(
+      withSequence(
+        withTiming(0.8, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.4, { duration: 1000, easing: Easing.inOut(Easing.ease) })
+      ),
+      -1,
+      true
+    );
+  }, []);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+  }));
+
+  return (
+    <Animated.View 
+      style={[
+        { width, height, backgroundColor: '#EDF2F7', borderRadius: 8 }, 
+        animatedStyle, 
+        style
+      ]} 
+    />
+  );
+};
+
+const ProductSkeleton = () => (
+  <View style={styles.productCard}>
+    <View style={styles.imageWrapper}>
+      <Skeleton width="100%" height="100%" />
+    </View>
+    <View style={styles.productInfo}>
+      <Skeleton width="40%" height={10} style={{ marginBottom: 8 }} />
+      <Skeleton width="90%" height={18} style={{ marginBottom: 12 }} />
+      <View style={styles.ratingRow}>
+        <Skeleton width={60} height={12} />
+      </View>
+      <View style={[styles.priceRow, { marginTop: 4 }]}>
+        <Skeleton width="50%" height={22} />
+        <Skeleton width={36} height={36} style={{ borderRadius: 18 }} />
+      </View>
+    </View>
+  </View>
+);
+
 
 export default function ShopScreen() {
   const router = useRouter();
@@ -62,14 +75,77 @@ export default function ShopScreen() {
   const insets = useSafeAreaInsets();
   const isSmall = width < 900;
   const { setTabBarVisible } = useUI();
+  const { user } = useAuth();
+
+  const [categories, setCategories] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const headerTranslateY = useSharedValue(0);
   const lastScrollY = useSharedValue(0);
-  const HEADER_HEIGHT = 75; // Reduced navbar height
+  const HEADER_HEIGHT = 75;
 
-  React.useEffect(() => {
+  useEffect(() => {
+    loadShopData();
     return () => setTabBarVisible(true);
   }, []);
+
+  const loadShopData = async () => {
+    try {
+      setLoading(true);
+      // Load categories
+      const { data: catData } = await supabase
+        .from('shop_categories')
+        .select('*')
+        .order('sort_order');
+      setCategories(catData || []);
+
+      // Load products
+      let query = supabase.from('shop_products').select('*');
+      if (activeCategory !== 'all') {
+        const catId = catData?.find(c => c.name === activeCategory)?.id;
+        if (catId) query = query.eq('category_id', catId);
+      }
+      
+      const { data: prodData } = await query.order('created_at', { ascending: false });
+      setProducts(prodData || []);
+    } catch (err) {
+      console.error('Error loading shop data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadShopData();
+  }, [activeCategory]);
+
+  const filteredProducts = products.filter(p => 
+    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (p.description || '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const featuredProduct = products.find(p => p.is_featured) || products[0];
+
+  const addToCart = async (productId: string) => {
+    if (!user) {
+      router.push('/(auth)/login');
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from('shop_cart')
+        .upsert({ user_id: user.id, product_id: productId }, { onConflict: 'user_id,product_id' });
+      
+      if (error) throw error;
+      if (Platform.OS === 'web') alert('Added to cart!');
+      else router.push('/shop/cart');
+    } catch (err) {
+      console.error('Error adding to cart:', err);
+    }
+  };
 
   const verticalScrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -114,81 +190,124 @@ export default function ShopScreen() {
       contentContainerStyle={[styles.scrollContent, onScroll && { paddingTop: HEADER_HEIGHT + insets.top }]}
     >
       {/* Hero Banner */}
-      <LinearGradient
-        colors={['#043529', '#06392e']}
-        style={styles.heroBanner}
-      >
-        <View style={styles.heroTextContainer}>
-          <RNText style={styles.heroTag}>NEW ARRIVAL</RNText>
-          <RNText style={styles.heroTitle}>Premium Cricket Gear</RNText>
-          <RNText style={styles.heroSubtitle}>Gear up with the world's finest cricket equipment.</RNText>
-          <TouchableOpacity 
-            style={styles.heroBtn}
-            onPress={() => router.push({ pathname: '/shop/[id]', params: { id: '1' } })}
-          >
-            <RNText style={styles.heroBtnText}>Shop Now</RNText>
-            <ArrowRight size={18} color="#043529" />
-          </TouchableOpacity>
+      {featuredProduct && (
+        <LinearGradient
+          colors={['#043529', '#06392e']}
+          style={styles.heroBanner}
+        >
+          <View style={styles.heroTextContainer}>
+            <RNText style={styles.heroTag}>{featuredProduct.tag || 'FEATURED'}</RNText>
+            <RNText style={styles.heroTitle} numberOfLines={2}>{featuredProduct.name}</RNText>
+            <RNText style={styles.heroSubtitle} numberOfLines={2}>{featuredProduct.description}</RNText>
+            <TouchableOpacity 
+              style={styles.heroBtn}
+              onPress={() => router.push({ pathname: '/shop/[id]', params: { id: featuredProduct.id } })}
+            >
+              <RNText style={styles.heroBtnText}>Shop Now</RNText>
+              <ArrowRight size={18} color="#043529" />
+            </TouchableOpacity>
+          </View>
+          <Image 
+            source={{ uri: featuredProduct.images?.[0] || 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=400&q=80' }} 
+            style={styles.heroImage} 
+          />
+        </LinearGradient>
+      )}
+
+      {/* Search Bar Mobile */}
+      {Platform.OS !== 'web' && (
+        <View style={styles.searchBarContainer}>
+          <View style={styles.searchBar}>
+            <Search size={20} color="#94A3B8" />
+            <RNTextInput 
+              style={styles.searchInput}
+              placeholder="Search equipment..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
         </View>
-        <Image 
-          source={{ uri: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=400&q=80' }} 
-          style={styles.heroImage} 
-        />
-      </LinearGradient>
+      )}
 
       {/* Categories */}
       <View style={styles.section}>
         <RNText style={styles.sectionTitle}>Shop by Category</RNText>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryScroll}>
-          {CATEGORIES.map(cat => (
-            <TouchableOpacity key={cat.id} style={styles.categoryCard}>
+          <TouchableOpacity 
+            style={[styles.categoryCard, activeCategory === 'all' && styles.categoryCardActive]}
+            onPress={() => setActiveCategory('all')}
+          >
+            <RNText style={styles.categoryIcon}>🏆</RNText>
+            <RNText style={[styles.categoryName, activeCategory === 'all' && styles.categoryNameActive]}>All</RNText>
+          </TouchableOpacity>
+          {categories.map(cat => (
+            <TouchableOpacity 
+              key={cat.id} 
+              style={[styles.categoryCard, activeCategory === cat.name && styles.categoryCardActive]}
+              onPress={() => setActiveCategory(cat.name)}
+            >
               <RNText style={styles.categoryIcon}>{cat.icon}</RNText>
-              <RNText style={styles.categoryName}>{cat.name}</RNText>
+              <RNText style={[styles.categoryName, activeCategory === cat.name && styles.categoryNameActive]}>{cat.name}</RNText>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
 
-      {/* Featured Products */}
+      {/* Products Grid */}
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
-          <RNText style={styles.sectionTitle}>Featured Equipment</RNText>
+          <RNText style={styles.sectionTitle}>{activeCategory === 'all' ? 'Popular Equipment' : activeCategory}</RNText>
           <TouchableOpacity>
-            <RNText style={styles.viewAllText}>View All</RNText>
+            <RNText style={styles.viewAllText}>Filter</RNText>
           </TouchableOpacity>
         </View>
-        <View style={styles.productGrid}>
-          {FEATURED_PRODUCTS.map(product => (
-            <TouchableOpacity 
-              key={product.id} 
-              style={styles.productCard}
-              onPress={() => router.push({ pathname: '/shop/[id]', params: { id: product.id } })}
-            >
-              <View style={styles.imageWrapper}>
-                <Image source={{ uri: product.image }} style={styles.productImage} />
-                {product.tag && (
-                  <View style={styles.tagBadge}>
-                    <RNText style={styles.tagText}>{product.tag}</RNText>
+        
+        {loading ? (
+          <View style={styles.productGrid}>
+            {[1, 2, 3, 4, 5, 6].map(i => <ProductSkeleton key={i} />)}
+          </View>
+        ) : filteredProducts.length === 0 ? (
+          <RNText style={styles.emptyText}>No products found in this category.</RNText>
+        ) : (
+          <View style={styles.productGrid}>
+            {filteredProducts.map(product => {
+              const category = categories.find(c => c.id === product.category_id)?.name || 'Equipment';
+              return (
+                <TouchableOpacity 
+                  key={product.id} 
+                  style={styles.productCard}
+                  onPress={() => router.push({ pathname: '/shop/[id]', params: { id: product.id } })}
+                >
+                  <View style={styles.imageWrapper}>
+                    <Image source={{ uri: product.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80' }} style={styles.productImage} />
+                    {product.tag && (
+                      <View style={styles.tagBadge}>
+                        <RNText style={styles.tagText}>{product.tag}</RNText>
+                      </View>
+                    )}
                   </View>
-                )}
-              </View>
-              <View style={styles.productInfo}>
-                <RNText style={styles.productCategory}>{product.category}</RNText>
-                <RNText style={styles.productName} numberOfLines={1}>{product.name}</RNText>
-                <View style={styles.ratingRow}>
-                  <Star size={14} color="#FBBF24" fill="#FBBF24" />
-                  <RNText style={styles.ratingText}>{product.rating} ({product.reviews})</RNText>
-                </View>
-                <View style={styles.priceRow}>
-                  <RNText style={styles.productPrice}>{product.price}</RNText>
-                  <TouchableOpacity style={styles.addToCartBtn}>
-                    <ShoppingCart size={18} color="#FFFFFF" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </View>
+                  <View style={styles.productInfo}>
+                    <RNText style={styles.productCategory}>{category}</RNText>
+                    <RNText style={styles.productName} numberOfLines={1}>{product.name}</RNText>
+                    <View style={styles.ratingRow}>
+                      <Star size={14} color="#FBBF24" fill="#FBBF24" />
+                      <RNText style={styles.ratingText}>{Number(product.rating || 0).toFixed(1)} ({product.review_count || 0})</RNText>
+                    </View>
+                    <View style={styles.priceRow}>
+                      <RNText style={styles.productPrice}>₹{Number(product.price).toLocaleString('en-IN')}</RNText>
+                      <TouchableOpacity 
+                        style={styles.addToCartBtn}
+                        onPress={() => addToCart(product.id)}
+                      >
+                        <ShoppingCart size={18} color="#FFFFFF" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
       </View>
     </Animated.ScrollView>
   );
@@ -205,8 +324,7 @@ export default function ShopScreen() {
           smallerTitle={true}
           rightAction={
             <View style={styles.headerIcons}>
-              <TouchableOpacity style={styles.iconBtn}><Search size={24} color="#01b854" /></TouchableOpacity>
-              <TouchableOpacity style={styles.iconBtn}><ShoppingCart size={24} color="#01b854" /></TouchableOpacity>
+              <TouchableOpacity style={styles.iconBtn} onPress={() => router.push('/shop/cart')}><ShoppingCart size={24} color="#01b854" /></TouchableOpacity>
             </View>
           }
         />
@@ -335,6 +453,10 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     minWidth: 80,
   },
+  categoryCardActive: {
+    backgroundColor: '#043529',
+    borderColor: '#043529',
+  },
   categoryIcon: {
     fontSize: 24,
     marginBottom: 4,
@@ -343,6 +465,36 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: '#4B5563',
+  },
+  categoryNameActive: {
+    color: '#FFFFFF',
+  },
+  searchBarContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 16,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 48,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 12,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#043529',
+    fontWeight: '500',
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#9CA3AF',
+    marginTop: 40,
+    fontSize: 14,
   },
   productGrid: {
     flexDirection: 'row',

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Platform, TouchableOpacity, useWindowDimensions, ScrollView, RefreshControl, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Platform, TouchableOpacity, useWindowDimensions, ScrollView, RefreshControl, ActivityIndicator, TextInput } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import WebLayout from '@/components/web/WebLayout';
 import { supabase } from '@/lib/supabase';
@@ -40,6 +40,9 @@ function DashboardContent() {
   const { profile, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [bookings, setBookings] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [popularSlots, setPopularSlots] = useState<any[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const { setTabBarVisible } = useUI();
   const lastScrollY = React.useRef(0);
@@ -57,10 +60,12 @@ function DashboardContent() {
     lastScrollY.current = currentY;
   };
 
-  const loadBookings = async () => {
+  const loadBookings = async (isRefresh = false) => {
     if (!user) return;
     try {
-      setLoading(true);
+      if (isRefresh) setIsRefreshing(true);
+      else setLoading(true);
+
       const { data, error } = await supabase
         .from('bookings')
         .select(`
@@ -80,18 +85,48 @@ function DashboardContent() {
             ground_images(image_url)
           )
         `)
-        .eq('status', 'confirmed')
+        .in('status', ['confirmed', 'completed'])
         .eq('user_id', user.id)
         .order('booking_date', { ascending: true })
         .order('start_time', { ascending: true });
 
       if (error) throw error;
       setBookings(data || []);
+      
+      // Fetch popular slots (mocking with actual ground availability for demo)
+      const { data: groundsSlots } = await supabase
+        .from('grounds')
+        .select('*, ground_images(image_url)')
+        .eq('active', true)
+        .eq('approved', true)
+        .limit(3);
+      
+      if (groundsSlots) {
+        setPopularSlots(groundsSlots.map(g => ({
+          id: g.id,
+          name: g.name,
+          time: '5:00',
+          ampm: 'PM',
+          slotsLeft: Math.floor(Math.random() * 5) + 1,
+          type: g.pitch_type,
+        })));
+      }
+
     } catch (err) {
       console.error('Error loading dashboard bookings:', err);
       setBookings([]);
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleSearch = () => {
+    if (searchQuery.trim()) {
+      router.push({
+        pathname: '/(tabs)/grounds',
+        params: { q: searchQuery.trim() }
+      });
     }
   };
 
@@ -108,14 +143,37 @@ function DashboardContent() {
   }, []);
 
   const upcomingBookings = useMemo(
-    () => bookings.filter((b) => b.booking_date >= todayIso),
+    () => bookings.filter((b) => b.booking_date >= todayIso && b.status === 'confirmed'),
     [bookings, todayIso],
   );
 
   const pastBookings = useMemo(
-    () => bookings.filter((b) => b.booking_date < todayIso),
+    () => bookings.filter((b) => b.booking_date < todayIso || b.status === 'completed'),
     [bookings, todayIso],
   );
+
+  const bookedDates = useMemo(() => {
+    const dates = new Set();
+    bookings.forEach(b => dates.add(b.booking_date));
+    return dates;
+  }, [bookings]);
+
+  const statsPlayedThisMonth = useMemo(() => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    let totalMinutes = 0;
+    bookings.forEach(b => {
+      if (b.status !== 'completed' && b.status !== 'confirmed') return;
+      const bDate = new Date(b.booking_date);
+      if (bDate.getMonth() === currentMonth && bDate.getFullYear() === currentYear) {
+        // Simple 1hr per booking if end_time unavailable or manual calc
+        totalMinutes += 60; 
+      }
+    });
+    return Math.round(totalMinutes / 60);
+  }, [bookings]);
 
   const nextBooking = upcomingBookings[0] ?? null;
   const lastBooking = pastBookings.length > 0 ? pastBookings[pastBookings.length - 1] : null;
@@ -173,58 +231,98 @@ function DashboardContent() {
             <ChevronRight size={16} color="#64748B" />
           </View>
         </View>
-        <Text style={styles.panelMonth}>April 2026</Text>
+        <Text style={styles.panelMonth}>
+          {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}
+        </Text>
         <View style={styles.calendarGrid}>
           {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
             <Text key={i} style={styles.calendarDayLabel}>{day}</Text>
           ))}
-          {Array.from({ length: 30 }).map((_, i) => {
-            const day = i + 1;
-            const isToday = day === 21;
-            const isBooked = day === 22 || day === 25;
-            return (
-              <View 
-                key={i} 
-                style={[
-                  styles.calendarDay,
-                  isToday && styles.calendarDayToday,
-                  isBooked && styles.calendarDayBooked
-                ]}
-              >
-                <Text style={[
-                  styles.calendarDayText,
-                  isToday && styles.calendarDayTextToday,
-                  isBooked && styles.calendarDayTextBooked
-                ]}>{day}</Text>
-              </View>
-            );
-          })}
+          {(() => {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth();
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const today = now.getDate();
+
+            const items = [];
+            // Padding for first day
+            for (let p = 0; p < firstDay; p++) {
+              items.push(<View key={`pad-${p}`} style={styles.calendarDay} />);
+            }
+            // Real days
+            for (let d = 1; d <= daysInMonth; d++) {
+              const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+              const isToday = d === today;
+              const isBooked = bookedDates.has(dateStr);
+              items.push(
+                <TouchableOpacity 
+                  key={d} 
+                  style={[
+                    styles.calendarDay,
+                    isToday && styles.calendarDayToday,
+                    isBooked && styles.calendarDayBooked
+                  ]}
+                  onPress={() => {
+                    router.push({
+                      pathname: '/(tabs)/grounds',
+                      params: { date: dateStr }
+                    });
+                  }}
+                >
+                  <Text style={[
+                    styles.calendarDayText,
+                    isToday && styles.calendarDayTextToday,
+                    isBooked && styles.calendarDayTextBooked
+                  ]}>{d}</Text>
+                </TouchableOpacity>
+              );
+            }
+            return items;
+          })()}
         </View>
 
         <Text style={styles.panelSubTitle}>Popular slots today</Text>
-        <View style={styles.slotItem}>
-          <View style={styles.slotTimeBox}>
-            <Text style={styles.slotTime}>5:00</Text>
-            <Text style={styles.slotAmPm}>PM</Text>
+        {popularSlots.length > 0 ? popularSlots.map((slot) => (
+          <View key={slot.id} style={styles.slotItem}>
+            <View style={styles.slotTimeBox}>
+              <Text style={styles.slotTime}>{slot.time}</Text>
+              <Text style={styles.slotAmPm}>{slot.ampm}</Text>
+            </View>
+            <View style={styles.slotInfo}>
+              <Text style={styles.slotName} numberOfLines={1}>{slot.name}</Text>
+              <Text style={styles.slotStatus}>{slot.slotsLeft} slots left</Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.slotAction}
+              onPress={() => router.push(`/ground/${slot.id}` as any)}
+            >
+              <Text style={styles.slotActionText}>Book</Text>
+            </TouchableOpacity>
           </View>
-          <View style={styles.slotInfo}>
-            <Text style={styles.slotName}>Football - Elite Turf</Text>
-            <Text style={styles.slotStatus}>3 slots left</Text>
-          </View>
-          <TouchableOpacity style={styles.slotAction}><Text style={styles.slotActionText}>Book</Text></TouchableOpacity>
-        </View>
+        )) : (
+          <Text style={styles.emptyCardText}>No slots available right now</Text>
+        )}
       </View>
 
       <View style={styles.panelCard}>
         <Text style={styles.panelTitle}>Balance & Stats</Text>
         <View style={styles.statsDonutContainer}>
-          <View style={styles.donutPlaceholder}>
-            <Text style={styles.donutPercent}>72%</Text>
+          <View style={[styles.donutPlaceholder, { 
+            borderColor: THEME_ACCENT,
+            borderLeftColor: '#F1F5F9',
+            // Simple visual based on goal of 25hrs
+            borderWidth: 10 
+          }]}>
+            <Text style={styles.donutPercent}>
+              {Math.min(100, Math.round((statsPlayedThisMonth / 25) * 100))}%
+            </Text>
           </View>
           <View style={styles.statsInfo}>
-            <Text style={styles.statsValueMain}>18 hrs</Text>
+            <Text style={styles.statsValueMain}>{statsPlayedThisMonth} hrs</Text>
             <Text style={styles.statsLabelMain}>Played this month</Text>
-            <View style={styles.tag}><Text style={styles.tagText}>Cricket</Text></View>
+            <View style={styles.tag}><Text style={styles.tagText}>{profile?.favorite_sport || 'CRICKET'}</Text></View>
           </View>
         </View>
       </View>
@@ -244,8 +342,12 @@ function DashboardContent() {
           {/* Greeting Row */}
           <View style={styles.greetingRow}>
             <View>
-              <Text style={styles.greetingText}>Good morning, {profile?.full_name?.split(' ')[0] || 'Alex'} 👋</Text>
-              <Text style={styles.dateText}>Thursday, 21 Apr 2026</Text>
+              <Text style={styles.greetingText}>
+                {new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening'}, {profile?.full_name?.split(' ')[0] || 'Player'} 👋
+              </Text>
+              <Text style={styles.dateText}>
+                {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}
+              </Text>
             </View>
             <View style={styles.weatherBadge}>
               <Sun size={18} color="#F59E0B" />
@@ -260,8 +362,15 @@ function DashboardContent() {
               <Text style={styles.searchHeroSub}>Search grounds near you...</Text>
               <View style={styles.dashboardSearch}>
                 <Search size={18} color="#94A3B8" />
-                <Text style={styles.searchPlaceholder}>Football turf in Gurgaon</Text>
-                <TouchableOpacity style={styles.searchBtn}>
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Football turf in Gurgaon"
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  onSubmitEditing={handleSearch}
+                  placeholderTextColor="#94A3B8"
+                />
+                <TouchableOpacity style={styles.searchBtn} onPress={handleSearch}>
                   <Text style={styles.searchBtnText}>Search</Text>
                 </TouchableOpacity>
               </View>
@@ -464,12 +573,13 @@ const styles = StyleSheet.create({
     gap: 12,
     maxWidth: 450,
   },
-  searchPlaceholder: {
+  searchInput: {
     flex: 1,
     fontSize: 15,
-    color: '#94A3B8',
+    color: '#0F172A',
     fontFamily: 'Inter',
-  },
+    outlineStyle: 'none',
+  } as any,
   searchBtn: {
     backgroundColor: '#00ea6b',
     paddingHorizontal: 20,

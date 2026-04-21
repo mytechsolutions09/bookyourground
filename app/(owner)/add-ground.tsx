@@ -1054,7 +1054,7 @@ export default function AddGroundScreen() {
     </KeyboardAvoidingView>
   );
 
-  if (Platform.OS === 'web') return <WebLayout noCard>{content}</WebLayout>;
+  if (Platform.OS === 'web') return <WebLayout>{content}</WebLayout>;
 
   return (
     <View style={styles.nativeRoot}>
@@ -1070,22 +1070,17 @@ const IS_WEB = Platform.OS === 'web';
 const styles = StyleSheet.create({
   nativeRoot: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'transparent',
   },
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'transparent',
     width: '100%',
     alignSelf: 'center',
   },
   scrollContent: {
-    padding: 16,
-    paddingTop: IS_WEB ? 16 : 8,
-    ...Platform.select({
-      web: {
-        paddingTop: 16,
-      },
-    }),
+    padding: 0,
+    paddingTop: 0,
     overflow: 'visible',
   },
   title: {

@@ -347,7 +347,7 @@ export default function OwnerInventoryScreen() {
   return (
     <>
       {!isWeb && <MobileAppNavbar title="Inventory Plan" titleColor="#01b854" />}
-      {isWeb ? <WebLayout noCard>{content}</WebLayout> : <View style={styles.screen}>{content}</View>}
+      {isWeb ? <WebLayout>{content}</WebLayout> : <View style={styles.screen}>{content}</View>}
     </>
   );
 }
@@ -355,14 +355,15 @@ export default function OwnerInventoryScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'transparent',
   },
   content: {
     flex: 1,
   },
   pageHeader: {
-    backgroundColor: '#FFFFFF',
-    padding: 16,
+    backgroundColor: 'transparent',
+    padding: 0,
+    paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },
@@ -479,7 +480,7 @@ const styles = StyleSheet.create({
     color: '#01b854',
   },
   list: {
-    padding: 16,
+    padding: 0,
     width: '100%',
   },
   groundCard: {

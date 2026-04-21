@@ -600,14 +600,14 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
               onPress={() => router.replace('/')}
               style={styles.logo}
               accessibilityRole="link"
-              accessibilityLabel="Groundly — home"
+              accessibilityLabel="Book My Ground — home"
             >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <View style={{ backgroundColor: '#00ea6b', padding: 6, borderRadius: 8 }}>
-                  <LandPlot size={20} color="#043529" />
-                </View>
-                <RNText style={{ fontSize: 22, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.5, fontFamily: 'Inter' }}>Groundly</RNText>
-              </View>
+              <Image
+                source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+                accessibilityIgnoresInvertColors
+              />
             </TouchableOpacity>
 
             <View style={styles.headerRight}>
@@ -780,6 +780,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                     <RNText style={styles.sidebarTitle}>Ground owner</RNText>
                     <NavLink href="/(owner)/owner-dashboard" icon={LayoutDashboard} label="Dashboard" />
                     <NavLink href="/(owner)/manage-grounds" icon={MapPin} label="My grounds" />
+                    <NavLink href="/wallet" icon={Wallet} label="Wallet" />
                     <NavLink href="/cricket/player-profile" icon={Swords} label="Cricket Hub" />
                     <NavLink href="/(owner)/ground-bookings" icon={ClipboardList} label="Bookings" />
                     <NavLink href="/(owner)/inventory" icon={CalendarClock} label="Inventory" />
@@ -1000,9 +1001,10 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                         <RNText style={styles.sidebarSectionTitle}>Ground owner</RNText>
                         <NavLink href="/(owner)/owner-dashboard" icon={LayoutDashboard} label="Dashboard" />
                         <NavLink href="/(owner)/manage-grounds" icon={MapPin} label="My grounds" />
+                        <NavLink href="/wallet" icon={Wallet} label="Wallet" />
 
                         <NavLink href="/(owner)/ground-bookings" icon={ClipboardList} label="Bookings" />
-                        <NavLink href="/(owner)/inventory" icon={CalendarClock} label="Inventory" />
+
                         <NavLink href="/(tabs)/bookings" icon={Ticket} label="My Bookings" />
                         <NavLink href="/(owner)/earnings" icon={IndianRupee} label="Earnings" />
                         <NavLink href="/(owner)/add-ground" icon={PlusCircle} label="Add ground" />
@@ -1076,7 +1078,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
         <View style={[
           styles.main,
           (isLanding || isMarketing || isPublicNoSidebar) && { padding: 0 },
-          !isPublicNoSidebar && !isCompact && !noCard && (isGroundOwner || isSuperAdmin) && styles.mainAppCard
+          !isPublicNoSidebar && !isCompact && !noCard && styles.mainAppCard
         ]}>
           {children}
         </View>
@@ -1490,8 +1492,7 @@ const styles = StyleSheet.create({
     shadowRadius: 15,
     shadowOffset: { width: 0, height: 8 },
     marginBottom: 0,
-    overflow: 'hidden',
-    height: '100%',
+    overflow: 'visible',
   },
   mobileOverlay: {
     position: 'absolute' as any,

@@ -507,7 +507,7 @@ function OwnerSettingsInner() {
 export default function OwnerSettingsScreen() {
   if (IS_WEB) {
     return (
-      <WebLayout noCard>
+      <WebLayout>
         <OwnerSettingsInner />
       </WebLayout>
     );
@@ -524,25 +524,18 @@ export default function OwnerSettingsScreen() {
 const styles = StyleSheet.create({
   nativeRoot: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'transparent',
   },
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
-    padding: 16,
-    ...Platform.select({
-      web: {
-        paddingLeft: 0,
-        paddingRight: 0,
-        paddingTop: 0,
-      },
-    }),
+    backgroundColor: 'transparent',
+    padding: 0,
   },
   inner: {
     width: '100%',
     alignSelf: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 16,
+    paddingHorizontal: 0,
+    paddingTop: 0,
     paddingBottom: 24,
   },
   panel: {

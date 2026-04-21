@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Platform, TouchableOpacity, useWindowDimensions, ScrollView, TextInput } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Platform, TouchableOpacity, useWindowDimensions, ScrollView, TextInput, ActivityIndicator } from 'react-native';
 import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import { ArrowUp, ArrowDown, ChevronDown } from 'lucide-react-native';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
+import { formatCurrency } from '@/utils/helpers';
 
 const THEME_BG = '#043529';
 const ACCENT = '#c8f35c'; 
@@ -10,17 +13,81 @@ const ACCENT = '#c8f35c';
 const MOCK_TRANSACTIONS = [
   { id: 1, type: 'refund', title: 'Refund from Cancelled Booking #G48291', sub: 'Riverside Cricket Ground', amount: 1800, date: 'Today, 10:30 AM' },
   { id: 2, type: 'payment', title: 'Payment for Booking #G48288', sub: 'Hoops Hub - Jayanagar', amount: 1800, date: 'Yesterday, 7:15 PM' },
-  { id: 3, type: 'reward', title: 'Groundly Rewards Credited', sub: 'For inviting 3 friends', amount: 150, date: 'Dec 12, 2024' },
+  { id: 3, type: 'reward', title: 'BMG Rewards Credited', sub: 'For inviting 3 friends', amount: 150, date: 'Dec 12, 2024' },
   { id: 4, type: 'payment', title: 'Payment for Booking #G48275', sub: 'GreenWave Turf', amount: 2400, date: 'Dec 11, 2024' },
 ];
 
 export default function WalletScreen() {
+  const { user, profile } = useAuth();
   const { width } = useWindowDimensions();
   const isCompact = width < 900;
   
   const [balance, setBalance] = useState(2840);
-  const [transactions, setTransactions] = useState(MOCK_TRANSACTIONS);
+  const [transactions, setTransactions] = useState<any[]>(MOCK_TRANSACTIONS);
+  const [loading, setLoading] = useState(false);
   const [quickAdd, setQuickAdd] = useState('1600');
+  const [summary, setSummary] = useState({ added: 15000, spent: 12160, refunded: 2500 });
+
+  const isOwner = profile?.role === 'ground_owner';
+
+  useEffect(() => {
+    if (user && isOwner) {
+      loadOwnerData();
+    }
+  }, [user, isOwner]);
+
+  const loadOwnerData = async () => {
+    if (!user) return;
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('bookings')
+        .select(`
+          id,
+          total_amount,
+          status,
+          booking_date,
+          payment_method,
+          ground:grounds!inner(name, city, owner_id)
+        `)
+        .eq('ground.owner_id', user.id)
+        .in('status', ['confirmed', 'completed'])
+        .order('booking_date', { ascending: false });
+
+      if (error) throw error;
+
+      const rows = data || [];
+      let totalOnline = 0;
+      let totalCash = 0;
+      
+      const realTx = rows.map(tx => ({
+        id: tx.id,
+        type: 'revenue',
+        title: `Earning from ${tx.ground?.name}`,
+        sub: `Booking #${tx.id.slice(0, 8).toUpperCase()}`,
+        amount: tx.total_amount,
+        date: new Date(tx.booking_date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+        isPositive: true
+      }));
+
+      rows.forEach(tx => {
+        if (tx.payment_method === 'cash') totalCash += tx.total_amount;
+        else totalOnline += tx.total_amount;
+      });
+
+      setBalance(totalOnline);
+      setTransactions(realTx.length > 0 ? realTx : MOCK_TRANSACTIONS);
+      setSummary({
+        added: totalOnline + totalCash,
+        spent: 0,
+        refunded: 0
+      });
+    } catch (err) {
+      console.error('Wallet load error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAddMoney = () => {
     const amount = parseInt(quickAdd) || 0;
@@ -45,77 +112,77 @@ export default function WalletScreen() {
       <View style={styles.panelCard}>
         <Text style={styles.panelTitle}>Wallet Summary</Text>
         <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Total Added</Text>
-          <Text style={styles.summaryValue}>₹15,000</Text>
+          <Text style={styles.summaryLabel}>Total Earnings</Text>
+          <Text style={styles.summaryValue}>{formatCurrency(summary.added)}</Text>
         </View>
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Total Spent</Text>
-          <Text style={styles.summaryValue}>₹12,160</Text>
+          <Text style={styles.summaryValue}>{formatCurrency(summary.spent)}</Text>
         </View>
         <View style={[styles.summaryRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
           <Text style={styles.summaryLabel}>Total Refunded</Text>
-          <Text style={styles.summaryValue}>₹2,500</Text>
+          <Text style={styles.summaryValue}>{formatCurrency(summary.refunded)}</Text>
         </View>
       </View>
 
-      <View style={styles.panelCard}>
-        <Text style={styles.panelTitle}>Quick Add</Text>
-        <View style={styles.quickAddChips}>
-          {['500', '1000', '2000', '1600'].map(amount => {
-            const isSelected = quickAdd === amount;
-            return (
-              <TouchableOpacity 
-                key={amount} 
-                style={[styles.quickAddChip, isSelected && styles.quickAddChipActive]}
-                onPress={() => setQuickAdd(amount)}
-              >
-                <Text style={[styles.quickAddChipText, isSelected && styles.quickAddChipTextActive]}>
-                  +₹{amount}
-                </Text>
-              </TouchableOpacity>
-            )
-          })}
-        </View>
-        <View style={styles.quickAddInputBox}>
-          <TextInput 
-            style={styles.quickAddInput} 
-            value={quickAdd}
-            onChangeText={text => setQuickAdd(text.replace(/[^0-9]/g, ''))}
-            keyboardType="numeric"
-            placeholder="0"
-            placeholderTextColor="#94A3B8"
-          />
-          <View style={styles.quickAddIconBox}>
-             <ChevronDown size={16} color="#64748B" />
+      {!isOwner && (
+        <>
+          <View style={styles.panelCard}>
+            <Text style={styles.panelTitle}>Quick Add</Text>
+            <View style={styles.quickAddChips}>
+              {['500', '1000', '2000', '1600'].map(amount => {
+                const isSelected = quickAdd === amount;
+                return (
+                  <TouchableOpacity 
+                    key={amount} 
+                    style={[styles.quickAddChip, isSelected && styles.quickAddChipActive]}
+                    onPress={() => setQuickAdd(amount)}
+                  >
+                    <Text style={[styles.quickAddChipText, isSelected && styles.quickAddChipTextActive]}>
+                      +₹{amount}
+                    </Text>
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+            <View style={styles.quickAddInputBox}>
+              <TextInput 
+                style={styles.quickAddInput} 
+                value={quickAdd}
+                onChangeText={text => setQuickAdd(text.replace(/[^0-9]/g, ''))}
+                keyboardType="numeric"
+                placeholder="0"
+                placeholderTextColor="#94A3B8"
+              />
+              <View style={styles.quickAddIconBox}>
+                 <ChevronDown size={16} color="#64748B" />
+              </View>
+            </View>
           </View>
-        </View>
-      </View>
 
-      <View style={styles.panelCard}>
-        <Text style={styles.panelTitle}>Spending Stats</Text>
-        <View style={styles.statsContainer}>
-          <View style={styles.donutWrapper}>
-            <View style={styles.donutMock} />
-            <View style={styles.donutInner}>
-               <Text style={styles.donutMainText}>Bookings</Text>
-               <Text style={styles.donutPercentText}>85%</Text>
+          <View style={styles.panelCard}>
+            <Text style={styles.panelTitle}>Spending Stats</Text>
+            <View style={styles.statsContainer}>
+              <View style={styles.donutWrapper}>
+                <View style={styles.donutMock} />
+                <View style={styles.donutInner}>
+                   <Text style={styles.donutMainText}>Bookings</Text>
+                   <Text style={styles.donutPercentText}>85%</Text>
+                </View>
+              </View>
+              <View style={styles.statsLegend}>
+                <View style={styles.legendRow}>
+                   <View style={styles.legendItem}><View style={[styles.legendDot, {backgroundColor: '#043529'}]}/><Text style={styles.legendText}>Refunds</Text></View>
+                   <Text style={styles.legendValue}>85%</Text>
+                   <View style={styles.legendItem}><View style={[styles.legendDot, {backgroundColor: '#EF4444'}]}/><Text style={styles.legendText}>Rewards</Text></View>
+                   <Text style={styles.legendValue}>5%</Text>
+                </View>
+              </View>
+              <Text style={styles.avgSpendText}>Avg. monthly spend: ₹4,000</Text>
             </View>
           </View>
-          <View style={styles.statsLegend}>
-            <View style={styles.legendRow}>
-               <View style={styles.legendItem}><View style={[styles.legendDot, {backgroundColor: '#043529'}]}/><Text style={styles.legendText}>Refunds</Text></View>
-               <Text style={styles.legendValue}>85%</Text>
-               <View style={styles.legendItem}><View style={[styles.legendDot, {backgroundColor: '#EF4444'}]}/><Text style={styles.legendText}>Rewards</Text></View>
-               <Text style={styles.legendValue}>5%</Text>
-            </View>
-            <View style={[styles.legendRow, {marginTop: 4}]}>
-               <View style={styles.legendItem}><View style={[styles.legendDot, {backgroundColor: '#84cc16'}]}/><Text style={styles.legendText}>10%</Text></View>
-               <View style={styles.legendItem}><View style={[styles.legendDot, {backgroundColor: '#9ca3af'}]}/><Text style={styles.legendText}>5%</Text></View>
-            </View>
-          </View>
-          <Text style={styles.avgSpendText}>Avg. monthly spend: ₹4,000</Text>
-        </View>
-      </View>
+        </>
+      )}
     </View>
   );
 
@@ -131,18 +198,22 @@ export default function WalletScreen() {
           <View style={styles.balanceCard}>
             <View style={styles.balanceInfo}>
               <Text style={styles.balanceLabel}>Current Balance</Text>
-              <Text style={styles.balanceAmount}>₹{balance.toLocaleString()}</Text>
-              <Text style={styles.balanceSub}>Available for bookings</Text>
+              <Text style={styles.balanceAmount}>{formatCurrency(balance)}</Text>
+              <Text style={styles.balanceSub}>Available for {isOwner ? 'withdrawal' : 'bookings'}</Text>
             </View>
-            <TouchableOpacity style={styles.addMoneyBtn} onPress={handleAddMoney}>
-              <Text style={styles.addMoneyBtnText}>Add Money</Text>
-            </TouchableOpacity>
+            {!isOwner && (
+              <TouchableOpacity style={styles.addMoneyBtn} onPress={handleAddMoney}>
+                <Text style={styles.addMoneyBtnText}>Add Money</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           <Text style={styles.sectionTitle}>Recent Transactions</Text>
           <View style={styles.transactionsList}>
-            {transactions.map(tx => {
-               const isPos = tx.type === 'refund' || tx.type === 'reward' || tx.type === 'added';
+            {loading ? (
+              <ActivityIndicator color={THEME_BG} size="large" style={{ marginTop: 20 }} />
+            ) : transactions.map(tx => {
+               const isPos = tx.type === 'refund' || tx.type === 'reward' || tx.type === 'added' || tx.type === 'revenue' || tx.isPositive;
                return (
                  <View key={tx.id} style={styles.txCard}>
                     <View style={[styles.txIconBox, isPos ? styles.txIconBoxPos : styles.txIconBoxNeg]}>
@@ -154,7 +225,7 @@ export default function WalletScreen() {
                     </View>
                     <View style={styles.txValues}>
                        <Text style={[styles.txAmount, isPos ? styles.txAmountPos : styles.txAmountNeg]}>
-                         {isPos ? '+' : '-'}₹{tx.amount}
+                         {isPos ? '+' : '-'}{formatCurrency(tx.amount)}
                        </Text>
                        <Text style={styles.txDate}>{tx.date}</Text>
                     </View>
@@ -190,11 +261,11 @@ export default function WalletScreen() {
 const styles = StyleSheet.create({
   nativeWrapper: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
   },
   root: {
     flex: 1,
-    backgroundColor: '#F1F5F9', // Light grey background 
+    backgroundColor: '#FFFFFF', 
   },
   scrollContent: {
     flexGrow: 1,

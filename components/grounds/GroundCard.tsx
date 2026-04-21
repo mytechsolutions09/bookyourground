@@ -6,15 +6,14 @@ import { formatCurrency } from '@/utils/helpers';
 import { getGroundBookingScheduleLines } from '@/utils/bookingSlots';
 import Card from '@/components/ui/Card';
 
-const NATIVE_CARD_BG = '#043529';
-const NATIVE_BORDER = '#02c259';
-const NATIVE_TEXT = '#dcc093';
+const NATIVE_CARD_BG = '#FFFFFF';
+const NATIVE_BORDER = '#E2E8F0';
+const NATIVE_TEXT = '#0F172A';
 
 interface GroundCardProps {
   ground: GroundWithImages;
   onPress: () => void;
-  /** When true, show booking dates + slot pattern (admin / owner). Default true. */
-  showBookingSchedule?: boolean;
+
   /** Compact variant for owner dashboards (smaller tile). */
   compact?: boolean;
   /** Optional per-slot price to display instead of `ground.base_price_per_hour`. */
@@ -24,14 +23,14 @@ interface GroundCardProps {
   isFavorite?: boolean;
   onToggleFavorite?: () => void;
   favoriteLoading?: boolean;
-  /** Force light theme. Default is true on Web, false on Native. */
+  /** Forced light theme. Default is true on Web, false on Native. */
   lightMode?: boolean;
+  occupancyRate?: number | null;
 }
 
 export default function GroundCard({
   ground,
   onPress,
-  showBookingSchedule = true,
   compact = false,
   displayPricePerUnit,
   unitLabelOverride,
@@ -39,6 +38,7 @@ export default function GroundCard({
   onToggleFavorite,
   favoriteLoading = false,
   lightMode = Platform.OS === 'web',
+  occupancyRate = null,
 }: GroundCardProps) {
   const isWeb = Platform.OS === 'web';
   const isLight = lightMode;
@@ -162,22 +162,25 @@ export default function GroundCard({
             </View>
           </View>
 
-          {showBookingSchedule ? (
-            <View style={styles.scheduleBlock}>
-              <View style={styles.scheduleRow}>
-                <Calendar size={13} color={scheduleIconColor} />
-                <Text style={scheduleTextStyle} numberOfLines={1}>
-                  {schedule.datesLine}
-                </Text>
+          {occupancyRate !== null && (
+            <View style={styles.occupancyContainer}>
+              <View style={styles.occupancyHeader}>
+                <Text style={styles.occupancyLabel}>Utilization</Text>
+                <Text style={styles.occupancyValue}>{Math.round(occupancyRate)}%</Text>
               </View>
-              <View style={styles.scheduleRow}>
-                <Clock size={13} color={scheduleIconColor} />
-                <Text style={scheduleTextStyle} numberOfLines={1}>
-                  {schedule.slotsLine}
-                </Text>
+              <View style={styles.occupancyBarBg}>
+                <View 
+                  style={[
+                    styles.occupancyBarFill, 
+                    { width: `${Math.min(100, occupancyRate)}%` },
+                    occupancyRate > 80 ? { backgroundColor: '#10B981' } : 
+                    occupancyRate > 50 ? { backgroundColor: '#34D399' } : 
+                    { backgroundColor: '#6EE7B7' }
+                  ]} 
+                />
               </View>
             </View>
-          ) : null}
+          )}
 
           <View style={styles.footer}>
             <View style={styles.amenities}>
@@ -224,13 +227,14 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   cardNative: {
-    backgroundColor: '#06392e',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.2)',
-    shadowOpacity: 0,
-    shadowRadius: 0,
-    shadowOffset: { width: 0, height: 0 },
-    elevation: 0,
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
   },
   cardWeb: {
     backgroundColor: '#FFFFFF',
@@ -377,7 +381,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   scheduleTextNative: {
-    color: NATIVE_TEXT,
+    color: '#475569',
   },
   footer: {
     flexDirection: 'row',
@@ -407,7 +411,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   priceNative: {
-    color: NATIVE_BORDER,
+    color: '#01b854',
     fontSize: 16,
   },
   mapsBtn: {
@@ -426,7 +430,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   mapsLinkNative: {
-    color: NATIVE_BORDER,
+    color: '#10B981',
   },
   amenities: {
     flexDirection: 'row',
@@ -449,9 +453,48 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
   amenityNative: {
-    color: NATIVE_TEXT,
-    backgroundColor: 'transparent',
+    color: '#475569',
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
-    borderColor: NATIVE_BORDER,
+    borderColor: '#E2E8F0',
+  },
+  occupancyContainer: {
+    marginTop: 4,
+    marginBottom: 8,
+    backgroundColor: 'rgba(16, 185, 129, 0.05)',
+    padding: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.1)',
+  },
+  occupancyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  occupancyLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#065F46',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontFamily: 'Inter',
+  },
+  occupancyValue: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#047857',
+    fontFamily: 'Inter',
+  },
+  occupancyBarBg: {
+    height: 4,
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  occupancyBarFill: {
+    height: '100%',
+    borderRadius: 2,
   },
 });

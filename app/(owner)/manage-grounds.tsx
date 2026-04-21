@@ -56,6 +56,7 @@ export default function OwnerGroundsScreen() {
   const [locationRows, setLocationRows] = useState<any[]>([]);
   const [editLocationKey, setEditLocationKey] = useState<string>('');
   const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [occupancyRates, setOccupancyRates] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (user) {
@@ -100,6 +101,18 @@ export default function OwnerGroundsScreen() {
 
       if (error) throw error;
       setGrounds(data || []);
+
+      // Fetch occupancy rates
+      const { data: occData, error: occError } = await supabase.rpc('get_owner_grounds_occupancy', { 
+        target_owner_id: user.id 
+      });
+      if (!occError && occData) {
+        const mapping: Record<string, number> = {};
+        occData.forEach((row: any) => {
+          mapping[row.ground_id] = row.occupancy_percentage;
+        });
+        setOccupancyRates(mapping);
+      }
     } catch (error) {
       console.error('Error loading grounds:', error);
     } finally {
@@ -527,8 +540,8 @@ export default function OwnerGroundsScreen() {
               onPress={() =>
                 setSelectedGroundId((prev) => (prev === item.id ? null : item.id))
               }
-              showBookingSchedule
               compact={Platform.OS === 'web'}
+              occupancyRate={occupancyRates[item.id] ?? null}
             />
 
             {selectedGroundId === item.id ? (
@@ -836,7 +849,7 @@ export default function OwnerGroundsScreen() {
   );
 
   if (Platform.OS === 'web') {
-    return <WebLayout noCard>{content}</WebLayout>;
+    return <WebLayout>{content}</WebLayout>;
   }
 
   return content;
@@ -847,8 +860,8 @@ const IS_WEB = Platform.OS === 'web';
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
-    paddingHorizontal: Platform.OS === 'web' ? 24 : 0,
+    backgroundColor: 'transparent',
+    padding: 0,
   },
   header: {
     backgroundColor: '#FFFFFF',
@@ -861,7 +874,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   webHeader: {
-    paddingVertical: 32,
+    paddingVertical: 16,
+    paddingTop: 0,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',

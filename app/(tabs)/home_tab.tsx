@@ -306,91 +306,88 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* ── Hero Section ─────────────────────────────── */}
-        <View style={[
-          styles.hero, 
-          { paddingTop: Math.max(insets.top + 32, 40) },
-          isWide && { alignItems: 'center', textAlign: 'center' }
-        ]}>
-          <View style={styles.heroBgGlow} />
+        {/* ── Immersive Hero Section ─────────────────────────── */}
+        <View style={styles.premiumHero}>
+          <View style={styles.heroGlowPrimary} />
+          <View style={styles.heroGlowSecondary} />
+          
+          <View style={[styles.heroPadding, { paddingTop: insets.top + 20 }]}>
+            <View style={styles.heroBrandPill}>
+              <View style={[styles.pulseDot, { backgroundColor: '#00ea6b' }]} />
+              <Text style={styles.brandPillText}>BOOKYOURGROUND</Text>
+              <View style={styles.brandPillDivider} />
+              <Text style={styles.brandPillSub}>Slots ready to play</Text>
+            </View>
 
-          <Text style={[styles.heroTitle, isWide && { textAlign: 'center' }]}>
-            Find your perfect{'\n'}
-            <Text style={styles.heroTitleAccent}>ground, today.</Text>
-          </Text>
+            <Text style={styles.heroMainTitle}>
+              Game-ready grounds,{'\n'}
+              <Text style={{ color: '#00ea6b' }}>just a tap away.</Text>
+            </Text>
 
-          {/* Stats row */}
-          <View style={[styles.statsRow, { marginBottom: 28 }, isWide && { maxWidth: 660, alignSelf: 'center', width: '100%', paddingHorizontal: 32 }]}>
-            <View style={styles.statItem}>
-              <View style={styles.statIconBadge}>
-                 <Trophy size={14} color="#01b854" fill="rgba(1, 184, 84, 0.1)" />
+            <Text style={styles.heroCopy}>
+              Find, book, and play at curated venues near you with instant confirmation.
+            </Text>
+
+            <View style={styles.heroStatsContainer}>
+              <View style={styles.heroStatBox}>
+                <Text style={styles.heroStatValue}>4.9/5</Text>
+                <Text style={styles.heroStatLabel}>Player Rating</Text>
               </View>
-              <View style={styles.statInfo}>
-                <Text style={styles.statNumber}>{stats.venueCount}+</Text>
-                <Text style={styles.statLabel}>Venues</Text>
+              <View style={styles.heroStatDivider} />
+              <View style={styles.heroStatBox}>
+                <Text style={styles.heroStatValue}>10k+</Text>
+                <Text style={styles.heroStatLabel}>Hours Booked</Text>
+              </View>
+              <View style={styles.heroStatDivider} />
+              <View style={styles.heroStatBox}>
+                <Text style={styles.heroStatValue}>50+</Text>
+                <Text style={styles.heroStatLabel}>Venues</Text>
               </View>
             </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <View style={styles.statIconBadge}>
-                 <MapPin size={14} color="#01b854" fill="rgba(1, 184, 84, 0.1)" />
-              </View>
-              <View style={styles.statInfo}>
-                <Text style={styles.statNumber}>{stats.cityCount}+</Text>
-                <Text style={styles.statLabel}>Cities</Text>
-              </View>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <View style={styles.statIconBadge}>
-                 <Star size={14} color="#F59E0B" fill="rgba(245, 158, 11, 0.1)" />
-              </View>
-              <View style={styles.statInfo}>
-                <Text style={styles.statNumber}>{stats.avgRating}/5</Text>
-                <Text style={styles.statLabel}>Ratings</Text>
-              </View>
-            </View>
-          </View>
 
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={[styles.categoriesRow, { paddingHorizontal: 0, marginBottom: 12 }]}
-          >
-            {SPORT_CATEGORIES.map((cat) => (
-              <Pressable
-                key={cat.value}
-                style={[
-                  styles.categoryChip,
-                  sportFilter === cat.value && styles.categoryChipActive,
-                ]}
-                onPress={() => setSportFilter(cat.value)}
-              >
-                <Text
+            <View style={styles.floatingSearchContainer}>
+              <Search size={18} color="#94A3B8" strokeWidth={2.5} />
+              <TextInput
+                style={styles.floatingSearchInput}
+                placeholder="Search grounds, city..."
+                placeholderTextColor="#94A3B8"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <Text style={{ color: '#94A3B8', fontWeight: '600' }}>Clear</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.heroCategories}
+            >
+              {SPORT_CATEGORIES.map((cat) => (
+                <TouchableOpacity
+                  key={cat.value}
+                  activeOpacity={0.8}
+                  onPress={() => setSportFilter(cat.value)}
                   style={[
-                    styles.categoryLabel,
-                    sportFilter === cat.value && styles.categoryLabelActive,
+                    styles.heroCatChip,
+                    sportFilter === cat.value && styles.heroCatChipActive,
                   ]}
                 >
-                  {cat.label}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-
-          <View style={[styles.heroSearch, isWide && { maxWidth: 660, alignSelf: 'center', width: '100%' }]}>
-            <Search size={18} color="#9ca3af" strokeWidth={2} />
-            <TextInput
-              style={styles.heroSearchInput}
-              placeholder="Search grounds, city..."
-              placeholderTextColor="#6b7280"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
+                  <Text
+                    style={[
+                      styles.heroCatText,
+                      sportFilter === cat.value && styles.heroCatTextActive,
+                    ]}
+                  >
+                    {cat.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
-          <Text style={[styles.heroSubtitle, isWide && { textAlign: 'center', maxWidth: 660, alignSelf: 'center' }]}>
-            Book cricket, football & multi-sport grounds near you — instantly.
-          </Text>
         </View>
 
 
@@ -498,31 +495,7 @@ export default function HomeScreen() {
 
 
 
-        {/* ── Features Strip ───────────────────────────── */}
-        <View style={styles.featuresSection}>
-          <Text style={styles.sectionLabel}>Why BookYourGround?</Text>
-          <Text style={styles.sectionTitle}>Everything you need</Text>
-          <View style={styles.featuresGrid}>
-            {FEATURES.map((f, i) => {
-              const Icon = f.icon;
-              return (
-                <View 
-                  key={i} 
-                  style={[
-                    styles.featureCard, 
-                    isWide && { width: isTablet ? '23%' : '47%' }
-                  ]}
-                >
-                  <View style={styles.featureIconWrap}>
-                    <Icon size={22} color="#01b854" strokeWidth={2} />
-                  </View>
-                  <Text style={styles.featureLabel}>{f.label}</Text>
-                  <Text style={styles.featureDesc}>{f.desc}</Text>
-                </View>
-              );
-            })}
-          </View>
-        </View>
+
 
         {/* ── CTA Banner ───────────────────────────────── */}
         <View style={styles.ctaBanner}>
@@ -566,115 +539,157 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
 
-  // ── Hero ──────────────────────────────────────
-  hero: {
-    backgroundColor: '#FFFFFF',
-    paddingTop: 24,
-    paddingBottom: 36,
-    paddingHorizontal: 20,
+  // ── Premium Immersive Hero ────────────────────
+  premiumHero: {
+    backgroundColor: '#043529',
     overflow: 'hidden',
+    borderBottomLeftRadius: 36,
+    borderBottomRightRadius: 36,
+    paddingBottom: 32,
+    position: 'relative',
   },
-  heroBgGlow: {
+  heroPadding: {
+    paddingHorizontal: 24,
+  },
+  heroGlowPrimary: {
     position: 'absolute',
-    top: -80,
-    right: -50,
-    width: 220,
-    height: 220,
-    borderRadius: 999,
-    backgroundColor: 'rgba(1, 184, 84, 0.05)',
+    top: -100,
+    right: -60,
+    width: 300,
+    height: 300,
+    borderRadius: 150,
+    backgroundColor: 'rgba(0, 234, 107, 0.12)',
   },
-  heroTitle: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#0F172A',
-    lineHeight: 40,
-    letterSpacing: -1,
-    marginBottom: 10,
-    fontFamily: 'Inter',
+  heroGlowSecondary: {
+    position: 'absolute',
+    bottom: -50,
+    left: -40,
+    width: 200,
+    height: 200,
+    borderRadius: 100,
+    backgroundColor: 'rgba(1, 184, 84, 0.08)',
   },
-  heroTitleAccent: {
-    color: '#01b854',
-  },
-  heroSubtitle: {
-    fontSize: 14,
-    color: '#64748B',
-    lineHeight: 22,
-    marginBottom: 20,
-    fontFamily: 'Inter',
-  },
-  heroSearch: {
+  heroBrandPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F1F5F9',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    marginTop: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     marginBottom: 20,
-    gap: 12,
-    zIndex: 10,
-    width: '100%',
+    gap: 8,
   },
-  heroSearchInput: {
-    flex: 1,
+  pulseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  brandPillText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#00ea6b',
+    letterSpacing: 1,
+  },
+  brandPillDivider: {
+    width: 1,
+    height: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  brandPillSub: {
+    fontSize: 10,
+    color: 'rgba(255, 255, 255, 0.5)',
+    fontWeight: '600',
+  },
+  heroMainTitle: {
+    fontSize: 34,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    lineHeight: 42,
+    letterSpacing: -1,
+    marginBottom: 12,
+  },
+  heroCopy: {
     fontSize: 15,
-    color: '#0F172A',
-    fontFamily: 'Inter',
-    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.7)',
+    lineHeight: 22,
+    marginBottom: 24,
+    maxWidth: '90%',
   },
-  statsRow: {
+  heroStatsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 0,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
+    marginBottom: 28,
   },
-  statItem: {
+  heroStatBox: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
   },
-  statIconBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: '#F8FAFC',
-    justifyContent: 'center',
-    alignItems: 'center',
+  heroStatValue: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    marginBottom: 2,
   },
-  statInfo: {
-    alignItems: 'flex-start',
-  },
-  statNumber: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0F172A',
-    fontFamily: 'Inter',
-  },
-  statLabel: {
+  heroStatLabel: {
     fontSize: 10,
-    color: '#64748B',
-    fontWeight: '400',
+    color: 'rgba(255, 255, 255, 0.5)',
+    fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  statDivider: {
+  heroStatDivider: {
     width: 1,
-    height: 28,
-    backgroundColor: '#F1F5F9',
+    height: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    marginHorizontal: 16,
+  },
+  floatingSearchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 8,
+    marginBottom: 20,
+  },
+  floatingSearchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#0F172A',
+    fontWeight: '600',
+  },
+  heroCategories: {
+    paddingVertical: 4,
+    gap: 10,
+  },
+  heroCatChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  heroCatChipActive: {
+    backgroundColor: '#00ea6b',
+    borderColor: '#00ea6b',
+  },
+  heroCatText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  heroCatTextActive: {
+    color: '#043529',
   },
 
   // ── Sections ──────────────────────────────────
@@ -688,68 +703,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    marginBottom: 14,
+    paddingHorizontal: 24,
+    marginBottom: 16,
   },
   sectionLabel: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '800',
     color: '#01b854',
     textTransform: 'uppercase',
     letterSpacing: 1.2,
     marginBottom: 4,
-    paddingHorizontal: 20,
-    fontFamily: 'Inter',
   },
   sectionTitle: {
     fontSize: 22,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#0F172A',
     letterSpacing: -0.6,
-    fontFamily: 'Inter',
   },
   seeAllBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: 4,
     paddingBottom: 2,
   },
   seeAllText: {
     fontSize: 13,
     fontWeight: '700',
     color: '#01b854',
-    fontFamily: 'Inter',
-  },
-
-  // ── Sport Categories ──────────────────────────
-  categoriesRow: {
-    paddingHorizontal: 20,
-    gap: 10,
-    paddingBottom: 8,
-  },
-  categoryChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  categoryChipActive: {
-    backgroundColor: '#01b854',
-    borderColor: '#01b854',
-  },
-  categoryLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#64748B',
-    fontFamily: 'Inter',
-  },
-  categoryLabelActive: {
-    color: '#FFFFFF',
   },
 
   // ── Ground cards (horizontal) ─────────────────

@@ -267,7 +267,7 @@ export default function SupportScreen() {
 
   if (Platform.OS === 'web') {
     return (
-      <WebLayout noCard>
+      <WebLayout>
         {mainContent}
       </WebLayout>
     );
@@ -291,8 +291,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   content: {
-    padding: Platform.OS === 'web' ? 16 : 20,
-    paddingTop: Platform.OS === 'web' ? 0 : 20,
+    padding: 0,
     width: '100%',
     maxWidth: 1000,
   },
@@ -503,7 +502,7 @@ const styles = StyleSheet.create({
   },
   nativeScreen: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
   },
   nativeBody: {
     flex: 1,

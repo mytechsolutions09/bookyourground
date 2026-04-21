@@ -1,11 +1,14 @@
 import { Platform } from 'react-native';
 
-export const formatCurrency = (amount: number): string => {
+export const formatCurrency = (amount: number | null | undefined): string => {
+  if (amount == null) return '₹0.00';
   return `₹${amount.toFixed(2)}`;
 };
 
-export const formatDateDDMMYY = (date: string): string => {
+export const formatDateDDMMYY = (date: string | null | undefined): string => {
+  if (!date) return '';
   const d = new Date(date);
+  if (isNaN(d.getTime())) return '';
   const day = d.getDate().toString().padStart(2, '0');
   const month = (d.getMonth() + 1).toString().padStart(2, '0');
   const year = d.getFullYear().toString().slice(-2);
