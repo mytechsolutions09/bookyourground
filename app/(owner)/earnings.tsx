@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, Platform, ScrollView, RefreshControl, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Platform, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Modal, TextInput as RNTextInput } from 'react-native';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import WebLayout from '@/components/web/WebLayout';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency } from '@/utils/helpers';
-import { TrendingUp, Download, ArrowRight, Wallet, History, Info, ChevronRight } from 'lucide-react-native';
+import { TrendingUp, Download, ArrowRight, Wallet, History, Info, ChevronRight, X } from 'lucide-react-native';
 import Svg, { Path, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 
 const IS_WEB = Platform.OS === 'web';
@@ -25,6 +25,11 @@ interface VenueBreakdown {
 interface ChartPoint {
   label: string;
   value: number;
+}
+
+interface WalletData {
+  id: string;
+  balance: number;
 }
 
 function LineChart({ data }: { data: ChartPoint[] }) {
@@ -88,6 +93,17 @@ function OwnerEarningsScreenInner() {
   const [chartData, setChartData] = useState<ChartPoint[]>([]);
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [wallet, setWallet] = useState<WalletData | null>(null);
+
+  // Withdrawal Modal State
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [payoutMethod, setPayoutMethod] = useState<'bank' | 'upi'>('bank');
+  const [upiId, setUpiId] = useState('');
+  const [bankName, setBankName] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [ifscCode, setIfscCode] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -100,6 +116,18 @@ function OwnerEarningsScreenInner() {
 
     try {
       setLoading(true);
+      
+      // Fetch Wallet Balance
+      const { data: walletData } = await supabase
+        .from('wallets')
+        .select('id, balance')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (walletData) {
+        setWallet(walletData);
+      }
+
       const { data, error } = await supabase
         .from('bookings')
         .select(`
@@ -138,8 +166,22 @@ function OwnerEarningsScreenInner() {
           thisMonthTotal += amt;
         }
 
-        const groundName = row.ground?.name || 'Other';
-        venueMap.set(groundName, (venueMap.get(groundName) || 0) + amt);
+        // Robust ground name extraction
+        let groundName = 'Other';
+        if (row.ground) {
+          if (Array.isArray(row.ground)) {
+            groundName = row.ground[0]?.name || 'Other';
+          } else if (typeof row.ground.name === 'object' && row.ground.name !== null) {
+            groundName = row.ground.name.name || 'Other';
+          } else {
+            groundName = row.ground.name || 'Other';
+          }
+        }
+        
+        // Ensure groundName is definitely a string
+        const safeName = typeof groundName === 'string' ? groundName : 'Other';
+        
+        venueMap.set(safeName, (venueMap.get(safeName) || 0) + amt);
 
         const monthKey = `${y}-${m}`;
         monthMap.set(monthKey, (monthMap.get(monthKey) || 0) + amt);
@@ -176,16 +218,75 @@ function OwnerEarningsScreenInner() {
     }
   };
 
+  const handleWithdrawRequest = async () => {
+    if (!user || !wallet) return;
+
+    const amount = parseFloat(withdrawAmount);
+    if (isNaN(amount) || amount <= 0) {
+      alert('Please enter a valid amount');
+      return;
+    }
+
+    if (amount > wallet.balance) {
+      alert('Withdrawal amount cannot exceed your current balance.');
+      return;
+    }
+
+    if (payoutMethod === 'bank') {
+      if (!bankName || !accountNumber || !ifscCode) {
+        alert('Please fill in all bank details.');
+        return;
+      }
+    } else {
+      if (!upiId) {
+        alert('Please enter your UPI ID.');
+        return;
+      }
+    }
+
+    try {
+      setSubmitting(true);
+      const { error } = await supabase
+        .from('withdrawals')
+        .insert({
+          owner_id: user.id,
+          amount,
+          payment_method: payoutMethod === 'bank' ? 'bank_transfer' : 'upi',
+          account_details: payoutMethod === 'bank' ? {
+            bank_name: bankName,
+            account_number: accountNumber,
+            ifsc_code: ifscCode,
+          } : {
+            upi_id: upiId
+          }
+        });
+
+      if (error) throw error;
+
+      alert('Withdrawal request submitted successfully!');
+      setShowWithdrawModal(false);
+      setWithdrawAmount('');
+      // Refresh balance
+      loadEarnings();
+    } catch (err) {
+      console.error('Error submitting withdrawal:', err);
+      alert('Failed to submit withdrawal request.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const renderLeftColumn = () => (
     <View style={styles.leftCol}>
       <View style={styles.totalEarningsCard}>
-        <View>
-          <Text style={styles.totalEarningsLabel}>Total Earnings</Text>
-          <Text style={styles.totalEarningsValue}>{formatCurrency(stats.totalEarnings)}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.totalEarningsLabel}>Transferable Balance</Text>
+          <Text style={styles.totalEarningsValue}>{formatCurrency(Number(wallet?.balance || 0))}</Text>
           <Text style={styles.monthlySubtext}>
-            This Month: <Text style={{ fontWeight: '700' }}>{formatCurrency(stats.thisMonthEarnings)}</Text>
+            Lifetime Earnings: <Text style={{ fontWeight: '700' }}>{formatCurrency(Number(stats.totalEarnings))}</Text>
           </Text>
         </View>
+        <Wallet size={64} color="#043529" strokeWidth={1} style={{ opacity: 0.2 }} />
       </View>
 
       <View style={styles.sectionCard}>
@@ -202,7 +303,7 @@ function OwnerEarningsScreenInner() {
                 {new Date(tx.booking_date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
               </Text>
               <Text style={[styles.cellText, { flex: 1 }]} numberOfLines={1}>
-                Booking - {tx.ground?.name}
+                Booking - {tx.ground && typeof tx.ground.name === 'string' ? tx.ground.name : 'Venue'}
               </Text>
               <View style={[styles.statusBadge, { width: 80 }]}>
                 <View style={styles.statusDot} />
@@ -211,10 +312,13 @@ function OwnerEarningsScreenInner() {
             </View>
           ))}
         </View>
-        <TouchableOpacity style={styles.withdrawBtn}>
-          <Text style={styles.withdrawBtnText}>Withdraw Funds</Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity 
+            style={styles.withdrawBtn}
+            onPress={() => setShowWithdrawModal(true)}
+          >
+            <Text style={styles.withdrawBtnText}>Withdraw Funds</Text>
+          </TouchableOpacity>
+        </View>
 
       <View style={styles.sectionCard}>
         <Text style={styles.sectionTitle}>Upcoming Payouts</Text>
@@ -258,8 +362,10 @@ function OwnerEarningsScreenInner() {
           {venueBreakdown.map((v, i) => (
             <View key={i} style={styles.venueItem}>
                <View style={styles.venueInfo}>
-                 <Text style={styles.venueName} numberOfLines={1}>{v.name}:</Text>
-                 <Text style={styles.venueAmount}>{formatCurrency(v.amount)} ({Math.round(v.percent)}%)</Text>
+                 <Text style={styles.venueName} numberOfLines={1}>
+                   {typeof v.name === 'string' ? v.name : 'Venue'}:
+                 </Text>
+                 <Text style={styles.venueAmount}>{formatCurrency(Number(v.amount))} ({Math.round(Number(v.percent))}%)</Text>
                </View>
                <View style={styles.progressBg}>
                  <View style={[styles.progressFill, { width: `${v.percent}%`, backgroundColor: i === 3 ? '#EF4444' : '#01b854' }]} />
@@ -300,20 +406,144 @@ function OwnerEarningsScreenInner() {
   );
 
   return (
-    <ScrollView 
-      style={styles.root}
-      showsVerticalScrollIndicator={false}
-      // @ts-ignore - web-only style to hide scrollbar
-      contentContainerStyle={[
-        styles.scrollContent,
-        Platform.OS === 'web' && { scrollbarWidth: 'none', msOverflowStyle: 'none' } as any
-      ]}
-    >
-      <View style={[styles.layoutRow, !IS_WEB && { flexDirection: 'column' }]}>
-        {renderLeftColumn()}
-        {renderRightColumn()}
-      </View>
-    </ScrollView>
+    <>
+      <ScrollView 
+        style={styles.root}
+        showsVerticalScrollIndicator={false}
+        // @ts-ignore - web-only style to hide scrollbar
+        contentContainerStyle={[
+          styles.scrollContent,
+          Platform.OS === 'web' && { scrollbarWidth: 'none', msOverflowStyle: 'none' } as any
+        ]}
+      >
+        <View style={[styles.layoutRow, !IS_WEB && { flexDirection: 'column' }]}>
+          {renderLeftColumn()}
+          {renderRightColumn()}
+        </View>
+      </ScrollView>
+
+      {/* Withdrawal Modal */}
+      <Modal
+        visible={showWithdrawModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowWithdrawModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity 
+            style={styles.modalBackdrop} 
+            activeOpacity={1} 
+            onPress={() => setShowWithdrawModal(false)} 
+          />
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>Withdraw Funds</Text>
+                <Text style={styles.modalSubtitle}>Available Balance: {formatCurrency(wallet?.balance || 0)}</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowWithdrawModal(false)}>
+                <X size={24} color="#0F172A" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalForm}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Amount (₹)</Text>
+                <RNTextInput
+                  style={styles.formInput}
+                  placeholder="Enter amount"
+                  keyboardType="numeric"
+                  value={withdrawAmount}
+                  onChangeText={setWithdrawAmount}
+                />
+              </View>
+
+              <View style={[styles.inputGroup, { marginBottom: 8 }]}>
+                <Text style={styles.inputLabel}>Payout Method</Text>
+                <View style={[styles.methodSelector, { flexDirection: 'row', display: 'flex' }]}>
+                  <TouchableOpacity 
+                    activeOpacity={0.8}
+                    style={[styles.methodOption, payoutMethod === 'bank' && styles.methodOptionActive]}
+                    onPress={() => setPayoutMethod('bank')}
+                  >
+                    <Text style={[styles.methodText, payoutMethod === 'bank' && styles.methodTextActive]}>Bank Transfer</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    activeOpacity={0.8}
+                    style={[styles.methodOption, payoutMethod === 'upi' && styles.methodOptionActive]}
+                    onPress={() => setPayoutMethod('upi')}
+                  >
+                    <Text style={[styles.methodText, payoutMethod === 'upi' && styles.methodTextActive]}>UPI</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {payoutMethod === 'bank' ? (
+                <>
+                  <Text style={styles.formSectionTitle}>Bank Details</Text>
+                  
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Bank Name</Text>
+                    <RNTextInput
+                      style={styles.formInput}
+                      placeholder="e.g. HDFC Bank"
+                      value={bankName}
+                      onChangeText={setBankName}
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Account Number</Text>
+                    <RNTextInput
+                      style={styles.formInput}
+                      placeholder="Enter account number"
+                      keyboardType="numeric"
+                      value={accountNumber}
+                      onChangeText={setAccountNumber}
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>IFSC Code</Text>
+                    <RNTextInput
+                      style={styles.formInput}
+                      placeholder="Enter IFSC code"
+                      autoCapitalize="characters"
+                      value={ifscCode}
+                      onChangeText={setIfscCode}
+                    />
+                  </View>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.formSectionTitle}>UPI Details</Text>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>UPI ID</Text>
+                    <RNTextInput
+                      style={styles.formInput}
+                      placeholder="username@bank / mobile@upi"
+                      autoCapitalize="none"
+                      value={upiId}
+                      onChangeText={setUpiId}
+                    />
+                  </View>
+                </>
+              )}
+
+              <TouchableOpacity 
+                style={[styles.submitBtn, submitting && { opacity: 0.7 }]}
+                onPress={handleWithdrawRequest}
+                disabled={submitting}
+              >
+                <Text style={styles.submitBtnText}>
+                  {submitting ? 'Submitting...' : 'Request Payout'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 }
 
@@ -566,6 +796,124 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
     lineHeight: 20,
     flex: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    padding: 24,
+    minHeight: 500,
+    ...Platform.select({
+      web: {
+        maxWidth: 500,
+        width: '100%',
+        alignSelf: 'center',
+        marginBottom: 'auto',
+        marginTop: 'auto',
+        borderRadius: 24,
+        maxHeight: '90vh',
+      }
+    })
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    marginTop: 4,
+    fontFamily: 'Inter',
+    fontWeight: '600',
+  },
+  modalForm: {
+    gap: 16,
+  },
+  formSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  inputGroup: {
+    gap: 8,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  formInput: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  submitBtn: {
+    backgroundColor: '#01b854',
+    paddingVertical: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  submitBtnText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  methodSelector: {
+    flexDirection: 'row',
+    display: 'flex',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    padding: 4,
+    marginTop: 4,
+    width: '100%',
+    overflow: 'hidden',
+  },
+  methodOption: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  methodOptionActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  methodText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  methodTextActive: {
+    color: '#0F172A',
   },
 });
 

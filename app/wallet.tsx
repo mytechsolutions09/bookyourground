@@ -10,36 +10,107 @@ import { formatCurrency } from '@/utils/helpers';
 const THEME_BG = '#043529';
 const ACCENT = '#c8f35c'; 
 
-const MOCK_TRANSACTIONS = [
-  { id: 1, type: 'refund', title: 'Refund from Cancelled Booking #G48291', sub: 'Riverside Cricket Ground', amount: 1800, date: 'Today, 10:30 AM' },
-  { id: 2, type: 'payment', title: 'Payment for Booking #G48288', sub: 'Hoops Hub - Jayanagar', amount: 1800, date: 'Yesterday, 7:15 PM' },
-  { id: 3, type: 'reward', title: 'BMG Rewards Credited', sub: 'For inviting 3 friends', amount: 150, date: 'Dec 12, 2024' },
-  { id: 4, type: 'payment', title: 'Payment for Booking #G48275', sub: 'GreenWave Turf', amount: 2400, date: 'Dec 11, 2024' },
-];
+const MOCK_TRANSACTIONS: any[] = [];
 
 export default function WalletScreen() {
   const { user, profile } = useAuth();
   const { width } = useWindowDimensions();
   const isCompact = width < 900;
   
-  const [balance, setBalance] = useState(2840);
-  const [transactions, setTransactions] = useState<any[]>(MOCK_TRANSACTIONS);
-  const [loading, setLoading] = useState(false);
+  const [balance, setBalance] = useState(0);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [quickAdd, setQuickAdd] = useState('1600');
-  const [summary, setSummary] = useState({ added: 15000, spent: 12160, refunded: 2500 });
+  const [summary, setSummary] = useState({ added: 0, spent: 0, refunded: 0 });
 
   const isOwner = profile?.role === 'ground_owner';
 
   useEffect(() => {
-    if (user && isOwner) {
-      loadOwnerData();
+    if (user) {
+      loadWalletData();
     }
-  }, [user, isOwner]);
+  }, [user, profile?.role]);
 
-  const loadOwnerData = async () => {
+  const loadWalletData = async () => {
     if (!user) return;
+    
     try {
       setLoading(true);
+      
+      // 1. Fetch real Wallet Balance
+      const { data: walletData } = await supabase
+        .from('wallets')
+        .select('balance')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (walletData) {
+        setBalance(walletData.balance);
+        
+        // 2. Fetch Wallet Transactions (Admin top-ups, etc.)
+        const { data: wtxData } = await supabase
+          .from('wallet_transactions')
+          .select('*')
+          .eq('wallet_id', walletData.id)
+          .order('created_at', { ascending: false });
+
+        const walletTx = (wtxData || []).map(tx => ({
+          id: tx.id,
+          type: tx.type,
+          title: tx.type === 'topup' ? 'Top-up Added' : 'Balance Adjustment',
+          sub: tx.description || 'System Transaction',
+          amount: tx.amount,
+          date: new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+          isPositive: Number(tx.amount) >= 0,
+          rawDate: new Date(tx.created_at)
+        }));
+
+        if (isOwner) {
+          const bookingTx = await loadOwnerTransactions();
+          const combined = [...walletTx, ...bookingTx].sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime());
+          setTransactions(combined);
+        } else {
+          const bookingTx = await loadUserTransactions();
+          const combined = [...walletTx, ...bookingTx].sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime());
+          setTransactions(combined);
+        }
+      }
+    } catch (err) {
+      console.error('Wallet load error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadUserTransactions = async () => {
+    const { data: bookingsData } = await supabase
+      .from('bookings')
+      .select(`
+        id,
+        total_amount,
+        status,
+        booking_date,
+        ground:grounds(name)
+      `)
+      .eq('user_id', user.id)
+      .order('booking_date', { ascending: false });
+
+    if (!bookingsData) return [];
+    
+    return bookingsData.map(b => ({
+      id: b.id,
+      type: 'payment',
+      title: `Payment for Booking`,
+      sub: b.ground?.name || 'Booking',
+      amount: b.total_amount,
+      date: new Date(b.booking_date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+      isPositive: false,
+      rawDate: new Date(b.booking_date)
+    }));
+  };
+
+  const loadOwnerTransactions = async () => {
+    try {
       const { data, error } = await supabase
         .from('bookings')
         .select(`
@@ -67,7 +138,8 @@ export default function WalletScreen() {
         sub: `Booking #${tx.id.slice(0, 8).toUpperCase()}`,
         amount: tx.total_amount,
         date: new Date(tx.booking_date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-        isPositive: true
+        isPositive: true,
+        rawDate: new Date(tx.booking_date)
       }));
 
       rows.forEach(tx => {
@@ -75,17 +147,15 @@ export default function WalletScreen() {
         else totalOnline += tx.total_amount;
       });
 
-      setBalance(totalOnline);
-      setTransactions(realTx.length > 0 ? realTx : MOCK_TRANSACTIONS);
       setSummary({
         added: totalOnline + totalCash,
         spent: 0,
         refunded: 0
       });
+      return realTx;
     } catch (err) {
-      console.error('Wallet load error:', err);
-    } finally {
-      setLoading(false);
+      console.error('Wallet transactions error:', err);
+      return [];
     }
   };
 

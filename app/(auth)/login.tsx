@@ -14,10 +14,14 @@ import {
   Pressable,
   ActivityIndicator,
   Modal,
+  ImageBackground,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, Mail, Lock, Eye, EyeOff, CheckCircle, Send } from 'lucide-react-native';
+import { Mail, Lock, Eye, EyeOff, CheckCircle, Send } from 'lucide-react-native';
+import { BlurView } from 'expo-blur';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import { runOnJS } from 'react-native-reanimated';
 
 let TurnstileComponent: any = null;
 if (Platform.OS === 'web') {
@@ -42,6 +46,15 @@ export default function LoginScreen() {
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const emailRef = React.useRef<TextInput>(null);
   const passwordRef = React.useRef<TextInput>(null);
+  
+  const swipeGesture = Gesture.Pan()
+    .activeCursor('grabbing')
+    .onEnd((e) => {
+      // If swipe right (left to right) with enough velocity or distance
+      if (e.translationX > 80 && e.velocityX > 400) {
+        runOnJS(router.push)('/(tabs)/home_tab' as any);
+      }
+    });
 
   const { signIn, profile, user, resetPassword } = useAuth();
   const os = Platform.OS as string;
@@ -256,7 +269,7 @@ export default function LoginScreen() {
                 resizeMode="cover"
               />
               <View style={StyleSheet.absoluteFillObject}>
-                <View style={{ flex: 1, backgroundColor: 'rgba(4,53,41,0.4)' }} />
+                <View style={{ flex: 1, backgroundColor: 'rgba(30,41,59,0.3)' }} />
               </View>
             </View>
           )}
@@ -267,39 +280,39 @@ export default function LoginScreen() {
 
   // ── Mobile layout ─────────────────────────────────────────────────────────
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={styles.screen}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.screen}
       >
-        <View style={styles.card}>
-          <View style={styles.cardHeaderRow}>
-            <Pressable
-              style={styles.backBtnRelative}
-              onPress={() => {
-                if (router.canGoBack()) router.back();
-                else router.replace('/');
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Go back"
-            >
-              <ArrowLeft size={20} color="#1E293B" strokeWidth={2.5} />
-            </Pressable>
-            <View style={styles.logoContainer}>
-              <Image
-                source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
-                style={styles.logo}
-                resizeMode="contain"
-                accessibilityLabel="BookYourGround"
-              />
-            </View>
-            <View style={{ width: 40 }} />
+        <GestureDetector gesture={swipeGesture}>
+          <View style={{ flex: 1 }}>
+            <ImageBackground 
+            source={require('../../assets/background.jpg')} 
+            style={styles.background}
+            resizeMode="cover"
+          >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+        <View style={styles.cardHeaderRow}>
+          <View style={styles.logoContainer}>
+            <Image
+              source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
+              style={styles.logo}
+              resizeMode="contain"
+              accessibilityLabel="BookYourGround"
+            />
           </View>
-          
+        </View>
+
+        <BlurView 
+          intensity={90} 
+          tint="light" 
+          style={styles.card}
+        >
           <View style={{ height: 16 }} />
           {/* Email field */}
             <Pressable style={styles.fieldLabel} onPress={() => emailRef.current?.focus()}>
@@ -312,7 +325,7 @@ export default function LoginScreen() {
                 emailFocused && styles.inputRowFocused,
               ]}
             >
-              <Mail size={17} color={emailFocused ? '#01b854' : '#6b7280'} strokeWidth={2} />
+              <Mail size={17} color={emailFocused ? '#475569' : '#6b7280'} strokeWidth={2} />
               <TextInput
                 ref={emailRef}
                 style={styles.textInput}
@@ -340,7 +353,7 @@ export default function LoginScreen() {
                 passwordFocused && styles.inputRowFocused,
               ]}
             >
-              <Lock size={17} color={passwordFocused ? '#01b854' : '#6b7280'} strokeWidth={2} />
+              <Lock size={17} color={passwordFocused ? '#475569' : '#6b7280'} strokeWidth={2} />
               <TextInput
                 ref={passwordRef}
                 style={styles.textInput}
@@ -395,8 +408,9 @@ export default function LoginScreen() {
               <Text style={styles.outlineBtnText}>SIGN UP</Text>
             </Pressable>
           </View>
-        </View>
+        </BlurView>
       </ScrollView>
+    </ImageBackground>
 
       {/* Login Success Modal - Optional but good for consistency */}
       <Modal
@@ -406,8 +420,8 @@ export default function LoginScreen() {
       >
         <View style={modalStyles.overlay}>
           <View style={modalStyles.card}>
-            <View style={[modalStyles.iconBg, { backgroundColor: 'rgba(0,234,107,0.1)' }]}>
-              <CheckCircle size={40} color="#01b854" strokeWidth={2.5} />
+            <View style={[modalStyles.iconBg, { backgroundColor: 'rgba(71, 85, 105, 0.1)' }]}>
+              <CheckCircle size={40} color="#475569" strokeWidth={2.5} />
             </View>
             <Text style={modalStyles.title}>Welcome Back!</Text>
             <Text style={modalStyles.message}>Signed in successfully. redirecting you...</Text>
@@ -423,13 +437,13 @@ export default function LoginScreen() {
       >
         <View style={modalStyles.overlay}>
           <View style={modalStyles.card}>
-            <View style={[modalStyles.iconBg, { backgroundColor: 'rgba(1, 184, 84, 0.1)' }]}>
-              <Send size={40} color="#01b854" strokeWidth={2.5} />
+            <View style={[modalStyles.iconBg, { backgroundColor: 'rgba(71, 85, 105, 0.1)' }]}>
+              <Send size={40} color="#475569" strokeWidth={2.5} />
             </View>
             <Text style={modalStyles.title}>Email Sent!</Text>
             <Text style={modalStyles.message}>A password reset link has been sent to your email address.</Text>
             <TouchableOpacity
-              style={modalStyles.button}
+              style={[modalStyles.button, { backgroundColor: '#1e293b' }]}
               onPress={() => setShowResetModal(false)}
             >
               <Text style={modalStyles.buttonText}>GOT IT</Text>
@@ -437,11 +451,13 @@ export default function LoginScreen() {
           </View>
         </View>
       </Modal>
+        </View>
+      </GestureDetector>
     </KeyboardAvoidingView>
+  </GestureHandlerRootView>
   );
 }
 
-// ── Simple web-only text input (reuse existing web layout) ─────────────────
 function WebInput(props: any) {
   const { label, ...rest } = props;
   return (
@@ -473,12 +489,17 @@ function WebInput(props: any) {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#043529',
+  },
+  background: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
   },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 180,
+    paddingTop: 120,
     paddingBottom: 40,
   },
   cardHeaderRow: {
@@ -486,15 +507,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-    marginBottom: 8,
-  },
-  backBtnRelative: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'transparent',
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginBottom: 48,
   },
   logoContainer: {
     flex: 1,
@@ -502,24 +515,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 10,
   },
-  logo: { width: 160, height: 40 },
+  logo: { width: 300, height: 75 },
   headingWrap: {
     alignItems: 'center',
     marginTop: 0,
     marginBottom: 16,
   },
   card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 28,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    gap: 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 32,
+    padding: 24,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+    gap: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.04,
-    shadowRadius: 20,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.15,
+    shadowRadius: 30,
+    elevation: 12,
+    overflow: 'hidden',
   },
   fieldWrap: {
     marginBottom: 12,
@@ -535,19 +549,19 @@ const styles = StyleSheet.create({
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
     paddingHorizontal: 14,
     paddingVertical: 10,
     gap: 10,
   },
   inputRowFocused: {
     backgroundColor: '#FFFFFF',
-    shadowColor: '#01b854',
+    shadowColor: '#1e293b',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 10,
     elevation: 2,
   },
@@ -565,12 +579,12 @@ const styles = StyleSheet.create({
   },
   signInBtn: {
     flex: 1,
-    backgroundColor: '#01b854',
+    backgroundColor: '#1e293b',
     borderRadius: 12,
     height: 42,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#01b854',
+    shadowColor: '#1e293b',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
@@ -588,14 +602,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     height: 42,
     borderWidth: 1.5,
-    borderColor: '#01b854',
+    borderColor: '#475569',
     alignItems: 'center',
     justifyContent: 'center',
   },
   outlineBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#01b854',
+    color: '#475569',
     letterSpacing: 0.5,
     fontFamily: 'Inter',
   },
@@ -607,7 +621,7 @@ const styles = StyleSheet.create({
   forgotText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#01b854',
+    color: '#475569',
     fontFamily: 'Inter',
   },
 });
@@ -616,7 +630,7 @@ const styles = StyleSheet.create({
 const webStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#043529',
+    backgroundColor: '#06392e',
   },
   scrollContent: {
     flexGrow: 1,
@@ -630,8 +644,8 @@ const webStyles = StyleSheet.create({
     alignItems: 'center',
   },
   logoImage: {
-    width: 200,
-    height: 50,
+    width: 240,
+    height: 60,
     marginBottom: 8,
   },
   form: {
@@ -644,7 +658,7 @@ const webStyles = StyleSheet.create({
   formContainer: {
     flex: 1,
     width: '100%',
-    backgroundColor: '#043529',
+    backgroundColor: '#06392e',
     paddingHorizontal: 24,
     paddingVertical: 32,
     justifyContent: 'center',
@@ -653,11 +667,11 @@ const webStyles = StyleSheet.create({
   formCard: {
     width: '100%',
     maxWidth: 420,
-    backgroundColor: '#06392e',
+    backgroundColor: '#043529',
     borderRadius: 20,
     padding: 24,
     borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.12)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.2,
@@ -690,7 +704,7 @@ const webStyles = StyleSheet.create({
   },
   button: {
     flex: 1,
-    backgroundColor: '#01b854',
+    backgroundColor: '#475569',
     borderRadius: 8,
     height: 36,
     alignItems: 'center',
@@ -699,7 +713,7 @@ const webStyles = StyleSheet.create({
   buttonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#043529',
+    color: '#ffffff',
     letterSpacing: 0.5,
   },
   outlineButton: {
@@ -707,14 +721,14 @@ const webStyles = StyleSheet.create({
     borderRadius: 8,
     height: 36,
     borderWidth: 1.5,
-    borderColor: '#01b854',
+    borderColor: '#475569',
     alignItems: 'center',
     justifyContent: 'center',
   },
   outlineButtonText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#01b854',
+    color: '#475569',
     textTransform: 'uppercase' as any,
   },
   forgotWrap: {
@@ -724,7 +738,7 @@ const webStyles = StyleSheet.create({
   forgotText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#01b854',
+    color: '#64748b',
   },
 });
 
@@ -773,7 +787,7 @@ const modalStyles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   button: {
-    backgroundColor: '#01b854',
+    backgroundColor: '#1e293b',
     paddingVertical: 16,
     borderRadius: 16,
     width: '100%',

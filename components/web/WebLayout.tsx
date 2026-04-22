@@ -55,6 +55,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { makeGroundPath } from '@/utils/groundSlug';
+import { formatCurrency } from '@/utils/helpers';
 
 interface WebLayoutProps {
   children: React.ReactNode;
@@ -75,6 +76,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [signOutHovered, setSignOutHovered] = useState(false);
   const [bookings, setBookings] = useState<any[]>([]);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -86,6 +88,14 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
           .select('id')
           .eq('user_id', user.id);
         if (data) setBookings(data);
+
+        // Fetch Wallet Balance
+        const { data: walletData } = await supabase
+          .from('wallets')
+          .select('balance')
+          .eq('user_id', user.id)
+          .single();
+        if (walletData) setWalletBalance(walletData.balance);
       } catch (err) {
         console.error('Sidebar fetch error:', err);
       } finally {
@@ -538,14 +548,12 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                         Cricket
                       </RNText>
 
-                      {!isGroundOwner && (
-                        <RNText
-                          style={styles.headerPrimaryButtonText}
-                          onPress={() => router.push('/shop' as any)}
-                        >
-                          Shop
-                        </RNText>
-                      )}
+                      <RNText
+                        style={styles.headerPrimaryButtonText}
+                        onPress={() => router.push('/shop' as any)}
+                      >
+                        Shop
+                      </RNText>
 
 
                       <RNText
@@ -636,6 +644,12 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                       onPress={() => router.push('/(tabs)/bookings' as any)}
                     >
                       Bookings
+                    </RNText>
+                    <RNText
+                      style={[styles.headerNavLink, cleanPath === '/shop' && styles.headerNavLinkActive]}
+                      onPress={() => router.push('/shop' as any)}
+                    >
+                      Shop
                     </RNText>
 
 
@@ -1045,7 +1059,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                           href="/wallet" 
                           icon={Wallet} 
                           label="Wallet" 
-                          meta="₹2,840"
+                          meta={walletBalance !== null ? formatCurrency(walletBalance) : undefined}
                         />
                         <NavLink 
                           href="/cricket/player-profile" 
@@ -1187,12 +1201,11 @@ const styles = StyleSheet.create({
     maxWidth: 1400,
     marginHorizontal: 'auto',
     paddingHorizontal: 24,
-    paddingTop: 16,
+    paddingVertical: 12,
     width: '100%',
   },
   headerContentCompact: {
-    paddingTop: 8,
-    paddingBottom: 2, // Smaller screen
+    paddingVertical: 6,
   },
   logo: {
     flexDirection: 'row',

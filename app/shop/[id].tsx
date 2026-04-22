@@ -241,7 +241,9 @@ export default function ProductDetailScreen() {
                 {Object.entries(product.specifications).map(([key, value]: [string, any], index) => (
                   <View key={key} style={[styles.specRow, index % 2 === 0 && styles.specRowAlt]}>
                     <RNText style={styles.specKey}>{key}</RNText>
-                    <RNText style={styles.specValue}>{value}</RNText>
+                    <RNText style={styles.specValue}>
+                      {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                    </RNText>
                   </View>
                 ))}
               </View>
@@ -326,7 +328,7 @@ export default function ProductDetailScreen() {
 
             {/* Right: Info */}
             <View style={styles.webInfoCol}>
-              <RNText style={styles.webCategory}>{product.category}</RNText>
+              <RNText style={styles.webCategory}>{product.category?.name || 'Equipment'}</RNText>
               <RNText style={styles.webProductName}>{product.name}</RNText>
               
               <View style={styles.webRatingRow}>
@@ -335,20 +337,24 @@ export default function ProductDetailScreen() {
                     <Star 
                       key={i} 
                       size={20} 
-                      color={i < Math.floor(product.rating) ? "#FBBF24" : "#E5E7EB"} 
-                      fill={i < Math.floor(product.rating) ? "#FBBF24" : "none"} 
+                      color={i < Math.floor(Number(product.rating || 0)) ? "#FBBF24" : "#E5E7EB"} 
+                      fill={i < Math.floor(Number(product.rating || 0)) ? "#FBBF24" : "none"} 
                     />
                   ))}
                 </View>
-                <RNText style={styles.webReviewsText}>{product.rating} ({product.reviews} customer reviews)</RNText>
+                <RNText style={styles.webReviewsText}>{Number(product.rating || 0).toFixed(1)} ({product.review_count || 0} customer reviews)</RNText>
               </View>
 
               <View style={styles.webPriceContainer}>
-                <RNText style={styles.webCurrentPrice}>{product.price}</RNText>
-                <RNText style={styles.webOriginalPrice}>{product.originalPrice}</RNText>
-                <View style={styles.webDiscountBadge}>
-                  <RNText style={styles.webDiscountText}>{product.discount}</RNText>
-                </View>
+                <RNText style={styles.webCurrentPrice}>₹{Number(product.price).toLocaleString('en-IN')}</RNText>
+                {product.discount_price && (
+                  <RNText style={styles.webOriginalPrice}>₹{Number(product.discount_price).toLocaleString('en-IN')}</RNText>
+                )}
+                {product.tag && (
+                  <View style={styles.webDiscountBadge}>
+                    <RNText style={styles.webDiscountText}>{product.tag}</RNText>
+                  </View>
+                )}
               </View>
 
               <RNText style={styles.webDescription}>{product.description}</RNText>
@@ -392,7 +398,9 @@ export default function ProductDetailScreen() {
                   {Object.entries(product.specifications).map(([key, value]: [string, any]) => (
                     <View key={key} style={styles.webSpecRow}>
                       <RNText style={styles.webSpecKey}>{key}</RNText>
-                      <RNText style={styles.webSpecValue}>{value}</RNText>
+                      <RNText style={styles.webSpecValue}>
+                        {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                      </RNText>
                     </View>
                   ))}
                 </View>
