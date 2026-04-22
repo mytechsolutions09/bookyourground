@@ -1,6 +1,7 @@
 import React from 'react';
 import { Platform } from 'react-native';
 import { useSegments } from 'expo-router';
+import { useUI } from '@/contexts/UIContext';
 import MobileTabBar from './MobileTabBar';
 
 /**
@@ -9,7 +10,9 @@ import MobileTabBar from './MobileTabBar';
  */
 export function MobileTabBarHost() {
   const segments = useSegments();
-  if (Platform.OS === 'web') return null;
+  const { isTabBarVisible } = useUI();
+  
+  if (Platform.OS === 'web' || !isTabBarVisible) return null;
 
   const root = segments[0];
   if (
@@ -17,7 +20,8 @@ export function MobileTabBarHost() {
     root === '(auth)' ||
     root === '(owner)' ||
     root === '(admin)' ||
-    root === 'players'
+    root === 'players' ||
+    root === 'shop'
   ) {
     return null;
   }

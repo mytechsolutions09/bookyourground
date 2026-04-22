@@ -50,6 +50,7 @@ export default function AdminLayout() {
       <Stack.Screen name="manage-users" />
       <Stack.Screen name="messages" />
       <Stack.Screen name="inventory" />
+      <Stack.Screen name="products" />
       <Stack.Screen name="locations" />
       <Stack.Screen name="settings" />
       <Stack.Screen name="cricketdata/index" />

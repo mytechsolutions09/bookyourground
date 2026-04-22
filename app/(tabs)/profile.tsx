@@ -16,6 +16,7 @@ import {
   CalendarClock,
   Star,
   ShoppingCart,
+  ShoppingBag,
   LifeBuoy,
   Info,
   X,
@@ -255,6 +256,17 @@ export default function ProfileScreen() {
 
           <TouchableOpacity
             style={styles.menuItem}
+            onPress={() => router.push('/(tabs)/profile/orders' as any)}
+          >
+            <View style={styles.menuItemLeft}>
+              <ShoppingBag size={20} color={themeAccent} />
+              <RNText style={[styles.menuItemText, { color: themeText }]}>My Orders</RNText>
+            </View>
+            <ChevronRight size={20} color={chevronColor} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
             onPress={() => router.push('/(owner)/earnings' as any)}
           >
             <View style={styles.menuItemLeft}>
@@ -340,6 +352,17 @@ export default function ProfileScreen() {
             <View style={styles.menuItemLeft}>
               <Calendar size={20} color={themeAccent} />
               <RNText style={[styles.menuItemText, { color: themeText }]}>My Bookings</RNText>
+            </View>
+            <ChevronRight size={20} color={chevronColor} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => router.push('/(tabs)/profile/orders' as any)}
+          >
+            <View style={styles.menuItemLeft}>
+              <ShoppingBag size={20} color={themeAccent} />
+              <RNText style={[styles.menuItemText, { color: themeText }]}>My Orders</RNText>
             </View>
             <ChevronRight size={20} color={chevronColor} />
           </TouchableOpacity>

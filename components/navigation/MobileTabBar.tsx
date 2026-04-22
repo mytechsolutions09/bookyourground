@@ -113,8 +113,8 @@ export default function MobileTabBar() {
         style={styles.item}
         onPress={() => go('/(tabs)/shop')}
       >
-        <ShoppingBag size={size} color={activeTab === 'shop' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'shop' ? 2.5 : 2} />
-        <Text style={[styles.label, { color: activeTab === 'shop' ? ACTIVE : INACTIVE }]}>Shop</Text>
+        <ShoppingBag size={size} color={activeTab === 'shop' ? '#dc8d3c' : INACTIVE} strokeWidth={activeTab === 'shop' ? 2.5 : 2} />
+        <Text style={[styles.label, { color: activeTab === 'shop' ? '#dc8d3c' : INACTIVE }]}>Shop</Text>
       </Pressable>
 
       <Pressable

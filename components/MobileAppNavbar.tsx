@@ -10,10 +10,18 @@ type MobileAppNavbarProps = {
   rightAction?: React.ReactNode;
   lightBg?: boolean;
   smallerTitle?: boolean;
+  bgColor?: string;
 };
 
 /** Green top bar with logo — use on native-only screens (not web). */
-export default function MobileAppNavbar({ title, titleColor = '#01b854', rightAction, lightBg, smallerTitle }: MobileAppNavbarProps) {
+export default function MobileAppNavbar({ 
+  title, 
+  titleColor = '#01b854', 
+  rightAction, 
+  lightBg, 
+  smallerTitle,
+  bgColor
+}: MobileAppNavbarProps) {
   const navigation = useNavigation();
   const [canGoBack, setCanGoBack] = React.useState(false);
 
@@ -32,7 +40,7 @@ export default function MobileAppNavbar({ title, titleColor = '#01b854', rightAc
   };
 
   return (
-    <View style={[styles.navbar, lightBg && styles.navbarLight]} accessibilityRole="header">
+    <View style={[styles.navbar, lightBg && styles.navbarLight, bgColor ? { backgroundColor: bgColor } : null]} accessibilityRole="header">
       {canGoBack && (
         <TouchableOpacity
           onPress={handleBack}

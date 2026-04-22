@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, ActivityIndicator, Alert } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { useRouter, Stack } from 'expo-router';
 import { ChevronLeft, Trash2, Plus, Minus, ShoppingBag, ArrowRight } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
@@ -84,65 +85,16 @@ export default function CartScreen() {
     return cartItems.reduce((acc, item) => acc + (item.product.price * item.quantity), 0);
   };
 
-  const handleCheckout = async () => {
-    if (!user || cartItems.length === 0) return;
-    
-    try {
-      setIsCheckingOut(true);
-      const total = calculateTotal();
-      
-      // 1. Create order
-      const { data: order, error: orderError } = await supabase
-        .from('shop_orders')
-        .insert({
-          user_id: user.id,
-          total_amount: total,
-          status: 'pending',
-          payment_status: 'paid', // Assuming wallet payment for now or just mock
-          payment_method: 'wallet'
-        })
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
-
-      // 2. Create order items
-      const orderItems = cartItems.map(item => ({
-        order_id: order.id,
-        product_id: item.product.id,
-        quantity: item.quantity,
-        price_at_purchase: item.product.price
-      }));
-
-      const { error: itemsError } = await supabase
-        .from('shop_order_items')
-        .insert(orderItems);
-
-      if (itemsError) throw itemsError;
-
-      // 3. Clear cart
-      const { error: clearError } = await supabase
-        .from('shop_cart')
-        .delete()
-        .eq('user_id', user.id);
-
-      if (clearError) throw clearError;
-
-      Alert.alert('Success', 'Order placed successfully!');
-      router.push('/(tabs)/shop');
-    } catch (err: any) {
-      console.error('Checkout error:', err);
-      Alert.alert('Checkout Failed', err.message || 'Something went wrong');
-    } finally {
-      setIsCheckingOut(false);
-    }
+  const handleCheckout = () => {
+    if (cartItems.length === 0) return;
+    router.push('/shop/checkout');
   };
 
   const content = (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {loading ? (
-          <ActivityIndicator color="#01b854" style={{ marginTop: 100 }} />
+          <ActivityIndicator color="#dc8d3c" style={{ marginTop: 100 }} />
         ) : cartItems.length === 0 ? (
           <View style={styles.emptyContainer}>
             <ShoppingBag size={80} color="#D1D5DB" strokeWidth={1} />
@@ -175,14 +127,14 @@ export default function CartScreen() {
                           onPress={() => updateQuantity(item.id, -1)}
                           style={styles.qtyBtn}
                         >
-                          <Minus size={16} color="#043529" />
+                          <Minus size={16} color="#2b2f4b" />
                         </TouchableOpacity>
                         <Text style={styles.qtyText}>{item.quantity}</Text>
                         <TouchableOpacity 
                           onPress={() => updateQuantity(item.id, 1)}
                           style={styles.qtyBtn}
                         >
-                          <Plus size={16} color="#043529" />
+                          <Plus size={16} color="#2b2f4b" />
                         </TouchableOpacity>
                       </View>
                       <TouchableOpacity 
@@ -205,7 +157,7 @@ export default function CartScreen() {
               </View>
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Delivery</Text>
-                <Text style={[styles.summaryValue, { color: '#01b854' }]}>FREE</Text>
+                <Text style={[styles.summaryValue, { color: '#dc8d3c' }]}>FREE</Text>
               </View>
               <View style={styles.divider} />
               <View style={styles.totalRow}>
@@ -218,7 +170,7 @@ export default function CartScreen() {
                 onPress={handleCheckout}
                 disabled={isCheckingOut}
               >
-                <Text style={styles.checkoutBtnText}>{isCheckingOut ? 'Processing...' : 'Checkout'}</Text>
+                <Text style={styles.checkoutBtnText}>{isCheckingOut ? 'Processing...' : 'Proceed to Checkout'}</Text>
                 {!isCheckingOut && <ArrowRight size={20} color="#FFFFFF" />}
               </TouchableOpacity>
             </View>
@@ -239,14 +191,12 @@ export default function CartScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
+      <StatusBar style="light" />
       <Stack.Screen options={{ headerShown: false }} />
       <MobileAppNavbar 
         title="My Cart" 
-        leftAction={
-          <TouchableOpacity onPress={() => router.back()}>
-            <ChevronLeft size={28} color="#01b854" />
-          </TouchableOpacity>
-        }
+        titleColor="#FFFFFF"
+        bgColor="#dc8d3c"
       />
       {content}
     </View>
@@ -259,8 +209,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   scrollContent: {
-    padding: 20,
-    paddingBottom: 40,
+    padding: 12,
+    paddingBottom: 30,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -270,7 +220,7 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#043529',
+    color: '#2b2f4b',
     marginTop: 20,
     marginBottom: 8,
   },
@@ -283,7 +233,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   shopNowBtn: {
-    backgroundColor: '#043529',
+    backgroundColor: '#2b2f4b',
     paddingHorizontal: 32,
     paddingVertical: 16,
     borderRadius: 999,
@@ -294,15 +244,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   itemsSection: {
-    gap: 16,
-    marginBottom: 32,
+    gap: 8,
+    marginBottom: 20,
   },
   cartItem: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 12,
+    borderRadius: 16,
+    padding: 8,
     flexDirection: 'row',
-    gap: 16,
+    gap: 12,
     borderWidth: 1,
     borderColor: '#F3F4F6',
     shadowColor: '#000',
@@ -312,9 +262,9 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   itemImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 12,
+    width: 80,
+    height: 80,
+    borderRadius: 10,
     backgroundColor: '#F9FAFB',
   },
   itemInfo: {
@@ -324,19 +274,19 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#043529',
+    color: '#2b2f4b',
     marginBottom: 2,
   },
   itemCategory: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#9CA3AF',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   itemPrice: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
-    color: '#01b854',
-    marginBottom: 12,
+    color: '#dc8d3c',
+    marginBottom: 8,
   },
   qtyRow: {
     flexDirection: 'row',
@@ -364,7 +314,7 @@ const styles = StyleSheet.create({
   qtyText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#043529',
+    color: '#2b2f4b',
     minWidth: 20,
     textAlign: 'center',
   },
@@ -372,9 +322,9 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   summaryCard: {
-    backgroundColor: '#043529',
-    borderRadius: 24,
-    padding: 24,
+    backgroundColor: '#2b2f4b',
+    borderRadius: 20,
+    padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.2,
@@ -404,7 +354,7 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: 'rgba(255,255,255,0.1)',
-    marginVertical: 20,
+    marginVertical: 12,
   },
   totalRow: {
     flexDirection: 'row',
@@ -417,14 +367,14 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   totalValue: {
-    color: '#00ea6b',
+    color: '#dc8d3c',
     fontSize: 22,
     fontWeight: '900',
   },
   checkoutBtn: {
-    backgroundColor: '#01b854',
-    height: 60,
-    borderRadius: 16,
+    backgroundColor: '#dc8d3c',
+    height: 52,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -432,7 +382,7 @@ const styles = StyleSheet.create({
   },
   checkoutBtnText: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800',
   },
 });

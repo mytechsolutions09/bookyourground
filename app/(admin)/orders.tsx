@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform, ActivityIndicator, TextInput, ScrollView } from 'react-native';
-import { ShoppingBag, Package, ChevronRight, Search, Calendar, User, IndianRupee, Clock, Filter } from 'lucide-react-native';
+import { ShoppingBag, Package, ChevronRight, Search, Calendar, User, IndianRupee, Clock, Filter, Mail, Phone, MapPin } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
@@ -107,12 +107,7 @@ export default function AdminOrdersScreen() {
       
       <View style={[styles.cell, { flex: 2 }]}>
         <View style={styles.userCellContent}>
-          <Text style={styles.userName}>{item.user?.full_name || 'Guest User'}</Text>
-          <View style={[styles.roleMiniBadge, item.user?.role === 'ground_owner' && styles.roleMiniBadgeOwner]}>
-            <Text style={[styles.roleMiniBadgeText, item.user?.role === 'ground_owner' && styles.roleMiniBadgeTextOwner]}>
-              {item.user?.role === 'ground_owner' ? 'OWNER' : 'USER'}
-            </Text>
-          </View>
+          <Text style={styles.userName}>{item.customer_name || item.user?.full_name || 'Guest User'}</Text>
         </View>
         <Text style={styles.userEmail}>{item.user?.email || 'No email'}</Text>
       </View>
@@ -221,7 +216,7 @@ export default function AdminOrdersScreen() {
                 <View style={styles.detailBox}>
                   <View style={styles.detailRow}>
                     <User size={16} color="#64748B" />
-                    <Text style={styles.detailValue}>{selectedOrder.user?.full_name}</Text>
+                    <Text style={styles.detailValue}>{selectedOrder.customer_name || selectedOrder.user?.full_name}</Text>
                   </View>
                   <View style={styles.detailRow}>
                     <Mail size={16} color="#64748B" />
@@ -229,7 +224,11 @@ export default function AdminOrdersScreen() {
                   </View>
                   <View style={styles.detailRow}>
                     <Phone size={16} color="#64748B" />
-                    <Text style={styles.detailValue}>{selectedOrder.user?.phone || 'No phone provided'}</Text>
+                    <Text style={styles.detailValue}>{selectedOrder.customer_phone || selectedOrder.user?.phone || 'No phone provided'}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <MapPin size={16} color="#64748B" />
+                    <Text style={styles.detailValue}>{selectedOrder.billing_address || 'No address provided'}</Text>
                   </View>
                 </View>
               </View>
@@ -431,6 +430,11 @@ const styles = StyleSheet.create({
   userEmail: {
     fontSize: 12,
     color: '#6B7280',
+  },
+  addressText: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
   },
   itemCount: {
     fontSize: 13,
