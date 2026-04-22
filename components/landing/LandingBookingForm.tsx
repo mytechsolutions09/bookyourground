@@ -970,7 +970,7 @@ export default function LandingBookingForm({
     return items;
   }, []);
 
-  const [datePage, setDatePage] = useState(0);
+  const [dateOffset, setDateOffset] = useState(0);
   const datePageSize = useMemo(() => {
     if (windowWidth >= 1440) return 15;
     if (windowWidth >= 1200) return 13;
@@ -980,18 +980,20 @@ export default function LandingBookingForm({
     return 5;
   }, [windowWidth]);
 
+  const moveStep = 3;
+
   const { visibleDates, hasPrevDates, hasNextDates } = useMemo(() => {
     const total = upcomingDates.length;
-    const maxPage = Math.max(0, Math.ceil(total / datePageSize) - 1);
-    const safePage = Math.min(Math.max(datePage, 0), maxPage);
-    const start = safePage * datePageSize;
-    const end = start + datePageSize;
+    const maxOffset = Math.max(0, total - datePageSize);
+    const safeOffset = Math.min(Math.max(dateOffset, 0), maxOffset);
+    const start = safeOffset;
+    const end = Math.min(start + datePageSize, total);
     return {
       visibleDates: upcomingDates.slice(start, end),
-      hasPrevDates: safePage > 0,
-      hasNextDates: safePage < maxPage,
+      hasPrevDates: safeOffset > 0,
+      hasNextDates: safeOffset < maxOffset,
     };
-  }, [upcomingDates, datePage, datePageSize]);
+  }, [upcomingDates, dateOffset, datePageSize]);
 
   function InlineDropdown({
     value,
@@ -1691,7 +1693,7 @@ export default function LandingBookingForm({
         />
       </View>
 
-      {!isBoxCricket ? (
+      {!isBoxCricket && (!useLandingSearchFlow || (bookingDate && startTime)) ? (
         <View style={[styles.section, webGridSectionStyle, webSingleColumnStyle]}>
           <Text style={fieldLabelStyle}>Teams</Text>
           <View style={styles.teamToggle}>
@@ -1778,7 +1780,7 @@ export default function LandingBookingForm({
                 <Pressable
                   onPress={() => {
                     if (!hasPrevDates) return;
-                    setDatePage((p) => Math.max(0, p - 1));
+                    setDateOffset((o) => Math.max(0, o - moveStep));
                   }}
                   style={[
                     styles.dateArrowButton,
@@ -1843,7 +1845,7 @@ export default function LandingBookingForm({
                 <Pressable
                   onPress={() => {
                     if (!hasNextDates) return;
-                    setDatePage((p) => p + 1);
+                    setDateOffset((o) => Math.min(upcomingDates.length - datePageSize, o + moveStep));
                   }}
                   style={[
                     styles.dateArrowButton,
@@ -1924,119 +1926,121 @@ export default function LandingBookingForm({
         })()}
       </View>
 
-      <View style={[styles.section, webSingleColumnStyle, webFullSpanStyle]}>
-        <Text style={fieldLabelStyle}>Start Time</Text>
+      {(!useLandingSearchFlow || bookingDate) && (
+        <View style={[styles.section, webSingleColumnStyle, webFullSpanStyle]}>
+          <Text style={fieldLabelStyle}>Start Time</Text>
 
-        {isWeb && !isCompact ? (
-          <View style={[styles.timeSlotsWrap, isBoxCricket && styles.timeSlotsWrapBox]}>
-            {!timeSlots.length ? (
-              <Text style={styles.smallMuted}>Select a ground type to see time slots.</Text>
-            ) : !availableTimeSlots.length ? (
-              <Text style={styles.smallMuted}>All slots are booked for this date.</Text>
-            ) : (
-              availableTimeSlots.map((s) => {
-                const active = s.value === startTime;
-                const slotIsAvailable = selectedGround?.id
-                  ? allowedStartHHMM.has(s.value)
-                  : searchAllowedStartHHMM.has(s.value);
-                return (
-                  <Pressable
-                    key={s.value}
-                    onPress={() => {
-                      if (lockSlot) return;
-                      if (useLandingSearchFlow) clearSearchState();
-                      setStartTime(s.value as TimeString);
-                    }}
-                    disabled={lockSlot || submitting || !slotIsAvailable}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: active, disabled: lockSlot || submitting || !slotIsAvailable }}
-                    accessibilityLabel={`${s.label} time slot`}
-                    style={({ pressed }) => [
-                      styles.timeSlotChip,
-                      isBoxCricket && styles.timeSlotChipDense,
-                      active && styles.timeSlotChipActive,
-                      lockSlot && !active && styles.timeSlotChipDisabled,
-                      lockSlot && active && { opacity: 0.8 },
-                      ...(Platform.OS === 'web' ? [{ cursor: 'pointer' } as object] : []),
-                      pressed && !active && !lockSlot && styles.timeSlotChipPressed,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.timeSlotText,
-                        isBoxCricket && styles.timeSlotTextDense,
-                        active && styles.timeSlotTextActive,
+          {isWeb && !isCompact ? (
+            <View style={[styles.timeSlotsWrap, isBoxCricket && styles.timeSlotsWrapBox]}>
+              {!timeSlots.length ? (
+                <Text style={styles.smallMuted}>Select a ground type to see time slots.</Text>
+              ) : !availableTimeSlots.length ? (
+                <Text style={styles.smallMuted}>All slots are booked for this date.</Text>
+              ) : (
+                availableTimeSlots.map((s) => {
+                  const active = s.value === startTime;
+                  const slotIsAvailable = selectedGround?.id
+                    ? allowedStartHHMM.has(s.value)
+                    : searchAllowedStartHHMM.has(s.value);
+                  return (
+                    <Pressable
+                      key={s.value}
+                      onPress={() => {
+                        if (lockSlot) return;
+                        if (useLandingSearchFlow) clearSearchState();
+                        setStartTime(s.value as TimeString);
+                      }}
+                      disabled={lockSlot || submitting || !slotIsAvailable}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active, disabled: lockSlot || submitting || !slotIsAvailable }}
+                      accessibilityLabel={`${s.label} time slot`}
+                      style={({ pressed }) => [
+                        styles.timeSlotChip,
+                        isBoxCricket && styles.timeSlotChipDense,
+                        active && styles.timeSlotChipActive,
+                        lockSlot && !active && styles.timeSlotChipDisabled,
+                        lockSlot && active && { opacity: 0.8 },
+                        ...(Platform.OS === 'web' ? [{ cursor: 'pointer' } as object] : []),
+                        pressed && !active && !lockSlot && styles.timeSlotChipPressed,
                       ]}
                     >
-                      {s.label}
-                    </Text>
-                  </Pressable>
-                );
-              })
-            )}
-          </View>
-        ) : (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.timeSlotsScrollContent}
-          >
-            {!timeSlots.length ? (
-              <Text style={styles.smallMuted}>Select a ground type to see time slots.</Text>
-            ) : !availableTimeSlots.length ? (
-              <Text style={styles.smallMuted}>All slots are booked for this date.</Text>
-            ) : (
-              availableTimeSlots.map((s) => {
-                const active = s.value === startTime;
-                const slotIsAvailable = selectedGround?.id
-                  ? allowedStartHHMM.has(s.value)
-                  : searchAllowedStartHHMM.has(s.value);
-                return (
-                  <Pressable
-                    key={s.value}
-                    onPress={() => {
-                      if (lockSlot) return;
-                      if (useLandingSearchFlow) clearSearchState();
-                      setStartTime(s.value as TimeString);
-                    }}
-                    disabled={lockSlot || submitting || !slotIsAvailable}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected: active, disabled: lockSlot || submitting || !slotIsAvailable }}
-                    accessibilityLabel={`${s.label} time slot`}
-                    style={({ pressed }) => [
-                      styles.timeSlotChip,
-                      styles.timeSlotChipMobile,
-                      isBoxCricket && styles.timeSlotChipDense,
-                      active && styles.timeSlotChipActive,
-                      lockSlot && !active && styles.timeSlotChipDisabled,
-                      lockSlot && active && { opacity: 0.8 },
-                      nativeTanChrome && !active && styles.timeSlotChipBorderBookGroundNative,
-                      pressed &&
-                      !active &&
-                      !lockSlot &&
-                      (nativeTanChrome
-                        ? styles.timeSlotChipPressedBookGroundNative
-                        : styles.timeSlotChipPressed),
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.timeSlotText,
-                        styles.timeSlotTextMobile,
-                        nativeTanChrome && styles.timeSlotTextBookGroundNative,
-                        isBoxCricket && styles.timeSlotTextDense,
-                        active && styles.timeSlotTextActive,
+                      <Text
+                        style={[
+                          styles.timeSlotText,
+                          isBoxCricket && styles.timeSlotTextDense,
+                          active && styles.timeSlotTextActive,
+                        ]}
+                      >
+                        {s.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })
+              )}
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.timeSlotsScrollContent}
+            >
+              {!timeSlots.length ? (
+                <Text style={styles.smallMuted}>Select a ground type to see time slots.</Text>
+              ) : !availableTimeSlots.length ? (
+                <Text style={styles.smallMuted}>All slots are booked for this date.</Text>
+              ) : (
+                availableTimeSlots.map((s) => {
+                  const active = s.value === startTime;
+                  const slotIsAvailable = selectedGround?.id
+                    ? allowedStartHHMM.has(s.value)
+                    : searchAllowedStartHHMM.has(s.value);
+                  return (
+                    <Pressable
+                      key={s.value}
+                      onPress={() => {
+                        if (lockSlot) return;
+                        if (useLandingSearchFlow) clearSearchState();
+                        setStartTime(s.value as TimeString);
+                      }}
+                      disabled={lockSlot || submitting || !slotIsAvailable}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: active, disabled: lockSlot || submitting || !slotIsAvailable }}
+                      accessibilityLabel={`${s.label} time slot`}
+                      style={({ pressed }) => [
+                        styles.timeSlotChip,
+                        styles.timeSlotChipMobile,
+                        isBoxCricket && styles.timeSlotChipDense,
+                        active && styles.timeSlotChipActive,
+                        lockSlot && !active && styles.timeSlotChipDisabled,
+                        lockSlot && active && { opacity: 0.8 },
+                        nativeTanChrome && !active && styles.timeSlotChipBorderBookGroundNative,
+                        pressed &&
+                        !active &&
+                        !lockSlot &&
+                        (nativeTanChrome
+                          ? styles.timeSlotChipPressedBookGroundNative
+                          : styles.timeSlotChipPressed),
                       ]}
                     >
-                      {s.label}
-                    </Text>
-                  </Pressable>
-                );
-              })
-            )}
-          </ScrollView>
-        )}
-      </View>
+                      <Text
+                        style={[
+                          styles.timeSlotText,
+                          styles.timeSlotTextMobile,
+                          nativeTanChrome && styles.timeSlotTextBookGroundNative,
+                          isBoxCricket && styles.timeSlotTextDense,
+                          active && styles.timeSlotTextActive,
+                        ]}
+                      >
+                        {s.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })
+              )}
+            </ScrollView>
+          )}
+        </View>
+      )}
 
       {/* Coupon Code Section */}
       {user && (!useLandingSearchFlow || groundSelectedFromSearch) && (
@@ -2130,7 +2134,7 @@ export default function LandingBookingForm({
           <Text style={styles.subtitle}>
             {hideGroundPicker
               ? useLandingSearchFlow
-                ? 'Choose location and type to search. Optionally add date and time to filter by an open slot.'
+                ? 'Choose location and type to search. Pick a date to see available time slots.'
                 : null
               : 'Pick a ground and time slot to request your booking.'}
           </Text>

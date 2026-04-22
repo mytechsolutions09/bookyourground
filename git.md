@@ -1,3 +1,21 @@
+# Booking Form UX & Progressive Disclosure - Home Page Search Refinement
+
+This update delivers a more intuitive and guided ground discovery experience by implementing progressive disclosure on the primary search form. By hiding advanced options until they are contextually relevant, we've significantly reduced the visual complexity of the landing page.
+
+## Key Changes
+
+### 1. Progressive Search Disclosure
+- **Dynamic Time Slots**: The **Start Time** selection chips are now hidden by default on the landing page search form. They are revealed only after a user selects a **Date**, guiding the user through a logical search sequence.
+- **Contextual Team Selection**: The **Teams** toggle (for Cricket grounds) now appears only after both a **Date** and a **Start Time** have been chosen. This prevents users from making non-functional selections before availability is known.
+- **Guided Subtitles**: Updated the form's helper text to actively guide the user: *"Choose location and type to search. Pick a date to see available time slots."*
+
+### 2. Form Logic Synchronization
+- **State Cleanup**: Implemented automatic clearing of subsequent selections (Time, Teams) when primary filters (Location, Type, Date) are changed. This ensures the search results always reflect a valid and consistent filter state.
+- **Unified Mobile/Web Experience**: Applied these dynamic visibility rules across both the mobile horizontal scrollers and the web-based grid layouts, maintaining a consistent brand experience.
+- **Optimized Subtitles**: Refined the instruction subtitles to be shorter and more actionable, improving scannability on small screens.
+
+---
+
 # Shop & Admin Infrastructure Modernization - "Elite Blue & Gold" Finalization
 
 This update completes the "Elite Blue & Gold" shop infrastructure, establishing a robust product-management-to-order-fulfillment pipeline. The project is now cross-platform compatible, secured with administrative RLS policies, and features a refined user purchase history ecosystem.
@@ -8,7 +26,10 @@ This update completes the "Elite Blue & Gold" shop infrastructure, establishing 
 - **Focused Product Management**: Re-engineered the admin products dashboard to hide the product grid when the **"Add Product"** form is active. This creates a distraction-free environment for high-volume inventory entry.
 - **Context-Aware Navigation**: Optimized the super admin navbar; the **"Add Product"** link now intelligently navigates to the products page if clicked from the orders screen.
 - **Persistent Admin Access**: Ensured that "Shop Orders" and "Add Product" links remain visible while managing orders, providing a seamless administrative workflow.
-- **Order Detail Modal (V2)**: Expanded the admin order modal to include full **Shipping Addresses**, **Customer Phone Numbers**, and **Itemized Breakdowns** with high-quality thumbnails.
+- **Date Navigation (Web)**:
+    - Optimized date pagination on wide screens to use a sliding window approach.
+    - Arrows now move the view by 3 days at a time instead of jumping by whole pages, preventing the "skipping" of dates and providing better context.
+    - Enhanced visibility logic to ensure the full 3-month range is accessible smoothly.
 
 ### 2. User Purchase History & Profile Integration
 - **"My Orders" Dashboard**: Launched a dedicated order history screen for users (`app/(tabs)/profile/orders.tsx`) featuring real-time status tracking (Pending, Shipped, Delivered) and item previews.
