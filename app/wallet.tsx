@@ -22,6 +22,7 @@ export default function WalletScreen() {
   const [loading, setLoading] = useState(true);
   const [quickAdd, setQuickAdd] = useState('1600');
   const [summary, setSummary] = useState({ added: 0, spent: 0, refunded: 0 });
+  const [stats, setStats] = useState({ bookingPercent: 0, shopPercent: 0, otherPercent: 0, avgMonthly: 0 });
 
   const isOwner = profile?.role === 'ground_owner';
 
@@ -40,7 +41,7 @@ export default function WalletScreen() {
       // 1. Fetch real Wallet Balance
       const { data: walletData } = await supabase
         .from('wallets')
-        .select('balance')
+        .select('id, balance')
         .eq('user_id', user.id)
         .single();
       
@@ -65,14 +66,63 @@ export default function WalletScreen() {
           rawDate: new Date(tx.created_at)
         }));
 
+        let combined: any[] = [];
         if (isOwner) {
           const bookingTx = await loadOwnerTransactions();
-          const combined = [...walletTx, ...bookingTx].sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime());
-          setTransactions(combined);
+          combined = [...walletTx, ...bookingTx];
         } else {
           const bookingTx = await loadUserTransactions();
-          const combined = [...walletTx, ...bookingTx].sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime());
-          setTransactions(combined);
+          combined = [...walletTx, ...bookingTx];
+        }
+
+        combined.sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime());
+        setTransactions(combined);
+
+        // Global Summary calculation from combined
+        let earned = 0;
+        let spent = 0;
+        let refunded = 0;
+
+        combined.forEach(tx => {
+          if (tx.isPositive) {
+             if (tx.type === 'refund') refunded += tx.amount;
+             else earned += tx.amount;
+          } else {
+             spent += tx.amount;
+          }
+        });
+
+        setSummary({
+          added: earned,
+          spent: spent,
+          refunded: refunded
+        });
+
+        // Calculate Spending Stats
+        if (spent > 0) {
+          let spentOnBookings = 0;
+          let spentOnShop = 0;
+          combined.forEach(tx => {
+            if (!tx.isPositive) {
+              if (tx.type === 'payment') spentOnBookings += tx.amount;
+              else if (tx.type === 'shop_payment') spentOnShop += tx.amount;
+            }
+          });
+          
+          const bookingPct = Math.round((spentOnBookings / spent) * 100);
+          const shopPct = Math.round((spentOnShop / spent) * 100);
+          const otherPct = 100 - bookingPct - shopPct;
+          
+          // Estimate avg monthly (very basic)
+          const distinctMonths = new Set(combined.map(tx => tx.rawDate.getMonth() + '-' + tx.rawDate.getFullYear())).size || 1;
+          const avg = Math.round(spent / distinctMonths);
+          
+          setStats({
+            bookingPercent: bookingPct,
+            shopPercent: shopPct,
+            otherPercent: otherPct,
+            avgMonthly: avg
+          });
         }
       }
     } catch (err) {
@@ -83,21 +133,31 @@ export default function WalletScreen() {
   };
 
   const loadUserTransactions = async () => {
-    const { data: bookingsData } = await supabase
-      .from('bookings')
-      .select(`
-        id,
-        total_amount,
-        status,
-        booking_date,
-        ground:grounds(name)
-      `)
-      .eq('user_id', user.id)
-      .order('booking_date', { ascending: false });
+    const [bookingsRes, ordersRes] = await Promise.all([
+      supabase
+        .from('bookings')
+        .select(`
+          id,
+          total_amount,
+          status,
+          booking_date,
+          ground:grounds(name)
+        `)
+        .eq('user_id', user.id)
+        .order('booking_date', { ascending: false }),
+      supabase
+        .from('shop_orders')
+        .select(`
+          id,
+          total_amount,
+          status,
+          created_at
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+    ]);
 
-    if (!bookingsData) return [];
-    
-    return bookingsData.map(b => ({
+    const bookingsTx = (bookingsRes.data || []).map(b => ({
       id: b.id,
       type: 'payment',
       title: `Payment for Booking`,
@@ -107,6 +167,8 @@ export default function WalletScreen() {
       isPositive: false,
       rawDate: new Date(b.booking_date)
     }));
+
+    return [...bookingsTx, ...ordersTx];
   };
 
   const loadOwnerTransactions = async () => {
@@ -147,11 +209,6 @@ export default function WalletScreen() {
         else totalOnline += tx.total_amount;
       });
 
-      setSummary({
-        added: totalOnline + totalCash,
-        spent: 0,
-        refunded: 0
-      });
       return realTx;
     } catch (err) {
       console.error('Wallet transactions error:', err);
@@ -195,64 +252,29 @@ export default function WalletScreen() {
         </View>
       </View>
 
-      {!isOwner && (
-        <>
-          <View style={styles.panelCard}>
-            <Text style={styles.panelTitle}>Quick Add</Text>
-            <View style={styles.quickAddChips}>
-              {['500', '1000', '2000', '1600'].map(amount => {
-                const isSelected = quickAdd === amount;
-                return (
-                  <TouchableOpacity 
-                    key={amount} 
-                    style={[styles.quickAddChip, isSelected && styles.quickAddChipActive]}
-                    onPress={() => setQuickAdd(amount)}
-                  >
-                    <Text style={[styles.quickAddChipText, isSelected && styles.quickAddChipTextActive]}>
-                      +₹{amount}
-                    </Text>
-                  </TouchableOpacity>
-                )
-              })}
-            </View>
-            <View style={styles.quickAddInputBox}>
-              <TextInput 
-                style={styles.quickAddInput} 
-                value={quickAdd}
-                onChangeText={text => setQuickAdd(text.replace(/[^0-9]/g, ''))}
-                keyboardType="numeric"
-                placeholder="0"
-                placeholderTextColor="#94A3B8"
-              />
-              <View style={styles.quickAddIconBox}>
-                 <ChevronDown size={16} color="#64748B" />
-              </View>
-            </View>
-          </View>
+
 
           <View style={styles.panelCard}>
             <Text style={styles.panelTitle}>Spending Stats</Text>
             <View style={styles.statsContainer}>
-              <View style={styles.donutWrapper}>
-                <View style={styles.donutMock} />
+               <View style={styles.donutWrapper}>
+                <View style={[styles.donutMock, { borderTopColor: '#043529', borderRightColor: stats.bookingPercent > 50 ? '#84cc16' : '#043529' }]} />
                 <View style={styles.donutInner}>
                    <Text style={styles.donutMainText}>Bookings</Text>
-                   <Text style={styles.donutPercentText}>85%</Text>
+                   <Text style={styles.donutPercentText}>{stats.bookingPercent}%</Text>
                 </View>
               </View>
               <View style={styles.statsLegend}>
                 <View style={styles.legendRow}>
-                   <View style={styles.legendItem}><View style={[styles.legendDot, {backgroundColor: '#043529'}]}/><Text style={styles.legendText}>Refunds</Text></View>
-                   <Text style={styles.legendValue}>85%</Text>
-                   <View style={styles.legendItem}><View style={[styles.legendDot, {backgroundColor: '#EF4444'}]}/><Text style={styles.legendText}>Rewards</Text></View>
-                   <Text style={styles.legendValue}>5%</Text>
+                   <View style={styles.legendItem}><View style={[styles.legendDot, {backgroundColor: '#84cc16'}]}/><Text style={styles.legendText}>Bookings</Text></View>
+                   <Text style={styles.legendValue}>{stats.bookingPercent}%</Text>
+                   <View style={styles.legendItem}><View style={[styles.legendDot, {backgroundColor: '#ef4444'}]}/><Text style={styles.legendText}>Shop</Text></View>
+                   <Text style={styles.legendValue}>{stats.shopPercent}%</Text>
                 </View>
               </View>
-              <Text style={styles.avgSpendText}>Avg. monthly spend: ₹4,000</Text>
+              <Text style={styles.avgSpendText}>Avg. monthly spend: {formatCurrency(stats.avgMonthly)}</Text>
             </View>
           </View>
-        </>
-      )}
     </View>
   );
 
@@ -271,11 +293,6 @@ export default function WalletScreen() {
               <Text style={styles.balanceAmount}>{formatCurrency(balance)}</Text>
               <Text style={styles.balanceSub}>Available for {isOwner ? 'withdrawal' : 'bookings'}</Text>
             </View>
-            {!isOwner && (
-              <TouchableOpacity style={styles.addMoneyBtn} onPress={handleAddMoney}>
-                <Text style={styles.addMoneyBtnText}>Add Money</Text>
-              </TouchableOpacity>
-            )}
           </View>
 
           <Text style={styles.sectionTitle}>Recent Transactions</Text>

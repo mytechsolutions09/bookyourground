@@ -800,6 +800,9 @@ export default function OwnerBookingsScreen() {
                   <Text style={styles.bookedTimeText}>
                     {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </Text>
+                  <Text style={styles.bookingIdTable}>
+                    ID: {item.id.substring(0, 8).toUpperCase()}
+                  </Text>
                 </View>
 
                 <View style={[styles.tableCell, styles.colGround]}>
@@ -1138,6 +1141,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#6B7280',
     marginTop: 1,
+  },
+  bookingIdTable: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#01b854',
+    marginTop: 4,
+    fontFamily: 'Inter',
   },
   groundName: {
     fontFamily: 'Inter',

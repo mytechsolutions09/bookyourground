@@ -223,7 +223,7 @@ export default function BookingDetailsScreen() {
                         : booking.status.toUpperCase()}
                     </Text>
                   </View>
-                  <Text style={[styles.bookingId, !IS_DARK && styles.bookingIdLight]}>ID: {id?.toString().substring(0,8).toUpperCase()}</Text>
+                  <Text style={[styles.bookingId, !IS_DARK && styles.bookingIdLight]}>Booking ID: {id?.toString().substring(0,8).toUpperCase()}</Text>
                 </View>
 
                 <Text style={[styles.groundName, !IS_DARK && styles.groundNameLight]}>{booking.ground.name}</Text>

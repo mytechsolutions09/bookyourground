@@ -7,6 +7,7 @@ import GroundsNearYou from '@/components/landing/GroundsNearYou';
 import Features from '@/components/landing/Features';
 import CallToAction from '@/components/landing/CallToAction';
 import SiteFooter from '@/components/web/SiteFooter';
+import CalendarTabs from '@/components/landing/CalendarTabs';
 
 type Variant = 'web' | 'native';
 
@@ -15,6 +16,7 @@ export default function LandingPageSections({ variant }: { variant: Variant }) {
   return (
     <>
       <Hero />
+      <CalendarTabs />
       <PopularGrounds />
       <View style={styles.bookingSectionSpacer}>
         <LandingBookingForm

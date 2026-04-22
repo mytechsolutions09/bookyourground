@@ -14,7 +14,9 @@ import {
   Pressable,
   ActivityIndicator,
   Modal,
+  ImageBackground,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, User, Mail, Lock, Phone, MapPin, Eye, EyeOff, CheckCircle, ChevronDown, Users } from 'lucide-react-native';
@@ -52,8 +54,6 @@ export default function SignupScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showStatePicker, setShowStatePicker] = useState(false);
-  const [playerType, setPlayerType] = useState('Player');
-  const [showPlayerTypePicker, setShowPlayerTypePicker] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const firstNameRef = React.useRef<TextInput>(null);
   const lastNameRef = React.useRef<TextInput>(null);
@@ -87,7 +87,7 @@ export default function SignupScreen() {
 
     setLoading(true);
     const fullName = `${firstName} ${lastName}`.trim();
-    const { error } = await signUp(email, password, fullName, phone, 'user', undefined, address, stateName, teamName, playerType, turnstileToken || undefined);
+    const { error } = await signUp(email, password, fullName, phone, 'user', undefined, address, stateName, teamName, 'Player', turnstileToken || undefined);
     setLoading(false);
 
     if (error) {
@@ -177,24 +177,12 @@ export default function SignupScreen() {
                     </View>
                   </View>
   
-                  <View style={webStyles.row}>
-                    <View style={webStyles.col}>
-                      <WebInput
-                        label="Team Name"
-                        value={teamName}
-                        onChangeText={setTeamName}
-                        placeholder="e.g. Yankees XI"
-                      />
-                    </View>
-                    <View style={webStyles.col}>
-                      <WebGenericPicker
-                        label="I am a"
-                        value={playerType}
-                        onValueChange={setPlayerType}
-                        options={['Captain', 'Player']}
-                      />
-                    </View>
-                  </View>
+                  <WebInput
+                    label="Team Name"
+                    value={teamName}
+                    onChangeText={setTeamName}
+                    placeholder="e.g. Yankees XI"
+                  />
 
                   <WebInput
                     label="Password"
@@ -272,12 +260,16 @@ export default function SignupScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.screen}
     >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+      <ImageBackground 
+        source={require('../../assets/signup.jpg')} 
+        style={styles.background}
+        resizeMode="cover"
       >
-        <View style={styles.card}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.cardHeaderRow}>
             <Pressable 
               style={styles.backBtnRelative}
@@ -297,6 +289,13 @@ export default function SignupScreen() {
             </View>
             <View style={{ width: 40 }} />
           </View>
+
+          <BlurView 
+            intensity={90} 
+            tint="light" 
+            style={styles.card}
+          >
+            <View style={{ height: 16 }} />
           <View style={styles.nameRow}>
             <View style={[styles.fieldWrap, { flex: 1 }]}>
               <Pressable onPress={() => firstNameRef.current?.focus()}>
@@ -388,38 +387,26 @@ export default function SignupScreen() {
             </Pressable>
           </View>
 
-          <View style={styles.nameRow}>
-            <View style={[styles.fieldWrap, { flex: 1.5 }]}>
-              <Pressable onPress={() => teamRef.current?.focus()}>
-                <Text style={styles.fieldLabel}>Team Name (Squad)</Text>
-              </Pressable>
-              <Pressable 
-                onPress={() => teamRef.current?.focus()}
-                style={[styles.inputRow, isFocused('teamName') && styles.inputRowFocused]}
-              >
-                <Users size={15} color={isFocused('teamName') ? '#01b854' : '#6b7280'} strokeWidth={2} />
-                <TextInput
-                  ref={teamRef}
-                  style={styles.textInput}
-                  value={teamName}
-                  onChangeText={setTeamName}
-                  placeholder="Yankees XI"
-                  placeholderTextColor="#94A3B8"
-                  onFocus={() => setFocusedField('teamName')}
-                  onBlur={() => setFocusedField(null)}
-                />
-              </Pressable>
-            </View>
-            <View style={[styles.fieldWrap, { flex: 1 }]}>
-               <Text style={styles.fieldLabel}>Role</Text>
-               <TouchableOpacity
-                 onPress={() => setShowPlayerTypePicker(true)}
-                 style={[styles.inputRow, isFocused('playerType') && styles.inputRowFocused]}
-               >
-                 <Text style={styles.textInput}>{playerType}</Text>
-                 <ChevronDown size={15} color="#6b7280" />
-               </TouchableOpacity>
-            </View>
+          <View style={styles.fieldWrap}>
+            <Pressable onPress={() => teamRef.current?.focus()}>
+              <Text style={styles.fieldLabel}>Team Name (Squad)</Text>
+            </Pressable>
+            <Pressable 
+              onPress={() => teamRef.current?.focus()}
+              style={[styles.inputRow, isFocused('teamName') && styles.inputRowFocused]}
+            >
+              <Users size={15} color={isFocused('teamName') ? '#01b854' : '#6b7280'} strokeWidth={2} />
+              <TextInput
+                ref={teamRef}
+                style={styles.textInput}
+                value={teamName}
+                onChangeText={setTeamName}
+                placeholder="Yankees XI"
+                placeholderTextColor="#94A3B8"
+                onFocus={() => setFocusedField('teamName')}
+                onBlur={() => setFocusedField(null)}
+              />
+            </Pressable>
           </View>
 
           <View style={styles.nameRow}>
@@ -507,8 +494,9 @@ export default function SignupScreen() {
               <Text style={styles.outlineBtnText}>SIGN IN</Text>
             </Pressable>
           </View>
-        </View>
+        </BlurView>
       </ScrollView>
+    </ImageBackground>
 
       <Modal visible={showSuccessModal} transparent animationType="fade">
         <View style={modalStyles.overlay}>
@@ -531,38 +519,7 @@ export default function SignupScreen() {
         </View>
       </Modal>
 
-      {/* Player Type Picker Modal for Mobile */}
-      <Modal visible={showPlayerTypePicker} transparent animationType="slide">
-        <View style={modalStyles.overlay}>
-          <View style={[modalStyles.card, { padding: 0, maxHeight: '40%' }]}>
-            <View style={{ padding: 20, width: '100%', borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.1)', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={[modalStyles.title, { marginBottom: 0 }]}>Select Role</Text>
-              <TouchableOpacity onPress={() => setShowPlayerTypePicker(false)}>
-                <Text style={{ color: '#01b854', fontWeight: '700' }}>DONE</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={{ width: '100%' }}>
-              {['Captain', 'Player'].map((type) => (
-                <TouchableOpacity
-                  key={type}
-                  onPress={() => {
-                    setPlayerType(type);
-                    setShowPlayerTypePicker(false);
-                  }}
-                  style={{
-                    padding: 16,
-                    borderBottomWidth: 1,
-                    borderBottomColor: 'rgba(255,255,255,0.05)',
-                    backgroundColor: playerType === type ? 'rgba(0,234,107,0.1)' : 'transparent',
-                  }}
-                >
-                  <Text style={{ color: playerType === type ? '#01b854' : '#1E293B', fontSize: 16, fontFamily: 'Inter', fontWeight: '500' }}>{type}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+
 
       {/* State Picker Modal for Mobile */}
       <Modal visible={showStatePicker} transparent animationType="slide">
@@ -675,11 +632,16 @@ function WebInput(props: any) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#F8FAFC' },
+  screen: { flex: 1, backgroundColor: '#043529' },
+  background: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 100,
+    paddingTop: 80,
     paddingBottom: 40,
   },
   cardHeaderRow: {
@@ -687,7 +649,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-    marginBottom: 8,
+    marginBottom: 24,
   },
   backBtnRelative: {
     width: 40,
@@ -703,19 +665,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 10,
   },
-  logo: { width: 160, height: 40 },
+  logo: { width: 240, height: 60 },
   headingWrap: { alignItems: 'center', marginTop: 0, marginBottom: 16 },
   card: { 
-    backgroundColor: '#FFFFFF', 
-    borderRadius: 28, 
+    backgroundColor: 'rgba(255, 255, 255, 0.2)', 
+    borderRadius: 32, 
     padding: 24, 
-    borderWidth: 1, 
-    borderColor: '#F1F5F9',
+    borderWidth: 1.5, 
+    borderColor: 'rgba(255, 255, 255, 0.5)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.04,
-    shadowRadius: 20,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.15,
+    shadowRadius: 30,
+    elevation: 12,
+    overflow: 'hidden',
   },
   nameRow: { flexDirection: 'row', gap: 10 },
   fieldWrap: { marginBottom: 14 },
@@ -730,10 +693,10 @@ const styles = StyleSheet.create({
   inputRow: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    backgroundColor: '#F8FAFC', 
+    backgroundColor: 'rgba(255, 255, 255, 0.5)', 
     borderRadius: 12, 
     borderWidth: 1.5, 
-    borderColor: '#E2E8F0', 
+    borderColor: 'rgba(255, 255, 255, 0.3)', 
     paddingHorizontal: 12, 
     paddingVertical: 10, 
     gap: 8 
@@ -756,11 +719,16 @@ const styles = StyleSheet.create({
   buttonRow: { flexDirection: 'row', gap: 12, marginTop: 16 },
   signUpBtn: { 
     flex: 1, 
-    backgroundColor: '#01b854', 
+    backgroundColor: '#1e293b', 
     borderRadius: 12, 
     height: 42, 
     alignItems: 'center', 
-    justifyContent: 'center' 
+    justifyContent: 'center',
+    shadowColor: '#1e293b',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
   },
   signUpBtnText: { 
     fontSize: 14, 
@@ -774,14 +742,14 @@ const styles = StyleSheet.create({
     borderRadius: 12, 
     height: 42, 
     borderWidth: 1.5, 
-    borderColor: '#01b854', 
+    borderColor: '#475569', 
     alignItems: 'center', 
     justifyContent: 'center' 
   },
   outlineBtnText: { 
     fontSize: 13, 
     fontWeight: '700', 
-    color: '#01b854', 
+    color: '#475569', 
     letterSpacing: 0.5,
     fontFamily: 'Inter',
   },

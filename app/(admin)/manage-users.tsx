@@ -7,10 +7,15 @@ import { UserRole } from '@/types/database';
 import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
 import { useAuth } from '@/contexts/AuthContext';
+import Modal from '@/components/ui/Modal';
+import Button from '@/components/ui/Button';
 
 export default function ManageUsersScreen() {
   const { user } = useAuth();
-  const [users, setUsers] = useState<(Profile & { wallets?: { balance: number }[] })[]>([]);
+  const [users, setUsers] = useState<(Profile & { 
+    wallets?: { balance: number }[],
+    bank_details?: { bank_name: string; account_number: string; ifsc: string; upi_id: string } 
+  })[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -19,6 +24,7 @@ export default function ManageUsersScreen() {
   const [isCrediting, setIsCrediting] = useState(false);
   const [roleFilter, setRoleFilter] = useState<'all' | UserRole>('all');
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [selectedBankUser, setSelectedBankUser] = useState<any | null>(null);
 
   useEffect(() => {
     if (user) loadUsers();
@@ -46,10 +52,20 @@ export default function ManageUsersScreen() {
         console.warn('Could not fetch wallets:', walletError);
       }
 
-      // 3. Merge data
+      // 3. Fetch bank details for owners
+      const { data: bankData, error: bankError } = await supabase
+        .from('owner_bank_details')
+        .select('*');
+
+      if (bankError) {
+        console.warn('Could not fetch bank details:', bankError);
+      }
+
+      // 4. Merge data
       const merged = (profileData || []).map(p => ({
         ...p,
-        wallets: walletData?.filter(w => w.user_id === p.id) || []
+        wallets: walletData?.filter(w => w.user_id === p.id) || [],
+        bank_details: bankData?.find(b => b.owner_id === p.id) || null
       }));
 
       setUsers(merged as any);
@@ -235,6 +251,19 @@ export default function ManageUsersScreen() {
              <Text style={styles.walletValue}>₹{item.wallets?.[0]?.balance?.toFixed(2) || '0.00'}</Text>
           </View>
 
+          <View style={[styles.cell, styles.colBank]}>
+             {item.role === 'ground_owner' && item.bank_details ? (
+                <TouchableOpacity 
+                  onPress={() => setSelectedBankUser(item)}
+                  style={styles.viewBankBtn}
+                >
+                   <Text style={styles.viewBankBtnText}>View Details</Text>
+                </TouchableOpacity>
+             ) : (
+                <Text style={styles.noBankText}>—</Text>
+             )}
+          </View>
+
           <View style={[styles.cell, styles.colRole]}>
              <View style={[styles.roleBadge, 
                 item.role === 'super_admin' ? styles.badgeAdmin : 
@@ -415,6 +444,7 @@ export default function ManageUsersScreen() {
            <Text style={[styles.headerLabel, styles.colContact]}>Contact info</Text>
            <Text style={[styles.headerLabel, styles.colTeam]}>Team</Text>
            <Text style={[styles.headerLabel, styles.colWallet]}>Wallet</Text>
+           <Text style={[styles.headerLabel, styles.colBank]}>Bank Details</Text>
            <Text style={[styles.headerLabel, styles.colRole]}>System Role</Text>
            <Text style={[styles.headerLabel, styles.colActions, { textAlign: 'right' }]}>Manage</Text>
         </View>
@@ -437,6 +467,56 @@ export default function ManageUsersScreen() {
           </View>
         }
       />
+
+      <Modal
+        visible={!!selectedBankUser}
+        onClose={() => setSelectedBankUser(null)}
+        title="Bank Details"
+        maxWidth={450}
+      >
+        {selectedBankUser && (
+          <View style={styles.modalContent}>
+            <View style={styles.modalUserHeader}>
+              <Text style={styles.modalUserName}>{selectedBankUser.full_name}</Text>
+              <Text style={styles.modalUserRole}>Ground Owner</Text>
+            </View>
+
+            <View style={styles.modalDetailsGrid}>
+              {selectedBankUser.bank_details?.upi_id && (
+                <View style={styles.modalDetailItem}>
+                  <Text style={styles.modalDetailLabel}>UPI ID</Text>
+                  <Text style={styles.modalDetailValue}>{selectedBankUser.bank_details.upi_id}</Text>
+                </View>
+              )}
+              
+              <View style={styles.modalDetailRow}>
+                <View style={styles.modalDetailItem}>
+                  <Text style={styles.modalDetailLabel}>Bank Name</Text>
+                  <Text style={styles.modalDetailValue}>{selectedBankUser.bank_details?.bank_name || '—'}</Text>
+                </View>
+                <View style={styles.modalDetailItem}>
+                  <Text style={styles.modalDetailLabel}>IFSC Code</Text>
+                  <Text style={styles.modalDetailValue}>{selectedBankUser.bank_details?.ifsc || '—'}</Text>
+                </View>
+              </View>
+
+              <View style={styles.modalDetailItem}>
+                <Text style={styles.modalDetailLabel}>Account Number</Text>
+                <Text style={[styles.modalDetailValue, { fontSize: 18, color: '#10b981' }]}>
+                  {selectedBankUser.bank_details?.account_number || '—'}
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity 
+              style={styles.modalCloseBtn}
+              onPress={() => setSelectedBankUser(null)}
+            >
+              <Text style={styles.modalCloseBtnText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </Modal>
     </View>
   );
 
@@ -578,6 +658,7 @@ const styles = StyleSheet.create({
   colContact: { flex: 1.5 },
   colTeam: { flex: 1 },
   colWallet: { flex: 0.8 },
+  colBank: { flex: 2 },
   colRole: { flex: 1, alignItems: 'center' },
   colActions: { flex: 1 },
   
@@ -654,6 +735,79 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
     color: '#B45309',
+  },
+  viewBankBtn: {
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D1FAE5',
+    alignSelf: 'flex-start',
+  },
+  viewBankBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#059669',
+  },
+  noBankText: {
+    fontSize: 12,
+    color: '#9CA3AF',
+  },
+  modalContent: {
+    padding: 4,
+  },
+  modalUserHeader: {
+    marginBottom: 24,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  modalUserName: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  modalUserRole: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#10b981',
+    marginTop: 2,
+  },
+  modalDetailsGrid: {
+    gap: 20,
+  },
+  modalDetailRow: {
+    flexDirection: 'row',
+    gap: 20,
+  },
+  modalDetailItem: {
+    flex: 1,
+  },
+  modalDetailLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  modalDetailValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  modalCloseBtn: {
+    marginTop: 32,
+    backgroundColor: '#111827',
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  modalCloseBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
   },
   roleBadge: {
     paddingHorizontal: 10,

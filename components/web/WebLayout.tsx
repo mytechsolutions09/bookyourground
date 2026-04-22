@@ -19,8 +19,6 @@ import {
   Building2,
   Shield,
   LogOut,
-  Menu,
-  X,
   Settings,
   IndianRupee,
   Wallet2,
@@ -68,7 +66,6 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
   const segments = useSegments();
   const { width } = useWindowDimensions();
   const [scrolled, setScrolled] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [searchFocused, setSearchFocused] = useState(false);
@@ -78,16 +75,33 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
   const [bookings, setBookings] = useState<any[]>([]);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [favoritesCount, setFavoritesCount] = useState(0);
+  const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
 
   useEffect(() => {
     async function fetchSidebarData() {
       if (!user?.id) return;
       try {
-        const { data } = await supabase
+        const today = new Date().toISOString().split('T')[0];
+        
+        const { data: bookingsData } = await supabase
           .from('bookings')
           .select('id')
-          .eq('user_id', user.id);
-        if (data) setBookings(data);
+          .eq('user_id', user.id)
+          .eq('status', 'confirmed')
+          .gte('booking_date', today);
+        if (bookingsData) setBookings(bookingsData);
+
+        // Fetch Favorites Count (Venues + Shop Products)
+        const [favsRes, shopFavsRes] = await Promise.all([
+          supabase.from('favorites').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+          supabase.from('shop_favorites').select('*', { count: 'exact', head: true }).eq('user_id', user.id)
+        ]);
+        
+        const totalFavs = (favsRes.count || 0) + (shopFavsRes.count || 0);
+        setFavoritesCount(totalFavs);
 
         // Fetch Wallet Balance
         const { data: walletData } = await supabase
@@ -104,6 +118,47 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
     }
     fetchSidebarData();
   }, [user?.id]);
+
+  const fetchNotifications = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      
+      if (data) {
+        setNotifications(data);
+        setUnreadCount(data.filter(n => !n.read).length);
+      }
+    } catch (err) {
+      console.error('Notifications fetch error:', err);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    fetchNotifications();
+    // Refresh notifications every minute
+    const interval = setInterval(fetchNotifications, 60000);
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
+
+  const markAllAsRead = async () => {
+    if (!user?.id) return;
+    try {
+      await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', user.id)
+        .eq('read', false);
+      
+      fetchNotifications();
+    } catch (err) {
+      console.error('Mark as read error:', err);
+    }
+  };
 
   const performSearch = useCallback(async (query: string) => {
     if (query.length < 2) {
@@ -245,6 +300,8 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
     '/earnings',
     '/withdrawals',
     '/inventory',
+    '/orders',
+    '/(admin)/orders',
     '/locations',
     '/manage-ground-owners',
     '/manage-users',
@@ -292,13 +349,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
   // Treat the presence of a Supabase `user` as authenticated even if `profile`
   // hasn't loaded yet (prevents briefly showing "Sign In").
   const isAuthenticated = !!user || !!profile || isSuperAdmin;
-  // App pages: sidebar as before. Public routes (/, book-my-ground): burger opens a small drawer
-  // (Sign In / Sign Up when logged out; Profile when logged in).
   const showMenuPanel = !isPublicNoSidebar && isAuthenticated && !isCompact;
-  const showLandingMobileMenu = false; // Disabled globally on mobile web in favor of bottom bar
-  const showOwnerMobileMenu = false;
-  const showAdminMobileMenu = false;
-  const showUserMobileMenu = false;
 
   const handleSignOut = async () => {
     await signOut();
@@ -358,7 +409,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
           } else {
             router.push(href as any);
           }
-          setMenuOpen(false);
+
         }}
         {...(Platform.OS === 'web' ? {
           onMouseEnter: () => setHovered(true),
@@ -437,18 +488,6 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
             </TouchableOpacity>
 
             <View style={styles.headerRight}>
-              {showLandingMobileMenu ? (
-                <TouchableOpacity
-                  style={styles.burgerButton}
-                  onPress={() => setMenuOpen((prev) => !prev)}
-                >
-                  {menuOpen ? (
-                    <X size={20} color="#dcc093" />
-                  ) : (
-                    <Menu size={20} color="#dcc093" />
-                  )}
-                </TouchableOpacity>
-              ) : (
                 <>
                   {!isCompact && (
                     <View style={styles.headerSearch}>
@@ -589,7 +628,6 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                     </>
                   )}
                 </>
-              )}
             </View>
           </View>
         </View>
@@ -619,266 +657,72 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
             </TouchableOpacity>
 
             <View style={styles.headerRight}>
-              {(!isCompact && !isAuthenticated && (isPublicNoSidebar || isMarketing)) ? (
-                <TouchableOpacity
-                  style={styles.burgerButton}
-                  onPress={() => setMenuOpen((prev) => !prev)}
-                >
-                  {menuOpen ? (
-                    <X size={20} color="#dcc093" />
+              {!isCompact && !isAdminLayout && (
+                <View style={{ flexDirection: 'row', gap: 32, alignItems: 'center' }}>
+                  <RNText
+                    style={[styles.headerNavLink, (cleanPath === '/(tabs)/dashboard' || cleanPath === '/dashboard') && styles.headerNavLinkActive]}
+                    onPress={() => router.push('/(tabs)/dashboard' as any)}
+                  >
+                    Dashboard
+                  </RNText>
+                  <RNText
+                    style={[styles.headerNavLink, cleanPath === '/(tabs)/bookings' && styles.headerNavLinkActive]}
+                    onPress={() => router.push('/(tabs)/bookings' as any)}
+                  >
+                    Bookings
+                  </RNText>
+                  <RNText
+                    style={[styles.headerNavLink, cleanPath === '/shop' && styles.headerNavLinkActive]}
+                    onPress={() => router.push('/shop' as any)}
+                  >
+                    Shop
+                  </RNText>
+
+
+                  {!isAuthenticated ? (
+                    <RNText
+                      style={styles.headerSecondaryButtonText}
+                      onPress={() => router.push('/(auth)/login' as any)}
+                    >
+                      Sign in
+                    </RNText>
                   ) : (
-                    <Menu size={20} color="#dcc093" />
-                  )}
-                </TouchableOpacity>
-              ) : (
-                !isCompact && !isAdminLayout && (
-                  <View style={{ flexDirection: 'row', gap: 32, alignItems: 'center' }}>
-                    <RNText
-                      style={[styles.headerNavLink, (cleanPath === '/(tabs)/dashboard' || cleanPath === '/dashboard') && styles.headerNavLinkActive]}
-                      onPress={() => router.push('/(tabs)/dashboard' as any)}
-                    >
-                      Dashboard
-                    </RNText>
-                    <RNText
-                      style={[styles.headerNavLink, cleanPath === '/(tabs)/bookings' && styles.headerNavLinkActive]}
-                      onPress={() => router.push('/(tabs)/bookings' as any)}
-                    >
-                      Bookings
-                    </RNText>
-                    <RNText
-                      style={[styles.headerNavLink, cleanPath === '/shop' && styles.headerNavLinkActive]}
-                      onPress={() => router.push('/shop' as any)}
-                    >
-                      Shop
-                    </RNText>
-
-
-                    {!isAuthenticated ? (
-                      <RNText
-                        style={styles.headerSecondaryButtonText}
-                        onPress={() => router.push('/(auth)/login' as any)}
+                    <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
+                      <TouchableOpacity 
+                        style={styles.userProfilePill}
+                        onPress={() => router.push('/(tabs)/profile' as any)}
                       >
-                        Sign in
-                      </RNText>
-                    ) : (
-                      <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
-                        <TouchableOpacity 
-                          style={styles.userProfilePill}
-                          onPress={() => router.push('/(tabs)/profile' as any)}
-                        >
-                          <Image 
-                            source={{ uri: profile?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex' }} 
-                            style={styles.userAvatar} 
-                          />
-                          <RNText style={styles.userName}>
-                            {(() => {
-                              const rawName = profile?.full_name?.split(' ')[0] || 'Alex';
-                              return rawName.charAt(0).toUpperCase() + rawName.slice(1).toLowerCase();
-                            })()}
-                          </RNText>
-                        </TouchableOpacity>
+                        <Image 
+                          source={{ uri: profile?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex' }} 
+                          style={styles.userAvatar} 
+                        />
+                        <RNText style={styles.userName}>
+                          {(() => {
+                            const rawName = profile?.full_name?.split(' ')[0] || 'Alex';
+                            return rawName.charAt(0).toUpperCase() + rawName.slice(1).toLowerCase();
+                          })()}
+                        </RNText>
+                      </TouchableOpacity>
 
-                        <TouchableOpacity style={styles.notificationPill}>
-                           <Bell size={20} color="#FFFFFF" />
-                           <View style={styles.headerNotificationBadge}>
-                             <RNText style={styles.headerBadgeText}>3</RNText>
-                           </View>
-                        </TouchableOpacity>
+                      <TouchableOpacity style={styles.notificationPill}>
+                         <Bell size={20} color="#FFFFFF" />
+                         <View style={styles.headerNotificationBadge}>
+                           <RNText style={styles.headerBadgeText}>3</RNText>
+                         </View>
+                      </TouchableOpacity>
 
 
-                      </View>
-                    )}
-                  </View>
-                )
+                    </View>
+                  )}
+                </View>
               )}
             </View>
           </View>
         </View>
       )}
 
+
       <View style={[bodyStyle, isCompact && isPublicNoSidebar && { paddingBottom: 72 }]}>
-        {(showLandingMobileMenu ||
-          showOwnerMobileMenu ||
-          showAdminMobileMenu ||
-          showUserMobileMenu) &&
-          menuOpen && (
-            <>
-              <TouchableOpacity
-                activeOpacity={1}
-                style={styles.mobileOverlay}
-                onPress={() => setMenuOpen(false)}
-              />
-              <View style={styles.sidebarMobile}>
-                <View style={styles.mobileSidebarSearch}>
-                  <Search size={18} color="#6B7280" />
-                  <RNTextInput
-                    style={styles.mobileSidebarSearchInput}
-                    placeholder="Search venues or matches..."
-                    placeholderTextColor="rgba(220, 192, 147, 0.5)"
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                    onSubmitEditing={() => {
-                      if (searchQuery.trim().length >= 2) {
-                        setMenuOpen(false);
-                        router.push({
-                          pathname: '/search',
-                          params: { q: searchQuery.trim() }
-                        } as any);
-                      }
-                    }}
-                  />
-                </View>
-                {showLandingMobileMenu &&
-                  !showOwnerMobileMenu &&
-                  !showAdminMobileMenu &&
-                  !showUserMobileMenu && (
-                    <>
-                      <RNText style={styles.sidebarTitle}>Get started</RNText>
-                      <TouchableOpacity
-                        style={styles.mobilePrimaryButton}
-                        onPress={() => {
-                          setMenuOpen(false);
-                          router.push('/cricket/player-profile' as any);
-                        }}
-                      >
-                        <RNText style={styles.mobilePrimaryButtonText}>Cricket Hub</RNText>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={styles.mobilePrimaryButton}
-                        onPress={() => {
-                          setMenuOpen(false);
-                          router.push('/shop' as any);
-                        }}
-                      >
-                        <RNText style={styles.mobilePrimaryButtonText}>Shop</RNText>
-                      </TouchableOpacity>
-
-
-                      <TouchableOpacity
-                        style={styles.mobilePrimaryButton}
-                        onPress={() => {
-                          setMenuOpen(false);
-                          router.push(groundsHref as any);
-                        }}
-                      >
-                        <RNText style={styles.mobilePrimaryButtonText}>Grounds</RNText>
-                      </TouchableOpacity>
-
-                      {!isAuthenticated ? (
-                        <TouchableOpacity
-                          style={styles.mobileSecondaryButton}
-                          onPress={() => {
-                            setMenuOpen(false);
-                            router.push('/(auth)/login' as any);
-                          }}
-                        >
-                          <RNText style={styles.mobileSecondaryButtonText}>Sign in</RNText>
-                        </TouchableOpacity>
-                      ) : (
-                        <TouchableOpacity
-                          style={styles.mobileSecondaryButton}
-                          onPress={() => {
-                            setMenuOpen(false);
-                            router.push('/(tabs)/profile' as any);
-                          }}
-                        >
-                          <RNText style={styles.mobileSecondaryButtonText}>Profile</RNText>
-                        </TouchableOpacity>
-                      )}
-                    </>
-                  )}
-
-                {showOwnerMobileMenu && (
-                  <>
-                    <RNText style={styles.sidebarTitle}>Ground owner</RNText>
-                    <NavLink href="/(owner)/owner-dashboard" icon={LayoutDashboard} label="Dashboard" />
-                    <NavLink href="/(owner)/manage-grounds" icon={MapPin} label="My grounds" />
-                    <NavLink href="/wallet" icon={Wallet} label="Wallet" />
-                    <NavLink href="/cricket/player-profile" icon={Swords} label="Cricket Hub" />
-                    <NavLink href="/(owner)/ground-bookings" icon={ClipboardList} label="Bookings" />
-                    <NavLink href="/(owner)/inventory" icon={CalendarClock} label="Inventory" />
-                    <NavLink href="/(tabs)/bookings" icon={Ticket} label="My Bookings" />
-                    <NavLink href="/(owner)/earnings" icon={IndianRupee} label="Earnings" />
-                    <NavLink href="/(owner)/add-ground" icon={PlusCircle} label="Add ground" />
-                    <NavLink href="/(owner)/settings" icon={Settings} label="Settings" />
-                    <NavLink href="/(tabs)/support" icon={Phone} label="Contact Us" />
-
-                    <View style={styles.sidebarDivider} />
-                    <TouchableOpacity
-                      style={[styles.signOutButton, isCompact && styles.signOutButtonMobile]}
-                      onPress={async () => {
-                        await handleSignOut();
-                        setMenuOpen(false);
-                      }}
-                    >
-                      <LogOut size={18} color={isCompact ? '#dcc093' : '#E5E7EB'} />
-                      <RNText style={[styles.signOutText, isCompact && styles.signOutTextMobile]}>Sign out</RNText>
-                    </TouchableOpacity>
-                  </>
-                )}
-
-                {showAdminMobileMenu && (
-                  <>
-                    <RNText style={styles.sidebarTitle}>Super admin</RNText>
-                    <NavLink href="/(admin)/dashboard" icon={LayoutDashboard} label="Dashboard" />
-                    <NavLink href="/shop" icon={ShoppingBag} label="Shop" />
-                    <NavLink href="/(admin)/cricketdata" icon={Swords} label="Cricket Hub" />
-                    <NavLink href="/(admin)/bookings" icon={Calendar} label="Bookings" />
-                    <NavLink href="/(admin)/grounds" icon={MapPin} label="Grounds" />
-                    <NavLink href="/(admin)/inventory" icon={CalendarClock} label="Inventory" />
-                    <NavLink href="/(admin)/earnings" icon={IndianRupee} label="Earnings" />
-                    <NavLink href="/(admin)/withdrawals" icon={Wallet2} label="Withdraw" />
-                    <NavLink
-                      href="/(admin)/manage-ground-owners"
-                      icon={Shield}
-                      label="Ground owners"
-                    />
-                    <NavLink href="/(admin)/manage-users" icon={User} label="Users" />
-                    <NavLink href="/(admin)/messages" icon={LifeBuoy} label="Support Tickets" />
-                    <NavLink href="/(admin)/settings" icon={Settings} label="Settings" />
-
-                    <View style={styles.sidebarDivider} />
-                    <TouchableOpacity
-                      style={[styles.signOutButton, isCompact && styles.signOutButtonMobile]}
-                      onPress={async () => {
-                        await handleSignOut();
-                        setMenuOpen(false);
-                      }}
-                    >
-                      <LogOut size={18} color={isCompact ? '#dcc093' : '#E5E7EB'} />
-                      <RNText style={[styles.signOutText, isCompact && styles.signOutTextMobile]}>Sign out</RNText>
-                    </TouchableOpacity>
-                  </>
-                )}
-
-                {showUserMobileMenu && (
-                  <>
-                    <RNText style={styles.sidebarTitle}>My Account</RNText>
-                    <NavLink href="/(tabs)/dashboard" icon={LayoutDashboard} label="Dashboard" />
-                    <NavLink href="/cricket/player-profile" icon={Swords} label="Cricket Hub" />
-                    <NavLink href="/(tabs)/bookings" icon={Calendar} label="My Bookings" />
-                    <NavLink href="/(tabs)/favorites" icon={Star} label="Favorites" />
-                    <NavLink href="/(tabs)/profile" icon={User} label="Profile" />
-                    <NavLink href="/(tabs)/support" icon={Phone} label="Contact Us" />
-
-                    <View style={styles.sidebarDivider} />
-                    <TouchableOpacity
-                      style={[styles.signOutButton, styles.signOutButtonUser, isCompact && styles.signOutButtonMobile]}
-                      onPress={async () => {
-                        await handleSignOut();
-                        setMenuOpen(false);
-                      }}
-                    >
-                      <LogOut size={18} color={isCompact ? '#dcc093' : '#E5E7EB'} />
-                      <RNText style={[styles.signOutText, isCompact && styles.signOutTextMobile]}>Sign out</RNText>
-                    </TouchableOpacity>
-                  </>
-                )}
-              </View>
-            </>
-          )}
-
         {showMenuPanel ? (
           <View
             style={isAdminLayout ? styles.sidebarContainerAdmin : styles.sidebarContainer}
@@ -926,12 +770,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                           label="Cricket Hub"
                           hideLabel={sidebarCollapsed}
                         />
-                        <NavLink
-                          href="/shop"
-                          icon={ShoppingBag}
-                          label="Shop"
-                          hideLabel={sidebarCollapsed}
-                        />
+
                         <NavLink
                           href="/(admin)/bookings"
                           icon={Calendar}
@@ -948,6 +787,12 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                           href="/(admin)/inventory"
                           icon={Package}
                           label="Inventory"
+                          hideLabel={sidebarCollapsed}
+                        />
+                        <NavLink
+                          href="/(admin)/orders"
+                          icon={ClipboardList}
+                          label="Orders"
                           hideLabel={sidebarCollapsed}
                         />
 
@@ -1053,7 +898,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                           href="/favorites" 
                           icon={Heart} 
                           label="Favorites" 
-                          badge={4}
+                          badge={loading ? undefined : favoritesCount}
                         />
                         <NavLink 
                           href="/wallet" 
@@ -1415,25 +1260,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     overflow: 'visible',
   },
-  sidebarMobile: {
-    position: 'absolute' as any,
-    top: 0,
-    right: 0,
-    left: 'auto' as any,
-    width: 280,
-    bottom: 0,
-    backgroundColor: '#FFFFFF',
-    borderLeftWidth: 1,
-    borderLeftColor: '#F3F4F6',
-    borderRightWidth: 0,
-    padding: 24,
-    paddingTop: 80,
-    zIndex: 3000,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    shadowOffset: { width: -4, height: 0 },
-  },
+
   navLink: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1468,14 +1295,7 @@ const styles = StyleSheet.create({
     color: '#00ea6b',
     fontWeight: '600',
   },
-  burgerButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+
   sidebarTitle: {
     fontFamily: 'Inter',
     fontSize: 12,

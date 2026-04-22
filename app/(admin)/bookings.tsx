@@ -21,6 +21,7 @@ export default function AdminBookingsScreen() {
   const isWeb = Platform.OS === 'web';
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'upcoming' | 'past'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -121,16 +122,30 @@ export default function AdminBookingsScreen() {
         filtered = filtered.filter((b) => b.booking_date === selectedDate);
       }
 
-      // 2. Tab Filter (only if no specific date is selected OR within the selected date)
-      // Usually users want to see only that date if selected.
-      if (selectedDate) return filtered;
+      // 2. Tab Filter (only if no specific date is selected)
+      if (!selectedDate && activeTab !== 'all') {
+        filtered = activeTab === 'upcoming'
+          ? filtered.filter((b) => b.booking_date >= todayIso)
+          : activeTab === 'past'
+            ? filtered.filter((b) => b.booking_date < todayIso)
+            : filtered.filter((b) => b.status === 'cancelled');
+      }
 
-      if (activeTab === 'all') return filtered;
-      return activeTab === 'upcoming'
-        ? filtered.filter((b) => b.booking_date >= todayIso)
-        : filtered.filter((b) => b.booking_date < todayIso);
+      // 3. Search Filter
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        filtered = filtered.filter((b) => {
+          const gn = (b.ground?.name || '').toLowerCase();
+          const city = (b.ground?.city || '').toLowerCase();
+          const customer = (b.user?.full_name || '').toLowerCase();
+          const bid = (b.id || '').toLowerCase();
+          return gn.includes(q) || city.includes(q) || customer.includes(q) || bid.includes(q);
+        });
+      }
+
+      return filtered;
     },
-    [bookings, selectedDate, activeTab],
+    [bookings, selectedDate, activeTab, searchQuery],
   );
 
   const todayIsoForCounts = useMemo(() => {
@@ -154,7 +169,20 @@ export default function AdminBookingsScreen() {
   const content = (
     <View style={styles.container}>
       <View style={[styles.header, isWeb && styles.webHeader]}>
-        <Text style={styles.title}>All Platform Bookings</Text>
+        <View style={styles.headerTop}>
+          <Text style={styles.title}>All Platform Bookings</Text>
+          {isWeb && (
+            <View style={styles.searchContainer}>
+              <TextInput
+                style={styles.searchBar}
+                placeholder="Search ground, city, customer or ID..."
+                placeholderTextColor="#9CA3AF"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+            </View>
+          )}
+        </View>
         <ScrollView 
           horizontal 
           showsHorizontalScrollIndicator={false} 
@@ -322,6 +350,9 @@ export default function AdminBookingsScreen() {
                   <Text style={styles.bookedTimeText}>
                     {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </Text>
+                  <Text style={styles.bookingIdTable}>
+                    Booking ID: {item.id.substring(0, 8).toUpperCase()}
+                  </Text>
                 </View>
 
                 <View style={[styles.tableCell, styles.colGround]}>
@@ -473,6 +504,28 @@ const styles = StyleSheet.create({
     color: IS_WEB ? '#111827' : '#f9fafb',
     letterSpacing: -0.3,
   },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 16,
+    flexWrap: 'wrap',
+  },
+  searchContainer: {
+    flex: 1,
+    maxWidth: 400,
+  },
+  searchBar: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    fontSize: 14,
+    fontFamily: 'Inter',
+    color: '#111827',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
   list: {
     padding: 16,
   },
@@ -556,6 +609,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#6B7280',
     marginTop: 1,
+  },
+  bookingIdTable: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#01b854',
+    marginTop: 4,
+    fontFamily: 'Inter',
   },
   groundName: {
     fontFamily: 'Inter',

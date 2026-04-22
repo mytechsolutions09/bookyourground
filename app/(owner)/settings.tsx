@@ -116,7 +116,10 @@ function OwnerSettingsInner() {
       const { error } = await supabase.from('withdrawals').insert({
         owner_id: user.id,
         amount: parsedAmount,
-        account_details: accountDetails.trim(),
+        payment_method: accountDetails.trim().toLowerCase().includes('bank') ? 'bank_transfer' : 'upi',
+        account_details: { 
+          raw_details: accountDetails.trim() 
+        },
         status: 'pending',
       });
 

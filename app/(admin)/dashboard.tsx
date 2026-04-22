@@ -10,6 +10,7 @@ import {
   Mail,
   LifeBuoy,
   Package,
+  ShoppingBag,
 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -162,6 +163,17 @@ export default function AdminDashboardScreen() {
             <View style={styles.actionContent}>
               <LifeBuoy size={18} color="#6366F1" />
               <Text style={styles.actionText}>Support Tickets</Text>
+            </View>
+            <ChevronRight size={18} color="#666" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionItem}
+            onPress={() => router.push('/(admin)/orders' as any)}
+          >
+            <View style={styles.actionContent}>
+              <ShoppingBag size={18} color="#059669" />
+              <Text style={styles.actionText}>Shop Orders</Text>
             </View>
             <ChevronRight size={18} color="#666" />
           </TouchableOpacity>

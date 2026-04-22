@@ -1,4 +1,3 @@
-
 #01b854
 #06392e
 #dcc093
@@ -6,6 +5,8 @@
 #005b80
 #4f2c63
 #2a533a
+#d8f79d 
+
 
 npx expo start
 npx expo start --web

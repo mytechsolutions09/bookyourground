@@ -475,9 +475,9 @@ export default function BookingsScreen() {
                         <Text style={styles.bGroundName} numberOfLines={1}>
                           {item.ground?.name} – {item.ground?.city}
                         </Text>
-                        <TouchableOpacity onPress={(e: any) => e.stopPropagation()} style={{ padding: 4 }}>
-                          <Text style={{ color: '#9CA3AF', fontSize: 18, fontFamily: 'Inter' }}>⋮</Text>
-                        </TouchableOpacity>
+                        <Text style={styles.bBookingId}>
+                          Booking ID: {item.id.substring(0, 8).toUpperCase()}
+                        </Text>
                       </View>
 
                       <Text style={styles.bMeta}>
@@ -489,19 +489,14 @@ export default function BookingsScreen() {
 
                       {/* CTAs */}
                       <View style={styles.bActions}>
-                        {isActive && (
+                        {!isCancelled && (
                           <TouchableOpacity style={styles.bBtnGreen} onPress={() => router.push(`/bookings/${item.id}`)}>
-                            <Text style={styles.bBtnGreenText}>View QR Code</Text>
+                            <Text style={styles.bBtnGreenText}>View Details</Text>
                           </TouchableOpacity>
                         )}
                         {isActive && canCancel && (
                           <TouchableOpacity style={styles.bBtnTextLink} onPress={(e: any) => { e.stopPropagation(); handleCancelBooking(item); }}>
                             <Text style={styles.bBtnTextLinkText}>Cancel Booking</Text>
-                          </TouchableOpacity>
-                        )}
-                        {!isActive && !isCancelled && (
-                          <TouchableOpacity style={styles.bBtnGreen} onPress={() => router.push(`/bookings/${item.id}`)}>
-                            <Text style={styles.bBtnGreenText}>View Details</Text>
                           </TouchableOpacity>
                         )}
                         {isCompleted && !alreadyReviewed && (

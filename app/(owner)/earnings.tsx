@@ -104,6 +104,8 @@ function OwnerEarningsScreenInner() {
   const [accountNumber, setAccountNumber] = useState('');
   const [ifscCode, setIfscCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [upcomingPayouts, setUpcomingPayouts] = useState<any[]>([]);
+  const [activityFeed, setActivityFeed] = useState<any[]>([]);
 
   useEffect(() => {
     if (user) {
@@ -211,6 +213,48 @@ function OwnerEarningsScreenInner() {
       }
       setChartData(trend);
       setTransactions(rows.slice(0, 5));
+
+      // Fetch Withdrawals
+      const { data: withdrawalData } = await supabase
+        .from('withdrawals')
+        .select('*')
+        .eq('owner_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (withdrawalData) {
+        setUpcomingPayouts(withdrawalData.filter(w => w.status === 'pending' || w.status === 'processing'));
+      }
+
+      // Create Activity Feed
+      const feed: any[] = [];
+      
+      // Add bookings to feed
+      rows.slice(0, 5).forEach(b => {
+        let gName = 'Venue';
+        if (b.ground) {
+          gName = Array.isArray(b.ground) ? (b.ground[0]?.name || 'Venue') : (b.ground.name || 'Venue');
+        }
+        feed.push({
+          id: `b-${b.id}`,
+          type: 'booking',
+          date: b.booking_date,
+          text: `New booking received for ${gName} (₹${b.total_amount})`,
+          color: '#3B82F6'
+        });
+      });
+
+      // Add withdrawals to feed
+      (withdrawalData || []).slice(0, 5).forEach(w => {
+        feed.push({
+          id: `w-${w.id}`,
+          type: 'withdrawal',
+          date: w.created_at,
+          text: `Payout of ₹${w.amount} ${w.status === 'completed' ? 'processed' : 'is ' + w.status}`,
+          color: w.status === 'completed' ? '#22C55E' : '#F59E0B'
+        });
+      });
+
+      setActivityFeed(feed.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 6));
     } catch (e) {
       console.error('Error loading earnings:', e);
     } finally {
@@ -328,22 +372,24 @@ function OwnerEarningsScreenInner() {
             <Text style={[styles.headerText, { flex: 1 }]}>Amount</Text>
             <Text style={[styles.headerText, { width: 100, textAlign: 'right' }]}>Status</Text>
           </View>
-          <View style={styles.tableRow}>
-            <Text style={[styles.cellText, { width: 140 }]}>Nov 15, 2024</Text>
-            <Text style={[styles.cellText, { flex: 1 }]}>₹15,000</Text>
-            <View style={[styles.statusBadge, { width: 100 }]}>
-              <View style={[styles.statusDot, { backgroundColor: '#F59E0B' }]} />
-              <Text style={styles.statusText}>Pending</Text>
+          {upcomingPayouts.length === 0 ? (
+            <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+              <Text style={{ color: '#64748B', fontSize: 14 }}>No upcoming payouts scheduled</Text>
             </View>
-          </View>
-          <View style={styles.tableRow}>
-            <Text style={[styles.cellText, { width: 140 }]}>Dec 01, 2024</Text>
-            <Text style={[styles.cellText, { flex: 1 }]}>₹28,500</Text>
-            <View style={[styles.statusBadge, { width: 100 }]}>
-              <View style={[styles.statusDot, { backgroundColor: '#3B82F6' }]} />
-              <Text style={styles.statusText}>Scheduled</Text>
-            </View>
-          </View>
+          ) : (
+            upcomingPayouts.map((p) => (
+              <View key={p.id} style={styles.tableRow}>
+                <Text style={[styles.cellText, { width: 140 }]}>
+                  {new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
+                </Text>
+                <Text style={[styles.cellText, { flex: 1 }]}>{formatCurrency(p.amount)}</Text>
+                <View style={[styles.statusBadge, { width: 100 }]}>
+                  <View style={[styles.statusDot, { backgroundColor: p.status === 'processing' ? '#3B82F6' : '#F59E0B' }]} />
+                  <Text style={[styles.statusText, { textTransform: 'capitalize' }]}>{p.status}</Text>
+                </View>
+              </View>
+            ))
+          )}
         </View>
       </View>
     </View>
@@ -382,24 +428,21 @@ function OwnerEarningsScreenInner() {
       <View style={styles.sectionCard}>
         <Text style={styles.sectionTitle}>Recent Activity Feed</Text>
         <View style={styles.activityFeed}>
-          <View style={styles.activityItem}>
-            <View style={styles.activityDot} />
-            <Text style={styles.activityText}>
-              <Text style={{ fontWeight: '700' }}>Today, 11:23 AM:</Text> New booking received for Metro Sports Complex (₹3,500)
-            </Text>
-          </View>
-          <View style={styles.activityItem}>
-            <View style={styles.activityDot} />
-            <Text style={styles.activityText}>
-              <Text style={{ fontWeight: '700' }}>Yesterday, 08:15 PM:</Text> Payout of ₹10,000 processed to your bank account
-            </Text>
-          </View>
-          <View style={styles.activityItem}>
-            <View style={styles.activityDot} />
-            <Text style={styles.activityText}>
-              <Text style={{ fontWeight: '700' }}>Nov 01, 2024:</Text> Lakeside Turf maintenance scheduled for next week
-            </Text>
-          </View>
+          {activityFeed.length === 0 ? (
+             <Text style={[styles.activityText, { textAlign: 'center', opacity: 0.5 }]}>No recent activity</Text>
+          ) : (
+            activityFeed.map((item) => (
+              <View key={item.id} style={styles.activityItem}>
+                <View style={[styles.activityDot, { backgroundColor: item.color }]} />
+                <Text style={styles.activityText}>
+                  <Text style={{ fontWeight: '700' }}>
+                    {new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, {new Date(item.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}:
+                  </Text>{' '}
+                  {item.text}
+                </Text>
+              </View>
+            ))
+          )}
         </View>
       </View>
     </View>
@@ -437,12 +480,12 @@ function OwnerEarningsScreenInner() {
           />
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={styles.modalTitle}>Withdraw Funds</Text>
-                <Text style={styles.modalSubtitle}>Available Balance: {formatCurrency(wallet?.balance || 0)}</Text>
+                <Text style={styles.modalSubtitle}>Available: {formatCurrency(wallet?.balance || 0)}</Text>
               </View>
-              <TouchableOpacity onPress={() => setShowWithdrawModal(false)}>
-                <X size={24} color="#0F172A" />
+              <TouchableOpacity onPress={() => setShowWithdrawModal(false)} style={styles.closeBtn}>
+                <X size={20} color="#64748B" />
               </TouchableOpacity>
             </View>
 
@@ -482,14 +525,26 @@ function OwnerEarningsScreenInner() {
                 <>
                   <Text style={styles.formSectionTitle}>Bank Details</Text>
                   
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Bank Name</Text>
-                    <RNTextInput
-                      style={styles.formInput}
-                      placeholder="e.g. HDFC Bank"
-                      value={bankName}
-                      onChangeText={setBankName}
-                    />
+                  <View style={[styles.formRow, !IS_WEB && { flexDirection: 'column' }]}>
+                    <View style={[styles.inputGroup, { flex: 1 }]}>
+                      <Text style={styles.inputLabel}>Bank Name</Text>
+                      <RNTextInput
+                        style={styles.formInput}
+                        placeholder="e.g. HDFC"
+                        value={bankName}
+                        onChangeText={setBankName}
+                      />
+                    </View>
+                    <View style={[styles.inputGroup, { flex: 1 }]}>
+                      <Text style={styles.inputLabel}>IFSC Code</Text>
+                      <RNTextInput
+                        style={styles.formInput}
+                        placeholder="IFSC"
+                        autoCapitalize="characters"
+                        value={ifscCode}
+                        onChangeText={setIfscCode}
+                      />
+                    </View>
                   </View>
 
                   <View style={styles.inputGroup}>
@@ -500,17 +555,6 @@ function OwnerEarningsScreenInner() {
                       keyboardType="numeric"
                       value={accountNumber}
                       onChangeText={setAccountNumber}
-                    />
-                  </View>
-
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>IFSC Code</Text>
-                    <RNTextInput
-                      style={styles.formInput}
-                      placeholder="Enter IFSC code"
-                      autoCapitalize="characters"
-                      value={ifscCode}
-                      onChangeText={setIfscCode}
                     />
                   </View>
                 </>
@@ -808,80 +852,92 @@ const styles = StyleSheet.create({
   modalContent: {
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 32,
+    borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     padding: 24,
-    minHeight: 500,
     ...Platform.select({
       web: {
-        maxWidth: 500,
-        width: '100%',
+        maxWidth: 440,
+        width: '95%',
         alignSelf: 'center',
         marginBottom: 'auto',
         marginTop: 'auto',
         borderRadius: 24,
         maxHeight: '90vh',
+        padding: 20,
       }
     })
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 24,
+    alignItems: 'center',
+    marginBottom: 20,
   },
   modalTitle: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '800',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
   modalSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#64748B',
-    marginTop: 4,
+    marginTop: 2,
     fontFamily: 'Inter',
     fontWeight: '600',
   },
   modalForm: {
-    gap: 16,
+    gap: 12,
+  },
+  formRow: {
+    flexDirection: 'row',
+    gap: 12,
   },
   formSectionTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: '#0F172A',
-    marginTop: 8,
-    marginBottom: 4,
+    marginTop: 4,
+    marginBottom: 2,
   },
   inputGroup: {
     gap: 8,
   },
   inputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '700',
     color: '#475569',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   formInput: {
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 15,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
     color: '#0F172A',
     fontFamily: 'Inter',
   },
   submitBtn: {
     backgroundColor: '#01b854',
-    paddingVertical: 16,
-    borderRadius: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: 8,
   },
   submitBtnText: {
     color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  closeBtn: {
+    padding: 8,
+    borderRadius: 99,
+    backgroundColor: '#F1F5F9',
   },
   methodSelector: {
     flexDirection: 'row',

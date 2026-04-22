@@ -170,6 +170,11 @@ export default function BookingCard({
               Booked by: <Text style={{ fontWeight: '800' }}>{whoTitle}</Text>
             </Text>
           ) : null}
+          <View style={styles.idRow}>
+             <Text style={metaStyle}>
+               Booking ID: {booking.id.substring(0, 8).toUpperCase()}
+             </Text>
+          </View>
           {metaText ? <Text style={metaStyle}>{metaText}</Text> : null}
         </View>
       </Card>
@@ -409,6 +414,10 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#111827',
     flex: 1,
+  },
+  idRow: {
+    marginTop: 2,
+    opacity: 0.8,
   },
 });
 

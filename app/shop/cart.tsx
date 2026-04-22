@@ -14,6 +14,7 @@ export default function CartScreen() {
   const { setTabBarVisible } = useUI();
   const [cartItems, setCartItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   useEffect(() => {
     setTabBarVisible(false);
@@ -81,6 +82,60 @@ export default function CartScreen() {
 
   const calculateTotal = () => {
     return cartItems.reduce((acc, item) => acc + (item.product.price * item.quantity), 0);
+  };
+
+  const handleCheckout = async () => {
+    if (!user || cartItems.length === 0) return;
+    
+    try {
+      setIsCheckingOut(true);
+      const total = calculateTotal();
+      
+      // 1. Create order
+      const { data: order, error: orderError } = await supabase
+        .from('shop_orders')
+        .insert({
+          user_id: user.id,
+          total_amount: total,
+          status: 'pending',
+          payment_status: 'paid', // Assuming wallet payment for now or just mock
+          payment_method: 'wallet'
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // 2. Create order items
+      const orderItems = cartItems.map(item => ({
+        order_id: order.id,
+        product_id: item.product.id,
+        quantity: item.quantity,
+        price_at_purchase: item.product.price
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('shop_order_items')
+        .insert(orderItems);
+
+      if (itemsError) throw itemsError;
+
+      // 3. Clear cart
+      const { error: clearError } = await supabase
+        .from('shop_cart')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (clearError) throw clearError;
+
+      Alert.alert('Success', 'Order placed successfully!');
+      router.push('/(tabs)/shop');
+    } catch (err: any) {
+      console.error('Checkout error:', err);
+      Alert.alert('Checkout Failed', err.message || 'Something went wrong');
+    } finally {
+      setIsCheckingOut(false);
+    }
   };
 
   const content = (
@@ -158,9 +213,13 @@ export default function CartScreen() {
                 <Text style={styles.totalValue}>₹{calculateTotal().toLocaleString('en-IN')}</Text>
               </View>
               
-              <TouchableOpacity style={styles.checkoutBtn}>
-                <Text style={styles.checkoutBtnText}>Checkout</Text>
-                <ArrowRight size={20} color="#FFFFFF" />
+              <TouchableOpacity 
+                style={[styles.checkoutBtn, isCheckingOut && { opacity: 0.7 }]}
+                onPress={handleCheckout}
+                disabled={isCheckingOut}
+              >
+                <Text style={styles.checkoutBtnText}>{isCheckingOut ? 'Processing...' : 'Checkout'}</Text>
+                {!isCheckingOut && <ArrowRight size={20} color="#FFFFFF" />}
               </TouchableOpacity>
             </View>
           </View>
