@@ -1,8 +1,18 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import React, { useState, useMemo, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Image, ActivityIndicator } from 'react-native';
+import { supabase } from '@/lib/supabase';
+import { GroundWithImages } from '@/types';
+import { router } from 'expo-router';
+import { makeGroundPath } from '@/utils/groundSlug';
+import { Star, MapPin, Clock, ChevronRight } from 'lucide-react-native';
+import { normalizeDbTimeToHHMM, formatTime12h } from '@/utils/bookingSlots';
 
 export default function CalendarTabs() {
   const [selectedDate, setSelectedDate] = useState(new Date());
+
+  const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
 
   const dates = useMemo(() => {
     const today = new Date();
@@ -12,6 +22,100 @@ export default function CalendarTabs() {
       return d;
     });
   }, []);
+
+  useEffect(() => {
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        (err) => console.log("CalendarTabs location denied:", err)
+      );
+    }
+  }, []);
+
+  const loadAvailability = async (date: Date) => {
+    try {
+      setLoading(true);
+      const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+      const dateString = date.toISOString().split('T')[0];
+
+      // 1. Fetch grounds (basic info + primary image)
+      const { data: groundsData, error: groundsError } = await supabase
+        .from('grounds')
+        .select('*, ground_images(*), reviews(rating)')
+        .eq('active', true)
+        .eq('approved', true)
+        .limit(10);
+
+      if (groundsError) throw groundsError;
+
+      // 2. Fetch all slots for these grounds for this day of week
+      const groundIds = groundsData.map(g => g.id);
+      const { data: slotsData, error: slotsError } = await supabase
+        .from('time_slots')
+        .select('*')
+        .in('ground_id', groundIds)
+        .eq('day_of_week', dayOfWeek)
+        .eq('is_available', true);
+
+      if (slotsError) throw slotsError;
+
+      // 3. Fetch bookings for these grounds on this specific date
+      const { data: bookingsData, error: bookingsError } = await supabase
+        .from('bookings')
+        .select('ground_id, start_time')
+        .in('ground_id', groundIds)
+        .eq('booking_date', dateString)
+        .neq('status', 'cancelled');
+
+      if (bookingsError) throw bookingsError;
+
+      // 4. Map everything together
+      const processed = groundsData.map(g => {
+        const groundSlots = slotsData.filter(s => s.ground_id === g.id);
+        const groundBookings = bookingsData.filter(b => b.ground_id === g.id);
+        
+        // Available = slot exists AND not booked
+        const availableSlots = groundSlots.filter(s => 
+          !groundBookings.some(b => b.start_time === s.start_time)
+        );
+
+        // Calculate distance if location available
+        let distance = 999;
+        if (userLocation && g.latitude && g.longitude) {
+          distance = Math.sqrt(
+            Math.pow(Number(g.latitude) - userLocation.lat, 2) + 
+            Math.pow(Number(g.longitude) - userLocation.lng, 2)
+          );
+        }
+
+        const reviews = (g.reviews || []) as { rating: number }[];
+        const avgRating = reviews.length > 0
+          ? reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length
+          : 0;
+
+        return {
+          ...g,
+          _availableSlots: availableSlots,
+          _distance: distance,
+          _avgRating: avgRating,
+          _reviewsCount: reviews.length
+        };
+      });
+
+      // Sort by distance if available, else by created_at
+      processed.sort((a, b) => a._distance - b._distance);
+
+      setGrounds(processed as any);
+    } catch (err) {
+      console.error('Error loading calendar availability:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAvailability(selectedDate);
+  }, [selectedDate, userLocation]);
 
   const isSameDay = (d1: Date, d2: Date) => {
     return d1.getFullYear() === d2.getFullYear() &&
@@ -73,6 +177,71 @@ export default function CalendarTabs() {
           );
         })}
       </ScrollView>
+
+      <View style={styles.selectedDateHeader}>
+        <View style={styles.selectedDateLine} />
+        <Text style={styles.selectedDateText}>
+          Availability for {selectedDate.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
+        </Text>
+      </View>
+
+      <View style={styles.resultsContainer}>
+        {loading ? (
+          <View style={styles.loadingState}>
+            <ActivityIndicator color="#10B981" />
+            <Text style={styles.loadingText}>Checking availability...</Text>
+          </View>
+        ) : grounds.length > 0 ? (
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.resultsScroll}
+          >
+            {grounds.map((ground: any) => (
+              <TouchableOpacity 
+                key={ground.id}
+                style={styles.groundTab}
+                onPress={() => router.push(makeGroundPath(ground) as any)}
+              >
+                <View style={styles.tabImageWrapper}>
+                  <Image 
+                    source={{ uri: ground.ground_images?.[0]?.image_url || 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg' }}
+                    style={styles.tabImage}
+                  />
+                </View>
+                
+                <View style={styles.priceRow}>
+                  <Text style={styles.priceRowText}>
+                    From ₹{ground.base_price_per_hour}/match • ₹{Math.round(ground.base_price_per_hour / 2)}/ team
+                  </Text>
+                </View>
+                
+                <View style={styles.tabInfo}>
+                  <Text style={styles.tabName} numberOfLines={1}>{ground.name}</Text>
+                  <View style={styles.tabMeta}>
+                    <View style={styles.ratingRow}>
+                      <Star size={10} color="#F59E0B" fill="#F59E0B" />
+                      <Text style={styles.ratingText}>{ground._avgRating.toFixed(1)}</Text>
+                    </View>
+                    <Text style={styles.tabCity}>• {ground.city}</Text>
+                  </View>
+                  
+                  <View style={styles.availabilityTag}>
+                    <Clock size={12} color="#10B981" />
+                    <Text style={styles.availabilityText}>
+                      {ground._availableSlots.length} slots left
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        ) : (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyText}>No grounds found for this date.</Text>
+          </View>
+        )}
+      </View>
     </View>
   );
 }
@@ -126,6 +295,8 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingRight: 24,
     paddingBottom: 8,
+    paddingTop: 12,
+    overflow: 'visible',
   },
   dateCard: {
     width: 88,
@@ -160,7 +331,7 @@ const styles = StyleSheet.create({
   dateCardActive: {
     backgroundColor: '#043529',
     borderColor: '#043529',
-    transform: [{ scale: 1.05 }, { translateY: -4 }],
+    transform: [{ scale: 1.12 }, { translateY: -6 }],
     ...Platform.select({
       web: {
         shadowColor: 'rgba(4, 53, 41, 0.25)',
@@ -211,5 +382,147 @@ const styles = StyleSheet.create({
     shadowColor: '#00ea6b',
     shadowOpacity: 0.8,
     shadowRadius: 4,
+  },
+  selectedDateHeader: {
+    paddingHorizontal: 24,
+    marginTop: 32,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  selectedDateLine: {
+    width: 3,
+    height: 16,
+    backgroundColor: '#10B981',
+    borderRadius: 2,
+  },
+  selectedDateText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#043529',
+    fontFamily: 'Inter',
+    letterSpacing: -0.2,
+  },
+  resultsContainer: {
+    marginTop: 24,
+    minHeight: 180,
+  },
+  resultsScroll: {
+    paddingHorizontal: 24,
+    paddingBottom: 10,
+    gap: 16,
+  },
+  groundTab: {
+    width: 220,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    overflow: 'hidden',
+    ...Platform.select({
+      web: {
+        shadowColor: 'rgba(15, 23, 42, 0.06)',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 1,
+        shadowRadius: 12,
+        transition: 'transform 0.2s ease',
+      }
+    }) as any,
+  },
+  tabImageWrapper: {
+    width: '100%',
+    height: 110,
+    position: 'relative',
+  },
+  tabImage: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#F1F5F9',
+  },
+  priceRow: {
+    backgroundColor: '#064e3b',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  priceRowText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '600',
+    fontFamily: 'Inter',
+    letterSpacing: 0.3,
+  },
+  tabInfo: {
+    padding: 12,
+  },
+  tabName: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+    marginBottom: 3,
+  },
+  tabMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 8,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  ratingText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#64748B',
+    fontFamily: 'Inter',
+  },
+  tabCity: {
+    fontSize: 10,
+    color: '#64748B',
+    fontFamily: 'Inter',
+  },
+  availabilityTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  availabilityText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#10B981',
+    fontFamily: 'Inter',
+  },
+  loadingState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    paddingVertical: 40,
+  },
+  loadingText: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#94A3B8',
+    fontWeight: '500',
   },
 });

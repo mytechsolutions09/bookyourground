@@ -256,14 +256,16 @@ export default function GroundDetailsPrettyUrlScreen() {
   const isLoading = loading || !ground;
   const Section = Platform.OS === 'web' ? Card : View;
 
+  let content;
+
   if (isLoading || !ground) {
-    return (
+    content = (
       <View style={styles.loadingContainer}>
         <Text style={styles.loadingText}>Loading ground...</Text>
       </View>
     );
   }
- else {
+  else {
     const fallbackUri = 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
     const rawImages = (ground.ground_images ?? []).filter((img) => img.image_url);
     const sortedImages = [...rawImages].sort((a, b) => {
@@ -277,7 +279,7 @@ export default function GroundDetailsPrettyUrlScreen() {
 
     const heroIdx = Math.min(heroImageIndex, Math.max(0, imageUrls.length - 1));
 
-    return (
+    content = (
       <>
         {/* Header buttons moved to Stack.Screen options */}
 

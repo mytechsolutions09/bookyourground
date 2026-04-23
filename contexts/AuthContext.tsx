@@ -85,6 +85,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName: string, phone: string, role: UserRole = 'user', businessName?: string, address?: string, state?: string, teamName?: string, playerType?: string, captchaToken?: string) => {
     try {
+      // Ensure we are signed out before trying to sign up to avoid session collision/refresh errors
+      await supabase.auth.signOut();
+
       const { error } = await supabase.auth.signUp({
         email,
         password,

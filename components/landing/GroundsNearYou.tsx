@@ -20,6 +20,42 @@ import {
 const MAP_ID = "DEMO_MAP_ID"; // Required for Advanced Markers
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 
+const CLEAN_MAP_STYLES = [
+  {
+    "featureType": "all",
+    "elementType": "labels",
+    "stylers": [{ "visibility": "off" }]
+  },
+  {
+    "featureType": "administrative",
+    "elementType": "labels",
+    "stylers": [{ "visibility": "off" }]
+  },
+  {
+    "featureType": "poi",
+    "stylers": [{ "visibility": "off" }]
+  },
+  {
+    "featureType": "road",
+    "elementType": "labels",
+    "stylers": [{ "visibility": "off" }]
+  },
+  {
+    "featureType": "transit",
+    "stylers": [{ "visibility": "off" }]
+  },
+  {
+    "featureType": "water",
+    "elementType": "labels",
+    "stylers": [{ "visibility": "off" }]
+  },
+  {
+    "featureType": "road",
+    "elementType": "geometry",
+    "stylers": [{ "lightness": 100 }, { "visibility": "simplified" }]
+  }
+];
+
 function MultiMarkerMap({ 
   grounds, 
   focusedGroundId, 
@@ -34,6 +70,7 @@ function MultiMarkerMap({
   const map = useMap();
   const geocodingLibrary = useMapsLibrary('geocoding');
   const [openInfoWindowId, setOpenInfoWindowId] = useState<string | null>(null);
+  const [hoveredGroundId, setHoveredGroundId] = useState<string | null>(null);
   const [resolvedCoords, setResolvedCoords] = useState<Record<string, {lat: number, lng: number}>>({});
 
   useEffect(() => {
@@ -47,6 +84,14 @@ function MultiMarkerMap({
       }
     }
   }, [focusedGroundId, map, resolvedCoords]);
+
+  // Pan to user location when first detected
+  useEffect(() => {
+    if (userLocation && map && !focusedGroundId) {
+      map.panTo(userLocation);
+      map.setZoom(11); // Slightly closer zoom for user location
+    }
+  }, [userLocation, map]);
 
   // Geocode grounds missing coordinates
   useEffect(() => {
@@ -84,10 +129,12 @@ function MultiMarkerMap({
     <Map
       style={{ width: '100%', height: '100%' }}
       defaultCenter={defaultCenter}
-      defaultZoom={12}
+      defaultZoom={10}
       mapId={MAP_ID}
       gestureHandling={'greedy'}
       disableDefaultUI={false}
+      styles={CLEAN_MAP_STYLES}
+      clickableIcons={false}
     >
       {grounds.map((g) => {
         let lat = parseFloat(g.latitude);
@@ -112,36 +159,84 @@ function MultiMarkerMap({
                 onMarkerClick(g.id);
                 setOpenInfoWindowId(g.id);
               }}
+              onMouseEnter={() => setHoveredGroundId(g.id)}
+              onMouseLeave={() => setHoveredGroundId(null)}
             >
+              <Pin 
+                background={isFocused || hoveredGroundId === g.id ? '#01b854' : '#bfff49'}
+                borderColor={'#FFFFFF'}
+                glyphColor={'#FFFFFF'}
+                scale={isFocused || hoveredGroundId === g.id ? 1.3 : 1.1}
+              />
+
+              {/* Stable Hover Tooltip - always mounted to prevent child removal errors */}
               <View style={{
-                backgroundColor: isFocused ? '#01b854' : '#d8f79d',
-                padding: 6,
-                borderRadius: 20,
-                borderWidth: 2,
-                borderColor: '#FFFFFF',
+                position: 'absolute',
+                bottom: 45,
+                left: -70,
+                width: 140,
+                backgroundColor: '#FFFFFF',
+                padding: 10,
+                borderRadius: 12,
                 shadowColor: '#000',
-                shadowOpacity: 0.3,
-                shadowRadius: 4,
-                elevation: 5
+                shadowOpacity: 0.15,
+                shadowRadius: 12,
+                elevation: 10,
+                // @ts-ignore - Web only property to prevent flicker
+                pointerEvents: 'none',
+                zIndex: 1000,
+                borderWidth: 1,
+                borderColor: '#F1F5F9',
+                opacity: (hoveredGroundId === g.id && openInfoWindowId !== g.id) ? 1 : 0,
               }}>
-                <MapPin size={14} color={isFocused ? "#FFFFFF" : "#1e293b"} />
+                <Text style={{ 
+                  fontWeight: '800', 
+                  fontSize: 13, 
+                  color: '#0F172A', 
+                  fontFamily: 'Inter', 
+                  marginBottom: 4 
+                }}>
+                  {g.name}
+                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <MapPin size={10} color="#10B981" />
+                  <Text style={{ fontSize: 11, color: '#64748B', fontFamily: 'Inter' }}>
+                    {g.city}
+                  </Text>
+                </View>
+                {/* Small Arrow */}
+                <View style={{
+                  position: 'absolute',
+                  bottom: -6,
+                  left: 70 - 6,
+                  width: 12,
+                  height: 12,
+                  backgroundColor: '#FFFFFF',
+                  transform: [{ rotate: '45deg' }],
+                  borderRightWidth: 1,
+                  borderBottomWidth: 1,
+                  borderColor: '#F1F5F9',
+                }} />
               </View>
             </AdvancedMarker>
             
             {openInfoWindowId === g.id && (
               <InfoWindow
-                position={{ lat: Number(g.latitude), lng: Number(g.longitude) }}
+                position={{ lat, lng }}
+                pixelOffset={[0, -15]}
                 onCloseClick={() => setOpenInfoWindowId(null)}
+                headerDisabled={true}
               >
-                <View style={{ padding: 4, maxWidth: 180 }}>
-                  <Text style={{ fontWeight: 'bold', fontSize: 14, color: '#1e293b', marginBottom: 2 }}>{g.name}</Text>
-                  <Text style={{ fontSize: 11, color: '#64748b' }}>{g.city}</Text>
-                  <TouchableOpacity 
-                    style={{ marginTop: 8, backgroundColor: '#10b981', padding: 6, borderRadius: 4, alignItems: 'center' }}
-                    onPress={() => router.push(makeGroundPath(g) as any)}
-                  >
-                    <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800' }}>VIEW DETAILS</Text>
-                  </TouchableOpacity>
+                <View style={{ padding: 4, minWidth: 140 }}>
+                  <Text style={{ fontWeight: '800', fontSize: 13, color: '#0F172A', fontFamily: 'Inter', marginBottom: 2 }}>
+                    {g.name}
+                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <MapPin size={10} color="#64748B" />
+                    <Text style={{ fontSize: 11, color: '#64748B', fontFamily: 'Inter' }}>
+                      {g.city}
+                    </Text>
+                  </View>
                 </View>
               </InfoWindow>
             )}

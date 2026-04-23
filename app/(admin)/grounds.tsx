@@ -1139,7 +1139,7 @@ export default function GroundsAdminScreen() {
                     style={[styles.formInput, styles.formInputHalf]}
                     value={String(createForm.base_price_per_hour ?? '')}
                     onChangeText={(t) => setCreateForm({ ...createForm, base_price_per_hour: t })}
-                    placeholder="Price/hr"
+                    placeholder="Price/match"
                     keyboardType="numeric"
                   />
                 </View>
@@ -1312,7 +1312,7 @@ export default function GroundsAdminScreen() {
                   </View>
 
                   <View style={[styles.tableCell, styles.colPrice]}>
-                    <Text style={styles.priceText}>₹{latestGround.base_price_per_hour}/hr</Text>
+                    <Text style={styles.priceText}>₹{latestGround.base_price_per_hour}/match</Text>
                   </View>
 
                   <View style={[styles.tableCell, styles.colStatus]}>
@@ -1465,7 +1465,7 @@ export default function GroundsAdminScreen() {
 
                   <View style={styles.listMetaRow}>
                     <Text style={styles.listMeta}>
-                      ₹{latestGround.base_price_per_hour}/hr
+                      ₹{latestGround.base_price_per_hour}/match
                     </Text>
                     <Text style={styles.listMeta}>
                       {ownerName}
@@ -1661,7 +1661,7 @@ export default function GroundsAdminScreen() {
                   onChangeText={(t) =>
                     setEditForm((prev: any) => ({ ...prev, base_price_per_hour: t }))
                   }
-                  placeholder="Price/hr"
+                  placeholder="Price/match"
                   keyboardType="numeric"
                 />
               </View>

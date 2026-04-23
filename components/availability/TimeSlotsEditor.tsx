@@ -242,7 +242,8 @@ function TimeSlotsEditorInner(
       setDirtyPriceById({});
     } catch (e: any) {
       console.error('TimeSlotsEditor: load failed', e);
-      Alert.alert('Error', e?.message ?? 'Failed to load time slots');
+      if (Platform.OS === 'web') alert(e?.message ?? 'Failed to load time slots');
+      else Alert.alert('Error', e?.message ?? 'Failed to load time slots');
     } finally {
       setLoading(false);
     }
@@ -282,7 +283,8 @@ function TimeSlotsEditorInner(
       if (error) throw error;
       await loadSlots();
     } catch (e: any) {
-      Alert.alert('Error', e?.message ?? 'Failed to delete slots');
+      if (Platform.OS === 'web') alert(e?.message ?? 'Failed to delete slots');
+      else Alert.alert('Error', e?.message ?? 'Failed to delete slots');
     } finally {
       setDeletingPreviewKey(null);
     }
@@ -294,11 +296,13 @@ function TimeSlotsEditorInner(
     const durationNum = parseInt(newDuration.trim(), 10);
 
     if (isNaN(priceNum) || priceNum < 0) {
-      Alert.alert('Invalid price', 'Price must be a positive number.');
+      if (Platform.OS === 'web') alert('Price must be a positive number.');
+      else Alert.alert('Invalid price', 'Price must be a positive number.');
       return;
     }
     if (isNaN(durationNum) || durationNum <= 0) {
-      Alert.alert('Invalid duration', 'Duration must be positive minutes.');
+      if (Platform.OS === 'web') alert('Duration must be positive minutes.');
+      else Alert.alert('Invalid duration', 'Duration must be positive minutes.');
       return;
     }
 
@@ -327,7 +331,8 @@ function TimeSlotsEditorInner(
       setEditingPreviewKey(null);
       await loadSlots();
     } catch (e: any) {
-      Alert.alert('Error', e?.message ?? 'Failed to update slots');
+      if (Platform.OS === 'web') alert(e?.message ?? 'Failed to update slots');
+      else Alert.alert('Error', e?.message ?? 'Failed to update slots');
     } finally {
       setSaving(false);
     }
@@ -369,7 +374,8 @@ function TimeSlotsEditorInner(
         const hhmmLabel = normalizeDbTimeToHHMM(s.start_time) ?? s.start_time;
 
         if (!trimmed) {
-          Alert.alert('Custom price required', `Please enter a custom price for ${hhmmLabel}.`);
+          if (Platform.OS === 'web') alert(`Please enter a custom price for ${hhmmLabel}.`);
+          else Alert.alert('Custom price required', `Please enter a custom price for ${hhmmLabel}.`);
           return false;
         }
 
@@ -781,18 +787,21 @@ function TimeSlotsEditorInner(
                             </Pressable>
                             <Pressable
                               onPress={() => {
-                                Alert.alert(
-                                  'Delete slots?',
-                                  `Are you sure you want to delete all slots starting at ${r.startHHMM}?`,
-                                  [
+                                const msg = `Are you sure you want to delete all slots starting at ${r.startHHMM}?`;
+                                if (Platform.OS === 'web') {
+                                  if (window.confirm(msg)) {
+                                    deleteSlotsByStartTime(key);
+                                  }
+                                } else {
+                                  Alert.alert('Delete slots?', msg, [
                                     { text: 'Cancel', style: 'cancel' },
                                     { 
                                       text: 'Delete', 
                                       style: 'destructive', 
                                       onPress: () => deleteSlotsByStartTime(key) 
                                     }
-                                  ]
-                                );
+                                  ]);
+                                }
                               }}
                               style={styles.previewIconBtn}
                               disabled={isDeleting || saving}

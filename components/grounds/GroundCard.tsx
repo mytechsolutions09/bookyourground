@@ -120,19 +120,27 @@ export default function GroundCard({
             <Text style={nameStyle} numberOfLines={2}>
               {ground.name}
             </Text>
-            <Text style={priceStyle}>
-              {formatCurrency(
-                displayPricePerUnit != null
-                  ? displayPricePerUnit
-                  : ground.base_price_per_hour,
-              )}
-              <Text style={styles.priceUnit}>
-                {unitLabelOverride ??
-                  (String(ground.pitch_type ?? '').toLowerCase().includes('box')
-                    ? '/hr'
-                    : ' / match')}
+            <View style={styles.priceBlock}>
+              <Text style={priceStyle}>
+                <Text style={{ fontSize: 10, fontWeight: '600', color: isLight ? '#64748B' : '#94A3B8' }}>From </Text>
+                {formatCurrency(
+                  displayPricePerUnit != null
+                    ? displayPricePerUnit
+                    : ground.base_price_per_hour,
+                )}
+                <Text style={styles.priceUnit}>
+                  {unitLabelOverride ??
+                    (String(ground.pitch_type ?? '').toLowerCase().includes('box')
+                      ? '/hr'
+                      : ' / match')}
+                </Text>
               </Text>
-            </Text>
+              {!(String(ground.pitch_type ?? '').toLowerCase().includes('box')) && (
+                <Text style={[styles.perTeamLabel, !isLight && styles.perTeamLabelNative]}>
+                  ₹{Math.round((displayPricePerUnit ?? ground.base_price_per_hour) / 2)} per team
+                </Text>
+              )}
+            </View>
           </View>
 
           <View style={styles.subTitleRow}>
@@ -413,6 +421,19 @@ const styles = StyleSheet.create({
   priceNative: {
     color: '#01b854',
     fontSize: 16,
+  },
+  priceBlock: {
+    alignItems: 'flex-end',
+  },
+  perTeamLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#10B981',
+    marginTop: 1,
+    fontFamily: 'Inter',
+  },
+  perTeamLabelNative: {
+    color: '#34D399',
   },
   mapsBtn: {
     flexDirection: 'row',

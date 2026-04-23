@@ -166,14 +166,20 @@ export default function LoginScreen() {
     }
   }, [user, profile, redirect, date, time, teams]);
 
-  // ── Web layout (unchanged split design) ──────────────────────────────────
+  // Web layout (unchanged split design)
   if (os === 'web') {
     return (
-      <KeyboardAvoidingView behavior="height" style={webStyles.container}>
-        <View style={webStyles.scrollContent}>
-          <View style={webStyles.heroColumn}>
+      <View style={webStyles.container}>
+        <ImageBackground 
+          source={require('../../assets/signup-stadium.png')}
+          style={StyleSheet.absoluteFillObject}
+          resizeMode="cover"
+        >
+          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(4,53,41,0.4)' }]} />
+          
+          <ScrollView contentContainerStyle={webStyles.scrollContent}>
             <View style={webStyles.formContainer}>
-              <View style={webStyles.formCard}>
+              <BlurView intensity={25} tint="light" style={webStyles.glassCard}>
                 <View style={webStyles.header}>
                   <TouchableOpacity onPress={() => router.replace('/')}>
                     <Image
@@ -182,50 +188,41 @@ export default function LoginScreen() {
                       resizeMode="contain"
                     />
                   </TouchableOpacity>
-                  <Text style={webStyles.formTitle}>Sign In</Text>
-                  <Text style={webStyles.formSubtitle}>Access your account to book grounds</Text>
+                  <Text style={webStyles.formTitle}>Welcome Back</Text>
+                  <Text style={webStyles.formSubtitle}>Sign in to your account</Text>
                 </View>
   
                 <View style={webStyles.form}>
                   <WebInput
-                    label="Email"
+                    label="Email Address"
                     value={email}
                     onChangeText={setEmail}
-                    placeholder="Enter your email"
+                    placeholder="email@example.com"
                     keyboardType="email-address"
                     autoCapitalize="none"
                     autoComplete="email"
-                    onSubmitEditing={handleLogin}
                   />
   
                   <WebInput
                     label="Password"
                     value={password}
                     onChangeText={setPassword}
-                    placeholder="Enter your password"
-                    secureTextEntry
-                    autoComplete="password"
-                    onSubmitEditing={handleLogin}
+                    placeholder="Enter password"
+                    secureTextEntry={!showPassword}
+                    showToggle={true}
+                    onToggle={() => setShowPassword(!showPassword)}
+                    isToggled={showPassword}
                   />
 
                   {Platform.OS === 'web' && TurnstileComponent && (
                     <View style={{ marginBottom: 16, alignItems: 'center', minHeight: 65 }}>
                       <TurnstileComponent
                         siteKey={process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY || '0x4AAAAAAA4N2_8m7n6b5v4c'} 
-                        onSuccess={(token: string) => {
-                          console.log('Turnstile success');
-                          setTurnstileToken(token);
-                        }}
-                        onExpire={() => {
-                          console.warn('Turnstile expired');
-                          setTurnstileToken(null);
-                        }}
-                        onError={(error: any) => {
-                          console.error('Turnstile error:', error);
-                          setTurnstileToken(null);
-                        }}
+                        onSuccess={(token: string) => setTurnstileToken(token)}
+                        onExpire={() => setTurnstileToken(null)}
+                        onError={() => setTurnstileToken(null)}
                         options={{
-                          theme: 'dark',
+                          theme: 'light',
                           size: 'normal',
                         }}
                       />
@@ -243,7 +240,7 @@ export default function LoginScreen() {
                       disabled={loading}
                     >
                       {loading ? (
-                        <ActivityIndicator color="#043529" size="small" />
+                        <ActivityIndicator color="#FFFFFF" size="small" />
                       ) : (
                         <Text style={webStyles.buttonText}>SIGN IN</Text>
                       )}
@@ -257,28 +254,14 @@ export default function LoginScreen() {
                     </TouchableOpacity>
                   </View>
                 </View>
-              </View>
+              </BlurView>
             </View>
-          </View>
-
-          {showHeroImage && (
-            <View style={webStyles.heroImage}>
-              <Image
-                source={require('../../assets/signup-stadium.png')}
-                style={{ width: '100%', height: '100%' }}
-                resizeMode="cover"
-              />
-              <View style={StyleSheet.absoluteFillObject}>
-                <View style={{ flex: 1, backgroundColor: 'rgba(30,41,59,0.3)' }} />
-              </View>
-            </View>
-          )}
-        </View>
-      </KeyboardAvoidingView>
+          </ScrollView>
+        </ImageBackground>
+      </View>
     );
   }
 
-  // ── Mobile layout ─────────────────────────────────────────────────────────
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <KeyboardAvoidingView
@@ -459,33 +442,42 @@ export default function LoginScreen() {
 }
 
 function WebInput(props: any) {
-  const { label, ...rest } = props;
+  const { label, showToggle, onToggle, isToggled, ...rest } = props;
   return (
     <View style={{ marginBottom: 10 }}>
-      {label && (
-        <Text style={{ fontSize: 12, fontWeight: '600', color: '#E5E7EB', marginBottom: 4 }}>
-          {label}
-        </Text>
-      )}
-      <TextInput
-        style={{
-          borderWidth: 1,
-          borderColor: 'rgba(0, 234, 107, 0.12)',
-          borderRadius: 8,
-          paddingHorizontal: 10,
-          paddingVertical: 8,
-          fontSize: 14,
-          backgroundColor: '#06392e',
-          color: '#f9fafb',
-        }}
-        placeholderTextColor="#6b7280"
-        {...rest}
-      />
+      {label && <Text style={{ fontSize: 12, fontWeight: '700', color: '#0F172A', marginBottom: 4 }}>{label}</Text>}
+      <View style={{ position: 'relative', width: '100%' }}>
+        <TextInput
+          style={{
+            borderWidth: 1.5,
+            borderColor: 'rgba(15, 23, 42, 0.2)',
+            borderRadius: 8,
+            paddingHorizontal: 10,
+            paddingVertical: 8,
+            paddingRight: showToggle ? 40 : 10,
+            fontSize: 14,
+            backgroundColor: 'rgba(255, 255, 255, 0.7)',
+            color: '#0F172A',
+            fontWeight: '600',
+            outlineStyle: 'none',
+          } as any}
+          placeholderTextColor="#64748B"
+          {...rest}
+        />
+        {showToggle && (
+          <TouchableOpacity 
+            onPress={onToggle}
+            style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)' }}
+          >
+            {isToggled ? <EyeOff size={16} color="#475569" /> : <Eye size={16} color="#475569" />}
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }
 
-// ── Mobile styles ──────────────────────────────────────────────────────────
+// --- Mobile styles ---
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
@@ -525,8 +517,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     borderRadius: 32,
     padding: 24,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
     gap: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 12 },
@@ -559,6 +549,7 @@ const styles = StyleSheet.create({
   },
   inputRowFocused: {
     backgroundColor: '#FFFFFF',
+    borderColor: 'transparent',
     shadowColor: '#1e293b',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.08,
@@ -626,120 +617,87 @@ const styles = StyleSheet.create({
   },
 });
 
-// ── Web styles (matching original web layout exactly) ──────────────────────
+// --- Web styles (matching original web layout exactly) ---
 const webStyles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#06392e',
+  container: { flex: 1, backgroundColor: '#043529' },
+  scrollContent: { flexGrow: 1 },
+  formContainer: { 
+    flex: 1, 
+    width: '100%', 
+    minHeight: '100vh' as any,
+    paddingHorizontal: 24, 
+    paddingVertical: 40, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
   },
-  scrollContent: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    flexDirection: 'row-reverse' as any,
-    alignItems: 'stretch',
-    width: '100%',
-  },
-  header: {
-    marginBottom: 16,
-    alignItems: 'center',
-  },
-  logoImage: {
-    width: 240,
-    height: 60,
-    marginBottom: 8,
-  },
-  form: {
-    gap: 4,
-  },
-  heroColumn: {
-    flex: 1,
-    width: '50%' as any,
-  },
-  formContainer: {
-    flex: 1,
-    width: '100%',
-    backgroundColor: '#06392e',
-    paddingHorizontal: 24,
-    paddingVertical: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  formCard: {
-    width: '100%',
-    maxWidth: 420,
-    backgroundColor: '#043529',
-    borderRadius: 20,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+  glassCard: { 
+    width: '100%', 
+    maxWidth: 420, 
+    backgroundColor: 'rgba(255, 255, 255, 0.8)', 
+    borderRadius: 32, 
+    paddingHorizontal: 32, 
+    paddingVertical: 32, 
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
+    shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.2,
-    shadowRadius: 20,
-  },
-  formTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#f9fafb',
-    marginTop: 4,
-    marginBottom: 2,
-    fontFamily: 'Inter',
-  },
-  formSubtitle: {
-    fontSize: 12,
-    fontFamily: 'Inter',
-    color: '#9ca3af',
-    marginBottom: 4,
-    textAlign: 'center',
-  },
-  heroImage: {
-    flex: 1,
-    width: '50%' as any,
+    shadowRadius: 30,
     overflow: 'hidden',
   },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
+  header: { marginBottom: 24, alignItems: 'center' },
+  logoImage: { width: 240, height: 60, marginBottom: 8 },
+  formTitle: { 
+    fontSize: 26, 
+    fontWeight: '900', 
+    color: '#0F172A', 
+    marginTop: 4, 
+    marginBottom: 0,
+    fontFamily: 'Inter',
   },
-  button: {
-    flex: 1,
-    backgroundColor: '#475569',
-    borderRadius: 8,
-    height: 36,
-    alignItems: 'center',
+  formSubtitle: { 
+    fontSize: 14, 
+    color: '#475569', 
+    marginTop: 4, 
+    fontFamily: 'Inter' 
+  },
+  form: { },
+  buttonRow: { flexDirection: 'row', gap: 12, marginTop: 16 },
+  button: { 
+    flex: 1, 
+    backgroundColor: '#0F172A', 
+    borderRadius: 12, 
+    height: 48, 
+    alignItems: 'center', 
     justifyContent: 'center',
+    shadowColor: '#1E293B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
   },
-  buttonText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#ffffff',
+  buttonText: { 
+    fontSize: 14, 
+    fontWeight: '700', 
+    color: '#FFFFFF', 
     letterSpacing: 0.5,
+    fontFamily: 'Inter',
   },
-  outlineButton: {
-    flex: 1,
-    borderRadius: 8,
-    height: 36,
-    borderWidth: 1.5,
-    borderColor: '#475569',
-    alignItems: 'center',
-    justifyContent: 'center',
+  outlineButton: { 
+    flex: 1, 
+    borderRadius: 12, 
+    height: 48, 
+    borderWidth: 1.5, 
+    borderColor: '#475569', 
+    alignItems: 'center', 
+    justifyContent: 'center' 
   },
-  outlineButtonText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#475569',
+  outlineButtonText: { 
+    fontSize: 14, 
+    fontWeight: '700', 
+    color: '#475569', 
     textTransform: 'uppercase' as any,
+    fontFamily: 'Inter',
   },
-  forgotWrap: {
-    alignSelf: 'flex-end',
-    marginBottom: 16,
-  },
-  forgotText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#64748b',
-  },
+  forgotWrap: { alignSelf: 'flex-end', marginBottom: 16 },
+  forgotText: { fontSize: 13, fontWeight: '700', color: '#475569', fontFamily: 'Inter' },
 });
 
 const modalStyles = StyleSheet.create({

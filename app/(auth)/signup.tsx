@@ -20,6 +20,7 @@ import { BlurView } from 'expo-blur';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { ArrowLeft, User, Mail, Lock, Phone, MapPin, Eye, EyeOff, CheckCircle, ChevronDown, Users } from 'lucide-react-native';
+import PasswordRequirement from '@/components/ui/PasswordRequirement';
 
 let TurnstileComponent: any = null;
 if (Platform.OS === 'web') {
@@ -46,12 +47,14 @@ export default function SignupScreen() {
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [stateName, setStateName] = useState('');
   const [teamName, setTeamName] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showStatePicker, setShowStatePicker] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
@@ -62,6 +65,7 @@ export default function SignupScreen() {
   const teamRef = React.useRef<TextInput>(null);
   const addressRef = React.useRef<TextInput>(null);
   const passwordRef = React.useRef<TextInput>(null);
+  const confirmPasswordRef = React.useRef<TextInput>(null);
 
   // Focus states
   const [focusedField, setFocusedField] = useState<string | null>(null);
@@ -78,8 +82,19 @@ export default function SignupScreen() {
       return;
     }
 
-    if (password.length < 6) {
-      const msg = 'Password must be at least 6 characters';
+    const hasLower = /[a-z]/.test(password);
+    const hasUpper = /[A-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+
+    if (password.length < 6 || !hasLower || !hasUpper || !hasNumber) {
+      const msg = 'Password must be at least 6 characters and contain at least one lowercase letter, one uppercase letter, and one number.';
+      if (Platform.OS === 'web') alert(msg);
+      else Alert.alert('Error', msg);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      const msg = 'Passwords do not match';
       if (Platform.OS === 'web') alert(msg);
       else Alert.alert('Error', msg);
       return;
@@ -98,14 +113,20 @@ export default function SignupScreen() {
     }
   };
 
-  // ── Web layout ────────────────────────────────────────────────────────────
+  // Web layout
   if (Platform.OS === 'web') {
     return (
-      <KeyboardAvoidingView behavior="height" style={webStyles.container}>
-        <View style={webStyles.scrollContent}>
-          <View style={webStyles.heroColumn}>
+      <View style={webStyles.container}>
+        <ImageBackground 
+          source={require('../../assets/signup-stadium.png')}
+          style={StyleSheet.absoluteFillObject}
+          resizeMode="cover"
+        >
+          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(4,53,41,0.4)' }]} />
+          
+          <ScrollView contentContainerStyle={webStyles.scrollContent}>
             <View style={webStyles.formContainer}>
-              <View style={webStyles.formCard}>
+              <BlurView intensity={Platform.OS === 'web' ? 25 : 90} tint="light" style={webStyles.glassCard}>
                 <View style={webStyles.header}>
                   <TouchableOpacity onPress={() => router.replace('/')}>
                     <Image
@@ -157,7 +178,7 @@ export default function SignupScreen() {
                       />
                     </View>
                   </View>
-
+ 
                   <View style={webStyles.row}>
                     <View style={webStyles.col}>
                       <WebInput
@@ -178,20 +199,46 @@ export default function SignupScreen() {
                   </View>
   
                   <WebInput
-                    label="Team Name"
+                    label="Team Name (Squad)"
                     value={teamName}
                     onChangeText={setTeamName}
                     placeholder="e.g. Yankees XI"
                   />
-
-                  <WebInput
-                    label="Password"
-                    value={password}
-                    onChangeText={setPassword}
-                    placeholder="Min 6 characters"
-                    secureTextEntry
-                  />
-
+ 
+                  <View style={webStyles.row}>
+                    <View style={webStyles.col}>
+                      <WebInput
+                        label="Password"
+                        value={password}
+                        onChangeText={setPassword}
+                        placeholder="Min 6 characters"
+                        secureTextEntry={!showPassword}
+                        showToggle={true}
+                        onToggle={() => setShowPassword(!showPassword)}
+                        isToggled={showPassword}
+                      />
+                    </View>
+                    <View style={webStyles.col}>
+                      <WebInput
+                        label="Confirm Password"
+                        value={confirmPassword}
+                        onChangeText={setConfirmPassword}
+                        placeholder="Repeat password"
+                        secureTextEntry={!showConfirmPassword}
+                        showToggle={true}
+                        onToggle={() => setShowConfirmPassword(!showConfirmPassword)}
+                        isToggled={showConfirmPassword}
+                      />
+                    </View>
+                  </View>
+                  
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 16 }}>
+                    <PasswordRequirement label="At least 1 lowercase (a-z)" met={/[a-z]/.test(password)} theme="light" />
+                    <PasswordRequirement label="At least 1 uppercase (A-Z)" met={/[A-Z]/.test(password)} theme="light" />
+                    <PasswordRequirement label="At least 1 number (0-9)" met={/[0-9]/.test(password)} theme="light" />
+                    <PasswordRequirement label="At least 6 characters" met={password.length >= 6} theme="light" />
+                  </View>
+ 
                   {Platform.OS === 'web' && TurnstileComponent && (
                     <View style={{ marginBottom: 16, alignItems: 'center', minHeight: 65 }}>
                       <TurnstileComponent
@@ -200,7 +247,7 @@ export default function SignupScreen() {
                         onExpire={() => setTurnstileToken(null)}
                         onError={() => setTurnstileToken(null)}
                         options={{
-                          theme: 'dark',
+                          theme: 'light',
                           size: 'normal',
                         }}
                       />
@@ -214,7 +261,7 @@ export default function SignupScreen() {
                       disabled={loading}
                     >
                       {loading ? (
-                        <ActivityIndicator color="#043529" size="small" />
+                        <ActivityIndicator color="#FFFFFF" size="small" />
                       ) : (
                         <Text style={webStyles.buttonText}>CREATE ACCOUNT</Text>
                       )}
@@ -231,28 +278,15 @@ export default function SignupScreen() {
                     </TouchableOpacity>
                   </View>
                 </View>
-              </View>
+              </BlurView>
             </View>
-          </View>
-
-          {showHeroImage && (
-            <View style={webStyles.heroImage}>
-              <Image
-                source={require('../../assets/signup-stadium.png')}
-                style={{ width: '100%', height: '100%' }}
-                resizeMode="cover"
-              />
-              <View style={StyleSheet.absoluteFillObject}>
-                <View style={{ flex: 1, backgroundColor: 'rgba(4,53,41,0.4)' }} />
-              </View>
-            </View>
-          )}
-        </View>
-      </KeyboardAvoidingView>
+          </ScrollView>
+        </ImageBackground>
+      </View>
     );
   }
 
-  // ── Mobile layout ─────────────────────────────────────────────────────────
+  //  Mobile layout 
   const isFocused = (field: string) => focusedField === field;
 
   return (
@@ -473,6 +507,43 @@ export default function SignupScreen() {
                 )}
               </Pressable>
             </Pressable>
+            
+            <View style={[styles.passwordRequirements, { flexDirection: 'row', flexWrap: 'wrap' }]}>
+              <PasswordRequirement label="At least 1 lowercase (a-z)" met={/[a-z]/.test(password)} theme="light" />
+              <PasswordRequirement label="At least 1 uppercase (A-Z)" met={/[A-Z]/.test(password)} theme="light" />
+              <PasswordRequirement label="At least 1 number (0-9)" met={/[0-9]/.test(password)} theme="light" />
+              <PasswordRequirement label="At least 6 characters" met={password.length >= 6} theme="light" />
+            </View>
+          </View>
+
+          <View style={styles.fieldWrap}>
+            <Pressable onPress={() => confirmPasswordRef.current?.focus()}>
+              <Text style={styles.fieldLabel}>Confirm Password</Text>
+            </Pressable>
+            <Pressable 
+              onPress={() => confirmPasswordRef.current?.focus()}
+              style={[styles.inputRow, isFocused('confirmPassword') && styles.inputRowFocused]}
+            >
+              <Lock size={17} color={isFocused('confirmPassword') ? '#01b854' : '#6b7280'} strokeWidth={2} />
+              <TextInput
+                ref={confirmPasswordRef}
+                style={styles.textInput}
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                placeholder="Repeat password"
+                placeholderTextColor="#94A3B8"
+                secureTextEntry={!showConfirmPassword}
+                onFocus={() => setFocusedField('confirmPassword')}
+                onBlur={() => setFocusedField(null)}
+              />
+              <Pressable onPress={() => setShowConfirmPassword((v) => !v)} hitSlop={8}>
+                {showConfirmPassword ? (
+                  <EyeOff size={17} color="#6b7280" strokeWidth={2} />
+                ) : (
+                  <Eye size={17} color="#6b7280" strokeWidth={2} />
+                )}
+              </Pressable>
+            </Pressable>
           </View>
 
           <View style={styles.buttonRow}>
@@ -557,7 +628,7 @@ export default function SignupScreen() {
   );
 }
 
-// ── Web state picker component ─────────────────────────────────────────────
+//  Web state picker component 
 function WebStatePicker(props: any) {
   const { label, value, onValueChange } = props;
   return (
@@ -575,58 +646,72 @@ function WebGenericPicker(props: any) {
   const { label, value, onValueChange, options, placeholder = "Select option" } = props;
   return (
     <View style={{ marginBottom: 10 }}>
-      {label && <Text style={{ fontSize: 12, fontWeight: '600', color: '#E5E7EB', marginBottom: 4 }}>{label}</Text>}
-      <div style={{ position: 'relative', width: '100%' }}>
+      {label && <Text style={{ fontSize: 12, fontWeight: '700', color: '#0F172A', marginBottom: 4 }}>{label}</Text>}
+      <View style={{ position: 'relative', width: '100%' }}>
         <select
           value={value}
           onChange={(e) => onValueChange(e.target.value)}
           style={{
             width: '100%',
             appearance: 'none',
-            border: '1px solid rgba(1, 184, 84, 0.12)',
+            border: '1.5px solid rgba(15, 23, 42, 0.2)',
             borderRadius: '8px',
             padding: '8px 10px',
             fontSize: '14px',
-            backgroundColor: '#06392e',
-            color: '#f9fafb',
+            backgroundColor: 'rgba(255, 255, 255, 0.7)',
+            color: '#0F172A',
             outline: 'none',
             cursor: 'pointer',
+            fontWeight: '600',
           }}
         >
           <option value="" disabled hidden>{placeholder}</option>
           {options.map((opt: string) => (
-            <option key={opt} value={opt} style={{ backgroundColor: '#06392e', color: '#f9fafb' }}>
+            <option key={opt} value={opt} style={{ backgroundColor: '#fff', color: '#0F172A' }}>
               {opt}
             </option>
           ))}
         </select>
-        <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
-          <ChevronDown size={14} color="#6b7280" />
-        </div>
-      </div>
+        <View style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+          <ChevronDown size={14} color="#475569" />
+        </View>
+      </View>
     </View>
   );
 }
 
 function WebInput(props: any) {
-  const { label, ...rest } = props;
+  const { label, showToggle, onToggle, isToggled, ...rest } = props;
   return (
     <View style={{ marginBottom: 10 }}>
-      {label && <Text style={{ fontSize: 12, fontWeight: '600', color: '#E5E7EB', marginBottom: 4 }}>{label}</Text>}
-      <TextInput
-        style={{
-          borderWidth: 1,
-          borderColor: 'rgba(1, 184, 84, 0.12)',
-          borderRadius: 8,
-          paddingHorizontal: 10,
-          paddingVertical: 8,
-          fontSize: 14,
-          backgroundColor: '#06392e',
-          color: '#f9fafb',
-        }}
-        placeholderTextColor="#6b7280"
-        {...rest}
-      />
+      {label && <Text style={{ fontSize: 12, fontWeight: '700', color: '#0F172A', marginBottom: 4 }}>{label}</Text>}
+      <View style={{ position: 'relative', width: '100%' }}>
+        <TextInput
+          style={{
+            borderWidth: 1.5,
+            borderColor: 'rgba(15, 23, 42, 0.2)',
+            borderRadius: 8,
+            paddingHorizontal: 10,
+            paddingVertical: 8,
+            paddingRight: showToggle ? 40 : 10,
+            fontSize: 14,
+            backgroundColor: 'rgba(255, 255, 255, 0.7)',
+            color: '#0F172A',
+            fontWeight: '600',
+            outlineStyle: 'none',
+          } as any}
+          placeholderTextColor="#64748B"
+          {...rest}
+        />
+        {showToggle && (
+          <TouchableOpacity 
+            onPress={onToggle}
+            style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)' }}
+          >
+            {isToggled ? <EyeOff size={16} color="#475569" /> : <Eye size={16} color="#475569" />}
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }
@@ -671,8 +756,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.2)', 
     borderRadius: 32, 
     padding: 24, 
-    borderWidth: 1.5, 
-    borderColor: 'rgba(255, 255, 255, 0.5)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.15,
@@ -703,6 +786,7 @@ const styles = StyleSheet.create({
   },
   inputRowFocused: { 
     backgroundColor: '#FFFFFF',
+    borderColor: 'transparent',
     shadowColor: '#01b854',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.1,
@@ -753,42 +837,83 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     fontFamily: 'Inter',
   },
+  passwordRequirements: {
+    marginTop: 8,
+    paddingLeft: 4,
+  },
 });
 
 const webStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#043529' },
-  scrollContent: { flexGrow: 1, justifyContent: 'center', flexDirection: 'row-reverse' as any, alignItems: 'stretch', width: '100%' },
-  header: { marginBottom: 16, alignItems: 'center' },
-  logoImage: { width: 180, height: 40, marginBottom: 8 },
-  form: { },
-  heroColumn: { flex: 1, width: '50%' as any },
-  formContainer: { flex: 1, width: '100%', backgroundColor: '#043529', paddingHorizontal: 24, paddingVertical: 32, justifyContent: 'center', alignItems: 'center' },
-  formCard: { width: '100%', maxWidth: 580, backgroundColor: '#06392e', borderRadius: 20, paddingHorizontal: 24, paddingVertical: 20, borderWidth: 1, borderColor: 'rgba(0,234,107,0.12)', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.2, shadowRadius: 20 },
+  scrollContent: { flexGrow: 1 },
+  formContainer: { 
+    flex: 1, 
+    width: '100%', 
+    minHeight: '100vh' as any,
+    paddingHorizontal: 24, 
+    paddingVertical: 40, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  glassCard: { 
+    width: '100%', 
+    maxWidth: 580, 
+    backgroundColor: 'rgba(255, 255, 255, 0.8)', 
+    borderRadius: 32, 
+    paddingHorizontal: 32, 
+    paddingVertical: 32, 
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.2,
+    shadowRadius: 30,
+    overflow: 'hidden',
+  },
+  header: { marginBottom: 24, alignItems: 'center' },
+  logoImage: { width: 240, height: 60, marginBottom: 8 },
   formTitle: { 
-    fontSize: 20, 
-    fontWeight: '800', 
-    color: '#f9fafb', 
+    fontSize: 26, 
+    fontWeight: '900', 
+    color: '#0F172A', 
     marginTop: 4, 
-    marginBottom: 4,
+    marginBottom: 0,
     fontFamily: 'Inter',
   },
-  heroImage: { flex: 1, width: '50%' as any, overflow: 'hidden' },
+  form: { },
   row: { flexDirection: 'row', gap: 12, marginBottom: 0 },
   col: { flex: 1 },
-  buttonRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  button: { flex: 1, backgroundColor: '#01b854', borderRadius: 8, height: 40, alignItems: 'center', justifyContent: 'center' },
+  buttonRow: { flexDirection: 'row', gap: 12, marginTop: 16 },
+  button: { 
+    flex: 1, 
+    backgroundColor: '#1E293B', 
+    borderRadius: 12, 
+    height: 48, 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    shadowColor: '#1E293B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+  },
   buttonText: { 
-    fontSize: 12, 
+    fontSize: 14, 
     fontWeight: '700', 
-    color: '#043529', 
+    color: '#FFFFFF', 
     letterSpacing: 0.5,
     fontFamily: 'Inter',
   },
-  outlineButton: { flex: 1, borderRadius: 8, height: 40, borderWidth: 1.5, borderColor: '#01b854', alignItems: 'center', justifyContent: 'center' },
+  outlineButton: { 
+    flex: 1, 
+    borderRadius: 12, 
+    height: 48, 
+    borderWidth: 1.5, 
+    borderColor: '#475569', 
+    alignItems: 'center', 
+    justifyContent: 'center' 
+  },
   outlineButtonText: { 
-    fontSize: 12, 
+    fontSize: 14, 
     fontWeight: '700', 
-    color: '#01b854', 
+    color: '#475569', 
     textTransform: 'uppercase' as any,
     fontFamily: 'Inter',
   },

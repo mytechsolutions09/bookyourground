@@ -194,4 +194,31 @@ This update delivers a comprehensive overhaul of the ground detail experience an
 - **Platform-Specific Optimization**: Refined the `Platform.OS === 'web'` checks to ensure advanced mapping features are delivered reliably to desktop users while maintaining a stable fallback for mobile environments.
 
 ---
-*Last Updated and Pushed on April 23, 2026, at 15:10:00+05:30*
+# Discovery Architecture & Owner Authentication Refinement - High-Fidelity UX & Security Hardening
+
+This update stabilizes the ground discovery architecture and hardens the authentication ecosystem. Key improvements include a unified web layout for detail pages, a distraction-free map interface, and a robust password security validation system for new users and owners.
+
+## Key Changes
+
+### 1. Unified Discovery & Map Experience (Web)
+- **Architecture Fix**: Standardized the ground detail page (`app/ground/[city]/[slug].tsx`) to correctly implement the `WebLayout`. This ensures users maintain access to the primary navigation and brand header while exploring specific venues on desktop.
+- **Minimalist Map Interface**: Optimized the Google Maps integration to suppress all default points of interest (POIs), business labels, and transit data. This results in an ultra-clean visualization that prioritizes the ground's location above all else.
+- **High-Fidelity Branding**: Applied consistent **'Inter'** typography and refined layout spacing across the discovery flow, maintaining a premium aesthetic during venue exploration.
+
+### 2. Authentication Security & Role Management
+- **Password Requirement Feedback**: Introduced a dynamic `PasswordRequirement` component in the signup workflow. It provides real-time visual validation (length, numbers, special characters), ensuring users create secure accounts.
+- **Owner Role Fix**: Deployed a critical database migration (`fix_owner_signup_role.sql`) to ensure that users registering through the owner signup portal are correctly assigned the **'OWNER'** role in the database, resolving previous permission issues.
+- **Auth UI Modernization**: Refined the visual hierarchy of the Login, User Signup, and Owner Signup screens with optimized button interactions and branded glassmorphism effects.
+
+### 3. Component & Landing Optimization
+- **Interactive Time Selection**: Enhanced the `TimeSlotsEditor` and `CalendarTabs` to provide smoother transitions and more accurate availability visualization.
+- **Ground Card Refinement**: Updated the primary `GroundCard` component with optimized amenity display logic and improved shadow elevation for better visual separation.
+- **Auth Context Hardening**: Refined the `AuthContext` logic to ensure more reliable session handling and more precise role-based navigation redirects post-authentication.
+
+### 4. Technical Infrastructure & Data Integrity
+- **Schema Synchronization**: Updated the initial schema and added specialized migrations to harden the link between authentication metadata and profile roles.
+- **Standardized Hooks**: Leveraged unified authentication hooks across all entry points to ensure consistent behavior during the registration and login cycles.
+
+---
+*Last Updated and Pushed on April 23, 2026, at 18:45:00+05:30*
+

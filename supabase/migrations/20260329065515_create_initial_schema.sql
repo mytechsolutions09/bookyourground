@@ -370,7 +370,11 @@ CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
   INSERT INTO public.profiles (id, full_name, role)
-  VALUES (new.id, COALESCE(new.raw_user_meta_data->>'full_name', 'User'), 'user');
+  VALUES (
+    new.id, 
+    COALESCE(new.raw_user_meta_data->>'full_name', 'User'), 
+    COALESCE((new.raw_user_meta_data->>'role')::user_role, 'user'::user_role)
+  );
   RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
