@@ -71,7 +71,6 @@ export default function RootLayout() {
               <Stack.Screen name="+not-found" />
             </Stack>
           </View>
-          <MobileTabBarHost />
         </View>
         <StatusBar style="auto" />
       </UIProvider>

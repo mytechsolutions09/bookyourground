@@ -30,7 +30,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export default function GroundsTabScreen() {
   const { width } = useWindowDimensions();
   const { user } = useAuth();
-  const { tab } = useLocalSearchParams();
+  const { tab, type } = useLocalSearchParams();
   const isSmall = width < 900;
   const [activeTab, setActiveTab] = useState<'book' | 'opponent' | 'favorite'>((tab as any) || 'book');
   const horizontalPagerRef = React.useRef<Animated.ScrollView>(null);
@@ -212,7 +212,7 @@ export default function GroundsTabScreen() {
             {activeTab === 'book' ? (
               <View>
                 <GroundsSearchBar lightMode={true} />
-                <LandingBookingForm fullWidth />
+                <LandingBookingForm fullWidth initialType={type as string} />
               </View>
             ) : activeTab === 'opponent' ? (
               <FindAnOpponentScreen hideHeader />
@@ -255,7 +255,7 @@ export default function GroundsTabScreen() {
             keyboardShouldPersistTaps="always"
           >
             <GroundsSearchBar lightMode={true} />
-            <LandingBookingForm fullWidth noCard bookGroundScreenNative hideTitle lightAppTheme />
+            <LandingBookingForm fullWidth noCard bookGroundScreenNative hideTitle lightAppTheme initialType={type as string} />
           </Animated.ScrollView>
         </View>
 

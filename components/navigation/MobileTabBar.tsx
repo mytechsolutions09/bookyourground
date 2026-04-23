@@ -38,6 +38,7 @@ function getActiveTab(
   if (tab === 'cricket') return 'cricket';
   if (tab === 'bookings') return 'bookings';
   if (tab === 'favorites') return 'favorites';
+  if (tab === 'find-an-opponent') return 'find-opponent';
   if (tab === 'profile') return 'profile';
   if (tab === 'shop') return 'shop';
   return 'home';
@@ -111,18 +112,18 @@ export default function MobileTabBar() {
 
       <Pressable
         style={styles.item}
-        onPress={() => go('/(tabs)/shop')}
+        onPress={() => go('/(tabs)/find-an-opponent')}
       >
-        <ShoppingBag size={size} color={activeTab === 'shop' ? '#dc8d3c' : INACTIVE} strokeWidth={activeTab === 'shop' ? 2.5 : 2} />
-        <Text style={[styles.label, { color: activeTab === 'shop' ? '#dc8d3c' : INACTIVE }]}>Shop</Text>
+        <Swords size={size} color={activeTab === 'find-opponent' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'find-opponent' ? 2.5 : 2} />
+        <Text style={[styles.label, { color: activeTab === 'find-opponent' ? ACTIVE : INACTIVE }]}>Opposition</Text>
       </Pressable>
 
       <Pressable
         style={styles.item}
-        onPress={() => go('/(tabs)/profile')}
+        onPress={() => go('/(tabs)/shop')}
       >
-        <CircleUser size={size} color={activeTab === 'profile' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'profile' ? 2.5 : 2} />
-        <Text style={[styles.label, { color: activeTab === 'profile' ? ACTIVE : INACTIVE }]}>Profile</Text>
+        <ShoppingBag size={size} color={activeTab === 'shop' ? '#dc8d3c' : INACTIVE} strokeWidth={activeTab === 'shop' ? 2.5 : 2} />
+        <Text style={[styles.label, { color: activeTab === 'shop' ? '#dc8d3c' : INACTIVE }]}>Shop</Text>
       </Pressable>
     </Animated.View>
   );

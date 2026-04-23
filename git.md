@@ -26,6 +26,12 @@ This update completes the "Elite Blue & Gold" shop infrastructure, establishing 
 - **Focused Product Management**: Re-engineered the admin products dashboard to hide the product grid when the **"Add Product"** form is active. This creates a distraction-free environment for high-volume inventory entry.
 - **Context-Aware Navigation**: Optimized the super admin navbar; the **"Add Product"** link now intelligently navigates to the products page if clicked from the orders screen.
 - **Persistent Admin Access**: Ensured that "Shop Orders" and "Add Product" links remain visible while managing orders, providing a seamless administrative workflow.
+- **Premium Web Hero Section**:
+    - Launched a cinematic, full-bleed hero section for web using high-fidelity imagery of a cricket ground at sunset.
+    - Implemented a centered, high-conversion layout with glassmorphism-based horizontal search functionality (Location, Date, Time).
+    - Added a custom-built, brand-coordinated **Calendar Picker** and **Time Selection Dropdown** with a sleek emerald green and dark forest green palette.
+    - Integrated feature highlights ("Easy Booking", "Top Grounds", "Secure & Reliable") with custom iconography.
+    - Optimized responsive behavior for large screens while maintaining the existing mobile hero experience.
 - **Date Navigation (Web)**:
     - Optimized date pagination on wide screens to use a sliding window approach.
     - Arrows now move the view by 3 days at a time instead of jumping by whole pages, preventing the "skipping" of dates and providing better context.

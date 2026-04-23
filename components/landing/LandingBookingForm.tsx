@@ -166,6 +166,8 @@ interface LandingBookingFormProps {
   lockSlot?: boolean;
   /** Force light theme on App. */
   lightAppTheme?: boolean;
+  /** Initial ground type to pre-select. */
+  initialType?: string;
 }
 
 export default function LandingBookingForm({
@@ -182,6 +184,7 @@ export default function LandingBookingForm({
   bookGroundScreenNative = false,
   lockSlot = false,
   lightAppTheme = true,
+  initialType,
 }: LandingBookingFormProps) {
   const { user } = useAuth();
   const { width: windowWidth } = useWindowDimensions();
@@ -224,7 +227,7 @@ export default function LandingBookingForm({
   const loadMoreSentinelRef = useRef<any>(null);
 
   const [locationKey, setLocationKey] = useState<string>('New Gurugram__Haryana');
-  const [typeKey, setTypeKey] = useState<string>('Cricket Ground');
+  const [typeKey, setTypeKey] = useState<string>(initialType || 'Cricket Ground');
   const [locationRows, setLocationRows] = useState<Location[]>([]);
   const [groundTypeRows, setGroundTypeRows] = useState<GroundType[]>([]);
 

@@ -36,6 +36,7 @@ import {
   Zap,
   Users,
   ArrowRight,
+  CircleUser,
 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { GroundWithImages } from '@/types';
@@ -158,7 +159,7 @@ export default function HomeScreen() {
 
   const insets = useSafeAreaInsets();
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -312,11 +313,27 @@ export default function HomeScreen() {
           <View style={styles.heroGlowSecondary} />
           
           <View style={[styles.heroPadding, { paddingTop: insets.top + 20 }]}>
-            <View style={styles.heroBrandPill}>
-              <View style={[styles.pulseDot, { backgroundColor: '#00ea6b' }]} />
-              <Text style={styles.brandPillText}>BOOKYOURGROUND</Text>
-              <View style={styles.brandPillDivider} />
-              <Text style={styles.brandPillSub}>Slots ready to play</Text>
+            <View style={styles.heroHeaderRow}>
+              <View style={styles.heroBrandPill}>
+                <View style={[styles.pulseDot, { backgroundColor: '#00ea6b' }]} />
+                <Text style={styles.brandPillText}>BOOKYOURGROUND</Text>
+                <View style={styles.brandPillDivider} />
+                <Text style={styles.brandPillSub}>Slots ready to play</Text>
+              </View>
+
+              <TouchableOpacity 
+                onPress={() => router.push('/(tabs)/profile')}
+                style={styles.profileButton}
+                activeOpacity={0.7}
+              >
+                {profile?.avatar_url ? (
+                  <Image source={{ uri: profile.avatar_url }} style={styles.profileImage} />
+                ) : (
+                  <View style={styles.profileIconPlaceholder}>
+                    <CircleUser size={22} color="#FFFFFF" strokeWidth={1.8} />
+                  </View>
+                )}
+              </TouchableOpacity>
             </View>
 
             <Text style={styles.heroMainTitle}>
@@ -388,6 +405,24 @@ export default function HomeScreen() {
               ))}
             </ScrollView>
           </View>
+        </View>
+
+        {/* ── Quick Actions ───────────────────────────────── */}
+        <View style={styles.quickActionsSection}>
+          <TouchableOpacity 
+            style={styles.findGroundBtn}
+            onPress={() => router.push('/select-sport')}
+            activeOpacity={0.9}
+          >
+            <View style={styles.findGroundIconBox}>
+              <Search size={22} color="#00ea6b" strokeWidth={3} />
+            </View>
+            <View style={styles.findGroundTextBox}>
+              <Text style={styles.findGroundBtnTitle}>Find a ground</Text>
+              <Text style={styles.findGroundBtnSub}>Pick your sport & play</Text>
+            </View>
+            <ArrowRight size={20} color="#94A3B8" />
+          </TouchableOpacity>
         </View>
 
 
@@ -539,14 +574,62 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
 
+  // ── Quick Actions ─────────────────────────────
+  quickActionsSection: {
+    paddingHorizontal: 24,
+    marginTop: -32, // Overlay slightly on hero
+    marginBottom: 12,
+    zIndex: 200,
+  },
+  findGroundBtn: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.08,
+    shadowRadius: 24,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  findGroundIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: '#F0FDF4',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  findGroundTextBox: {
+    flex: 1,
+    gap: 2,
+  },
+  findGroundBtnTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  findGroundBtnSub: {
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '500',
+    fontFamily: 'Inter',
+  },
+
   // ── Premium Immersive Hero ────────────────────
   premiumHero: {
     backgroundColor: '#043529',
-    overflow: 'hidden',
     borderBottomLeftRadius: 36,
     borderBottomRightRadius: 36,
-    paddingBottom: 32,
+    paddingBottom: 64,
     position: 'relative',
+    zIndex: 100,
+    overflow: 'visible',
   },
   heroPadding: {
     paddingHorizontal: 24,
@@ -569,18 +652,43 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     backgroundColor: 'rgba(1, 184, 84, 0.08)',
   },
+  heroHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
   heroBrandPill: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    alignSelf: 'flex-start',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
-    marginBottom: 20,
     gap: 8,
+  },
+  profileButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  profileImage: {
+    width: '100%',
+    height: '100%',
+  },
+  profileIconPlaceholder: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   pulseDot: {
     width: 6,

@@ -81,7 +81,7 @@ export default function TabLayout() {
     const { isTabBarVisible } = useUI();
     if (hideTabBarOnBigScreens || !isTabBarVisible) return null;
 
-    const visibleTabNames = ['home_tab', 'grounds', 'cricket', 'shop', 'profile'];
+    const visibleTabNames = ['home_tab', 'grounds', 'find-an-opponent', 'cricket', 'shop'];
     
     const visibleRoutes = state.routes.filter((route: any) => {
       const { options } = descriptors[route.key];
@@ -164,6 +164,9 @@ export default function TabLayout() {
         headerShown: false,
         tabBarActiveTintColor: '#00ea6b',
         tabBarInactiveTintColor: '#9ca3af',
+        tabBar: () => null,
+        tabBarStyle: { display: 'none', height: 0, overflow: 'hidden' },
+        tabBarItemStyle: { display: 'none', height: 0, overflow: 'hidden' },
         ...(Platform.OS === 'web'
           ? {
             tabBarStyle: webTabBarStyle,
@@ -203,8 +206,8 @@ export default function TabLayout() {
       <Tabs.Screen
         name="find-an-opponent"
         options={{
-          href: null,
-          title: 'Find an Opponent',
+          title: 'Opposition',
+          tabBarIcon: ({ color, size }) => <Swords size={size} color={color} />,
         }}
       />
 
@@ -229,6 +232,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
+          href: null,
           title: 'Profile',
           tabBarIcon: ({ color, size }) => <CircleUser size={size} color={color} />,
         }}

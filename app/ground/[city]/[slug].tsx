@@ -36,6 +36,8 @@ import { Share } from 'react-native';
 
 const MAP_ID = "DEMO_MAP_ID";
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+const IS_WEB = Platform.OS === 'web';
+const Section = IS_WEB ? Card : View;
 
 const CLEAN_MAP_STYLES = [
   {
@@ -254,7 +256,6 @@ export default function GroundDetailsPrettyUrlScreen() {
   };
 
   const isLoading = loading || !ground;
-  const Section = Platform.OS === 'web' ? Card : View;
 
   let content;
 
@@ -292,12 +293,11 @@ export default function GroundDetailsPrettyUrlScreen() {
         <View style={styles.content}>
           {/* ── Web Split Header ── */}
           {Platform.OS === 'web' ? (
-            <WebSplitHeader 
+            <WebHeroGallery 
               ground={ground} 
               heroIdx={heroIdx} 
               imageUrls={imageUrls} 
               setHeroImageIndex={setHeroImageIndex}
-              mapsUrl={mapsUrl}
               isFavorite={isFavorite}
               toggleFavorite={toggleFavorite}
               favoriteLoading={favoriteLoading}
@@ -390,154 +390,212 @@ export default function GroundDetailsPrettyUrlScreen() {
             </View>
           )}
 
-          {/* ── Name + location + rating ── */}
-          <Section style={styles.section}>
-            <Text style={styles.name}>{ground.name}</Text>
-
-            <View style={styles.locationRow}>
-              <Text style={styles.location}>
-                {ground.address}, {ground.city}, {ground.state} - {ground.pincode}
-              </Text>
-            </View>
-
-            {mapsUrl && (
-              <Pressable
-                onPress={() => { void Linking.openURL(mapsUrl); }}
-                style={styles.mapsLinkWrap}
-              >
-                <MapPin size={14} color="#01b854" strokeWidth={2.5} />
-                <Text style={styles.mapsLinkText}>Get Directions</Text>
-              </Pressable>
-            )}
-
-            <View style={styles.starsSummaryRow}>
-              {[1, 2, 3, 4, 5].map((i) => {
-                const filled = reviews.length > 0 && i <= Math.round(averageRating);
-                return (
-                  <Star
-                    key={i}
-                    size={16}
-                    color={filled ? '#dcc093' : '#374151'}
-                    fill={filled ? '#dcc093' : 'none'}
-                  />
-                );
-              })}
-              <Text style={styles.rating}>
-                {reviews.length > 0
-                  ? `${averageRating.toFixed(1)} (${reviews.length} reviews)`
-                  : 'No reviews yet'}
-              </Text>
-            </View>
-            {/* Price strip (mobile) */}
-            {Platform.OS !== 'web' && ground.base_price_per_hour ? (
-              <View style={styles.priceStrip}>
-                <View>
-                  <Text style={styles.priceLabel}>Starting from</Text>
-                  <Text style={styles.priceValue}>
-                    ₹{Number(ground.base_price_per_hour).toLocaleString('en-IN')}
-                    <Text style={styles.priceUnit}>
-                      {String(ground.pitch_type ?? '').toLowerCase().includes('box') ? ' /hr' : ' /match'}
+          {Platform.OS === 'web' ? (
+            <View style={styles.webTwoColumnLayout}>
+              <View style={styles.webLeftColumn}>
+                <Section style={styles.section}>
+                  <Text style={styles.name}>{ground.name}</Text>
+                  <View style={styles.locationRow}>
+                    <Text style={styles.location}>
+                      {ground.address}, {ground.city}, {ground.state} - {ground.pincode}
                     </Text>
-                  </Text>
-                </View>
-              </View>
-            ) : null}
+                  </View>
+                  <View style={styles.starsSummaryRow}>
+                    {[1, 2, 3, 4, 5].map((i) => {
+                      const filled = reviews.length > 0 && i <= Math.round(averageRating);
+                      return (
+                        <Star
+                          key={i}
+                          size={16}
+                          color={filled ? '#dcc093' : '#374151'}
+                          fill={filled ? '#dcc093' : 'none'}
+                        />
+                      );
+                    })}
+                    <Text style={styles.rating}>
+                      {reviews.length > 0
+                        ? `${averageRating.toFixed(1)} (${reviews.length} reviews)`
+                        : 'No reviews yet'}
+                    </Text>
+                  </View>
+                </Section>
 
-            {/* ── Booking form (Now part of the main container) ── */}
-            {ground.id ? (
-              <View style={styles.formContainer}>
-                <LandingBookingForm
-                  initialGroundId={String(ground.id)}
-                  hideGroundPicker
-                  initialDate={typeof date === 'string' ? date : undefined}
-                  initialStartTime={typeof time === 'string' ? time : undefined}
-                  initialTeamType={
-                    teams === 'one' || teams === 'both' ? (teams as 'one' | 'both') : undefined
-                  }
-                  fullWidth
-                  noCard
-                  hideTitle
-                  groundPageAccent
-                  lightAppTheme
-                  lockSlot={lock === 'true'}
+                {/* Map Section - Moved under images/name */}
+                <Section style={[styles.section, styles.mapSection]}>
+                  <Text style={styles.sectionTitle}>Location</Text>
+                  <View style={styles.webMapContainer}>
+                    <WebMap ground={ground} />
+                  </View>
+                  {mapsUrl && (
+                    <Pressable
+                      onPress={() => { void Linking.openURL(mapsUrl); }}
+                      style={styles.mapsLinkWrap}
+                    >
+                      <MapPin size={14} color="#01b854" strokeWidth={2.5} />
+                      <Text style={styles.mapsLinkText}>Open in Google Maps</Text>
+                    </Pressable>
+                  )}
+                </Section>
+
+                {ground.description && (
+                  <Section style={styles.section}>
+                    <Text style={styles.sectionTitle}>About</Text>
+                    <Text style={styles.description}>{ground.description}</Text>
+                  </Section>
+                )}
+
+                <Section style={styles.section}>
+                  <Text style={styles.sectionTitle}>Details</Text>
+                  {ground.pitch_type && (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Ground type</Text>
+                      <Text style={styles.detailValue}>{ground.pitch_type}</Text>
+                    </View>
+                  )}
+                  {isCricketGroundType(ground.pitch_type) ? (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Pitch surface</Text>
+                      <Text style={[styles.detailValue, !String(ground.cricket_pitch_surface ?? '').trim() && styles.detailValueMuted]}>
+                        {String(ground.cricket_pitch_surface ?? '').trim() ? String(ground.cricket_pitch_surface) : '—'}
+                      </Text>
+                    </View>
+                  ) : null}
+                  {ground.ground_size && (
+                    <View style={styles.detailRow}>
+                      <Text style={styles.detailLabel}>Ground Size</Text>
+                      <Text style={styles.detailValue}>{ground.ground_size}</Text>
+                    </View>
+                  )}
+                </Section>
+
+                <Section style={styles.section}>
+                  <Text style={styles.sectionTitle}>Amenities</Text>
+                  <AmenitiesList ground={ground} />
+                </Section>
+
+                <ReviewsSection 
+                  reviews={reviews} 
+                  averageRating={averageRating} 
+                  reviewSortOrder={reviewSortOrder} 
+                  setReviewSortOrder={setReviewSortOrder}
                 />
               </View>
-            ) : null}
-          </Section>
 
-          {/* ── About ── */}
-          {ground.description && (
-            <Section style={styles.section}>
-              <Text style={styles.sectionTitle}>About</Text>
-              <Text style={styles.description}>{ground.description}</Text>
-            </Section>
-          )}
-
-          {/* ── Details ── */}
-          <Section style={styles.section}>
-            <Text style={styles.sectionTitle}>Details</Text>
-            {ground.pitch_type && (
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Ground type</Text>
-                <Text style={styles.detailValue}>{ground.pitch_type}</Text>
-              </View>
-            )}
-            {isCricketGroundType(ground.pitch_type) ? (
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Pitch surface</Text>
-                <Text
-                  style={[
-                    styles.detailValue,
-                    !String(ground.cricket_pitch_surface ?? '').trim() && styles.detailValueMuted,
-                  ]}
-                >
-                  {String(ground.cricket_pitch_surface ?? '').trim()
-                    ? String(ground.cricket_pitch_surface)
-                    : '—'}
-                </Text>
-              </View>
-            ) : null}
-            {ground.ground_size && (
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Ground Size</Text>
-                <Text style={styles.detailValue}>{ground.ground_size}</Text>
-              </View>
-            )}
-            {ground.capacity && (
-              <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Capacity</Text>
-                <Text style={styles.detailValue}>{ground.capacity} players</Text>
-              </View>
-            )}
-          </Section>
-
-          {/* ── Amenities ── */}
-          <Section style={styles.section}>
-            <Text style={styles.sectionTitle}>Amenities</Text>
-            {(() => {
-              const items: string[] = [];
-              if (ground.has_floodlights) items.push('Floodlights');
-              if (ground.has_parking) items.push('Parking');
-              if (ground.has_changing_rooms) items.push('Changing Rooms');
-              if (ground.has_pavilion) items.push('Pavilion');
-              if (ground.has_washrooms) items.push('Washroom');
-
-              if (!items.length) {
-                return <Text style={styles.amenitiesEmpty}>None listed</Text>;
-              }
-
-              return (
-                <View style={styles.amenitiesGrid}>
-                  {items.map((label) => (
-                    <View key={label} style={styles.amenityChip}>
-                      <CheckCircle2 size={15} color="#01b854" strokeWidth={2.5} />
-                      <Text style={styles.amenityText}>{label}</Text>
+              <View style={styles.webRightColumn}>
+                <View style={styles.stickySidebar}>
+                  <Section style={styles.sidebarBookingCard}>
+                    <Text style={styles.sidebarPriceTitle}>Book Your Slot</Text>
+                    {ground.base_price_per_hour ? (
+                      <View style={styles.sidebarPriceRow}>
+                        <Text style={styles.sidebarPriceValue}>₹{Number(ground.base_price_per_hour).toLocaleString('en-IN')}</Text>
+                        <Text style={styles.sidebarPriceUnit}>
+                          {String(ground.pitch_type ?? '').toLowerCase().includes('box') ? ' /hr' : ' /match'}
+                        </Text>
+                      </View>
+                    ) : null}
+                    
+                    <View style={styles.formContainer}>
+                      <LandingBookingForm
+                        initialGroundId={String(ground.id)}
+                        hideGroundPicker
+                        initialDate={typeof date === 'string' ? date : undefined}
+                        initialStartTime={typeof time === 'string' ? time : undefined}
+                        initialTeamType={teams === 'one' || teams === 'both' ? (teams as 'one' | 'both') : undefined}
+                        fullWidth
+                        noCard
+                        hideTitle
+                        groundPageAccent
+                        lightAppTheme
+                        lockSlot={lock === 'true'}
+                      />
                     </View>
-                  ))}
+                  </Section>
+                  
+                  <Section style={styles.sidebarSupportCard}>
+                    <Text style={styles.supportTitle}>Need Help?</Text>
+                    <Text style={styles.supportDesc}>Contact the ground directly for bulk bookings or tournaments.</Text>
+                    <Button 
+                      title="Contact Ground" 
+                      variant="outline" 
+                      icon={Phone} 
+                      onPress={() => ground.phone && Linking.openURL(`tel:${ground.phone}`)}
+                    />
+                  </Section>
                 </View>
-              );
-            })()}
-          </Section>
+              </View>
+            </View>
+          ) : (
+            <>
+              {/* Mobile single column layout */}
+              <Section style={styles.section}>
+                <Text style={styles.name}>{ground.name}</Text>
+                <View style={styles.locationRow}>
+                  <Text style={styles.location}>
+                    {ground.address}, {ground.city}, {ground.state} - {ground.pincode}
+                  </Text>
+                </View>
+                <View style={styles.starsSummaryRow}>
+                  {[1, 2, 3, 4, 5].map((i) => {
+                    const filled = reviews.length > 0 && i <= Math.round(averageRating);
+                    return (
+                      <Star
+                        key={i}
+                        size={16}
+                        color={filled ? '#dcc093' : '#374151'}
+                        fill={filled ? '#dcc093' : 'none'}
+                      />
+                    );
+                  })}
+                  <Text style={styles.rating}>
+                    {reviews.length > 0 ? `${averageRating.toFixed(1)} (${reviews.length})` : 'No reviews'}
+                  </Text>
+                </View>
+                {mapsUrl && (
+                  <Pressable onPress={() => Linking.openURL(mapsUrl)} style={styles.mapsLinkWrap}>
+                    <MapPin size={14} color="#01b854" />
+                    <Text style={styles.mapsLinkText}>Get Directions</Text>
+                  </Pressable>
+                )}
+                {ground.base_price_per_hour ? (
+                  <View style={styles.priceStrip}>
+                    <Text style={styles.priceLabel}>Starting from</Text>
+                    <Text style={styles.priceValue}>₹{Number(ground.base_price_per_hour).toLocaleString('en-IN')}<Text style={styles.priceUnit}> /match</Text></Text>
+                  </View>
+                ) : null}
+                
+                <View style={styles.formContainer}>
+                  <LandingBookingForm
+                    initialGroundId={String(ground.id)}
+                    hideGroundPicker
+                    fullWidth
+                    noCard
+                    hideTitle
+                    groundPageAccent
+                  />
+                </View>
+              </Section>
+
+              {ground.description && (
+                <Section style={styles.section}>
+                  <Text style={styles.sectionTitle}>About</Text>
+                  <Text style={styles.description}>{ground.description}</Text>
+                </Section>
+              )}
+
+              <Section style={styles.section}>
+                <Text style={styles.sectionTitle}>Details</Text>
+                {/* Mobile details... */}
+                {ground.pitch_type && <Text style={styles.description}>Type: {ground.pitch_type}</Text>}
+              </Section>
+              
+              <Section style={styles.section}>
+                <Text style={styles.sectionTitle}>Location</Text>
+                <View style={{ height: 250, borderRadius: 16, overflow: 'hidden' }}>
+                   <WebMap ground={ground} />
+                </View>
+              </Section>
+            </>
+          )}
 
 
 
@@ -719,57 +777,19 @@ function MapHandler({ coords }: { coords: { lat: number, lng: number } | null })
   return null;
 }
 
-// ── Web Split Header Component ──
-function WebSplitHeader({ 
+// ── Web Hero Gallery Component ──
+function WebHeroGallery({ 
   ground, 
   heroIdx, 
   imageUrls, 
   setHeroImageIndex,
-  mapsUrl,
   isFavorite,
   toggleFavorite,
   favoriteLoading
 }: any) {
-  const geocodingLibrary = useMapsLibrary('geocoding');
-  const [coords, setCoords] = useState<{lat: number, lng: number} | null>(null);
-
-  useEffect(() => {
-    if (ground.latitude && ground.longitude) {
-      const c = { lat: parseFloat(ground.latitude), lng: parseFloat(ground.longitude) };
-      console.log('Using ground coordinates from DB:', c);
-      setCoords(c);
-    } else if (geocodingLibrary) {
-      const geocoder = new geocodingLibrary.Geocoder();
-      const address = `${ground.address}, ${ground.city}, ${ground.state}`;
-      console.log('Attempting geocode for address:', address);
-      geocoder.geocode({ address }, (results, status) => {
-        if (status === 'OK' && results?.[0]?.geometry?.location) {
-          const loc = results[0].geometry.location;
-          const c = { lat: loc.lat(), lng: loc.lng() };
-          console.log('Geocode successful:', c);
-          setCoords(c);
-        } else {
-          console.warn('Geocode failed for address:', status);
-          const fallbackAddress = `${ground.name}, ${ground.address}, ${ground.city}, ${ground.state}`;
-          console.log('Attempting fallback geocode:', fallbackAddress);
-          geocoder.geocode({ address: fallbackAddress }, (res2, stat2) => {
-             if (stat2 === 'OK' && res2?.[0]?.geometry?.location) {
-               const loc2 = res2[0].geometry.location;
-               const c2 = { lat: loc2.lat(), lng: loc2.lng() };
-               console.log('Fallback geocode successful:', c2);
-               setCoords(c2);
-             } else {
-               console.error('All geocoding attempts failed:', stat2);
-             }
-          });
-        }
-      });
-    }
-  }, [ground, geocodingLibrary]);
-
   return (
-    <View style={styles.webSplitHeader}>
-      <View style={styles.webSplitLeft}>
+    <View style={styles.webGalleryWrapper}>
+      <View style={styles.webGalleryMain}>
         <Image
           source={{ uri: imageUrls[heroIdx] }}
           style={styles.webHeroImage}
@@ -794,58 +814,229 @@ function WebSplitHeader({
           </View>
         )}
       </View>
-      <View style={styles.webSplitRight}>
-        <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
-          <Map
-            defaultCenter={coords || { lat: 28.4595, lng: 77.0266 }}
-            center={coords}
-            defaultZoom={15}
-            mapId={MAP_ID}
-            style={{ width: '100%', height: '100%', borderRadius: 24 }}
-            gestureHandling={'greedy'}
-            disableDefaultUI={true}
-            styles={CLEAN_MAP_STYLES}
-          >
-            {coords && (
-              <>
-                <Marker 
-                  position={coords} 
-                  icon="https://maps.google.com/mapfiles/ms/icons/green-dot.png"
-                />
-                <MapHandler coords={coords} />
-              </>
-            )}
-          </Map>
-        </APIProvider>
-      </View>
     </View>
   );
 }
 
-const IS_WEB = Platform.OS === 'web';
+// ── Web Map Component ──
+function WebMap({ ground }: { ground: GroundWithImages }) {
+  const geocodingLibrary = useMapsLibrary('geocoding');
+  const [coords, setCoords] = useState<{lat: number, lng: number} | null>(null);
+
+  useEffect(() => {
+    if (ground.latitude && ground.longitude) {
+      setCoords({ lat: parseFloat(ground.latitude), lng: parseFloat(ground.longitude) });
+    } else if (geocodingLibrary) {
+      const geocoder = new geocodingLibrary.Geocoder();
+      const address = `${ground.address}, ${ground.city}, ${ground.state}`;
+      geocoder.geocode({ address }, (results, status) => {
+        if (status === 'OK' && results?.[0]?.geometry?.location) {
+          const loc = results[0].geometry.location;
+          setCoords({ lat: loc.lat(), lng: loc.lng() });
+        }
+      });
+    }
+  }, [ground, geocodingLibrary]);
+
+  return (
+    <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+      <Map
+        defaultCenter={coords || { lat: 28.4595, lng: 77.0266 }}
+        center={coords}
+        defaultZoom={15}
+        mapId={MAP_ID}
+        style={{ width: '100%', height: '100%', borderRadius: 16 }}
+        gestureHandling={'greedy'}
+        disableDefaultUI={true}
+        styles={CLEAN_MAP_STYLES}
+      >
+        {coords && (
+          <>
+            <Marker position={coords} icon="https://maps.google.com/mapfiles/ms/icons/green-dot.png" />
+            <MapHandler coords={coords} />
+          </>
+        )}
+      </Map>
+    </APIProvider>
+  );
+}
+
+// ── Sub-components for cleaner structure ──
+function AmenitiesList({ ground }: { ground: GroundWithImages }) {
+  const items: string[] = [];
+  if (ground.has_floodlights) items.push('Floodlights');
+  if (ground.has_parking) items.push('Parking');
+  if (ground.has_changing_rooms) items.push('Changing Rooms');
+  if (ground.has_pavilion) items.push('Pavilion');
+  if (ground.has_washrooms) items.push('Washroom');
+
+  if (!items.length) return <Text style={styles.amenitiesEmpty}>None listed</Text>;
+
+  return (
+    <View style={styles.amenitiesGrid}>
+      {items.map((label) => (
+        <View key={label} style={styles.amenityChip}>
+          <CheckCircle2 size={15} color="#01b854" strokeWidth={2.5} />
+          <Text style={styles.amenityText}>{label}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function ReviewsSection({ reviews, averageRating, reviewSortOrder, setReviewSortOrder }: any) {
+  return (
+    <Section style={styles.section}>
+      <View style={styles.reviewHeaderMain}>
+        <Text style={styles.sectionTitle}>Reviews</Text>
+        <View style={styles.reviewStatsSummary}>
+          <Text style={styles.avgRatingValue}>{averageRating.toFixed(1)}</Text>
+          <Text style={styles.reviewCountText}>({reviews.length} reviews)</Text>
+        </View>
+      </View>
+
+      <View style={styles.sortContainer}>
+        <View style={styles.sortChipsRow}>
+          {['newest', 'highest', 'lowest'].map((id) => (
+            <Pressable 
+              key={id}
+              onPress={() => setReviewSortOrder(id as any)}
+              style={[styles.sortChip, reviewSortOrder === id && styles.sortChipActive]}
+            >
+              <Text style={[styles.sortChipText, reviewSortOrder === id && styles.sortChipTextActive]}>
+                {id.charAt(0).toUpperCase() + id.slice(1)}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
+      {reviews.length === 0 ? (
+        <Text style={styles.noReviewsText}>No reviews yet.</Text>
+      ) : (
+        <View style={styles.reviewsList}>
+          {reviews.slice(0, 5).map((r: any, idx: number) => (
+            <View key={r.id ?? idx} style={styles.reviewItem}>
+              <View style={styles.reviewHeader}>
+                <View style={styles.reviewRatingRow}>
+                  {[1,2,3,4,5].map((s) => (
+                    <Star key={s} size={12} color={s <= r.rating ? '#dcc093' : '#E5E7EB'} fill={s <= r.rating ? '#dcc093' : 'none'} />
+                  ))}
+                </View>
+                <Text style={styles.reviewDateText}>{formatDate(r.created_at)}</Text>
+              </View>
+              <Text style={styles.reviewAuthorText}>{r.user?.full_name || 'Anonymous'}</Text>
+              {r.comment && <Text style={styles.reviewCommentText}>{r.comment}</Text>}
+            </View>
+          ))}
+        </View>
+      )}
+    </Section>
+  );
+}
+
+
 
 const styles = StyleSheet.create({
   // ── Web Shell ──────────────────────────────────────────────
-  webSplitHeader: {
-    flexDirection: 'row',
-    gap: 24,
-    height: 450,
+  webGalleryWrapper: {
+    width: '100%',
+    height: 520,
     marginBottom: 24,
-  },
-  webSplitLeft: {
-    flex: 1.5,
     borderRadius: 24,
     overflow: 'hidden',
-    position: 'relative',
     backgroundColor: '#E2E8F0',
   },
-  webSplitRight: {
+  webGalleryMain: {
     flex: 1,
+    position: 'relative',
+  },
+  webTwoColumnLayout: {
+    flexDirection: 'row',
+    gap: 32,
+    width: '100%',
+  },
+  webLeftColumn: {
+    flex: 1.8,
+  },
+  webRightColumn: {
+    flex: 1,
+    minWidth: 340,
+  },
+  stickySidebar: {
+    position: 'sticky' as any,
+    top: 100,
+    gap: 20,
+  },
+  sidebarBookingCard: {
+    backgroundColor: '#FFFFFF',
     borderRadius: 24,
-    overflow: 'hidden',
-    backgroundColor: '#E2E8F0',
+    padding: 24,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
+    elevation: 5,
+  },
+  sidebarPriceTitle: {
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748B',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  sidebarPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 4,
+    marginBottom: 20,
+  },
+  sidebarPriceValue: {
+    fontFamily: 'Inter',
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  sidebarPriceUnit: {
+    fontFamily: 'Inter',
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  sidebarSupportCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 24,
+    padding: 24,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+  },
+  supportTitle: {
+    fontFamily: 'Inter',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  supportDesc: {
+    fontFamily: 'Inter',
+    fontSize: 13,
+    color: '#64748B',
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  mapSection: {
+    padding: 0,
+    overflow: 'hidden',
+  },
+  webMapContainer: {
+    height: 400,
+    width: '100%',
+    borderRadius: 16,
+    overflow: 'hidden',
   },
   webHeroImage: {
     width: '100%',

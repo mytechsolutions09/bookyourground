@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import Hero from '@/components/landing/Hero';
+import HeroWeb from '@/components/landing/HeroWeb';
 import LandingBookingForm from '@/components/landing/LandingBookingForm';
 import PopularGrounds from '@/components/landing/PopularGrounds';
 import GroundsNearYou from '@/components/landing/GroundsNearYou';
@@ -15,7 +16,7 @@ type Variant = 'web' | 'native';
 export default function LandingPageSections({ variant }: { variant: Variant }) {
   return (
     <>
-      <Hero />
+      {variant === 'web' ? <HeroWeb /> : <Hero />}
       <CalendarTabs />
       <PopularGrounds />
       <View style={styles.bookingSectionSpacer}>

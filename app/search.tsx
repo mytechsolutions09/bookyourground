@@ -33,6 +33,11 @@ export default function SearchScreen() {
   
   const [query, setQuery] = useState((params.q as string) || '');
   const [activeTab, setActiveTab] = useState<SearchTab>('all');
+  const labels: Record<string, string> = {
+    all: 'All',
+    grounds: 'Grounds',
+    matches: 'Find Opposition'
+  };
   const [results, setResults] = useState<{ grounds: any[], matches: any[] }>({ grounds: [], matches: [] });
   const [loading, setLoading] = useState(false);
 
@@ -326,10 +331,16 @@ export default function SearchScreen() {
                   <Pressable 
                     key={t}
                     onPress={() => setActiveTab(t)}
-                    style={[styles.sidebarTab, activeTab === t && styles.sidebarTabActive]}
+                    style={[
+                      styles.sidebarTab, 
+                      activeTab === t && styles.sidebarTabActive
+                    ]}
                   >
-                    <Text style={[styles.sidebarTabText, activeTab === t && styles.sidebarTabTextActive]}>
-                        {t.charAt(0).toUpperCase() + t.slice(1)}
+                    <Text style={[
+                      styles.sidebarTabText, 
+                      activeTab === t && styles.sidebarTabTextActive
+                    ]}>
+                        {labels[t]}
                     </Text>
                   </Pressable>
                 ))}
@@ -426,10 +437,16 @@ export default function SearchScreen() {
                   <Pressable 
                     key={t}
                     onPress={() => setActiveTab(t)}
-                    style={[styles.tab, activeTab === t && styles.tabActive]}
+                    style={[
+                      styles.tab, 
+                      activeTab === t && styles.tabActive
+                    ]}
                   >
-                    <Text style={[styles.tabText, activeTab === t && styles.tabTextActive]}>
-                        {t.toUpperCase()}
+                    <Text style={[
+                      styles.tabText, 
+                      activeTab === t && styles.tabTextActive
+                    ]}>
+                        {labels[t].toUpperCase()}
                     </Text>
                   </Pressable>
                 ))}
@@ -761,7 +778,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   list: {
-    padding: 24,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 80,
     gap: 16,
   },
   premiumCard: {

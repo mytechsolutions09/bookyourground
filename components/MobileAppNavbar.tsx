@@ -41,16 +41,19 @@ export default function MobileAppNavbar({
 
   return (
     <View style={[styles.navbar, lightBg && styles.navbarLight, bgColor ? { backgroundColor: bgColor } : null]} accessibilityRole="header">
-      {canGoBack && (
-        <TouchableOpacity
-          onPress={handleBack}
-          style={styles.backButton}
-          accessibilityLabel="Go back"
-          accessibilityRole="button"
-        >
-          <ArrowLeft size={24} color={titleColor} />
-        </TouchableOpacity>
-      )}
+      {/* 
+        Back button removed as per user request to use gestures only.
+        canGoBack && (
+          <TouchableOpacity
+            onPress={handleBack}
+            style={styles.backButton}
+            accessibilityLabel="Go back"
+            accessibilityRole="button"
+          >
+            <ArrowLeft size={24} color={titleColor} />
+          </TouchableOpacity>
+        ) 
+      */}
       {title ? (
         <Text style={[styles.titleText, { color: titleColor }, smallerTitle && { fontSize: 15 }]}>{title}</Text>
       ) : (
