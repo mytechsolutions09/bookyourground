@@ -776,19 +776,21 @@ function WebSplitHeader({
           resizeMode="cover"
         />
         {imageUrls.length > 1 && (
-          <View style={styles.webThumbnailsOverlay}>
-            {imageUrls.map((uri: string, idx: number) => (
-              <Pressable
-                key={`${uri}-${idx}`}
-                onPress={() => setHeroImageIndex(idx)}
-                style={[
-                  styles.webThumb,
-                  idx === heroIdx && styles.webThumbSelected
-                ]}
-              >
-                <Image source={{ uri }} style={styles.webThumbImg} resizeMode="cover" />
-              </Pressable>
-            ))}
+          <View style={styles.webThumbnailsWrapper}>
+            <View style={styles.webThumbnailsOverlay}>
+              {imageUrls.map((uri: string, idx: number) => (
+                <Pressable
+                  key={`${uri}-${idx}`}
+                  onPress={() => setHeroImageIndex(idx)}
+                  style={[
+                    styles.webThumb,
+                    idx === heroIdx && styles.webThumbSelected
+                  ]}
+                >
+                  <Image source={{ uri }} style={styles.webThumbImg} resizeMode="cover" />
+                </Pressable>
+              ))}
+            </View>
           </View>
         )}
       </View>
@@ -849,17 +851,28 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  webThumbnailsOverlay: {
+  webThumbnailsWrapper: {
     position: 'absolute',
     bottom: 20,
     left: 20,
     right: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    pointerEvents: 'box-none' as any,
+  },
+  webThumbnailsOverlay: {
     flexDirection: 'row',
     gap: 12,
-    padding: 12,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    borderRadius: 16,
-    backdropFilter: 'blur(8px)',
+    padding: 10,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    borderRadius: 18,
+    backdropFilter: 'blur(12px)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
   } as any,
   webThumb: {
     width: 60,

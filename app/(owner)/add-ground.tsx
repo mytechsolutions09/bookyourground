@@ -33,6 +33,7 @@ import TimeSlotsEditor, { TimeSlotsEditorHandle } from '@/components/availabilit
 import { createTimeSlotsForGround } from '@/utils/timeSlotsDb';
 import { cricketPitchSurfaceForDb, isCricketGroundType } from '@/utils/cricketGround';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import type { DayOfWeek } from '@/types';
 
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
@@ -412,7 +413,24 @@ export default function AddGroundScreen() {
 
       setUploadingMedia(true);
       const asset = result.assets[0];
-      const uri = asset.uri;
+      let uri = asset.uri;
+
+      // Resize and compress if it's an image
+      const isImage = asset.mimeType?.startsWith('image/') || 
+                     !asset.mimeType?.startsWith('video/'); // Fallback check
+
+      if (isImage) {
+        try {
+          const manipResult = await ImageManipulator.manipulateAsync(
+            uri,
+            [{ resize: { width: 1000 } }], // Resize to max 1000px width
+            { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+          );
+          uri = manipResult.uri;
+        } catch (manipError) {
+          console.warn('Image manipulation failed, using original:', manipError);
+        }
+      }
 
       // Extract filename and extension
       const extension = uri.split('.').pop() || 'jpg';

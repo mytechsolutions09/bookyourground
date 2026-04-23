@@ -4,8 +4,10 @@ import { supabase } from '@/lib/supabase';
 import { GroundWithImages } from '@/types';
 import { router } from 'expo-router';
 import { makeGroundPath } from '@/utils/groundSlug';
-import { Star, MapPin, Clock, ChevronRight } from 'lucide-react-native';
+import { Star, MapPin, Clock, ChevronRight, ChevronLeft, Calendar as CalendarIcon, X } from 'lucide-react-native';
 import { normalizeDbTimeToHHMM, formatTime12h } from '@/utils/bookingSlots';
+import { buildCalendarCells, formatISODate } from '@/utils/calendar';
+import { Modal, Pressable } from 'react-native';
 
 export default function CalendarTabs() {
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -13,6 +15,8 @@ export default function CalendarTabs() {
   const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
   const [loading, setLoading] = useState(false);
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [showFullCalendar, setShowFullCalendar] = useState(false);
+  const [viewDate, setViewDate] = useState(new Date());
 
   const dates = useMemo(() => {
     const today = new Date();
@@ -137,10 +141,110 @@ export default function CalendarTabs() {
            <Text style={styles.subtitle}>Find your slot</Text>
            <Text style={styles.title}>Live Availability</Text>
         </View>
-        <TouchableOpacity style={styles.viewAllButton}>
+        <TouchableOpacity 
+          style={styles.viewAllButton}
+          onPress={() => {
+            setViewDate(new Date(selectedDate));
+            setShowFullCalendar(true);
+          }}
+        >
           <Text style={styles.viewAllText}>View Full Calendar</Text>
         </TouchableOpacity>
       </View>
+
+      <Modal
+        visible={showFullCalendar}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowFullCalendar(false)}
+      >
+        <Pressable 
+          style={styles.modalOverlay} 
+          onPress={() => setShowFullCalendar(false)} 
+        />
+        <View style={styles.modalContainer}>
+          <View style={styles.calendarCard}>
+            <View style={styles.calendarHeader}>
+              <View>
+                <Text style={styles.calendarMonthName}>
+                  {viewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </Text>
+                <Text style={styles.calendarHeaderHint}>Select a date to check availability</Text>
+              </View>
+              <View style={styles.calendarNav}>
+                <TouchableOpacity 
+                  onPress={() => {
+                    const d = new Date(viewDate);
+                    d.setMonth(d.getMonth() - 1);
+                    setViewDate(d);
+                  }}
+                  style={styles.navBtn}
+                >
+                  <ChevronLeft size={20} color="#043529" />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => {
+                    const d = new Date(viewDate);
+                    d.setMonth(d.getMonth() + 1);
+                    setViewDate(d);
+                  }}
+                  style={styles.navBtn}
+                >
+                  <ChevronRight size={20} color="#043529" />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={() => setShowFullCalendar(false)}
+                  style={[styles.navBtn, { marginLeft: 8, backgroundColor: '#F1F5F9' }]}
+                >
+                  <X size={20} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.weekdaysRow}>
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                <Text key={d} style={styles.weekdayText}>{d}</Text>
+              ))}
+            </View>
+
+            <View style={styles.calendarGrid}>
+              {buildCalendarCells(viewDate.getFullYear(), viewDate.getMonth()).map((cell, idx) => {
+                const isSelected = formatISODate(cell.date) === formatISODate(selectedDate);
+                const isToday = formatISODate(cell.date) === formatISODate(new Date());
+                const isPast = cell.date < new Date(new Date().setHours(0,0,0,0));
+
+                return (
+                  <TouchableOpacity
+                    key={idx}
+                    disabled={isPast}
+                    onPress={() => {
+                      setSelectedDate(cell.date);
+                      setShowFullCalendar(false);
+                    }}
+                    style={[
+                      styles.calendarCell,
+                      !cell.inMonth && styles.cellNotInMonth,
+                      isSelected && styles.cellSelected,
+                      isToday && !isSelected && styles.cellToday,
+                      isPast && styles.cellDisabled,
+                    ]}
+                  >
+                    <Text style={[
+                      styles.cellText,
+                      !cell.inMonth && styles.cellTextNotInMonth,
+                      isSelected && styles.cellTextSelected,
+                      isToday && !isSelected && styles.cellTextToday,
+                      isPast && styles.cellTextDisabled,
+                    ]}>
+                      {cell.dayNum}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+      </Modal>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -524,5 +628,126 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#94A3B8',
     fontWeight: '500',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.4)',
+  },
+  modalContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    pointerEvents: 'box-none' as any,
+  },
+  calendarCard: {
+    width: '100%',
+    maxWidth: 400,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.1,
+        shadowRadius: 20,
+      },
+      android: {
+        elevation: 10,
+      },
+      web: {
+        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+      }
+    }) as any,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 24,
+  },
+  calendarMonthName: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#043529',
+    fontFamily: 'Inter',
+  },
+  calendarHeaderHint: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
+    fontFamily: 'Inter',
+  },
+  calendarNav: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  navBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  weekdaysRow: {
+    flexDirection: 'row',
+    marginBottom: 12,
+  },
+  weekdayText: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#94A3B8',
+    textTransform: 'uppercase',
+    fontFamily: 'Inter',
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  calendarCell: {
+    width: `${100 / 7}%`,
+    aspectRatio: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 12,
+  },
+  cellNotInMonth: {
+    opacity: 0.3,
+  },
+  cellSelected: {
+    backgroundColor: '#043529',
+  },
+  cellToday: {
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+  },
+  cellDisabled: {
+    opacity: 0.15,
+  },
+  cellText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#334155',
+    fontFamily: 'Inter',
+  },
+  cellTextNotInMonth: {
+    fontWeight: '400',
+  },
+  cellTextSelected: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  cellTextToday: {
+    color: '#10B981',
+  },
+  cellTextDisabled: {
+    textDecorationLine: 'line-through',
   },
 });

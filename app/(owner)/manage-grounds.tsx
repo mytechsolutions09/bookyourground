@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Pla
 import { router } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { GroundWithImages } from '@/types';
@@ -182,7 +183,24 @@ export default function OwnerGroundsScreen() {
 
       setUploadingMedia(true);
       const asset = result.assets[0];
-      const uri = asset.uri;
+      let uri = asset.uri;
+
+      // Resize and compress if it's an image
+      const isImage = asset.mimeType?.startsWith('image/') || 
+                     !asset.mimeType?.startsWith('video/'); // Fallback check
+
+      if (isImage) {
+        try {
+          const manipResult = await ImageManipulator.manipulateAsync(
+            uri,
+            [{ resize: { width: 1000 } }], // Resize to max 1000px width
+            { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+          );
+          uri = manipResult.uri;
+        } catch (manipError) {
+          console.warn('Image manipulation failed, using original:', manipError);
+        }
+      }
 
       // Extract extension
       const extension = uri.split('.').pop() || 'jpg';

@@ -2652,7 +2652,7 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
     marginTop: 4,
   },
   applyBtn: {
-    backgroundColor: '#01b854',
+    backgroundColor: '#F1F5F9',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,
@@ -2660,16 +2660,20 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     minWidth: 80,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   applyBtnDisabled: {
     backgroundColor: '#E5E7EB',
     opacity: 0.6,
   },
   applyBtnApplied: {
-    backgroundColor: '#10b981',
+    backgroundColor: '#F8FAFC',
+    borderColor: '#10b981',
+    borderWidth: 1.5,
   },
   applyBtnText: {
-    color: '#FFFFFF',
+    color: '#0F172A',
     fontWeight: '800',
     fontSize: 14,
   },

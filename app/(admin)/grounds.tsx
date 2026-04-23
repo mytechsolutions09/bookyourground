@@ -23,6 +23,7 @@ import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
 import { useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import Button from '@/components/ui/Button';
 import { useAuth } from '@/contexts/AuthContext';
 import TimeSlotsEditor, { TimeSlotsEditorHandle } from '@/components/availability/TimeSlotsEditor';
@@ -511,7 +512,25 @@ export default function GroundsAdminScreen() {
       }
 
       const asset = result.assets[0];
-      const uri = asset.uri;
+      let uri = asset.uri;
+
+      // Resize and compress if it's an image
+      const isImage = asset.mimeType?.startsWith('image/') || 
+                     !asset.mimeType?.startsWith('video/'); // Fallback check
+
+      if (isImage) {
+        try {
+          const manipResult = await ImageManipulator.manipulateAsync(
+            uri,
+            [{ resize: { width: 1000 } }], // Resize to max 1000px width
+            { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+          );
+          uri = manipResult.uri;
+        } catch (manipError) {
+          console.warn('Image manipulation failed, using original:', manipError);
+        }
+      }
+
       const extensionFromUri = uri.split('.').pop() || '';
       const ext =
         extensionFromUri.toLowerCase().match(/^(jpg|jpeg|png|webp|mp4|mov|m4v)$/)?.[0] || 'jpg';

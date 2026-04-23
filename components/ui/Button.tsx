@@ -83,7 +83,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   primary: {
-    backgroundColor: '#01e669',
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   secondary: {
     backgroundColor: '#4CAF50',
@@ -119,7 +121,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   primaryText: {
-    color: '#FFFFFF',
+    color: '#0F172A',
   },
   secondaryText: {
     color: '#FFFFFF',

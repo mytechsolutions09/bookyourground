@@ -282,6 +282,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
   const cleanPath = (pathname || '').split('?')[0];
   const isLanding = cleanPath === '/' || cleanPath === '';
   const isMarketing = cleanPath === '/book-my-ground' || cleanPath === '/find-an-opponent';
+  const isShop = cleanPath === '/shop' || cleanPath.startsWith('/shop/');
   // Treat only ground detail routes as "ground details" (hide sidebar, use hero header).
   // Plain /grounds (lists, dashboards) should use the normal app navbar.
   const isGroundDetails =
@@ -643,6 +644,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
         <View
           style={[
             styles.header,
+            isShop && { backgroundColor: '#4f2c63', borderBottomWidth: 0 },
             isGroundOwner && !isPublicNoSidebar && styles.ownerHeader,
             isUserRoute && !isPublicNoSidebar && styles.userHeader,
           ]}
@@ -1227,6 +1229,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
     gap: 0,
   },
+  signOutButtonMobile: {
+    backgroundColor: 'transparent',
+  },
   signOutText: {
     fontSize: 14,
     color: 'rgba(255,255,255,0.7)',
@@ -1235,9 +1240,6 @@ const styles = StyleSheet.create({
   },
   signOutTextMobile: {
     color: '#dcc093',
-  },
-  signOutButtonMobile: {
-    backgroundColor: 'transparent',
   },
   body: {
     flex: 1,

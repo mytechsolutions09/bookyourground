@@ -428,12 +428,12 @@ const styles = StyleSheet.create({
   perTeamLabel: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#10B981',
+    color: '#64748B',
     marginTop: 1,
     fontFamily: 'Inter',
   },
   perTeamLabelNative: {
-    color: '#34D399',
+    color: '#64748B',
   },
   mapsBtn: {
     flexDirection: 'row',
@@ -446,12 +446,12 @@ const styles = StyleSheet.create({
   },
   mapsLink: {
     fontSize: 12,
-    color: '#10B981',
+    color: '#64748B',
     fontWeight: '800',
     fontFamily: 'Inter',
   },
   mapsLinkNative: {
-    color: '#10B981',
+    color: '#64748B',
   },
   amenities: {
     flexDirection: 'row',
