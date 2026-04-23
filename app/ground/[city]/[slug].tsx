@@ -12,7 +12,16 @@ import {
   Linking,
 } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { MapPin, Star, ArrowLeft, Phone, Navigation2, CheckCircle2, Heart, ChevronRight } from 'lucide-react-native';
+import { MapPin, Star, ArrowLeft, Phone, Navigation2, CheckCircle2, Heart, ChevronRight, Share2, Map as MapIcon } from 'lucide-react-native';
+import { 
+  APIProvider, 
+  Map, 
+  AdvancedMarker, 
+  Pin,
+  Marker,
+  useMap,
+  useMapsLibrary
+} from '@vis.gl/react-google-maps';
 import { supabase } from '@/lib/supabase';
 import { formatDate } from '@/utils/helpers';
 import { slugifyGroundSegment } from '@/utils/groundSlug';
@@ -23,6 +32,26 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import WebLayout from '@/components/web/WebLayout';
 import LandingBookingForm from '@/components/landing/LandingBookingForm';
+import { Share } from 'react-native';
+
+const MAP_ID = "DEMO_MAP_ID";
+const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+
+const CLEAN_MAP_STYLES = [
+  {
+    featureType: "all",
+    elementType: "labels",
+    stylers: [{ visibility: "off" }],
+  },
+  {
+    featureType: "poi",
+    stylers: [{ visibility: "off" }],
+  },
+  {
+    featureType: "transit",
+    stylers: [{ visibility: "off" }],
+  }
+];
 export default function GroundDetailsPrettyUrlScreen() {
   const { city, slug, date, time, teams, lock } = useLocalSearchParams();
   const { user } = useAuth();
@@ -227,15 +256,14 @@ export default function GroundDetailsPrettyUrlScreen() {
   const isLoading = loading || !ground;
   const Section = Platform.OS === 'web' ? Card : View;
 
-  let content: React.ReactNode;
-
   if (isLoading || !ground) {
-    content = (
+    return (
       <View style={styles.loadingContainer}>
         <Text style={styles.loadingText}>Loading ground...</Text>
       </View>
     );
-  } else {
+  }
+ else {
     const fallbackUri = 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
     const rawImages = (ground.ground_images ?? []).filter((img) => img.image_url);
     const sortedImages = [...rawImages].sort((a, b) => {
@@ -249,7 +277,7 @@ export default function GroundDetailsPrettyUrlScreen() {
 
     const heroIdx = Math.min(heroImageIndex, Math.max(0, imageUrls.length - 1));
 
-    content = (
+    return (
       <>
         {/* Header buttons moved to Stack.Screen options */}
 
@@ -260,21 +288,30 @@ export default function GroundDetailsPrettyUrlScreen() {
         >
 
         <View style={styles.content}>
-          {/* ── Hero image + thumbnails ── */}
-          <Section style={[styles.section, styles.imageCard]}>
-            <Image
-              source={{ uri: imageUrls[heroIdx] }}
-              style={styles.heroImage}
-              resizeMode="cover"
+          {/* ── Web Split Header ── */}
+          {Platform.OS === 'web' ? (
+            <WebSplitHeader 
+              ground={ground} 
+              heroIdx={heroIdx} 
+              imageUrls={imageUrls} 
+              setHeroImageIndex={setHeroImageIndex}
+              mapsUrl={mapsUrl}
+              isFavorite={isFavorite}
+              toggleFavorite={toggleFavorite}
+              favoriteLoading={favoriteLoading}
             />
-            {/* ── Favorite Button (Web Only) ── */}
-            {Platform.OS === 'web' && (
+          ) : (
+            <Section style={[styles.section, styles.imageCard]}>
+              <Image
+                source={{ uri: imageUrls[heroIdx] }}
+                style={styles.heroImage}
+                resizeMode="cover"
+              />
+              {/* ── Favorite Button (Mobile Overlay) ── */}
               <Pressable
                 style={[styles.favBtn, isFavorite && styles.favBtnActive]}
                 onPress={toggleFavorite}
                 disabled={favoriteLoading}
-                accessibilityRole="button"
-                accessibilityLabel={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
               >
                 <Heart
                   size={22}
@@ -283,33 +320,73 @@ export default function GroundDetailsPrettyUrlScreen() {
                   strokeWidth={2}
                 />
               </Pressable>
-            )}
-            {imageUrls.length > 1 ? (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.thumbScroll}
-                contentContainerStyle={styles.thumbScrollContent}
-              >
-                {imageUrls.map((uri, idx) => (
-                  <Pressable
-                    key={`${uri}-${idx}`}
-                    onPress={() => setHeroImageIndex(idx)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Show image ${idx + 1} of ${imageUrls.length}`}
-                    style={({ pressed }) => [
-                      styles.thumbPressable,
-                      idx === heroIdx && styles.thumbPressableSelected,
-                      pressed && styles.thumbPressablePressed,
-                      Platform.OS === 'web' && styles.thumbPressableWeb,
-                    ]}
-                  >
-                    <Image source={{ uri }} style={styles.thumbImage} resizeMode="cover" />
-                  </Pressable>
-                ))}
-              </ScrollView>
-            ) : null}
-          </Section>
+              {imageUrls.length > 1 ? (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.thumbScroll}
+                  contentContainerStyle={styles.thumbScrollContent}
+                >
+                  {imageUrls.map((uri, idx) => (
+                    <Pressable
+                      key={`${uri}-${idx}`}
+                      onPress={() => setHeroImageIndex(idx)}
+                      style={[
+                        styles.thumbPressable,
+                        idx === heroIdx && styles.thumbPressableSelected,
+                      ]}
+                    >
+                      <Image source={{ uri }} style={styles.thumbImage} resizeMode="cover" />
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              ) : null}
+            </Section>
+          )}
+
+          {/* ── Name & Quick Actions Bar (Web Only) ── */}
+          {Platform.OS === 'web' && (
+            <View style={styles.webActionBar}>
+              <View style={styles.webNameSection}>
+                <Text style={styles.webGroundName}>{ground.name}</Text>
+                <View style={styles.webLocationRow}>
+                  <MapPin size={16} color="#6B7280" />
+                  <Text style={styles.webLocationText}>{ground.city}, {ground.state}</Text>
+                </View>
+              </View>
+              <View style={styles.webButtonActions}>
+                <Button
+                  title="Directions"
+                  variant="outline"
+                  icon={Navigation2}
+                  onPress={() => mapsUrl && Linking.openURL(mapsUrl)}
+                  style={styles.webActionBtn}
+                />
+                <Button
+                  title="Share"
+                  variant="outline"
+                  icon={Share2}
+                  onPress={() => {
+                    const url = window.location.href;
+                    Share.share({
+                      message: `Check out ${ground.name} on BookYourGround!`,
+                      url: url,
+                      title: ground.name
+                    });
+                  }}
+                  style={styles.webActionBtn}
+                />
+                <Button
+                  title={isFavorite ? "Saved" : "Save"}
+                  variant={isFavorite ? "primary" : "outline"}
+                  icon={Heart}
+                  onPress={toggleFavorite}
+                  loading={favoriteLoading}
+                  style={styles.webActionBtn}
+                />
+              </View>
+            </View>
+          )}
 
           {/* ── Name + location + rating ── */}
           <Section style={styles.section}>
@@ -589,9 +666,260 @@ export default function GroundDetailsPrettyUrlScreen() {
   );
 }
 
+// ── Custom Marker Component ──
+function CustomMarker({ position }: { position: { lat: number, lng: number } }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map || !position) return;
+
+    // Use the global google object safely
+    if (typeof google === 'undefined') return;
+
+    const newMarker = new google.maps.Marker({
+      position,
+      map,
+      title: 'Ground Location',
+      icon: {
+        path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z",
+        fillColor: "#01b854",
+        fillOpacity: 1,
+        strokeWeight: 2,
+        strokeColor: "#FFFFFF",
+        scale: 1.5,
+        anchor: new google.maps.Point(12, 24),
+      },
+    });
+
+    // Center map on marker
+    map.setCenter(position);
+    map.setZoom(16);
+
+    return () => {
+      newMarker.setMap(null);
+    };
+  }, [map, position]);
+
+  return null;
+}
+
+// ── Map Handler Component ──
+function MapHandler({ coords }: { coords: { lat: number, lng: number } | null }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (map && coords) {
+      map.panTo(coords);
+      map.setZoom(15);
+    }
+  }, [map, coords]);
+
+  return null;
+}
+
+// ── Web Split Header Component ──
+function WebSplitHeader({ 
+  ground, 
+  heroIdx, 
+  imageUrls, 
+  setHeroImageIndex,
+  mapsUrl,
+  isFavorite,
+  toggleFavorite,
+  favoriteLoading
+}: any) {
+  const geocodingLibrary = useMapsLibrary('geocoding');
+  const [coords, setCoords] = useState<{lat: number, lng: number} | null>(null);
+
+  useEffect(() => {
+    if (ground.latitude && ground.longitude) {
+      const c = { lat: parseFloat(ground.latitude), lng: parseFloat(ground.longitude) };
+      console.log('Using ground coordinates from DB:', c);
+      setCoords(c);
+    } else if (geocodingLibrary) {
+      const geocoder = new geocodingLibrary.Geocoder();
+      const address = `${ground.address}, ${ground.city}, ${ground.state}`;
+      console.log('Attempting geocode for address:', address);
+      geocoder.geocode({ address }, (results, status) => {
+        if (status === 'OK' && results?.[0]?.geometry?.location) {
+          const loc = results[0].geometry.location;
+          const c = { lat: loc.lat(), lng: loc.lng() };
+          console.log('Geocode successful:', c);
+          setCoords(c);
+        } else {
+          console.warn('Geocode failed for address:', status);
+          const fallbackAddress = `${ground.name}, ${ground.address}, ${ground.city}, ${ground.state}`;
+          console.log('Attempting fallback geocode:', fallbackAddress);
+          geocoder.geocode({ address: fallbackAddress }, (res2, stat2) => {
+             if (stat2 === 'OK' && res2?.[0]?.geometry?.location) {
+               const loc2 = res2[0].geometry.location;
+               const c2 = { lat: loc2.lat(), lng: loc2.lng() };
+               console.log('Fallback geocode successful:', c2);
+               setCoords(c2);
+             } else {
+               console.error('All geocoding attempts failed:', stat2);
+             }
+          });
+        }
+      });
+    }
+  }, [ground, geocodingLibrary]);
+
+  return (
+    <View style={styles.webSplitHeader}>
+      <View style={styles.webSplitLeft}>
+        <Image
+          source={{ uri: imageUrls[heroIdx] }}
+          style={styles.webHeroImage}
+          resizeMode="cover"
+        />
+        {imageUrls.length > 1 && (
+          <View style={styles.webThumbnailsOverlay}>
+            {imageUrls.map((uri: string, idx: number) => (
+              <Pressable
+                key={`${uri}-${idx}`}
+                onPress={() => setHeroImageIndex(idx)}
+                style={[
+                  styles.webThumb,
+                  idx === heroIdx && styles.webThumbSelected
+                ]}
+              >
+                <Image source={{ uri }} style={styles.webThumbImg} resizeMode="cover" />
+              </Pressable>
+            ))}
+          </View>
+        )}
+      </View>
+      <View style={styles.webSplitRight}>
+        <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+          <Map
+            defaultCenter={coords || { lat: 28.4595, lng: 77.0266 }}
+            center={coords}
+            defaultZoom={15}
+            mapId={MAP_ID}
+            style={{ width: '100%', height: '100%', borderRadius: 24 }}
+            gestureHandling={'greedy'}
+            disableDefaultUI={true}
+            styles={CLEAN_MAP_STYLES}
+          >
+            {coords && (
+              <>
+                <Marker 
+                  position={coords} 
+                  icon="https://maps.google.com/mapfiles/ms/icons/green-dot.png"
+                />
+                <MapHandler coords={coords} />
+              </>
+            )}
+          </Map>
+        </APIProvider>
+      </View>
+    </View>
+  );
+}
+
 const IS_WEB = Platform.OS === 'web';
 
 const styles = StyleSheet.create({
+  // ── Web Shell ──────────────────────────────────────────────
+  webSplitHeader: {
+    flexDirection: 'row',
+    gap: 24,
+    height: 450,
+    marginBottom: 24,
+  },
+  webSplitLeft: {
+    flex: 1.5,
+    borderRadius: 24,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: '#E2E8F0',
+  },
+  webSplitRight: {
+    flex: 1,
+    borderRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: '#E2E8F0',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  webHeroImage: {
+    width: '100%',
+    height: '100%',
+  },
+  webThumbnailsOverlay: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    flexDirection: 'row',
+    gap: 12,
+    padding: 12,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    borderRadius: 16,
+    backdropFilter: 'blur(8px)',
+  } as any,
+  webThumb: {
+    width: 60,
+    height: 40,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    overflow: 'hidden',
+    cursor: 'pointer' as any,
+  },
+  webThumbSelected: {
+    borderColor: '#01b854',
+  },
+  webThumbImg: {
+    width: '100%',
+    height: '100%',
+  },
+  webActionBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    padding: 24,
+    borderRadius: 24,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  webNameSection: {
+    gap: 4,
+  },
+  webGroundName: {
+    fontFamily: 'Inter',
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#111827',
+    letterSpacing: -1,
+  },
+  webLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  webLocationText: {
+    fontFamily: 'Inter',
+    fontSize: 16,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  webButtonActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  webActionBtn: {
+    minWidth: 120,
+  },
+
   // ── Shell ──────────────────────────────────────────────
   container: {
     flex: 1,

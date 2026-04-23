@@ -8,6 +8,9 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUI } from '@/contexts/UIContext';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import WebLayout from '@/components/web/WebLayout';
+import SiteFooter from '@/components/web/SiteFooter';
 
 export default function CheckoutScreen() {
   const router = useRouter();
@@ -30,6 +33,7 @@ export default function CheckoutScreen() {
   const [billingPinCode, setBillingPinCode] = useState('');
   const [sameAsDelivery, setSameAsDelivery] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState('razorpay');
+  const [saveInfo, setSaveInfo] = useState(true);
 
   const [isStateModalVisible, setIsStateModalVisible] = useState(false);
   const [pickingFor, setPickingFor] = useState<'delivery' | 'billing'>('delivery');
@@ -44,11 +48,32 @@ export default function CheckoutScreen() {
 
   useEffect(() => {
     setTabBarVisible(false);
-    loadCart();
+    if (user?.id) {
+      loadCart();
+      loadSavedInfo();
+    }
     return () => setTabBarVisible(true);
-  }, []);
+  }, [user?.id]);
+
+  const loadSavedInfo = async () => {
+    try {
+      const savedData = await AsyncStorage.getItem('checkout_saved_info');
+      if (savedData) {
+        const info = JSON.parse(savedData);
+        setFullName(info.fullName || '');
+        setPhoneNumber(info.phoneNumber || '');
+        setAddress(info.address || '');
+        setCity(info.city || '');
+        setState(info.state || 'Delhi');
+        setPinCode(info.pinCode || '');
+      }
+    } catch (err) {
+      console.error('Error loading saved info:', err);
+    }
+  };
 
   const loadCart = async () => {
+    if (!user?.id) return;
     try {
       const { data, error } = await supabase
         .from('shop_cart')
@@ -57,7 +82,7 @@ export default function CheckoutScreen() {
           quantity,
           product:shop_products(*)
         `)
-        .eq('user_id', user?.id);
+        .eq('user_id', user.id);
 
       if (error) throw error;
       setCartItems(data || []);
@@ -111,7 +136,20 @@ export default function CheckoutScreen() {
 
       if (itemsError) throw itemsError;
 
-      // 3. Clear Cart
+      // 3. Save info if requested
+      if (saveInfo) {
+        const infoToSave = {
+          fullName,
+          phoneNumber,
+          address,
+          city,
+          state,
+          pinCode
+        };
+        await AsyncStorage.setItem('checkout_saved_info', JSON.stringify(infoToSave));
+      }
+
+      // 4. Clear Cart
       await supabase.from('shop_cart').delete().eq('user_id', user?.id);
 
       Alert.alert('Success', 'Your order has been placed!');
@@ -124,204 +162,266 @@ export default function CheckoutScreen() {
     }
   };
 
-  return (
-    <View style={styles.container}>
+  const content = (
+    <View style={[styles.container, Platform.OS === 'web' && styles.webContainer]}>
       <StatusBar style="light" />
       <Stack.Screen options={{ headerShown: false }} />
-      <MobileAppNavbar 
-        title="Checkout" 
-        titleColor="#FFFFFF"
-        bgColor="#dc8d3c"
-      />
+      {Platform.OS !== 'web' && (
+        <MobileAppNavbar 
+          title="Checkout" 
+          titleColor="#FFFFFF"
+          bgColor="#dc8d3c"
+        />
+      )}
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Contact Information */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Contact Information</Text>
-          </View>
-          <View style={styles.card}>
-            <TextInput
-              style={styles.input}
-              placeholder="Full Name"
-              placeholderTextColor="#9CA3AF"
-              value={fullName}
-              onChangeText={setFullName}
-            />
-            <TextInput
-              style={[styles.input, { marginBottom: 0 }]}
-              placeholder="Phone Number"
-              placeholderTextColor="#9CA3AF"
-              value={phoneNumber}
-              onChangeText={setPhoneNumber}
-              keyboardType="phone-pad"
-            />
-          </View>
-        </View>
-
-        {/* Delivery Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Delivery Address</Text>
-          </View>
-          <View style={styles.card}>
-            <TextInput
-              style={styles.input}
-              placeholder="House / Street / Area"
-              placeholderTextColor="#9CA3AF"
-              value={address}
-              onChangeText={setAddress}
-            />
-            <View style={styles.row}>
-              <TextInput
-                style={[styles.input, { flex: 1, marginRight: 8 }]}
-                placeholder="City"
-                placeholderTextColor="#9CA3AF"
-                value={city}
-                onChangeText={setCity}
-              />
-              <TouchableOpacity 
-                style={[styles.input, styles.dropdownInput, { flex: 1.2 }]}
-                onPress={() => { setPickingFor('delivery'); setIsStateModalVisible(true); }}
-              >
-                <Text style={[styles.dropdownText, !state && { color: '#9CA3AF' }]}>{state || 'State'}</Text>
-                <ChevronDown size={16} color="#64748b" />
-              </TouchableOpacity>
-            </View>
-            <TextInput
-              style={[styles.input, { marginBottom: 0 }]}
-              placeholder="PIN Code"
-              placeholderTextColor="#9CA3AF"
-              value={pinCode}
-              onChangeText={setPinCode}
-              keyboardType="number-pad"
-            />
-          </View>
-        </View>
-
-        {/* Billing Address Toggle */}
-        <TouchableOpacity 
-          style={styles.checkboxRow} 
-          onPress={() => setSameAsDelivery(!sameAsDelivery)}
-        >
-          <View style={[styles.checkbox, sameAsDelivery && styles.checkboxChecked]}>
-            {sameAsDelivery && <ShieldCheck size={12} color="#FFFFFF" />}
-          </View>
-          <Text style={styles.checkboxLabel}>Billing address same as delivery</Text>
-        </TouchableOpacity>
-
-        {/* Billing Section (Conditional) */}
-        {!sameAsDelivery && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Billing Address</Text>
-            </View>
-            <View style={styles.card}>
-              <TextInput
-                style={styles.input}
-                placeholder="Billing House / Street"
-                placeholderTextColor="#9CA3AF"
-                value={billingAddress}
-                onChangeText={setBillingAddress}
-              />
-              <View style={styles.row}>
-                <TextInput
-                  style={[styles.input, { flex: 1, marginRight: 8 }]}
-                  placeholder="City"
-                  placeholderTextColor="#9CA3AF"
-                  value={billingCity}
-                  onChangeText={setBillingCity}
-                />
-                <TouchableOpacity 
-                  style={[styles.input, styles.dropdownInput, { flex: 1.2 }]}
-                  onPress={() => { setPickingFor('billing'); setIsStateModalVisible(true); }}
-                >
-                  <Text style={[styles.dropdownText, !billingState && { color: '#9CA3AF' }]}>{billingState || 'State'}</Text>
-                  <ChevronDown size={16} color="#64748b" />
-                </TouchableOpacity>
-              </View>
-              <TextInput
-                style={[styles.input, { marginBottom: 0 }]}
-                placeholder="PIN"
-                placeholderTextColor="#9CA3AF"
-                value={billingPinCode}
-                onChangeText={setBillingPinCode}
-                keyboardType="number-pad"
-              />
-            </View>
+        {Platform.OS === 'web' && (
+          <View style={styles.webHeader}>
+            <Text style={styles.webTitle}>Checkout</Text>
+            <Text style={styles.webSubtitle}>Complete your order details below</Text>
           </View>
         )}
 
-        {/* Payment Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Payment Method</Text>
-          </View>
-          <View style={styles.paymentOptions}>
+        <View style={Platform.OS === 'web' ? styles.webLayoutRow : null}>
+          <View style={Platform.OS === 'web' ? styles.webLayoutMain : null}>
+            {/* Contact Information */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Contact Information</Text>
+              </View>
+              <View style={styles.card}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Full Name"
+                  placeholderTextColor="#9CA3AF"
+                  value={fullName}
+                  onChangeText={setFullName}
+                />
+                <TextInput
+                  style={[styles.input, { marginBottom: 0 }]}
+                  placeholder="Phone Number"
+                  placeholderTextColor="#9CA3AF"
+                  value={phoneNumber}
+                  onChangeText={setPhoneNumber}
+                  keyboardType="phone-pad"
+                />
+              </View>
+            </View>
+
+            {/* Delivery Section */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Delivery Address</Text>
+              </View>
+              <View style={styles.card}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="House / Street / Area"
+                  placeholderTextColor="#9CA3AF"
+                  value={address}
+                  onChangeText={setAddress}
+                />
+                <View style={styles.row}>
+                  <TextInput
+                    style={[styles.input, { flex: 1, marginRight: 8 }]}
+                    placeholder="City"
+                    placeholderTextColor="#9CA3AF"
+                    value={city}
+                    onChangeText={setCity}
+                  />
+                  <TouchableOpacity 
+                    style={[styles.input, styles.dropdownInput, { flex: 1.2 }]}
+                    onPress={() => { setPickingFor('delivery'); setIsStateModalVisible(true); }}
+                  >
+                    <Text style={[styles.dropdownText, !state && { color: '#9CA3AF' }]}>{state || 'State'}</Text>
+                    <ChevronDown size={16} color="#64748b" />
+                  </TouchableOpacity>
+                </View>
+                <TextInput
+                  style={[styles.input, { marginBottom: 0 }]}
+                  placeholder="PIN Code"
+                  placeholderTextColor="#9CA3AF"
+                  value={pinCode}
+                  onChangeText={setPinCode}
+                  keyboardType="number-pad"
+                />
+              </View>
+            </View>
+
+            {/* Billing Address Toggle */}
             <TouchableOpacity 
-              style={[styles.paymentCard, paymentMethod === 'razorpay' && styles.paymentCardActive]}
-              onPress={() => setPaymentMethod('razorpay')}
+              style={styles.checkboxRow} 
+              onPress={() => setSameAsDelivery(!sameAsDelivery)}
             >
-              <CreditCard size={20} color={paymentMethod === 'razorpay' ? '#dc8d3c' : '#9CA3AF'} />
-              <Text style={[styles.paymentText, paymentMethod === 'razorpay' && styles.paymentTextActive]}>Razorpay</Text>
+              <View style={[styles.checkbox, sameAsDelivery && styles.checkboxChecked]}>
+                {sameAsDelivery && <ShieldCheck size={12} color="#FFFFFF" />}
+              </View>
+              <Text style={styles.checkboxLabel}>Billing address same as delivery</Text>
             </TouchableOpacity>
+
+            {/* Save Info Toggle */}
             <TouchableOpacity 
-              style={[styles.paymentCard, paymentMethod === 'upi' && styles.paymentCardActive]}
-              onPress={() => setPaymentMethod('upi')}
+              style={styles.checkboxRow} 
+              onPress={() => setSaveInfo(!saveInfo)}
             >
-              <Text style={[styles.upiIcon, paymentMethod === 'upi' && styles.upiIconActive]}>UPI</Text>
-              <Text style={[styles.paymentText, paymentMethod === 'upi' && styles.paymentTextActive]}>UPI / GPay</Text>
+              <View style={[styles.checkbox, saveInfo && styles.checkboxChecked]}>
+                {saveInfo && <ShieldCheck size={12} color="#FFFFFF" />}
+              </View>
+              <Text style={styles.checkboxLabel}>Save info for future references</Text>
+            </TouchableOpacity>
+
+
+            {/* Billing Section (Conditional) */}
+            {!sameAsDelivery && (
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Billing Address</Text>
+                </View>
+                <View style={styles.card}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Billing House / Street"
+                    placeholderTextColor="#9CA3AF"
+                    value={billingAddress}
+                    onChangeText={setBillingAddress}
+                  />
+                  <View style={styles.row}>
+                    <TextInput
+                      style={[styles.input, { flex: 1, marginRight: 8 }]}
+                      placeholder="City"
+                      placeholderTextColor="#9CA3AF"
+                      value={billingCity}
+                      onChangeText={setBillingCity}
+                    />
+                    <TouchableOpacity 
+                      style={[styles.input, styles.dropdownInput, { flex: 1.2 }]}
+                      onPress={() => { setPickingFor('billing'); setIsStateModalVisible(true); }}
+                    >
+                      <Text style={[styles.dropdownText, !billingState && { color: '#9CA3AF' }]}>{billingState || 'State'}</Text>
+                      <ChevronDown size={16} color="#64748b" />
+                    </TouchableOpacity>
+                  </View>
+                  <TextInput
+                    style={[styles.input, { marginBottom: 0 }]}
+                    placeholder="PIN"
+                    placeholderTextColor="#9CA3AF"
+                    value={billingPinCode}
+                    onChangeText={setBillingPinCode}
+                    keyboardType="number-pad"
+                  />
+                </View>
+              </View>
+            )}
+
+            {/* Payment Section */}
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Payment Method</Text>
+              </View>
+              <View style={styles.paymentOptions}>
+                <TouchableOpacity 
+                  style={[styles.paymentCard, paymentMethod === 'razorpay' && styles.paymentCardActive]}
+                  onPress={() => setPaymentMethod('razorpay')}
+                >
+                  <CreditCard size={20} color={paymentMethod === 'razorpay' ? '#dc8d3c' : '#9CA3AF'} />
+                  <Text style={[styles.paymentText, paymentMethod === 'razorpay' && styles.paymentTextActive]}>Razorpay</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.paymentCard, paymentMethod === 'upi' && styles.paymentCardActive]}
+                  onPress={() => setPaymentMethod('upi')}
+                >
+                  <Text style={[styles.upiIcon, paymentMethod === 'upi' && styles.upiIconActive]}>UPI</Text>
+                  <Text style={[styles.paymentText, paymentMethod === 'upi' && styles.paymentTextActive]}>UPI / GPay</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+
+          <View style={Platform.OS === 'web' ? styles.webLayoutSide : null}>
+            {/* Order Summary */}
+            <View style={[styles.section, { marginBottom: 12 }]}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Order Summary</Text>
+              </View>
+              <View style={styles.summaryCard}>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Subtotal ({cartItems.length} items)</Text>
+                  <Text style={styles.summaryValue}>₹{totalAmount.toLocaleString('en-IN')}</Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Shipping</Text>
+                  <Text style={[styles.summaryValue, { color: '#dc8d3c' }]}>FREE</Text>
+                </View>
+                <View style={styles.divider} />
+                <View style={styles.totalRow}>
+                  <Text style={styles.totalLabel}>Total</Text>
+                  <Text style={styles.totalValue}>₹{totalAmount.toLocaleString('en-IN')}</Text>
+                </View>
+                
+                {Platform.OS === 'web' && (
+                  <View>
+                    <TouchableOpacity 
+                      style={[styles.placeOrderBtn, { marginTop: 24 }, loading && { opacity: 0.7 }]}
+                      onPress={handlePlaceOrder}
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <ActivityIndicator color="#FFFFFF" />
+                      ) : (
+                        <Text style={styles.placeOrderText}>Place Order</Text>
+                      )}
+                    </TouchableOpacity>
+                    <View style={styles.webTermsContainer}>
+                      <Text style={styles.smallTermsText}>By placing this order, you agree to our </Text>
+                      <TouchableOpacity onPress={() => router.push('/shop/terms')}>
+                        <Text style={styles.smallTermsLink}>Terms & Conditions</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {/* Trust Badges */}
+            <View style={styles.trustRow}>
+              <View style={styles.trustItem}>
+                <ShieldCheck size={16} color="#6B7280" />
+                <Text style={styles.trustText}>Secure Checkout</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {Platform.OS !== 'web' && (
+          <View style={styles.mobileTermsContainer}>
+            <Text style={styles.smallTermsText}>By placing this order, you agree to our </Text>
+            <TouchableOpacity onPress={() => router.push('/shop/terms')}>
+              <Text style={styles.smallTermsLink}>Terms & Conditions</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        )}
 
-        {/* Order Summary */}
-        <View style={[styles.section, { marginBottom: 12 }]}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Order Summary</Text>
-          </View>
-          <View style={styles.summaryCard}>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Subtotal ({cartItems.length} items)</Text>
-              <Text style={styles.summaryValue}>₹{totalAmount.toLocaleString('en-IN')}</Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Shipping</Text>
-              <Text style={[styles.summaryValue, { color: '#dc8d3c' }]}>FREE</Text>
-            </View>
-            <View style={styles.divider} />
-            <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Total</Text>
-              <Text style={styles.totalValue}>₹{totalAmount.toLocaleString('en-IN')}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Trust Badges */}
-        <View style={styles.trustRow}>
-          <View style={styles.trustItem}>
-            <ShieldCheck size={16} color="#6B7280" />
-            <Text style={styles.trustText}>Secure Checkout</Text>
-          </View>
-        </View>
-
+        {Platform.OS === 'web' && <SiteFooter />}
         <View style={{ height: 40 }} />
       </ScrollView>
 
-      {/* Bottom Action */}
-      <View style={styles.bottomBar}>
-        <TouchableOpacity 
-          style={[styles.placeOrderBtn, loading && { opacity: 0.7 }]}
-          onPress={handlePlaceOrder}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={styles.placeOrderText}>Place Order • ₹{totalAmount.toLocaleString('en-IN')}</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+      {/* Bottom Action (Mobile Only) */}
+      {Platform.OS !== 'web' && (
+        <View style={styles.bottomBar}>
+          <TouchableOpacity 
+            style={[styles.placeOrderBtn, loading && { opacity: 0.7 }]}
+            onPress={handlePlaceOrder}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={styles.placeOrderText}>Place Order • ₹{totalAmount.toLocaleString('en-IN')}</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
+      
       {/* State Selection Modal */}
       <Modal
         visible={isStateModalVisible}
@@ -365,6 +465,12 @@ export default function CheckoutScreen() {
       </Modal>
     </View>
   );
+
+  if (Platform.OS === 'web') {
+    return <WebLayout>{content}</WebLayout>;
+  }
+
+  return content;
 }
 
 const styles = StyleSheet.create({
@@ -396,6 +502,33 @@ const styles = StyleSheet.create({
     padding: 12,
     borderWidth: 1,
     borderColor: '#F1F5F9',
+  },
+  webContainer: {
+    backgroundColor: '#F3F4F6',
+  },
+  webHeader: {
+    marginBottom: 32,
+    marginTop: 16,
+  },
+  webTitle: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#2b2f4b',
+    marginBottom: 8,
+  },
+  webSubtitle: {
+    fontSize: 16,
+    color: '#64748b',
+  },
+  webLayoutRow: {
+    flexDirection: 'row',
+    gap: 24,
+  },
+  webLayoutMain: {
+    flex: 2,
+  },
+  webLayoutSide: {
+    flex: 1,
   },
   input: {
     height: 44,
@@ -444,6 +577,42 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#64748b',
     fontWeight: '600',
+  },
+  termsTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    flex: 1,
+  },
+  termsLink: {
+    color: '#dc8d3c',
+    textDecorationLine: 'underline',
+  },
+  mobileTermsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    marginTop: 20,
+    paddingHorizontal: 20,
+  },
+  webTermsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    marginTop: 12,
+  },
+  smallTermsText: {
+    fontSize: 11,
+    color: '#94a3b8',
+    textAlign: 'center',
+  },
+  smallTermsLink: {
+    fontSize: 11,
+    color: '#dc8d3c',
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
   modalOverlay: {
     flex: 1,

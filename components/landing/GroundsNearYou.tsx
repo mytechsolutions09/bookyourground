@@ -6,6 +6,151 @@ import { GroundWithImages } from '@/types';
 import { router } from 'expo-router';
 import { makeGroundPath } from '@/utils/groundSlug';
 import Card from '@/components/ui/Card';
+import { 
+  APIProvider, 
+  Map, 
+  AdvancedMarker, 
+  Pin, 
+  InfoWindow,
+  useMap,
+  useMapsLibrary,
+  ControlPosition
+} from '@vis.gl/react-google-maps';
+
+const MAP_ID = "DEMO_MAP_ID"; // Required for Advanced Markers
+const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+
+function MultiMarkerMap({ 
+  grounds, 
+  focusedGroundId, 
+  onMarkerClick,
+  userLocation
+}: { 
+  grounds: GroundWithImages[], 
+  focusedGroundId: string | null,
+  onMarkerClick: (id: string) => void,
+  userLocation: {lat: number, lng: number} | null
+}) {
+  const map = useMap();
+  const geocodingLibrary = useMapsLibrary('geocoding');
+  const [openInfoWindowId, setOpenInfoWindowId] = useState<string | null>(null);
+  const [resolvedCoords, setResolvedCoords] = useState<Record<string, {lat: number, lng: number}>>({});
+
+  useEffect(() => {
+    if (focusedGroundId && map) {
+      const g = grounds.find(x => x.id === focusedGroundId);
+      const coords = resolvedCoords[focusedGroundId] || (g?.latitude && g?.longitude ? { lat: Number(g.latitude), lng: Number(g.longitude) } : null);
+      
+      if (coords) {
+        map.panTo(coords);
+        map.setZoom(15);
+      }
+    }
+  }, [focusedGroundId, map, resolvedCoords]);
+
+  // Geocode grounds missing coordinates
+  useEffect(() => {
+    if (!geocodingLibrary) return;
+
+    const groundsToGeocode = grounds.filter(g => {
+      const lat = parseFloat(g.latitude);
+      const lng = parseFloat(g.longitude);
+      return (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) && !resolvedCoords[g.id];
+    });
+
+    if (groundsToGeocode.length === 0) return;
+
+    const geocoder = new geocodingLibrary.Geocoder();
+    
+    groundsToGeocode.forEach((g) => {
+      const address = `${g.name}, ${g.address}, ${g.city}, ${g.state}`;
+      geocoder.geocode({ address }, (results, status) => {
+        if (status === 'OK' && results?.[0]?.geometry?.location) {
+          const loc = results[0].geometry.location;
+          setResolvedCoords(prev => ({
+            ...prev,
+            [g.id]: { lat: loc.lat(), lng: loc.lng() }
+          }));
+        } else {
+          console.warn(`Geocoding failed for ${g.name}:`, status);
+        }
+      });
+    });
+  }, [grounds, geocodingLibrary]);
+
+  const defaultCenter = userLocation || { lat: 28.4595, lng: 77.0266 }; // Gurgaon default
+
+  return (
+    <Map
+      style={{ width: '100%', height: '100%' }}
+      defaultCenter={defaultCenter}
+      defaultZoom={12}
+      mapId={MAP_ID}
+      gestureHandling={'greedy'}
+      disableDefaultUI={false}
+    >
+      {grounds.map((g) => {
+        let lat = parseFloat(g.latitude);
+        let lng = parseFloat(g.longitude);
+        
+        // Fallback to resolved coords if missing in DB
+        if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
+          if (resolvedCoords[g.id]) {
+            lat = resolvedCoords[g.id].lat;
+            lng = resolvedCoords[g.id].lng;
+          } else {
+            return null;
+          }
+        }
+
+        const isFocused = g.id === focusedGroundId;
+        return (
+          <React.Fragment key={g.id}>
+            <AdvancedMarker
+              position={{ lat, lng }}
+              onClick={() => {
+                onMarkerClick(g.id);
+                setOpenInfoWindowId(g.id);
+              }}
+            >
+              <View style={{
+                backgroundColor: isFocused ? '#01b854' : '#d8f79d',
+                padding: 6,
+                borderRadius: 20,
+                borderWidth: 2,
+                borderColor: '#FFFFFF',
+                shadowColor: '#000',
+                shadowOpacity: 0.3,
+                shadowRadius: 4,
+                elevation: 5
+              }}>
+                <MapPin size={14} color={isFocused ? "#FFFFFF" : "#1e293b"} />
+              </View>
+            </AdvancedMarker>
+            
+            {openInfoWindowId === g.id && (
+              <InfoWindow
+                position={{ lat: Number(g.latitude), lng: Number(g.longitude) }}
+                onCloseClick={() => setOpenInfoWindowId(null)}
+              >
+                <View style={{ padding: 4, maxWidth: 180 }}>
+                  <Text style={{ fontWeight: 'bold', fontSize: 14, color: '#1e293b', marginBottom: 2 }}>{g.name}</Text>
+                  <Text style={{ fontSize: 11, color: '#64748b' }}>{g.city}</Text>
+                  <TouchableOpacity 
+                    style={{ marginTop: 8, backgroundColor: '#10b981', padding: 6, borderRadius: 4, alignItems: 'center' }}
+                    onPress={() => router.push(makeGroundPath(g) as any)}
+                  >
+                    <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800' }}>VIEW DETAILS</Text>
+                  </TouchableOpacity>
+                </View>
+              </InfoWindow>
+            )}
+          </React.Fragment>
+        );
+      })}
+    </Map>
+  );
+}
 
 export default function GroundsNearYou() {
   const { width } = useWindowDimensions();
@@ -261,14 +406,14 @@ export default function GroundsNearYou() {
         {/* Map Section */}
         <View style={[styles.mapCard, isSmallScreen && { height: 350 }]}>
           {isWeb ? (
-            <iframe
-              width="100%"
-              height="100%"
-              style={{ border: 0, borderRadius: 16 }}
-              loading="lazy"
-              allowFullScreen
-              src={freeMapEmbed}
-            />
+            <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+              <MultiMarkerMap 
+                grounds={filteredGrounds} 
+                focusedGroundId={focusedGroundId}
+                onMarkerClick={setFocusedGroundId}
+                userLocation={userLocation}
+              />
+            </APIProvider>
           ) : (
             <View style={styles.nativeMapPlaceholder}>
               <View style={styles.nativeMapIcon}>

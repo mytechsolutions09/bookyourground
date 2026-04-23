@@ -13,6 +13,16 @@ import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import { createTimeSlotsForGround } from '@/utils/timeSlotsDb';
 import type { DayOfWeek } from '@/types';
+import { 
+  APIProvider, 
+  Map as GoogleMap, 
+  Marker, 
+  useMap,
+  useMapsLibrary
+} from '@vis.gl/react-google-maps';
+
+const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+const MAP_ID = "DEMO_MAP_ID";
 
 function makeGroundPath(ground: GroundWithImagesType): string {
   const name = (ground.name ?? '').toString().toLowerCase().trim();
@@ -141,6 +151,8 @@ export default function OwnerGroundsScreen() {
       has_washrooms: !!(ground as any).has_washrooms,
       active: !!(ground as any).active,
       mediaUrls: (ground.ground_images ?? []).map((img) => img.image_url),
+      latitude: ground.latitude ? String(ground.latitude) : '',
+      longitude: ground.longitude ? String(ground.longitude) : '',
     });
     setEditLocationKey(`${ground.city ?? ''}__${ground.state ?? ''}`);
     setEditOpen(true);
@@ -297,6 +309,8 @@ export default function OwnerGroundsScreen() {
         has_pavilion: !!editForm.has_pavilion,
         has_washrooms: !!editForm.has_washrooms,
         active: !!editForm.active,
+        latitude: editForm.latitude ? parseFloat(editForm.latitude) : null,
+        longitude: editForm.longitude ? parseFloat(editForm.longitude) : null,
       };
 
       const { error } = await supabase
@@ -619,6 +633,69 @@ export default function OwnerGroundsScreen() {
             </View>
 
             <ScrollView style={styles.modalScroll} keyboardShouldPersistTaps="handled">
+              {/* ── Map Picker for Edit (Force Visible at Top) ── */}
+              <View style={{ 
+                marginVertical: 20, 
+                padding: 16, 
+                backgroundColor: '#ecfdf5', 
+                borderRadius: 20, 
+                borderWidth: 2, 
+                borderColor: '#10b981',
+                minHeight: 400 
+              }}>
+                <Text style={{ fontFamily: 'Inter', fontSize: 18, fontWeight: '800', color: '#064e3b', marginBottom: 4 }}>Set Exact Location (Pin on Map)</Text>
+                <Text style={{ fontFamily: 'Inter', fontSize: 14, color: '#065f46', marginBottom: 16 }}>Click on the map to update your ground's exact GPS location.</Text>
+                <View style={{ height: 300, borderRadius: 16, overflow: 'hidden', marginBottom: 16, backgroundColor: '#cbd5e1' }}>
+                  <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+                    <GoogleMap
+                      defaultCenter={{ lat: 28.4595, lng: 77.0266 }}
+                      center={editForm?.latitude && editForm?.longitude ? { lat: parseFloat(editForm.latitude), lng: parseFloat(editForm.longitude) } : undefined}
+                      defaultZoom={15}
+                      mapId={MAP_ID}
+                      onClick={(e) => {
+                        if (e.detail.latLng) {
+                          setEditForm((p: any) => ({
+                            ...p,
+                            latitude: String(e.detail.latLng!.lat),
+                            longitude: String(e.detail.latLng!.lng)
+                          }));
+                        }
+                       }}
+                      style={{ width: '100%', height: '100%' }}
+                    >
+                        {editForm?.latitude && editForm?.longitude && (
+                          <Marker 
+                            position={{ lat: parseFloat(editForm.latitude), lng: parseFloat(editForm.longitude) }} 
+                            icon="https://maps.google.com/mapfiles/ms/icons/green-dot.png"
+                          />
+                        )}
+                    </GoogleMap>
+                  </APIProvider>
+                </View>
+                <View style={{ flexDirection: 'row', display: 'flex', gap: 12 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontFamily: 'Inter', fontSize: 12, fontWeight: '600', color: '#065f46', marginBottom: 4 }}>Latitude</Text>
+                    <TextInput
+                      style={[styles.formInput, { marginBottom: 0, backgroundColor: '#ffffff' }]}
+                      value={String(editForm?.latitude ?? '')}
+                      onChangeText={(t) => setEditForm((p: any) => ({ ...p, latitude: t }))}
+                      placeholder="Latitude"
+                      keyboardType="numeric"
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontFamily: 'Inter', fontSize: 12, fontWeight: '600', color: '#065f46', marginBottom: 4 }}>Longitude</Text>
+                    <TextInput
+                      style={[styles.formInput, { marginBottom: 0, backgroundColor: '#ffffff' }]}
+                      value={String(editForm?.longitude ?? '')}
+                      onChangeText={(t) => setEditForm((p: any) => ({ ...p, longitude: t }))}
+                      placeholder="Longitude"
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </View>
+              </View>
+
               <TextInput
                 style={styles.formInput}
                 value={String(editForm?.name ?? '')}
@@ -670,6 +747,7 @@ export default function OwnerGroundsScreen() {
                   keyboardType="numeric"
                 />
               </View>
+
               <TextInput
                 style={styles.formInput}
                 value={String(editForm?.pitch_type ?? '')}

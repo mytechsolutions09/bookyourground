@@ -40,6 +40,19 @@ export function formatSlotLabelHour(hour24: number): string {
   return `${hour12} ${ampm}`;
 }
 
+export function formatTime12h(hhmm: string): string {
+  const [hhStr, mmStr] = hhmm.split(':');
+  const hh = parseInt(hhStr ?? '', 10);
+  const mm = parseInt(mmStr ?? '', 10);
+  if (!Number.isFinite(hh) || !Number.isFinite(mm)) return hhmm;
+
+  const ampm = hh >= 12 ? 'PM' : 'AM';
+  const hour12 = hh % 12 || 12;
+  const minPart = mm === 0 ? '' : `:${String(mm).padStart(2, '0')}`;
+
+  return `${hour12}${minPart} ${ampm}`;
+}
+
 function pad2(n: number): string {
   return `${n}`.padStart(2, '0');
 }

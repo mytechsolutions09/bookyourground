@@ -48,6 +48,12 @@ export default function SiteFooter() {
             >
               Match strategies
             </Text>
+            <Text
+              style={styles.footerLink}
+              onPress={() => router.push('/(tabs)/shop' as any)}
+            >
+              Shop
+            </Text>
           </View>
 
           <View style={styles.footerColumn}>
@@ -105,6 +111,12 @@ export default function SiteFooter() {
             <Text
               style={styles.footerLink}
               onPress={() => router.push('/terms' as any)}
+            >
+              Terms &amp; Conditions
+            </Text>
+            <Text
+              style={styles.footerLink}
+              onPress={() => router.push('/shop/terms' as any)}
             >
               Terms &amp; Conditions
             </Text>

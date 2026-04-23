@@ -14,7 +14,7 @@ import {
 import { supabase } from '@/lib/supabase';
 import { TimeSlot, DayOfWeek } from '@/types';
 import Button from '@/components/ui/Button';
-import { formatSlotLabelHour, normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
+import { formatTime12h, normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
 import { createTimeSlotsForGround, ensureDefaultTimeSlotsForGround } from '@/utils/timeSlotsDb';
 import { Pencil, Trash2, X, Check } from 'lucide-react-native';
 
@@ -33,9 +33,7 @@ function dayLabel(d: DayOfWeek): string {
 }
 
 function timeLabelFromHHMM(hhmm: string): string {
-  const hh = parseInt(hhmm.split(':')[0] ?? '', 10);
-  if (!Number.isFinite(hh)) return hhmm;
-  return formatSlotLabelHour(hh);
+  return formatTime12h(hhmm);
 }
 
 const DAY_PRESET_OPTIONS: { key: string; label: string; days: DayOfWeek[] }[] = [
