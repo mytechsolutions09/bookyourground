@@ -132,7 +132,7 @@ export default function CheckoutScreen() {
   const fetchNewBookingDetails = async () => {
     try {
       setLoading(true);
-      const { groundId, date, time, teamType, couponId, discount, amount: passedAmount, endTime: passedEndTime } = params;
+      const { groundId, date, time, teamType, couponId, discount, amount: passedAmount, endTime: passedEndTime, pricePerHour: passedPricePerHour } = params;
       
       const { data: ground, error: groundError } = await supabase
         .from('grounds')
@@ -158,12 +158,7 @@ export default function CheckoutScreen() {
       const totalHours = startHHMM && endHHMM ? hoursBetweenBooked(startHHMM, endHHMM) : null;
 
       let totalAmount = passedAmount ? parseFloat(passedAmount as string) : 0;
-      if (!totalAmount) {
-        const pricePerHour = ground.base_price_per_hour;
-        totalAmount = isBox
-          ? pricePerHour * (totalHours || 1)
-          : teamType === 'one' ? (pricePerHour / 2) : pricePerHour;
-      }
+      const pricePerHour = passedPricePerHour ? parseFloat(passedPricePerHour as string) : 0;
       
       const discountVal = parseFloat(discount as string || '0');
 
@@ -174,7 +169,7 @@ export default function CheckoutScreen() {
         start_time: time,
         end_time: endTime,
         total_hours: totalHours || 1,
-        price_per_hour: ground.base_price_per_hour,
+        price_per_hour: pricePerHour,
         total_amount: totalAmount - discountVal,
         discount_amount: discountVal,
         team_type: teamType,

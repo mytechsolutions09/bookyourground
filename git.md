@@ -228,4 +228,30 @@ This update stabilizes the ground discovery architecture and hardens the authent
 ---
 *Last Updated and Pushed on April 23, 2026, at 18:45:00+05:30*
 
-#4f2c63
+# Standardized Cricket Booking Pricing & Custom Slot Logic - Cross-Platform Accuracy
+
+This update delivers a complete overhaul of the pricing ecosystem, transitioning from a generic ground-based fallback to a precision slot-based custom pricing model. This ensures 100% financial accuracy across all user, owner, and administrative views.
+
+## Key Changes
+
+### 1. Custom Slot-Based Pricing Model
+- **Removal of Base Price Fallbacks**: Eliminated the legacy dependency on `base_price_per_hour` across the booking engine. The system now strictly enforces `custom_price` settings defined per time slot.
+- **Dynamic Calculation Utility**: Refactored the `getBookingDisplayAmount` utility to provide real-time, accurate pricing for both Box Cricket (hourly) and Cricket Grounds (per match) without generic defaults.
+- **Persistence Hardening**: Updated the checkout flow to explicitly capture and lock in the slot's custom price at the moment of selection, protecting users from mid-transaction price changes.
+
+### 2. High-Fidelity Price Visualization
+- **Real-Time "Starting from" Logic**: Re-engineered the mobile price strip on ground detail pages to dynamically scan all active time slots and surface the actual minimum bookable price.
+- **Discovery CTA Refinement**: Updated `GroundCard` components in lists to show "See Slots" when a specific time isn't selected, ensuring users are guided to accurate pricing rather than generic estimates.
+- **Cricket Team Pricing**: Standardized the "1 Team vs Both Teams" logic to always derive from the specific slot's custom price, maintaining the 50% discount rule with mathematical precision.
+
+### 3. Cross-Platform Dashboard Synchronization
+- **Admin Table Modernization**: Updated the global admin bookings dashboard to use the standardized pricing utility and standard currency formatting, resolving discrepancies in historical records.
+- **Owner Inventory Precision**: Synchronized the owner ground-bookings view with the core pricing engine, ensuring owners see the exact revenue generated per slot.
+- **Standardized Labels**: Unified price labels and "Per Team" descriptors across all dashboards, creating a consistent design language for financial data.
+
+### 4. Technical Stabilizations
+- **Robust Schema Mapping**: Enhanced the `time_slots` join in ground detail queries to ensure custom prices are always available for the frontend calculation engine.
+- **UI Error Mitigation**: Added strict null-checks to the pricing displays to handle edge cases where slots might not yet have prices assigned, preventing layout breaks.
+
+---
+*Last Updated and Pushed on April 25, 2026, at 04:05:00+05:30*

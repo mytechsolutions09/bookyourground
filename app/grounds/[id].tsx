@@ -103,7 +103,8 @@ export default function GroundDetailsScreen() {
             `
             *,
             ground_images(*),
-            reviews(rating, comment, user:profiles(full_name))
+            reviews(rating, comment, user:profiles(full_name)),
+            time_slots(custom_price, is_available)
           `,
           )
           .eq('id', idParam)
@@ -125,7 +126,8 @@ export default function GroundDetailsScreen() {
             `
             *,
             ground_images(*),
-            reviews(rating, comment, user:profiles(full_name))
+            reviews(rating, comment, user:profiles(full_name)),
+            time_slots(custom_price, is_available)
           `,
           )
           .eq('active', true)
@@ -442,20 +444,32 @@ export default function GroundDetailsScreen() {
               </Text>
             </View>
 
-            {/* Price strip (mobile) */}
-            {Platform.OS !== 'web' && ground.base_price_per_hour ? (
-              <View style={styles.priceStrip}>
-                <View>
-                  <Text style={styles.priceLabel}>Starting from</Text>
-                  <Text style={styles.priceValue}>
-                    ₹{Number(ground.base_price_per_hour).toLocaleString('en-IN')}
-                    <Text style={styles.priceUnit}>
-                      {String(ground.pitch_type ?? '').toLowerCase().includes('box') ? ' /hr' : ' /match'}
+            {/* Price strip (mobile) - Derived from custom slot prices */}
+            {Platform.OS !== 'web' ? (() => {
+              const slots = (ground as any).time_slots || [];
+              const prices = slots
+                .filter((s: any) => s.is_available && s.custom_price != null)
+                .map((s: any) => Number(s.custom_price));
+              
+              if (prices.length === 0) return null;
+              const minPrice = Math.min(...prices);
+              const maxPrice = Math.max(...prices);
+              const hasVariation = minPrice !== maxPrice;
+
+              return (
+                <View style={styles.priceStrip}>
+                  <View>
+                    <Text style={styles.priceLabel}>{hasVariation ? 'Starting from' : 'Price'}</Text>
+                    <Text style={styles.priceValue}>
+                      ₹{minPrice.toLocaleString('en-IN')}
+                      <Text style={styles.priceUnit}>
+                        {String(ground.pitch_type ?? '').toLowerCase().includes('box') ? ' /hr' : ' /match'}
+                      </Text>
                     </Text>
-                  </Text>
+                  </View>
                 </View>
-              </View>
-            ) : null}
+              );
+            })() : null}
 
             {/* ── Booking form (Now part of the main container) ── */}
             {ground.id ? (

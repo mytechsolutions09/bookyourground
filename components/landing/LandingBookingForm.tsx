@@ -644,10 +644,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       const customMatchPrice = Object.prototype.hasOwnProperty.call(slotPriceByStartTime, startTime)
         ? slotPriceByStartTime[startTime]
         : undefined;
-      const baseMatchPrice =
-        customMatchPrice == null
-          ? selectedGround.base_price_per_hour ?? 0
-          : customMatchPrice ?? 0;
+      const baseMatchPrice = customMatchPrice ?? 0;
 
       // If user selects only 1 team, charge half of the "both teams" price.
       const pricePerMatch =
@@ -662,11 +659,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       return { totalHours, totalAmount, pricePerUnit: pricePerMatch, unitLabel: 'match' as const };
     }
 
-    const basePrice = selectedGround.base_price_per_hour;
-    const custom = Object.prototype.hasOwnProperty.call(slotPriceByStartTime, startTime)
-      ? slotPriceByStartTime[startTime]
-      : undefined;
-    const pricePerHour = custom == null ? basePrice : custom;
+    const pricePerHour = custom ?? 0;
     const _sanity = hoursBetweenBooked(startTime, derivedEndTime);
     if (_sanity === null || !Number.isFinite(_sanity) || _sanity <= 0) return null;
 
@@ -1459,10 +1452,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       Object.prototype.hasOwnProperty.call(slotPriceByStartTime, startTime) &&
         slotPriceByStartTime[startTime] != null
         ? slotPriceByStartTime[startTime]!
-        : isBoxCricket
-          ? selectedGround.base_price_per_hour
-          : // For cricket grounds, store per-match price in price_per_hour column.
-          (computed?.pricePerUnit ?? 0);
+        : (computed?.pricePerUnit ?? 0);
 
     try {
       setSubmitting(true);
@@ -1473,6 +1463,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       params.set('teamType', teamType);
       if (computed) {
         params.set('amount', computed.totalAmount.toString());
+        params.set('pricePerHour', computed.pricePerUnit.toString());
         params.set('endTime', derivedEndTime);
       }
       if (appliedCoupon) params.set('couponId', appliedCoupon.id);
@@ -1529,13 +1520,11 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
               let unitLabelOverride: string | undefined;
 
               if (isBox) {
-                const base = g.base_price_per_hour ?? 0;
-                const perHour = slotCustom != null ? slotCustom : base;
+                const perHour = slotCustom ?? 0;
                 displayPricePerUnit = perHour;
                 unitLabelOverride = '/hr';
               } else {
-                const baseBothTeams =
-                  slotCustom != null ? slotCustom : g.base_price_per_hour ?? 0;
+                const baseBothTeams = slotCustom ?? 0;
                 const perMatch =
                   teamType === 'one'
                     ? Math.round((baseBothTeams / 2) * 100) / 100

@@ -86,7 +86,8 @@ export default function GroundDetailsPrettyUrlScreen() {
       const select = `
           *,
           ground_images(*),
-          reviews(rating, comment, created_at, user:profiles(full_name))
+          reviews(rating, comment, created_at, user:profiles(full_name)),
+          time_slots(custom_price, is_available)
         `;
 
       // Narrow by city when possible; links use slugify(city), not "name with spaces" from the slug.
@@ -479,34 +480,36 @@ export default function GroundDetailsPrettyUrlScreen() {
                 <View style={styles.stickySidebar}>
                   <Card style={styles.sidebarBookingCard}>
                     <Text style={styles.sidebarPriceTitle}>Book Your Slot</Text>
-                    {ground.base_price_per_hour ? (
-                      <View style={styles.sidebarPriceRow}>
-                        {currentTotal !== null ? (
-                          <>
-                            <Text style={styles.sidebarPriceUnit}>Total: </Text>
-                            <Text style={styles.sidebarPriceValue}>₹{currentTotal.toLocaleString('en-IN')}</Text>
-                          </>
-                        ) : (
-                          <>
-                            {isCricketGroundType(ground.pitch_type) && (
-                              <Text style={styles.sidebarPriceUnit}>Starting </Text>
-                            )}
-                            <Text style={styles.sidebarPriceValue}>
-                              ₹{Number(
-                                isCricketGroundType(ground.pitch_type)
-                                  ? (ground.base_price_per_hour / 2)
-                                  : ground.base_price_per_hour
-                              ).toLocaleString('en-IN')}
-                            </Text>
-                            {!isCricketGroundType(ground.pitch_type) && (
+                    {(() => {
+                      const slots = (ground as any).time_slots || [];
+                      const prices = slots
+                        .filter((s: any) => s.is_available && s.custom_price != null)
+                        .map((s: any) => Number(s.custom_price));
+                      
+                      if (prices.length === 0) return null;
+                      const minPrice = Math.min(...prices);
+                      const maxPrice = Math.max(...prices);
+                      const hasVariation = minPrice !== maxPrice;
+
+                      return (
+                        <View style={styles.sidebarPriceRow}>
+                          {currentTotal !== null ? (
+                            <>
+                              <Text style={styles.sidebarPriceUnit}>Total: </Text>
+                              <Text style={styles.sidebarPriceValue}>₹{currentTotal.toLocaleString('en-IN')}</Text>
+                            </>
+                          ) : (
+                            <>
+                              <Text style={styles.sidebarPriceUnit}>{hasVariation ? 'Starting ' : 'Price '}</Text>
+                              <Text style={styles.sidebarPriceValue}>₹{minPrice.toLocaleString('en-IN')}</Text>
                               <Text style={styles.sidebarPriceUnit}>
                                 {String(ground.pitch_type ?? '').toLowerCase().includes('box') ? ' /hr' : ' /match'}
                               </Text>
-                            )}
-                          </>
-                        )}
-                      </View>
-                    ) : null}
+                            </>
+                          )}
+                        </View>
+                      );
+                    })()}
                     
                     <View style={styles.formContainer}>
                       <LandingBookingForm
@@ -571,21 +574,29 @@ export default function GroundDetailsPrettyUrlScreen() {
                     <Text style={styles.mapsLinkText}>Get Directions</Text>
                   </Pressable>
                 )}
-                {ground.base_price_per_hour ? (
-                  <View style={styles.priceStrip}>
-                    <Text style={styles.priceLabel}>Starting from</Text>
-                    <Text style={styles.priceValue}>
-                      ₹{Number(
-                        isCricketGroundType(ground.pitch_type)
-                          ? (ground.base_price_per_hour / 2)
-                          : ground.base_price_per_hour
-                      ).toLocaleString('en-IN')}
-                      <Text style={styles.priceUnit}>
-                        {isCricketGroundType(ground.pitch_type) ? ' /team' : ' /match'}
+                {(() => {
+                  const slots = (ground as any).time_slots || [];
+                  const prices = slots
+                    .filter((s: any) => s.is_available && s.custom_price != null)
+                    .map((s: any) => Number(s.custom_price));
+                  
+                  if (prices.length === 0) return null;
+                  const minPrice = Math.min(...prices);
+                  const maxPrice = Math.max(...prices);
+                  const hasVariation = minPrice !== maxPrice;
+
+                  return (
+                    <View style={styles.priceStrip}>
+                      <Text style={styles.priceLabel}>{hasVariation ? 'Starting from' : 'Price'}</Text>
+                      <Text style={styles.priceValue}>
+                        ₹{minPrice.toLocaleString('en-IN')}
+                        <Text style={styles.priceUnit}>
+                          {String(ground.pitch_type ?? '').toLowerCase().includes('box') ? ' /hr' : ' /match'}
+                        </Text>
                       </Text>
-                    </Text>
-                  </View>
-                ) : null}
+                    </View>
+                  );
+                })()}
                 
                 <View style={styles.formContainer}>
                   <LandingBookingForm

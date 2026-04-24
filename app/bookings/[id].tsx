@@ -1,12 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, Alert, Platform, useWindowDimensions, TextInput, Pressable, Alert as RNAlert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, Alert, Platform, useWindowDimensions, TextInput, Pressable, Animated, Alert as RNAlert, ActivityIndicator } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { MapPin, Calendar, Clock, User, Users, Star } from 'lucide-react-native';
+import { MapPin, Calendar, Clock, User, Users, Star, CheckCircle2, CreditCard, ShieldCheck, Info, ChevronLeft, Share2 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { BookingWithDetails } from '@/types';
 import { formatCurrency, formatDate } from '@/utils/helpers';
 import { formatBookingSlotSummary } from '@/utils/bookingSlotFormat';
-import { hoursBetweenBooked, normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
 import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
 import { getBookingDisplayAmount } from '@/utils/bookingPricing';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,18 +19,20 @@ export default function BookingDetailsScreen() {
   const bookingId = Array.isArray(id) ? id[0] : id;
   const { user, profile: userProfile } = useAuth();
   
-  const [booking, setBooking] = useState<BookingWithDetails | null>(null);
+  const [booking, setBooking] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
-
   const { width } = useWindowDimensions();
-  const Section = View;
+  const [fadeAnim] = useState(new Animated.Value(0));
   
   const [reviewRating, setReviewRating] = useState<number>(5);
   const [reviewComment, setReviewComment] = useState<string>('');
   const [existingReviewId, setExistingReviewId] = useState<string | null>(null);
   const [submittingReview, setSubmittingReview] = useState(false);
-  const [reviewLoading, setReviewLoading] = useState(true);
   const [successModalVisible, setSuccessModalVisible] = useState(false);
+
+  const isWeb = Platform.OS === 'web';
+  const isDesktop = width > 1024;
+  const isTablet = width > 768;
 
   useEffect(() => {
     if (bookingId) {
@@ -40,10 +41,41 @@ export default function BookingDetailsScreen() {
     }
   }, [bookingId]);
 
+  const loadBooking = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('bookings')
+        .select(`
+          *,
+          ground:grounds(
+            *,
+            ground_images(*)
+          ),
+          user:profiles(full_name, phone)
+        `)
+        .eq('id', bookingId)
+        .single();
+
+      if (error) throw error;
+      setBooking(data);
+      
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }).start();
+    } catch (error) {
+      console.error('Error loading booking:', error);
+      Alert.alert('Error', 'Failed to load booking details');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchReview = async () => {
     if (!bookingId || !user) return;
     try {
-      setReviewLoading(true);
       const { data, error } = await supabase
         .from('reviews')
         .select('id, rating, comment')
@@ -58,24 +90,17 @@ export default function BookingDetailsScreen() {
       }
     } catch (e) {
       console.warn('Error fetching review:', e);
-    } finally {
-      setReviewLoading(false);
     }
   };
 
   const handleSubmitReview = async () => {
     if (!user) {
       const msg = 'Please log in to submit a review.';
-      if (Platform.OS === 'web') alert(msg);
+      if (isWeb) alert(msg);
       else RNAlert.alert('Login Required', msg);
       return;
     }
     if (!booking) return;
-
-    if (reviewRating < 1 || reviewRating > 5) {
-      RNAlert.alert('Invalid Rating', 'Please select 1-5 stars.');
-      return;
-    }
 
     try {
       setSubmittingReview(true);
@@ -106,270 +131,277 @@ export default function BookingDetailsScreen() {
     } catch (e: any) {
       console.error('Error saving review:', e);
       const errMsg = e.message || 'Failed to save review';
-      if (Platform.OS === 'web') alert(errMsg);
+      if (isWeb) alert(errMsg);
       else RNAlert.alert('Error', errMsg);
     } finally {
       setSubmittingReview(false);
     }
   };
 
-  const loadBooking = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('bookings')
-        .select(`
-          *,
-          ground:grounds(
-            *,
-            ground_images(*)
-          ),
-          user:profiles(full_name, phone)
-        `)
-        .eq('id', bookingId)
-        .single();
+  // Priority: Use the actual stored amount from the DB if available (> 0), 
+  // otherwise fall back to the utility's recalculation logic (mostly for drafts).
+  const storedTotal = Number(booking?.total_amount || 0);
+  const discountAmount = Number(booking?.discount_amount || 0);
+  
+  const displayTotalAmount = useMemo(() => {
+    if (storedTotal > 0) return storedTotal;
+    return getBookingDisplayAmount(booking);
+  }, [booking, storedTotal]);
 
-      if (error) throw error;
-      setBooking(data);
-    } catch (error) {
-      console.error('Error loading booking:', error);
-      Alert.alert('Error', 'Failed to load booking details');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const originalAmount = useMemo(() => {
+    // If we have a stored total, the original price is total + discount
+    if (storedTotal > 0) return storedTotal + discountAmount;
+    // Fallback to utility recalculation
+    return getBookingDisplayAmount(booking) + discountAmount;
+  }, [booking, storedTotal, discountAmount]);
+  
+  const isPastBooking = useMemo(() => {
+    if (!booking) return false;
+    const today = new Date().toISOString().split('T')[0];
+    return booking.booking_date < today;
+  }, [booking]);
 
-  const displayTotalAmount = useMemo(() => getBookingDisplayAmount(booking), [booking]);
+  const cricketTeamsLabel = useMemo(() => {
+    if (!booking) return null;
+    return cricketTeamsLabelFromBooking(booking.ground.pitch_type, booking.notes);
+  }, [booking]);
 
-  if (loading || !booking) {
-    const loadingContent = (
+  if (loading) {
+    return (
       <View style={styles.loadingContainer}>
-        <Text>Loading...</Text>
+        <ActivityIndicator size="large" color="#10b981" />
+        <Text style={[styles.loadingText, { marginTop: 12 }]}>Loading details...</Text>
       </View>
     );
+  }
 
+  if (!booking) {
     return (
-      <>
-        <Stack.Screen options={{ title: 'Booking' }} />
-        {Platform.OS === 'web' ? <WebLayout>{loadingContent}</WebLayout> : loadingContent}
-      </>
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>Booking not found.</Text>
+        <Button title="Go Back" onPress={() => router.back()} style={{ marginTop: 20 }} />
+      </View>
     );
   }
 
   const primaryImage = booking.ground.ground_images?.[0]?.image_url ||
-    'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
-
-  const isNarrow = width < 900;
-  const isWeb = Platform.OS === 'web';
-  const IS_DARK = !isWeb;
-
-  const isPastBooking = (() => {
-    const today = new Date().toISOString().split('T')[0];
-    return booking.booking_date < today;
-  })();
-
-  const cricketTeamsLabel = cricketTeamsLabelFromBooking(
-    booking.ground.pitch_type,
-    booking.notes,
-  );
-
-  const detailsSection = (
-    <View style={isNarrow ? styles.detailsColumnNarrow : styles.detailsColumn}>
-      <View style={isWeb ? [styles.detailsContentWeb, !IS_DARK && styles.detailsContentWebLight] : styles.detailsContentMobileOuter}>
-        <View style={isWeb ? styles.detailsBodyWeb : styles.detailsBodyNative}>
-          <Section style={[styles.sectionHeaderCard, !IS_DARK && styles.sectionHeaderCardLight]}>
-            <View style={styles.headerRow}>
-              <View style={{ flex: 1 }}>
-                <View style={styles.badgeRow}>
-                   <View style={[
-                    styles.statusBadge,
-                    booking.status === 'confirmed' && styles.statusBadgeConfirmed,
-                    booking.status === 'pending' && styles.statusBadgePending,
-                    (booking.status === 'cancelled' || booking.status === 'rejected') && styles.statusBadgeCancelled,
-                  ]}>
-                    <Text style={[
-                      styles.statusText,
-                      booking.status === 'confirmed' && (IS_DARK ? styles.statusTextConfirmed : styles.statusTextConfirmedLight),
-                      booking.status === 'pending' && styles.statusTextPending,
-                      (booking.status === 'cancelled' || booking.status === 'rejected') && styles.statusTextCancelled,
-                    ]}>
-                      {booking.status === 'confirmed' 
-                        ? (isPastBooking ? 'DONE' : 'ACTIVE')
-                        : booking.status.toUpperCase()}
-                    </Text>
-                  </View>
-                  <Text style={[styles.bookingId, !IS_DARK && styles.bookingIdLight]}>Booking ID: {id?.toString().substring(0,8).toUpperCase()}</Text>
-                </View>
-
-                <Text style={[styles.groundName, !IS_DARK && styles.groundNameLight]}>{booking.ground.name}</Text>
-                <View style={[styles.locationRow, { marginTop: 4 }]}>
-                  <MapPin size={16} color={IS_DARK ? "#00ea6b" : "#10b981"} />
-                  <Text style={[styles.location, !IS_DARK && styles.locationLight]}>
-                    {booking.ground.address}, {booking.ground.city}, {booking.ground.state}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </Section>
-
-          <View style={[styles.infoGrid, !isNarrow && styles.infoGridDesktop]}>
-            <Section style={[styles.infoCard, !IS_DARK && styles.infoCardLight]}>
-              <View style={styles.infoIconBox}>
-                <Calendar size={20} color={IS_DARK ? "#00ea6b" : "#10b981"} />
-              </View>
-              <View style={styles.infoContent}>
-                <Text style={[styles.infoLabel, !IS_DARK && styles.infoLabelLight]}>Date</Text>
-                <Text style={[styles.infoValue, !IS_DARK && styles.infoValueLight]}>{formatDate(booking.booking_date)}</Text>
-              </View>
-            </Section>
-
-            <Section style={[styles.infoCard, !IS_DARK && styles.infoCardLight]}>
-              <View style={styles.infoIconBox}>
-                <Clock size={20} color={IS_DARK ? "#00ea6b" : "#10b981"} />
-              </View>
-              <View style={styles.infoContent}>
-                <Text style={[styles.infoLabel, !IS_DARK && styles.infoLabelLight]}>Time Slot</Text>
-                <Text style={[styles.infoValue, !IS_DARK && styles.infoValueLight]}>
-                  {formatBookingSlotSummary(
-                    booking.start_time,
-                    booking.end_time,
-                    booking.ground.pitch_type,
-                  )}
-                </Text>
-              </View>
-            </Section>
-          </View>
-
-           <Section style={[styles.section, !IS_DARK && styles.sectionLight, { marginTop: 16 }]}>
-              <Text style={[styles.sectionTitle, !IS_DARK && styles.sectionTitleLight]}>Venue Rules</Text>
-              <View style={styles.rulesList}>
-                 <Text style={[styles.ruleItem, !IS_DARK && styles.ruleItemLight]}>• Please arrive 15 minutes before your slot.</Text>
-                 <Text style={[styles.ruleItem, !IS_DARK && styles.ruleItemLight]}>• Proper footwear is mandatory for the pitch.</Text>
-                 <Text style={[styles.ruleItem, !IS_DARK && styles.ruleItemLight]}>• Respect the ground staff and other players.</Text>
-              </View>
-           </Section>
-
-           {(isPastBooking && (booking?.status === 'confirmed' || booking?.status === 'completed')) && (
-             <Section style={[styles.section, !IS_DARK && styles.sectionLight, { marginTop: 16 }]}>
-               <Text style={[styles.sectionTitle, !IS_DARK && styles.sectionTitleLight]}>Rate your experience</Text>
-               <View style={styles.reviewStarsRow}>
-                 {[1, 2, 3, 4, 5].map((star) => (
-                   <Pressable key={star} onPress={() => setReviewRating(star)} style={{ padding: 4 }}>
-                     <Star
-                       size={28}
-                       color={reviewRating >= star ? (IS_DARK ? '#00ea6b' : '#10b981') : '#d1d5db'}
-                       fill={reviewRating >= star ? (IS_DARK ? '#00ea6b' : '#10b981') : 'none'}
-                     />
-                   </Pressable>
-                 ))}
-               </View>
-               <TextInput
-                 style={[styles.reviewInput, !IS_DARK && styles.reviewInputLight]}
-                 placeholder="Share your feedback..."
-                 placeholderTextColor={IS_DARK ? "#9ca3af" : "#6b7280"}
-                 value={reviewComment}
-                 onChangeText={setReviewComment}
-                 multiline
-                 numberOfLines={3}
-               />
-               <Button
-                 title={submittingReview ? "Submitting..." : (existingReviewId ? "Update Review" : "Submit Review")}
-                 onPress={handleSubmitReview}
-                 disabled={submittingReview}
-                 style={{ marginTop: 12 }}
-               />
-             </Section>
-           )}
-        </View>
-      </View>
-    </View>
-  );
-
-  const discountAmount = Number(booking.discount_amount ?? 0);
-  const basePrice = displayTotalAmount + discountAmount;
-
-  const paymentSection = (
-    <View style={isNarrow ? styles.paymentColumnNarrow : styles.paymentColumn}>
-      <Section style={[styles.paymentCard, !IS_DARK && styles.paymentCardLight]}>
-        <Text style={[styles.paymentTitle, !IS_DARK && styles.paymentTitleLight]}>Payment Summary</Text>
-        
-        <View style={styles.priceBreakdown}>
-           <View style={styles.paymentRow}>
-              <Text style={[styles.paymentLabel, !IS_DARK && styles.paymentLabelLight]}>
-                Base Price {cricketTeamsLabel ? `(${cricketTeamsLabel === '1 team' ? '1 Team' : 'Both Teams'})` : ''}
-              </Text>
-              <Text style={[styles.paymentValue, !IS_DARK && styles.paymentValueLight]}>{formatCurrency(basePrice)}</Text>
-            </View>
-            
-            {discountAmount > 0 && (
-              <View style={styles.paymentRow}>
-                <Text style={[styles.paymentLabel, { color: '#10b981' }]}>Discount</Text>
-                <Text style={[styles.paymentValue, { color: '#10b981', fontWeight: '800' }]}>-{formatCurrency(discountAmount)}</Text>
-              </View>
-            )}
-
-            <View style={styles.paymentRow}>
-              <Text style={[styles.paymentLabel, !IS_DARK && styles.paymentLabelLight]}>Taxes & Fees</Text>
-              <Text style={[styles.paymentValue, !IS_DARK && styles.paymentValueLight]}>₹0.00</Text>
-            </View>
-        </View>
-
-        <View style={[styles.paymentRow, styles.totalRow, !IS_DARK && styles.totalRowLight]}>
-          <Text style={[styles.totalLabel, !IS_DARK && styles.totalLabelLight]}>Grand Total</Text>
-          <Text style={[styles.totalValue, !IS_DARK && styles.totalValueLight]}>{formatCurrency(displayTotalAmount)}</Text>
-        </View>
-
-        <View style={styles.paymentDivider} />
-
-        {booking.payment_method && (
-          <View style={styles.infoRow}>
-             <Clock size={16} color={IS_DARK ? "#9ca3af" : "#6B7280"} />
-             <View>
-                <Text style={[styles.infoLabel, !IS_DARK && styles.infoLabelLight]}>Payment Method</Text>
-                <Text style={[styles.paymentValue, !IS_DARK && styles.paymentValueLight]}>
-                  {booking.payment_method === 'cash' ? 'Cash at Ground' : 'Prepaid Online'}
-                </Text>
-             </View>
-          </View>
-        )}
-      </Section>
-    </View>
-  );
+    'https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=1200&auto=format&fit=crop';
 
   const content = (
     <ScrollView
-      style={[styles.container, !IS_DARK && styles.webContainerRoot]}
+      style={styles.container}
       contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator
+      showsVerticalScrollIndicator={false}
     >
-      <View style={isNarrow ? styles.narrowWrapper : styles.wideWrapper}>
-         <Image source={{ uri: primaryImage }} style={[styles.image, !isWeb && styles.imageMobile, !IS_DARK && styles.imageWeb, { width: '100%' }]} />
+      <Animated.View style={[styles.mainWrapper, { opacity: fadeAnim }]}>
+        {/* Banner Section */}
+        <View style={styles.bannerContainer}>
+          <Image source={{ uri: primaryImage }} style={styles.bannerImage} />
+          <View style={styles.bannerOverlay}>
+            <Pressable onPress={() => router.back()} style={styles.backButton}>
+              <ChevronLeft size={24} color="#FFF" />
+            </Pressable>
+            <View style={styles.bannerBadge}>
+              <Text style={styles.bannerBadgeText}>{booking.status === 'confirmed' ? (isPastBooking ? 'COMPLETED' : 'UPCOMING') : booking.status.toUpperCase()}</Text>
+            </View>
+          </View>
+        </View>
 
-         <View style={isNarrow ? styles.bodyColumn : styles.body}>
-           {detailsSection}
-           {paymentSection}
-         </View>
-      </View>
+        <View style={[styles.contentLayout, isDesktop && styles.contentLayoutDesktop]}>
+          {/* Main Details Column */}
+          <View style={styles.detailsColumn}>
+            <Card style={styles.mainInfoCard}>
+              <View style={styles.headerRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.groundName}>{booking.ground.name}</Text>
+                  <View style={styles.locationRow}>
+                    <MapPin size={16} color="#64748b" />
+                    <Text style={styles.locationText}>{booking.ground.address}, {booking.ground.city}</Text>
+                  </View>
+                </View>
+                <View style={styles.bookingIdBox}>
+                   <Text style={styles.bookingIdLabel}>BOOKING ID</Text>
+                   <Text style={styles.bookingIdValue}>#{bookingId.substring(0, 8).toUpperCase()}</Text>
+                </View>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.infoGrid}>
+                <View style={styles.infoItem}>
+                  <View style={styles.infoIconWrapper}>
+                    <Calendar size={20} color="#10b981" />
+                  </View>
+                  <View>
+                    <Text style={styles.infoItemLabel}>Date</Text>
+                    <Text style={styles.infoItemValue}>{formatDate(booking.booking_date)}</Text>
+                  </View>
+                </View>
+                <View style={styles.infoItem}>
+                  <View style={styles.infoIconWrapper}>
+                    <Clock size={20} color="#10b981" />
+                  </View>
+                  <View>
+                    <Text style={styles.infoItemLabel}>Time Slot</Text>
+                    <Text style={styles.infoItemValue}>
+                      {formatBookingSlotSummary(booking.start_time, booking.end_time, booking.ground.pitch_type)}
+                    </Text>
+                  </View>
+                </View>
+                {cricketTeamsLabel && (
+                  <View style={styles.infoItem}>
+                    <View style={styles.infoIconWrapper}>
+                      <Users size={20} color="#10b981" />
+                    </View>
+                    <View>
+                      <Text style={styles.infoItemLabel}>Match Type</Text>
+                      <Text style={styles.infoItemValue}>{cricketTeamsLabel}</Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            </Card>
+
+            <Card style={styles.rulesCard}>
+              <View style={styles.cardHeader}>
+                <Info size={20} color="#0f172a" />
+                <Text style={styles.cardTitle}>Venue Rules</Text>
+              </View>
+              <View style={styles.rulesList}>
+                 <Text style={styles.ruleItem}>• Please arrive 15 minutes before your slot.</Text>
+                 <Text style={styles.ruleItem}>• Proper footwear is mandatory for the pitch.</Text>
+                 <Text style={styles.ruleItem}>• Respect the ground staff and other players.</Text>
+                 <Text style={styles.ruleItem}>• No littering or smoking allowed inside the premises.</Text>
+              </View>
+            </Card>
+
+            {isPastBooking && (booking.status === 'confirmed' || booking.status === 'completed') && (
+              <Card style={styles.reviewCard}>
+                <View style={styles.cardHeader}>
+                  <Star size={20} color="#0f172a" />
+                  <Text style={styles.cardTitle}>Rate Your Experience</Text>
+                </View>
+                <View style={styles.starsContainer}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Pressable key={star} onPress={() => setReviewRating(star)} style={styles.starBtn}>
+                      <Star
+                        size={32}
+                        color={reviewRating >= star ? "#10b981" : "#e2e8f0"}
+                        fill={reviewRating >= star ? "#10b981" : "none"}
+                      />
+                    </Pressable>
+                  ))}
+                </View>
+                <TextInput
+                  style={styles.reviewInput}
+                  placeholder="Tell us about the ground conditions, amenities, and staff..."
+                  placeholderTextColor="#94a3b8"
+                  value={reviewComment}
+                  onChangeText={setReviewComment}
+                  multiline
+                />
+                <Button
+                  title={submittingReview ? "Submitting..." : (existingReviewId ? "Update Review" : "Post Review")}
+                  onPress={handleSubmitReview}
+                  disabled={submittingReview}
+                  style={styles.reviewSubmitBtn}
+                />
+              </Card>
+            )}
+          </View>
+
+          {/* Payment Sidebar */}
+          <View style={styles.sidebarColumn}>
+            <Card style={styles.paymentCard}>
+              <Text style={styles.paymentTitle}>Payment Summary</Text>
+              
+              <View style={styles.priceBreakdown}>
+                <View style={styles.priceRow}>
+                  <Text style={styles.priceLabel}>
+                    Booking Price {cricketTeamsLabel ? `(${cricketTeamsLabel === '1 team' ? '1 Team' : 'Both Teams'})` : ''}
+                  </Text>
+                  <Text style={styles.priceValue}>{formatCurrency(originalAmount)}</Text>
+                </View>
+                
+                {discountAmount > 0 && (
+                  <View style={styles.priceRow}>
+                    <Text style={styles.discountLabel}>Discount Applied</Text>
+                    <Text style={styles.discountValue}>-{formatCurrency(discountAmount)}</Text>
+                  </View>
+                )}
+
+                <View style={styles.priceRow}>
+                  <Text style={styles.priceLabel}>Taxes & Fees</Text>
+                  <Text style={styles.priceValue}>₹0.00</Text>
+                </View>
+              </View>
+
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Grand Total</Text>
+                <Text style={styles.totalValue}>{formatCurrency(displayTotalAmount)}</Text>
+              </View>
+
+              <View style={styles.paymentMethodBox}>
+                <View style={styles.methodIconWrapper}>
+                   {booking.payment_method === 'cash' ? <CreditCard size={18} color="#64748b" /> : <ShieldCheck size={18} color="#10b981" />}
+                </View>
+                <View>
+                   <Text style={styles.methodLabel}>PAYMENT METHOD</Text>
+                   <Text style={styles.methodValue}>
+                     {booking.payment_method === 'cash' ? 'Cash at Ground' : (booking.payment_method?.toUpperCase() || 'PAID ONLINE')}
+                   </Text>
+                </View>
+              </View>
+
+              <View style={styles.trustBadge}>
+                <ShieldCheck size={14} color="#10b981" />
+                <Text style={styles.trustText}>Secure booking via Book Your Ground</Text>
+              </View>
+            </Card>
+
+            <View style={styles.actionsBox}>
+               <Button 
+                 title="Share Booking" 
+                 variant="outline" 
+                 icon={Share2} 
+                 onPress={() => {}}
+                 fullWidth
+                 style={styles.actionBtn}
+               />
+               <Button 
+                 title="View Receipt" 
+                 variant="outline" 
+                 onPress={() => {}}
+                 fullWidth
+                 style={styles.actionBtn}
+               />
+            </View>
+          </View>
+        </View>
+      </Animated.View>
     </ScrollView>
   );
 
   return (
     <>
-      <Stack.Screen options={{ title: booking.ground.name ?? 'Booking' }} />
-      {Platform.OS === 'web' ? <WebLayout>{content}</WebLayout> : content}
+      <Stack.Screen options={{ headerShown: false }} />
+      {isWeb ? <WebLayout>{content}</WebLayout> : content}
 
       <Modal
         visible={successModalVisible}
         onClose={() => setSuccessModalVisible(false)}
-        title="Success"
+        title="Review Submitted"
         maxWidth={400}
       >
         <View style={styles.modalBody}>
-          <Text style={styles.modalText}>Thanks for the review!</Text>
+          <View style={styles.modalIcon}>
+            <CheckCircle2 size={48} color="#10b981" />
+          </View>
+          <Text style={styles.modalText}>Thank you for your feedback! It helps other players choose the best grounds.</Text>
           <Button
             title="CLOSE"
             onPress={() => setSuccessModalVisible(false)}
-            variant="primary"
-            style={{ marginTop: 10 }}
+            fullWidth
           />
         </View>
       </Modal>
@@ -380,356 +412,342 @@ export default function BookingDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#043529',
-  },
-  webContainerRoot: {
-    backgroundColor: '#F8F9FA',
-    paddingTop: 40,
-    paddingHorizontal: 24,
-    paddingBottom: 40,
+    backgroundColor: '#f8fafc',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#043529',
+    backgroundColor: '#f8fafc',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#64748b',
+    fontWeight: '600',
   },
   scrollContent: {
-    paddingBottom: 40,
+    flexGrow: 1,
   },
-  wideWrapper: {
-     maxWidth: 1100,
-     width: '100%',
-     alignSelf: 'center',
+  mainWrapper: {
+    width: '100%',
+    alignSelf: 'center',
+    maxWidth: 1200,
+    paddingBottom: 60,
   },
-  narrowWrapper: {
-     width: '100%',
+  bannerContainer: {
+    width: '100%',
+    height: Platform.OS === 'web' ? 400 : 250,
+    position: 'relative',
   },
-  body: {
+  bannerImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  bannerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    padding: 24,
     flexDirection: 'row',
-    gap: 32,
-    marginTop: 24,
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(0,0,0,0.2)',
   },
-  bodyColumn: {
-    paddingHorizontal: 16,
-    paddingBottom: 32,
-  },
-  detailsColumn: {
-    flex: 1.6,
-  },
-  detailsColumnNarrow: {
-    width: '100%',
-  },
-  detailsContentWeb: {
-    padding: 0,
-  },
-  detailsContentWebLight: {
-    backgroundColor: 'transparent',
-  },
-  image: {
-    width: '100%',
-    height: 380,
-    borderRadius: 24,
-    marginBottom: 24,
-  },
-  imageWeb: {
-     height: 450,
-     shadowColor: '#000',
-     shadowOffset: { width: 0, height: 10 },
-     shadowOpacity: 0.1,
-     shadowRadius: 20,
-  },
-  imageMobile: {
-    borderRadius: 0,
-    height: 250,
-  },
-  detailsBodyWeb: {
-    width: '100%',
-  },
-  detailsBodyNative: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-  },
-  sectionHeaderCard: {
-    backgroundColor: '#06392e',
-    borderRadius: 24,
-    padding: 28,
-    borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.15)',
-    marginBottom: 24,
-  },
-  sectionHeaderCardLight: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.03,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  badgeRow: {
-    flexDirection: 'row',
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
   },
-  bookingId: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#9ca3af',
+  bannerBadge: {
+    backgroundColor: '#10b981',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 99,
+  },
+  bannerBadgeText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '800',
     letterSpacing: 1,
   },
-  bookingIdLight: {
-    color: '#6B7280',
+  contentLayout: {
+    flexDirection: 'column',
+    padding: 20,
+    gap: 24,
+    marginTop: Platform.OS === 'web' ? -60 : 0,
+  },
+  contentLayoutDesktop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  detailsColumn: {
+    flex: 1.8,
+    gap: 24,
+  },
+  sidebarColumn: {
+    flex: 1,
+    gap: 24,
+  },
+  mainInfoCard: {
+    padding: 32,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    flexWrap: 'wrap',
+    gap: 16,
   },
   groundName: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -0.5,
-  },
-  groundNameLight: {
-    color: '#111827',
-    fontSize: 28,
+    color: '#0f172a',
+    marginBottom: 8,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
-  location: {
-    fontSize: 15,
-    color: '#9ca3af',
-    lineHeight: 22,
+  locationText: {
+    fontSize: 16,
+    color: '#64748b',
   },
-  locationLight: {
-    color: '#4B5563',
+  bookingIdBox: {
+    backgroundColor: '#f8fafc',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 16,
+    alignItems: 'flex-end',
   },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  statusBadge: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 99,
-    backgroundColor: 'rgba(156,163,175,0.1)',
-  },
-  statusBadgeConfirmed: {
-    backgroundColor: 'rgba(0,234,107,0.12)',
-  },
-  statusBadgePending: {
-    backgroundColor: 'rgba(255,193,7,0.12)',
-  },
-  statusBadgeCancelled: {
-    backgroundColor: 'rgba(244,67,54,0.12)',
-  },
-  statusText: {
-    fontSize: 11,
-    fontWeight: '900',
-    letterSpacing: 0.8,
-    color: '#9ca3af',
-  },
-  statusTextConfirmed: { color: '#00ea6b' },
-  statusTextConfirmedLight: { color: '#10b981' },
-  statusTextPending: { color: '#FFC107' },
-  statusTextCancelled: { color: '#F44336' },
-
-  infoGrid: {
-     flexDirection: 'row',
-     flexWrap: 'wrap',
-     gap: 16,
-  },
-  infoGridDesktop: {
-     flexWrap: 'nowrap',
-  },
-  infoCard: {
-     flex: 1,
-     minWidth: 150,
-     backgroundColor: '#06392e',
-     borderRadius: 20,
-     padding: 20,
-     flexDirection: 'row',
-     alignItems: 'center',
-     gap: 16,
-     borderWidth: 1,
-     borderColor: 'rgba(0,234,107,0.1)',
-  },
-  infoCardLight: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E5E7EB',
-  },
-  infoIconBox: {
-     width: 44,
-     height: 44,
-     borderRadius: 12,
-     backgroundColor: 'rgba(0,234,107,0.08)',
-     alignItems: 'center',
-     justifyContent: 'center',
-  },
-  infoContent: {
-    flex: 1,
-  },
-  infoLabel: {
-    fontSize: 11,
-    color: '#9ca3af',
+  bookingIdLabel: {
+    fontSize: 10,
     fontWeight: '700',
+    color: '#94a3b8',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  bookingIdValue: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1e293b',
+    letterSpacing: 1,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#f1f5f9',
+    marginVertical: 32,
+  },
+  infoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 32,
+  },
+  infoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  infoIconWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: '#f0fdf4',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  infoItemLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#94a3b8',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 4,
   },
-  infoLabelLight: { color: '#6B7280' },
-  infoValue: {
-    fontSize: 15,
-    color: '#FFFFFF',
+  infoItemValue: {
+    fontSize: 16,
     fontWeight: '700',
+    color: '#1e293b',
   },
-  infoValueLight: { color: '#111827' },
-
-  section: {
-    backgroundColor: '#06392e',
+  rulesCard: {
+    padding: 32,
     borderRadius: 24,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.1)',
   },
-  sectionLight: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E5E7EB',
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#00ea6b',
-    marginBottom: 16,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
-  sectionTitleLight: { color: '#10b981' },
-  
-  notes: {
-    fontSize: 15,
-    color: '#e5e7eb',
-    lineHeight: 24,
-  },
-  notesLight: { color: '#374151' },
-
-  rulesList: { gap: 10 },
-  ruleItem: { fontSize: 14, color: '#9ca3af', lineHeight: 20 },
-  ruleItemLight: { color: '#4B5563' },
-
-  paymentColumn: {
-    flex: 1,
-  },
-  paymentCard: {
-    backgroundColor: '#06392e',
-    borderRadius: 24,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.15)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 20,
-  },
-  paymentCardLight: {
-    backgroundColor: '#FFFFFF',
-    borderColor: '#E5E7EB',
-  },
-  paymentTitle: {
-     fontSize: 18,
-     fontWeight: '800',
-     color: '#FFFFFF',
-     marginBottom: 20,
-  },
-  paymentTitleLight: { color: '#111827' },
-  priceBreakdown: { marginBottom: 20 },
-  paymentRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-  },
-  paymentLabel: { fontSize: 14, color: '#9ca3af' },
-  paymentLabelLight: { color: '#6B7280' },
-  paymentValue: { fontSize: 14, color: '#FFFFFF', fontWeight: '700' },
-  paymentValueLight: { color: '#111827' },
-  
-  totalRow: {
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.1)',
-    marginTop: 10,
-    paddingTop: 20,
-  },
-  totalRowLight: { borderTopColor: '#F3F4F6' },
-  totalLabel: { fontSize: 16, fontWeight: '800', color: '#FFFFFF' },
-  totalLabelLight: { color: '#111827' },
-  totalValue: { fontSize: 28, fontWeight: '900', color: '#00ea6b' },
-  totalValueLight: { color: '#10b981' },
-  
-  paymentDivider: {
-     height: 1,
-     backgroundColor: 'rgba(255,255,255,0.05)',
-     marginVertical: 20,
-  },
-
-  backButtonLarge: {
-     marginTop: 24,
-     height: 56,
-     borderRadius: 16,
-     backgroundColor: '#111827',
-  },
-  backButtonTextLarge: {
-     fontSize: 14,
-     fontWeight: '800',
-     letterSpacing: 2,
-  },
-  detailsContentMobileOuter: {
-    padding: 0,
-  },
-  paymentColumnNarrow: {
-    width: '100%',
-    marginTop: 16,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  stackSection: {
-    width: '100%',
-  },
-  reviewStarsRow: {
+  cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 16,
+    gap: 12,
+    marginBottom: 24,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  rulesList: {
+    gap: 16,
+  },
+  ruleItem: {
+    fontSize: 15,
+    color: '#64748b',
+    lineHeight: 22,
+  },
+  reviewCard: {
+    padding: 32,
+    borderRadius: 24,
+  },
+  starsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 24,
+  },
+  starBtn: {
+    padding: 4,
   },
   reviewInput: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 12,
-    padding: 16,
-    color: '#FFFFFF',
-    fontSize: 15,
-    minHeight: 100,
+    backgroundColor: '#f8fafc',
+    borderRadius: 16,
+    padding: 20,
+    color: '#1e293b',
+    fontSize: 16,
+    height: 120,
     textAlignVertical: 'top',
     borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.1)',
+    borderColor: '#e2e8f0',
   },
-  reviewInputLight: {
-    backgroundColor: '#F9FAFB',
-    color: '#111827',
-    borderColor: '#E5E7EB',
+  reviewSubmitBtn: {
+    marginTop: 20,
+    height: 56,
+    borderRadius: 16,
+  },
+  paymentCard: {
+    padding: 32,
+    borderRadius: 24,
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+  },
+  paymentTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#0f172a',
+    marginBottom: 24,
+  },
+  priceBreakdown: {
+    gap: 16,
+    marginBottom: 24,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  priceLabel: {
+    fontSize: 15,
+    color: '#64748b',
+  },
+  priceValue: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1e293b',
+  },
+  discountLabel: {
+    fontSize: 15,
+    color: '#10b981',
+    fontWeight: '600',
+  },
+  discountValue: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#10b981',
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+    marginBottom: 32,
+  },
+  totalLabel: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  totalValue: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#10b981',
+  },
+  paymentMethodBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    backgroundColor: '#f8fafc',
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 24,
+  },
+  methodIconWrapper: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+  },
+  methodLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#94a3b8',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  methodValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1e293b',
+  },
+  trustBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  trustText: {
+    fontSize: 12,
+    color: '#94a3b8',
+    fontWeight: '500',
+  },
+  actionsBox: {
+    gap: 12,
+  },
+  actionBtn: {
+    height: 52,
+    borderRadius: 12,
   },
   modalBody: {
     alignItems: 'center',
-    paddingVertical: 10,
+    padding: 24,
+  },
+  modalIcon: {
+    marginBottom: 20,
   },
   modalText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 20,
+    fontSize: 16,
+    color: '#64748b',
     textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 32,
   },
 });

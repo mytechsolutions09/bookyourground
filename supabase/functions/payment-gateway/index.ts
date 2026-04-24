@@ -208,8 +208,7 @@ serve(async (req) => {
         
         let pricePerHour = Number(bookingDetails.price_per_hour ?? ground.base_price_per_hour);
         const totalHours = Number(bookingDetails.total_hours ?? bookingHours(start_time, end_time));
-        // Use client-supplied total_amount if provided (respects custom slot pricing);
-        // otherwise fall back to base price calculation.
+        
         let totalAmount: number;
         let discountAmount: number;
 
@@ -235,6 +234,7 @@ serve(async (req) => {
              }
           }
         }
+        const netAmount = Math.round((totalAmount - discountAmount) * 100) / 100;
 
         const { data: newBooking, error: insertError } = await supabaseClient
           .from('bookings')
@@ -246,7 +246,7 @@ serve(async (req) => {
             end_time,
             total_hours: totalHours,
             price_per_hour: pricePerHour,
-            total_amount: Math.round((totalAmount - discountAmount) * 100) / 100,
+            total_amount: netAmount,
             coupon_id,
             discount_amount: discountAmount,
             notes: (team_type === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Paid via PayU: ${txnid})`,
@@ -383,6 +383,7 @@ serve(async (req) => {
              }
           }
         }
+        const netAmount = Math.round((totalAmount - discountAmount) * 100) / 100;
 
         console.log(`[Cash] Inserting new booking. Amount: ${totalAmount - discountAmount}`);
         const { data: newBooking, error: insertError } = await supabaseClient
@@ -395,7 +396,7 @@ serve(async (req) => {
             end_time,
             total_hours: totalHours,
             price_per_hour: pricePerHour,
-            total_amount: Math.round((totalAmount - discountAmount) * 100) / 100,
+            total_amount: netAmount,
             coupon_id,
             discount_amount: discountAmount,
             notes: (team_type === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ' (Cash Payment confirmed by Owner)',
@@ -557,7 +558,7 @@ serve(async (req) => {
                 }
              }
           }
-        }
+        const netAmount = Math.round((totalAmount - discountAmount) * 100) / 100;
 
         const { data: newBooking, error: insertError } = await supabaseClient
           .from('bookings')
@@ -569,7 +570,7 @@ serve(async (req) => {
             end_time,
             total_hours: totalHours,
             price_per_hour: pricePerHour,
-            total_amount: Math.round((totalAmount - discountAmount) * 100) / 100,
+            total_amount: netAmount,
             coupon_id,
             discount_amount: discountAmount,
             notes: (team_type === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Paid via Razorpay: ${razorpay_payment_id})`,

@@ -26,7 +26,7 @@ export function getBookingDisplayAmount(booking: BookingPriceInput | null | unde
   }
 
   const pitchType = String(booking.ground?.pitch_type ?? '').toLowerCase();
-  const unitPrice = Number(booking.price_per_hour ?? booking.ground?.base_price_per_hour ?? 0);
+  const unitPrice = Number(booking.price_per_hour ?? 0);
   const discountAmount = Number(booking.discount_amount ?? 0);
 
   if (pitchType.includes('box')) {

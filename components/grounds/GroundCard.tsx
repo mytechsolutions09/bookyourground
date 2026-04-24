@@ -121,24 +121,26 @@ export default function GroundCard({
               {ground.name}
             </Text>
             <View style={styles.priceBlock}>
-              <Text style={priceStyle}>
-                <Text style={{ fontSize: 10, fontWeight: '600', color: isLight ? '#64748B' : '#94A3B8' }}>From </Text>
-                {formatCurrency(
-                  displayPricePerUnit != null
-                    ? displayPricePerUnit
-                    : ground.base_price_per_hour,
-                )}
-                <Text style={styles.priceUnit}>
-                  {unitLabelOverride ??
-                    (String(ground.pitch_type ?? '').toLowerCase().includes('box')
-                      ? '/hr'
-                      : ' / match')}
-                </Text>
-              </Text>
-              {!(String(ground.pitch_type ?? '').toLowerCase().includes('box')) && (
-                <Text style={[styles.perTeamLabel, !isLight && styles.perTeamLabelNative]}>
-                  ₹{Math.round((displayPricePerUnit ?? ground.base_price_per_hour) / 2)} per team
-                </Text>
+              {displayPricePerUnit != null ? (
+                <>
+                  <Text style={priceStyle}>
+                    <Text style={{ fontSize: 10, fontWeight: '600', color: isLight ? '#64748B' : '#94A3B8' }}>From </Text>
+                    {formatCurrency(displayPricePerUnit)}
+                    <Text style={styles.priceUnit}>
+                      {unitLabelOverride ??
+                        (String(ground.pitch_type ?? '').toLowerCase().includes('box')
+                          ? '/hr'
+                          : ' / match')}
+                    </Text>
+                  </Text>
+                  {!(String(ground.pitch_type ?? '').toLowerCase().includes('box')) && (
+                    <Text style={[styles.perTeamLabel, !isLight && styles.perTeamLabelNative]}>
+                      ₹{Math.round(displayPricePerUnit / 2)} per team
+                    </Text>
+                  )}
+                </>
+              ) : (
+                <Text style={priceStyle}>See Slots</Text>
               )}
             </View>
           </View>
