@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { router } from 'expo-router';
+import { router, Redirect } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import LandingScrollContent from '@/components/landing/LandingScrollContent';
 import HomePageSkeleton from '@/components/landing/HomePageSkeleton';
@@ -50,13 +50,11 @@ export default function IndexScreen() {
       if (user) {
         if (profile?.role === 'super_admin') {
           router.replace('/(admin)/dashboard');
-        } else if (profile?.role === 'ground_owner') {
-          router.replace('/(owner)/manage-grounds');
         } else {
-          router.replace('/(tabs)/dashboard');
+          router.replace('/(tabs)/home_tab');
         }
       } else {
-        router.replace('/(tabs)/home_tab');
+        router.replace('/(auth)/login');
       }
     }
   }, [user, profile, loading, welcomeChecked, os]);
@@ -65,7 +63,12 @@ export default function IndexScreen() {
     return <HomePageSkeleton />;
   }
 
-  // On web, we keep landing visible so the booking form can be used.
+  // On web, we redirect to login if not authenticated to show login screen on loading.
+  if (os === 'web' && !loading && !user) {
+    return <Redirect href="/(auth)/login" />;
+  }
+
+  // On web, we keep landing visible for authenticated users.
   if (os !== 'web') return null;
 
   return (

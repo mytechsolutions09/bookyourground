@@ -581,7 +581,7 @@ export default function SignupScreen() {
               style={modalStyles.button}
               onPress={() => {
                 setShowSuccessModal(false);
-                router.replace('/(tabs)/dashboard');
+                router.replace('/(tabs)/home_tab');
               }}
             >
               <Text style={modalStyles.buttonText}>GET STARTED</Text>

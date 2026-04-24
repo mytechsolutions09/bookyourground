@@ -192,7 +192,7 @@ export default function LandingBookingForm({
   const IS_DARK = !isWeb || windowWidth < 900;
   
   const isEffectiveLight = true;
-  const styles = React.useMemo(() => getStyles(isWeb, isEffectiveLight), [isWeb, isEffectiveLight]);
+  const styles = React.useMemo(() => getStyles(isWeb, isEffectiveLight, noCard), [isWeb, isEffectiveLight, noCard]);
 
   /** Landing: Search → pick ground → Book Now. Skip when booking a known ground. */
   const useLandingSearchFlow = hideGroundPicker && !initialGroundId;
@@ -1461,6 +1461,10 @@ export default function LandingBookingForm({
       params.set('date', bookingDate);
       params.set('time', startTime);
       params.set('teamType', teamType);
+      if (computed) {
+        params.set('amount', computed.totalAmount.toString());
+        params.set('endTime', derivedEndTime);
+      }
       if (appliedCoupon) params.set('couponId', appliedCoupon.id);
       if (discountAmount > 0) params.set('discount', discountAmount.toString());
 
@@ -2107,10 +2111,11 @@ export default function LandingBookingForm({
   );
 
   const ContainerComponent: React.ComponentType<any> =
-    !isWeb && noCard ? View : Card;
+    noCard ? View : Card;
   const mainCardStyle = [
-    styles.card,
-    isWeb && styles.cardWeb,
+    !noCard && styles.card,
+    !noCard && isWeb && styles.cardWeb,
+    noCard && styles.cardPlain,
     fullWidth && !isWeb && styles.cardNativeFull,
     !isWeb && noCard && styles.cardPlainNative,
     !isWeb && noCard && bookGroundScreenNative && styles.cardPlainNativeBookGround,
@@ -2279,10 +2284,10 @@ export default function LandingBookingForm({
   );
 }
 
-const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
+const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false) => StyleSheet.create({
   wrapper: {
-    paddingHorizontal: 16,
-    paddingBottom: 28,
+    paddingHorizontal: noCard ? 0 : 16,
+    paddingBottom: noCard ? 0 : 28,
     ...Platform.select({
       web: {
         maxWidth: 1120,
@@ -2329,6 +2334,13 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 20,
     elevation: 2,
+  },
+  cardPlain: {
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    shadowOpacity: 0,
+    elevation: 0,
+    padding: 0,
   },
   /** Native-only full-screen card (no rounding, no side margins). */
   cardNativeFull: {
@@ -2462,8 +2474,8 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
     borderColor: '#E2E8F0',
     borderRadius: 16,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    minHeight: 48,
+    paddingVertical: isWeb ? 8 : 12,
+    minHeight: isWeb ? 38 : 48,
     fontSize: 15,
     fontFamily: 'Inter',
     backgroundColor: '#F8FAFC',
@@ -2533,8 +2545,8 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
   teamToggleOption: {
     flex: 1,
     paddingHorizontal: 12,
-    paddingVertical: 12,
-    minHeight: 48,
+    paddingVertical: 10,
+    minHeight: 40,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     borderRadius: 16,
@@ -2657,9 +2669,9 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
   applyBtn: {
     backgroundColor: '#F1F5F9',
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: isWeb ? 6 : 10,
     borderRadius: 10,
-    minHeight: 44,
+    minHeight: isWeb ? 38 : 44,
     justifyContent: 'center',
     alignItems: 'center',
     minWidth: 80,
@@ -3008,8 +3020,8 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
     alignSelf: 'stretch',
   },
   dateChip: {
-    paddingVertical: 6,
-    paddingHorizontal: 22,
+    paddingVertical: 4,
+    paddingHorizontal: 16,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: isLight ? '#E5E7EB' : 'transparent',
@@ -3123,8 +3135,8 @@ const getStyles = (isWeb: boolean, isLight: boolean) => StyleSheet.create({
     gap: 6,
   },
   timeSlotChip: {
-    paddingVertical: 8,
-    paddingHorizontal: 22,
+    paddingVertical: 6,
+    paddingHorizontal: 18,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: isLight ? '#E5E7EB' : 'transparent',

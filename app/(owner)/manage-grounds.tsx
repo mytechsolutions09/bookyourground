@@ -663,33 +663,39 @@ export default function OwnerGroundsScreen() {
               }}>
                 <Text style={{ fontFamily: 'Inter', fontSize: 18, fontWeight: '800', color: '#064e3b', marginBottom: 4 }}>Set Exact Location (Pin on Map)</Text>
                 <Text style={{ fontFamily: 'Inter', fontSize: 14, color: '#065f46', marginBottom: 16 }}>Click on the map to update your ground's exact GPS location.</Text>
-                <View style={{ height: 300, borderRadius: 16, overflow: 'hidden', marginBottom: 16, backgroundColor: '#cbd5e1' }}>
-                  <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
-                    <GoogleMap
-                      defaultCenter={{ lat: 28.4595, lng: 77.0266 }}
-                      center={editForm?.latitude && editForm?.longitude ? { lat: parseFloat(editForm.latitude), lng: parseFloat(editForm.longitude) } : undefined}
-                      defaultZoom={15}
-                      mapId={MAP_ID}
-                      onClick={(e) => {
-                        if (e.detail.latLng) {
-                          setEditForm((p: any) => ({
-                            ...p,
-                            latitude: String(e.detail.latLng!.lat),
-                            longitude: String(e.detail.latLng!.lng)
-                          }));
-                        }
-                       }}
-                      style={{ width: '100%', height: '100%' }}
-                    >
-                        {editForm?.latitude && editForm?.longitude && (
-                          <Marker 
-                            position={{ lat: parseFloat(editForm.latitude), lng: parseFloat(editForm.longitude) }} 
-                            icon="https://maps.google.com/mapfiles/ms/icons/green-dot.png"
-                          />
-                        )}
-                    </GoogleMap>
-                  </APIProvider>
-                </View>
+                {Platform.OS === 'web' ? (
+                  <View style={{ height: 300, borderRadius: 16, overflow: 'hidden', marginBottom: 16, backgroundColor: '#cbd5e1' }}>
+                    <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+                      <GoogleMap
+                        defaultCenter={{ lat: 28.4595, lng: 77.0266 }}
+                        center={editForm?.latitude && editForm?.longitude ? { lat: parseFloat(editForm.latitude), lng: parseFloat(editForm.longitude) } : undefined}
+                        defaultZoom={15}
+                        mapId={MAP_ID}
+                        onClick={(e) => {
+                          if (e.detail.latLng) {
+                            setEditForm((p: any) => ({
+                              ...p,
+                              latitude: String(e.detail.latLng!.lat),
+                              longitude: String(e.detail.latLng!.lng)
+                            }));
+                          }
+                         }}
+                        style={{ width: '100%', height: '100%' }}
+                      >
+                          {editForm?.latitude && editForm?.longitude && (
+                            <Marker 
+                              position={{ lat: parseFloat(editForm.latitude), lng: parseFloat(editForm.longitude) }} 
+                              icon="https://maps.google.com/mapfiles/ms/icons/green-dot.png"
+                            />
+                          )}
+                      </GoogleMap>
+                    </APIProvider>
+                  </View>
+                ) : (
+                  <View style={{ height: 100, backgroundColor: '#f1f5f9', borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 16, borderStyle: 'dashed', borderWidth: 1, borderColor: '#cbd5e1' }}>
+                    <Text style={{ fontFamily: 'Inter', fontSize: 13, color: '#64748B' }}>Interactive map available on Web</Text>
+                  </View>
+                )}
                 <View style={{ flexDirection: 'row', display: 'flex', gap: 12 }}>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontFamily: 'Inter', fontSize: 12, fontWeight: '600', color: '#065f46', marginBottom: 4 }}>Latitude</Text>

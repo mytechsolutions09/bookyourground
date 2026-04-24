@@ -184,21 +184,30 @@ serve(async (req) => {
         const { data: ground } = await supabaseClient.from('grounds').select('pitch_type, base_price_per_hour').eq('id', ground_id).single();
         
         let pricePerHour = ground.base_price_per_hour;
-        let totalAmount = pricePerHour;
-        if (ground.pitch_type.toLowerCase().includes('cricket') && !ground.pitch_type.toLowerCase().includes('box')) {
-           if (team_type === 'one') totalAmount = Math.round((pricePerHour / 2) * 100) / 100;
-        }
+        // Use client-supplied total_amount if provided (respects custom slot pricing);
+        // otherwise fall back to base price calculation.
+        let totalAmount: number;
+        let discountAmount: number;
 
-        let discountAmount = 0;
-        if (coupon_id) {
-           const { data: coupon } = await supabaseClient.from('coupons').select('*').eq('id', coupon_id).single();
-           if (coupon) {
-              if (coupon.discount_type === 'percentage') {
-                discountAmount = totalAmount * (coupon.discount_value / 100);
-              } else {
-                discountAmount = coupon.discount_value;
-              }
-           }
+        if (bookingDetails.total_amount != null) {
+          totalAmount = Number(bookingDetails.total_amount);
+          discountAmount = Number(bookingDetails.discount_amount ?? 0);
+        } else {
+          totalAmount = pricePerHour;
+          if (ground.pitch_type.toLowerCase().includes('cricket') && !ground.pitch_type.toLowerCase().includes('box')) {
+             if (team_type === 'one') totalAmount = Math.round((pricePerHour / 2) * 100) / 100;
+          }
+          discountAmount = 0;
+          if (coupon_id) {
+             const { data: coupon } = await supabaseClient.from('coupons').select('*').eq('id', coupon_id).single();
+             if (coupon) {
+                if (coupon.discount_type === 'percentage') {
+                  discountAmount = totalAmount * (coupon.discount_value / 100);
+                } else {
+                  discountAmount = coupon.discount_value;
+                }
+             }
+          }
         }
 
         const { data: newBooking, error: insertError } = await supabaseClient
@@ -321,21 +330,29 @@ serve(async (req) => {
         }
 
         let pricePerHour = ground.base_price_per_hour;
-        let totalAmount = pricePerHour;
-        if (ground.pitch_type.toLowerCase().includes('cricket') && !ground.pitch_type.toLowerCase().includes('box')) {
-           if (team_type === 'one') totalAmount = Math.round((pricePerHour / 2) * 100) / 100;
-        }
+        // Use client-supplied total_amount if provided (respects custom slot pricing);
+        let totalAmount: number;
+        let discountAmount: number;
 
-        let discountAmount = 0;
-        if (coupon_id) {
-           const { data: coupon } = await supabaseClient.from('coupons').select('*').eq('id', coupon_id).single();
-           if (coupon) {
-              if (coupon.discount_type === 'percentage') {
-                discountAmount = totalAmount * (coupon.discount_value / 100);
-              } else {
-                discountAmount = coupon.discount_value;
-              }
-           }
+        if (bookingDetails.total_amount != null) {
+          totalAmount = Number(bookingDetails.total_amount);
+          discountAmount = Number(bookingDetails.discount_amount ?? 0);
+        } else {
+          totalAmount = pricePerHour;
+          if (ground.pitch_type.toLowerCase().includes('cricket') && !ground.pitch_type.toLowerCase().includes('box')) {
+             if (team_type === 'one') totalAmount = Math.round((pricePerHour / 2) * 100) / 100;
+          }
+          discountAmount = 0;
+          if (coupon_id) {
+             const { data: coupon } = await supabaseClient.from('coupons').select('*').eq('id', coupon_id).single();
+             if (coupon) {
+                if (coupon.discount_type === 'percentage') {
+                  discountAmount = totalAmount * (coupon.discount_value / 100);
+                } else {
+                  discountAmount = coupon.discount_value;
+                }
+             }
+          }
         }
 
         console.log(`[Cash] Inserting new booking. Amount: ${totalAmount - discountAmount}`);
@@ -485,21 +502,29 @@ serve(async (req) => {
         const { data: ground } = await supabaseClient.from('grounds').select('pitch_type, base_price_per_hour').eq('id', ground_id).single();
         
         let pricePerHour = ground.base_price_per_hour;
-        let totalAmount = pricePerHour;
-        if (ground.pitch_type.toLowerCase().includes('cricket') && !ground.pitch_type.toLowerCase().includes('box')) {
-           if (team_type === 'one') totalAmount = Math.round((pricePerHour / 2) * 100) / 100;
-        }
+        // Use client-supplied total_amount if provided (respects custom slot pricing);
+        let totalAmount: number;
+        let discountAmount: number;
 
-        let discountAmount = 0;
-        if (coupon_id) {
-           const { data: coupon } = await supabaseClient.from('coupons').select('*').eq('id', coupon_id).single();
-           if (coupon) {
-              if (coupon.discount_type === 'percentage') {
-                discountAmount = totalAmount * (coupon.discount_value / 100);
-              } else {
-                discountAmount = coupon.discount_value;
-              }
-           }
+        if (bookingDetails.total_amount != null) {
+          totalAmount = Number(bookingDetails.total_amount);
+          discountAmount = Number(bookingDetails.discount_amount ?? 0);
+        } else {
+          totalAmount = pricePerHour;
+          if (ground.pitch_type.toLowerCase().includes('cricket') && !ground.pitch_type.toLowerCase().includes('box')) {
+             if (team_type === 'one') totalAmount = Math.round((pricePerHour / 2) * 100) / 100;
+          }
+          discountAmount = 0;
+          if (coupon_id) {
+             const { data: coupon } = await supabaseClient.from('coupons').select('*').eq('id', coupon_id).single();
+             if (coupon) {
+                if (coupon.discount_type === 'percentage') {
+                  discountAmount = totalAmount * (coupon.discount_value / 100);
+                } else {
+                  discountAmount = coupon.discount_value;
+                }
+             }
+          }
         }
 
         const { data: newBooking, error: insertError } = await supabaseClient

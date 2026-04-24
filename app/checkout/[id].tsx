@@ -93,6 +93,8 @@ export default function CheckoutScreen() {
             end_time: booking.end_time,
             team_type: booking.team_type,
             coupon_id: booking.coupon_id,
+            total_amount: booking.total_amount + (booking.discount_amount || 0),
+            discount_amount: booking.discount_amount || 0,
           } : null,
         },
       });
@@ -127,7 +129,7 @@ export default function CheckoutScreen() {
   const fetchNewBookingDetails = async () => {
     try {
       setLoading(true);
-      const { groundId, date, time, teamType, couponId, discount } = params;
+      const { groundId, date, time, teamType, couponId, discount, amount: passedAmount, endTime: passedEndTime } = params;
       
       const { data: ground, error: groundError } = await supabase
         .from('grounds')
@@ -138,15 +140,23 @@ export default function CheckoutScreen() {
       if (groundError) throw groundError;
 
       const isBox = (ground.pitch_type ?? '').toLowerCase().includes('box');
-      const durationHours = 1;
-      const startTimeMinutes = parseTimeToMinutes(time as string) || 540;
-      const endMinutes = startTimeMinutes + (durationHours * 60);
-      const endTime = minutesToHHMM(endMinutes);
+      
+      // Use passed values from form if available, otherwise fall back to 1hr default
+      let endTime = passedEndTime as string;
+      if (!endTime) {
+        const durationHours = 1;
+        const startTimeMinutes = parseTimeToMinutes(time as string) || 540;
+        const endMinutes = startTimeMinutes + (durationHours * 60);
+        endTime = minutesToHHMM(endMinutes);
+      }
 
-      const pricePerHour = ground.base_price_per_hour;
-      const totalAmount = isBox 
-        ? pricePerHour 
-        : teamType === 'one' ? (pricePerHour / 2) : pricePerHour;
+      let totalAmount = passedAmount ? parseFloat(passedAmount as string) : 0;
+      if (!totalAmount) {
+        const pricePerHour = ground.base_price_per_hour;
+        totalAmount = isBox 
+          ? pricePerHour 
+          : teamType === 'one' ? (pricePerHour / 2) : pricePerHour;
+      }
       
       const discountVal = parseFloat(discount as string || '0');
 
@@ -420,6 +430,8 @@ export default function CheckoutScreen() {
                     end_time: booking.end_time,
                     team_type: booking.team_type,
                     coupon_id: booking.coupon_id,
+                    total_amount: booking.total_amount + (booking.discount_amount || 0),
+                    discount_amount: booking.discount_amount || 0,
                   } : null,
                 },
               });
@@ -811,6 +823,7 @@ const styles = StyleSheet.create({
     maxWidth: 1100,
     alignSelf: 'center',
     width: '100%',
+    paddingBottom: Platform.OS === 'web' ? 64 : 24,
   },
   centered: {
     flex: 1,

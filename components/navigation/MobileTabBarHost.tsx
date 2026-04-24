@@ -21,7 +21,10 @@ export function MobileTabBarHost() {
     root === '(owner)' ||
     root === '(admin)' ||
     root === 'players' ||
-    root === 'shop'
+    root === 'shop' ||
+    root === 'select-sport' ||
+    root === 'search' ||
+    root === 'ground'
   ) {
     return null;
   }

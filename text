@@ -5,8 +5,9 @@
 #005b80
 #4f2c63
 #2a533a
-#d8f79d
+#d8f79d neon
 #bfff49
+
 
 
 npx expo start
@@ -20,8 +21,8 @@ git push
 
 
 git status
-git add . && git commit -m
-git add .; git commit -m
+git add .
+git commit
 git push
 
 pull from git

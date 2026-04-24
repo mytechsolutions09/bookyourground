@@ -43,21 +43,14 @@ export default function WelcomeScreen() {
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: '#043529' }]}>
-        <View style={styles.fallbackContent}>
-          <View style={styles.logoCircle}>
-             <Trophy size={48} color="#10B981" />
-          </View>
-          <Text style={styles.welcomeTitle}>BOOK YOUR GROUND</Text>
-          <Text style={styles.welcomeSubtitle}>Your game, your ground, instantly.</Text>
-        </View>
-      </View>
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: '#043529' }]} />
       
       <Video
         source={require('../assets/videos/welcome.mp4')}
         style={StyleSheet.absoluteFill}
         resizeMode={ResizeMode.COVER}
         shouldPlay
+        isMuted={true}
         isLooping={false}
         useNativeControls={false}
         onPlaybackStatusUpdate={(status) => {
@@ -67,8 +60,6 @@ export default function WelcomeScreen() {
         }}
         onError={(error) => {
           console.warn('Welcome video error:', error);
-          // Don't auto-finish immediately on error unless it's fatal, 
-          // allow user to see the fallback UI for a second.
           setTimeout(finish, 2000); 
         }}
       />

@@ -8,6 +8,8 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { UIProvider } from '@/contexts/UIContext';
 import { MobileTabBarHost } from '@/components/navigation/MobileTabBarHost';
 
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
 export default function RootLayout() {
   useFrameworkReady();
 
@@ -52,28 +54,31 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <AuthProvider>
-      <UIProvider>
-        <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-          <View style={{ flex: 1 }}>
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: '#FFFFFF', flex: 1 },
-              }}
-            >
-              <Stack.Screen name="index" />
-              <Stack.Screen name="welcome" />
-              <Stack.Screen name="(auth)" />
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="(owner)" />
-              <Stack.Screen name="(admin)" />
-              <Stack.Screen name="+not-found" />
-            </Stack>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <UIProvider>
+          <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+            <View style={{ flex: 1 }}>
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  contentStyle: { backgroundColor: '#FFFFFF', flex: 1 },
+                }}
+              >
+                <Stack.Screen name="index" />
+                <Stack.Screen name="welcome" />
+                <Stack.Screen name="(auth)" />
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="(owner)" />
+                <Stack.Screen name="(admin)" />
+                <Stack.Screen name="+not-found" />
+              </Stack>
+            </View>
+            <MobileTabBarHost />
           </View>
-        </View>
-        <StatusBar style="auto" />
-      </UIProvider>
-    </AuthProvider>
+          <StatusBar style="auto" />
+        </UIProvider>
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }

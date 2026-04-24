@@ -490,8 +490,7 @@ export default function MatchStrategiesScreen() {
   const isRuleViolated = fieldersOutside > maxAllowedOutside;
 
   const content = (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <View style={styles.page}>
+    <View style={styles.page}>
         <View style={[styles.contentWrapper, isMobile && { flexDirection: 'column' }]}>
           
           {/* Mobile Menu Overlay */}
@@ -775,9 +774,8 @@ export default function MatchStrategiesScreen() {
         </View>
       </View>
     </View>
-  </GestureHandlerRootView>
-);
-
+  );
+  
   if (Platform.OS === 'web') {
     return <WebLayout noCard>{content}</WebLayout>;
   }

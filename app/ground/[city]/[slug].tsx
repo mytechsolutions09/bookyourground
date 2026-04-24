@@ -10,6 +10,7 @@ import {
   TextInput,
   Pressable,
   Linking,
+  useWindowDimensions,
 } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { MapPin, Star, ArrowLeft, Phone, Navigation2, CheckCircle2, Heart, ChevronRight, Share2, Map as MapIcon } from 'lucide-react-native';
@@ -63,6 +64,11 @@ export default function GroundDetailsPrettyUrlScreen() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   const [reviewSortOrder, setReviewSortOrder] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>('newest');
+
+  const { width } = useWindowDimensions();
+  const isCompact = width < 900;
+  const isWeb = Platform.OS === 'web';
+  const isLargeWeb = isWeb && !isCompact;
 
   const slugParam = Array.isArray(slug) ? slug[0] : slug;
   const cityParam = Array.isArray(city) ? city[0] : city;
@@ -286,13 +292,13 @@ export default function GroundDetailsPrettyUrlScreen() {
 
         <ScrollView
           style={styles.container}
-          contentContainerStyle={Platform.OS === 'web' ? undefined : { paddingBottom: 32 }}
+          contentContainerStyle={isLargeWeb ? undefined : { paddingBottom: 32 }}
           showsVerticalScrollIndicator={false}
         >
 
         <View style={styles.content}>
-          {/* ── Web Split Header ── */}
-          {Platform.OS === 'web' ? (
+          {/* ── Hero Gallery ── */}
+          {isLargeWeb ? (
             <WebHeroGallery 
               ground={ground} 
               heroIdx={heroIdx} 
@@ -303,25 +309,12 @@ export default function GroundDetailsPrettyUrlScreen() {
               favoriteLoading={favoriteLoading}
             />
           ) : (
-            <Section style={[styles.section, styles.imageCard]}>
+            <View style={[styles.section, styles.imageCard]}>
               <Image
                 source={{ uri: imageUrls[heroIdx] }}
                 style={styles.heroImage}
                 resizeMode="cover"
               />
-              {/* ── Favorite Button (Mobile Overlay) ── */}
-              <Pressable
-                style={[styles.favBtn, isFavorite && styles.favBtnActive]}
-                onPress={toggleFavorite}
-                disabled={favoriteLoading}
-              >
-                <Heart
-                  size={22}
-                  color={isFavorite ? '#01b854' : '#f9fafb'}
-                  fill={isFavorite ? '#01b854' : 'rgba(0,0,0,0.2)'}
-                  strokeWidth={2}
-                />
-              </Pressable>
               {imageUrls.length > 1 ? (
                 <ScrollView
                   horizontal
@@ -343,11 +336,11 @@ export default function GroundDetailsPrettyUrlScreen() {
                   ))}
                 </ScrollView>
               ) : null}
-            </Section>
+            </View>
           )}
 
-          {/* ── Name & Quick Actions Bar (Web Only) ── */}
-          {Platform.OS === 'web' && (
+          {/* ── Name & Quick Actions Bar (Web Large Only) ── */}
+          {isLargeWeb && (
             <View style={styles.webActionBar}>
               <View style={styles.webNameSection}>
                 <Text style={styles.webGroundName}>{ground.name}</Text>
@@ -369,7 +362,7 @@ export default function GroundDetailsPrettyUrlScreen() {
                   variant="outline"
                   icon={Share2}
                   onPress={() => {
-                    const url = window.location.href;
+                    const url = typeof window !== 'undefined' ? window.location.href : '';
                     Share.share({
                       message: `Check out ${ground.name} on BookYourGround!`,
                       url: url,
@@ -390,10 +383,10 @@ export default function GroundDetailsPrettyUrlScreen() {
             </View>
           )}
 
-          {Platform.OS === 'web' ? (
+          {isLargeWeb ? (
             <View style={styles.webTwoColumnLayout}>
               <View style={styles.webLeftColumn}>
-                <Section style={styles.section}>
+                <Card style={styles.section}>
                   <Text style={styles.name}>{ground.name}</Text>
                   <View style={styles.locationRow}>
                     <Text style={styles.location}>
@@ -418,10 +411,10 @@ export default function GroundDetailsPrettyUrlScreen() {
                         : 'No reviews yet'}
                     </Text>
                   </View>
-                </Section>
+                </Card>
 
                 {/* Map Section - Moved under images/name */}
-                <Section style={[styles.section, styles.mapSection]}>
+                <Card style={[styles.section, styles.mapSection]}>
                   <Text style={styles.sectionTitle}>Location</Text>
                   <View style={styles.webMapContainer}>
                     <WebMap ground={ground} />
@@ -435,16 +428,16 @@ export default function GroundDetailsPrettyUrlScreen() {
                       <Text style={styles.mapsLinkText}>Open in Google Maps</Text>
                     </Pressable>
                   )}
-                </Section>
+                </Card>
 
                 {ground.description && (
-                  <Section style={styles.section}>
+                  <Card style={styles.section}>
                     <Text style={styles.sectionTitle}>About</Text>
                     <Text style={styles.description}>{ground.description}</Text>
-                  </Section>
+                  </Card>
                 )}
 
-                <Section style={styles.section}>
+                <Card style={styles.section}>
                   <Text style={styles.sectionTitle}>Details</Text>
                   {ground.pitch_type && (
                     <View style={styles.detailRow}>
@@ -466,12 +459,12 @@ export default function GroundDetailsPrettyUrlScreen() {
                       <Text style={styles.detailValue}>{ground.ground_size}</Text>
                     </View>
                   )}
-                </Section>
+                </Card>
 
-                <Section style={styles.section}>
+                <Card style={styles.section}>
                   <Text style={styles.sectionTitle}>Amenities</Text>
                   <AmenitiesList ground={ground} />
-                </Section>
+                </Card>
 
                 <ReviewsSection 
                   reviews={reviews} 
@@ -483,13 +476,21 @@ export default function GroundDetailsPrettyUrlScreen() {
 
               <View style={styles.webRightColumn}>
                 <View style={styles.stickySidebar}>
-                  <Section style={styles.sidebarBookingCard}>
+                  <Card style={styles.sidebarBookingCard}>
                     <Text style={styles.sidebarPriceTitle}>Book Your Slot</Text>
                     {ground.base_price_per_hour ? (
                       <View style={styles.sidebarPriceRow}>
-                        <Text style={styles.sidebarPriceValue}>₹{Number(ground.base_price_per_hour).toLocaleString('en-IN')}</Text>
+                        <Text style={styles.sidebarPriceValue}>
+                          ₹{Number(
+                            isCricketGroundType(ground.pitch_type)
+                              ? (ground.base_price_per_hour / 2)
+                              : ground.base_price_per_hour
+                          ).toLocaleString('en-IN')}
+                        </Text>
                         <Text style={styles.sidebarPriceUnit}>
-                          {String(ground.pitch_type ?? '').toLowerCase().includes('box') ? ' /hr' : ' /match'}
+                          {isCricketGroundType(ground.pitch_type)
+                            ? ' starting'
+                            : (String(ground.pitch_type ?? '').toLowerCase().includes('box') ? ' /hr' : ' /match')}
                         </Text>
                       </View>
                     ) : null}
@@ -509,9 +510,9 @@ export default function GroundDetailsPrettyUrlScreen() {
                         lockSlot={lock === 'true'}
                       />
                     </View>
-                  </Section>
+                  </Card>
                   
-                  <Section style={styles.sidebarSupportCard}>
+                  <Card style={styles.sidebarSupportCard}>
                     <Text style={styles.supportTitle}>Need Help?</Text>
                     <Text style={styles.supportDesc}>Contact the ground directly for bulk bookings or tournaments.</Text>
                     <Button 
@@ -520,14 +521,14 @@ export default function GroundDetailsPrettyUrlScreen() {
                       icon={Phone} 
                       onPress={() => ground.phone && Linking.openURL(`tel:${ground.phone}`)}
                     />
-                  </Section>
+                  </Card>
                 </View>
               </View>
             </View>
           ) : (
             <>
-              {/* Mobile single column layout */}
-              <Section style={styles.section}>
+              {/* Mobile / Small-screen layout */}
+              <View style={styles.section}>
                 <Text style={styles.name}>{ground.name}</Text>
                 <View style={styles.locationRow}>
                   <Text style={styles.location}>
@@ -559,7 +560,16 @@ export default function GroundDetailsPrettyUrlScreen() {
                 {ground.base_price_per_hour ? (
                   <View style={styles.priceStrip}>
                     <Text style={styles.priceLabel}>Starting from</Text>
-                    <Text style={styles.priceValue}>₹{Number(ground.base_price_per_hour).toLocaleString('en-IN')}<Text style={styles.priceUnit}> /match</Text></Text>
+                    <Text style={styles.priceValue}>
+                      ₹{Number(
+                        isCricketGroundType(ground.pitch_type)
+                          ? (ground.base_price_per_hour / 2)
+                          : ground.base_price_per_hour
+                      ).toLocaleString('en-IN')}
+                      <Text style={styles.priceUnit}>
+                        {isCricketGroundType(ground.pitch_type) ? ' /team' : ' /match'}
+                      </Text>
+                    </Text>
                   </View>
                 ) : null}
                 
@@ -573,35 +583,44 @@ export default function GroundDetailsPrettyUrlScreen() {
                     groundPageAccent
                   />
                 </View>
-              </Section>
+              </View>
 
               {ground.description && (
-                <Section style={styles.section}>
+                <View style={styles.section}>
                   <Text style={styles.sectionTitle}>About</Text>
                   <Text style={styles.description}>{ground.description}</Text>
-                </Section>
+                </View>
               )}
 
-              <Section style={styles.section}>
+              <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Details</Text>
-                {/* Mobile details... */}
                 {ground.pitch_type && <Text style={styles.description}>Type: {ground.pitch_type}</Text>}
-              </Section>
+              </View>
               
-              <Section style={styles.section}>
+              <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Location</Text>
-                <View style={{ height: 250, borderRadius: 16, overflow: 'hidden' }}>
-                   <WebMap ground={ground} />
-                </View>
-              </Section>
+                {Platform.OS === 'web' ? (
+                  <View style={{ height: 250, borderRadius: 16, overflow: 'hidden' }}>
+                     <WebMap ground={ground} />
+                  </View>
+                ) : (
+                  <View style={styles.mobileMapPlaceholder}>
+                    <MapIcon size={40} color="#94A3B8" strokeWidth={1.5} />
+                    <Text style={styles.mobileMapPlaceholderText}>Map preview available on Web</Text>
+                    {mapsUrl && (
+                      <Pressable onPress={() => Linking.openURL(mapsUrl)} style={styles.mapsLinkWrap}>
+                        <Navigation2 size={16} color="#01b854" strokeWidth={2.5} />
+                        <Text style={styles.mapsLinkText}>Get Directions</Text>
+                      </Pressable>
+                    )}
+                  </View>
+                )}
+              </View>
             </>
           )}
 
-
-
-
           {/* ── Reviews ── */}
-          <Section style={styles.section}>
+          <View style={styles.section}>
             <View style={styles.reviewHeaderMain}>
               <Text style={styles.sectionTitle}>Customer Reviews</Text>
               
@@ -681,7 +700,7 @@ export default function GroundDetailsPrettyUrlScreen() {
                 ))}
               </View>
             )}
-          </Section>
+          </View>
         </View>
       </ScrollView>
     </>
@@ -971,7 +990,7 @@ const styles = StyleSheet.create({
   sidebarBookingCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
-    padding: 24,
+    padding: 16,
     borderWidth: 1,
     borderColor: '#F1F5F9',
     shadowColor: '#000',
@@ -1138,9 +1157,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   loadingText: {
-    fontSize: 15,
     color: '#6B7280',
     fontWeight: '500',
+  },
+  mobileMapPlaceholder: {
+    height: 200,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderStyle: 'dashed',
+    gap: 8,
+  },
+  mobileMapPlaceholderText: {
+    fontFamily: 'Inter',
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
+    marginBottom: 8,
   },
 
   // ── Fixed Header (mobile) ─────────────────────────────
