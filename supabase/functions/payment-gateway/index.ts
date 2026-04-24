@@ -7,6 +7,29 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+function timeToMinutes(time: string | null | undefined): number | null {
+  const match = /^(\d{1,2}):(\d{2})/.exec(String(time ?? '').trim());
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+  return hours * 60 + minutes;
+}
+
+function bookingHours(startTime: string | null | undefined, endTime: string | null | undefined): number {
+  const start = timeToMinutes(startTime);
+  const end = timeToMinutes(endTime);
+  if (start == null || end == null) return 1;
+  let diff = end - start;
+  if (diff <= 0) diff += 24 * 60;
+  return Math.max(diff / 60, 1);
+}
+
+function isBoxCricket(pitchType: string | null | undefined): boolean {
+  return String(pitchType ?? '').toLowerCase().includes('box');
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -183,7 +206,8 @@ serve(async (req) => {
 
         const { data: ground } = await supabaseClient.from('grounds').select('pitch_type, base_price_per_hour').eq('id', ground_id).single();
         
-        let pricePerHour = ground.base_price_per_hour;
+        let pricePerHour = Number(bookingDetails.price_per_hour ?? ground.base_price_per_hour);
+        const totalHours = Number(bookingDetails.total_hours ?? bookingHours(start_time, end_time));
         // Use client-supplied total_amount if provided (respects custom slot pricing);
         // otherwise fall back to base price calculation.
         let totalAmount: number;
@@ -194,7 +218,9 @@ serve(async (req) => {
           discountAmount = Number(bookingDetails.discount_amount ?? 0);
         } else {
           totalAmount = pricePerHour;
-          if (ground.pitch_type.toLowerCase().includes('cricket') && !ground.pitch_type.toLowerCase().includes('box')) {
+          if (isBoxCricket(ground.pitch_type)) {
+             totalAmount = Math.round(pricePerHour * totalHours * 100) / 100;
+          } else if (String(ground.pitch_type ?? '').toLowerCase().includes('cricket')) {
              if (team_type === 'one') totalAmount = Math.round((pricePerHour / 2) * 100) / 100;
           }
           discountAmount = 0;
@@ -218,7 +244,7 @@ serve(async (req) => {
             booking_date,
             start_time,
             end_time,
-            total_hours: 1,
+            total_hours: totalHours,
             price_per_hour: pricePerHour,
             total_amount: Math.round((totalAmount - discountAmount) * 100) / 100,
             coupon_id,
@@ -329,7 +355,8 @@ serve(async (req) => {
             throw new Error('This slot is no longer available.');
         }
 
-        let pricePerHour = ground.base_price_per_hour;
+        let pricePerHour = Number(bookingDetails.price_per_hour ?? ground.base_price_per_hour);
+        const totalHours = Number(bookingDetails.total_hours ?? bookingHours(start_time, end_time));
         // Use client-supplied total_amount if provided (respects custom slot pricing);
         let totalAmount: number;
         let discountAmount: number;
@@ -339,7 +366,9 @@ serve(async (req) => {
           discountAmount = Number(bookingDetails.discount_amount ?? 0);
         } else {
           totalAmount = pricePerHour;
-          if (ground.pitch_type.toLowerCase().includes('cricket') && !ground.pitch_type.toLowerCase().includes('box')) {
+          if (isBoxCricket(ground.pitch_type)) {
+             totalAmount = Math.round(pricePerHour * totalHours * 100) / 100;
+          } else if (String(ground.pitch_type ?? '').toLowerCase().includes('cricket')) {
              if (team_type === 'one') totalAmount = Math.round((pricePerHour / 2) * 100) / 100;
           }
           discountAmount = 0;
@@ -364,7 +393,7 @@ serve(async (req) => {
             booking_date,
             start_time,
             end_time,
-            total_hours: 1,
+            total_hours: totalHours,
             price_per_hour: pricePerHour,
             total_amount: Math.round((totalAmount - discountAmount) * 100) / 100,
             coupon_id,
@@ -501,7 +530,8 @@ serve(async (req) => {
 
         const { data: ground } = await supabaseClient.from('grounds').select('pitch_type, base_price_per_hour').eq('id', ground_id).single();
         
-        let pricePerHour = ground.base_price_per_hour;
+        let pricePerHour = Number(bookingDetails.price_per_hour ?? ground.base_price_per_hour);
+        const totalHours = Number(bookingDetails.total_hours ?? bookingHours(start_time, end_time));
         // Use client-supplied total_amount if provided (respects custom slot pricing);
         let totalAmount: number;
         let discountAmount: number;
@@ -511,7 +541,9 @@ serve(async (req) => {
           discountAmount = Number(bookingDetails.discount_amount ?? 0);
         } else {
           totalAmount = pricePerHour;
-          if (ground.pitch_type.toLowerCase().includes('cricket') && !ground.pitch_type.toLowerCase().includes('box')) {
+          if (isBoxCricket(ground.pitch_type)) {
+             totalAmount = Math.round(pricePerHour * totalHours * 100) / 100;
+          } else if (String(ground.pitch_type ?? '').toLowerCase().includes('cricket')) {
              if (team_type === 'one') totalAmount = Math.round((pricePerHour / 2) * 100) / 100;
           }
           discountAmount = 0;
@@ -535,7 +567,7 @@ serve(async (req) => {
             booking_date,
             start_time,
             end_time,
-            total_hours: 1,
+            total_hours: totalHours,
             price_per_hour: pricePerHour,
             total_amount: Math.round((totalAmount - discountAmount) * 100) / 100,
             coupon_id,

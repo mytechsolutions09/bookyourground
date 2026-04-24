@@ -64,6 +64,7 @@ export default function GroundDetailsPrettyUrlScreen() {
   const [isFavorite, setIsFavorite] = useState(false);
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   const [reviewSortOrder, setReviewSortOrder] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>('newest');
+  const [currentTotal, setCurrentTotal] = useState<number | null>(null);
 
   const { width } = useWindowDimensions();
   const isCompact = width < 900;
@@ -480,18 +481,30 @@ export default function GroundDetailsPrettyUrlScreen() {
                     <Text style={styles.sidebarPriceTitle}>Book Your Slot</Text>
                     {ground.base_price_per_hour ? (
                       <View style={styles.sidebarPriceRow}>
-                        <Text style={styles.sidebarPriceValue}>
-                          ₹{Number(
-                            isCricketGroundType(ground.pitch_type)
-                              ? (ground.base_price_per_hour / 2)
-                              : ground.base_price_per_hour
-                          ).toLocaleString('en-IN')}
-                        </Text>
-                        <Text style={styles.sidebarPriceUnit}>
-                          {isCricketGroundType(ground.pitch_type)
-                            ? ' starting'
-                            : (String(ground.pitch_type ?? '').toLowerCase().includes('box') ? ' /hr' : ' /match')}
-                        </Text>
+                        {currentTotal !== null ? (
+                          <>
+                            <Text style={styles.sidebarPriceUnit}>Total: </Text>
+                            <Text style={styles.sidebarPriceValue}>₹{currentTotal.toLocaleString('en-IN')}</Text>
+                          </>
+                        ) : (
+                          <>
+                            {isCricketGroundType(ground.pitch_type) && (
+                              <Text style={styles.sidebarPriceUnit}>Starting </Text>
+                            )}
+                            <Text style={styles.sidebarPriceValue}>
+                              ₹{Number(
+                                isCricketGroundType(ground.pitch_type)
+                                  ? (ground.base_price_per_hour / 2)
+                                  : ground.base_price_per_hour
+                              ).toLocaleString('en-IN')}
+                            </Text>
+                            {!isCricketGroundType(ground.pitch_type) && (
+                              <Text style={styles.sidebarPriceUnit}>
+                                {String(ground.pitch_type ?? '').toLowerCase().includes('box') ? ' /hr' : ' /match'}
+                              </Text>
+                            )}
+                          </>
+                        )}
                       </View>
                     ) : null}
                     
@@ -508,6 +521,7 @@ export default function GroundDetailsPrettyUrlScreen() {
                         groundPageAccent
                         lightAppTheme
                         lockSlot={lock === 'true'}
+                        onFinalAmountChange={setCurrentTotal}
                       />
                     </View>
                   </Card>

@@ -279,6 +279,9 @@ export interface Database {
           created_at: string;
           updated_at: string;
           payment_method: string | null;
+          team_type: string | null;
+          coupon_id: string | null;
+          discount_amount: number | null;
         };
         Insert: {
           id?: string;
@@ -297,6 +300,9 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
           payment_method?: string | null;
+          team_type?: string | null;
+          coupon_id?: string | null;
+          discount_amount?: number | null;
         };
         Update: {
           id?: string;
@@ -315,6 +321,9 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
           payment_method?: string | null;
+          team_type?: string | null;
+          coupon_id?: string | null;
+          discount_amount?: number | null;
         };
       };
       reviews: {

@@ -23,6 +23,7 @@ import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import { formatCurrency, formatDateDDMMYYYY } from '@/utils/helpers';
 import { CreditCard, ShieldCheck, Clock, Calendar, MapPin, ChevronLeft, Wallet } from 'lucide-react-native';
+import { hoursBetweenBooked, normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
 
 export default function CheckoutScreen() {
   const { id } = useLocalSearchParams();
@@ -93,6 +94,8 @@ export default function CheckoutScreen() {
             end_time: booking.end_time,
             team_type: booking.team_type,
             coupon_id: booking.coupon_id,
+            total_hours: booking.total_hours,
+            price_per_hour: booking.price_per_hour,
             total_amount: booking.total_amount + (booking.discount_amount || 0),
             discount_amount: booking.discount_amount || 0,
           } : null,
@@ -150,11 +153,15 @@ export default function CheckoutScreen() {
         endTime = minutesToHHMM(endMinutes);
       }
 
+      const startHHMM = normalizeDbTimeToHHMM(time as string);
+      const endHHMM = normalizeDbTimeToHHMM(endTime);
+      const totalHours = startHHMM && endHHMM ? hoursBetweenBooked(startHHMM, endHHMM) : null;
+
       let totalAmount = passedAmount ? parseFloat(passedAmount as string) : 0;
       if (!totalAmount) {
         const pricePerHour = ground.base_price_per_hour;
-        totalAmount = isBox 
-          ? pricePerHour 
+        totalAmount = isBox
+          ? pricePerHour * (totalHours || 1)
           : teamType === 'one' ? (pricePerHour / 2) : pricePerHour;
       }
       
@@ -166,6 +173,8 @@ export default function CheckoutScreen() {
         booking_date: date,
         start_time: time,
         end_time: endTime,
+        total_hours: totalHours || 1,
+        price_per_hour: ground.base_price_per_hour,
         total_amount: totalAmount - discountVal,
         discount_amount: discountVal,
         team_type: teamType,
@@ -430,6 +439,8 @@ export default function CheckoutScreen() {
                     end_time: booking.end_time,
                     team_type: booking.team_type,
                     coupon_id: booking.coupon_id,
+                    total_hours: booking.total_hours,
+                    price_per_hour: booking.price_per_hour,
                     total_amount: booking.total_amount + (booking.discount_amount || 0),
                     discount_amount: booking.discount_amount || 0,
                   } : null,

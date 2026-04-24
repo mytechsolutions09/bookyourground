@@ -892,6 +892,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                         <Text style={styles.sidebarSectionTitle}>Ground owner</Text>
                         <NavLink href="/(owner)/owner-dashboard" icon={LayoutDashboard} label="Dashboard" />
                         <NavLink href="/(owner)/manage-grounds" icon={MapPin} label="My grounds" />
+                        <NavLink href="/(owner)/inventory" icon={Package} label="Inventory" />
                         <NavLink href="/wallet" icon={Wallet} label="Wallet" />
 
                         <NavLink href="/(owner)/ground-bookings" icon={ClipboardList} label="Bookings" />

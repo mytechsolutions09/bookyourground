@@ -8,6 +8,7 @@ import { formatCurrency, formatDate } from '@/utils/helpers';
 import { formatBookingSlotSummary } from '@/utils/bookingSlotFormat';
 import { hoursBetweenBooked, normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
 import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
+import { getBookingDisplayAmount } from '@/utils/bookingPricing';
 import { useAuth } from '@/contexts/AuthContext';
 import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
@@ -31,7 +32,6 @@ export default function BookingDetailsScreen() {
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewLoading, setReviewLoading] = useState(true);
   const [successModalVisible, setSuccessModalVisible] = useState(false);
-
 
   useEffect(() => {
     if (bookingId) {
@@ -79,14 +79,6 @@ export default function BookingDetailsScreen() {
 
     try {
       setSubmittingReview(true);
-      console.log('Submitting review:', { 
-        rating: reviewRating, 
-        comment: reviewComment,
-        bookingId,
-        groundId: booking.ground_id,
-        existingReviewId
-      });
-
       if (existingReviewId) {
         const { error } = await supabase
           .from('reviews')
@@ -146,29 +138,9 @@ export default function BookingDetailsScreen() {
     }
   };
 
-  const durationHoursLabel = useMemo(() => {
-    if (!booking) return '';
-    const st = normalizeDbTimeToHHMM(booking.start_time);
-    const et = normalizeDbTimeToHHMM(booking.end_time);
-    if (st && et) {
-      const h = hoursBetweenBooked(st, et);
-      if (h != null && Number.isFinite(h) && h > 0) {
-        return `${Math.round(h * 100) / 100}`;
-      }
-    }
-    return String(booking.total_hours ?? '');
-  }, [booking]);
-
-
-  const isPastBooking = useMemo(() => {
-    if (!booking) return false;
-    const today = new Date().toISOString().split('T')[0];
-    return booking.booking_date < today;
-  }, [booking?.booking_date]);
-
+  const displayTotalAmount = useMemo(() => getBookingDisplayAmount(booking), [booking]);
 
   if (loading || !booking) {
-
     const loadingContent = (
       <View style={styles.loadingContainer}>
         <Text>Loading...</Text>
@@ -187,16 +159,18 @@ export default function BookingDetailsScreen() {
     'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
 
   const isNarrow = width < 900;
+  const isWeb = Platform.OS === 'web';
+  const IS_DARK = !isWeb;
 
-
+  const isPastBooking = (() => {
+    const today = new Date().toISOString().split('T')[0];
+    return booking.booking_date < today;
+  })();
 
   const cricketTeamsLabel = cricketTeamsLabelFromBooking(
     booking.ground.pitch_type,
     booking.notes,
   );
-
-  const isWeb = Platform.OS === 'web';
-  const IS_DARK = !isWeb;
 
   const detailsSection = (
     <View style={isNarrow ? styles.detailsColumnNarrow : styles.detailsColumn}>
@@ -263,11 +237,7 @@ export default function BookingDetailsScreen() {
                 </Text>
               </View>
             </Section>
-
-
           </View>
-
-
 
            <Section style={[styles.section, !IS_DARK && styles.sectionLight, { marginTop: 16 }]}>
               <Text style={[styles.sectionTitle, !IS_DARK && styles.sectionTitleLight]}>Venue Rules</Text>
@@ -314,7 +284,8 @@ export default function BookingDetailsScreen() {
     </View>
   );
 
-  const isBoxCricket = (booking.ground.pitch_type ?? '').toLowerCase().includes('box');
+  const discountAmount = Number(booking.discount_amount ?? 0);
+  const basePrice = displayTotalAmount + discountAmount;
 
   const paymentSection = (
     <View style={isNarrow ? styles.paymentColumnNarrow : styles.paymentColumn}>
@@ -323,9 +294,19 @@ export default function BookingDetailsScreen() {
         
         <View style={styles.priceBreakdown}>
            <View style={styles.paymentRow}>
-              <Text style={[styles.paymentLabel, !IS_DARK && styles.paymentLabelLight]}>Base Price</Text>
-              <Text style={[styles.paymentValue, !IS_DARK && styles.paymentValueLight]}>{formatCurrency(booking.total_amount)}</Text>
+              <Text style={[styles.paymentLabel, !IS_DARK && styles.paymentLabelLight]}>
+                Base Price {cricketTeamsLabel ? `(${cricketTeamsLabel === '1 team' ? '1 Team' : 'Both Teams'})` : ''}
+              </Text>
+              <Text style={[styles.paymentValue, !IS_DARK && styles.paymentValueLight]}>{formatCurrency(basePrice)}</Text>
             </View>
+            
+            {discountAmount > 0 && (
+              <View style={styles.paymentRow}>
+                <Text style={[styles.paymentLabel, { color: '#10b981' }]}>Discount</Text>
+                <Text style={[styles.paymentValue, { color: '#10b981', fontWeight: '800' }]}>-{formatCurrency(discountAmount)}</Text>
+              </View>
+            )}
+
             <View style={styles.paymentRow}>
               <Text style={[styles.paymentLabel, !IS_DARK && styles.paymentLabelLight]}>Taxes & Fees</Text>
               <Text style={[styles.paymentValue, !IS_DARK && styles.paymentValueLight]}>₹0.00</Text>
@@ -334,7 +315,7 @@ export default function BookingDetailsScreen() {
 
         <View style={[styles.paymentRow, styles.totalRow, !IS_DARK && styles.totalRowLight]}>
           <Text style={[styles.totalLabel, !IS_DARK && styles.totalLabelLight]}>Grand Total</Text>
-          <Text style={[styles.totalValue, !IS_DARK && styles.totalValueLight]}>{formatCurrency(booking.total_amount)}</Text>
+          <Text style={[styles.totalValue, !IS_DARK && styles.totalValueLight]}>{formatCurrency(displayTotalAmount)}</Text>
         </View>
 
         <View style={styles.paymentDivider} />
@@ -351,7 +332,6 @@ export default function BookingDetailsScreen() {
           </View>
         )}
       </Section>
-
     </View>
   );
 

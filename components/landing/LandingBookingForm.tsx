@@ -168,24 +168,27 @@ interface LandingBookingFormProps {
   lightAppTheme?: boolean;
   /** Initial ground type to pre-select. */
   initialType?: string;
+  onFinalAmountChange?: (amount: number | null) => void;
 }
 
-export default function LandingBookingForm({
-  initialGroundId,
-  hideGroundPicker = true,
-  initialDate,
-  initialStartTime,
-  initialTeamType,
-  fullWidth = false,
-  separateSearchResults = false,
-  noCard = false,
-  hideTitle = false,
-  groundPageAccent = false,
-  bookGroundScreenNative = false,
-  lockSlot = false,
-  lightAppTheme = true,
-  initialType,
-}: LandingBookingFormProps) {
+export default function LandingBookingForm(props: LandingBookingFormProps) {
+  const {
+    initialGroundId,
+    hideGroundPicker = true,
+    initialDate,
+    initialStartTime,
+    initialTeamType,
+    fullWidth = false,
+    separateSearchResults = false,
+    noCard = false,
+    hideTitle = false,
+    groundPageAccent = false,
+    bookGroundScreenNative = false,
+    lockSlot = false,
+    lightAppTheme = true,
+    initialType,
+    onFinalAmountChange,
+  } = props;
   const { user } = useAuth();
   const { width: windowWidth } = useWindowDimensions();
   const isWeb = Platform.OS === 'web';
@@ -692,6 +695,13 @@ export default function LandingBookingForm({
     if (!computed) return 0;
     return Math.max(0, computed.totalAmount - discountAmount);
   }, [computed, discountAmount]);
+
+  useEffect(() => {
+    if (props.onFinalAmountChange) {
+      props.onFinalAmountChange(computed ? finalAmount : null);
+    }
+  }, [finalAmount, computed, props.onFinalAmountChange]);
+
 
   const handleApplyCoupon = async () => {
     if (!user || !couponCode || !computed) return;
