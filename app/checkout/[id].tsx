@@ -24,6 +24,7 @@ import Card from '@/components/ui/Card';
 import { formatCurrency, formatDateDDMMYYYY } from '@/utils/helpers';
 import { CreditCard, ShieldCheck, Clock, Calendar, MapPin, ChevronLeft, Wallet, Users } from 'lucide-react-native';
 import { hoursBetweenBooked, normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
+import { useUI } from '@/contexts/UIContext';
 
 export default function CheckoutScreen() {
   const { id } = useLocalSearchParams();
@@ -45,8 +46,15 @@ export default function CheckoutScreen() {
   const [customCashAmount, setCustomCashAmount] = useState<string>('');
   const [bookedForName, setBookedForName] = useState<string>('');
 
+  const { setTabBarVisible } = useUI();
+
   useEffect(() => {
     fetchActiveGateways();
+    // Hide bottom tab bar on checkout for better focus
+    setTabBarVisible(false);
+    return () => {
+      setTabBarVisible(true);
+    };
   }, []);
 
   const fetchActiveGateways = async () => {
@@ -544,6 +552,12 @@ export default function CheckoutScreen() {
     },
     productPlaceholder: {
       height: Platform.OS === 'web' && width > 768 ? 140 : 120,
+    },
+    mainColumn: {
+      flex: isDesktop ? 1.8 : undefined,
+    },
+    sideColumn: {
+      flex: isDesktop ? 1 : undefined,
     }
   };
 
@@ -574,11 +588,11 @@ export default function CheckoutScreen() {
 
       <View style={[styles.layout, !isDesktop && styles.layoutMobile, dynamicStyles.layout]}>
         {/* Left Column: Items (Booking Details) */}
-        <View style={styles.mainColumn}>
+        <View style={[styles.mainColumn, !isDesktop && styles.mainColumnMobile, dynamicStyles.mainColumn]}>
           <Card style={styles.itemProductCard}>
-            {booking.grounds.ground_images?.[0]?.image_url ? (
+            {(booking.grounds || booking.ground)?.ground_images?.[0]?.image_url ? (
               <Image 
-                source={{ uri: booking.grounds.ground_images[0].image_url }} 
+                source={{ uri: (booking.grounds || booking.ground).ground_images[0].image_url }} 
                 style={[styles.productImg, dynamicStyles.productImg]}
               />
             ) : (
@@ -590,10 +604,10 @@ export default function CheckoutScreen() {
             <View style={styles.productInfo}>
               <View style={styles.productHeaderRow}>
                 <View>
-                  <RNText style={styles.itemTitle}>{booking.grounds.name}</RNText>
+                  <RNText style={styles.itemTitle}>{(booking.grounds || booking.ground)?.name}</RNText>
                   <View style={styles.itemMetaRow}>
                     <MapPin size={14} color="#6B7280" />
-                    <RNText style={styles.itemMetaText}>{booking.grounds.city}, {booking.grounds.state}</RNText>
+                    <RNText style={styles.itemMetaText}>{(booking.grounds || booking.ground)?.city}, {(booking.grounds || booking.ground)?.state}</RNText>
                   </View>
                 </View>
                 <RNText style={styles.productPrice}>
@@ -649,7 +663,7 @@ export default function CheckoutScreen() {
         </View>
 
         {/* Right Column: Order Summary */}
-        <View style={styles.sideColumn}>
+        <View style={[styles.sideColumn, !isDesktop && styles.sideColumnMobile, dynamicStyles.sideColumn]}>
           <Card style={styles.summaryCard}>
             <RNText style={styles.summaryTitle}>Order Summary</RNText>
             
@@ -926,11 +940,18 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
   },
   mainColumn: {
-    flex: 1.8,
+    // Flex is handled dynamically
+  },
+  mainColumnMobile: {
+    width: '100%',
+    marginBottom: 0,
   },
   sideColumn: {
-    flex: 1,
     minWidth: Platform.OS === 'web' ? 300 : '100%',
+  },
+  sideColumnMobile: {
+    width: '100%',
+    marginTop: 0,
   },
   itemCard: {
     padding: 24,

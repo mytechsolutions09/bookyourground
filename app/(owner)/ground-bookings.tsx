@@ -126,7 +126,7 @@ export default function OwnerBookingsScreen() {
   const [ownerScope, setOwnerScope] = useState<'all' | 'own' | 'other'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  const [sortKey, setSortKey] = useState<'date' | 'ground' | 'amount' | 'status' | 'booked_at' | 'paid' | 'teams' | 'name'>('date');
+  const [sortKey, setSortKey] = useState<'date' | 'ground' | 'amount' | 'status' | 'booked_at' | 'paid' | 'teams' | 'name'>(Platform.OS === 'web' ? 'booked_at' : 'date');
   const [sortAsc, setSortAsc] = useState(false);
   const [showDatePickerMobile, setShowDatePickerMobile] = useState(false);
 
@@ -184,7 +184,7 @@ export default function OwnerBookingsScreen() {
       (selfData as BookingWithDetails[] | null)?.forEach((b) => map.set(b.id, b));
 
       const merged = Array.from(map.values()).sort((a, b) =>
-        a.booking_date < b.booking_date ? 1 : a.booking_date > b.booking_date ? -1 : 0,
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
       );
 
       setBookings(merged);
@@ -452,7 +452,10 @@ export default function OwnerBookingsScreen() {
         {isOpen && (
           <>
             <TouchableOpacity 
-              style={styles.dropdownOverlay} 
+              style={[
+                styles.dropdownOverlay,
+                Platform.OS === 'web' && { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 } as any
+              ]} 
               activeOpacity={1} 
               onPress={() => setActiveDropdown(null)} 
             />
@@ -1700,6 +1703,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F1F5F9',
     alignItems: 'center',
     gap: 6,
+    zIndex: 1001,
   },
   searchBoxMobileWrapper: {
     flex: 1.5,
@@ -1760,11 +1764,11 @@ const styles = StyleSheet.create({
     minWidth: 140,
     overflow: 'hidden',
   },
-  dropdownOverlay: {
+   dropdownOverlay: {
     position: 'absolute',
-    top: -500,
-    left: -500,
-    right: -500,
+    top: -1000,
+    left: -1000,
+    right: -1000,
     bottom: -1000,
     zIndex: 999,
   },

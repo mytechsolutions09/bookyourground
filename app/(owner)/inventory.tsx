@@ -12,6 +12,7 @@ import {
   TextInput,
   Alert,
   Modal,
+  useWindowDimensions,
 } from 'react-native';
 
 const IS_WEB = Platform.OS === 'web';
@@ -41,6 +42,8 @@ export default function OwnerInventoryScreen() {
   const [bookingChoice, setBookingChoice] = useState<any | null>(null);
 
   const isWeb = Platform.OS === 'web';
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
 
   useEffect(() => {
     if (user) loadData();
@@ -271,14 +274,14 @@ export default function OwnerInventoryScreen() {
   const content = (
     <View style={styles.content}>
       <View style={[styles.pageHeader, isWeb && styles.webPageHeader]}>
-        <View style={styles.headerTop}>
+        <View style={[styles.headerTop, isMobile && styles.headerTopMobile]}>
           <View>
             <Text style={styles.title}>Inventory</Text>
             <Text style={styles.subtitle}>Manage your ground occupancy and slots</Text>
           </View>
           
-          <Card style={styles.filterCard}>
-            <View style={styles.filtersContainer}>
+          <Card style={[styles.filterCard, isMobile && styles.filterCardMobile]}>
+            <View style={[styles.filtersContainer, isMobile && styles.filtersContainerMobile]}>
                <View style={styles.statusFilters}>
                   {['ALL', 'EMPTY', 'PARTIAL', 'FULL'].map(status => (
                     <TouchableOpacity
@@ -529,6 +532,19 @@ const styles = StyleSheet.create({
     gap: 12,
     flexWrap: 'wrap',
   },
+  filtersContainerMobile: {
+    justifyContent: 'flex-start',
+    gap: 8,
+  },
+  headerTopMobile: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  filterCardMobile: {
+    width: '100%',
+    padding: 0,
+  },
   statusFilters: {
     flexDirection: 'row',
     backgroundColor: '#F1F5F9',
@@ -715,10 +731,12 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   choiceCard: {
-    width: Platform.OS === 'web' ? 400 : '100%',
+    width: '90%',
+    maxWidth: 400,
     padding: 24,
     borderRadius: 24,
     backgroundColor: '#FFFFFF',
+    alignSelf: 'center',
   },
   choiceTitle: {
     fontSize: 20,

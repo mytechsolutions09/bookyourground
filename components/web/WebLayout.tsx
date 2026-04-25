@@ -978,7 +978,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
         </View>
       </View>
 
-      {isCompact && !segments.includes('(tabs)') && cleanPath !== '/grounds' && cleanPath !== '/shop' && (
+      {isCompact && !segments.includes('(tabs)') && cleanPath !== '/grounds' && cleanPath !== '/shop' && !isCheckoutPage && (
         <View style={styles.bottomBar}>
           {[
             { label: 'Home', icon: House, href: '/' },

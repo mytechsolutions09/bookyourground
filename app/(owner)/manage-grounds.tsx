@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Platform, Modal, Pressable, ScrollView, TextInput, Switch, Alert, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Platform, Modal, Pressable, ScrollView, TextInput, Switch, Alert, ActivityIndicator, Image, useWindowDimensions } from 'react-native';
 import { router } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -58,6 +58,8 @@ export default function OwnerGroundsScreen() {
   const { user } = useAuth();
   const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
   const [loading, setLoading] = useState(true);
+  const { width } = useWindowDimensions();
+  const numColumns = Platform.OS === 'web' ? (width > 1200 ? 3 : (width > 768 ? 2 : 1)) : 1;
   const [selectedGroundId, setSelectedGroundId] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
@@ -532,6 +534,46 @@ export default function OwnerGroundsScreen() {
 
   const content = (
     <View style={styles.container}>
+      <FlatList
+        data={grounds}
+        renderItem={({ item }) => (
+          <View>
+            <GroundCard
+              ground={item}
+              onPress={() =>
+                setSelectedGroundId((prev) => (prev === item.id ? null : item.id))
+              }
+              compact={Platform.OS === 'web'}
+              occupancyRate={occupancyRates[item.id] ?? null}
+            />
+          </View>
+        )}
+        keyExtractor={item => item.id}
+        contentContainerStyle={styles.list}
+        numColumns={numColumns}
+        key={`columns-${numColumns}`}
+        columnWrapperStyle={numColumns > 1 ? styles.listRowWeb : undefined}
+        refreshControl={
+          <RefreshControl refreshing={loading} onRefresh={loadGrounds} />
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>You haven't added any grounds yet</Text>
+            <Button
+              title="Add Your First Ground"
+              onPress={() => router.push('/(owner)/add-ground')}
+              style={[styles.emptyButton, { backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#01b854' }]}
+              textStyle={{ color: '#01b854' }}
+              loadingIndicatorColor="#01b854"
+            />
+          </View>
+        }
+      />
+    </View>
+  );
+
+  const finalContent = (
+    <>
       {Platform.OS !== 'web' ? (
         <MobileAppNavbar 
           title="My Grounds" 
@@ -559,78 +601,72 @@ export default function OwnerGroundsScreen() {
         </View>
       )}
 
-      <FlatList
-        data={grounds}
-        renderItem={({ item }) => (
-          <View>
-            <GroundCard
-              ground={item}
-              onPress={() =>
-                setSelectedGroundId((prev) => (prev === item.id ? null : item.id))
-              }
-              compact={Platform.OS === 'web'}
-              occupancyRate={occupancyRates[item.id] ?? null}
-            />
+      {content}
 
-            {selectedGroundId === item.id ? (
-              <Card style={styles.editorCard}>
-                <Text style={styles.editorTitle}>Actions</Text>
-                <View style={styles.actionsRow}>
-                  <Button
-                    title="Edit Ground"
-                    onPress={() => startEditGround(item)}
-                    variant="primary"
-                    size="small"
-                    style={{ flex: 1 }}
-                  />
-                  <Button
-                    title="View details"
-                    onPress={() => router.push(makeGroundPath(item) as any)}
-                    variant="outline"
-                    size="small"
-                    style={{ flex: 1 }}
-                  />
-                </View>
-                <View style={[styles.actionsRow, { marginTop: 10 }]}>
-                    <Button
-                    title="Manage bookings"
-                    onPress={() => router.push('/(owner)/bookings')}
-                    variant="outline"
-                    size="small"
-                    style={{ flex: 1 }}
-                    />
-                    <Button
-                    title="Export Ground"
-                    onPress={() => handleExportGround(item)}
-                    variant="outline"
-                    size="small"
-                    style={{ flex: 1 }}
-                    />
-                </View>
-              </Card>
-            ) : null}
-          </View>
-        )}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.list}
-        numColumns={Platform.OS === 'web' ? 2 : 1}
-        columnWrapperStyle={Platform.OS === 'web' ? styles.listRowWeb : undefined}
-        refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={loadGrounds} />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>You haven't added any grounds yet</Text>
-            <Button
-              title="Add Your First Ground"
-              onPress={() => router.push('/(owner)/add-ground')}
-              style={[styles.emptyButton, { backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#01b854' }]}
-              textStyle={{ color: '#01b854' }}
-              loadingIndicatorColor="#01b854"
-            />
-          </View>
-        }
-      />
+      {/* Options Modal */}
+      <Modal
+        transparent
+        visible={!!selectedGroundId && !editOpen}
+        animationType="fade"
+        onRequestClose={() => setSelectedGroundId(null)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setSelectedGroundId(null)} />
+        <View style={styles.modalWrap}>
+          <Card style={[styles.modalCard, { width: 400, maxWidth: '90vw' }]}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>Manage Ground</Text>
+                <Text style={{ fontSize: 13, color: '#64748B' }}>
+                  {grounds.find(g => g.id === selectedGroundId)?.name}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setSelectedGroundId(null)}>
+                <Text style={{ color: '#64748B', fontWeight: '800' }}>CLOSE</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ padding: 16, gap: 12 }}>
+              <Button
+                title="Edit Venue & Pricing"
+                onPress={() => {
+                  const ground = grounds.find(g => g.id === selectedGroundId);
+                  if (ground) startEditGround(ground);
+                }}
+                variant="primary"
+                fullWidth
+              />
+              
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <Button
+                  title="View Public Page"
+                  onPress={() => {
+                    const ground = grounds.find(g => g.id === selectedGroundId);
+                    if (ground) router.push(makeGroundPath(ground) as any);
+                  }}
+                  variant="outline"
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  title="Manage Bookings"
+                  onPress={() => router.push('/(owner)/bookings')}
+                  variant="outline"
+                  style={{ flex: 1 }}
+                />
+              </View>
+
+              <Button
+                title="Export Data (JSON)"
+                onPress={() => {
+                  const ground = grounds.find(g => g.id === selectedGroundId);
+                  if (ground) handleExportGround(ground);
+                }}
+                variant="outline"
+                fullWidth
+              />
+            </View>
+          </Card>
+        </View>
+      </Modal>
 
       <Modal
         transparent
@@ -884,14 +920,14 @@ export default function OwnerGroundsScreen() {
           </Card>
         </View>
       </Modal>
-    </View>
+    </>
   );
 
   if (Platform.OS === 'web') {
-    return <WebLayout>{content}</WebLayout>;
+    return <WebLayout>{finalContent}</WebLayout>;
   }
 
-  return content;
+  return finalContent;
 }
 
 const IS_WEB = Platform.OS === 'web';
@@ -915,12 +951,14 @@ const styles = StyleSheet.create({
   webHeader: {
     paddingVertical: 16,
     paddingTop: 0,
-    flexDirection: 'row',
+    flexDirection: Platform.OS === 'web' ? 'row' : 'column',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
     marginBottom: 16,
+    gap: 16,
   },
   webTitle: {
     fontFamily: 'Inter',
@@ -979,6 +1017,7 @@ const styles = StyleSheet.create({
   },
   actionsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 10,
     marginBottom: 10,
   },
