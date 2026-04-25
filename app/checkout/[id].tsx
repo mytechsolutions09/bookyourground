@@ -42,6 +42,7 @@ export default function CheckoutScreen() {
   const [availableCoupons, setAvailableCoupons] = useState<any[]>([]);
   const [fetchingCoupons, setFetchingCoupons] = useState(false);
   const [applyingCoupon, setApplyingCoupon] = useState(false);
+  const [customCashAmount, setCustomCashAmount] = useState<string>('');
 
   useEffect(() => {
     fetchActiveGateways();
@@ -96,9 +97,11 @@ export default function CheckoutScreen() {
             coupon_id: booking.coupon_id,
             total_hours: booking.total_hours,
             price_per_hour: booking.price_per_hour,
-            total_amount: booking.total_amount + (booking.discount_amount || 0),
+            total_amount: parseFloat(customCashAmount) || (booking.total_amount + (booking.discount_amount || 0)),
             discount_amount: booking.discount_amount || 0,
-          } : null,
+          } : {
+            total_amount: parseFloat(customCashAmount) || booking.total_amount,
+          },
         },
       });
 
@@ -720,14 +723,27 @@ export default function CheckoutScreen() {
                 style={styles.payButton}
               />
             ) : selectedGateway === 'cash' ? (
-              <Button
-                title={processingCash ? 'Confirming...' : 'Confirm Order'}
-                onPress={handleCashPayment}
-                disabled={processingCash}
-                loading={processingCash}
-                fullWidth
-                style={styles.payButton}
-              />
+              <View style={{ gap: 12, marginBottom: 12 }}>
+                <View style={styles.cashAmountSection}>
+                  <RNText style={styles.cashAmountLabel}>Enter Received Amount (Cash)</RNText>
+                  <RNTextInput
+                    style={styles.cashAmountInput}
+                    placeholder="Enter amount..."
+                    placeholderTextColor="#9CA3AF"
+                    keyboardType="numeric"
+                    value={customCashAmount}
+                    onChangeText={setCustomCashAmount}
+                  />
+                </View>
+                <Button
+                  title={processingCash ? 'Confirming...' : 'Confirm Order'}
+                  onPress={handleCashPayment}
+                  disabled={processingCash || !customCashAmount || isNaN(parseFloat(customCashAmount)) || parseFloat(customCashAmount) <= 0}
+                  loading={processingCash}
+                  fullWidth
+                  style={styles.payButton}
+                />
+              </View>
             ) : (
               <Button
                 title="Select Payment Method"
@@ -1287,5 +1303,32 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     fontWeight: '500',
+  },
+  cashAmountSection: {
+    backgroundColor: '#F0FDF4',
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    marginTop: 8,
+  },
+  cashAmountLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#166534',
+    marginBottom: 8,
+    fontFamily: 'Inter',
+  },
+  cashAmountInput: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#86EFAC',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 48,
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#14532D',
+    fontFamily: 'Inter',
   },
 });

@@ -413,11 +413,15 @@ serve(async (req) => {
         finalBookingId = newBooking.id;
       } else {
           console.log(`[Cash] Confirm existing mode for booking: ${bookingId}`);
-          const { error: updateError } = await supabaseClient.from('bookings').update({ 
+          const updatePayload: any = { 
             status: 'confirmed', 
             payment_method: 'cash',
             notes: 'Cash Payment confirmed by Owner'
-          }).eq('id', bookingId);
+          };
+          if (bookingDetails?.total_amount != null) {
+            updatePayload.total_amount = Number(bookingDetails.total_amount);
+          }
+          const { error: updateError } = await supabaseClient.from('bookings').update(updatePayload).eq('id', bookingId);
           
           if (updateError) throw new Error(`Booking update failed: ${updateError.message}`);
       }
