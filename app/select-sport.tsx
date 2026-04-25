@@ -89,7 +89,14 @@ function GroundCardExpo({ ground, index, scrollX, onPress }: { ground: any; inde
               <Text style={styles.cardFullLoc} numberOfLines={1}>{ground.city}, {ground.state}</Text>
             </View>
             <View style={styles.cardFullFooter}>
-              <Text style={styles.cardFullPrice}>₹{ground.base_price_per_hour}<Text style={styles.cardFullUnit}>/hr</Text></Text>
+              <Text style={styles.cardFullPrice}>
+                {ground.time_slots?.filter((s: any) => s.is_available && s.custom_price != null).length > 0
+                  ? `₹${Math.min(...ground.time_slots.filter((s: any) => s.is_available && s.custom_price != null).map((s: any) => Number(s.custom_price)))}`
+                  : 'See Slots'}
+                <Text style={styles.cardFullUnit}>
+                  {String(ground.pitch_type ?? '').toLowerCase().includes('box') ? '/hr' : ' /match'}
+                </Text>
+              </Text>
               <View style={styles.cardFullBadge}>
                 <Text style={styles.cardFullBadgeText}>{ground.pitch_type}</Text>
               </View>
@@ -172,16 +179,36 @@ export default function SelectSportScreen() {
 
     setLoadingGrounds(true);
     try {
+      // Fetch the actual slot price for the selected time and ground
+      const d = new Date(date.db);
+      const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const dow = days[d.getDay()];
       // Convert "09:00 AM" to "09:00:00"
       const [t, ampm] = time.split(' ');
       let [h, m] = t.split(':').map(Number);
       if (ampm === 'PM' && h < 12) h += 12;
       if (ampm === 'AM' && h === 12) h = 0;
-      const startTime = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:00`;
-      
-      // Calculate end time (default 1 hour later)
-      const endH = (h + 1) % 24;
-      const endTime = `${endH.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:00`;
+      const startTimeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:00`;
+
+      const { data: slotData } = await supabase
+        .from('time_slots')
+        .select('custom_price, end_time')
+        .eq('ground_id', selectedGround.id)
+        .eq('start_time', startTimeStr)
+        .eq('day_of_week', dow)
+        .maybeSingle();
+
+      const finalPrice = slotData?.custom_price ?? 0;
+      const actualEndTime = slotData?.end_time || `${(h + 1) % 24}:00:00`;
+
+      // Calculate hours for the price helper
+      const startH = h + m/60;
+      const [eh, em] = actualEndTime.split(':').map(Number);
+      const endH = eh + em/60;
+      const duration = endH > startH ? endH - startH : (24 - startH + endH);
+
+      const isBox = (selectedGround.pitch_type || '').toLowerCase().includes('box');
+      const teamType = 'both'; // default for this simple flow
 
       const { data, error } = await supabase
         .from('bookings')
@@ -189,13 +216,15 @@ export default function SelectSportScreen() {
           user_id: user.id,
           ground_id: selectedGround.id,
           booking_date: date.db,
-          start_time: startTime,
-          end_time: endTime,
-          total_hours: 1,
-          price_per_hour: selectedGround.base_price_per_hour,
-          total_amount: selectedGround.base_price_per_hour,
+          start_time: startTimeStr,
+          end_time: actualEndTime,
+          total_hours: duration,
+          price_per_hour: isBox ? (finalPrice / (duration || 1)) : finalPrice,
+          total_amount: isBox ? finalPrice : (teamType === 'one' ? finalPrice / 2 : finalPrice),
           status: 'pending',
-          payment_method: 'Wallet'
+          payment_method: 'Wallet',
+          team_type: teamType,
+          notes: !isBox ? (teamType === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') : null,
         })
         .select()
         .single();
@@ -333,7 +362,7 @@ export default function SelectSportScreen() {
       try {
         const { data, error } = await supabase
           .from('grounds')
-          .select(`*, ground_images(*)`)
+          .select(`*, ground_images(*), time_slots(custom_price, is_available)`)
           .eq('city', loc.city)
           .ilike('pitch_type', `%${sport.dbType}%`)
           .eq('active', true)
@@ -614,7 +643,11 @@ export default function SelectSportScreen() {
                   <Text style={styles.modalInfoText}>{date.label}, {time}</Text>
                 </View>
                 
-                <Text style={styles.modalPrice}>₹{selectedGround.base_price_per_hour}</Text>
+                <Text style={styles.modalPrice}>
+                  {selectedGround.time_slots?.filter((s: any) => s.is_available && s.custom_price != null).length > 0
+                    ? `₹${Math.min(...selectedGround.time_slots.filter((s: any) => s.is_available && s.custom_price != null).map((s: any) => Number(s.custom_price)))}`
+                    : 'Price Varies'}
+                </Text>
                 
                 <View style={styles.modalSection}>
                   <Text style={styles.modalSectionTitle}>Address</Text>
@@ -651,7 +684,7 @@ export default function SelectSportScreen() {
                 {loadingGrounds ? (
                   <ActivityIndicator color="#06392e" />
                 ) : (
-                  <Text style={styles.confirmButtonText}>Confirm Booking - Pay ₹{selectedGround.base_price_per_hour}</Text>
+                  <Text style={styles.confirmButtonText}>Confirm Booking</Text>
                 )}
               </TouchableOpacity>
             </View>

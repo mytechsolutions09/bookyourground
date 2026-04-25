@@ -136,7 +136,9 @@ function GroundCardMobile({ ground, index }: { ground: any; index: number }) {
         </View>
         <View style={styles.groundFooter}>
           <Text style={styles.groundPrice}>
-            ₹{Number(ground.base_price_per_hour || 0).toLocaleString('en-IN')}
+            {ground.time_slots?.filter((s: any) => s.is_available && s.custom_price != null).length > 0
+              ? `₹${Math.min(...ground.time_slots.filter((s: any) => s.is_available && s.custom_price != null).map((s: any) => Number(s.custom_price)))}`
+              : 'See Slots'}
             <Text style={styles.groundPriceUnit}>
               {String(ground.pitch_type ?? '').toLowerCase().includes('box') ? '/hr' : '/match'}
             </Text>
@@ -195,7 +197,7 @@ export default function HomeScreen() {
     try {
       const { data, error } = await supabase
         .from('grounds')
-        .select(`*, ground_images(*), reviews(rating)`)
+        .select(`*, ground_images(*), reviews(rating), time_slots(custom_price, is_available)`)
         .eq('active', true)
         .eq('approved', true)
         .order('created_at', { ascending: false });
@@ -474,7 +476,9 @@ export default function HomeScreen() {
                     {!isWide && (
                       <View style={styles.listRowRight}>
                         <Text style={styles.listRowPrice}>
-                          ₹{Number(g.base_price_per_hour || 0).toLocaleString('en-IN')}
+                          {g.time_slots?.filter((s: any) => s.is_available && s.custom_price != null).length > 0
+                            ? `₹${Math.min(...g.time_slots.filter((s: any) => s.is_available && s.custom_price != null).map((s: any) => Number(s.custom_price)))}`
+                            : 'See Slots'}
                         </Text>
                         <View style={styles.bookSmallBtn}>
                           <ArrowRight size={14} color="#FFFFFF" strokeWidth={2.5} />

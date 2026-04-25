@@ -197,8 +197,9 @@ export default function OwnerBookingsScreen() {
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const bDay = new Date(bDate.getFullYear(), bDate.getMonth(), bDate.getDate());
     const diffDays = Math.ceil((bDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    const isOwnGround = booking.ground.owner_id === user?.id;
 
-    if (diffDays < 7) {
+    if (diffDays < 7 && !isOwnGround) {
       const msg = 'Bookings can only be cancelled at least 7 days before the slot time. For urgent queries, please contact support.';
       if (Platform.OS === 'web') alert(msg);
       else Alert.alert('Cancellation Policy', msg);
@@ -250,8 +251,8 @@ export default function OwnerBookingsScreen() {
             } catch (err: any) {
               Alert.alert('Error', err.message || 'Failed to cancel');
             }
-          }
-        }
+          },
+        },
       ]
     );
   };

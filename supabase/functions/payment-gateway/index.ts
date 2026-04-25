@@ -30,6 +30,42 @@ function isBoxCricket(pitchType: string | null | undefined): boolean {
   return String(pitchType ?? '').toLowerCase().includes('box');
 }
 
+// --- AUTHORITATIVE Pricing Calculation Helper ---
+const calculateFinalAmounts = (details: any, groundType: string | null) => {
+  console.log(`[Pricing] Input details: ${JSON.stringify(details)}`);
+  
+  let discount = Number(details.discount_amount ?? details.discountAmount ?? 0);
+  const priceUnit = Number(details.price_per_hour ?? details.pricePerHour ?? 0);
+  
+  // CRITICAL: Prioritize client-provided total (check multiple possible keys)
+  const clientTotal = Number(details.total_amount ?? details.totalAmount ?? details.amount ?? 0);
+
+  let grossAmount = 0;
+  if (clientTotal > 0) {
+    console.log(`[Pricing] Using authoritative client-provided total: ${clientTotal}`);
+    grossAmount = clientTotal + discount;
+  } else {
+    console.log(`[Pricing] WARNING: Client total missing, falling back to calculation logic`);
+    const hours = Number(details.total_hours ?? details.totalHours ?? 1);
+    const isBox = String(groundType ?? '').toLowerCase().includes('box');
+    if (isBox) {
+      grossAmount = priceUnit * hours;
+    } else {
+      grossAmount = (details.team_type === 'one' || details.teamType === 'one') ? (priceUnit / 2) : priceUnit;
+    }
+  }
+  
+  const net = Math.round((grossAmount - discount) * 100) / 100;
+  console.log(`[Pricing] Result -> Unit: ${priceUnit}, Gross: ${grossAmount}, Net: ${net}`);
+  
+  return {
+    pricePerHour: priceUnit,
+    totalAmount: grossAmount,
+    discountAmount: discount,
+    netAmount: net
+  };
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -204,37 +240,9 @@ serve(async (req) => {
             throw new Error('This slot is no longer available. Please contact support for a refund if payment was successful.');
         }
 
-        const { data: ground } = await supabaseClient.from('grounds').select('pitch_type, base_price_per_hour').eq('id', ground_id).single();
+        const { data: ground } = await supabaseClient.from('grounds').select('pitch_type').eq('id', ground_id).single();
         
-        let pricePerHour = Number(bookingDetails.price_per_hour ?? ground.base_price_per_hour);
-        const totalHours = Number(bookingDetails.total_hours ?? bookingHours(start_time, end_time));
-        
-        let totalAmount: number;
-        let discountAmount: number;
-
-        if (bookingDetails.total_amount != null) {
-          totalAmount = Number(bookingDetails.total_amount);
-          discountAmount = Number(bookingDetails.discount_amount ?? 0);
-        } else {
-          totalAmount = pricePerHour;
-          if (isBoxCricket(ground.pitch_type)) {
-             totalAmount = Math.round(pricePerHour * totalHours * 100) / 100;
-          } else if (String(ground.pitch_type ?? '').toLowerCase().includes('cricket')) {
-             if (team_type === 'one') totalAmount = Math.round((pricePerHour / 2) * 100) / 100;
-          }
-          discountAmount = 0;
-          if (coupon_id) {
-             const { data: coupon } = await supabaseClient.from('coupons').select('*').eq('id', coupon_id).single();
-             if (coupon) {
-                if (coupon.discount_type === 'percentage') {
-                  discountAmount = totalAmount * (coupon.discount_value / 100);
-                } else {
-                  discountAmount = coupon.discount_value;
-                }
-             }
-          }
-        }
-        const netAmount = Math.round((totalAmount - discountAmount) * 100) / 100;
+        const { pricePerHour, discountAmount, netAmount } = calculateFinalAmounts(bookingDetails, ground?.pitch_type);
 
         const { data: newBooking, error: insertError } = await supabaseClient
           .from('bookings')
@@ -244,7 +252,7 @@ serve(async (req) => {
             booking_date,
             start_time,
             end_time,
-            total_hours: totalHours,
+            total_hours: Number(bookingDetails.total_hours ?? 1),
             price_per_hour: pricePerHour,
             total_amount: netAmount,
             coupon_id,
@@ -261,7 +269,7 @@ serve(async (req) => {
       }
 
       // Record transaction
-      const { data: bookingData } = await supabaseClient.from('bookings').select('total_amount, user_id').eq('id', finalBookingId).single();
+      const { data: bookingData } = await supabaseClient.from('bookings').select('total_amount, user_id, ground:grounds(name, owner_id)').eq('id', finalBookingId).single();
 
       await supabaseClient.from('transactions').insert({
         booking_id: finalBookingId,
@@ -271,6 +279,17 @@ serve(async (req) => {
         payment_method: 'payu',
         transaction_reference: txnid,
       });
+
+      // Credit Owner's Wallet
+      if (bookingData?.ground?.owner_id) {
+        await supabaseClient.rpc('add_money_to_wallet', {
+          target_user_id: bookingData.ground.owner_id,
+          amount_to_add: bookingData.total_amount,
+          description_text: `Earning from booking for ${bookingData.ground.name}`,
+          ref_type: 'booking_revenue',
+          ref_id: finalBookingId
+        });
+      }
 
       return new Response(JSON.stringify({ success: true, bookingId: finalBookingId }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -333,7 +352,7 @@ serve(async (req) => {
           throw new Error('Missing mandatory booking details (ground_id, date, or time).');
         }
 
-        const { data: ground, error: groundError } = await supabaseClient.from('grounds').select('pitch_type, base_price_per_hour').eq('id', ground_id).single();
+        const { data: ground, error: groundError } = await supabaseClient.from('grounds').select('pitch_type').eq('id', ground_id).single();
         if (groundError || !ground) throw new Error(`Ground not found: ${groundError?.message}`);
 
         console.log(`[Cash] Checking availability for ground ${ground_id} on ${booking_date} at ${start_time}`);
@@ -355,37 +374,8 @@ serve(async (req) => {
             throw new Error('This slot is no longer available.');
         }
 
-        let pricePerHour = Number(bookingDetails.price_per_hour ?? ground.base_price_per_hour);
-        const totalHours = Number(bookingDetails.total_hours ?? bookingHours(start_time, end_time));
-        // Use client-supplied total_amount if provided (respects custom slot pricing);
-        let totalAmount: number;
-        let discountAmount: number;
+        const { pricePerHour, discountAmount, netAmount } = calculateFinalAmounts(bookingDetails, ground?.pitch_type);
 
-        if (bookingDetails.total_amount != null) {
-          totalAmount = Number(bookingDetails.total_amount);
-          discountAmount = Number(bookingDetails.discount_amount ?? 0);
-        } else {
-          totalAmount = pricePerHour;
-          if (isBoxCricket(ground.pitch_type)) {
-             totalAmount = Math.round(pricePerHour * totalHours * 100) / 100;
-          } else if (String(ground.pitch_type ?? '').toLowerCase().includes('cricket')) {
-             if (team_type === 'one') totalAmount = Math.round((pricePerHour / 2) * 100) / 100;
-          }
-          discountAmount = 0;
-          if (coupon_id) {
-             const { data: coupon } = await supabaseClient.from('coupons').select('*').eq('id', coupon_id).single();
-             if (coupon) {
-                if (coupon.discount_type === 'percentage') {
-                  discountAmount = totalAmount * (coupon.discount_value / 100);
-                } else {
-                  discountAmount = coupon.discount_value;
-                }
-             }
-          }
-        }
-        const netAmount = Math.round((totalAmount - discountAmount) * 100) / 100;
-
-        console.log(`[Cash] Inserting new booking. Amount: ${totalAmount - discountAmount}`);
         const { data: newBooking, error: insertError } = await supabaseClient
           .from('bookings')
           .insert({
@@ -394,7 +384,7 @@ serve(async (req) => {
             booking_date,
             start_time,
             end_time,
-            total_hours: totalHours,
+            total_hours: Number(bookingDetails.total_hours ?? 1),
             price_per_hour: pricePerHour,
             total_amount: netAmount,
             coupon_id,
@@ -413,22 +403,24 @@ serve(async (req) => {
         finalBookingId = newBooking.id;
       } else {
           console.log(`[Cash] Confirm existing mode for booking: ${bookingId}`);
+          
           const updatePayload: any = { 
             status: 'confirmed', 
             payment_method: 'cash',
             notes: 'Cash Payment confirmed by Owner'
           };
-          if (bookingDetails?.total_amount != null) {
-            updatePayload.total_amount = Number(bookingDetails.total_amount);
-          }
-          const { error: updateError } = await supabaseClient.from('bookings').update(updatePayload).eq('id', bookingId);
           
+          if (bookingDetails?.total_amount != null) {
+             updatePayload.total_amount = Number(bookingDetails.total_amount);
+          }
+          
+          const { error: updateError } = await supabaseClient.from('bookings').update(updatePayload).eq('id', bookingId);
           if (updateError) throw new Error(`Booking update failed: ${updateError.message}`);
       }
 
       // Record transaction
       console.log(`[Cash] Recording transaction for booking: ${finalBookingId}`);
-      const { data: bookingData } = await supabaseClient.from('bookings').select('total_amount, user_id').eq('id', finalBookingId).single();
+      const { data: bookingData } = await supabaseClient.from('bookings').select('total_amount, user_id, ground:grounds(name, owner_id)').eq('id', finalBookingId).single();
 
       await supabaseClient.from('transactions').insert({
         booking_id: finalBookingId,
@@ -438,6 +430,17 @@ serve(async (req) => {
         payment_method: 'cash',
         transaction_reference: 'CASH_' + Date.now(),
       });
+
+      // Credit Owner's Wallet
+      if (bookingData?.ground?.owner_id) {
+        await supabaseClient.rpc('add_money_to_wallet', {
+          target_user_id: bookingData.ground.owner_id,
+          amount_to_add: bookingData.total_amount,
+          description_text: `Earning from booking for ${bookingData.ground.name} (Cash)`,
+          ref_type: 'booking_revenue',
+          ref_id: finalBookingId
+        });
+      }
 
       console.log('[Cash] Finished successfully');
       return new Response(JSON.stringify({ success: true, bookingId: finalBookingId }), {
@@ -479,15 +482,11 @@ serve(async (req) => {
     }
 
     if (action === 'verify-razorpay-payment') {
-      const { razorpay_order_id, razorpay_payment_id, razorpay_signature, bookingId, bookingDetails } = body;
+      const { razorpay_order_id, razorpay_payment_id, razorpay_signature, bookingDetails, bookingId } = body;
       
       const keySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
+      if (!keySecret) throw new Error('Razorpay secret not configured.');
 
-      if (!keySecret) {
-        throw new Error('Razorpay key secret not configured in Supabase Secrets.');
-      }
-
-      // Verify signature
       const text = razorpay_order_id + "|" + razorpay_payment_id;
       const encoder = new TextEncoder();
       const data = encoder.encode(text);
@@ -513,56 +512,22 @@ serve(async (req) => {
       let finalBookingId = bookingId;
 
       if ((!finalBookingId || finalBookingId === 'pending') && bookingDetails) {
-        // ATOMIC CREATE
         const { ground_id, booking_date, start_time, end_time, team_type, coupon_id } = bookingDetails;
         
-        // 1. Check availability FIRST
         const { data: availableIds, error: availError } = await supabaseClient.rpc('available_ground_ids_for_slot', {
             p_ground_ids: [ground_id],
             p_booking_date: booking_date,
             p_start_time: start_time,
         });
 
-        if (availError) {
-          console.error(`[Razorpay] Availability RPC error: ${availError.message}`);
-          throw new Error(`Availability check failed: ${availError.message}`);
-        }
+        if (availError) throw new Error(`Availability check failed: ${availError.message}`);
         
         const isAvailable = Array.isArray(availableIds) && availableIds.some((r: any) => r.ground_id === ground_id);
-        if (!isAvailable) {
-            throw new Error('This slot is no longer available. Please contact support for a refund as payment was successful.');
-        }
+        if (!isAvailable) throw new Error('Slot no longer available.');
 
-        const { data: ground } = await supabaseClient.from('grounds').select('pitch_type, base_price_per_hour').eq('id', ground_id).single();
+        const { data: ground } = await supabaseClient.from('grounds').select('pitch_type').eq('id', ground_id).single();
         
-        let pricePerHour = Number(bookingDetails.price_per_hour ?? ground.base_price_per_hour);
-        const totalHours = Number(bookingDetails.total_hours ?? bookingHours(start_time, end_time));
-        // Use client-supplied total_amount if provided (respects custom slot pricing);
-        let totalAmount: number;
-        let discountAmount: number;
-
-        if (bookingDetails.total_amount != null) {
-          totalAmount = Number(bookingDetails.total_amount);
-          discountAmount = Number(bookingDetails.discount_amount ?? 0);
-        } else {
-          totalAmount = pricePerHour;
-          if (isBoxCricket(ground.pitch_type)) {
-             totalAmount = Math.round(pricePerHour * totalHours * 100) / 100;
-          } else if (String(ground.pitch_type ?? '').toLowerCase().includes('cricket')) {
-             if (team_type === 'one') totalAmount = Math.round((pricePerHour / 2) * 100) / 100;
-          }
-          discountAmount = 0;
-          if (coupon_id) {
-             const { data: coupon } = await supabaseClient.from('coupons').select('*').eq('id', coupon_id).single();
-             if (coupon) {
-                if (coupon.discount_type === 'percentage') {
-                  discountAmount = totalAmount * (coupon.discount_value / 100);
-                } else {
-                  discountAmount = coupon.discount_value;
-                }
-             }
-          }
-        const netAmount = Math.round((totalAmount - discountAmount) * 100) / 100;
+        const { pricePerHour, discountAmount, netAmount } = calculateFinalAmounts(bookingDetails, ground?.pitch_type);
 
         const { data: newBooking, error: insertError } = await supabaseClient
           .from('bookings')
@@ -572,7 +537,7 @@ serve(async (req) => {
             booking_date,
             start_time,
             end_time,
-            total_hours: totalHours,
+            total_hours: Number(bookingDetails.total_hours ?? 1),
             price_per_hour: pricePerHour,
             total_amount: netAmount,
             coupon_id,
@@ -589,7 +554,7 @@ serve(async (req) => {
       }
 
       // Record transaction
-      const { data: bookingData } = await supabaseClient.from('bookings').select('total_amount, user_id').eq('id', finalBookingId).single();
+      const { data: bookingData } = await supabaseClient.from('bookings').select('total_amount, user_id, ground:grounds(name, owner_id)').eq('id', finalBookingId).single();
 
       await supabaseClient.from('transactions').insert({
         booking_id: finalBookingId,
@@ -599,6 +564,17 @@ serve(async (req) => {
         payment_method: 'razorpay',
         transaction_reference: razorpay_payment_id,
       });
+
+      // Credit Owner's Wallet
+      if (bookingData?.ground?.owner_id) {
+        await supabaseClient.rpc('add_money_to_wallet', {
+          target_user_id: bookingData.ground.owner_id,
+          amount_to_add: bookingData.total_amount,
+          description_text: `Earning from booking for ${bookingData.ground.name}`,
+          ref_type: 'booking_revenue',
+          ref_id: finalBookingId
+        });
+      }
 
       return new Response(JSON.stringify({ success: true, bookingId: finalBookingId }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

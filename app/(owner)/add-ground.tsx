@@ -140,7 +140,6 @@ export default function AddGroundScreen() {
     city: '',
     state: '',
     pincode: '',
-    base_price_per_hour: '',
     pitch_type: '',
     cricket_pitch_surface: '' as '' | 'Turf' | 'Matting',
     ground_size: '',
@@ -279,7 +278,7 @@ export default function AddGroundScreen() {
   const handleSubmit = async () => {
     if (!user) return;
 
-    if (!formData.name || !formData.address || !formData.city || !formData.state || !formData.pincode || !formData.base_price_per_hour) {
+    if (!formData.name || !formData.address || !formData.city || !formData.state || !formData.pincode) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
@@ -304,7 +303,6 @@ export default function AddGroundScreen() {
           city: formData.city,
           state: formData.state,
           pincode: formData.pincode,
-          base_price_per_hour: parseFloat(formData.base_price_per_hour),
           pitch_type: formData.pitch_type || null,
           cricket_pitch_surface: cricketPitchSurfaceForDb(
             formData.pitch_type,
@@ -664,29 +662,22 @@ export default function AddGroundScreen() {
 
         <Card style={styles.section}>
           <Text style={styles.sectionTitle}>Ground Details</Text>
-          <Text style={styles.subLabel}>Type</Text>
-          <View style={styles.typeChipsRow}>
-            {['Cricket Ground', 'Box Cricket'].map((label) => {
-              const active = formData.pitch_type === label;
-              return (
-                <Pressable
-                  key={label}
-                  onPress={() =>
-                    setFormData({
-                      ...formData,
-                      pitch_type: label,
-                      cricket_pitch_surface: '',
-                    })
-                  }
-                  style={[styles.typeChip, active && styles.typeChipActive]}
-                >
-                  <Text style={[styles.typeChipText, active && styles.typeChipTextActive]}>
-                    {label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <Text style={styles.subLabel}>Type *</Text>
+          <StartTimeDropdown
+            value={formData.pitch_type}
+            options={[
+              { key: 'Cricket Ground', label: 'Cricket Ground' },
+              { key: 'Box Cricket', label: 'Box Cricket' },
+            ]}
+            onChange={(val) =>
+              setFormData({
+                ...formData,
+                pitch_type: val,
+                cricket_pitch_surface: '',
+              })
+            }
+            placeholder="Select Ground Type"
+          />
           {formData.pitch_type === 'Cricket Ground' ? (
             <>
               <Text style={styles.subLabel}>Pitch surface</Text>
@@ -710,17 +701,6 @@ export default function AddGroundScreen() {
               </View>
             </>
           ) : null}
-          <Input
-            label={
-              formData.pitch_type === 'Cricket Ground'
-                ? 'Base Price Per Match (₹) *'
-                : 'Base Price Per Hour (₹) *'
-            }
-            value={formData.base_price_per_hour}
-            onChangeText={(text) => setFormData({ ...formData, base_price_per_hour: text })}
-            placeholder="1000"
-            keyboardType="decimal-pad"
-          />
           <Input
             label="Ground Size"
             value={formData.ground_size}

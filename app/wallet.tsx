@@ -23,6 +23,8 @@ export default function WalletScreen() {
   const [quickAdd, setQuickAdd] = useState('1600');
   const [summary, setSummary] = useState({ added: 0, spent: 0, refunded: 0 });
   const [stats, setStats] = useState({ bookingPercent: 0, shopPercent: 0, otherPercent: 0, avgMonthly: 0 });
+  const [limit, setLimit] = useState(10);
+  const [hasMore, setHasMore] = useState(true);
 
   const isOwner = profile?.role === 'ground_owner';
 
@@ -32,7 +34,7 @@ export default function WalletScreen() {
     }
   }, [user, profile?.role]);
 
-  const loadWalletData = async () => {
+  const loadWalletData = async (newLimit = limit) => {
     if (!user) return;
     
     try {
@@ -53,30 +55,33 @@ export default function WalletScreen() {
           .from('wallet_transactions')
           .select('*')
           .eq('wallet_id', walletData.id)
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false })
+          .limit(newLimit + 1);
 
         const walletTx = (wtxData || []).map(tx => ({
           id: tx.id,
           type: tx.type,
-          title: tx.type === 'topup' ? 'Top-up Added' : 'Balance Adjustment',
-          sub: tx.description || 'System Transaction',
+          title: tx.type === 'topup' ? 'Top-up Added' : (tx.description || 'Balance Adjustment'),
+          sub: tx.type === 'topup' ? 'Added by Admin' : 'System Transaction',
           amount: tx.amount,
-          date: new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+          date: new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) + ', ' + new Date(tx.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
           isPositive: Number(tx.amount) >= 0,
           rawDate: new Date(tx.created_at)
         }));
 
         let combined: any[] = [];
         if (isOwner) {
-          const bookingTx = await loadOwnerTransactions();
+          const bookingTx = await loadOwnerTransactions(newLimit);
           combined = [...walletTx, ...bookingTx];
         } else {
-          const bookingTx = await loadUserTransactions();
+          const bookingTx = await loadUserTransactions(newLimit);
           combined = [...walletTx, ...bookingTx];
         }
 
         combined.sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime());
-        setTransactions(combined);
+        
+        setHasMore(combined.length > newLimit);
+        setTransactions(combined.slice(0, newLimit));
 
         // Global Summary calculation from combined
         let earned = 0;
@@ -132,7 +137,7 @@ export default function WalletScreen() {
     }
   };
 
-  const loadUserTransactions = async () => {
+  const loadUserTransactions = async (currentLimit: number) => {
     const [bookingsRes, ordersRes] = await Promise.all([
       supabase
         .from('bookings')
@@ -140,11 +145,12 @@ export default function WalletScreen() {
           id,
           total_amount,
           status,
-          booking_date,
+          created_at,
           ground:grounds(name)
         `)
         .eq('user_id', user.id)
-        .order('booking_date', { ascending: false }),
+        .order('created_at', { ascending: false })
+        .limit(currentLimit),
       supabase
         .from('shop_orders')
         .select(`
@@ -155,6 +161,7 @@ export default function WalletScreen() {
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
+        .limit(currentLimit)
     ]);
 
     const bookingsTx = (bookingsRes.data || []).map(b => ({
@@ -163,15 +170,26 @@ export default function WalletScreen() {
       title: `Payment for Booking`,
       sub: b.ground?.name || 'Booking',
       amount: b.total_amount,
-      date: new Date(b.booking_date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+      date: new Date(b.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) + ', ' + new Date(b.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
       isPositive: false,
-      rawDate: new Date(b.booking_date)
+      rawDate: new Date(b.created_at)
+    }));
+
+    const ordersTx = (ordersRes.data || []).map(o => ({
+       id: o.id,
+       type: 'shop_payment',
+       title: `Shop Order`,
+       sub: `Order #${o.id.slice(0, 8).toUpperCase()}`,
+       amount: o.total_amount,
+       date: new Date(o.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) + ', ' + new Date(o.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+       isPositive: false,
+       rawDate: new Date(o.created_at)
     }));
 
     return [...bookingsTx, ...ordersTx];
   };
 
-  const loadOwnerTransactions = async () => {
+  const loadOwnerTransactions = async (currentLimit: number) => {
     try {
       const { data, error } = await supabase
         .from('bookings')
@@ -179,41 +197,37 @@ export default function WalletScreen() {
           id,
           total_amount,
           status,
-          booking_date,
+          created_at,
           payment_method,
           ground:grounds!inner(name, city, owner_id)
         `)
         .eq('ground.owner_id', user.id)
         .in('status', ['confirmed', 'completed'])
-        .order('booking_date', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(currentLimit);
 
       if (error) throw error;
 
-      const rows = data || [];
-      let totalOnline = 0;
-      let totalCash = 0;
-      
-      const realTx = rows.map(tx => ({
+      return (data || []).map(tx => ({
         id: tx.id,
         type: 'revenue',
         title: `Earning from ${tx.ground?.name}`,
         sub: `Booking #${tx.id.slice(0, 8).toUpperCase()}`,
         amount: tx.total_amount,
-        date: new Date(tx.booking_date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+        date: new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) + ', ' + new Date(tx.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
         isPositive: true,
-        rawDate: new Date(tx.booking_date)
+        rawDate: new Date(tx.created_at)
       }));
-
-      rows.forEach(tx => {
-        if (tx.payment_method === 'cash') totalCash += tx.total_amount;
-        else totalOnline += tx.total_amount;
-      });
-
-      return realTx;
     } catch (err) {
       console.error('Wallet transactions error:', err);
       return [];
     }
+  };
+
+  const loadMore = () => {
+    const newLimit = limit + 10;
+    setLimit(newLimit);
+    loadWalletData(newLimit);
   };
 
   const handleAddMoney = () => {
@@ -242,39 +256,45 @@ export default function WalletScreen() {
           <Text style={styles.summaryLabel}>Total Earnings</Text>
           <Text style={styles.summaryValue}>{formatCurrency(summary.added)}</Text>
         </View>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Total Spent</Text>
-          <Text style={styles.summaryValue}>{formatCurrency(summary.spent)}</Text>
-        </View>
-        <View style={[styles.summaryRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
-          <Text style={styles.summaryLabel}>Total Refunded</Text>
-          <Text style={styles.summaryValue}>{formatCurrency(summary.refunded)}</Text>
-        </View>
+        {!isOwner && (
+          <>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Total Spent</Text>
+              <Text style={styles.summaryValue}>{formatCurrency(summary.spent)}</Text>
+            </View>
+            <View style={[styles.summaryRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
+              <Text style={styles.summaryLabel}>Total Refunded</Text>
+              <Text style={styles.summaryValue}>{formatCurrency(summary.refunded)}</Text>
+            </View>
+          </>
+        )}
       </View>
 
 
 
-          <View style={styles.panelCard}>
-            <Text style={styles.panelTitle}>Spending Stats</Text>
-            <View style={styles.statsContainer}>
-               <View style={styles.donutWrapper}>
-                <View style={[styles.donutMock, { borderTopColor: '#043529', borderRightColor: stats.bookingPercent > 50 ? '#84cc16' : '#043529' }]} />
-                <View style={styles.donutInner}>
-                   <Text style={styles.donutMainText}>Bookings</Text>
-                   <Text style={styles.donutPercentText}>{stats.bookingPercent}%</Text>
+          {!isOwner && (
+            <View style={styles.panelCard}>
+              <Text style={styles.panelTitle}>Spending Stats</Text>
+              <View style={styles.statsContainer}>
+                 <View style={styles.donutWrapper}>
+                  <View style={[styles.donutMock, { borderTopColor: '#043529', borderRightColor: stats.bookingPercent > 50 ? '#84cc16' : '#043529' }]} />
+                  <View style={styles.donutInner}>
+                     <Text style={styles.donutMainText}>Bookings</Text>
+                     <Text style={styles.donutPercentText}>{stats.bookingPercent}%</Text>
+                  </View>
                 </View>
-              </View>
-              <View style={styles.statsLegend}>
-                <View style={styles.legendRow}>
-                   <View style={styles.legendItem}><View style={[styles.legendDot, {backgroundColor: '#84cc16'}]}/><Text style={styles.legendText}>Bookings</Text></View>
-                   <Text style={styles.legendValue}>{stats.bookingPercent}%</Text>
-                   <View style={styles.legendItem}><View style={[styles.legendDot, {backgroundColor: '#ef4444'}]}/><Text style={styles.legendText}>Shop</Text></View>
-                   <Text style={styles.legendValue}>{stats.shopPercent}%</Text>
+                <View style={styles.statsLegend}>
+                  <View style={styles.legendRow}>
+                     <View style={styles.legendItem}><View style={[styles.legendDot, {backgroundColor: '#84cc16'}]}/><Text style={styles.legendText}>Bookings</Text></View>
+                     <Text style={styles.legendValue}>{stats.bookingPercent}%</Text>
+                     <View style={styles.legendItem}><View style={[styles.legendDot, {backgroundColor: '#ef4444'}]}/><Text style={styles.legendText}>Shop</Text></View>
+                     <Text style={styles.legendValue}>{stats.shopPercent}%</Text>
+                  </View>
                 </View>
+                <Text style={styles.avgSpendText}>Avg. monthly spend: {formatCurrency(stats.avgMonthly)}</Text>
               </View>
-              <Text style={styles.avgSpendText}>Avg. monthly spend: {formatCurrency(stats.avgMonthly)}</Text>
             </View>
-          </View>
+          )}
     </View>
   );
 
@@ -322,9 +342,13 @@ export default function WalletScreen() {
           </View>
 
           <View style={styles.viewAllWrapper}>
-             <TouchableOpacity style={styles.viewAllBtn}>
-               <Text style={styles.viewAllTxt}>View All Transactions</Text>
-             </TouchableOpacity>
+             {hasMore ? (
+               <TouchableOpacity style={styles.viewAllBtn} onPress={loadMore} disabled={loading}>
+                 <Text style={styles.viewAllTxt}>{loading ? 'Loading...' : 'Load More Transactions'}</Text>
+               </TouchableOpacity>
+             ) : transactions.length > 0 && (
+               <Text style={styles.noMoreText}>No more transactions to show</Text>
+             )}
           </View>
         </View>
 
@@ -669,6 +693,12 @@ const styles = StyleSheet.create({
     color: '#475569',
     marginTop: 16,
     fontWeight: '500',
+    fontFamily: 'Inter',
+  },
+  noMoreText: {
+    fontSize: 14,
+    color: '#94a3b8',
+    fontWeight: '600',
     fontFamily: 'Inter',
   },
 });

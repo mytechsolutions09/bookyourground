@@ -142,7 +142,7 @@ export default function GroundsAdminScreen() {
     city: '',
     state: '',
     pincode: '',
-    base_price_per_hour: '',
+    // base_price_per_hour removed
     pitch_type: '',
     cricket_pitch_surface: '',
     ground_size: '',
@@ -285,7 +285,7 @@ export default function GroundsAdminScreen() {
       city: '',
       state: '',
       pincode: '',
-      base_price_per_hour: '',
+      // base_price_per_hour removed
       pitch_type: '',
       ground_size: '',
       capacity: '',
@@ -328,7 +328,7 @@ export default function GroundsAdminScreen() {
       city: ground.city ?? '',
       state: ground.state ?? '',
       pincode: ground.pincode ?? '',
-      base_price_per_hour: ground.base_price_per_hour != null ? String(ground.base_price_per_hour) : '',
+      // base_price_per_hour removed
       pitch_type: (ground.pitch_type ?? '') as string,
       cricket_pitch_surface: ((ground as any).cricket_pitch_surface ?? '') as string,
       ground_size: (ground.ground_size ?? '') as string,
@@ -379,7 +379,7 @@ export default function GroundsAdminScreen() {
         city: String(editForm.city ?? '').trim(),
         state: String(editForm.state ?? '').trim(),
         pincode: String(editForm.pincode ?? '').trim(),
-        base_price_per_hour: parseNullableFloat(String(editForm.base_price_per_hour ?? '')) ?? 0,
+        // base_price_per_hour removed
         pitch_type: String(editForm.pitch_type ?? '').trim() || null,
         cricket_pitch_surface: cricketPitchSurfaceForDb(
           editForm.pitch_type,
@@ -613,7 +613,7 @@ export default function GroundsAdminScreen() {
         city: String(createForm.city ?? '').trim(),
         state: String(createForm.state ?? '').trim(),
         pincode: String(createForm.pincode ?? '').trim(),
-        base_price_per_hour: parseNullableFloat(String(createForm.base_price_per_hour ?? '')) ?? 0,
+        // base_price_per_hour removed
         pitch_type: String(createForm.pitch_type ?? '').trim() || null,
         cricket_pitch_surface: cricketPitchSurfaceForDb(
           createForm.pitch_type,
@@ -1154,13 +1154,7 @@ export default function GroundsAdminScreen() {
                     onChangeText={(t) => setCreateForm({ ...createForm, pincode: t })}
                     placeholder="Pincode"
                   />
-                  <TextInput
-                    style={[styles.formInput, styles.formInputHalf]}
-                    value={String(createForm.base_price_per_hour ?? '')}
-                    onChangeText={(t) => setCreateForm({ ...createForm, base_price_per_hour: t })}
-                    placeholder="Price/match"
-                    keyboardType="numeric"
-                  />
+                  {/* base_price_per_hour removed */}
                 </View>
 
                 <TextInput
@@ -1331,7 +1325,7 @@ export default function GroundsAdminScreen() {
                   </View>
 
                   <View style={[styles.tableCell, styles.colPrice]}>
-                    <Text style={styles.priceText}>₹{latestGround.base_price_per_hour}/match</Text>
+                    <Text style={styles.priceText}>Price set in Availability</Text>
                   </View>
 
                   <View style={[styles.tableCell, styles.colStatus]}>
@@ -1484,7 +1478,7 @@ export default function GroundsAdminScreen() {
 
                   <View style={styles.listMetaRow}>
                     <Text style={styles.listMeta}>
-                      ₹{latestGround.base_price_per_hour}/match
+                      Price set in Availability
                     </Text>
                     <Text style={styles.listMeta}>
                       {ownerName}
@@ -1674,15 +1668,7 @@ export default function GroundsAdminScreen() {
                   onChangeText={(t) => setEditForm((prev: any) => ({ ...prev, pincode: t }))}
                   placeholder="Pincode"
                 />
-                <TextInput
-                  style={[styles.formInput, styles.formInputHalf]}
-                  value={String(editForm?.base_price_per_hour ?? '')}
-                  onChangeText={(t) =>
-                    setEditForm((prev: any) => ({ ...prev, base_price_per_hour: t }))
-                  }
-                  placeholder="Price/match"
-                  keyboardType="numeric"
-                />
+                  {/* base_price_per_hour removed */}
               </View>
 
               <TextInput

@@ -89,16 +89,16 @@ export default function CheckoutScreen() {
           action: 'confirm-cash',
           bookingId: booking.isNew ? null : booking.id,
           bookingDetails: booking.isNew ? {
+            price_per_hour: Number(booking.price_per_hour),
+            total_amount: Number(parseFloat(customCashAmount) || (booking.total_amount + (booking.discount_amount || 0))),
+            discount_amount: Number(booking.discount_amount || 0),
+            total_hours: Number(booking.total_hours || 1),
             ground_id: booking.ground_id,
             booking_date: booking.booking_date,
             start_time: booking.start_time,
             end_time: booking.end_time,
             team_type: booking.team_type,
             coupon_id: booking.coupon_id,
-            total_hours: booking.total_hours,
-            price_per_hour: booking.price_per_hour,
-            total_amount: parseFloat(customCashAmount) || (booking.total_amount + (booking.discount_amount || 0)),
-            discount_amount: booking.discount_amount || 0,
           } : {
             total_amount: parseFloat(customCashAmount) || booking.total_amount,
           },
@@ -585,7 +585,13 @@ export default function CheckoutScreen() {
                     <RNText style={styles.itemMetaText}>{booking.grounds.city}, {booking.grounds.state}</RNText>
                   </View>
                 </View>
-                <RNText style={styles.productPrice}>{formatCurrency(booking.total_amount + (booking.discount_amount || 0))}</RNText>
+                <RNText style={styles.productPrice}>
+                  {formatCurrency(
+                    (selectedGateway === 'cash' && customCashAmount && !isNaN(parseFloat(customCashAmount)))
+                      ? parseFloat(customCashAmount) + (booking.discount_amount || 0)
+                      : booking.total_amount + (booking.discount_amount || 0)
+                  )}
+                </RNText>
               </View>
 
               <View style={styles.itemDetailsFooter}>
@@ -664,7 +670,13 @@ export default function CheckoutScreen() {
             <View style={styles.breakdown}>
               <View style={styles.breakdownRow}>
                 <RNText style={styles.breakdownLabel}>Items (1)</RNText>
-                <RNText style={styles.breakdownValue}>{formatCurrency(booking.total_amount + (booking.discount_amount || 0))}</RNText>
+                <RNText style={styles.breakdownValue}>
+                  {formatCurrency(
+                    (selectedGateway === 'cash' && customCashAmount && !isNaN(parseFloat(customCashAmount)))
+                      ? parseFloat(customCashAmount) + (booking.discount_amount || 0)
+                      : booking.total_amount + (booking.discount_amount || 0)
+                  )}
+                </RNText>
               </View>
               {booking.discount_amount > 0 && (
                 <View style={styles.breakdownRow}>
@@ -680,7 +692,13 @@ export default function CheckoutScreen() {
 
             <View style={styles.subtotalRow}>
               <RNText style={styles.subtotalLabel}>Sub Total :</RNText>
-              <RNText style={styles.subtotalValue}>{formatCurrency(booking.total_amount)}</RNText>
+              <RNText style={styles.subtotalValue}>
+                {formatCurrency(
+                  (selectedGateway === 'cash' && customCashAmount && !isNaN(parseFloat(customCashAmount)))
+                    ? parseFloat(customCashAmount)
+                    : booking.total_amount
+                )}
+              </RNText>
             </View>
 
             <View style={styles.paymentMethodSection}>

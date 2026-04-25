@@ -639,7 +639,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
     const isCricketGround = !isBoxCricket;
     // For cricket grounds, allow per-slot custom pricing as well:
     // - `time_slots.custom_price` (if present) is treated as the price for BOTH teams for that slot
-    // - otherwise fall back to the ground's `base_price_per_hour` (also "both teams" price)
+    // - otherwise defaults to 0 (all pricing must be set per-slot in Time Slots)
     if (isCricketGround) {
       const customMatchPrice = Object.prototype.hasOwnProperty.call(slotPriceByStartTime, startTime)
         ? slotPriceByStartTime[startTime]
@@ -656,10 +656,10 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       // Store actual slot span (e.g. 4h window) — price is still per match, not hourly.
       const totalHours = _sanity;
 
-      return { totalHours, totalAmount, pricePerUnit: pricePerMatch, unitLabel: 'match' as const };
+      return { totalHours, totalAmount, pricePerUnit: baseMatchPrice, unitLabel: 'match' as const };
     }
 
-    const pricePerHour = custom ?? 0;
+    const pricePerHour = slotPriceByStartTime[startTime] ?? 0;
     const _sanity = hoursBetweenBooked(startTime, derivedEndTime);
     if (_sanity === null || !Number.isFinite(_sanity) || _sanity <= 0) return null;
 
@@ -1447,13 +1447,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       Alert.alert('Unavailable slot', 'Please choose a different time slot.');
       return;
     }
-
-    const pricePerHour =
-      Object.prototype.hasOwnProperty.call(slotPriceByStartTime, startTime) &&
-        slotPriceByStartTime[startTime] != null
-        ? slotPriceByStartTime[startTime]!
-        : (computed?.pricePerUnit ?? 0);
-
+    // Submitting...
     try {
       setSubmitting(true);
       const params = new URLSearchParams();
@@ -2199,8 +2193,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                 ? `Duration: ${computed.totalHours} hours @ ${formatCurrency(
                   computed.pricePerUnit,
                 )}/hr`
-                : `Cricket ground: ${teamType === 'one' ? '1 team' : 'both teams'
-                } · ${formatCurrency(computed.pricePerUnit)} ${teamType === 'one' ? 'per team' : 'per match'}`}
+                : `Cricket ground: ${teamType === 'one' ? '1 team' : 'Both teams'} • ${formatCurrency(teamType === 'one' ? computed.pricePerUnit / 2 : computed.pricePerUnit)} ${teamType === 'one' ? 'per team' : 'per match'}`}
             </Text>
           </View>
         )}

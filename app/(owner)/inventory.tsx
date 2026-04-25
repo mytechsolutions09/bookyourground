@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 
 const IS_WEB = Platform.OS === 'web';
+import { router } from 'expo-router';
 import { ChevronRight, ChevronDown, Calendar, Search, Filter, CalendarClock } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -160,13 +161,28 @@ export default function OwnerInventoryScreen() {
             textColor = '#92400E';
           }
 
+          const isClickable = statusText !== 'FULL';
+
           return (
-            <View key={s.id} style={[styles.slotChip, { backgroundColor: statusColor }]}>
+            <TouchableOpacity 
+              key={s.id} 
+              style={[styles.slotChip, { backgroundColor: statusColor }]}
+              disabled={!isClickable}
+              onPress={() => {
+                router.push({
+                  pathname: `/ground/${ground.id}`,
+                  params: { 
+                    date: dateStr,
+                    initialSlot: normalizeDbTimeToHHMM(s.start_time)
+                  }
+                });
+              }}
+            >
               <Text style={[styles.slotTime, { color: textColor }]}>
                 {normalizeDbTimeToHHMM(s.start_time)}
               </Text>
               <Text style={[styles.slotStatus, { color: textColor }]}>{statusText}</Text>
-            </View>
+            </TouchableOpacity>
           );
         })}
       </View>
@@ -306,20 +322,26 @@ export default function OwnerInventoryScreen() {
                   )}
                </View>
 
-               <View style={styles.rangeSelector}>
-                  <TouchableOpacity
-                    onPress={() => setDaysToShow(7)}
-                    style={[styles.rangeBtn, daysToShow === 7 && styles.rangeBtnActive]}
-                  >
-                    <Text style={[styles.rangeBtnText, daysToShow === 7 && styles.rangeBtnTextActive]}>7D</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => setDaysToShow(30)}
-                    style={[styles.rangeBtn, daysToShow === 30 && styles.rangeBtnActive]}
-                  >
-                    <Text style={[styles.rangeBtnText, daysToShow === 30 && styles.rangeBtnTextActive]}>30D</Text>
-                  </TouchableOpacity>
-               </View>
+                <View style={styles.rangeSelector}>
+                   <TouchableOpacity
+                     onPress={() => setDaysToShow(7)}
+                     style={[styles.rangeBtn, daysToShow === 7 && styles.rangeBtnActive]}
+                   >
+                     <Text style={[styles.rangeBtnText, daysToShow === 7 && styles.rangeBtnTextActive]}>7D</Text>
+                   </TouchableOpacity>
+                   <TouchableOpacity
+                     onPress={() => setDaysToShow(30)}
+                     style={[styles.rangeBtn, daysToShow === 30 && styles.rangeBtnActive]}
+                   >
+                     <Text style={[styles.rangeBtnText, daysToShow === 30 && styles.rangeBtnTextActive]}>30D</Text>
+                   </TouchableOpacity>
+                   <TouchableOpacity
+                     onPress={() => setDaysToShow(90)}
+                     style={[styles.rangeBtn, daysToShow === 90 && styles.rangeBtnActive]}
+                   >
+                     <Text style={[styles.rangeBtnText, daysToShow === 90 && styles.rangeBtnTextActive]}>90D</Text>
+                   </TouchableOpacity>
+                </View>
             </View>
           </Card>
         </View>
@@ -368,7 +390,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F0F0F0',
   },
   webPageHeader: {
-    paddingTop: 10,
+    paddingTop: 0,
     backgroundColor: 'transparent',
     borderBottomWidth: 0,
     width: '100%',
@@ -393,40 +415,40 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   filterCard: {
-    padding: 12,
-    borderRadius: 20,
-    marginTop: 8,
+    padding: 4,
+    borderRadius: 16,
+    marginTop: 0,
     backgroundColor: 'transparent',
   },
   filtersContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    gap: 12,
     flexWrap: 'wrap',
   },
   statusFilters: {
     flexDirection: 'row',
     backgroundColor: '#F1F5F9',
-    borderRadius: 16,
-    padding: 6,
+    borderRadius: 12,
+    padding: 3,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
   filterTag: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 9,
   },
   filterTagActive: {
     backgroundColor: '#FFFFFF',
     shadowColor: '#000',
     shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
   },
   filterTagText: {
     fontFamily: 'Inter',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: '#6B7280',
   },

@@ -697,12 +697,14 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
             <View style={styles.headerRight}>
               {!isCompact && !isAdminLayout && (
                 <View style={{ flexDirection: 'row', gap: 32, alignItems: 'center' }}>
-                  <Text
-                    style={[styles.headerNavLink, (cleanPath === '/(tabs)/dashboard' || cleanPath === '/dashboard') && styles.headerNavLinkActive]}
-                    onPress={() => router.push('/(tabs)/dashboard' as any)}
-                  >
-                    Dashboard
-                  </Text>
+                  {!isGroundOwner && (
+                    <Text
+                      style={[styles.headerNavLink, (cleanPath === '/(tabs)/dashboard' || cleanPath === '/dashboard') && styles.headerNavLinkActive]}
+                      onPress={() => router.push('/(tabs)/dashboard' as any)}
+                    >
+                      Dashboard
+                    </Text>
+                  )}
                   <Text
                     style={[styles.headerNavLink, cleanPath === '/(tabs)/bookings' && styles.headerNavLinkActive]}
                     onPress={() => router.push('/(tabs)/bookings' as any)}

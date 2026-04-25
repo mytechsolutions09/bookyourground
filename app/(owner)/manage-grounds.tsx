@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Platform, Modal, Pressable, ScrollView, TextInput, Switch, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Platform, Modal, Pressable, ScrollView, TextInput, Switch, Alert, ActivityIndicator, Image } from 'react-native';
 import { router } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
@@ -140,7 +140,6 @@ export default function OwnerGroundsScreen() {
       city: ground.city ?? '',
       state: ground.state ?? '',
       pincode: ground.pincode ?? '',
-      base_price_per_hour: ground.base_price_per_hour != null ? String(ground.base_price_per_hour) : '',
       pitch_type: (ground.pitch_type ?? '') as string,
       cricket_pitch_surface: ((ground as any).cricket_pitch_surface ?? '') as string,
       ground_size: (ground.ground_size ?? '') as string,
@@ -313,7 +312,6 @@ export default function OwnerGroundsScreen() {
         city: String(editForm.city ?? '').trim(),
         state: String(editForm.state ?? '').trim(),
         pincode: String(editForm.pincode ?? '').trim(),
-        base_price_per_hour: parseNullableFloat(String(editForm.base_price_per_hour ?? '')) ?? 0,
         pitch_type: String(editForm.pitch_type ?? '').trim() || null,
         cricket_pitch_surface: cricketPitchSurfaceForDb(
           editForm.pitch_type,
@@ -412,7 +410,6 @@ export default function OwnerGroundsScreen() {
               city: data.City,
               state: data.State,
               pincode: data.Pincode,
-              base_price_per_hour: data.Price_per_hour || 0,
               pitch_type: data.Pitch_Type,
               cricket_pitch_surface: data.Pitch_Surface,
               ground_size: data.Ground_Size,
@@ -496,7 +493,6 @@ export default function OwnerGroundsScreen() {
       City: ground.city,
       State: ground.state,
       Pincode: ground.pincode,
-      Price_per_hour: ground.base_price_per_hour,
       Pitch_Type: ground.pitch_type,
       Pitch_Surface: (ground as any).cricket_pitch_surface,
       Ground_Size: ground.ground_size,
@@ -644,295 +640,236 @@ export default function OwnerGroundsScreen() {
       >
         <Pressable style={styles.modalOverlay} onPress={closeEditModal} />
         <View style={styles.modalWrap}>
-          <Card style={styles.modalCard}>
+          <Card style={[styles.modalCard, IS_WEB && { width: 1200, maxWidth: '98vw' }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Edit Ground</Text>
+              <View>
+                <Text style={styles.modalTitle}>Edit Venue</Text>
+                <Text style={{ fontSize: 11, color: '#64748B' }}>Managing {editForm?.name}</Text>
+              </View>
               <Button title="Close" onPress={closeEditModal} variant="outline" size="small" />
             </View>
 
             <ScrollView style={styles.modalScroll} keyboardShouldPersistTaps="handled">
-              {/* ── Map Picker for Edit (Force Visible at Top) ── */}
-              <View style={{ 
-                marginVertical: 20, 
-                padding: 16, 
-                backgroundColor: '#ecfdf5', 
-                borderRadius: 20, 
-                borderWidth: 2, 
-                borderColor: '#10b981',
-                minHeight: 400 
-              }}>
-                <Text style={{ fontFamily: 'Inter', fontSize: 18, fontWeight: '800', color: '#064e3b', marginBottom: 4 }}>Set Exact Location (Pin on Map)</Text>
-                <Text style={{ fontFamily: 'Inter', fontSize: 14, color: '#065f46', marginBottom: 16 }}>Click on the map to update your ground's exact GPS location.</Text>
-                {Platform.OS === 'web' ? (
-                  <View style={{ height: 300, borderRadius: 16, overflow: 'hidden', marginBottom: 16, backgroundColor: '#cbd5e1' }}>
-                    <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
-                      <GoogleMap
-                        defaultCenter={{ lat: 28.4595, lng: 77.0266 }}
-                        center={editForm?.latitude && editForm?.longitude ? { lat: parseFloat(editForm.latitude), lng: parseFloat(editForm.longitude) } : undefined}
-                        defaultZoom={15}
-                        mapId={MAP_ID}
-                        onClick={(e) => {
-                          if (e.detail.latLng) {
-                            setEditForm((p: any) => ({
-                              ...p,
-                              latitude: String(e.detail.latLng!.lat),
-                              longitude: String(e.detail.latLng!.lng)
-                            }));
-                          }
-                         }}
-                        style={{ width: '100%', height: '100%' }}
-                      >
-                          {editForm?.latitude && editForm?.longitude && (
-                            <Marker 
-                              position={{ lat: parseFloat(editForm.latitude), lng: parseFloat(editForm.longitude) }} 
-                              icon="https://maps.google.com/mapfiles/ms/icons/green-dot.png"
-                            />
-                          )}
-                      </GoogleMap>
-                    </APIProvider>
-                  </View>
-                ) : (
-                  <View style={{ height: 100, backgroundColor: '#f1f5f9', borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 16, borderStyle: 'dashed', borderWidth: 1, borderColor: '#cbd5e1' }}>
-                    <Text style={{ fontFamily: 'Inter', fontSize: 13, color: '#64748B' }}>Interactive map available on Web</Text>
-                  </View>
-                )}
-                <View style={{ flexDirection: 'row', display: 'flex', gap: 12 }}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontFamily: 'Inter', fontSize: 12, fontWeight: '600', color: '#065f46', marginBottom: 4 }}>Latitude</Text>
-                    <TextInput
-                      style={[styles.formInput, { marginBottom: 0, backgroundColor: '#ffffff' }]}
-                      value={String(editForm?.latitude ?? '')}
-                      onChangeText={(t) => setEditForm((p: any) => ({ ...p, latitude: t }))}
-                      placeholder="Latitude"
-                      keyboardType="numeric"
-                    />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontFamily: 'Inter', fontSize: 12, fontWeight: '600', color: '#065f46', marginBottom: 4 }}>Longitude</Text>
-                    <TextInput
-                      style={[styles.formInput, { marginBottom: 0, backgroundColor: '#ffffff' }]}
-                      value={String(editForm?.longitude ?? '')}
-                      onChangeText={(t) => setEditForm((p: any) => ({ ...p, longitude: t }))}
-                      placeholder="Longitude"
-                      keyboardType="numeric"
-                    />
-                  </View>
-                </View>
-              </View>
-
-              <TextInput
-                style={styles.formInput}
-                value={String(editForm?.name ?? '')}
-                onChangeText={(t) => setEditForm((p: any) => ({ ...p, name: t }))}
-                placeholder="Name"
-              />
-              <TextInput
-                style={styles.formInput}
-                value={String(editForm?.description ?? '')}
-                onChangeText={(t) => setEditForm((p: any) => ({ ...p, description: t }))}
-                placeholder="Description"
-              />
-              <View style={styles.formRow2}>
-                <View style={styles.formInputHalf}>
-                  <Text style={styles.locationLabel}>City / State</Text>
-                  <OwnerLocationDropdown
-                    value={editLocationKey}
-                    options={buildLocationOptions(locationRows)}
-                    onChange={(k) => {
-                      setEditLocationKey(k);
-                      const [city, state] = k.split('__');
-                      setEditForm((p: any) => ({
-                        ...p,
-                        city: city || '',
-                        state: state || '',
-                      }));
-                    }}
-                  />
-                </View>
-              </View>
-              <TextInput
-                style={styles.formInput}
-                value={String(editForm?.address ?? '')}
-                onChangeText={(t) => setEditForm((p: any) => ({ ...p, address: t }))}
-                placeholder="Address"
-              />
-              <View style={styles.formRow2}>
-                <TextInput
-                  style={[styles.formInput, styles.formInputHalf]}
-                  value={String(editForm?.pincode ?? '')}
-                  onChangeText={(t) => setEditForm((p: any) => ({ ...p, pincode: t }))}
-                  placeholder="Pincode"
-                />
-                <TextInput
-                  style={[styles.formInput, styles.formInputHalf]}
-                  value={String(editForm?.base_price_per_hour ?? '')}
-                  onChangeText={(t) => setEditForm((p: any) => ({ ...p, base_price_per_hour: t }))}
-                  placeholder="Price/hr"
-                  keyboardType="numeric"
-                />
-              </View>
-
-              <TextInput
-                style={styles.formInput}
-                value={String(editForm?.pitch_type ?? '')}
-                onChangeText={(t) =>
-                  setEditForm((p: any) => ({
-                    ...p,
-                    pitch_type: t,
-                    cricket_pitch_surface: isCricketGroundType(t) ? p.cricket_pitch_surface : '',
-                  }))
-                }
-                placeholder="Type (Cricket Ground / Box Cricket)"
-              />
-              {isCricketGroundType(String(editForm?.pitch_type ?? '')) ? (
-                <>
-                  <Text style={styles.locationLabel}>Pitch surface</Text>
-                  <View style={styles.surfaceChipsRow}>
-                    {(['Turf', 'Matting'] as const).map((surfaceLabel) => {
-                      const active = String(editForm?.cricket_pitch_surface ?? '') === surfaceLabel;
-                      return (
-                        <Pressable
-                          key={surfaceLabel}
-                          onPress={() =>
-                            setEditForm((p: any) => ({ ...p, cricket_pitch_surface: surfaceLabel }))
-                          }
-                          style={[styles.surfaceChip, active && styles.surfaceChipActive]}
-                        >
-                          <Text
-                            style={[styles.surfaceChipText, active && styles.surfaceChipTextActive]}
-                          >
-                            {surfaceLabel}
-                          </Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                </>
-              ) : null}
-              <TextInput
-                style={styles.formInput}
-                value={String(editForm?.ground_size ?? '')}
-                onChangeText={(t) => setEditForm((p: any) => ({ ...p, ground_size: t }))}
-                placeholder="Ground size"
-              />
-              <TextInput
-                style={styles.formInput}
-                value={String(editForm?.capacity ?? '')}
-                onChangeText={(t) => setEditForm((p: any) => ({ ...p, capacity: t }))}
-                placeholder="Capacity"
-                keyboardType="numeric"
-              />
-
-              <View style={styles.switchRow}>
-                <Text style={styles.switchLabel}>Floodlights</Text>
-                <Switch
-                  value={!!editForm?.has_floodlights}
-                  onValueChange={(v) => setEditForm((p: any) => ({ ...p, has_floodlights: v }))}
-                />
-              </View>
-              <View style={styles.switchRow}>
-                <Text style={styles.switchLabel}>Parking</Text>
-                <Switch
-                  value={!!editForm?.has_parking}
-                  onValueChange={(v) => setEditForm((p: any) => ({ ...p, has_parking: v }))}
-                />
-              </View>
-              <View style={styles.switchRow}>
-                <Text style={styles.switchLabel}>Changing Rooms</Text>
-                <Switch
-                  value={!!editForm?.has_changing_rooms}
-                  onValueChange={(v) =>
-                    setEditForm((p: any) => ({ ...p, has_changing_rooms: v }))
-                  }
-                />
-              </View>
-              <View style={styles.switchRow}>
-                <Text style={styles.switchLabel}>Washroom</Text>
-                <Switch
-                  value={!!editForm?.has_washrooms}
-                  onValueChange={(v) => setEditForm((p: any) => ({ ...p, has_washrooms: v }))}
-                />
-              </View>
-              <View style={styles.switchRow}>
-                <Text style={styles.switchLabel}>Pavilion</Text>
-                <Switch
-                  value={!!editForm?.has_pavilion}
-                  onValueChange={(v) => setEditForm((p: any) => ({ ...p, has_pavilion: v }))}
-                />
-              </View>
-              <View style={styles.switchRow}>
-                <Text style={styles.switchLabel}>Active</Text>
-                <Switch
-                  value={!!editForm?.active}
-                  onValueChange={(v) => setEditForm((p: any) => ({ ...p, active: v }))}
-                />
-              </View>
-
-              <Text style={styles.modalSectionTitle}>Media (up to 8 images, 2 videos)</Text>
-              <Text style={styles.mediaHint}>
-                Add URLs below, or upload files from your device (stored in the ground-images bucket).
-              </Text>
-              <Pressable
-                style={[styles.mediaAddButton, styles.mediaUploadButton]}
-                onPress={handlePickMediaForEdit}
-                disabled={uploadingMedia}
-              >
-                <Text style={styles.mediaUploadText}>
-                  {uploadingMedia ? 'Uploading…' : 'Upload from device'}
-                </Text>
-              </Pressable>
-              {(editForm?.mediaUrls ?? []).map((url: string, index: number) => (
-                <View key={index} style={styles.mediaRow}>
+              <View style={[styles.compactFormGrid, IS_WEB && { flexDirection: 'row', gap: 24 }]}>
+                {/* Left Column: Basic Info & Media */}
+                <View style={[styles.compactFormCol, IS_WEB && { flex: 1 }]}>
+                  <Text style={styles.compactSectionTitle}>Basic Details</Text>
                   <TextInput
-                    style={[styles.formInput, styles.mediaInput]}
-                    value={url}
-                    onChangeText={(t) =>
-                      setEditForm((prev: any) => {
-                        const next = [...(prev.mediaUrls ?? [])];
-                        next[index] = t;
-                        return { ...prev, mediaUrls: next };
-                      })
-                    }
-                    placeholder="https://example.com/image-or-video"
+                    style={styles.compactInput}
+                    value={String(editForm?.name ?? '')}
+                    onChangeText={(t) => setEditForm((p: any) => ({ ...p, name: t }))}
+                    placeholder="Venue Name"
                   />
-                  <Pressable
-                    onPress={() =>
-                      setEditForm((prev: any) => {
-                        const next = [...(prev.mediaUrls ?? [])];
-                        next.splice(index, 1);
-                        return { ...prev, mediaUrls: next };
-                      })
-                    }
-                    style={styles.mediaRemove}
-                  >
-                    <Text style={styles.mediaRemoveText}>Remove</Text>
-                  </Pressable>
-                </View>
-              ))}
-              {(editForm?.mediaUrls ?? []).length < 10 ? (
-                <Pressable
-                  onPress={() =>
-                    setEditForm((prev: any) => ({
-                      ...prev,
-                      mediaUrls: [...(prev.mediaUrls ?? []), ''],
-                    }))
-                  }
-                  style={styles.mediaAddButton}
-                >
-                  <Text style={styles.mediaAddText}>Add media URL</Text>
-                </Pressable>
-              ) : null}
+                  <TextInput
+                    style={[styles.compactInput, { height: 60 }]}
+                    value={String(editForm?.description ?? '')}
+                    onChangeText={(t) => setEditForm((p: any) => ({ ...p, description: t }))}
+                    placeholder="Brief Description"
+                    multiline
+                  />
+                  
+                  <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.locationLabel}>Type</Text>
+                      <OwnerLocationDropdown
+                        value={editForm?.pitch_type}
+                        options={[
+                          { key: 'Cricket Ground', label: 'Cricket' },
+                          { key: 'Box Cricket', label: 'Box Cricket' },
+                        ]}
+                        onChange={(t) =>
+                          setEditForm((p: any) => ({
+                            ...p,
+                            pitch_type: t,
+                            cricket_pitch_surface: isCricketGroundType(t) ? p.cricket_pitch_surface : '',
+                          }))
+                        }
+                      />
+                    </View>
+                    {isCricketGroundType(String(editForm?.pitch_type ?? '')) && (
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.locationLabel}>Surface</Text>
+                        <View style={styles.surfaceChipsRow}>
+                          {(['Turf', 'Matting'] as const).map((surfaceLabel) => {
+                            const active = String(editForm?.cricket_pitch_surface ?? '') === surfaceLabel;
+                            return (
+                              <Pressable
+                                key={surfaceLabel}
+                                onPress={() =>
+                                  setEditForm((p: any) => ({ ...p, cricket_pitch_surface: surfaceLabel }))
+                                }
+                                style={[styles.surfaceChipCompact, active && styles.surfaceChipActive]}
+                              >
+                                <Text style={[styles.surfaceChipText, active && styles.surfaceChipTextActive]}>
+                                  {surfaceLabel}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </View>
+                      </View>
+                    )}
+                  </View>
 
-              <Text style={styles.modalSectionTitle}>Editable availability (Days & Slots)</Text>
-              {editForm?.id ? (
+                  <View style={{ flexDirection: 'row', gap: 12 }}>
+                    <TextInput
+                      style={[styles.compactInput, { flex: 1 }]}
+                      value={String(editForm?.ground_size ?? '')}
+                      onChangeText={(t) => setEditForm((p: any) => ({ ...p, ground_size: t }))}
+                      placeholder="Size (e.g. 60m)"
+                    />
+                    <TextInput
+                      style={[styles.compactInput, { flex: 1 }]}
+                      value={String(editForm?.capacity ?? '')}
+                      onChangeText={(t) => setEditForm((p: any) => ({ ...p, capacity: t }))}
+                      placeholder="Capacity"
+                      keyboardType="numeric"
+                    />
+                  </View>
+
+                  <Text style={[styles.compactSectionTitle, { marginTop: 12 }]}>Gallery (8 Images, 2 Videos)</Text>
+                  <View style={styles.compactMediaGrid}>
+                    {(editForm?.mediaUrls ?? []).map((url: string, idx: number) => (
+                      <View key={idx} style={styles.compactMediaItem}>
+                        <Image source={{ uri: url }} style={styles.compactMediaImg} />
+                        <TouchableOpacity 
+                          style={styles.compactMediaRemove} 
+                          onPress={() => setEditForm((p: any) => ({ ...p, mediaUrls: p.mediaUrls.filter((_: any, i: number) => i !== idx) }))}
+                        >
+                          <Text style={styles.compactMediaRemoveText}>×</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                    {(editForm?.mediaUrls ?? []).length < 10 && (
+                      <TouchableOpacity style={styles.compactMediaAdd} onPress={handlePickMediaForEdit}>
+                        {uploadingMedia ? <ActivityIndicator size="small" color="#64748B" /> : <Plus size={20} color="#64748B" />}
+                        <Text style={styles.compactMediaAddText}>{uploadingMedia ? '...' : 'Add'}</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+
+                {/* Right Column: Location & Map */}
+                <View style={[styles.compactFormCol, IS_WEB && { flex: 1 }]}>
+                  <Text style={styles.compactSectionTitle}>Location</Text>
+                  <TextInput
+                    style={styles.compactInput}
+                    value={String(editForm?.address ?? '')}
+                    onChangeText={(t) => setEditForm((p: any) => ({ ...p, address: t }))}
+                    placeholder="Street Address"
+                  />
+                  <View style={styles.formRow2}>
+                    <View style={{ flex: 1.5 }}>
+                      <OwnerLocationDropdown
+                        value={editLocationKey}
+                        options={buildLocationOptions(locationRows)}
+                        onChange={(k) => {
+                          setEditLocationKey(k);
+                          const [city, state] = k.split('__');
+                          setEditForm((p: any) => ({ ...p, city, state }));
+                        }}
+                      />
+                    </View>
+                    <TextInput
+                      style={[styles.compactInput, { flex: 1 }]}
+                      value={String(editForm?.pincode ?? '')}
+                      onChangeText={(t) => setEditForm((p: any) => ({ ...p, pincode: t }))}
+                      placeholder="Pincode"
+                    />
+                  </View>
+
+                  <View style={styles.compactMapContainer}>
+                    {Platform.OS === 'web' ? (
+                      <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+                        <GoogleMap
+                          center={editForm?.latitude && editForm?.longitude ? { lat: parseFloat(editForm.latitude), lng: parseFloat(editForm.longitude) } : { lat: 28.4595, lng: 77.0266 }}
+                          defaultZoom={15}
+                          mapId={MAP_ID}
+                          onClick={(e) => {
+                            if (e.detail.latLng) {
+                              setEditForm((p: any) => ({
+                                ...p,
+                                latitude: String(e.detail.latLng!.lat),
+                                longitude: String(e.detail.latLng!.lng)
+                              }));
+                            }
+                           }}
+                          style={{ width: '100%', height: '100%' }}
+                        >
+                            {editForm?.latitude && editForm?.longitude && (
+                              <Marker 
+                                position={{ lat: parseFloat(editForm.latitude), lng: parseFloat(editForm.longitude) }} 
+                                icon="https://maps.google.com/mapfiles/ms/icons/green-dot.png"
+                              />
+                            )}
+                        </GoogleMap>
+                      </APIProvider>
+                    ) : (
+                      <Text style={{ fontSize: 11, color: '#64748B' }}>Map available on Web</Text>
+                    )}
+                  </View>
+                  <View style={[styles.formRow2, { marginTop: 8 }]}>
+                     <View style={{ flex: 1 }}>
+                       <Text style={styles.locationLabel}>Lat</Text>
+                       <TextInput
+                        style={[styles.compactInput, { fontSize: 12 }]}
+                        value={String(editForm?.latitude ?? '')}
+                        onChangeText={(t) => setEditForm((p: any) => ({ ...p, latitude: t }))}
+                        placeholder="Lat"
+                      />
+                     </View>
+                    <View style={{ flex: 1 }}>
+                       <Text style={styles.locationLabel}>Lng</Text>
+                       <TextInput
+                        style={[styles.compactInput, { fontSize: 12 }]}
+                        value={String(editForm?.longitude ?? '')}
+                        onChangeText={(t) => setEditForm((p: any) => ({ ...p, longitude: t }))}
+                        placeholder="Lng"
+                      />
+                    </View>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.divider} />
+
+              <Text style={styles.compactSectionTitle}>Amenities & Visibility</Text>
+              <View style={styles.amenitiesGrid}>
+                {[
+                  { key: 'has_floodlights', label: 'Floodlights' },
+                  { key: 'has_parking', label: 'Parking' },
+                  { key: 'has_changing_rooms', label: 'Changing Rms' },
+                  { key: 'has_pavilion', label: 'Pavilion' },
+                  { key: 'has_washrooms', label: 'Washrooms' },
+                  { key: 'active', label: 'Visible' },
+                ].map((item) => (
+                  <View key={item.key} style={styles.amenityItemCompact}>
+                    <Text style={styles.switchLabelCompact}>{item.label}</Text>
+                    <Switch
+                      value={!!editForm?.[item.key]}
+                      onValueChange={(v) => setEditForm((p: any) => ({ ...p, [item.key]: v }))}
+                      thumbColor={!!editForm?.[item.key] ? '#10b981' : '#f4f3f4'}
+                      trackColor={{ false: '#767577', true: '#6ee7b7' }}
+                      ios_backgroundColor="#3e3e3e"
+                      style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
+                    />
+                  </View>
+                ))}
+              </View>
+
+              <View style={styles.divider} />
+
+              <Text style={styles.compactSectionTitle}>Weekly Availability & Pricing</Text>
+              <View style={styles.compactAvailabilityBox}>
                 <TimeSlotsEditor
                   ref={availabilityRef}
-                  groundId={String(editForm.id)}
-                  pitchType={String(editForm.pitch_type ?? '') || null}
+                  groundId={editForm?.id}
+                  pitchType={editForm?.pitch_type}
                   canEdit
+                  canConfigure={false}
                   showSaveButton={false}
                 />
-              ) : null}
+              </View>
             </ScrollView>
 
             <View style={styles.modalFooter}>
@@ -1059,6 +996,7 @@ const styles = StyleSheet.create({
   modalWrap: {
     flex: 1,
     justifyContent: 'center',
+    alignItems: 'center',
     padding: 16,
     zIndex: 10,
   },
@@ -1294,6 +1232,129 @@ const styles = StyleSheet.create({
     fontWeight: '300',
     color: IS_WEB ? '#2563EB' : '#00ea6b',
     fontFamily: IS_WEB ? '"Inter", sans-serif' : undefined,
+  },
+  compactFormGrid: {
+    padding: 12,
+  },
+  compactFormCol: {
+    gap: 12,
+  },
+  compactSectionTitle: {
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#1E293B',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  compactInput: {
+    fontFamily: 'Inter',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    backgroundColor: '#F8FAFC',
+    fontSize: 13,
+    color: '#0F172A',
+  },
+  compactMapContainer: {
+    height: 140,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  amenitiesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    padding: 12,
+    paddingTop: 0,
+  },
+  amenityItemCompact: {
+    width: IS_WEB ? '15%' : '45%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    backgroundColor: '#F8FAFC',
+  },
+  switchLabelCompact: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#475569',
+    fontFamily: 'Inter',
+  },
+  compactMediaGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  compactMediaItem: {
+    width: 50,
+    height: 50,
+    borderRadius: 6,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: '#F1F5F9',
+  },
+  compactMediaImg: {
+    width: '100%',
+    height: '100%',
+  },
+  compactMediaRemove: {
+    position: 'absolute',
+    top: 1,
+    right: 1,
+    backgroundColor: 'rgba(239, 68, 68, 0.9)',
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  compactMediaRemoveText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: '700',
+    lineHeight: 12,
+  },
+  compactMediaAdd: {
+    width: 50,
+    height: 50,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: '#CBD5E1',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 1,
+  },
+  compactMediaAddText: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  compactAvailabilityBox: {
+    padding: 12,
+    paddingTop: 0,
+  },
+  surfaceChipCompact: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
   },
 });
 

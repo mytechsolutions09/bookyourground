@@ -83,10 +83,12 @@ function TimeSlotsEditorInner(
     seedDefaults?: boolean;
   /** If false, hide the internal Save button (parent will call ref.save()). */
   showSaveButton?: boolean;
+  /** If false, hide the Add/Delete/Configure slots UI, but allow editing price/availability. */
+  canConfigure?: boolean;
 },
   ref: React.ForwardedRef<TimeSlotsEditorHandle>,
 ) {
-  const { groundId, pitchType, canEdit = true, seedDefaults = true, showSaveButton = true } = props;
+  const { groundId, pitchType, canEdit = true, canConfigure = true, seedDefaults = true, showSaveButton = true } = props;
 
   const { width } = useWindowDimensions();
   const showRightPreview = Platform.OS === 'web' && width >= 900;
@@ -211,6 +213,7 @@ function TimeSlotsEditorInner(
   }, [slots]);
 
   const loadSlots = React.useCallback(async () => {
+    if (!groundId || groundId === 'undefined') return;
     setLoading(true);
     try {
       if (pitchType && seedDefaults) {
@@ -486,7 +489,7 @@ function TimeSlotsEditorInner(
         <Text style={styles.subtitle}>{canEdit ? '' : '(read-only)'}</Text>
       </View>
 
-      {canEdit ? (
+      {canEdit && canConfigure ? (
         <View style={styles.addSlotsBox}>
           <Text style={styles.addSlotsTitle}>Add time slots (Presets)</Text>
           
@@ -772,7 +775,7 @@ function TimeSlotsEditorInner(
                           </Text>
                         </View>
 
-                        {canEdit && (
+                        {canEdit && canConfigure && (
                           <View style={styles.previewActions}>
                             <Pressable
                               onPress={() => {

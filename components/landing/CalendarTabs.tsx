@@ -316,7 +316,9 @@ export default function CalendarTabs() {
                 
                 <View style={styles.priceRow}>
                   <Text style={styles.priceRowText}>
-                    From ₹{ground.base_price_per_hour}/match • ₹{Math.round(ground.base_price_per_hour / 2)}/ team
+                    {ground._availableSlots?.length > 0
+                      ? `From ₹${Math.min(...ground._availableSlots.map((s: any) => Number(s.custom_price || 0)))}/match`
+                      : 'See Slots'}
                   </Text>
                 </View>
                 

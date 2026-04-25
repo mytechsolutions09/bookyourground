@@ -73,7 +73,7 @@ export default function SearchScreen() {
       // 1. Search Grounds
       let gQuery = supabase
         .from('grounds')
-        .select('*, ground_images(*), reviews(rating)')
+        .select('*, ground_images(*), reviews(rating), time_slots(custom_price, is_available)')
         .eq('active', true)
         .eq('approved', true);
 
@@ -193,7 +193,11 @@ export default function SearchScreen() {
             </View>
             
             <View style={styles.premiumPriceRow}>
-              <Text style={styles.premiumPriceText}>₹{item.base_price_per_hour}</Text>
+              <Text style={styles.premiumPriceText}>
+                {item.time_slots?.filter((s: any) => s.is_available && s.custom_price != null).length > 0
+                  ? `₹${Math.min(...item.time_slots.filter((s: any) => s.is_available && s.custom_price != null).map((s: any) => Number(s.custom_price)))}`
+                  : 'See Slots'}
+              </Text>
               <Text style={styles.premiumPriceUnit}> / match</Text>
             </View>
 

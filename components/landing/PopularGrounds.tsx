@@ -19,7 +19,8 @@ export default function PopularGrounds() {
           .select(`
             *,
             ground_images(*),
-            reviews(rating)
+            reviews(rating),
+            time_slots(custom_price, is_available)
           `)
           .eq('active', true)
           .eq('approved', true)
@@ -159,7 +160,9 @@ export default function PopularGrounds() {
         <View style={styles.cardFooter}>
           <View style={styles.pricePill}>
             <Text style={styles.priceText}>
-              ₹{Number(g.base_price_per_hour || 0).toLocaleString('en-IN')}
+              {g.time_slots?.filter((s: any) => s.is_available && s.custom_price != null).length > 0
+                ? `₹${Math.min(...g.time_slots.filter((s: any) => s.is_available && s.custom_price != null).map((s: any) => Number(s.custom_price)))}`
+                : 'See Slots'}
             </Text>
             <Text style={styles.priceUnitText}>
               {String(g.pitch_type ?? '').toLowerCase().includes('box') ? '/hour' : '/match'}
