@@ -17,9 +17,11 @@ import { formatCurrency, formatDate, formatDateDDMMYY, getStatusColor, isDateInP
 function NameInputCell({ booking, onSave }: { booking: BookingWithDetails, onSave: (id: string, name: string) => Promise<void> }) {
   const [localName, setLocalName] = useState(booking.booked_for_name || '');
   const [saving, setSaving] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const hasChanged = localName !== (booking.booked_for_name || '');
 
   const handleSave = async () => {
+    setIsFocused(false);
     if (!hasChanged || saving) return;
     setSaving(true);
     await onSave(booking.id, localName);
@@ -31,28 +33,76 @@ function NameInputCell({ booking, onSave }: { booking: BookingWithDetails, onSav
       <TouchableOpacity 
         activeOpacity={1} 
         onPress={(e) => e.stopPropagation()} 
-        style={styles.nameInputRow}
+        style={[
+          styles.nameInputRow, 
+          (isFocused || saving) && { borderColor: 'transparent', backgroundColor: '#f1f5f9' },
+          saving && { opacity: 0.7 }
+        ]}
       >
-        <User size={14} color="#01b854" style={styles.nameInputIcon} />
+        <User size={14} color={saving ? "#94A3B8" : "#01b854"} style={styles.nameInputIcon} />
         <TextInput
-          style={styles.nameInput}
+          style={[styles.nameInput, Platform.OS === 'web' && { outlineStyle: 'none' } as any]}
           value={localName}
           onChangeText={setLocalName}
+          onFocus={() => setIsFocused(true)}
+          onBlur={handleSave}
           placeholder="Player name..."
           placeholderTextColor="#94A3B8"
           onSubmitEditing={handleSave}
         />
-        {hasChanged && (
-          <TouchableOpacity 
-            style={styles.saveBadge} 
-            onPress={(e) => {
-              e.stopPropagation();
-              handleSave();
-            }}
-            disabled={saving}
-          >
-            <Text style={styles.saveBadgeText}>{saving ? '...' : 'SAVE'}</Text>
-          </TouchableOpacity>
+        {saving && (
+          <View style={{ marginRight: 8 }}>
+            <Text style={{ fontSize: 9, color: '#01b854', fontWeight: '800' }}>SAVING...</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function AmountInputCell({ booking, onSave }: { booking: BookingWithDetails, onSave: (id: string, amount: number) => Promise<void> }) {
+  const [localAmount, setLocalAmount] = useState(String(booking.total_amount || ''));
+  const [saving, setSaving] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const hasChanged = localAmount !== String(booking.total_amount || '');
+
+  const handleSave = async () => {
+    setIsFocused(false);
+    const numAmount = parseFloat(localAmount);
+    if (isNaN(numAmount) || saving) return;
+    if (!hasChanged) return;
+    setSaving(true);
+    await onSave(booking.id, numAmount);
+    setSaving(false);
+  };
+
+  return (
+    <View style={styles.nameInputWrapper}>
+      <TouchableOpacity 
+        activeOpacity={1} 
+        onPress={(e) => e.stopPropagation()} 
+        style={[
+          styles.nameInputRow, 
+          (isFocused || saving) && { borderColor: 'transparent', backgroundColor: '#f1f5f9' },
+          saving && { opacity: 0.7 }
+        ]}
+      >
+        <Text style={{ fontSize: 13, color: saving ? "#94A3B8" : "#01b854", fontWeight: '700', marginLeft: 4 }}>₹</Text>
+        <TextInput
+          style={[styles.nameInput, { paddingLeft: 4 }, Platform.OS === 'web' && { outlineStyle: 'none' } as any]}
+          value={localAmount}
+          onChangeText={setLocalAmount}
+          onFocus={() => setIsFocused(true)}
+          onBlur={handleSave}
+          placeholder="Amount..."
+          placeholderTextColor="#94A3B8"
+          keyboardType="numeric"
+          onSubmitEditing={handleSave}
+        />
+        {saving && (
+          <View style={{ marginRight: 8 }}>
+            <Text style={{ fontSize: 9, color: '#01b854', fontWeight: '800' }}>SAVING...</Text>
+          </View>
         )}
       </TouchableOpacity>
     </View>
@@ -217,6 +267,20 @@ export default function OwnerBookingsScreen() {
     } catch (err: any) {
       if (Platform.OS === 'web') alert(err.message || 'Failed to save name');
       else Alert.alert('Error', err.message || 'Failed to save name');
+    }
+  };
+
+  const saveBookingAmount = async (bookingId: string, amount: number) => {
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ total_amount: amount })
+        .eq('id', bookingId);
+      if (error) throw error;
+      setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, total_amount: amount } : b));
+    } catch (err: any) {
+      if (Platform.OS === 'web') alert(err.message || 'Failed to save amount');
+      else Alert.alert('Error', err.message || 'Failed to save amount');
     }
   };
 
@@ -877,7 +941,11 @@ export default function OwnerBookingsScreen() {
                 </View>
 
                 <View style={[styles.tableCell, styles.colAmount]}>
-                  <Text style={styles.amount}>{formatCurrency(item.total_amount)}</Text>
+                  {isOwnGround ? (
+                    <AmountInputCell booking={item} onSave={saveBookingAmount} />
+                  ) : (
+                    <Text style={styles.amount}>{formatCurrency(item.total_amount)}</Text>
+                  )}
                 </View>
 
                 <View style={[styles.tableCell, styles.colName]}>
@@ -932,9 +1000,15 @@ export default function OwnerBookingsScreen() {
                 </View>
 
                 <View style={styles.compactStatusInfoAx}>
-                  <Text style={[styles.compactAmount, !isLight && styles.compactAmountNative]}>
-                    {formatCurrency(item.total_amount)}
-                  </Text>
+                  <View style={{ width: 100 }}>
+                    {isOwnGround ? (
+                      <AmountInputCell booking={item} onSave={saveBookingAmount} />
+                    ) : (
+                      <Text style={[styles.compactAmount, !isLight && styles.compactAmountNative]}>
+                        {formatCurrency(item.total_amount)}
+                      </Text>
+                    )}
+                  </View>
                   <View style={[
                     styles.statusBadgeCompact,
                     item.status === 'confirmed' ? styles.statusConfirmed : styles.statusCancelled

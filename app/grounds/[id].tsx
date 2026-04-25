@@ -482,6 +482,7 @@ export default function GroundDetailsScreen() {
                   initialTeamType={
                     teams === 'one' || teams === 'both' ? (teams as 'one' | 'both') : undefined
                   }
+                  lockSlot={!!(date && time)}
                   fullWidth
                   noCard
                   hideTitle
