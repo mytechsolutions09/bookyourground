@@ -1000,6 +1000,19 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       hasNextDates: safeOffset < maxOffset,
     };
   }, [upcomingDates, dateOffset, datePageSize]);
+  
+  useEffect(() => {
+    if (initialDate && upcomingDates.length > 0) {
+      const idx = upcomingDates.findIndex(d => d.iso === initialDate);
+      if (idx !== -1) {
+        // Try to center it, or at least make it visible
+        const half = Math.floor(datePageSize / 2);
+        const nextOffset = Math.max(0, idx - half);
+        const maxOffset = Math.max(0, upcomingDates.length - datePageSize);
+        setDateOffset(Math.min(nextOffset, maxOffset));
+      }
+    }
+  }, [initialDate, upcomingDates, datePageSize]);
 
   function InlineDropdown({
     value,

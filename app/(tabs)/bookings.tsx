@@ -378,7 +378,12 @@ export default function BookingsScreen() {
   const content = (
     <View style={[styles.container, isWeb && !IS_DARK && styles.webContainerRoot]}>
       {isWeb && !IS_DARK ? (
-        <View style={styles.webTwoCol}>
+        <ScrollView 
+          style={styles.webScrollRoot} 
+          contentContainerStyle={styles.webScrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.webTwoCol}>
           {/* LEFT: bookings list */}
           <View style={styles.webLeft}>
             <View style={styles.webPageHeader}>
@@ -419,6 +424,31 @@ export default function BookingsScreen() {
                   ))}
                 </>
               )}
+
+              <View style={styles.webFilterSection}>
+                <View style={styles.webDateInputWrap}>
+                  <Calendar size={14} color="#64748B" />
+                  <input
+                    type="date"
+                    value={selectedDate || ''}
+                    onChange={(e) => setSelectedDate(e.target.value || null)}
+                    style={{
+                      border: 'none',
+                      outline: 'none',
+                      fontSize: '13px',
+                      color: '#0F172A',
+                      fontFamily: 'Inter',
+                      background: 'transparent',
+                      cursor: 'pointer'
+                    }}
+                  />
+                  {selectedDate && (
+                    <TouchableOpacity onPress={() => setSelectedDate(null)} style={{ marginLeft: 4 }}>
+                      <X size={14} color="#64748B" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
             </View>
 
             {/* Cards */}
@@ -550,25 +580,43 @@ export default function BookingsScreen() {
 
               {/* Balance & Stats */}
               <View style={styles.panelCard}>
-                <Text style={styles.panelTitle}>Balance & Stats</Text>
+                <Text style={styles.panelTitle}>Activity & Stats</Text>
                 <View style={styles.statsRow}>
                   <View style={styles.donutWrap}>
                     <View style={styles.donut} />
                     <View style={styles.donutCenter}>
-                      <Text style={styles.donutPct}>72%</Text>
+                      <Text style={styles.donutPct}>
+                        {Math.min(100, Math.round((bookings.filter(b => isDateInPast(b.booking_date) && b.status === 'confirmed').length / 20) * 100))}%
+                      </Text>
                     </View>
                   </View>
                   <View style={styles.statsText}>
-                    <Text style={styles.statsSmall}>of monthly</Text>
-                    <Text style={styles.statsBold}>games booked</Text>
-                    <Text style={[styles.statsBold, { color: '#00ea6b', marginTop: 8 }]}>18 hrs</Text>
-                    <Text style={styles.statsSmall}>played this month</Text>
+                    <Text style={styles.statsSmall}>Match Activity</Text>
+                    <Text style={styles.statsBold}>Level: Regular</Text>
+                    <Text style={[styles.statsBold, { color: '#00ea6b', marginTop: 4 }]}>
+                      {bookings.filter(b => isDateInPast(b.booking_date) && b.status === 'confirmed').length * 2} hrs
+                    </Text>
+                    <Text style={styles.statsSmall}>played total</Text>
+                  </View>
+                </View>
+
+                <View style={styles.statsDivider} />
+
+                <View style={styles.statsGrid}>
+                  <View style={styles.statsGridItem}>
+                    <Text style={styles.gridValue}>{new Set(bookings.map(b => b.ground_id)).size}</Text>
+                    <Text style={styles.gridLabel}>Grounds</Text>
+                  </View>
+                  <View style={styles.statsGridItem}>
+                    <Text style={styles.gridValue}>{bookings.filter(b => b.status === 'cancelled').length}</Text>
+                    <Text style={styles.gridLabel}>Cancelled</Text>
                   </View>
                 </View>
               </View>
             </ScrollView>
           </View>
         </View>
+      </ScrollView>
 
       ) : (
         <>
@@ -1399,14 +1447,21 @@ const styles = StyleSheet.create({
   },
 
   /* ── New card-based web layout ── */
+  webScrollRoot: {
+    flex: 1,
+  },
+  webScrollContent: {
+    paddingBottom: 60,
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center',
+    paddingHorizontal: 20,
+  },
   webTwoCol: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 20,
-    paddingTop: 0,
-    paddingBottom: 24,
-    paddingLeft: 0,
-    paddingRight: 0,
+    gap: 32,
+    paddingTop: 32,
     flex: 1,
   },
   webLeft: {
@@ -1436,9 +1491,26 @@ const styles = StyleSheet.create({
   webTabRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'space-between',
     marginBottom: 20,
     flexWrap: 'wrap',
+    gap: 12,
+  },
+  webFilterSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  webDateInputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   webTab: {
     paddingHorizontal: 12,
@@ -1688,6 +1760,36 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#374151',
     fontFamily: 'Inter',
+  },
+  statsDivider: {
+    height: 1,
+    backgroundColor: '#F1F5F9',
+    marginVertical: 4,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  statsGridItem: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 12,
+    alignItems: 'center',
+  },
+  gridValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  gridLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#64748B',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: 2,
   },
 });
 

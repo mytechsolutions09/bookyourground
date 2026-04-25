@@ -866,7 +866,7 @@ export default function OwnerGroundsScreen() {
                   groundId={editForm?.id}
                   pitchType={editForm?.pitch_type}
                   canEdit
-                  canConfigure={false}
+                  canConfigure={true}
                   showSaveButton={false}
                 />
               </View>

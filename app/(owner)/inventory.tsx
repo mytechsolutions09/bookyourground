@@ -10,6 +10,8 @@ import {
   ScrollView,
   ActivityIndicator,
   TextInput,
+  Alert,
+  Modal,
 } from 'react-native';
 
 const IS_WEB = Platform.OS === 'web';
@@ -24,6 +26,7 @@ import Card from '@/components/ui/Card';
 import { formatDateDDMMYY } from '@/utils/helpers';
 import { normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
 import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
+import { slugifyGroundSegment } from '@/utils/groundSlug';
 
 export default function OwnerInventoryScreen() {
   const { user } = useAuth();
@@ -35,6 +38,7 @@ export default function OwnerInventoryScreen() {
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [selectedDateFilter, setSelectedDateFilter] = useState<string | null>(null);
   const [daysToShow, setDaysToShow] = useState<number>(30);
+  const [bookingChoice, setBookingChoice] = useState<any | null>(null);
 
   const isWeb = Platform.OS === 'web';
 
@@ -162,6 +166,7 @@ export default function OwnerInventoryScreen() {
           }
 
           const isClickable = statusText !== 'FULL';
+          const teamParam = statusText === 'PARTIAL' ? 'one' : 'both';
 
           return (
             <TouchableOpacity 
@@ -169,13 +174,39 @@ export default function OwnerInventoryScreen() {
               style={[styles.slotChip, { backgroundColor: statusColor }]}
               disabled={!isClickable}
               onPress={() => {
-                router.push({
-                  pathname: `/ground/${ground.id}`,
-                  params: { 
-                    date: dateStr,
-                    initialSlot: normalizeDbTimeToHHMM(s.start_time)
-                  }
-                });
+                const startHHMM = normalizeDbTimeToHHMM(s.start_time);
+                const endHHMM = normalizeDbTimeToHHMM(s.end_time);
+                const isBox = (ground.pitch_type ?? '').toLowerCase().includes('box');
+                const basePrice = s.custom_price ?? 0;
+
+                const goToCheckout = (teams: 'one' | 'both') => {
+                  const finalAmount = isBox ? basePrice : (teams === 'one' ? basePrice / 2 : basePrice);
+                  router.push({
+                    pathname: '/checkout/new',
+                    params: { 
+                      groundId: ground.id,
+                      date: dateStr,
+                      time: startHHMM,
+                      endTime: endHHMM,
+                      teamType: teams,
+                      amount: finalAmount.toString(),
+                      pricePerHour: basePrice.toString()
+                    }
+                  });
+                };
+
+                if (statusText === 'EMPTY' && !isBox) {
+                  setBookingChoice({
+                    ground,
+                    slot: s,
+                    dateStr,
+                    startHHMM,
+                    endHHMM,
+                    basePrice,
+                  });
+                } else {
+                  goToCheckout(teamParam as 'one' | 'both');
+                }
               }}
             >
               <Text style={[styles.slotTime, { color: textColor }]}>
@@ -219,7 +250,7 @@ export default function OwnerInventoryScreen() {
                 d.setFullYear(y, m - 1, day);
               }
               d.setDate(d.getDate() + i);
-              const dateStr = d.toISOString().split('T')[0];
+              const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
               const displayDate = d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
 
               return (
@@ -370,6 +401,78 @@ export default function OwnerInventoryScreen() {
     <>
       {!isWeb && <MobileAppNavbar title="Inventory Plan" titleColor="#01b854" />}
       {isWeb ? <WebLayout>{content}</WebLayout> : <View style={styles.screen}>{content}</View>}
+
+      <Modal
+        visible={!!bookingChoice}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setBookingChoice(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <Card style={styles.choiceCard}>
+            <Text style={styles.choiceTitle}>Select Booking Type</Text>
+            <Text style={styles.choiceSubtitle}>
+              {bookingChoice?.ground?.name} - {bookingChoice?.dateStr}
+            </Text>
+            
+            <View style={styles.choiceButtons}>
+              <TouchableOpacity 
+                style={styles.choiceBtn}
+                onPress={() => {
+                  const b = bookingChoice;
+                  const finalAmount = (b.basePrice / 2);
+                  setBookingChoice(null);
+                  router.push({
+                    pathname: '/checkout/new',
+                    params: { 
+                      groundId: b.ground.id,
+                      date: b.dateStr,
+                      time: b.startHHMM,
+                      endTime: b.endHHMM,
+                      teamType: 'one',
+                      amount: finalAmount.toString(),
+                      pricePerHour: b.basePrice.toString()
+                    }
+                  });
+                }}
+              >
+                <Text style={styles.choiceBtnText}>Book 1 Team</Text>
+                <Text style={styles.choiceBtnPrice}>₹{(bookingChoice?.basePrice / 2).toLocaleString('en-IN')}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.choiceBtn, styles.choiceBtnPrimary]}
+                onPress={() => {
+                  const b = bookingChoice;
+                  setBookingChoice(null);
+                  router.push({
+                    pathname: '/checkout/new',
+                    params: { 
+                      groundId: b.ground.id,
+                      date: b.dateStr,
+                      time: b.startHHMM,
+                      endTime: b.endHHMM,
+                      teamType: 'both',
+                      amount: b.basePrice.toString(),
+                      pricePerHour: b.basePrice.toString()
+                    }
+                  });
+                }}
+              >
+                <Text style={[styles.choiceBtnText, styles.choiceBtnTextWhite]}>Full Ground</Text>
+                <Text style={[styles.choiceBtnPrice, styles.choiceBtnTextWhite]}>₹{bookingChoice?.basePrice?.toLocaleString('en-IN')}</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity 
+              style={styles.choiceCancel}
+              onPress={() => setBookingChoice(null)}
+            >
+              <Text style={styles.choiceCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </Card>
+        </View>
+      </Modal>
     </>
   );
 }
@@ -603,5 +706,70 @@ const styles = StyleSheet.create({
   emptyText: {
     color: '#6B7280',
     fontSize: 15,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  choiceCard: {
+    width: Platform.OS === 'web' ? 400 : '100%',
+    padding: 24,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+  },
+  choiceTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0F172A',
+    textAlign: 'center',
+  },
+  choiceSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: 4,
+    marginBottom: 24,
+  },
+  choiceButtons: {
+    gap: 12,
+  },
+  choiceBtn: {
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  choiceBtnPrimary: {
+    backgroundColor: '#01b854',
+    borderColor: '#01b854',
+  },
+  choiceBtnText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  choiceBtnTextWhite: {
+    color: '#FFFFFF',
+  },
+  choiceBtnPrice: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#01b854',
+  },
+  choiceCancel: {
+    marginTop: 20,
+    alignItems: 'center',
+    padding: 8,
+  },
+  choiceCancelText: {
+    color: '#94A3B8',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });

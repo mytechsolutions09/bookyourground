@@ -22,7 +22,7 @@ import WebLayout from '@/components/web/WebLayout';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import { formatCurrency, formatDateDDMMYYYY } from '@/utils/helpers';
-import { CreditCard, ShieldCheck, Clock, Calendar, MapPin, ChevronLeft, Wallet } from 'lucide-react-native';
+import { CreditCard, ShieldCheck, Clock, Calendar, MapPin, ChevronLeft, Wallet, Users } from 'lucide-react-native';
 import { hoursBetweenBooked, normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
 
 export default function CheckoutScreen() {
@@ -43,6 +43,7 @@ export default function CheckoutScreen() {
   const [fetchingCoupons, setFetchingCoupons] = useState(false);
   const [applyingCoupon, setApplyingCoupon] = useState(false);
   const [customCashAmount, setCustomCashAmount] = useState<string>('');
+  const [bookedForName, setBookedForName] = useState<string>('');
 
   useEffect(() => {
     fetchActiveGateways();
@@ -99,8 +100,10 @@ export default function CheckoutScreen() {
             end_time: booking.end_time,
             team_type: booking.team_type,
             coupon_id: booking.coupon_id,
+            booked_for_name: bookedForName,
           } : {
             total_amount: parseFloat(customCashAmount) || booking.total_amount,
+            booked_for_name: bookedForName,
           },
         },
       });
@@ -119,6 +122,14 @@ export default function CheckoutScreen() {
       }
 
       if (data && data.success) {
+        // Direct update fallback to ensure name is saved even if edge function is stale
+        if (bookedForName) {
+           await supabase
+            .from('bookings')
+            .update({ booked_for_name: bookedForName })
+            .eq('id', data.bookingId);
+        }
+
         Alert.alert('Success', 'Booking confirmed via Cash payment.');
         router.replace(`/bookings/${data.bookingId}` as any);
       } else {
@@ -609,6 +620,13 @@ export default function CheckoutScreen() {
                        <RNText style={styles.footerDetailText}>{booking.start_time.substring(0, 5)} - {booking.end_time.substring(0, 5)}</RNText>
                     </View>
                  </View>
+                 <View style={styles.footerDetail}>
+                    <Users size={16} color="#01b854" />
+                    <View>
+                       <RNText style={styles.detailTinyLabel}>BOOKING FOR</RNText>
+                       <RNText style={styles.footerDetailText}>{booking.team_type === 'one' ? '1 Team' : 'Both Teams'}</RNText>
+                    </View>
+                 </View>
               </View>
 
               <View style={styles.productActionsRow}>
@@ -743,7 +761,18 @@ export default function CheckoutScreen() {
             ) : selectedGateway === 'cash' ? (
               <View style={{ gap: 12, marginBottom: 12 }}>
                 <View style={styles.cashAmountSection}>
-                  <RNText style={styles.cashAmountLabel}>Enter Received Amount (Cash)</RNText>
+                  <RNText style={styles.cashAmountLabel}>Player Name (for record)</RNText>
+                  <RNTextInput
+                    style={styles.cashAmountInput}
+                    placeholder="Enter player name..."
+                    placeholderTextColor="#9CA3AF"
+                    value={bookedForName}
+                    onChangeText={setBookedForName}
+                  />
+                </View>
+
+                <View style={styles.cashAmountSection}>
+                  <RNText style={styles.cashAmountLabel}>Ground price</RNText>
                   <RNTextInput
                     style={styles.cashAmountInput}
                     placeholder="Enter amount..."

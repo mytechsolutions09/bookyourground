@@ -389,7 +389,8 @@ serve(async (req) => {
             total_amount: netAmount,
             coupon_id,
             discount_amount: discountAmount,
-            notes: (team_type === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ' (Cash Payment confirmed by Owner)',
+            booked_for_name: bookingDetails.booked_for_name || bookingDetails.bookedForName,
+            notes: (team_type === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Player: ${bookingDetails.booked_for_name || bookingDetails.bookedForName || 'Manual Entry'})` + ' (Cash Payment confirmed by Owner)',
             status: 'confirmed',
             payment_method: 'cash',
           })
@@ -412,6 +413,11 @@ serve(async (req) => {
           
           if (bookingDetails?.total_amount != null) {
              updatePayload.total_amount = Number(bookingDetails.total_amount);
+          }
+          
+          if (bookingDetails?.booked_for_name || bookingDetails?.bookedForName) {
+             updatePayload.booked_for_name = bookingDetails.booked_for_name || bookingDetails.bookedForName;
+             updatePayload.notes = `(Player: ${bookingDetails.booked_for_name || bookingDetails.bookedForName}) Cash Payment confirmed by Owner`;
           }
           
           const { error: updateError } = await supabaseClient.from('bookings').update(updatePayload).eq('id', bookingId);

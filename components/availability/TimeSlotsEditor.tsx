@@ -512,28 +512,30 @@ function TimeSlotsEditorInner(
             />
           </View>
 
-          <View style={[styles.draftField, { zIndex: 30 }]}>
-            <Text style={styles.draftLabel}>Duration (minutes) *</Text>
-            <TextInput
-              style={styles.addSlotsInput}
-              value={slotDurationMinutesText}
-              onChangeText={setSlotDurationMinutesText}
-              keyboardType="numeric"
-              placeholder="60"
-              placeholderTextColor="#9CA3AF"
-            />
-          </View>
+          <View style={styles.addSlotsRow}>
+            <View style={[styles.draftField, styles.addSlotsDuration, { zIndex: 30 }]}>
+              <Text style={styles.draftLabel}>Duration (mins) *</Text>
+              <TextInput
+                style={styles.addSlotsInput}
+                value={slotDurationMinutesText}
+                onChangeText={setSlotDurationMinutesText}
+                keyboardType="numeric"
+                placeholder="60"
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
 
-          <View style={[styles.draftField, { zIndex: 20 }]}>
-            <Text style={styles.draftLabel}>Custom price per slot (₹) *</Text>
-            <TextInput
-              style={styles.addSlotsInput}
-              value={slotCustomPriceText}
-              onChangeText={setSlotCustomPriceText}
-              keyboardType="numeric"
-              placeholder="e.g. 1500"
-              placeholderTextColor="#9CA3AF"
-            />
+            <View style={[styles.draftField, styles.addSlotsPrice, { zIndex: 20 }]}>
+              <Text style={styles.draftLabel}>Price (₹) *</Text>
+              <TextInput
+                style={styles.addSlotsInput}
+                value={slotCustomPriceText}
+                onChangeText={setSlotCustomPriceText}
+                keyboardType="numeric"
+                placeholder="e.g. 1500"
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
           </View>
 
           <Button
@@ -1078,8 +1080,8 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     backgroundColor: '#F9FAFB',
     borderRadius: 12,
-    padding: 10,
-    marginBottom: 12,
+    padding: 8,
+    marginBottom: 8,
   },
   addSlotsTitle: {
     fontSize: 13,
@@ -1098,15 +1100,15 @@ const styles = StyleSheet.create({
   addSlotsInput: {
     borderWidth: 1,
     borderColor: '#D1D5DB',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
     backgroundColor: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '300',
     color: '#111827',
     fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
-    marginBottom: 8,
+    marginBottom: 4,
   },
   addAnotherBtn: {
     alignSelf: 'flex-start',
@@ -1201,15 +1203,15 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
   },
   draftField: {
-    marginBottom: 10,
+    marginBottom: 6,
     zIndex: 50,
   },
   draftLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '300',
     color: '#374151',
     fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
-    marginBottom: 4,
+    marginBottom: 2,
   },
 });
 
@@ -1279,9 +1281,9 @@ const startTimeDropdownStyles = StyleSheet.create({
     width: '100%',
   },
   button: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: '#D1D5DB',
     backgroundColor: '#FFFFFF',

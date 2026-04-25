@@ -20,6 +20,10 @@ function NameInputCell({ booking, onSave }: { booking: BookingWithDetails, onSav
   const [isFocused, setIsFocused] = useState(false);
   const hasChanged = localName !== (booking.booked_for_name || '');
 
+  useEffect(() => {
+    setLocalName(booking.booked_for_name || '');
+  }, [booking.booked_for_name]);
+
   const handleSave = async () => {
     setIsFocused(false);
     if (!hasChanged || saving) return;
@@ -734,9 +738,9 @@ export default function OwnerBookingsScreen() {
                 if (sortKey === 'booked_at') setSortAsc(!sortAsc);
                 else { setSortKey('booked_at'); setSortAsc(true); }
               }}
-              style={[styles.tableHeaderCell, styles.colBookedAt, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
+              style={[styles.colBookedAt, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
             >
-              <Text style={styles.tableHeaderCell}>Booked at</Text>
+              <Text style={styles.tableHeaderText}>Booked at</Text>
               {sortKey === 'booked_at' && (
                 <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
               )}
@@ -747,9 +751,9 @@ export default function OwnerBookingsScreen() {
                 if (sortKey === 'ground') setSortAsc(!sortAsc);
                 else { setSortKey('ground'); setSortAsc(true); }
               }}
-              style={[styles.tableHeaderCell, styles.colGround, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
+              style={[styles.colGround, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
             >
-              <Text style={styles.tableHeaderCell}>Ground</Text>
+              <Text style={styles.tableHeaderText}>Ground</Text>
               {sortKey === 'ground' && (
                 <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
               )}
@@ -760,9 +764,9 @@ export default function OwnerBookingsScreen() {
                 if (sortKey === 'date') setSortAsc(!sortAsc);
                 else { setSortKey('date'); setSortAsc(true); }
               }}
-              style={[styles.tableHeaderCell, styles.colDateTime, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
+              style={[styles.colDateTime, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
             >
-              <Text style={styles.tableHeaderCell}>Slot Date & time</Text>
+              <Text style={styles.tableHeaderText}>Slot Date & time</Text>
               {sortKey === 'date' && (
                 <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
               )}
@@ -773,9 +777,9 @@ export default function OwnerBookingsScreen() {
                 if (sortKey === 'teams') setSortAsc(!sortAsc);
                 else { setSortKey('teams'); setSortAsc(true); }
               }}
-              style={[styles.tableHeaderCell, styles.colTeams, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
+              style={[styles.colTeams, { flexDirection: 'row', gap: 4, paddingLeft: 12 }]}
             >
-              <Text style={styles.tableHeaderCell}>Teams</Text>
+              <Text style={styles.tableHeaderText}>Teams</Text>
               {sortKey === 'teams' && (
                 <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
               )}
@@ -786,9 +790,9 @@ export default function OwnerBookingsScreen() {
                 if (sortKey === 'status') setSortAsc(!sortAsc);
                 else { setSortKey('status'); setSortAsc(true); }
               }}
-              style={[styles.tableHeaderCell, styles.colStatus, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
+              style={[styles.colStatus, { flexDirection: 'row', gap: 4, paddingLeft: 12 }]}
             >
-              <Text style={styles.tableHeaderCell}>Status</Text>
+              <Text style={styles.tableHeaderText}>Status</Text>
               {sortKey === 'status' && (
                 <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
               )}
@@ -799,22 +803,26 @@ export default function OwnerBookingsScreen() {
                 if (sortKey === 'amount') setSortAsc(!sortAsc);
                 else { setSortKey('amount'); setSortAsc(true); }
               }}
-              style={[styles.tableHeaderCell, styles.colAmount, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
+              style={[styles.colAmount, { flexDirection: 'row', alignItems: 'center', gap: 4, paddingLeft: 32 }]}
             >
-              <Text style={styles.tableHeaderCell}>Amount</Text>
+              <Text style={styles.tableHeaderText}>Amount</Text>
               {sortKey === 'amount' && (
                 <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
               )}
             </TouchableOpacity>
+
+            <View style={[styles.colPayment, { paddingLeft: 20 }]}>
+              <Text style={styles.tableHeaderText}>Payment</Text>
+            </View>
 
             <TouchableOpacity 
               onPress={() => {
                 if (sortKey === 'name') setSortAsc(!sortAsc);
                 else { setSortKey('name'); setSortAsc(true); }
               }}
-              style={[styles.tableHeaderCell, styles.colName, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
+              style={[styles.colName, { flexDirection: 'row', alignItems: 'center', gap: 4, paddingLeft: 56 }]}
             >
-              <Text style={styles.tableHeaderCell}>Name</Text>
+              <Text style={styles.tableHeaderText}>Name</Text>
               {sortKey === 'name' && (
                 <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
               )}
@@ -825,9 +833,9 @@ export default function OwnerBookingsScreen() {
                 if (sortKey === 'paid') setSortAsc(!sortAsc);
                 else { setSortKey('paid'); setSortAsc(true); }
               }}
-              style={[styles.tableHeaderCell, styles.colPaymentReceived, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
+              style={[styles.colPaymentReceived, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
             >
-              <Text style={styles.tableHeaderCell}>Paid</Text>
+              <Text style={styles.tableHeaderText}>Paid</Text>
               {sortKey === 'paid' && (
                 <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
               )}
@@ -910,11 +918,11 @@ export default function OwnerBookingsScreen() {
                               }}
                               style={styles.partialBadge}
                             >
-                              <Text style={styles.partialBadgeText}>PARTIAL (NEED 1 MORE)</Text>
+                              <Text style={styles.partialBadgeText}>PARTIAL</Text>
                             </TouchableOpacity>
                           ) : (
                             <View style={styles.fullMatchBadge}>
-                              <Text style={styles.fullMatchBadgeText}>FULL (MATCH READY)</Text>
+                              <Text style={styles.fullMatchBadgeText}>FULL</Text>
                             </View>
                           )}
                         </>
@@ -947,6 +955,20 @@ export default function OwnerBookingsScreen() {
                   ) : (
                     <Text style={styles.amount}>{formatCurrency(item.total_amount)}</Text>
                   )}
+                </View>
+
+                <View style={[styles.tableCell, styles.colPayment]}>
+                   <View style={[
+                     styles.paymentBadge,
+                     item.payment_method === 'cash' ? styles.paymentCash : styles.paymentOnline
+                   ]}>
+                     <Text style={[
+                       styles.paymentBadgeText,
+                       item.payment_method === 'cash' ? styles.paymentCash : styles.paymentOnline
+                     ]}>
+                       {(item.payment_method || 'online').toUpperCase()}
+                     </Text>
+                   </View>
                 </View>
 
                 <View style={[styles.tableCell, styles.colName]}>
@@ -1169,6 +1191,13 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textTransform: 'uppercase',
   },
+  tableHeaderText: {
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+  },
   tableRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -1179,29 +1208,41 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   tableCell: {
-    paddingRight: 16,
+    // paddingRight: 16,
   },
   colBookedAt: {
     width: 110,
+    marginRight: 16,
   },
   colGround: {
     flex: 1.5,
+    marginRight: 16,
   },
   colDateTime: {
-    flex: 1.8,
+    width: 140,
+    marginRight: 16,
   },
   colTeams: {
-    width: 100,
+    width: 80,
+    marginRight: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-
   colStatus: {
     width: 100,
+    marginRight: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   colAmount: {
-    width: 100,
+    width: 90,
+    marginRight: 16,
   },
   colPayment: {
-    width: 90,
+    width: 85,
+    marginRight: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   colWho: {
     flex: 1.8,
@@ -1303,6 +1344,7 @@ const styles = StyleSheet.create({
   },
   colName: {
     width: 150,
+    marginRight: 16,
   },
   colPaymentReceived: {
     width: 60,
