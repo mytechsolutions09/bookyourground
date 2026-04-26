@@ -82,6 +82,8 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
   const [favoritesCount, setFavoritesCount] = useState(0);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  const [isBottomBarVisible, setIsBottomBarVisible] = useState(true);
+  const [lastScrollPos, setLastScrollPos] = useState(0);
   const searchInputRef = React.useRef<TextInput>(null);
 
   useEffect(() => {
@@ -271,19 +273,36 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
     const handleScroll = () => {
       const y = (window as any).scrollY || 0;
       setScrolled(y > 8);
+      
+      if (Math.abs(y - lastScrollPos) > 10) {
+        if (y > lastScrollPos && y > 100) {
+          setIsBottomBarVisible(false);
+        } else {
+          setIsBottomBarVisible(true);
+        }
+        setLastScrollPos(y);
+      }
     };
 
     const sub = DeviceEventEmitter.addListener('mainScroll', (data) => {
       setScrolled(data.y > 8);
+      if (Math.abs(data.y - lastScrollPos) > 10) {
+        if (data.y > lastScrollPos && data.y > 100) {
+          setIsBottomBarVisible(false);
+        } else {
+          setIsBottomBarVisible(true);
+        }
+        setLastScrollPos(data.y);
+      }
     });
 
     handleScroll();
-    window.addEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => {
       window.removeEventListener('scroll', handleScroll);
       sub.remove();
     };
-  }, []);
+  }, [lastScrollPos]);
 
   // Navbar search: fetch ground suggestions as user types on landing pages.
 
@@ -967,6 +986,12 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                         />
 
                         <NavLink 
+                          href="/profile/orders" 
+                          icon={ShoppingBag} 
+                          label="Shop Orders" 
+                        />
+
+                        <NavLink 
                           href="/(tabs)/bookings" 
                           icon={ClipboardList} 
                           label="My Bookings" 
@@ -1021,8 +1046,11 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
         </View>
       </View>
 
-      {isCompact && !segments.includes('(tabs)') && cleanPath !== '/grounds' && cleanPath !== '/shop' && !isCheckoutPage && (
-        <View style={styles.bottomBar}>
+      {isCompact && !isCheckoutPage && (
+        <View style={[
+          styles.bottomBar,
+          !isBottomBarVisible && { transform: [{ translateY: 100 }] }
+        ]}>
           {[
             { label: 'Home', icon: House, href: '/' },
             { label: 'Grounds', icon: LandPlot, href: '/grounds' },
@@ -1742,14 +1770,22 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 64,
+    height: 72,
     backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-    zIndex: 3000,
-    paddingHorizontal: 10,
-    paddingBottom: 2,
+    borderTopColor: 'rgba(0,0,0,0.05)',
+    paddingBottom: Platform.OS === 'web' ? 0 : 20,
+    zIndex: 10000,
+    ...Platform.select({
+      web: {
+        position: 'fixed' as any,
+        bottom: 0,
+        left: 0,
+        right: 0,
+        transition: 'transform 0.3s ease-in-out',
+      }
+    }),
   },
   bottomBarItem: {
     flex: 1,

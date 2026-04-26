@@ -18,14 +18,15 @@ type Variant = 'web' | 'native';
 export default function LandingScrollContent({ variant }: { variant: Variant }) {
   const isWeb = Platform.OS === 'web';
   const { width } = useWindowDimensions();
-  const heroHeight = width < 900 ? 720 : 850;
+  const isCompact = width < 1025;
+  const heroHeight = isCompact ? '100%' : (width < 900 ? 720 : 850);
 
   if (isWeb && variant === 'web') {
     return (
       <View style={{ flex: 1 }}>
         <ScrollView
           style={[landingScrollStyles.container, { backgroundColor: '#FFFFFF' }]}
-          contentContainerStyle={[landingScrollStyles.scrollContent, { backgroundColor: '#FFFFFF' }]}
+          contentContainerStyle={[landingScrollStyles.scrollContent, { backgroundColor: '#FFFFFF', flexGrow: 1 }]}
           showsVerticalScrollIndicator={false}
           scrollEventThrottle={16}
           onScroll={(e) => {
@@ -38,60 +39,64 @@ export default function LandingScrollContent({ variant }: { variant: Variant }) 
             This keeps it at the top while the rest of the content scrolls over it.
           */}
           <View style={{ 
-            position: 'sticky' as any, 
+            position: isCompact ? 'relative' : 'sticky' as any, 
             top: 0, 
             zIndex: 0,
-            height: heroHeight,
+            height: isCompact ? '100vh' : heroHeight,
             width: '100%',
           }}>
             <HeroWeb />
           </View>
 
-          {/* 
-            Subsequent Section 2: Find an Opposition
-          */}
-          <View style={{ 
-            zIndex: 5,
-            backgroundColor: '#FFFFFF',
-            position: 'relative',
-          }}>
-            <FindOpposition />
-          </View>
+          {!isCompact && (
+            <>
+              {/* 
+                Subsequent Section 2: Find an Opposition
+              */}
+              <View style={{ 
+                zIndex: 5,
+                backgroundColor: '#FFFFFF',
+                position: 'relative',
+              }}>
+                <FindOpposition />
+              </View>
 
-          {/* 
-            Subsequent Section 3: Scoring & Stats.
-            We make this sticky too, so it stays at top after scrolling over hero.
-          */}
-          <View style={{ 
-            position: 'sticky' as any, 
-            top: 0, 
-            zIndex: 10,
-            backgroundColor: '#FFFFFF', // Solid background to cover hero
-          }}>
-            <ScoringStatsSection />
-          </View>
+              {/* 
+                Subsequent Section 3: Scoring & Stats.
+                We make this sticky too, so it stays at top after scrolling over hero.
+              */}
+              <View style={{ 
+                position: 'sticky' as any, 
+                top: 0, 
+                zIndex: 10,
+                backgroundColor: '#FFFFFF', // Solid background to cover hero
+              }}>
+                <ScoringStatsSection />
+              </View>
 
-          {/* 
-            Subsequent Section 3+: The rest of the page.
-            This section will scroll OVER section 2 because it has a higher z-index.
-          */}
-          <View style={{ 
-            backgroundColor: '#FFFFFF', 
-            zIndex: 20, 
-            position: 'relative',
-            marginTop: 0,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: -20 },
-            shadowOpacity: 0.1,
-            shadowRadius: 30,
-          }}>
-            <CalendarTabs />
-            <PopularGrounds />
-            <GroundsNearYou />
-            <Features />
-            <CallToAction />
-            <SiteFooter />
-          </View>
+              {/* 
+                Subsequent Section 3+: The rest of the page.
+                This section will scroll OVER section 2 because it has a higher z-index.
+              */}
+              <View style={{ 
+                backgroundColor: '#FFFFFF', 
+                zIndex: 20, 
+                position: 'relative',
+                marginTop: 0,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: -20 },
+                shadowOpacity: 0.1,
+                shadowRadius: 30,
+              }}>
+                <CalendarTabs />
+                <PopularGrounds />
+                <GroundsNearYou />
+                <Features />
+                <CallToAction />
+                <SiteFooter />
+              </View>
+            </>
+          )}
         </ScrollView>
       </View>
     );

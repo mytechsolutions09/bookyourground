@@ -22,11 +22,19 @@ import {
   Maximize,
   Map as MapIcon,
   Info,
+  Cloud,
+  CloudRain,
+  CloudLightning,
+  CloudSnow,
+  CloudDrizzle,
 } from 'lucide-react-native';
+import * as ExpoLocation from 'expo-location';
+import { fetchWeather, fetchCityName } from '@/utils/weather';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
-import { formatBookingSlotSummary } from '@/utils/bookingSlotFormat';
+import { makeGroundPath } from '@/utils/groundSlug';
 import BookingCard from '@/components/bookings/BookingCard';
 import { useUI } from '@/contexts/UIContext';
+import DashboardMap from '@/components/maps/DashboardMap';
 
 const THEME_BG = '#043529';
 const THEME_CARD_BG = '#06392e';
@@ -43,6 +51,8 @@ function DashboardContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [popularSlots, setPopularSlots] = useState<any[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [weather, setWeather] = useState<{ temp: number; condition: string } | null>(null);
+  const [locationName, setLocationName] = useState<string>('Gurgaon');
 
   const { setTabBarVisible } = useUI();
   const lastScrollY = React.useRef(0);
@@ -102,14 +112,23 @@ function DashboardContent() {
         .limit(3);
       
       if (groundsSlots) {
-        setPopularSlots(groundsSlots.map(g => ({
-          id: g.id,
-          name: g.name,
-          time: '5:00',
-          ampm: 'PM',
-          slotsLeft: Math.floor(Math.random() * 5) + 1,
-          type: g.pitch_type,
-        })));
+        setPopularSlots(groundsSlots.map(g => {
+          // Generate a semi-realistic slot based on current hour
+          const currentHour = new Date().getHours();
+          const slotHour = (currentHour + Math.floor(Math.random() * 4) + 1) % 24;
+          const ampm = slotHour >= 12 ? 'PM' : 'AM';
+          const displayHour = slotHour % 12 || 12;
+          
+          return {
+            id: g.id,
+            name: g.name,
+            time: `${displayHour}:00`,
+            ampm: ampm,
+            slotsLeft: Math.floor(Math.random() * 5) + 1,
+            type: g.pitch_type,
+            ground: g
+          };
+        }));
       }
 
     } catch (err) {
@@ -132,7 +151,47 @@ function DashboardContent() {
 
   useEffect(() => {
     loadBookings();
+    initLocationAndWeather();
   }, [user]);
+
+  const initLocationAndWeather = async () => {
+    try {
+      const { status } = await ExpoLocation.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        console.log('Permission to access location was denied');
+        return;
+      }
+
+      const location = await ExpoLocation.getCurrentPositionAsync({});
+      const { latitude, longitude } = location.coords;
+
+      // Parallel fetch for speed
+      const [weatherData, cityName] = await Promise.all([
+        fetchWeather(latitude, longitude),
+        fetchCityName(latitude, longitude)
+      ]);
+
+      if (weatherData) {
+        setWeather({ temp: weatherData.temp, condition: weatherData.conditionText });
+      }
+      if (cityName) {
+        setLocationName(cityName);
+      }
+    } catch (error) {
+      console.error('Error initializing location/weather:', error);
+    }
+  };
+
+  const WeatherIcon = useMemo(() => {
+    if (!weather) return Sun;
+    const cond = weather.condition.toLowerCase();
+    if (cond.includes('rain')) return CloudRain;
+    if (cond.includes('cloud')) return Cloud;
+    if (cond.includes('thunder')) return CloudLightning;
+    if (cond.includes('snow')) return CloudSnow;
+    if (cond.includes('drizzle')) return CloudDrizzle;
+    return Sun;
+  }, [weather]);
 
   const todayIso = useMemo(() => {
     const d = new Date();
@@ -222,7 +281,7 @@ function DashboardContent() {
   const IS_DARK = false; // Forced light theme for modern mobile UI
 
   const renderRightPanel = () => (
-    <View style={styles.rightPanel}>
+    <View style={[styles.rightPanel, isCompact && { width: '100%', paddingLeft: 24 }]}>
       <View style={styles.panelCard}>
         <View style={styles.panelHeader}>
           <Text style={styles.panelTitle}>Quick Book</Text>
@@ -296,7 +355,7 @@ function DashboardContent() {
             </View>
             <TouchableOpacity 
               style={styles.slotAction}
-              onPress={() => router.push(`/ground/${slot.id}` as any)}
+              onPress={() => router.push(makeGroundPath(slot.ground) as any)}
             >
               <Text style={styles.slotActionText}>Book</Text>
             </TouchableOpacity>
@@ -337,7 +396,7 @@ function DashboardContent() {
       onScroll={onScroll}
       scrollEventThrottle={16}
     >
-      <View style={styles.mainLayout}>
+      <View style={[styles.mainLayout, isCompact && { flexDirection: 'column' }]}>
         <View style={styles.centerContent}>
           {/* Greeting Row */}
           <View style={styles.greetingRow}>
@@ -350,102 +409,112 @@ function DashboardContent() {
               </Text>
             </View>
             <View style={styles.weatherBadge}>
-              <Sun size={18} color="#F59E0B" />
-              <Text style={styles.weatherText}>22°C • Clear • Gurgaon</Text>
+              <WeatherIcon size={18} color={weather?.condition.toLowerCase().includes('clear') ? "#F59E0B" : "#64748B"} />
+              <Text style={styles.weatherText}>
+                {weather ? `${weather.temp}°C • ${weather.condition} • ` : '22°C • Clear • '}
+                {locationName}
+              </Text>
             </View>
           </View>
 
-          {/* Search Hero */}
-          <View style={styles.searchHero}>
-            <View style={styles.searchHeroText}>
-              <Text style={styles.searchHeroTitle}>Book your next game</Text>
-              <Text style={styles.searchHeroSub}>Search grounds near you...</Text>
-              <View style={styles.dashboardSearch}>
-                <Search size={18} color="#94A3B8" />
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Football turf in Gurgaon"
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  onSubmitEditing={handleSearch}
-                  placeholderTextColor="#94A3B8"
-                />
-                <TouchableOpacity style={styles.searchBtn} onPress={handleSearch}>
-                  <Text style={styles.searchBtnText}>Search</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-            <View style={styles.searchHeroImagePlaceholder}>
-              <LayoutDashboard size={120} color="rgba(255,255,255,0.1)" />
-            </View>
+          {/* Live Map */}
+          <View style={styles.mapContainer}>
+             <DashboardMap />
           </View>
 
           {/* Cards Row */}
-          <View style={styles.cardsRow}>
+          <View style={[styles.cardsRow, isCompact && { flexDirection: 'column' }]}>
             <View style={styles.contentCardLarge}>
               <View style={styles.cardHeader}>
                 <Text style={styles.cardHeaderTitle}>Upcoming Booking</Text>
-                <TouchableOpacity><Text style={styles.cardActionText}>Cancel</Text></TouchableOpacity>
+                {nextBooking && (
+                  <TouchableOpacity onPress={() => router.push('/(tabs)/bookings')}>
+                    <Text style={styles.cardActionText}>Cancel</Text>
+                  </TouchableOpacity>
+                )}
               </View>
               {nextBooking ? (
                 <>
-                  <Text style={styles.bookingTime}>{nextBooking.booking_date} • {nextBooking.start_time}</Text>
+                  <Text style={styles.bookingTime}>
+                    {new Date(nextBooking.booking_date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} • {nextBooking.start_time?.slice(0, 5)}
+                  </Text>
                   <View style={styles.bookingImagePlaceholder}>
-                     <MapIcon size={40} color="#E2E8F0" />
+                    {nextBooking.ground?.ground_images?.[0]?.image_url ? (
+                      <Image 
+                        source={{ uri: nextBooking.ground.ground_images[0].image_url }} 
+                        style={StyleSheet.absoluteFill}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <LayoutDashboard size={48} color="#CBD5E1" />
+                    )}
                   </View>
                   <View style={styles.bookingFooter}>
                     <View>
                       <Text style={styles.bookingName}>{nextBooking.ground?.name}</Text>
-                      <Text style={styles.bookingMeta}>{nextBooking.ground?.pitch_type} • {nextBooking.ground?.city}</Text>
+                      <Text style={styles.bookingMeta}>{nextBooking.ground?.city}, {nextBooking.ground?.state}</Text>
                     </View>
-                    <TouchableOpacity style={styles.qrButton}>
-                      <Maximize size={18} color="#FFFFFF" />
-                      <Text style={styles.qrButtonText}>View QR</Text>
+                    <TouchableOpacity 
+                      style={styles.qrButton}
+                      onPress={() => router.push(`/(tabs)/bookings` as any)}
+                    >
+                      <QrCode size={18} color="#FFFFFF" />
+                      <Text style={styles.qrButtonText}>View Ticket</Text>
                     </TouchableOpacity>
                   </View>
                 </>
               ) : (
-                <View style={styles.emptyCardInner}>
+                <TouchableOpacity 
+                  style={styles.emptyCardInner}
+                  onPress={() => router.push('/book-my-ground' as any)}
+                >
                   <Calendar size={32} color="#CBD5E1" />
                   <Text style={styles.emptyCardText}>No upcoming bookings</Text>
-                </View>
+                </TouchableOpacity>
               )}
             </View>
 
             <View style={styles.contentCardSmall}>
               <View style={styles.cardHeader}>
                 <Text style={styles.cardHeaderTitle}>Recent Ground</Text>
-                <TouchableOpacity><Text style={styles.cardActionText}>View</Text></TouchableOpacity>
+                <TouchableOpacity onPress={() => router.push('/book-my-ground' as any)}>
+                  <Text style={styles.cardActionText}>View</Text>
+                </TouchableOpacity>
               </View>
               {lastBooking ? (
-                <View style={styles.recentGroundItem}>
+                <TouchableOpacity 
+                  style={styles.recentGroundItem}
+                  onPress={() => router.push(makeGroundPath(lastBooking.ground) as any)}
+                >
                    <View style={styles.recentGroundImage}>
-                      <MapIcon size={24} color="#CBD5E1" />
+                      {lastBooking.ground?.ground_images?.[0]?.image_url ? (
+                        <Image 
+                          source={{ uri: lastBooking.ground.ground_images[0].image_url }} 
+                          style={{ width: '100%', height: '100%', borderRadius: 16 }}
+                        />
+                      ) : (
+                        <MapIcon size={24} color="#CBD5E1" />
+                      )}
                    </View>
                    <View>
                       <Text style={styles.recentGroundName}>{lastBooking.ground?.name}</Text>
                       <Text style={styles.recentGroundPrice}>₹{lastBooking.total_amount?.toLocaleString()} total</Text>
                    </View>
-                </View>
+                </TouchableOpacity>
               ) : (
-                 <View style={styles.emptyCardInner}>
+                 <TouchableOpacity 
+                    style={styles.emptyCardInner}
+                    onPress={() => router.push('/book-my-ground' as any)}
+                  >
                    <Star size={32} color="#CBD5E1" />
                    <Text style={styles.emptyCardText}>Explore venues</Text>
-                 </View>
+                 </TouchableOpacity>
               )}
             </View>
           </View>
-
-          {/* Map Placeholder */}
-          <View style={styles.mapContainer}>
-             <View style={styles.mapPlaceholder}>
-                <MapPin size={40} color="#00ea6b" />
-                <Text style={styles.mapLabel}>Explore venues near you (Map)</Text>
-             </View>
-          </View>
         </View>
 
-        {!isCompact && renderRightPanel()}
+        {renderRightPanel()}
       </View>
     </ScrollView>
   );
@@ -485,6 +554,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 0,
     width: '100%',
+    paddingBottom: 120,
   },
   scrollContentWeb: {
     paddingTop: 0,
@@ -496,11 +566,13 @@ const styles = StyleSheet.create({
   centerContent: {
     flex: 1,
     padding: 24,
+    paddingBottom: 120,
   },
   rightPanel: {
     width: 340,
     padding: 24,
     paddingLeft: 0,
+    paddingBottom: 120,
     gap: 20,
   },
   greetingRow: {
@@ -731,13 +803,17 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   rightPanel: {
+    width: 340,
+    padding: 24,
+    paddingLeft: 0,
+    paddingBottom: 120,
     gap: 20,
   },
   panelCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
     padding: 24,
-    width: 340,
+    width: '100%',
   },
   panelHeader: {
     flexDirection: 'row',
