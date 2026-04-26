@@ -11,6 +11,7 @@ import {
   Swords,
   Trophy,
   ShoppingBag,
+  CalendarClock,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUI } from '@/contexts/UIContext';
@@ -21,8 +22,9 @@ const INACTIVE = '#9ca3af';
 
 function getActiveTab(
   segments: string[],
-): 'home' | 'grounds' | 'bookings' | 'favorites' | 'profile' | 'find-opponent' | 'cricket' | 'shop' {
+): 'home' | 'grounds' | 'bookings' | 'favorites' | 'profile' | 'find-opponent' | 'cricket' | 'shop' | 'inventory' {
   const root = segments[0];
+  if (root === 'inventory') return 'inventory';
   if (root === 'find-an-opponent') return 'find-opponent';
   if (root === 'ground' || root === 'grounds' || root === 'book-my-ground') {
     return 'grounds';
@@ -41,6 +43,7 @@ function getActiveTab(
   if (tab === 'find-an-opponent') return 'find-opponent';
   if (tab === 'profile') return 'profile';
   if (tab === 'shop') return 'shop';
+  if (tab === 'inventory') return 'inventory';
   return 'home';
 }
 
@@ -49,7 +52,10 @@ export default function MobileTabBar() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const segments = useSegments();
+  const { profile } = useAuth();
   const { isTabBarVisible } = useUI();
+  
+  const isOwner = profile?.role === 'ground_owner';
   
   const translateY = useSharedValue(0);
 
@@ -122,8 +128,8 @@ export default function MobileTabBar() {
         style={styles.item}
         onPress={() => go('/(tabs)/shop')}
       >
-        <ShoppingBag size={size} color={activeTab === 'shop' ? '#dc8d3c' : INACTIVE} strokeWidth={activeTab === 'shop' ? 2.5 : 2} />
-        <Text style={[styles.label, { color: activeTab === 'shop' ? '#dc8d3c' : INACTIVE }]}>Shop</Text>
+        <ShoppingBag size={size} color={activeTab === 'shop' ? '#2b2f4b' : INACTIVE} strokeWidth={activeTab === 'shop' ? 2.5 : 2} />
+        <Text style={[styles.label, { color: activeTab === 'shop' ? '#2b2f4b' : INACTIVE }]}>Shop</Text>
       </Pressable>
     </Animated.View>
   );

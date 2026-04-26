@@ -228,8 +228,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   groundName: {
+    fontFamily: 'Inter',
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#111827',
   },
   groundNameNative: {
@@ -257,6 +258,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   detailText: {
+    fontFamily: 'Inter',
     fontSize: 13,
     color: '#4B5563',
   },
@@ -273,8 +275,9 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   amount: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: '600',
     color: '#10b981',
   },
   amountNative: {
@@ -294,8 +297,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   compactGroundName: {
+    fontFamily: 'Inter',
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#111827',
   },
   compactGroundNameNative: {
@@ -365,9 +369,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   cancelBtnText: {
+    fontFamily: 'Inter',
     color: '#F44336',
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '600',
     letterSpacing: 0.5,
   },
   whoTitleText: {
@@ -389,9 +394,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   reviewBtnText: {
-    color: '#00ea6b',
+    fontFamily: 'Inter',
+    color: '#01b854',
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '600',
     letterSpacing: 0.5,
   },
   vsBadge: {

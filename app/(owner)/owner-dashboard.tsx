@@ -8,6 +8,15 @@ import WebLayout from '@/components/web/WebLayout';
 import { router } from 'expo-router';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import { formatBookingSlotSummary } from '@/utils/bookingSlotFormat';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withTiming, 
+  Easing, 
+  useAnimatedScrollHandler,
+  runOnJS
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const THEME_BG = '#F8FAFC';
 const THEME_CARD_BG = '#FFFFFF';
@@ -207,407 +216,507 @@ export default function OwnerDashboardScreen() {
     }
   };
 
-  const startEditing = (field: 'full_name' | 'phone' | 'business_name', currentVal: string) => {
-    setEditingField(field);
-    setEditValue(currentVal || '');
+  const insets = useSafeAreaInsets();
+  const horizontalPagerRef = React.useRef<Animated.ScrollView>(null);
+  const lastScrollY = useSharedValue(0);
+  const headerTranslateY = useSharedValue(0);
+  const HEADER_HEIGHT = 100;
+
+  const onTabPress = (tab: 'owner' | 'personal' | 'profile') => {
+    setActiveTab(tab);
+    const idx = tab === 'owner' ? 0 : tab === 'personal' ? 1 : 2;
+    horizontalPagerRef.current?.scrollTo({ x: idx * width, animated: true });
   };
 
-  const handleSave = async () => {
-    if (!editingField || !user) return;
-    
-    try {
-      setIsSaving(true);
-      const { error } = await updateProfile({ [editingField]: editValue });
-      if (error) throw error;
-      setEditingField(null);
-    } catch (err) {
-      console.error('Error updating profile:', err);
-      // Optional: alert user of error
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  const horizontalScrollHandler = useAnimatedScrollHandler({
+    onMomentumEnd: (event) => {
+      const idx = Math.round(event.contentOffset.x / width);
+      const tab = idx === 0 ? 'owner' : idx === 1 ? 'personal' : 'profile';
+      runOnJS(setActiveTab)(tab as any);
+    },
+  });
 
-  const content = (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-      refreshControl={<RefreshControl refreshing={loading} onRefresh={loadStats} tintColor={THEME_ACCENT} />}
-    >
-      <View style={styles.mainWrapper}>
+  const verticalScrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      const currentY = event.contentOffset.y;
+      const diff = currentY - lastScrollY.value;
+
+      if (diff > 10 && currentY > 50) {
+        headerTranslateY.value = withTiming(-HEADER_HEIGHT - insets.top, { duration: 600, easing: Easing.out(Easing.exp) });
+      } else if (diff < -10 || currentY < 20) {
+        headerTranslateY.value = withTiming(0, { duration: 600, easing: Easing.out(Easing.exp) });
+      }
+      lastScrollY.value = currentY;
+    },
+  });
+
+  const headerAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: headerTranslateY.value }],
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    backgroundColor: '#F8FAFC',
+  }));
+
+  const renderOwnerHub = () => (
+    <View style={styles.grid}>
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]}>
+        <View style={styles.statBox}>
+          <View style={styles.iconCircle}>
+            <Building2 size={20} color="#01b854" />
+          </View>
+          <Text style={styles.statsLabel}>My grounds</Text>
+          <Text style={styles.statsValue}>{stats.totalGrounds}</Text>
+          <Text style={styles.statsCaption}>{stats.totalGrounds === 1 ? '1 active ground' : `${stats.totalGrounds} active grounds`}</Text>
+        </View>
+      </View>
+
+      <TouchableOpacity 
+        style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]} 
+        onPress={() => router.push('/(owner)/ground-bookings' as any)}
+      >
+        <View style={styles.statBox}>
+          <View style={styles.iconCircle}>
+            <Calendar size={20} color="#01b854" />
+          </View>
+          <Text style={styles.statsLabel}>Ground Bookings</Text>
+          <Text style={styles.statsValue}>{stats.totalBookingsOnMyGrounds}</Text>
+          <Text style={styles.statsCaption}>Confirmed games</Text>
+        </View>
+      </TouchableOpacity>
+
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]}>
+        <View style={styles.statBox}>
+          <View style={styles.iconCircle}>
+            <Swords size={22} color="#01b854" />
+          </View>
+          <Text style={styles.statsLabel}>Other ground bookings</Text>
+          <Text style={styles.statsValue}>{stats.myOwnBookingsCount}</Text>
+          <Text style={styles.statsCaption}>Personal games</Text>
+        </View>
+      </View>
+
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]}>
+        <View style={styles.statBox}>
+          <View style={styles.iconCircle}>
+            <IndianRupee size={20} color="#01b854" />
+          </View>
+          <Text style={styles.statsLabel}>Total earnings</Text>
+          <Text style={styles.statsValueSmall}>₹{stats.totalEarningsOnMyGrounds.toLocaleString('en-IN')}</Text>
+          <Text style={styles.statsCaption}>Total revenue</Text>
+        </View>
+      </View>
+
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]}>
+        <View style={styles.statBox}>
+          <View style={styles.iconCircle}>
+            <PieChart size={20} color="#01b854" />
+          </View>
+          <Text style={styles.statsLabel}>Occupancy</Text>
+          <Text style={styles.statsValue}>{stats.occupancyRate}%</Text>
+          <Text style={styles.statsCaption}>Monthly utilization</Text>
+        </View>
+      </View>
+
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]}>
+        <View style={styles.statBox}>
+          <View style={styles.iconCircle}>
+            <IndianRupee size={20} color="#01b854" />
+          </View>
+          <Text style={styles.statsLabel}>Paid Out</Text>
+          <Text style={styles.statsValueSmall}>₹{stats.totalWithdrawn.toLocaleString('en-IN')}</Text>
+          <Text style={styles.statsCaption}>Successfully paid</Text>
+        </View>
+      </View>
+
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]}>
+        <View style={styles.statBox}>
+          <View style={styles.iconCircle}>
+            <IndianRupee size={22} color="#01b854" />
+          </View>
+          <Text style={styles.statsLabel}>Total spent</Text>
+          <Text style={styles.statsValueSmall}>₹{stats.totalSpentOnOtherGrounds.toLocaleString('en-IN')}</Text>
+          <Text style={styles.statsCaption}>On other grounds</Text>
+        </View>
+      </View>
+
+      <TouchableOpacity 
+        style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]} 
+        onPress={() => router.push('/(tabs)/bookings' as any)}
+      >
+        <View style={styles.statBox}>
+          <View style={styles.iconCircle}>
+            <Calendar size={22} color="#01b854" />
+          </View>
+          <Text style={styles.statsLabel}>My Bookings</Text>
+          <Text style={styles.statsValueSmall}>Player History</Text>
+          <Text style={styles.statsCaption}>Your personal bookings</Text>
+        </View>
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]} 
+        onPress={() => router.push('/(owner)/add-ground' as any)}
+      >
+        <View style={styles.statBox}>
+          <View style={styles.iconCircle}>
+            <PlusCircle size={22} color="#01b854" />
+          </View>
+          <Text style={styles.statsLabel}>Add Ground</Text>
+          <Text style={styles.statsValueSmall}>Register</Text>
+          <Text style={styles.statsCaption}>List new property</Text>
+        </View>
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]} 
+        onPress={() => router.push('/(owner)/settings' as any)}
+      >
+        <View style={styles.statBox}>
+          <View style={styles.iconCircle}>
+            <Settings size={22} color="#01b854" />
+          </View>
+          <Text style={styles.statsLabel}>Settings</Text>
+          <Text style={styles.statsValueSmall}>Account</Text>
+          <Text style={styles.statsCaption}>Business settings</Text>
+        </View>
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]} 
+        onPress={() => router.push('/(tabs)/support' as any)}
+      >
+        <View style={styles.statBox}>
+          <View style={styles.iconCircle}>
+            <LifeBuoy size={22} color="#01b854" />
+          </View>
+          <Text style={styles.statsLabel}>Support</Text>
+          <Text style={styles.statsValueSmall}>Contact Us</Text>
+          <Text style={styles.statsCaption}>Get help</Text>
+        </View>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderPersonalActivity = () => (
+    <View style={styles.grid}>
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]}>
+        <View style={styles.statBox}>
+          <View style={styles.iconCircle}>
+            <Users size={20} color="#01b854" />
+          </View>
+          <Text style={styles.statsLabel}>Total Bookings</Text>
+          <Text style={styles.statsValue}>{stats.myOwnBookingsCount}</Text>
+          <Text style={styles.statsCaption}>{stats.myOwnBookingsCount === 1 ? '1 booking made' : `${stats.myOwnBookingsCount} bookings made`}</Text>
+        </View>
+      </View>
+
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]}>
+        <View style={styles.statBox}>
+          <View style={styles.iconCircle}>
+            <Calendar size={20} color="#01b854" />
+          </View>
+          <Text style={styles.statsLabel}>Next booking</Text>
+          {stats.nextBooking ? (
+            <>
+              <Text style={styles.statsValueSmall} numberOfLines={1}>{stats.nextBooking.ground?.name}</Text>
+              <Text style={styles.statsCaption}>{stats.nextBooking.booking_date}</Text>
+              <Text style={[styles.statsCaption, { fontSize: 10 }]}>{formatBookingSlotSummary(stats.nextBooking.start_time, stats.nextBooking.end_time, stats.nextBooking.ground?.pitch_type)}</Text>
+            </>
+          ) : (
+            <Text style={styles.statsCaption}>No upcoming</Text>
+          )}
+        </View>
+      </View>
+
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]}>
+        <View style={styles.statBox}>
+          <View style={styles.iconCircle}>
+            <Calendar size={20} color="#01b854" />
+          </View>
+          <Text style={styles.statsLabel}>Last booking</Text>
+          {stats.lastBooking ? (
+            <>
+              <Text style={styles.statsValueSmall} numberOfLines={1}>{stats.lastBooking.ground?.name}</Text>
+              <Text style={styles.statsCaption}>{stats.lastBooking.booking_date}</Text>
+              <Text style={[styles.statsCaption, { fontSize: 10 }]}>{formatBookingSlotSummary(stats.lastBooking.start_time, stats.lastBooking.end_time, stats.lastBooking.ground?.pitch_type)}</Text>
+            </>
+          ) : (
+            <Text style={styles.statsCaption}>No history</Text>
+          )}
+        </View>
+      </View>
+
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]}>
+        <View style={styles.statBox}>
+          <View style={styles.iconCircle}>
+            <Star size={20} color="#FFA000" />
+          </View>
+          <Text style={styles.statsLabel}>Favorite</Text>
+          {stats.favoriteGround ? (
+            <>
+              <Text style={styles.statsValueSmall} numberOfLines={1}>{stats.favoriteGround.name}</Text>
+              <Text style={styles.statsCaption}>{stats.favoriteGround.count} {stats.favoriteGround.count === 1 ? 'visit' : 'visits'}</Text>
+            </>
+          ) : (
+            <Text style={styles.statsCaption}>N/A</Text>
+          )}
+        </View>
+      </View>
+    </View>
+  );
+
+  const renderProfileTab = () => (
+    <View style={styles.grid}>
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]}>
+        <View style={styles.statBox}>
+          {editingField !== 'full_name' && (
+            <TouchableOpacity 
+              style={styles.editBtn} 
+              onPress={() => startEditing('full_name', profile?.full_name || '')}
+            >
+              <Pencil size={12} color="#01b854" />
+            </TouchableOpacity>
+          )}
+          <View style={styles.iconCircle}>
+            <User size={20} color="#01b854" />
+          </View>
+          <Text style={styles.statsLabel}>Full Name</Text>
+          
+          {editingField === 'full_name' ? (
+            <View style={styles.editContainer}>
+              <TextInput
+                style={styles.editInput}
+                value={editValue}
+                onChangeText={setEditValue}
+                autoFocus
+                placeholder="Full name"
+              />
+              <View style={styles.editActions}>
+                <TouchableOpacity onPress={handleSave} disabled={isSaving}>
+                  {isSaving ? <ActivityIndicator size="small" color="#01b854" /> : <Check size={18} color="#01b854" />}
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setEditingField(null)} disabled={isSaving}>
+                  <X size={18} color="#EF4444" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <Text style={styles.statsValueSmall} numberOfLines={1}>{profile?.full_name || 'N/A'}</Text>
+          )}
+          <Text style={styles.statsCaption}>Primary Account holder</Text>
+        </View>
+      </View>
+
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]}>
+        <View style={styles.statBox}>
+          <View style={styles.iconCircle}>
+            <Mail size={20} color="#01b854" />
+          </View>
+          <Text style={styles.statsLabel}>Email Address</Text>
+          <Text style={styles.statsValueSmall} numberOfLines={1}>{user?.email || 'N/A'}</Text>
+          <Text style={styles.statsCaption}>Login Email</Text>
+        </View>
+      </View>
+
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]}>
+        <View style={styles.statBox}>
+          {editingField !== 'phone' && (
+            <TouchableOpacity 
+              style={styles.editBtn} 
+              onPress={() => startEditing('phone', profile?.phone || '')}
+            >
+              <Pencil size={12} color="#01b854" />
+            </TouchableOpacity>
+          )}
+          <View style={styles.iconCircle}>
+            <Phone size={20} color="#01b854" />
+          </View>
+          <Text style={styles.statsLabel}>Phone Number</Text>
+          
+          {editingField === 'phone' ? (
+            <View style={styles.editContainer}>
+              <TextInput
+                style={styles.editInput}
+                value={editValue}
+                onChangeText={setEditValue}
+                autoFocus
+                placeholder="Phone"
+                keyboardType="phone-pad"
+              />
+              <View style={styles.editActions}>
+                <TouchableOpacity onPress={handleSave} disabled={isSaving}>
+                  {isSaving ? <ActivityIndicator size="small" color="#01b854" /> : <Check size={18} color="#01b854" />}
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setEditingField(null)} disabled={isSaving}>
+                  <X size={18} color="#EF4444" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <Text style={styles.statsValueSmall}>{profile?.phone || 'Not provided'}</Text>
+          )}
+          <Text style={styles.statsCaption}>Contact information</Text>
+        </View>
+      </View>
+
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]}>
+        <View style={styles.statBox}>
+          {editingField !== 'business_name' && (
+            <TouchableOpacity 
+              style={styles.editBtn} 
+              onPress={() => startEditing('business_name', profile?.business_name || '')}
+            >
+              <Pencil size={12} color="#01b854" />
+            </TouchableOpacity>
+          )}
+          <View style={styles.iconCircle}>
+            <ShieldCheck size={20} color="#01b854" />
+          </View>
+          <Text style={styles.statsLabel}>Business</Text>
+          
+          {editingField === 'business_name' ? (
+            <View style={styles.editContainer}>
+              <TextInput
+                style={styles.editInput}
+                value={editValue}
+                onChangeText={setEditValue}
+                autoFocus
+                placeholder="Business name"
+              />
+              <View style={styles.editActions}>
+                <TouchableOpacity onPress={handleSave} disabled={isSaving}>
+                  {isSaving ? <ActivityIndicator size="small" color="#01b854" /> : <Check size={18} color="#01b854" />}
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setEditingField(null)} disabled={isSaving}>
+                  <X size={18} color="#EF4444" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <Text style={styles.statsValueSmall} numberOfLines={1}>{profile?.business_name || 'Personal Account'}</Text>
+          )}
+          <Text style={styles.statsCaption}>{profile?.business_verified ? 'Verified Partner' : 'Verification pending'}</Text>
+        </View>
+      </View>
+    </View>
+  );
+
+  if (Platform.OS === 'web' && !isCompact) {
+    return (
+      <WebLayout>
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={loading} onRefresh={loadStats} tintColor={THEME_ACCENT} />}
+        >
+          <View style={styles.mainWrapper}>
+            <View style={styles.tabContainer}>
+              <TouchableOpacity 
+                style={[styles.tabButton, activeTab === 'owner' && styles.activeTabButton]} 
+                onPress={() => setActiveTab('owner')}
+              >
+                <Text style={[styles.tabText, activeTab === 'owner' && styles.activeTabText]}>Owner Hub</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.tabButton, activeTab === 'personal' && styles.activeTabButton]} 
+                onPress={() => setActiveTab('personal')}
+              >
+                <Text style={[styles.tabText, activeTab === 'personal' && styles.activeTabText]}>Personal Activity</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.tabButton, activeTab === 'profile' && styles.activeTabButton]} 
+                onPress={() => setActiveTab('profile')}
+              >
+                <Text style={[styles.tabText, activeTab === 'profile' && styles.activeTabText]}>Profile</Text>
+              </TouchableOpacity>
+            </View>
+
+            {activeTab === 'owner' ? renderOwnerHub() : activeTab === 'personal' ? renderPersonalActivity() : renderProfileTab()}
+          </View>
+        </ScrollView>
+      </WebLayout>
+    );
+  }
+
+  return (
+    <View style={styles.nativeContainer}>
+      <Animated.View style={headerAnimatedStyle}>
+        <MobileAppNavbar title="Owner Dashboard" titleColor={THEME_ACCENT} />
         <View style={styles.tabContainer}>
           <TouchableOpacity 
             style={[styles.tabButton, activeTab === 'owner' && styles.activeTabButton]} 
-            onPress={() => setActiveTab('owner')}
+            onPress={() => onTabPress('owner')}
           >
             <Text style={[styles.tabText, activeTab === 'owner' && styles.activeTabText]}>Owner Hub</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.tabButton, activeTab === 'personal' && styles.activeTabButton]} 
-            onPress={() => setActiveTab('personal')}
+            onPress={() => onTabPress('personal')}
           >
-            <Text style={[styles.tabText, activeTab === 'personal' && styles.activeTabText]}>Personal Activity</Text>
+            <Text style={[styles.tabText, activeTab === 'personal' && styles.activeTabText]}>Activity</Text>
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.tabButton, activeTab === 'profile' && styles.activeTabButton]} 
-            onPress={() => setActiveTab('profile')}
+            onPress={() => onTabPress('profile')}
           >
             <Text style={[styles.tabText, activeTab === 'profile' && styles.activeTabText]}>Profile</Text>
           </TouchableOpacity>
         </View>
+      </Animated.View>
 
-        {activeTab === 'owner' && (
-          <>
-            <View style={styles.grid}>
-              <View style={styles.statBoxWrapper}>
-                <View style={styles.statBox}>
-                  <View style={styles.iconCircle}>
-                    <Building2 size={22} color="#01b854" />
-                  </View>
-                  <Text style={styles.statsLabel}>My grounds</Text>
-                  <Text style={styles.statsValue}>{stats.totalGrounds}</Text>
-                  <Text style={styles.statsCaption}>{stats.totalGrounds === 1 ? '1 active ground' : `${stats.totalGrounds} active grounds`}</Text>
-                </View>
-              </View>
+      <Animated.ScrollView
+        ref={horizontalPagerRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onScroll={horizontalScrollHandler}
+        scrollEventThrottle={16}
+        style={{ flex: 1 }}
+      >
+        {/* Slide 1: Owner Hub */}
+        <View style={{ width }}>
+          <Animated.ScrollView
+            onScroll={verticalScrollHandler}
+            scrollEventThrottle={16}
+            style={styles.container}
+            contentContainerStyle={[styles.scrollContent, { paddingTop: HEADER_HEIGHT + insets.top + 16, paddingHorizontal: 16 }]}
+            showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={loading} onRefresh={loadStats} tintColor={THEME_ACCENT} />}
+          >
+            {renderOwnerHub()}
+          </Animated.ScrollView>
+        </View>
 
-              <TouchableOpacity style={styles.statBoxWrapper} onPress={() => router.push('/(owner)/ground-bookings' as any)}>
-                <View style={styles.statBox}>
-                  <View style={styles.iconCircle}>
-                    <Calendar size={22} color="#01b854" />
-                  </View>
-                  <Text style={styles.statsLabel}>Ground Bookings</Text>
-                  <Text style={styles.statsValue}>{stats.totalBookingsOnMyGrounds}</Text>
-                  <Text style={styles.statsCaption}>Confirmed games</Text>
-                </View>
-              </TouchableOpacity>
+        {/* Slide 2: Activity */}
+        <View style={{ width }}>
+          <Animated.ScrollView
+            onScroll={verticalScrollHandler}
+            scrollEventThrottle={16}
+            style={styles.container}
+            contentContainerStyle={[styles.scrollContent, { paddingTop: HEADER_HEIGHT + insets.top + 16, paddingHorizontal: 16 }]}
+            showsVerticalScrollIndicator={false}
+          >
+            {renderPersonalActivity()}
+          </Animated.ScrollView>
+        </View>
 
-
-
-              <View style={styles.statBoxWrapper}>
-                <View style={styles.statBox}>
-                  <View style={styles.iconCircle}>
-                    <Swords size={24} color="#01b854" />
-                  </View>
-                  <Text style={styles.statsLabel}>Other ground bookings</Text>
-                  <Text style={styles.statsValue}>{stats.myOwnBookingsCount}</Text>
-                  <Text style={styles.statsCaption}>Personal games</Text>
-                </View>
-              </View>
-
-              <View style={styles.statBoxWrapper}>
-                <View style={styles.statBox}>
-                  <View style={styles.iconCircle}>
-                    <IndianRupee size={22} color="#01b854" />
-                  </View>
-                  <Text style={styles.statsLabel}>Total earnings</Text>
-                  <Text style={styles.statsValueSmall}>₹{stats.totalEarningsOnMyGrounds.toLocaleString('en-IN')}</Text>
-                  <Text style={styles.statsCaption}>Total revenue</Text>
-                </View>
-              </View>
-
-              <View style={styles.statBoxWrapper}>
-                <View style={styles.statBox}>
-                  <View style={styles.iconCircle}>
-                    <PieChart size={22} color="#01b854" />
-                  </View>
-                  <Text style={styles.statsLabel}>Occupancy</Text>
-                  <Text style={styles.statsValue}>{stats.occupancyRate}%</Text>
-                  <Text style={styles.statsCaption}>Monthly utilization</Text>
-                </View>
-              </View>
-
-              <View style={styles.statBoxWrapper}>
-                <View style={styles.statBox}>
-                  <View style={styles.iconCircle}>
-                    <IndianRupee size={22} color="#01b854" />
-                  </View>
-                  <Text style={styles.statsLabel}>Paid Out</Text>
-                  <Text style={styles.statsValueSmall}>₹{stats.totalWithdrawn.toLocaleString('en-IN')}</Text>
-                  <Text style={styles.statsCaption}>Successfully paid</Text>
-                </View>
-              </View>
-
-              <View style={styles.statBoxWrapper}>
-                <View style={styles.statBox}>
-                  <View style={styles.iconCircle}>
-                    <IndianRupee size={24} color="#01b854" />
-                  </View>
-                  <Text style={styles.statsLabel}>Total spent</Text>
-                  <Text style={styles.statsValueSmall}>₹{stats.totalSpentOnOtherGrounds.toLocaleString('en-IN')}</Text>
-                  <Text style={styles.statsCaption}>On other grounds</Text>
-                </View>
-              </View>
-
-
-
-              <TouchableOpacity style={styles.statBoxWrapper} onPress={() => router.push('/(tabs)/bookings' as any)}>
-                <View style={styles.statBox}>
-                  <View style={styles.iconCircle}>
-                    <Calendar size={24} color="#01b854" />
-                  </View>
-                  <Text style={styles.statsLabel}>My Bookings</Text>
-                  <Text style={styles.statsValueSmall}>Player History</Text>
-                  <Text style={styles.statsCaption}>Your personal bookings</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.statBoxWrapper} onPress={() => router.push('/(owner)/add-ground' as any)}>
-                <View style={styles.statBox}>
-                  <View style={styles.iconCircle}>
-                    <PlusCircle size={24} color="#01b854" />
-                  </View>
-                  <Text style={styles.statsLabel}>Add Ground</Text>
-                  <Text style={styles.statsValueSmall}>Register</Text>
-                  <Text style={styles.statsCaption}>List new property</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.statBoxWrapper} onPress={() => router.push('/(owner)/settings' as any)}>
-                <View style={styles.statBox}>
-                  <View style={styles.iconCircle}>
-                    <Settings size={24} color="#01b854" />
-                  </View>
-                  <Text style={styles.statsLabel}>Settings</Text>
-                  <Text style={styles.statsValueSmall}>Account</Text>
-                  <Text style={styles.statsCaption}>Business settings</Text>
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.statBoxWrapper} onPress={() => router.push('/(tabs)/support' as any)}>
-                <View style={styles.statBox}>
-                  <View style={styles.iconCircle}>
-                    <LifeBuoy size={24} color="#01b854" />
-                  </View>
-                  <Text style={styles.statsLabel}>Support</Text>
-                  <Text style={styles.statsValueSmall}>Contact Us</Text>
-                  <Text style={styles.statsCaption}>Get help</Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </>
-        )}
-
-        {activeTab === 'personal' && (
-          <View>
-            <View style={styles.grid}>
-              <View style={styles.statBoxWrapper}>
-                <View style={styles.statBox}>
-                  <View style={styles.iconCircle}>
-                    <Users size={22} color="#01b854" />
-                  </View>
-                  <Text style={styles.statsLabel}>Total Bookings</Text>
-                  <Text style={styles.statsValue}>{stats.myOwnBookingsCount}</Text>
-                  <Text style={styles.statsCaption}>{stats.myOwnBookingsCount === 1 ? '1 booking made' : `${stats.myOwnBookingsCount} bookings made`}</Text>
-                </View>
-              </View>
-
-              <View style={styles.statBoxWrapper}>
-                <View style={styles.statBox}>
-                  <View style={styles.iconCircle}>
-                    <Calendar size={22} color="#01b854" />
-                  </View>
-                  <Text style={styles.statsLabel}>Next booking</Text>
-                  {stats.nextBooking ? (
-                    <>
-                      <Text style={styles.statsValueSmall} numberOfLines={1}>{stats.nextBooking.ground?.name}</Text>
-                      <Text style={styles.statsCaption}>{stats.nextBooking.booking_date}</Text>
-                      <Text style={[styles.statsCaption, { fontSize: 10 }]}>{formatBookingSlotSummary(stats.nextBooking.start_time, stats.nextBooking.end_time, stats.nextBooking.ground?.pitch_type)}</Text>
-                    </>
-                  ) : (
-                    <Text style={styles.statsCaption}>No upcoming</Text>
-                  )}
-                </View>
-              </View>
-
-              <View style={styles.statBoxWrapper}>
-                <View style={styles.statBox}>
-                  <View style={styles.iconCircle}>
-                    <Calendar size={22} color="#01b854" />
-                  </View>
-                  <Text style={styles.statsLabel}>Last booking</Text>
-                  {stats.lastBooking ? (
-                    <>
-                      <Text style={styles.statsValueSmall} numberOfLines={1}>{stats.lastBooking.ground?.name}</Text>
-                      <Text style={styles.statsCaption}>{stats.lastBooking.booking_date}</Text>
-                      <Text style={[styles.statsCaption, { fontSize: 10 }]}>{formatBookingSlotSummary(stats.lastBooking.start_time, stats.lastBooking.end_time, stats.lastBooking.ground?.pitch_type)}</Text>
-                    </>
-                  ) : (
-                    <Text style={styles.statsCaption}>No history</Text>
-                  )}
-                </View>
-              </View>
-
-              <View style={styles.statBoxWrapper}>
-                <View style={styles.statBox}>
-                  <View style={styles.iconCircle}>
-                    <Star size={22} color="#FFA000" />
-                  </View>
-                  <Text style={styles.statsLabel}>Favorite</Text>
-                  {stats.favoriteGround ? (
-                    <>
-                      <Text style={styles.statsValueSmall} numberOfLines={1}>{stats.favoriteGround.name}</Text>
-                      <Text style={styles.statsCaption}>{stats.favoriteGround.count} {stats.favoriteGround.count === 1 ? 'visit' : 'visits'}</Text>
-                    </>
-                  ) : (
-                    <Text style={styles.statsCaption}>N/A</Text>
-                  )}
-                </View>
-              </View>
-            </View>
-          </View>
-        )}
-        
-        {activeTab === 'profile' && (
-          <View>
-            <View style={styles.grid}>
-              <View style={styles.statBoxWrapper}>
-                <View style={styles.statBox}>
-                  {editingField !== 'full_name' && (
-                    <TouchableOpacity 
-                      style={styles.editBtn} 
-                      onPress={() => startEditing('full_name', profile?.full_name || '')}
-                    >
-                      <Pencil size={12} color="#01b854" />
-                    </TouchableOpacity>
-                  )}
-                  <View style={styles.iconCircle}>
-                    <User size={22} color="#01b854" />
-                  </View>
-                  <Text style={styles.statsLabel}>Full Name</Text>
-                  
-                  {editingField === 'full_name' ? (
-                    <View style={styles.editContainer}>
-                      <TextInput
-                        style={styles.editInput}
-                        value={editValue}
-                        onChangeText={setEditValue}
-                        autoFocus
-                        placeholder="Full name"
-                      />
-                      <View style={styles.editActions}>
-                        <TouchableOpacity onPress={handleSave} disabled={isSaving}>
-                          {isSaving ? <ActivityIndicator size="small" color="#01b854" /> : <Check size={18} color="#01b854" />}
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => setEditingField(null)} disabled={isSaving}>
-                          <X size={18} color="#EF4444" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ) : (
-                    <Text style={styles.statsValueSmall} numberOfLines={1}>{profile?.full_name || 'N/A'}</Text>
-                  )}
-                  <Text style={styles.statsCaption}>Primary Account holder</Text>
-                </View>
-              </View>
-
-              <View style={styles.statBoxWrapper}>
-                <View style={styles.statBox}>
-                  <View style={styles.iconCircle}>
-                    <Mail size={22} color="#01b854" />
-                  </View>
-                  <Text style={styles.statsLabel}>Email Address</Text>
-                  <Text style={styles.statsValueSmall} numberOfLines={1}>{user?.email || 'N/A'}</Text>
-                  <Text style={styles.statsCaption}>Login Email</Text>
-                </View>
-              </View>
-
-              <View style={styles.statBoxWrapper}>
-                <View style={styles.statBox}>
-                  {editingField !== 'phone' && (
-                    <TouchableOpacity 
-                      style={styles.editBtn} 
-                      onPress={() => startEditing('phone', profile?.phone || '')}
-                    >
-                      <Pencil size={12} color="#01b854" />
-                    </TouchableOpacity>
-                  )}
-                  <View style={styles.iconCircle}>
-                    <Phone size={22} color="#01b854" />
-                  </View>
-                  <Text style={styles.statsLabel}>Phone Number</Text>
-                  
-                  {editingField === 'phone' ? (
-                    <View style={styles.editContainer}>
-                      <TextInput
-                        style={styles.editInput}
-                        value={editValue}
-                        onChangeText={setEditValue}
-                        autoFocus
-                        placeholder="Phone"
-                        keyboardType="phone-pad"
-                      />
-                      <View style={styles.editActions}>
-                        <TouchableOpacity onPress={handleSave} disabled={isSaving}>
-                          {isSaving ? <ActivityIndicator size="small" color="#01b854" /> : <Check size={18} color="#01b854" />}
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => setEditingField(null)} disabled={isSaving}>
-                          <X size={18} color="#EF4444" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ) : (
-                    <Text style={styles.statsValueSmall}>{profile?.phone || 'Not provided'}</Text>
-                  )}
-                  <Text style={styles.statsCaption}>Contact information</Text>
-                </View>
-              </View>
-
-              <View style={styles.statBoxWrapper}>
-                <View style={styles.statBox}>
-                  {editingField !== 'business_name' && (
-                    <TouchableOpacity 
-                      style={styles.editBtn} 
-                      onPress={() => startEditing('business_name', profile?.business_name || '')}
-                    >
-                      <Pencil size={12} color="#01b854" />
-                    </TouchableOpacity>
-                  )}
-                  <View style={styles.iconCircle}>
-                    <ShieldCheck size={22} color="#01b854" />
-                  </View>
-                  <Text style={styles.statsLabel}>Business</Text>
-                  
-                  {editingField === 'business_name' ? (
-                    <View style={styles.editContainer}>
-                      <TextInput
-                        style={styles.editInput}
-                        value={editValue}
-                        onChangeText={setEditValue}
-                        autoFocus
-                        placeholder="Business name"
-                      />
-                      <View style={styles.editActions}>
-                        <TouchableOpacity onPress={handleSave} disabled={isSaving}>
-                          {isSaving ? <ActivityIndicator size="small" color="#01b854" /> : <Check size={18} color="#01b854" />}
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => setEditingField(null)} disabled={isSaving}>
-                          <X size={18} color="#EF4444" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ) : (
-                    <Text style={styles.statsValueSmall} numberOfLines={1}>{profile?.business_name || 'Personal Account'}</Text>
-                  )}
-                  <Text style={styles.statsCaption}>{profile?.business_verified ? 'Verified Partner' : 'Verification pending'}</Text>
-                </View>
-              </View>
-            </View>
-            
-          </View>
-        )}
-      </View>
-    </ScrollView>
-  );
-
-  if (Platform.OS === 'web') {
-    return <WebLayout>{content}</WebLayout>;
-  }
-
-  return (
-    <View style={styles.nativeContainer}>
-      <MobileAppNavbar title="Owner Dashboard" titleColor={THEME_ACCENT} />
-      {content}
+        {/* Slide 3: Profile */}
+        <View style={{ width }}>
+          <Animated.ScrollView
+            onScroll={verticalScrollHandler}
+            scrollEventThrottle={16}
+            style={styles.container}
+            contentContainerStyle={[styles.scrollContent, { paddingTop: HEADER_HEIGHT + insets.top + 16, paddingHorizontal: 16 }]}
+            showsVerticalScrollIndicator={false}
+          >
+            {renderProfileTab()}
+          </Animated.ScrollView>
+        </View>
+      </Animated.ScrollView>
     </View>
   );
 }
@@ -627,16 +736,20 @@ const styles = StyleSheet.create({
   },
   mainWrapper: {
     width: '100%',
+    maxWidth: 1000,
     alignSelf: 'center',
-    paddingHorizontal: 0,
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '900',
+    fontFamily: 'Inter',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#111827',
     marginBottom: 12,
     marginLeft: 12,
-    letterSpacing: -0.5,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 
   tabContainer: {
@@ -672,7 +785,7 @@ const styles = StyleSheet.create({
   },
   activeTabText: {
     color: '#01b854',
-    fontWeight: '800',
+    fontWeight: '700',
   },
   grid: {
     flexDirection: 'row',
@@ -681,8 +794,8 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   statBoxWrapper: {
-    width: '48%',
-    marginBottom: 12,
+    width: '48.5%',
+    marginBottom: 16,
   },
   statBox: {
     borderRadius: 24,
@@ -711,8 +824,8 @@ const styles = StyleSheet.create({
   },
   statsLabel: {
     fontFamily: 'Inter',
-    fontSize: 11,
-    fontWeight: '800',
+    fontSize: 10,
+    fontWeight: '600',
     color: '#64748B',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
@@ -721,25 +834,25 @@ const styles = StyleSheet.create({
   },
   statsValue: {
     fontFamily: 'Inter',
-    fontSize: 28,
-    fontWeight: '900',
+    fontSize: 24,
+    fontWeight: '700',
     color: '#0F172A',
     marginBottom: 6,
-    letterSpacing: -1,
+    letterSpacing: -0.5,
   },
   statsValueSmall: {
     fontFamily: 'Inter',
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '700',
     color: '#0F172A',
     marginBottom: 4,
     textAlign: 'center',
-    letterSpacing: -0.5,
+    letterSpacing: -0.3,
   },
   statsCaption: {
     fontFamily: 'Inter',
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#94A3B8',
     textAlign: 'center',
   },

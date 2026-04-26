@@ -770,7 +770,10 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                     Bookings
                   </Text>
                   <Text
-                    style={[styles.headerNavLink, cleanPath === '/shop' && styles.headerNavLinkActive]}
+                    style={[
+                      styles.headerNavLink, 
+                      cleanPath === '/shop' && { color: '#2b2f4b', borderBottomWidth: 2, borderBottomColor: '#2b2f4b', paddingBottom: 4 }
+                    ]}
                     onPress={() => router.push('/shop' as any)}
                   >
                     Shop
@@ -1075,8 +1078,11 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                   }
                 }}
               >
-                <Icon size={22} color={isActive ? '#00ea6b' : '#9ca3af'} />
-                <Text style={[styles.bottomBarText, isActive && styles.bottomBarTextActive]}>
+                <Icon size={22} color={isActive ? (item.label === 'Shop' ? '#2b2f4b' : '#00ea6b') : '#9ca3af'} />
+                <Text style={[
+                  styles.bottomBarText, 
+                  isActive && (item.label === 'Shop' ? { color: '#2b2f4b', fontWeight: '700' } : styles.bottomBarTextActive)
+                ]}>
                   {item.label}
                 </Text>
               </TouchableOpacity>
@@ -1361,16 +1367,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRightWidth: 1,
     borderColor: 'rgba(255,255,255,0.05)',
-    height: '100%',
     ...Platform.select({
       web: {
         position: 'sticky' as any,
         top: 0,
         alignSelf: 'flex-start',
-        maxHeight: '100vh' as any,
+        height: '100vh' as any,
+        minHeight: '100vh' as any,
         transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
         overflow: 'hidden',
       },
+      default: {
+        height: '100%',
+      }
     }),
   },
   sidebarCollapsed: {
@@ -1429,6 +1438,7 @@ const styles = StyleSheet.create({
   main: {
     flex: 1,
     padding: 20,
+    backgroundColor: '#F1F5F9',
     ...Platform.select({
       web: {
         minHeight: '100vh' as any,

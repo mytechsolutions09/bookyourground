@@ -299,8 +299,8 @@ export default function ProductDetailScreen() {
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Specifications</Text>
               <View style={styles.specTable}>
-                {Object.entries(product.specifications).map(([key, value]: [string, any], index) => (
-                  <View key={key} style={[styles.specRow, index % 2 === 0 && styles.specRowAlt]}>
+                {Object.entries(product.specifications).map(([key, value]: [string, any], index, array) => (
+                  <View key={key} style={[styles.specRow, index === array.length - 1 && { borderBottomWidth: 0 }]}>
                     <Text style={styles.specKey}>{key}</Text>
                     <Text style={styles.specValue}>
                       {typeof value === 'object' ? JSON.stringify(value) : String(value)}
@@ -488,7 +488,7 @@ export default function ProductDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8FAFC',
   },
   fixedImageContainer: {
     height: 440,
@@ -504,6 +504,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingTop: 400,
+    paddingBottom: 120,
   },
   mainImage: {
     width: '100%',
@@ -564,11 +565,12 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   contentWrapper: {
-    padding: 24,
+    paddingHorizontal: 20,
+    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
+    paddingTop: 32,
     marginTop: -32,
-    backgroundColor: '#FFFFFF',
   },
   infoSection: {
     marginBottom: 24,
@@ -576,7 +578,7 @@ const styles = StyleSheet.create({
   categoryText: {
     fontSize: 12,
     color: '#dc8d3c',
-    fontWeight: '800',
+    fontWeight: '700',
     letterSpacing: 1.5,
     textTransform: 'uppercase',
     marginBottom: 8,
@@ -584,7 +586,7 @@ const styles = StyleSheet.create({
   },
   productName: {
     fontSize: 26,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#2b2f4b',
     marginBottom: 12,
     lineHeight: 32,
@@ -610,7 +612,7 @@ const styles = StyleSheet.create({
   },
   currentPrice: {
     fontSize: 28,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#2b2f4b',
     fontFamily: 'Inter',
   },
@@ -634,38 +636,46 @@ const styles = StyleSheet.create({
   },
   trustRow: {
     flexDirection: 'row',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 20,
-    padding: 16,
+    gap: 12,
     marginBottom: 32,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
   },
   trustItem: {
     flex: 1,
     alignItems: 'center',
-    gap: 6,
-  },
-  trustDivider: {
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
-    borderColor: '#E5E7EB',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    gap: 8,
   },
   trustText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
-    color: '#4B5563',
+    color: '#64748B',
     fontFamily: 'Inter',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    textAlign: 'center',
   },
   section: {
     marginBottom: 32,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#2b2f4b',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
     marginBottom: 16,
     fontFamily: 'Inter',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   descriptionText: {
     fontSize: 15,
@@ -688,19 +698,17 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   specTable: {
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 16,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 32,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
   specRow: {
     flexDirection: 'row',
-    padding: 16,
+    padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-  },
-  specRowAlt: {
-    backgroundColor: '#F9FAFB',
+    borderBottomColor: '#F1F5F9',
   },
   specKey: {
     flex: 1,
@@ -713,7 +721,7 @@ const styles = StyleSheet.create({
     flex: 1.5,
     fontSize: 14,
     color: '#2b2f4b',
-    fontWeight: '700',
+    fontWeight: '600',
     fontFamily: 'Inter',
   },
   footerGap: {
@@ -763,13 +771,13 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#2b2f4b',
     alignItems: 'center',
     justifyContent: 'center',
   },
   addToCartSecondaryText: {
-    color: '#2b2f4b',
-    fontWeight: '700',
+    color: '#FFFFFF',
+    fontWeight: '600',
     fontSize: 14,
     fontFamily: 'Inter',
   },
@@ -777,13 +785,13 @@ const styles = StyleSheet.create({
     flex: 1.2,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#2b2f4b',
+    backgroundColor: '#dc8d3c',
     alignItems: 'center',
     justifyContent: 'center',
   },
   buyNowText: {
     color: '#FFFFFF',
-    fontWeight: '800',
+    fontWeight: '600',
     fontSize: 14,
     fontFamily: 'Inter',
   },
@@ -804,7 +812,7 @@ const styles = StyleSheet.create({
   },
   webMainImageWrapper: {
     aspectRatio: 1,
-    borderRadius: 24,
+    borderRadius: 32,
     overflow: 'hidden',
     backgroundColor: '#F9FAFB',
     marginBottom: 20,
@@ -941,7 +949,7 @@ const styles = StyleSheet.create({
   webAddToCartBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#2b2f4b',
+    backgroundColor: '#dc8d3c',
     paddingHorizontal: 32,
     height: 56,
     borderRadius: 12,

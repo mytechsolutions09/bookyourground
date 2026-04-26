@@ -153,11 +153,11 @@ export default function UserOrdersScreen() {
 
   return (
     <View style={styles.screen}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <MobileAppNavbar 
         title="My Orders" 
-        titleColor="#FFFFFF"
-        bgColor="#dc8d3c"
+        titleColor="#111827"
+        lightBg
       />
       {content}
     </View>
@@ -182,8 +182,8 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   webTitle: {
-    fontSize: 28,
-    fontWeight: '900',
+    fontSize: 20,
+    fontWeight: '600',
     color: '#1F2937',
     marginTop: 8,
     fontFamily: 'Inter',
@@ -231,8 +231,8 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   orderId: {
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '600',
     color: '#1F2937',
     fontFamily: 'Inter',
   },
@@ -297,8 +297,8 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   totalAmount: {
-    fontSize: 16,
-    fontWeight: '900',
+    fontSize: 15,
+    fontWeight: '700',
     color: '#1F2937',
     marginTop: 2,
     fontFamily: 'Inter',

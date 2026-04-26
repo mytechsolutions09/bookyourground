@@ -41,7 +41,11 @@ import {
 import { supabase } from '@/lib/supabase';
 
 const { width, height } = Dimensions.get('window');
-const HEADER_TABS = [80, 60, 55, 50]; // Sport, Location, Date, Time heights
+const HEADER_TABS = [70, 55, 50, 50, 45]; // Sport, Location, Date, Team, Time heights
+const TEAMS_OPTIONS = [
+  { id: 'one', label: '1 Team', icon: Swords },
+  { id: 'both', label: 'Both Teams', icon: Trophy },
+];
 const SPORT_ICON_MAP: Record<string, any> = {
   'Box Cricket': { icon: Swords, bg: '#043529', image: require('@/assets/images/box_cricket_bg.png') },
   'Cricket Ground': { icon: Trophy, bg: '#064e3b', image: require('@/assets/images/cricket_bg.png') },
@@ -88,11 +92,17 @@ function GroundCardExpo({ ground, index, scrollX, onPress }: { ground: any; inde
               <MapPin size={14} color="#64748B" />
               <Text style={styles.cardFullLoc} numberOfLines={1}>{ground.city}, {ground.state}</Text>
             </View>
+            <View style={styles.cardFullRow}>
+              <Calendar size={14} color="#64748B" />
+              <Text style={styles.cardFullLoc}>{ground.selectedDateLabel}</Text>
+            </View>
+            <View style={styles.cardFullRow}>
+              <Clock size={14} color="#64748B" />
+              <Text style={styles.cardFullLoc}>{ground.selectedTimeLabel} ({ground.selectedTeamLabel})</Text>
+            </View>
             <View style={styles.cardFullFooter}>
               <Text style={styles.cardFullPrice}>
-                {ground.time_slots?.filter((s: any) => s.is_available && s.custom_price != null).length > 0
-                  ? `₹${Math.min(...ground.time_slots.filter((s: any) => s.is_available && s.custom_price != null).map((s: any) => Number(s.custom_price)))}`
-                  : 'See Slots'}
+                ₹{ground.displayPrice}
                 <Text style={styles.cardFullUnit}>
                   {String(ground.pitch_type ?? '').toLowerCase().includes('box') ? '/hr' : ' /match'}
                 </Text>
@@ -119,6 +129,7 @@ export default function SelectSportScreen() {
   const [activeSportIndex, setActiveSportIndex] = useState(0);
   const [activeLocIndex, setActiveLocIndex] = useState(0);
   const [activeDateIndex, setActiveDateIndex] = useState(0);
+  const [activeTeamIndex, setActiveTeamIndex] = useState(1); // Default to Both Teams
   const [activeTimeIndex, setActiveTimeIndex] = useState(0);
   const [activeResultPage, setActiveResultPage] = useState(0);
   
@@ -134,56 +145,14 @@ export default function SelectSportScreen() {
     horizontalScrollX.value = event.nativeEvent.contentOffset.x;
   };
 
-  const handleSelectGround = (ground: any) => {
-    setSelectedGround(ground);
-    modalY.value = withSpring(0, { damping: 20, stiffness: 90 });
-  };
-
-  const handleDismissModal = () => {
-    modalY.value = withSpring(height, { damping: 20, stiffness: 90 }, () => {
-      runOnJS(setSelectedGround)(null);
-    });
-  };
-
-  const panGesture = Gesture.Pan()
-    .onUpdate((e) => {
-      if (e.translationY > 0) {
-        modalY.value = e.translationY;
-      }
-    })
-    .onEnd((e) => {
-      if (e.translationY > 150 || e.velocityY > 500) {
-        runOnJS(handleDismissModal)();
-      } else {
-        modalY.value = withSpring(0);
-      }
-    });
-
-  const modalStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: modalY.value }],
-  }));
-
-  const handlePay = async () => {
-    if (!user) {
-      Alert.alert('Sign In Required', 'Please sign in to book a ground.', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign In', onPress: () => router.push('/(auth)/login') }
-      ]);
-      return;
-    }
-
-    if (!selectedGround || !time || time === 'No slots') {
-      Alert.alert('Selection Required', 'Please select a valid time slot to continue.');
-      return;
-    }
-
+  const handleSelectGround = async (ground: any) => {
+    if (!ground || !date || !time) return;
     setLoadingGrounds(true);
     try {
-      // Fetch the actual slot price for the selected time and ground
       const d = new Date(date.db);
       const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
       const dow = days[d.getDay()];
-      // Convert "09:00 AM" to "09:00:00"
+      
       const [t, ampm] = time.split(' ');
       let [h, m] = t.split(':').map(Number);
       if (ampm === 'PM' && h < 12) h += 12;
@@ -193,62 +162,50 @@ export default function SelectSportScreen() {
       const { data: slotData } = await supabase
         .from('time_slots')
         .select('custom_price, end_time')
-        .eq('ground_id', selectedGround.id)
+        .eq('ground_id', ground.id)
         .eq('start_time', startTimeStr)
         .eq('day_of_week', dow)
         .maybeSingle();
 
       const finalPrice = slotData?.custom_price ?? 0;
-      const actualEndTime = slotData?.end_time || `${(h + 1) % 24}:00:00`;
+      const actualEndTime = slotData?.end_time || `${(h + 1) % 24}:${m.toString().padStart(2, '0')}:00`;
 
-      // Calculate hours for the price helper
       const startH = h + m/60;
       const [eh, em] = actualEndTime.split(':').map(Number);
       const endH = eh + em/60;
       const duration = endH > startH ? endH - startH : (24 - startH + endH);
 
-      const isBox = (selectedGround.pitch_type || '').toLowerCase().includes('box');
-      const teamType = 'both'; // default for this simple flow
+      const isBox = (ground.pitch_type || '').toLowerCase().includes('box');
+      const teamType = TEAMS_OPTIONS[activeTeamIndex].id;
+      
+      const totalAmount = isBox ? finalPrice : (teamType === 'one' ? finalPrice / 2 : finalPrice);
+      const pricePerHour = isBox ? (finalPrice / (duration || 1)) : finalPrice;
 
-      const { data, error } = await supabase
-        .from('bookings')
-        .insert({
-          user_id: user.id,
-          ground_id: selectedGround.id,
-          booking_date: date.db,
-          start_time: startTimeStr,
-          end_time: actualEndTime,
-          total_hours: duration,
-          price_per_hour: isBox ? (finalPrice / (duration || 1)) : finalPrice,
-          total_amount: isBox ? finalPrice : (teamType === 'one' ? finalPrice / 2 : finalPrice),
-          status: 'pending',
-          payment_method: 'Wallet',
-          team_type: teamType,
-          notes: !isBox ? (teamType === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') : null,
-        })
-        .select()
-        .single();
+      const params = new URLSearchParams();
+      params.set('groundId', ground.id);
+      params.set('date', date.db);
+      params.set('time', startTimeStr.slice(0, 5));
+      params.set('teamType', teamType);
+      params.set('amount', totalAmount.toString());
+      params.set('pricePerHour', pricePerHour.toString());
+      params.set('endTime', actualEndTime.slice(0, 5));
 
-      if (error) throw error;
-
-      Alert.alert(
-        'Booking Successful!',
-        'Your booking has been placed and is pending confirmation.',
-        [{ text: 'View Bookings', onPress: () => router.replace('/(tabs)/bookings') }]
-      );
-      handleDismissModal();
+      router.push(`/checkout/new?${params.toString()}` as any);
     } catch (err: any) {
       console.error('Booking error:', err);
-      Alert.alert('Booking Failed', err.message || 'Something went wrong. Please try again.');
+      Alert.alert('Error', 'Could not initiate checkout. Please try again.');
     } finally {
       setLoadingGrounds(false);
     }
   };
 
+
+
   const SNAP_1 = height - HEADER_TABS[0] - insets.top;
   const SNAP_2 = SNAP_1 + height - (HEADER_TABS[0] + HEADER_TABS[1]) - insets.top;
   const SNAP_3 = SNAP_2 + height - (HEADER_TABS[0] + HEADER_TABS[1] + HEADER_TABS[2]) - insets.top;
   const SNAP_4 = SNAP_3 + height - (HEADER_TABS[0] + HEADER_TABS[1] + HEADER_TABS[2] + HEADER_TABS[3]) - insets.top;
+  const SNAP_5 = SNAP_4 + height - (HEADER_TABS.reduce((a, b) => a + b, 0)) - insets.top;
 
   const dates = useMemo(() => {
     return Array.from({ length: 14 }).map((_, i) => {
@@ -356,19 +313,74 @@ export default function SelectSportScreen() {
   useEffect(() => {
     if (sports.length === 0 || locations.length === 0) return;
     async function fetchResults() {
+      if (!sport || !loc || !date || !time) return;
       setLoadingGrounds(true);
-      const sport = sports[activeSportIndex];
-      const loc = locations[activeLocIndex];
+      
       try {
+        const d = new Date(date.db);
+        const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const dow = days[d.getDay()];
+        
+        // Convert "09:00 AM" to "09:00:00"
+        if (!time.includes(':')) {
+          setGrounds([]);
+          return;
+        }
+        const [t, ampm] = time.split(' ');
+        let [h, m] = t.split(':').map(Number);
+        if (m === undefined || isNaN(h) || isNaN(m)) {
+          setGrounds([]);
+          return;
+        }
+        if (ampm === 'PM' && h < 12) h += 12;
+        if (ampm === 'AM' && h === 12) h = 0;
+        const startTimeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:00`;
+
+        // 1. Get grounds that have this specific slot available
+        const { data: slotMatches } = await supabase
+          .from('time_slots')
+          .select('ground_id, custom_price')
+          .eq('day_of_week', dow)
+          .eq('start_time', startTimeStr)
+          .eq('is_available', true);
+
+        if (!slotMatches || slotMatches.length === 0) {
+          setGrounds([]);
+          return;
+        }
+
+        const groundIdsWithSlot = slotMatches.map(s => s.ground_id);
+        const priceMap = new Map(slotMatches.map(s => [s.ground_id, s.custom_price]));
+
+        // 2. Fetch ground details for those IDs
         const { data, error } = await supabase
           .from('grounds')
-          .select(`*, ground_images(*), time_slots(custom_price, is_available)`)
+          .select(`*, ground_images(*)`)
+          .in('id', groundIdsWithSlot)
           .eq('city', loc.city)
           .ilike('pitch_type', `%${sport.dbType}%`)
           .eq('active', true)
           .limit(20);
+
         if (error) throw error;
-        setGrounds(data || []);
+
+        const teamType = TEAMS_OPTIONS[activeTeamIndex].id;
+        const isBox = (sport.dbType || '').toLowerCase().includes('box');
+
+        const processed = (data || []).map(g => {
+          const basePrice = priceMap.get(g.id) || 0;
+          const displayPrice = (teamType === 'one' && !isBox) ? basePrice / 2 : basePrice;
+          
+          return {
+            ...g,
+            displayPrice,
+            selectedDateLabel: date.label,
+            selectedTimeLabel: time,
+            selectedTeamLabel: TEAMS_OPTIONS[activeTeamIndex].label,
+          };
+        });
+
+        setGrounds(processed);
       } catch (err) {
         console.error('Error fetching results:', err);
       } finally {
@@ -376,7 +388,7 @@ export default function SelectSportScreen() {
       }
     }
     fetchResults();
-  }, [sports, locations, activeSportIndex, activeLocIndex]);
+  }, [sports, locations, activeSportIndex, activeLocIndex, activeDateIndex, activeTeamIndex, activeTimeIndex]);
 
   // ANIMATED STYLES
   const statusBarBgStyle = useAnimatedStyle(() => ({
@@ -398,9 +410,14 @@ export default function SelectSportScreen() {
     transform: [{ translateY: HEADER_TABS[0] + HEADER_TABS[1] }],
     top: insets.top
   }));
-  const timeTabStyle = useAnimatedStyle(() => ({
+  const teamTabStyle = useAnimatedStyle(() => ({
     opacity: interpolate(verticalScrollY.value, [SNAP_3 + 100, SNAP_4], [0, 1], Extrapolate.CLAMP),
     transform: [{ translateY: HEADER_TABS[0] + HEADER_TABS[1] + HEADER_TABS[2] }],
+    top: insets.top
+  }));
+  const timeTabStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(verticalScrollY.value, [SNAP_4 + 100, SNAP_5], [0, 1], Extrapolate.CLAMP),
+    transform: [{ translateY: HEADER_TABS[0] + HEADER_TABS[1] + HEADER_TABS[2] + HEADER_TABS[3] }],
     top: insets.top
   }));
 
@@ -417,7 +434,7 @@ export default function SelectSportScreen() {
     };
   });
   const bgPin3Style = useAnimatedStyle(() => {
-    const ty = interpolate(verticalScrollY.value, [0, SNAP_2, SNAP_4], [height, SNAP_2, SNAP_4], Extrapolate.CLAMP);
+    const ty = interpolate(verticalScrollY.value, [0, SNAP_2, SNAP_5], [height, SNAP_2, SNAP_5], Extrapolate.CLAMP);
     return {
       backgroundColor: '#01b854',
       transform: [{ translateY: ty }],
@@ -425,11 +442,19 @@ export default function SelectSportScreen() {
     };
   });
   const bgPin4Style = useAnimatedStyle(() => {
-    const ty = interpolate(verticalScrollY.value, [0, SNAP_3, SNAP_4], [height, SNAP_3, SNAP_4], Extrapolate.CLAMP);
+    const ty = interpolate(verticalScrollY.value, [0, SNAP_3, SNAP_5], [height, SNAP_3, SNAP_5], Extrapolate.CLAMP);
+    return {
+      backgroundColor: '#5bcd8e',
+      transform: [{ translateY: ty }],
+      zIndex: 3,
+    };
+  });
+  const bgPin5Style = useAnimatedStyle(() => {
+    const ty = interpolate(verticalScrollY.value, [0, SNAP_4, SNAP_5], [height, SNAP_4, SNAP_5], Extrapolate.CLAMP);
     return {
       backgroundColor: '#2a533a',
       transform: [{ translateY: ty }],
-      zIndex: 3,
+      zIndex: 4,
     };
   });
 
@@ -437,12 +462,14 @@ export default function SelectSportScreen() {
   const dots2Opacity = useAnimatedStyle(() => ({ opacity: interpolate(verticalScrollY.value, [SNAP_1, SNAP_1 + (SNAP_2 - SNAP_1) * 0.4], [1, 0], Extrapolate.CLAMP) }));
   const dots3Opacity = useAnimatedStyle(() => ({ opacity: interpolate(verticalScrollY.value, [SNAP_2, SNAP_2 + (SNAP_3 - SNAP_2) * 0.4], [1, 0], Extrapolate.CLAMP) }));
   const dots4Opacity = useAnimatedStyle(() => ({ opacity: interpolate(verticalScrollY.value, [SNAP_3, SNAP_3 + (SNAP_4 - SNAP_3) * 0.4], [1, 0], Extrapolate.CLAMP) }));
+  const dots5Opacity = useAnimatedStyle(() => ({ opacity: interpolate(verticalScrollY.value, [SNAP_4, SNAP_4 + (SNAP_5 - SNAP_4) * 0.4], [1, 0], Extrapolate.CLAMP) }));
 
 
 
   const sport = sports[activeSportIndex];
   const loc = locations[activeLocIndex];
   const date = dates[activeDateIndex];
+  const teamOption = TEAMS_OPTIONS[activeTeamIndex];
   const time = timeSlots[activeTimeIndex] || 'No slots';
 
   if (sports.length === 0 || locations.length === 0) {
@@ -461,6 +488,7 @@ export default function SelectSportScreen() {
       <Animated.View style={[styles.bgPin, bgPin2Style]} />
       <Animated.View style={[styles.bgPin, bgPin3Style]} />
       <Animated.View style={[styles.bgPin, bgPin4Style]} />
+      <Animated.View style={[styles.bgPin, bgPin5Style]} />
 
       <View style={styles.headerOverlay}>
         <Animated.View style={[styles.statusBarFill, { height: insets.top }, statusBarBgStyle]} />
@@ -473,7 +501,10 @@ export default function SelectSportScreen() {
         <Animated.View style={[styles.headerTab, dateTabStyle, { height: HEADER_TABS[2], backgroundColor: '#01b854' }]}>
           <View style={styles.centerRow}><Text style={[styles.tabTextSmall, { color: '#06392e' }]}>{date.short}</Text></View>
         </Animated.View>
-        <Animated.View style={[styles.headerTab, timeTabStyle, { height: HEADER_TABS[3], backgroundColor: '#2a533a' }]}>
+        <Animated.View style={[styles.headerTab, teamTabStyle, { height: HEADER_TABS[3], backgroundColor: '#5bcd8e' }]}>
+          <View style={styles.centerRow}><Text style={[styles.tabTextSmall, { color: '#043529' }]}>{teamOption.label}</Text></View>
+        </Animated.View>
+        <Animated.View style={[styles.headerTab, timeTabStyle, { height: HEADER_TABS[4], backgroundColor: '#2a533a' }]}>
           <View style={styles.centerRow}><Text style={[styles.tabTextSmall, { color: '#FFFFFF' }]}>{time}</Text></View>
         </Animated.View>
       </View>
@@ -483,7 +514,7 @@ export default function SelectSportScreen() {
         showsVerticalScrollIndicator={false}
         onScroll={onVerticalScroll}
         scrollEventThrottle={16}
-        snapToOffsets={[0, SNAP_1, SNAP_2, SNAP_3, SNAP_4]}
+        snapToOffsets={[0, SNAP_1, SNAP_2, SNAP_3, SNAP_4, SNAP_5]}
         decelerationRate="fast"
         bounces={false}
       >
@@ -558,6 +589,27 @@ export default function SelectSportScreen() {
         </View>
 
         <View style={{ height: height - (HEADER_TABS[0] + HEADER_TABS[1] + HEADER_TABS[2]) - insets.top }}>
+          <View style={[styles.pageCard, { backgroundColor: '#5bcd8e' }]}>
+            <ScrollView horizontal pagingEnabled onScroll={(e) => setActiveTeamIndex(Math.round(e.nativeEvent.contentOffset.x / width))} scrollEventThrottle={16}>
+              {TEAMS_OPTIONS.map((opt) => (
+                <View key={opt.id} style={styles.slide}>
+                  <View style={styles.iconCircleSmall}><opt.icon size={40} color="#043529" /></View>
+                  <Text style={[styles.heroName, { color: '#043529' }]}>{opt.label}</Text>
+                  <Text style={[styles.tabTextSmall, { marginTop: 10, opacity: 0.7 }]}>
+                    {opt.id === 'one' ? 'Single team booking' : 'Full ground booking'}
+                  </Text>
+                </View>
+              ))}
+            </ScrollView>
+            <Animated.View style={[styles.dotContainerAbsolute, dots4Opacity]}>
+              {TEAMS_OPTIONS.map((_, i) => (
+                <View key={i} style={[styles.dotDark, activeTeamIndex === i && styles.activeDotDark, { backgroundColor: 'rgba(4, 53, 41, 0.2)' }]} />
+              ))}
+            </Animated.View>
+          </View>
+        </View>
+        
+        <View style={{ height: height - (HEADER_TABS[0] + HEADER_TABS[1] + HEADER_TABS[2] + HEADER_TABS[3]) - insets.top }}>
           <View style={[styles.pageCard, { backgroundColor: '#2a533a' }]}>
             <ScrollView horizontal pagingEnabled onScroll={(e) => setActiveTimeIndex(Math.round(e.nativeEvent.contentOffset.x / width))} scrollEventThrottle={16} showsHorizontalScrollIndicator={false}>
               {timeSlots.length > 0 ? timeSlots.map((t) => (
@@ -572,7 +624,7 @@ export default function SelectSportScreen() {
                 </View>
               )}
             </ScrollView>
-            <Animated.View style={[styles.dotContainerAbsolute, dots4Opacity]}>
+            <Animated.View style={[styles.dotContainerAbsolute, dots5Opacity]}>
               {timeSlots.map((_, i) => (
                 <View key={i} style={[styles.dotDark, activeTimeIndex === i && styles.activeDotDark]} />
               ))}
@@ -618,79 +670,7 @@ export default function SelectSportScreen() {
         </View>
       </ScrollView>
 
-      {/* BOOKING CONFIRMATION MODAL */}
-      {selectedGround && (
-        <GestureDetector gesture={panGesture}>
-          <Animated.View style={[styles.modalOverlay, modalStyle]}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHandle} />
-              
-              <Image 
-                source={{ uri: selectedGround.ground_images?.[0]?.image_url || 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg' }} 
-                style={styles.modalHeroImage} 
-              />
-              
-              <View style={styles.modalDetails}>
-                <Text style={styles.modalGroundName}>{selectedGround.name}</Text>
-                
-                <View style={styles.modalInfoRow}>
-                  <Trophy size={16} color="#059669" />
-                  <Text style={styles.modalInfoText}>{selectedGround.pitch_type}</Text>
-                </View>
-                
-                <View style={styles.modalInfoRow}>
-                  <Clock size={16} color="#059669" />
-                  <Text style={styles.modalInfoText}>{date.label}, {time}</Text>
-                </View>
-                
-                <Text style={styles.modalPrice}>
-                  {selectedGround.time_slots?.filter((s: any) => s.is_available && s.custom_price != null).length > 0
-                    ? `₹${Math.min(...selectedGround.time_slots.filter((s: any) => s.is_available && s.custom_price != null).map((s: any) => Number(s.custom_price)))}`
-                    : 'Price Varies'}
-                </Text>
-                
-                <View style={styles.modalSection}>
-                  <Text style={styles.modalSectionTitle}>Address</Text>
-                  <View style={styles.modalAddressRow}>
-                    <MapPin size={16} color="#059669" />
-                    <Text style={styles.modalAddressText}>{selectedGround.address}, {selectedGround.city}</Text>
-                  </View>
-                </View>
-                
-                <View style={styles.modalSection}>
-                  <Text style={styles.modalSectionTitle}>Facilities</Text>
-                  <View style={styles.facilitiesContainer}>
-                    {[
-                      selectedGround.has_floodlights && 'Floodlights',
-                      selectedGround.has_parking && 'Parking',
-                      selectedGround.has_changing_rooms && 'Changing Rooms',
-                      selectedGround.has_pavilion && 'Pavilion',
-                      selectedGround.has_washrooms && 'Washrooms',
-                    ].filter(Boolean).map((item, idx) => (
-                      <View key={idx} style={styles.facilityChip}>
-                        <Text style={styles.facilityChipText}>{item}</Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              </View>
-              
-              <TouchableOpacity 
-                style={[styles.confirmButton, loadingGrounds && { opacity: 0.7 }]} 
-                activeOpacity={0.9}
-                onPress={handlePay}
-                disabled={loadingGrounds}
-              >
-                {loadingGrounds ? (
-                  <ActivityIndicator color="#06392e" />
-                ) : (
-                  <Text style={styles.confirmButtonText}>Confirm Booking</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
-        </GestureDetector>
-      )}
+
     </View>
   );
 }

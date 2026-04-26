@@ -1,4 +1,5 @@
-import { View, Text as RNText, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, useWindowDimensions } from 'react-native';
+import { View, Text as RNText, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, useWindowDimensions, Pressable, Image } from 'react-native';
+import { ExpoImage } from 'expo-image';
 import { router } from 'expo-router';
 import {
   User,
@@ -21,6 +22,8 @@ import {
   Info,
   X,
   Swords,
+  LayoutGrid,
+  Trophy,
 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -135,307 +138,149 @@ export default function ProfileScreen() {
         />
       )}
 
-      <Modal
-        visible={showInfoModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowInfoModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <TouchableOpacity 
-            style={styles.modalBackdrop} 
-            activeOpacity={1} 
-            onPress={() => setShowInfoModal(false)} 
+      {/* 1. PROFILE CARD */}
+      <View style={styles.profileCardNew}>
+        <View style={styles.profileCardContent}>
+          <Image
+            source={{ uri: profile?.avatar_url || 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg' }}
+            style={styles.avatarNew}
           />
-          <View style={[styles.modalContent, { backgroundColor: themeBg }]}>
-            <View style={styles.modalHeader}>
-              <RNText style={[styles.modalTitle, { color: themeText }]}>Profile Info</RNText>
-              <TouchableOpacity onPress={() => setShowInfoModal(false)}>
-                <X size={24} color={themeText} />
-              </TouchableOpacity>
-            </View>
-
-            <Card
-              style={[
-                styles.profileCard,
-                {
-                  backgroundColor: themeCard,
-                  borderColor: themeBorder,
-                  borderWidth: isLight ? 1 : styles.cardThemed.borderWidth,
-                  shadowColor: isLight ? '#000' : 'transparent',
-                  shadowOpacity: isLight ? 0.04 : 0,
-                  shadowRadius: 12,
-                  shadowOffset: { width: 0, height: 4 },
-                },
-              ]}
-            >
-              <View style={{ height: 8 }} />
-              <RNText style={[styles.name, { color: themeText }]}>{getFormattedName(profile?.full_name)}</RNText>
-              <View style={[styles.roleBadge, { borderColor: themeAccent, backgroundColor: isLight ? 'rgba(16, 185, 129, 0.08)' : 'transparent', marginBottom: 16 }]}>
-                <RNText style={[styles.roleText, { color: isLight ? themeAccent : themeText }]}>
-                  {profile && getRoleLabel(profile.role)}
-                </RNText>
-              </View>
-
-              <View style={styles.overviewInfo}>
-                <View style={styles.overviewInfoItem}>
-                  <Mail size={14} color={themeAccent} />
-                  <RNText style={[styles.overviewInfoText, { color: isLight ? '#475569' : themeText }]}>
-                    {user?.email}
-                  </RNText>
-                </View>
-                {profile?.phone && (
-                  <View style={styles.overviewInfoItem}>
-                    <Phone size={14} color={themeAccent} />
-                    <RNText style={[styles.overviewInfoText, { color: isLight ? '#475569' : themeText }]}>
-                      {profile.phone}
-                    </RNText>
-                  </View>
-                )}
-                {profile?.team_name && (
-                  <View style={styles.overviewInfoItem}>
-                    <Swords size={14} color={themeAccent} />
-                    <RNText style={[styles.overviewInfoText, { color: isLight ? '#475569' : themeText }]}>
-                      Team: {profile.team_name}
-                    </RNText>
-                  </View>
-                )}
-              </View>
-            </Card>
+          <View style={styles.profileTextContainer}>
+            <RNText style={styles.nameNew}>{getFormattedName(profile?.full_name)}</RNText>
+            <RNText style={styles.roleNew}>
+              {profile?.role === 'ground_owner' ? 'Ground Owner & Player' : 'Player'}
+            </RNText>
             
-            <View style={{ height: 40 }} />
+
           </View>
         </View>
-      </Modal>
+      </View>
 
-
-      {(profile?.role === 'ground_owner' && (!isWeb || isCompact)) ? (
-        <View style={[styles.menuCard, styles.ownerNavCard, { backgroundColor: themeCard, borderColor: themeBorder }]}>
-          <RNText style={[styles.ownerNavTitle, { color: isLight ? themeMuted : themeText }]}>Ground owner</RNText>
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => router.push('/(owner)/owner-dashboard' as any)}
-          >
-            <View style={styles.menuItemLeft}>
-              <LayoutDashboard size={20} color={themeAccent} />
-              <RNText style={[styles.menuItemText, { color: themeText }]}>Dashboard</RNText>
-            </View>
-            <ChevronRight size={20} color={chevronColor} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => router.push('/(owner)/manage-grounds' as any)}
-          >
-            <View style={styles.menuItemLeft}>
-              <MapPin size={20} color={themeAccent} />
-              <RNText style={[styles.menuItemText, { color: themeText }]}>My grounds</RNText>
-            </View>
-            <ChevronRight size={20} color={chevronColor} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => router.push('/(owner)/ground-bookings' as any)}
-          >
-            <View style={styles.menuItemLeft}>
-              <Calendar size={20} color={themeAccent} />
-              <RNText style={[styles.menuItemText, { color: themeText }]}>Bookings</RNText>
-            </View>
-            <ChevronRight size={20} color={chevronColor} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => router.push('/(owner)/inventory' as any)}
-          >
-            <View style={styles.menuItemLeft}>
-              <CalendarClock size={20} color={themeAccent} />
-              <RNText style={[styles.menuItemText, { color: themeText }]}>Inventory Plan</RNText>
-            </View>
-            <ChevronRight size={20} color={chevronColor} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => router.push('/(tabs)/profile/orders' as any)}
-          >
-            <View style={styles.menuItemLeft}>
-              <ShoppingBag size={20} color={themeAccent} />
-              <RNText style={[styles.menuItemText, { color: themeText }]}>My Orders</RNText>
-            </View>
-            <ChevronRight size={20} color={chevronColor} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => router.push('/(owner)/earnings' as any)}
-          >
-            <View style={styles.menuItemLeft}>
-              <IndianRupee size={20} color={themeAccent} />
-              <RNText style={[styles.menuItemText, { color: themeText }]}>Earnings</RNText>
-            </View>
-            <ChevronRight size={20} color={chevronColor} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => router.push('/(owner)/add-ground' as any)}
-          >
-            <View style={styles.menuItemLeft}>
-              <PlusCircle size={20} color={themeAccent} />
-              <RNText style={[styles.menuItemText, { color: themeText }]}>Add ground</RNText>
-            </View>
-            <ChevronRight size={20} color={chevronColor} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => router.push('/(owner)/settings' as any)}
-          >
-            <View style={styles.menuItemLeft}>
-              <Settings size={20} color={themeAccent} />
-              <RNText style={[styles.menuItemText, { color: themeText }]}>Settings</RNText>
-            </View>
-            <ChevronRight size={20} color={chevronColor} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => router.push('/(tabs)/support' as any)}
-          >
-            <View style={styles.menuItemLeft}>
-              <LifeBuoy size={20} color={themeAccent} />
-              <RNText style={[styles.menuItemText, { color: themeText }]}>Contact Us</RNText>
-            </View>
-            <ChevronRight size={20} color={chevronColor} />
-          </TouchableOpacity>
-        </View>
-      ) : profile?.role === 'ground_owner' && isWeb && !isCompact ? ( // Only for desktop owners, mobile owners use the compact menu above
-        <View style={styles.menuCard}>
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => router.push('/(owner)/grounds')}
-          >
-            <RNText style={styles.menuItemText}>Manage Grounds</RNText>
-            <ChevronRight size={20} color={chevronColor} />
-          </TouchableOpacity>
-        </View>
-      ) : null}
-
-      {(isCompact || !isWeb) && (
-        <View style={styles.menuContainer}>
-          <View style={[styles.menuCard, { backgroundColor: themeCard, borderColor: themeBorder }]}>
-            {isSuperAdmin && (
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={() => router.push('/(admin)/dashboard')}
+      {/* 2. GROUND OWNER HUB (Grid) */}
+      {profile?.role === 'ground_owner' && (
+        <View style={styles.sectionContainer}>
+          <RNText style={styles.sectionTitle}>GROUND OWNER HUB</RNText>
+          <View style={styles.hubGrid}>
+            <TouchableOpacity 
+              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              onPress={() => router.push('/(owner)/owner-dashboard' as any)}
             >
-              <View style={styles.menuItemLeft}>
-                <Shield size={20} color={themeAccent} />
-                <RNText style={[styles.menuItemText, { color: themeText }]}>Admin Dashboard</RNText>
+              <View style={styles.hubIconCircle}>
+                <LayoutGrid size={24} color="#10b981" />
               </View>
-              <ChevronRight size={20} color={chevronColor} />
+              <RNText style={styles.hubCardText}>Dashboard</RNText>
             </TouchableOpacity>
-          )}
 
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => router.push('/(tabs)/dashboard' as any)}
-          >
-            <View style={styles.menuItemLeft}>
-              <LayoutDashboard size={20} color={themeAccent} />
-              <RNText style={[styles.menuItemText, { color: themeText }]}>My Dashboard</RNText>
-            </View>
-            <ChevronRight size={20} color={chevronColor} />
-          </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              onPress={() => router.push('/(owner)/manage-grounds' as any)}
+            >
+              <View style={styles.hubIconCircle}>
+                <MapPin size={24} color="#10b981" />
+              </View>
+              <RNText style={styles.hubCardText}>My Grounds</RNText>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.menuItem}
+            <TouchableOpacity 
+              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              onPress={() => router.push('/(owner)/ground-bookings' as any)}
+            >
+              <View style={styles.hubIconCircle}>
+                <Calendar size={24} color="#10b981" />
+              </View>
+              <RNText style={styles.hubCardText}>Bookings</RNText>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              onPress={() => router.push('/(owner)/earnings' as any)}
+            >
+              <View style={styles.hubIconCircle}>
+                <IndianRupee size={24} color="#10b981" />
+              </View>
+              <RNText style={styles.hubCardText}>Earnings</RNText>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              onPress={() => router.push('/(owner)/inventory' as any)}
+            >
+              <View style={styles.hubIconCircle}>
+                <CalendarClock size={24} color="#10b981" />
+              </View>
+              <RNText style={styles.hubCardText}>Inventory</RNText>
+            </TouchableOpacity>
+
+
+            <TouchableOpacity 
+              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              onPress={() => router.push('/(owner)/settings' as any)}
+            >
+              <View style={styles.hubIconCircle}>
+                <Settings size={24} color="#10b981" />
+              </View>
+              <RNText style={styles.hubCardText}>Settings</RNText>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* 3. PLAYER DASHBOARD (Rows) */}
+      <View style={styles.sectionContainer}>
+        <RNText style={styles.sectionTitle}>PLAYER DASHBOARD</RNText>
+        <View style={styles.rowList}>
+          <TouchableOpacity 
+            style={styles.rowItem}
             onPress={() => router.push('/(tabs)/bookings' as any)}
           >
-            <View style={styles.menuItemLeft}>
-              <Calendar size={20} color={themeAccent} />
-              <RNText style={[styles.menuItemText, { color: themeText }]}>My Bookings</RNText>
+            <View style={styles.rowLeft}>
+              <Trophy size={20} color="#10b981" />
+              <RNText style={styles.rowText}>My Bookings</RNText>
             </View>
-            <ChevronRight size={20} color={chevronColor} />
+            <ChevronRight size={20} color="#94a3b8" />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.menuItem}
+          <TouchableOpacity 
+            style={styles.rowItem}
             onPress={() => router.push('/(tabs)/profile/orders' as any)}
           >
-            <View style={styles.menuItemLeft}>
-              <ShoppingBag size={20} color={themeAccent} />
-              <RNText style={[styles.menuItemText, { color: themeText }]}>My Orders</RNText>
+            <View style={styles.rowLeft}>
+              <ShoppingBag size={20} color="#10b981" />
+              <RNText style={styles.rowText}>My Orders</RNText>
             </View>
-            <ChevronRight size={20} color={chevronColor} />
+            <ChevronRight size={20} color="#94a3b8" />
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.menuItem}
+          <TouchableOpacity 
+            style={styles.rowItem}
             onPress={() => router.push('/shop/cart' as any)}
           >
-            <View style={styles.menuItemLeft}>
-              <ShoppingCart size={20} color={themeAccent} />
-              <RNText style={[styles.menuItemText, { color: themeText }]}>My Shopping Cart</RNText>
+            <View style={styles.rowLeft}>
+              <ShoppingCart size={20} color="#10b981" />
+              <RNText style={styles.rowText}>My Shopping Cart</RNText>
             </View>
-            <ChevronRight size={20} color={chevronColor} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.menuItem}
-            onPress={() => router.push('/favorites' as any)}
-          >
-            <View style={styles.menuItemLeft}>
-              <Star size={20} color={themeAccent} />
-              <RNText style={[styles.menuItemText, { color: themeText }]}>Favorites</RNText>
-            </View>
-            <ChevronRight size={20} color={chevronColor} />
+            <ChevronRight size={20} color="#94a3b8" />
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={styles.menuItem}
-            onPress={() => router.push('/(tabs)/profile/notifications' as any)}
+            style={styles.rowItem}
+            onPress={() => router.push('/(tabs)/find-an-opponent' as any)}
           >
-            <View style={styles.menuItemLeft}>
-              <Bell size={20} color={themeAccent} />
-              <RNText style={[styles.menuItemText, { color: themeText }]}>Notifications</RNText>
+            <View style={styles.rowLeft}>
+              <Swords size={20} color="#10b981" />
+              <RNText style={styles.rowText}>Find Opposition</RNText>
             </View>
-            <ChevronRight size={20} color={chevronColor} />
+            <ChevronRight size={20} color="#94a3b8" />
           </TouchableOpacity>
-  
-          <TouchableOpacity 
-            style={styles.menuItem}
-            onPress={() => router.push('/(tabs)/profile/settings' as any)}
-          >
-            <View style={styles.menuItemLeft}>
-              <Settings size={20} color={themeAccent} />
-              <RNText style={[styles.menuItemText, { color: themeText }]}>Settings</RNText>
-            </View>
-            <ChevronRight size={20} color={chevronColor} />
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.menuItem}
-            onPress={() => router.push('/(tabs)/support' as any)}
-          >
-            <View style={styles.menuItemLeft}>
-              <LifeBuoy size={20} color={themeAccent} />
-              <RNText style={[styles.menuItemText, { color: themeText }]}>Contact Us</RNText>
-            </View>
-            <ChevronRight size={20} color={chevronColor} />
-          </TouchableOpacity>
-
-
-          </View>
         </View>
-      )}
+      </View>
 
-      {(isCompact || !isWeb) && (
-        <Button
-          title="Sign Out"
-          onPress={handleSignOut}
-          variant="danger"
-          fullWidth
-          style={styles.signOutButton}
-        />
-      )}
+      <Button
+        title="Sign Out"
+        onPress={handleSignOut}
+        variant="danger"
+        fullWidth
+        style={styles.signOutButtonNew}
+      />
     </View>
   );
 
@@ -450,10 +295,14 @@ export default function ProfileScreen() {
   return (
     <View style={styles.nativeScreen}>
       <MobileAppNavbar 
-        title="Profile" 
+        title="PROFILE" 
+        titleColor="#0F172A"
+        smallerTitle
         rightAction={
-          <TouchableOpacity onPress={() => setShowInfoModal(true)}>
-            <Info size={22} color="#01b854" strokeWidth={2.5} />
+          <TouchableOpacity onPress={() => router.push('/(tabs)/profile/notifications' as any)}>
+            <View style={styles.headerIconCircle}>
+              <Bell size={20} color="#10b981" />
+            </View>
           </TouchableOpacity>
         }
       />
@@ -526,7 +375,7 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
     width: '100%',
     maxWidth: 900,
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
     ...Platform.select({
       web: {
         paddingHorizontal: 16,
@@ -687,5 +536,173 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '800',
     fontFamily: 'Inter',
+  },
+  
+  // NEW STYLES
+  profileCardNew: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 32,
+    padding: 24,
+    marginBottom: 32,
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.1,
+    shadowRadius: 24,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.05)',
+  },
+  profileCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 20,
+  },
+  avatarNew: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#F1F5F9',
+  },
+  profileTextContainer: {
+    flex: 1,
+  },
+  nameNew: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#0F172A',
+    marginBottom: 4,
+    letterSpacing: -0.3,
+    fontFamily: 'Inter',
+  },
+  roleNew: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+    marginBottom: 12,
+    fontFamily: 'Inter',
+  },
+  levelContainer: {
+    width: '100%',
+  },
+  levelHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  levelText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  levelPercent: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  progressBarBg: {
+    height: 6,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#10b981',
+    borderRadius: 3,
+  },
+  sectionContainer: {
+    marginBottom: 32,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0F172A',
+    marginBottom: 12,
+    letterSpacing: 0.5,
+    fontFamily: 'Inter',
+    textTransform: 'uppercase',
+  },
+  hubGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    justifyContent: 'space-between',
+  },
+  hubCard: {
+    width: '47.5%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  hubIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#F0FDF4',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+  },
+  hubCardText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  rowList: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    paddingHorizontal: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  rowItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8FAFC',
+  },
+  rowLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  rowText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  headerIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  signOutButtonNew: {
+    marginBottom: 40,
+    borderRadius: 16,
+    height: 56,
   },
 });

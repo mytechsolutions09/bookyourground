@@ -250,7 +250,7 @@ export default function GroundsTabScreen() {
             onScroll={verticalScrollHandler}
             scrollEventThrottle={16}
             style={styles.page}
-            contentContainerStyle={{ paddingTop: HEADER_HEIGHT + insets.top + 16, paddingBottom: 100 }}
+            contentContainerStyle={{ paddingTop: HEADER_HEIGHT + insets.top + 4, paddingBottom: 100 }}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="always"
           >
@@ -295,9 +295,11 @@ const styles = StyleSheet.create({
   tabContainerBase: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'transparent',
-    borderRadius: 999,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 20,
     padding: 6,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   nativeTabContainer: {
     marginHorizontal: 16,
@@ -305,10 +307,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   webTabContainer: {
-    paddingTop: 12,
-    paddingBottom: 20,
+    marginTop: 12,
+    marginBottom: 20,
     width: '100%',
-    maxWidth: 600,
+    maxWidth: 400,
     alignSelf: 'center',
   },
   webTabContainerNative: {
@@ -318,24 +320,29 @@ const styles = StyleSheet.create({
   },
   tab: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 999,
+    paddingVertical: 12,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   activeTab: {
-    backgroundColor: 'transparent',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   tabText: {
-    color: '#334155',
-    fontSize: 13,
-    fontWeight: '500',
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '600',
     fontFamily: 'Inter',
   },
   activeTabText: {
     color: '#01b854',
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '700',
     fontFamily: 'Inter',
   },
   favoritesContainer: {

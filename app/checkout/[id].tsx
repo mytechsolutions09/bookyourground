@@ -14,6 +14,7 @@ import {
   FlatList,
   Pressable,
 } from 'react-native';
+import { WebView } from 'react-native-webview';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,7 +23,7 @@ import WebLayout from '@/components/web/WebLayout';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import { formatCurrency, formatDateDDMMYYYY } from '@/utils/helpers';
-import { CreditCard, ShieldCheck, Clock, Calendar, MapPin, ChevronLeft, Wallet, Users } from 'lucide-react-native';
+import { CreditCard, ShieldCheck, Clock, Calendar, MapPin, ChevronLeft, Wallet, Users, X } from 'lucide-react-native';
 import { hoursBetweenBooked, normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
 import { useUI } from '@/contexts/UIContext';
 
@@ -45,6 +46,9 @@ export default function CheckoutScreen() {
   const [applyingCoupon, setApplyingCoupon] = useState(false);
   const [customCashAmount, setCustomCashAmount] = useState<string>('');
   const [bookedForName, setBookedForName] = useState<string>('');
+  
+  const [showRazorpayWebView, setShowRazorpayWebView] = useState(false);
+  const [razorpayOrderData, setRazorpayOrderData] = useState<any>(null);
 
   const { setTabBarVisible } = useUI();
 
@@ -407,9 +411,14 @@ export default function CheckoutScreen() {
         throw new Error(order.error || 'Failed to create Razorpay order');
       }
 
-      if (Platform.OS === 'web') {
-        // 2. Load Razorpay Script
-        const loadScript = (src: string) => {
+      if (Platform.OS !== 'web') {
+        setRazorpayOrderData(order);
+        setShowRazorpayWebView(true);
+        return;
+      }
+
+      // Web Logic
+      const loadScript = (src: string) => {
           return new Promise((resolve) => {
             const script = document.createElement('script');
             script.src = src;
@@ -494,16 +503,119 @@ export default function CheckoutScreen() {
 
         const rzp = new (window as any).Razorpay(options);
         rzp.open();
-      } else {
-        Alert.alert('Mobile Payment', 'Razorpay native integration coming soon.');
-        setProcessing(false);
-      }
-    } catch (error: any) {
+      } catch (error: any) {
       console.error('Razorpay error:', error);
       Alert.alert('Error', error.message || 'Razorpay initiation failed.');
       setProcessing(false);
     }
   };
+
+  const handleRazorpayMobileMessage = async (event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      
+      if (data.status === 'success') {
+        setShowRazorpayWebView(false);
+        setProcessing(true);
+        
+        const { data: verifyData, error: verifyError } = await supabase.functions.invoke('payment-gateway', {
+          body: {
+            action: 'verify-razorpay-payment',
+            razorpay_order_id: data.response.razorpay_order_id,
+            razorpay_payment_id: data.response.razorpay_payment_id,
+            razorpay_signature: data.response.razorpay_signature,
+            bookingId: booking.isNew ? null : booking.id,
+            bookingDetails: booking.isNew ? {
+              ground_id: booking.ground_id,
+              booking_date: booking.booking_date,
+              start_time: booking.start_time,
+              end_time: booking.end_time,
+              team_type: booking.team_type,
+              coupon_id: booking.coupon_id,
+              total_hours: booking.total_hours,
+              price_per_hour: booking.price_per_hour,
+              total_amount: booking.total_amount + (booking.discount_amount || 0),
+              discount_amount: booking.discount_amount || 0,
+            } : null,
+          },
+        });
+
+        if (verifyError) throw verifyError;
+        
+        if (verifyData && verifyData.success) {
+          Alert.alert('Success', 'Payment successful! Your booking is confirmed.');
+          router.replace(`/bookings/${verifyData.bookingId}` as any);
+        } else {
+          throw new Error(verifyData?.error || 'Payment verification failed.');
+        }
+      } else if (data.status === 'dismissed' || data.status === 'failed') {
+        setShowRazorpayWebView(false);
+        setProcessing(false);
+        if (data.status === 'failed') {
+          Alert.alert('Payment Failed', data.response?.error?.description || 'Payment was unsuccessful.');
+        }
+      }
+    } catch (err: any) {
+      setShowRazorpayWebView(false);
+      setProcessing(false);
+      Alert.alert('Payment Error', err.message);
+    }
+  };
+
+  const razorpayMobileHtml = razorpayOrderData ? `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <style>
+          body { background-color: #f8fafc; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: -apple-system, system-ui; }
+          .loader { border: 4px solid #f3f3f3; border-top: 4px solid #10b981; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+          @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        </style>
+      </head>
+      <body>
+        <div class="loader"></div>
+        <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+        <script>
+          var options = {
+            "key": "${razorpayOrderData.key_id}",
+            "amount": "${razorpayOrderData.amount}",
+            "currency": "${razorpayOrderData.currency}",
+            "name": "Book Your Ground",
+            "description": "Booking for ${booking?.grounds?.name || 'your selected ground'}",
+            "order_id": "${razorpayOrderData.id}",
+            "prefill": {
+              "name": "${user?.user_metadata?.full_name || ''}",
+              "email": "${user?.email || ''}",
+              "contact": "${user?.user_metadata?.phone || ''}"
+            },
+            "theme": { "color": "#10b981" },
+            "handler": function (response) {
+              window.ReactNativeWebView.postMessage(JSON.stringify({
+                status: 'success',
+                response: response
+              }));
+            },
+            "modal": {
+              "ondismiss": function() {
+                window.ReactNativeWebView.postMessage(JSON.stringify({
+                  status: 'dismissed'
+                }));
+              }
+            }
+          };
+          var rzp = new Razorpay(options);
+          rzp.on('payment.failed', function (response){
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              status: 'failed',
+              response: response
+            }));
+          });
+          setTimeout(function() { rzp.open(); }, 500);
+        </script>
+      </body>
+    </html>
+  ` : '';
 
   const handlePayment = async () => {
     if (selectedGateway === 'razorpay') {
@@ -542,10 +654,10 @@ export default function CheckoutScreen() {
 
   const dynamicStyles = {
     content: {
-      padding: Platform.OS === 'web' ? (width > 768 ? 24 : 16) : 12,
+      padding: Platform.OS === 'web' ? (width > 768 ? 16 : 8) : 8,
     },
     layout: {
-      gap: isDesktop ? (width > 1024 ? 32 : 16) : 0,
+      gap: isDesktop ? (width > 1024 ? 24 : 16) : 0,
     },
     productImg: {
       height: Platform.OS === 'web' && width > 768 ? 220 : 160,
@@ -583,7 +695,7 @@ export default function CheckoutScreen() {
         >
           <ChevronLeft size={20} color={themeBackIconColor} />
         </TouchableOpacity>
-        <RNText style={[styles.title, { color: themeTextColor }]}>Checkout</RNText>
+        <RNText style={[styles.title, { color: themeTextColor }]}>Confirm Booking</RNText>
       </View>
 
       <View style={[styles.layout, !isDesktop && styles.layoutMobile, dynamicStyles.layout]}>
@@ -765,6 +877,8 @@ export default function CheckoutScreen() {
                 disabled={processing}
                 loading={processing}
                 fullWidth
+                size="large"
+                variant="secondary"
                 style={styles.payButton}
               />
             ) : selectedGateway === 'cash' ? (
@@ -801,6 +915,8 @@ export default function CheckoutScreen() {
                   disabled={processingCash || !customCashAmount || isNaN(parseFloat(customCashAmount)) || parseFloat(customCashAmount) <= 0}
                   loading={processingCash}
                   fullWidth
+                  size="large"
+                  variant="secondary"
                   style={styles.payButton}
                 />
               </View>
@@ -810,6 +926,7 @@ export default function CheckoutScreen() {
                 onPress={() => {}}
                 disabled={true}
                 fullWidth
+                size="large"
                 style={styles.payButton}
               />
             )}
@@ -886,6 +1003,25 @@ export default function CheckoutScreen() {
           </View>
         </Pressable>
       </Modal>
+
+      <Modal visible={showRazorpayWebView} transparent animationType="slide">
+        <View style={{ flex: 1, backgroundColor: '#000' }}>
+          <View style={{ height: 60, backgroundColor: '#FFF', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#EEE', marginTop: Platform.OS === 'ios' ? 40 : 0 }}>
+            <TouchableOpacity onPress={() => { setShowRazorpayWebView(false); setProcessing(false); }} style={{ padding: 8 }}>
+              <X size={24} color="#333" />
+            </TouchableOpacity>
+            <RNText style={{ fontSize: 18, fontWeight: '700', marginLeft: 16 }}>Secure Payment</RNText>
+          </View>
+          <WebView
+            source={{ html: razorpayMobileHtml }}
+            onMessage={handleRazorpayMobileMessage}
+            style={{ flex: 1 }}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            startInLoadingState={true}
+          />
+        </View>
+      </Modal>
     </ScrollView>
   );
 
@@ -952,196 +1088,226 @@ const styles = StyleSheet.create({
     width: '100%',
     marginTop: 0,
   },
-  itemCard: {
-    padding: 24,
-    marginBottom: 16,
-    borderRadius: 20,
-    backgroundColor: '#FFF',
-    borderWidth: 0,
+  container: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
   },
-  itemRow: {
+  content: {
+    paddingVertical: 24,
+    maxWidth: 1400,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  header: {
     flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 32,
+    gap: 16,
+    paddingHorizontal: 8,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  layout: {
+    flexDirection: 'row',
+    paddingHorizontal: 8,
     gap: 20,
   },
+  layoutMobile: {
+    flexDirection: 'column',
+    gap: 20,
+  },
+  mainColumn: {
+    flex: 1.8,
+  },
+  sideColumn: {
+    flex: 1,
+  },
   itemProductCard: {
-    padding: 0,
-    marginBottom: 16,
-    borderRadius: 24,
-    backgroundColor: '#FFF',
-    borderWidth: 0,
+    borderRadius: 32,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 3,
   },
   productImg: {
     width: '100%',
+    height: 240,
     resizeMode: 'cover',
   },
   productPlaceholder: {
     width: '100%',
-    backgroundColor: '#F3F4F6',
+    height: 200,
+    backgroundColor: '#F8FAFC',
     alignItems: 'center',
     justifyContent: 'center',
   },
   productInfo: {
-    padding: 16,
+    padding: 24,
   },
   productHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  productPrice: {
-    fontSize: 20,
-    fontWeight: '900',
-    color: '#06392e',
-  },
-  detailTinyLabel: {
-    fontSize: 10,
-    color: '#9CA3AF',
-    fontWeight: '700',
-    marginBottom: 0,
-  },
-
-  itemInfo: {
-    flex: 1,
+    alignItems: 'flex-start',
+    marginBottom: 24,
   },
   itemTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
-    marginBottom: 4,
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+    marginBottom: 6,
   },
   itemMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginBottom: 12,
-  },
-  itemMetaText: {
-    fontSize: 13,
-    color: '#6B7280',
-  },
-  itemTags: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  itemTag: {
-    fontSize: 11,
-    color: '#01b854',
-    fontWeight: '600',
-    backgroundColor: '#ECFDF5',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  itemPriceCol: {
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-  },
-  itemPrice: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#111827',
-  },
-
-  itemPolicyRow: {
-    gap: 4,
-    marginTop: 8,
-  },
-  policyItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: 6,
   },
-  policyText: {
-    fontSize: 12,
-    color: '#10b981',
+  itemMetaText: {
+    fontSize: 14,
+    color: '#64748B',
+    fontFamily: 'Inter',
     fontWeight: '500',
+  },
+  productPrice: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
   },
   itemDetailsFooter: {
     flexDirection: 'row',
-    gap: 24,
-    marginTop: 20,
-    paddingTop: 20,
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 16,
+    marginTop: 24,
+    paddingTop: 24,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: '#F1F5F9',
   },
   footerDetail: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
+    minWidth: 120,
+  },
+  detailTinyLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#94A3B8',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+    fontFamily: 'Inter',
+    textTransform: 'uppercase',
   },
   footerDetailText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
-    color: '#374151',
+    color: '#1E293B',
+    fontFamily: 'Inter',
   },
   securityInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    padding: 16,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-  },
-  securityText: {
-    fontSize: 13,
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontWeight: '500',
-  },
-  summaryCard: {
+    gap: 12,
     padding: 20,
     borderRadius: 24,
-    backgroundColor: '#FFF',
-    borderWidth: 0,
+    backgroundColor: '#ECFDF5',
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: '#D1FAE5',
+  },
+  securityText: {
+    fontSize: 14,
+    color: '#065F46',
+    fontWeight: '600',
+    fontFamily: 'Inter',
+    flex: 1,
+  },
+  summaryCard: {
+    padding: 24,
+    borderRadius: 32,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 3,
   },
   summaryTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#111827',
-    marginBottom: 12,
+    color: '#0F172A',
+    marginBottom: 24,
+    fontFamily: 'Inter',
   },
   couponSection: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 10,
+    gap: 12,
+    marginBottom: 12,
   },
   couponInput: {
     flex: 1,
-    height: 32,
+    height: 48,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    paddingHorizontal: 12,
-    fontSize: 12,
-    color: '#111827',
-    backgroundColor: '#FFF',
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 16,
+    fontSize: 14,
+    color: '#0F172A',
+    backgroundColor: '#FFFFFF',
+    fontFamily: 'Inter',
     ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
   },
   applyBtn: {
-    height: 28,
-    paddingHorizontal: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#013a30',
+    height: 48,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'center',
   },
   applyBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#013a30',
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0F172A',
+    fontFamily: 'Inter',
   },
   offersBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 8,
+    padding: 12,
     borderRadius: 16,
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    marginBottom: 12,
+    borderColor: '#F1F5F9',
+    marginBottom: 24,
   },
   offersLeft: {
     flexDirection: 'row',
@@ -1149,213 +1315,237 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   offersText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#374151',
+    color: '#64748B',
+    fontFamily: 'Inter',
   },
   breakdown: {
-    gap: 8,
-    marginBottom: 12,
+    gap: 12,
+    marginBottom: 24,
   },
   breakdownRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
   breakdownLabel: {
-    fontSize: 12,
-    color: '#4B5563',
+    fontSize: 14,
+    color: '#64748B',
     fontWeight: '500',
+    fontFamily: 'Inter',
   },
   breakdownValue: {
-    fontSize: 12,
-    color: '#111827',
-    fontWeight: '800',
+    fontSize: 14,
+    color: '#0F172A',
+    fontWeight: '700',
+    fontFamily: 'Inter',
   },
   breakdownDiscountLabel: {
-    fontSize: 12,
-    color: '#01b854',
+    fontSize: 14,
+    color: '#10B981',
     fontWeight: '600',
+    fontFamily: 'Inter',
   },
   breakdownDiscountValue: {
-    fontSize: 12,
-    color: '#01b854',
-    fontWeight: '800',
+    fontSize: 14,
+    color: '#10B981',
+    fontWeight: '700',
+    fontFamily: 'Inter',
   },
   subtotalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
-    paddingTop: 10,
+    marginBottom: 24,
+    paddingTop: 20,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: '#F1F5F9',
   },
   subtotalLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0F172A',
+    fontFamily: 'Inter',
   },
   subtotalValue: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
   },
   paymentMethodSection: {
-    marginBottom: 12,
+    marginBottom: 24,
   },
   paymentMethodTitle: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
-    color: '#374151',
-    marginBottom: 6,
+    color: '#94A3B8',
+    marginBottom: 12,
+    fontFamily: 'Inter',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   methodSelector: {
-    gap: 6,
+    gap: 8,
   },
   methodOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    padding: 6,
-    borderRadius: 10,
+    gap: 12,
+    padding: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: '#F1F5F9',
     backgroundColor: '#FFFFFF',
   },
   methodOptionActive: {
-    borderColor: 'transparent',
-    backgroundColor: '#ECFDF5',
+    borderColor: '#10B981',
+    backgroundColor: '#F0FDF4',
   },
   methodCircle: {
     width: 24,
     height: 24,
-    borderRadius: 6,
-    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
   },
   methodCircleActive: {
-    backgroundColor: '#01b854',
+    borderColor: '#10B981',
+    backgroundColor: '#10B981',
   },
   methodLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#4B5563',
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#475569',
+    fontFamily: 'Inter',
   },
   methodLabelActive: {
     color: '#065F46',
+    fontWeight: '700',
   },
   payButton: {
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#01b854',
+    height: 56,
+    borderRadius: 20,
+    backgroundColor: '#10B981',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   trustFooter: {
-    marginTop: 16,
+    marginTop: 24,
+    alignItems: 'center',
+    gap: 12,
   },
   trustBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: 8,
-    padding: 12,
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 12,
-    backgroundColor: '#F9FAFB',
   },
   trustFooterText: {
-    fontSize: 11,
-    color: '#6B7280',
-    textAlign: 'center',
+    fontSize: 12,
+    color: '#94A3B8',
     fontWeight: '500',
+    fontFamily: 'Inter',
+  },
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+    backgroundColor: '#F8FAFC',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#FFF',
+    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-    minHeight: '40%',
-    maxHeight: '80%',
     padding: 24,
+    maxHeight: '80%',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: '800',
-    color: '#111827',
-  },
-  closeBtnText: {
-    fontSize: 14,
-    color: '#01b854',
     fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  closeBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   couponsList: {
     gap: 16,
-    paddingBottom: 20,
   },
   couponItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
-    borderRadius: 20,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1.5,
-    borderColor: '#F3F4F6',
-    borderStyle: 'dashed',
-  },
-  couponLeft: {
-    flex: 1,
+    padding: 20,
+    borderRadius: 24,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
   couponCodeText: {
     fontSize: 16,
-    fontWeight: '800',
-    color: '#06392e',
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
     marginBottom: 4,
   },
   couponDescText: {
     fontSize: 13,
-    color: '#34d399',
-    fontWeight: '700',
+    color: '#10B981',
+    fontWeight: '600',
+    fontFamily: 'Inter',
   },
   couponMinText: {
     fontSize: 11,
-    color: '#9CA3AF',
+    color: '#94A3B8',
+    fontFamily: 'Inter',
     marginTop: 4,
   },
   applySmallBtn: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 12,
-    backgroundColor: '#01b854',
+    backgroundColor: '#10B981',
   },
   applySmallText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#FFF',
-  },
-  emptyCoupons: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    fontFamily: 'Inter',
   },
   cashFieldsContainer: {
     backgroundColor: '#F0FDF4',
-    padding: 12,
-    borderRadius: 16,
-    marginTop: 4,
+    padding: 16,
+    borderRadius: 20,
+    marginTop: 12,
+    gap: 12,
   },
   cashFieldsRow: {
     flexDirection: 'row',
@@ -1368,17 +1558,18 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     color: '#166534',
-    marginBottom: 4,
+    marginBottom: 6,
     fontFamily: 'Inter',
+    textTransform: 'uppercase',
   },
   cashAmountInput: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#86EFAC',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    height: 36,
-    fontSize: 14,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 44,
+    fontSize: 15,
     fontWeight: '700',
     color: '#14532D',
     fontFamily: 'Inter',

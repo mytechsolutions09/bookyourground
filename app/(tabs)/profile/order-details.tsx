@@ -183,12 +183,12 @@ export default function OrderDetailsScreen() {
 
   return (
     <View style={styles.screen}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <Stack.Screen options={{ headerShown: false }} />
       <MobileAppNavbar 
         title="Order Details" 
-        titleColor="#FFFFFF"
-        bgColor="#dc8d3c"
+        titleColor="#111827"
+        lightBg
       />
       {content}
     </View>
@@ -229,8 +229,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   orderId: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '500',
     color: '#1F2937',
     fontFamily: 'Inter',
   },
@@ -254,8 +254,8 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 11,
+    fontWeight: '600',
     color: '#64748B',
     textTransform: 'uppercase',
     letterSpacing: 1.2,
@@ -290,8 +290,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   itemName: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '500',
     color: '#1F2937',
     fontFamily: 'Inter',
   },
@@ -302,8 +302,8 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   itemTotal: {
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '700',
     color: '#1F2937',
     fontFamily: 'Inter',
   },
@@ -358,14 +358,14 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '600',
     fontFamily: 'Inter',
   },
   totalValue: {
     color: '#dc8d3c',
-    fontSize: 24,
-    fontWeight: '900',
+    fontSize: 20,
+    fontWeight: '700',
     fontFamily: 'Inter',
   },
   backBtnWeb: {

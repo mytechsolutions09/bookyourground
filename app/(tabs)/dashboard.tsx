@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Platform, TouchableOpacity, useWindowDimensions, ScrollView, RefreshControl, ActivityIndicator, TextInput } from 'react-native';
+import { View, Text, StyleSheet, Platform, TouchableOpacity, useWindowDimensions, ScrollView, RefreshControl, ActivityIndicator, TextInput, Image } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import WebLayout from '@/components/web/WebLayout';
 import { supabase } from '@/lib/supabase';
@@ -27,7 +27,18 @@ import {
   CloudLightning,
   CloudSnow,
   CloudDrizzle,
+  QrCode,
+  Activity as ActivityIcon,
 } from 'lucide-react-native';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withTiming, 
+  Easing, 
+  useAnimatedScrollHandler,
+  runOnJS
+} from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ExpoLocation from 'expo-location';
 import { fetchWeather, fetchCityName } from '@/utils/weather';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
@@ -55,20 +66,51 @@ function DashboardContent() {
   const [locationName, setLocationName] = useState<string>('Gurgaon');
 
   const { setTabBarVisible } = useUI();
-  const lastScrollY = React.useRef(0);
+  const insets = useSafeAreaInsets();
+  const [activeTab, setActiveTab] = useState<'overview' | 'activity'>('overview');
+  
+  const horizontalPagerRef = React.useRef<Animated.ScrollView>(null);
+  const lastScrollY = useSharedValue(0);
+  const headerTranslateY = useSharedValue(0);
+  const HEADER_HEIGHT = 100;
 
-  const onScroll = (event: any) => {
-    if (Platform.OS === 'web') return;
-    const currentY = event.nativeEvent.contentOffset.y;
-    const diff = currentY - lastScrollY.current;
-
-    if (diff > 10 && currentY > 50) {
-      setTabBarVisible(false);
-    } else if (diff < -10) {
-      setTabBarVisible(true);
-    }
-    lastScrollY.current = currentY;
+  const onTabPress = (tab: 'overview' | 'activity') => {
+    setActiveTab(tab);
+    horizontalPagerRef.current?.scrollTo({ x: tab === 'overview' ? 0 : width, animated: true });
   };
+
+  const horizontalScrollHandler = useAnimatedScrollHandler({
+    onMomentumEnd: (event) => {
+      const idx = Math.round(event.contentOffset.x / width);
+      runOnJS(setActiveTab)(idx === 0 ? 'overview' : 'activity');
+    },
+  });
+
+  const verticalScrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      const currentY = event.contentOffset.y;
+      const diff = currentY - lastScrollY.value;
+
+      if (diff > 10 && currentY > 50) {
+        headerTranslateY.value = withTiming(-HEADER_HEIGHT - insets.top, { duration: 600, easing: Easing.out(Easing.exp) });
+        runOnJS(setTabBarVisible)(false);
+      } else if (diff < -10 || currentY < 20) {
+        headerTranslateY.value = withTiming(0, { duration: 600, easing: Easing.out(Easing.exp) });
+        runOnJS(setTabBarVisible)(true);
+      }
+      lastScrollY.value = currentY;
+    },
+  });
+
+  const headerAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: headerTranslateY.value }],
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    backgroundColor: '#F8FAFC',
+  }));
 
   const loadBookings = async (isRefresh = false) => {
     if (!user) return;
@@ -388,149 +430,261 @@ function DashboardContent() {
     </View>
   );
 
-  const content = (
-    <ScrollView
-      style={[styles.root, IS_DARK && styles.rootDark]}
-      contentContainerStyle={[styles.scrollContent, (Platform.OS === 'web' && !isCompact) && styles.scrollContentWeb]}
-      refreshControl={<RefreshControl refreshing={loading} onRefresh={loadBookings} tintColor="#01b854" />}
-      onScroll={onScroll}
-      scrollEventThrottle={16}
-    >
-      <View style={[styles.mainLayout, isCompact && { flexDirection: 'column' }]}>
-        <View style={styles.centerContent}>
-          {/* Greeting Row */}
-          <View style={[styles.greetingRow, isCompact && { flexDirection: 'column', alignItems: 'flex-start', gap: 12 }]}>
-            <View>
-              <Text style={styles.greetingText}>
-                {new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening'}, {profile?.full_name?.split(' ')[0] || 'Player'} 👋
-              </Text>
-              <Text style={styles.dateText}>
-                {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}
-              </Text>
-            </View>
-            <View style={styles.weatherBadge}>
-              <WeatherIcon size={18} color={weather?.condition.toLowerCase().includes('clear') ? "#F59E0B" : "#64748B"} />
-              <Text style={styles.weatherText}>
-                {weather ? `${weather.temp}°C • ${weather.condition} • ` : '22°C • Clear • '}
-                {locationName}
-              </Text>
-            </View>
-          </View>
-
-          {/* Live Map */}
-          <View style={styles.mapContainer}>
-             <DashboardMap />
-          </View>
-
-          {/* Cards Row */}
-          <View style={[styles.cardsRow, isCompact && { flexDirection: 'column' }]}>
-            <View style={styles.contentCardLarge}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.cardHeaderTitle}>Upcoming Booking</Text>
-                {nextBooking && (
-                  <TouchableOpacity onPress={() => router.push('/(tabs)/bookings')}>
-                    <Text style={styles.cardActionText}>Cancel</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-              {nextBooking ? (
-                <>
-                  <Text style={styles.bookingTime}>
-                    {new Date(nextBooking.booking_date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} • {nextBooking.start_time?.slice(0, 5)}
-                  </Text>
-                  <View style={styles.bookingImagePlaceholder}>
-                    {nextBooking.ground?.ground_images?.[0]?.image_url ? (
-                      <Image 
-                        source={{ uri: nextBooking.ground.ground_images[0].image_url }} 
-                        style={StyleSheet.absoluteFill}
-                        resizeMode="cover"
-                      />
-                    ) : (
-                      <LayoutDashboard size={48} color="#CBD5E1" />
-                    )}
-                  </View>
-                  <View style={styles.bookingFooter}>
-                    <View>
-                      <Text style={styles.bookingName}>{nextBooking.ground?.name}</Text>
-                      <Text style={styles.bookingMeta}>{nextBooking.ground?.city}, {nextBooking.ground?.state}</Text>
-                    </View>
-                    <TouchableOpacity 
-                      style={styles.qrButton}
-                      onPress={() => router.push(`/(tabs)/bookings` as any)}
-                    >
-                      <QrCode size={18} color="#FFFFFF" />
-                      <Text style={styles.qrButtonText}>View Ticket</Text>
-                    </TouchableOpacity>
-                  </View>
-                </>
-              ) : (
-                <TouchableOpacity 
-                  style={styles.emptyCardInner}
-                  onPress={() => router.push('/book-my-ground' as any)}
-                >
-                  <Calendar size={32} color="#CBD5E1" />
-                  <Text style={styles.emptyCardText}>No upcoming bookings</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            <View style={styles.contentCardSmall}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.cardHeaderTitle}>Recent Ground</Text>
-                <TouchableOpacity onPress={() => router.push('/book-my-ground' as any)}>
-                  <Text style={styles.cardActionText}>View</Text>
-                </TouchableOpacity>
-              </View>
-              {lastBooking ? (
-                <TouchableOpacity 
-                  style={styles.recentGroundItem}
-                  onPress={() => router.push(makeGroundPath(lastBooking.ground) as any)}
-                >
-                   <View style={styles.recentGroundImage}>
-                      {lastBooking.ground?.ground_images?.[0]?.image_url ? (
-                        <Image 
-                          source={{ uri: lastBooking.ground.ground_images[0].image_url }} 
-                          style={{ width: '100%', height: '100%', borderRadius: 16 }}
-                        />
-                      ) : (
-                        <MapIcon size={24} color="#CBD5E1" />
-                      )}
-                   </View>
-                   <View>
-                      <Text style={styles.recentGroundName}>{lastBooking.ground?.name}</Text>
-                      <Text style={styles.recentGroundPrice}>₹{lastBooking.total_amount?.toLocaleString()} total</Text>
-                   </View>
-                </TouchableOpacity>
-              ) : (
-                 <TouchableOpacity 
-                    style={styles.emptyCardInner}
-                    onPress={() => router.push('/book-my-ground' as any)}
-                  >
-                   <Star size={32} color="#CBD5E1" />
-                   <Text style={styles.emptyCardText}>Explore venues</Text>
-                 </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        </View>
-
-        {renderRightPanel()}
-      </View>
-    </ScrollView>
-  );
-
   if (Platform.OS === 'web' && !isCompact) {
     return (
       <WebLayout>
-        {content}
+        <ScrollView
+          style={[styles.root, IS_DARK && styles.rootDark]}
+          contentContainerStyle={[styles.scrollContent, styles.scrollContentWeb]}
+          refreshControl={<RefreshControl refreshing={loading} onRefresh={loadBookings} tintColor="#01b854" />}
+          showsVerticalScrollIndicator
+        >
+          <View style={styles.mainLayout}>
+            <View style={styles.centerContent}>
+              <View style={styles.greetingRow}>
+                <View>
+                  <Text style={styles.greetingText}>
+                    {new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening'}, {profile?.full_name?.split(' ')[0] || 'Player'} 👋
+                  </Text>
+                  <Text style={styles.dateText}>
+                    {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}
+                  </Text>
+                </View>
+                <View style={styles.weatherBadge}>
+                  <WeatherIcon size={18} color={weather?.condition.toLowerCase().includes('clear') ? "#F59E0B" : "#64748B"} />
+                  <Text style={styles.weatherText}>
+                    {weather ? `${weather.temp}°C • ${weather.condition} • ` : '22°C • Clear • '}
+                    {locationName}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.mapContainer}>
+                 <DashboardMap />
+              </View>
+              <View style={styles.cardsRow}>
+                <View style={styles.contentCardLarge}>
+                  <View style={styles.cardHeader}>
+                    <Text style={styles.cardHeaderTitle}>Upcoming Booking</Text>
+                    {nextBooking && (
+                      <TouchableOpacity onPress={() => router.push('/(tabs)/bookings')}>
+                        <Text style={styles.cardActionText}>Cancel</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  {nextBooking ? (
+                    <>
+                      <Text style={styles.bookingTime}>
+                        {new Date(nextBooking.booking_date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} • {nextBooking.start_time?.slice(0, 5)}
+                      </Text>
+                      <View style={styles.bookingImagePlaceholder}>
+                        {nextBooking.ground?.ground_images?.[0]?.image_url ? (
+                          <Image 
+                            source={{ uri: nextBooking.ground.ground_images[0].image_url }} 
+                            style={StyleSheet.absoluteFill}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <LayoutDashboard size={48} color="#CBD5E1" />
+                        )}
+                      </View>
+                      <View style={styles.bookingFooter}>
+                        <View>
+                          <Text style={styles.bookingName}>{nextBooking.ground?.name}</Text>
+                          <Text style={styles.bookingMeta}>{nextBooking.ground?.city}, {nextBooking.ground?.state}</Text>
+                        </View>
+                        <TouchableOpacity 
+                          style={styles.qrButton}
+                          onPress={() => router.push(`/(tabs)/bookings` as any)}
+                        >
+                          <QrCode size={18} color="#FFFFFF" />
+                          <Text style={styles.qrButtonText}>View Ticket</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </>
+                  ) : (
+                    <TouchableOpacity 
+                      style={styles.emptyCardInner}
+                      onPress={() => router.push('/book-my-ground' as any)}
+                    >
+                      <Calendar size={32} color="#CBD5E1" />
+                      <Text style={styles.emptyCardText}>No upcoming bookings</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                <View style={styles.contentCardSmall}>
+                  <View style={styles.cardHeader}>
+                    <Text style={styles.cardHeaderTitle}>Recent Ground</Text>
+                    <TouchableOpacity onPress={() => router.push('/book-my-ground' as any)}>
+                      <Text style={styles.cardActionText}>View</Text>
+                    </TouchableOpacity>
+                  </View>
+                  {lastBooking ? (
+                    <TouchableOpacity 
+                      style={styles.recentGroundItem}
+                      onPress={() => router.push(makeGroundPath(lastBooking.ground) as any)}
+                    >
+                       <View style={styles.recentGroundImage}>
+                          {lastBooking.ground?.ground_images?.[0]?.image_url ? (
+                            <Image 
+                              source={{ uri: lastBooking.ground.ground_images[0].image_url }} 
+                              style={{ width: '100%', height: '100%', borderRadius: 16 }}
+                            />
+                          ) : (
+                            <MapIcon size={24} color="#CBD5E1" />
+                          )}
+                       </View>
+                       <View>
+                          <Text style={styles.recentGroundName}>{lastBooking.ground?.name}</Text>
+                          <Text style={styles.recentGroundPrice}>₹{lastBooking.total_amount?.toLocaleString()} total</Text>
+                       </View>
+                    </TouchableOpacity>
+                  ) : (
+                     <TouchableOpacity 
+                        style={styles.emptyCardInner}
+                        onPress={() => router.push('/book-my-ground' as any)}
+                      >
+                       <Star size={32} color="#CBD5E1" />
+                       <Text style={styles.emptyCardText}>Explore venues</Text>
+                     </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            </View>
+            {renderRightPanel()}
+          </View>
+        </ScrollView>
       </WebLayout>
     );
   }
 
   return (
     <View style={styles.nativeWrapper}>
-      <MobileAppNavbar title="Dashboard" titleColor={THEME_ACCENT} />
-      {content}
+      <Animated.View style={headerAnimatedStyle}>
+        <MobileAppNavbar title="Dashboard" titleColor={THEME_ACCENT} />
+        <View style={styles.tabContainer}>
+          <TouchableOpacity 
+            style={[styles.tab, activeTab === 'overview' && styles.activeTab]}
+            onPress={() => onTabPress('overview')}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.tabText, activeTab === 'overview' && styles.activeTabText]}>Overview</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.tab, activeTab === 'activity' && styles.activeTab]}
+            onPress={() => onTabPress('activity')}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.tabText, activeTab === 'activity' && styles.activeTabText]}>Activity</Text>
+          </TouchableOpacity>
+        </View>
+      </Animated.View>
+
+      <Animated.ScrollView
+        ref={horizontalPagerRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onScroll={horizontalScrollHandler}
+        scrollEventThrottle={16}
+        style={{ flex: 1 }}
+      >
+        {/* Slide 1: Overview */}
+        <View style={{ width }}>
+          <Animated.ScrollView
+            onScroll={verticalScrollHandler}
+            scrollEventThrottle={16}
+            style={styles.root}
+            contentContainerStyle={[styles.scrollContent, { paddingTop: HEADER_HEIGHT + insets.top + 16 }]}
+            showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={loading} onRefresh={loadBookings} tintColor="#01b854" />}
+          >
+            <View style={styles.centerContentNative}>
+               {/* Greeting Row */}
+               <View style={styles.greetingRowNative}>
+                <View>
+                  <Text style={styles.greetingText}>
+                    {new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening'}, {profile?.full_name?.split(' ')[0] || 'Player'} 👋
+                  </Text>
+                  <Text style={styles.dateText}>
+                    {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}
+                  </Text>
+                </View>
+                <View style={styles.weatherBadge}>
+                  <WeatherIcon size={18} color={weather?.condition.toLowerCase().includes('clear') ? "#F59E0B" : "#64748B"} />
+                  <Text style={styles.weatherText}>
+                    {weather ? `${weather.temp}°C` : '22°C'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Live Map */}
+              <View style={styles.mapContainer}>
+                 <DashboardMap />
+              </View>
+
+              {/* Upcoming Booking */}
+              <View style={styles.contentCardLarge}>
+                <View style={styles.cardHeader}>
+                  <Text style={styles.cardHeaderTitle}>Upcoming Booking</Text>
+                </View>
+                {nextBooking ? (
+                  <>
+                    <Text style={styles.bookingTime}>
+                      {new Date(nextBooking.booking_date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} • {nextBooking.start_time?.slice(0, 5)}
+                    </Text>
+                    <View style={styles.bookingImagePlaceholder}>
+                      {nextBooking.ground?.ground_images?.[0]?.image_url ? (
+                        <Image 
+                          source={{ uri: nextBooking.ground.ground_images[0].image_url }} 
+                          style={StyleSheet.absoluteFill}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <LayoutDashboard size={48} color="#CBD5E1" />
+                      )}
+                    </View>
+                    <View style={styles.bookingFooter}>
+                      <View>
+                        <Text style={styles.bookingName}>{nextBooking.ground?.name}</Text>
+                        <Text style={styles.bookingMeta}>{nextBooking.ground?.city}</Text>
+                      </View>
+                      <TouchableOpacity 
+                        style={styles.qrButton}
+                        onPress={() => router.push(`/(tabs)/bookings` as any)}
+                      >
+                        <QrCode size={18} color="#FFFFFF" />
+                        <Text style={styles.qrButtonText}>View Ticket</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                ) : (
+                  <TouchableOpacity 
+                    style={styles.emptyCardInner}
+                    onPress={() => router.push('/book-my-ground' as any)}
+                  >
+                    <Calendar size={32} color="#CBD5E1" />
+                    <Text style={styles.emptyCardText}>No upcoming bookings</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          </Animated.ScrollView>
+        </View>
+
+        {/* Slide 2: Activity/Stats */}
+        <View style={{ width }}>
+          <Animated.ScrollView
+            onScroll={verticalScrollHandler}
+            scrollEventThrottle={16}
+            style={styles.root}
+            contentContainerStyle={[styles.scrollContent, { paddingTop: HEADER_HEIGHT + insets.top + 16, paddingHorizontal: 16 }]}
+            showsVerticalScrollIndicator={false}
+          >
+            {renderRightPanel()}
+          </Animated.ScrollView>
+        </View>
+      </Animated.ScrollView>
     </View>
   );
 }
@@ -574,6 +728,53 @@ const styles = StyleSheet.create({
     paddingLeft: 0,
     paddingBottom: 120,
     gap: 20,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 20,
+    padding: 6,
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeTab: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
+  },
+  tabText: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '600',
+    fontFamily: 'Inter',
+  },
+  activeTabText: {
+    color: '#00ea6b',
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: 'Inter',
+  },
+  centerContentNative: {
+    padding: 16,
+  },
+  greetingRowNative: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   greetingRow: {
     flexDirection: 'row',

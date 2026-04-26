@@ -10,7 +10,8 @@ import {
   TextInput as RNTextInput, 
   useWindowDimensions, 
   ActivityIndicator,
-  Pressable
+  Pressable,
+  Modal
 } from 'react-native';
 import { 
   ShoppingBag, 
@@ -22,7 +23,9 @@ import {
   Heart,
   ChevronRight,
   TrendingUp,
-  Tag
+  Tag,
+  X,
+  Check
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -79,10 +82,16 @@ export default function ShopScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const cardWidth = useMemo(() => (width - 56) / 2, [width]);
+  const numColumns = useMemo(() => {
+    if (width > 1000) return 4;
+    if (width > 600) return 3;
+    return 2;
+  }, [width]);
+
+  const cardWidth = useMemo(() => (width - 40 - (numColumns - 1) * 16) / numColumns, [width, numColumns]);
 
   const ProductSkeleton = () => (
-    <View style={[styles.productCard, { width: Platform.OS === 'web' && !isSmall ? '23%' : cardWidth }]}>
+    <View style={[styles.productCard, { width: cardWidth }]}>
       <View style={styles.imageWrapper}>
         <Skeleton width="100%" height="100%" style={{ borderRadius: 20 }} />
       </View>
@@ -130,6 +139,13 @@ export default function ShopScreen() {
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [cartCount, setCartCount] = useState(0);
+  
+  // Filter States
+  const [isFilterVisible, setIsFilterVisible] = useState(false);
+  const [sortBy, setSortBy] = useState('newest');
+  const [priceRange, setPriceRange] = useState<[number, number] | null>(null);
+  const [tempSortBy, setTempSortBy] = useState('newest');
+  const [tempPriceRange, setTempPriceRange] = useState<[number, number] | null>(null);
 
   const scrollY = useSharedValue(0);
   const headerTranslateY = useSharedValue(0);
@@ -179,19 +195,58 @@ export default function ShopScreen() {
   };
 
   const filteredProducts = useMemo(() => {
-    let result = products;
-    if (activeCategory !== 'all') {
-      const catId = categories.find(c => c.name === activeCategory)?.id;
-      if (catId) result = result.filter(p => p.category_id === catId);
-    }
+    let result = [...products];
+
+    // Search Query Filter
     if (searchQuery) {
       result = result.filter(p => 
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (p.description || '').toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
+
+    // Category Filter
+    if (activeCategory !== 'all') {
+      const catId = categories.find(c => c.name === activeCategory)?.id;
+      if (catId) result = result.filter(p => p.category_id === catId);
+    }
+
+    // Price Range Filter
+    if (priceRange) {
+      result = result.filter(p => {
+        const price = Number(p.price);
+        return price >= priceRange[0] && price <= priceRange[1];
+      });
+    }
+
+    // Sorting
+    if (sortBy === 'price_low') {
+      result.sort((a, b) => Number(a.price) - Number(b.price));
+    } else if (sortBy === 'price_high') {
+      result.sort((a, b) => Number(b.price) - Number(a.price));
+    } else if (sortBy === 'rating') {
+      result.sort((a, b) => Number(b.rating || 0) - Number(a.rating || 0));
+    } else {
+      // newest - already default from Supabase but ensuring consistency
+      result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }
+
     return result;
-  }, [products, activeCategory, searchQuery, categories]);
+  }, [products, activeCategory, searchQuery, categories, sortBy, priceRange]);
+
+  const applyFilters = () => {
+    setSortBy(tempSortBy);
+    setPriceRange(tempPriceRange);
+    setIsFilterVisible(false);
+  };
+
+  const resetFilters = () => {
+    setTempSortBy('newest');
+    setTempPriceRange(null);
+    setSortBy('newest');
+    setPriceRange(null);
+    setActiveCategory('all');
+  };
 
   const featuredProduct = useMemo(() => 
     products.find(p => p.is_featured) || products[0], 
@@ -303,7 +358,7 @@ export default function ShopScreen() {
               style={styles.addToCartBtn}
               onPress={() => addToCart(product.id)}
             >
-              <ShoppingCart size={18} color="#FFFFFF" strokeWidth={2.5} />
+              <ShoppingCart size={18} color="#2b2f4b" strokeWidth={2.5} />
             </TouchableOpacity>
           </View>
         </View>
@@ -370,8 +425,18 @@ export default function ShopScreen() {
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
-            <TouchableOpacity style={styles.filterBtn}>
+            <TouchableOpacity 
+              style={styles.filterBtn}
+              onPress={() => {
+                setTempSortBy(sortBy);
+                setTempPriceRange(priceRange);
+                setIsFilterVisible(true);
+              }}
+            >
               <Filter size={20} color="#2b2f4b" />
+              {(sortBy !== 'newest' || priceRange) && (
+                <View style={styles.filterBadge} />
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -480,6 +545,96 @@ export default function ShopScreen() {
       </View>
       
       {content(verticalScrollHandler)}
+      
+      {/* Filter Modal */}
+      <Modal
+        visible={isFilterVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setIsFilterVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity 
+            style={styles.modalBackdrop} 
+            activeOpacity={1} 
+            onPress={() => setIsFilterVisible(false)} 
+          />
+          <View style={[styles.modalContent, { paddingBottom: insets.bottom + 20 }]}>
+            <View style={styles.modalHeader}>
+              <RNText style={styles.modalTitle}>Filter & Sort</RNText>
+              <TouchableOpacity onPress={() => setIsFilterVisible(false)} style={styles.modalCloseBtn}>
+                <X size={24} color="#2b2f4b" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Sort Section */}
+              <View style={styles.modalSection}>
+                <RNText style={styles.modalSectionTitle}>Sort By</RNText>
+                <View style={styles.modalGrid}>
+                  {[
+                    { id: 'newest', label: 'Newest Arrivals' },
+                    { id: 'price_low', label: 'Price: Low to High' },
+                    { id: 'price_high', label: 'Price: High to Low' },
+                    { id: 'rating', label: 'Best Rating' }
+                  ].map(option => (
+                    <TouchableOpacity 
+                      key={option.id}
+                      style={[styles.modalOption, tempSortBy === option.id && styles.modalOptionActive]}
+                      onPress={() => setTempSortBy(option.id)}
+                    >
+                      <RNText style={[styles.modalOptionText, tempSortBy === option.id && styles.modalOptionTextActive]}>
+                        {option.label}
+                      </RNText>
+                      {tempSortBy === option.id && <Check size={16} color="#dc8d3c" />}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Price Section */}
+              <View style={styles.modalSection}>
+                <RNText style={styles.modalSectionTitle}>Price Range</RNText>
+                <View style={styles.modalGrid}>
+                  {[
+                    { label: 'All', range: null },
+                    { label: 'Under ₹500', range: [0, 500] },
+                    { label: '₹500 - ₹2000', range: [500, 2000] },
+                    { label: '₹2000 - ₹5000', range: [2000, 5000] },
+                    { label: '₹5000+', range: [5000, 100000] }
+                  ].map((option, idx) => (
+                    <TouchableOpacity 
+                      key={idx}
+                      style={[
+                        styles.modalOption, 
+                        JSON.stringify(tempPriceRange) === JSON.stringify(option.range) && styles.modalOptionActive
+                      ]}
+                      onPress={() => setTempPriceRange(option.range as [number, number] | null)}
+                    >
+                      <RNText style={[
+                        styles.modalOptionText, 
+                        JSON.stringify(tempPriceRange) === JSON.stringify(option.range) && styles.modalOptionTextActive
+                      ]}>
+                        {option.label}
+                      </RNText>
+                      {JSON.stringify(tempPriceRange) === JSON.stringify(option.range) && <Check size={16} color="#dc8d3c" />}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity style={styles.resetBtn} onPress={resetFilters}>
+                <RNText style={styles.resetBtnText}>Reset All</RNText>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.applyBtn} onPress={applyFilters}>
+                <RNText style={styles.applyBtnText}>Apply Filters</RNText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -493,7 +648,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 120,
   },
   floatingHeader: {
     position: 'absolute',
@@ -531,8 +686,9 @@ const styles = StyleSheet.create({
   },
   cartBadgeText: {
     fontSize: 8,
-    fontWeight: '900',
+    fontWeight: '700',
     color: '#2b2f4b',
+    fontFamily: 'Inter',
   },
   heroWrapper: {
     height: 420,
@@ -569,15 +725,18 @@ const styles = StyleSheet.create({
   trendingText: {
     color: '#dc8d3c',
     fontSize: 10,
-    fontWeight: '900',
+    fontWeight: '700',
     letterSpacing: 1,
+    fontFamily: 'Inter',
   },
   heroTitle: {
     color: '#FFFFFF',
-    fontSize: 42,
-    fontWeight: '900',
-    lineHeight: 46,
+    fontSize: 40,
+    fontWeight: '800',
+    lineHeight: 44,
     marginBottom: 12,
+    fontFamily: 'Inter',
+    letterSpacing: -1,
   },
   heroSubtitle: {
     color: 'rgba(255,255,255,0.85)',
@@ -585,9 +744,10 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     marginBottom: 28,
     maxWidth: '85%',
+    fontFamily: 'Inter',
   },
   heroBtn: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#2b2f4b',
     paddingLeft: 24,
     paddingRight: 6,
     paddingVertical: 6,
@@ -596,11 +756,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'flex-start',
     gap: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   heroBtnText: {
-    color: '#2b2f4b',
-    fontWeight: '800',
+    color: '#FFFFFF',
+    fontWeight: '600',
     fontSize: 15,
+    fontFamily: 'Inter',
   },
   heroBtnIcon: {
     backgroundColor: '#dc8d3c',
@@ -611,11 +774,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   mainContent: {
-    marginTop: -25,
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    paddingTop: 24,
+    marginTop: -30,
+    backgroundColor: '#F8FAFC',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingTop: 32,
   },
   searchSection: {
     paddingHorizontal: 20,
@@ -636,7 +799,8 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     color: '#0F172A',
-    fontWeight: '500',
+    fontWeight: '600',
+    fontFamily: 'Inter',
   },
   filterBtn: {
     width: 40,
@@ -675,8 +839,9 @@ const styles = StyleSheet.create({
   },
   categoryPillText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#64748B',
+    fontFamily: 'Inter',
   },
   categoryPillTextActive: {
     color: '#FFFFFF',
@@ -695,15 +860,17 @@ const styles = StyleSheet.create({
   promoTitle: {
     color: '#2b2f4b',
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: '700',
     letterSpacing: 1,
     textTransform: 'uppercase',
     marginBottom: 4,
+    fontFamily: 'Inter',
   },
   promoSubtitle: {
     color: '#2b2f4b',
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '600',
+    fontFamily: 'Inter',
   },
   promoBadge: {
     backgroundColor: '#2b2f4b',
@@ -716,8 +883,9 @@ const styles = StyleSheet.create({
   },
   promoCode: {
     color: '#FFFFFF',
-    fontWeight: '800',
+    fontWeight: '600',
     fontSize: 14,
+    fontFamily: 'Inter',
   },
   productsSection: {
     paddingHorizontal: 20,
@@ -729,9 +897,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 22,
-    fontWeight: '900',
+    fontSize: 18,
+    fontWeight: '700',
     color: '#0F172A',
+    fontFamily: 'Inter',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   viewAllRow: {
     flexDirection: 'row',
@@ -740,8 +911,9 @@ const styles = StyleSheet.create({
   },
   viewAllText: {
     color: '#dc8d3c',
-    fontWeight: '800',
+    fontWeight: '600',
     fontSize: 14,
+    fontFamily: 'Inter',
   },
   productGrid: {
     flexDirection: 'row',
@@ -750,13 +922,18 @@ const styles = StyleSheet.create({
   },
   productCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 24,
+    borderRadius: 32,
     marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 3,
   },
   imageWrapper: {
     height: 180,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 24,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 32,
     overflow: 'hidden',
     position: 'relative',
   },
@@ -777,7 +954,8 @@ const styles = StyleSheet.create({
   tagText: {
     color: '#dc8d3c',
     fontSize: 9,
-    fontWeight: '900',
+    fontWeight: '700',
+    fontFamily: 'Inter',
   },
   favoriteBtn: {
     position: 'absolute',
@@ -801,12 +979,14 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 4,
+    fontFamily: 'Inter',
   },
   productName: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#0F172A',
     marginBottom: 6,
+    fontFamily: 'Inter',
   },
   ratingRow: {
     flexDirection: 'row',
@@ -817,12 +997,14 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 12,
     color: '#dc8d3c',
-    fontWeight: '800',
+    fontWeight: '600',
+    fontFamily: 'Inter',
   },
   reviewCount: {
     fontSize: 11,
     color: '#94A3B8',
     fontWeight: '500',
+    fontFamily: 'Inter',
   },
   priceRow: {
     flexDirection: 'row',
@@ -831,23 +1013,25 @@ const styles = StyleSheet.create({
   },
   productPrice: {
     fontSize: 18,
-    fontWeight: '900',
+    fontWeight: '700',
     color: '#2b2f4b',
+    fontFamily: 'Inter',
   },
   oldPrice: {
     fontSize: 12,
     color: '#94A3B8',
     textDecorationLine: 'line-through',
     marginTop: -2,
+    fontFamily: 'Inter',
   },
   addToCartBtn: {
-    backgroundColor: '#2b2f4b',
+    backgroundColor: '#dc8d3c',
     width: 40,
     height: 40,
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#2b2f4b',
+    shadowColor: '#dc8d3c',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
@@ -865,10 +1049,136 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginTop: 16,
     marginBottom: 8,
+    fontFamily: 'Inter',
   },
   resetText: {
     color: '#dc8d3c',
-    fontWeight: '800',
+    fontWeight: '600',
     fontSize: 14,
+    fontFamily: 'Inter',
+  },
+  filterBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#dc8d3c',
+    borderWidth: 2,
+    borderColor: '#F8FAFC',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(43, 47, 75, 0.4)',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    maxHeight: '80%',
+    paddingTop: 24,
+    paddingHorizontal: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#2b2f4b',
+    fontFamily: 'Inter',
+  },
+  modalCloseBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalSection: {
+    marginBottom: 24,
+  },
+  modalSectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#94A3B8',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 16,
+    fontFamily: 'Inter',
+  },
+  modalGrid: {
+    gap: 12,
+  },
+  modalOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  modalOptionActive: {
+    backgroundColor: '#2b2f4b',
+    borderColor: '#2b2f4b',
+  },
+  modalOptionText: {
+    fontSize: 15,
+    color: '#2b2f4b',
+    fontWeight: '600',
+    fontFamily: 'Inter',
+  },
+  modalOptionTextActive: {
+    color: '#FFFFFF',
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 20,
+  },
+  resetBtn: {
+    flex: 1,
+    height: 56,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F1F5F9',
+  },
+  resetBtnText: {
+    color: '#64748B',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'Inter',
+  },
+  applyBtn: {
+    flex: 2,
+    height: 56,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#dc8d3c',
+  },
+  applyBtnText: {
+    color: '#2b2f4b',
+    fontSize: 16,
+    fontWeight: '700',
+    fontFamily: 'Inter',
   },
 });

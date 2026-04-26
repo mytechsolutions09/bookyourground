@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { UserRole } from '@/types/database';
+import { scheduleMatchReminders } from '@/utils/notifications';
 
 interface Profile {
   id: string;
@@ -56,6 +57,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(session?.user ?? null);
         if (session?.user) {
           await loadProfile(session.user.id);
+          // Schedule 6 AM reminders for today's matches
+          void scheduleMatchReminders(session.user.id);
         } else {
           setProfile(null);
           setLoading(false);
@@ -76,6 +79,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error;
       setProfile(data);
+      
+      // Also schedule reminders here in case onAuthStateChange didn't catch it
+      void scheduleMatchReminders(userId);
     } catch (error) {
       console.error('Error loading profile:', error);
     } finally {

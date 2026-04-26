@@ -216,7 +216,7 @@ export default function NotificationsScreen() {
 
   return (
     <View style={styles.nativeRoot}>
-      <MobileAppNavbar title="Notifications" titleColor="#01b854" />
+      <MobileAppNavbar title="Notifications" titleColor="#0F172A" lightBg />
       <NotificationsInner />
     </View>
   );
@@ -233,8 +233,8 @@ const styles = StyleSheet.create({
   },
   inner: {
     width: '100%',
-    maxWidth: 900,
-    alignSelf: 'flex-start',
+    maxWidth: 1000,
+    alignSelf: 'center',
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 24,
@@ -247,8 +247,8 @@ const styles = StyleSheet.create({
   },
   pageTitle: {
     fontFamily: 'Inter',
-    fontSize: 20,
-    fontWeight: '900',
+    fontSize: 18,
+    fontWeight: '600',
     color: '#0F172A',
     marginBottom: 2,
   },
@@ -261,12 +261,10 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 14,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
-    borderWidth: 1,
-    borderColor: '#DCFCE7',
   },
   redDot: {
     position: 'absolute',
@@ -302,8 +300,8 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
      fontFamily: 'Inter',
-     fontSize: 20,
-     fontWeight: '800',
+     fontSize: 18,
+     fontWeight: '600',
      color: '#0F172A',
      marginBottom: 8,
   },
@@ -329,7 +327,7 @@ const styles = StyleSheet.create({
   exploreBtnText: {
      fontFamily: 'Inter',
      color: '#FFFFFF',
-     fontWeight: '800',
+     fontWeight: '600',
      fontSize: 14,
      textTransform: 'uppercase',
      letterSpacing: 0.5,
@@ -360,10 +358,10 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   matchIcon: {
-    backgroundColor: '#DCFCE7',
+    backgroundColor: 'transparent',
   },
   bookingIcon: {
-    backgroundColor: '#DCFCE7',
+    backgroundColor: 'transparent',
   },
   reminderContent: {
     flex: 1,
@@ -377,7 +375,7 @@ const styles = StyleSheet.create({
   reminderType: {
     fontFamily: 'Inter',
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#01b854',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
@@ -390,8 +388,8 @@ const styles = StyleSheet.create({
   },
   reminderTitle: {
     fontFamily: 'Inter',
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '600',
     color: '#0F172A',
   },
   metaRow: {

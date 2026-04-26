@@ -195,8 +195,8 @@ export default function CartScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <MobileAppNavbar 
         title="My Cart" 
-        titleColor="#FFFFFF"
-        bgColor="#dc8d3c"
+        titleColor="#111827"
+        lightBg
       />
       {content}
     </View>
@@ -206,11 +206,11 @@ export default function CartScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#F8FAFC',
   },
   scrollContent: {
-    padding: 12,
-    paddingBottom: 30,
+    padding: 16,
+    paddingBottom: 40,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -218,8 +218,9 @@ const styles = StyleSheet.create({
     paddingVertical: 100,
   },
   emptyTitle: {
-    fontSize: 22,
-    fontWeight: '800',
+    fontFamily: 'Inter',
+    fontSize: 18,
+    fontWeight: '600',
     color: '#2b2f4b',
     marginTop: 20,
     marginBottom: 8,
@@ -240,8 +241,9 @@ const styles = StyleSheet.create({
   },
   shopNowText: {
     color: '#FFFFFF',
-    fontWeight: '800',
+    fontWeight: '600',
     fontSize: 16,
+    fontFamily: 'Inter',
   },
   itemsSection: {
     gap: 8,
@@ -249,17 +251,17 @@ const styles = StyleSheet.create({
   },
   cartItem: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 8,
+    borderRadius: 32,
+    padding: 12,
     flexDirection: 'row',
-    gap: 12,
+    gap: 16,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: '#F1F5F9',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 3,
   },
   itemImage: {
     width: 80,
@@ -272,8 +274,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   itemName: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontFamily: 'Inter',
+    fontSize: 15,
+    fontWeight: '500',
     color: '#2b2f4b',
     marginBottom: 2,
   },
@@ -283,8 +286,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   itemPrice: {
-    fontSize: 15,
-    fontWeight: '800',
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: '600',
     color: '#dc8d3c',
     marginBottom: 8,
   },
@@ -313,29 +317,33 @@ const styles = StyleSheet.create({
   },
   qtyText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#2b2f4b',
     minWidth: 20,
     textAlign: 'center',
+    fontFamily: 'Inter',
   },
   removeBtn: {
     padding: 8,
   },
   summaryCard: {
     backgroundColor: '#2b2f4b',
-    borderRadius: 20,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
+    borderRadius: 32,
+    padding: 24,
+    shadowColor: '#2b2f4b',
+    shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.2,
-    shadowRadius: 20,
+    shadowRadius: 24,
     elevation: 8,
   },
   summaryTitle: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontFamily: 'Inter',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#FFFFFF',
     marginBottom: 20,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -349,7 +357,8 @@ const styles = StyleSheet.create({
   summaryValue: {
     color: '#FFFFFF',
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '600',
+    fontFamily: 'Inter',
   },
   divider: {
     height: 1,
@@ -362,14 +371,16 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
   totalLabel: {
+    fontFamily: 'Inter',
     color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '600',
   },
   totalValue: {
+    fontFamily: 'Inter',
     color: '#dc8d3c',
-    fontSize: 22,
-    fontWeight: '900',
+    fontSize: 18,
+    fontWeight: '700',
   },
   checkoutBtn: {
     backgroundColor: '#dc8d3c',
@@ -383,6 +394,7 @@ const styles = StyleSheet.create({
   checkoutBtnText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '600',
+    fontFamily: 'Inter',
   },
 });

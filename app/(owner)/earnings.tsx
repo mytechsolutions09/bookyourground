@@ -1,12 +1,12 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, Platform, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Modal, TextInput as RNTextInput } from 'react-native';
+import { View, Text, StyleSheet, Platform, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Modal, TextInput as RNTextInput, useWindowDimensions } from 'react-native';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import WebLayout from '@/components/web/WebLayout';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency } from '@/utils/helpers';
 import { TrendingUp, Download, ArrowRight, Wallet, History, Info, ChevronRight, X } from 'lucide-react-native';
-import Svg, { Path, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Path, Circle, Defs, LinearGradient, Stop, Text as SvgText } from 'react-native-svg';
 
 const IS_WEB = Platform.OS === 'web';
 
@@ -32,51 +32,135 @@ interface WalletData {
   balance: number;
 }
 
-function LineChart({ data }: { data: ChartPoint[] }) {
+function LineChart({ data, height = 150, totalDays = 30 }: { data: ChartPoint[], height?: number, totalDays?: number }) {
   if (data.length === 0) return null;
 
   const [containerWidth, setContainerWidth] = useState(300);
-  const height = 150;
-  const padding = 30;
-  
+  const padding = { top: 24, bottom: 36, left: 0, right: 16 };
+
   const maxValue = Math.max(...data.map(d => d.value), 1000);
-  const points = data.map((d, i) => ({
-    x: padding + (i * (containerWidth - 2 * padding)) / (data.length - 1),
-    y: height - padding - (d.value / maxValue) * (height - 2 * padding)
+
+  // Use ACTUAL day range: day 1 → last data point day
+  const lastDay = parseInt(data[data.length - 1].label);
+  const firstDay = 1;
+  const dayRange = Math.max(lastDay - firstDay, 1);
+
+  const chartW = containerWidth - padding.left - padding.right;
+  const chartH = height - padding.top - padding.bottom;
+
+  const toX = (day: number) =>
+    padding.left + ((day - firstDay) / dayRange) * chartW;
+  const toY = (val: number) =>
+    padding.top + chartH - (val / maxValue) * chartH;
+
+  const points = data.map(d => ({
+    x: toX(parseInt(d.label)),
+    y: toY(d.value),
   }));
 
-  const pathData = points.reduce((acc, p, i) => 
-    acc + (i === 0 ? `M ${p.x} ${p.y}` : ` L ${p.x} ${p.y}`), ''
-  );
+  // Smooth bezier path
+  const smoothPath = points.reduce((acc, p, i) => {
+    if (i === 0) return `M ${p.x} ${p.y}`;
+    const prev = points[i - 1];
+    const cpX = (prev.x + p.x) / 2;
+    return acc + ` C ${cpX} ${prev.y}, ${cpX} ${p.y}, ${p.x} ${p.y}`;
+  }, '');
+
+  // Closed area path for gradient fill
+  const areaPath =
+    smoothPath +
+    ` L ${points[points.length - 1].x} ${padding.top + chartH}` +
+    ` L ${points[0].x} ${padding.top + chartH} Z`;
+
+  // X-axis label days: spread across actual range
+  const labelDays = Array.from(new Set([
+    firstDay,
+    ...Array.from({ length: 4 }, (_, i) => Math.round(firstDay + ((lastDay - firstDay) * (i + 1)) / 5)),
+    lastDay,
+  ]));
+
+  const lastPt = points[points.length - 1];
 
   return (
-    <View 
-      style={styles.chartContainer} 
-      onLayout={(e) => setContainerWidth(e.nativeEvent.layout.width)}
-    >
-      <Svg width={containerWidth} height={height}>
-        <Defs>
-          <LinearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0%" stopColor="#01b854" stopOpacity="0.2" />
-            <Stop offset="100%" stopColor="#01b854" stopOpacity="0" />
-          </LinearGradient>
-        </Defs>
-        <Path
-          d={pathData}
-          fill="none"
-          stroke="#01b854"
-          strokeWidth="4"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        {points.map((p, i) => (
-          <Circle key={i} cx={p.x} cy={p.y} r="5" fill="#01b854" />
-        ))}
-      </Svg>
-      <View style={styles.chartLabels}>
-        {data.map((d, i) => (
-          <Text key={i} style={styles.chartLabelText}>{d.label}</Text>
-        ))}
+    <View style={{ flexDirection: 'row', width: '100%' }}>
+      {/* Y Axis labels */}
+      <View style={{ height, width: 82, position: 'relative' }}>
+        <View style={{ position: 'absolute', top: padding.top - 10, right: 8, alignItems: 'flex-end' }}>
+          <Text style={{ fontSize: 9, color: '#01b854', fontWeight: '800' }}>Total</Text>
+          <Text style={{ fontSize: 10, color: '#0F172A', fontWeight: '700' }}>{formatCurrency(maxValue)}</Text>
+        </View>
+        <View style={{ position: 'absolute', top: padding.top + chartH / 2 - 7, right: 8, alignItems: 'flex-end' }}>
+          <Text style={{ fontSize: 9, color: '#64748B', fontWeight: '600' }}>{formatCurrency(maxValue / 2)}</Text>
+        </View>
+        <View style={{ position: 'absolute', top: padding.top + chartH - 7, right: 8, alignItems: 'flex-end' }}>
+          <Text style={{ fontSize: 9, color: '#64748B', fontWeight: '600' }}>₹0</Text>
+        </View>
+      </View>
+
+      {/* Chart */}
+      <View
+        style={{ flex: 1, height }}
+        onLayout={e => setContainerWidth(e.nativeEvent.layout.width)}
+      >
+        <Svg width={containerWidth} height={height}>
+          <Defs>
+            <LinearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0%" stopColor="#01b854" stopOpacity="0.18" />
+              <Stop offset="100%" stopColor="#01b854" stopOpacity="0" />
+            </LinearGradient>
+          </Defs>
+
+          {/* Grid lines */}
+          {[0, 0.5, 1].map((frac, i) => {
+            const y = padding.top + chartH * frac;
+            return (
+              <Path
+                key={i}
+                d={`M ${padding.left} ${y} L ${containerWidth - padding.right} ${y}`}
+                stroke="#E2E8F0"
+                strokeWidth="1"
+                strokeDasharray={i === 2 ? undefined : '4,4'}
+              />
+            );
+          })}
+
+          {/* Area fill */}
+          <Path d={areaPath} fill="url(#areaGrad)" />
+
+          {/* Line */}
+          <Path
+            d={smoothPath}
+            fill="none"
+            stroke="#01b854"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+
+          {/* Dots on each point */}
+          {points.map((p, i) => (
+            <Circle key={i} cx={p.x} cy={p.y} r="4" fill="#01b854" />
+          ))}
+
+          {/* Pulse ring on last point */}
+          <Circle cx={lastPt.x} cy={lastPt.y} r="9" fill="#01b854" fillOpacity="0.15" />
+          <Circle cx={lastPt.x} cy={lastPt.y} r="5" fill="#01b854" />
+
+          {/* X-axis labels */}
+          {labelDays.map(day => (
+            <SvgText
+              key={day}
+              x={toX(day)}
+              y={height - 4}
+              fontSize="10"
+              fill="#64748B"
+              textAnchor="middle"
+              fontWeight="500"
+            >
+              {day}
+            </SvgText>
+          ))}
+        </Svg>
       </View>
     </View>
   );
@@ -84,6 +168,8 @@ function LineChart({ data }: { data: ChartPoint[] }) {
 
 function OwnerEarningsScreenInner() {
   const { user } = useAuth();
+  const { width } = useWindowDimensions();
+  const isCompact = width < 900;
   const [stats, setStats] = useState<EarningsStats>({
     totalEarnings: 0,
     thisMonthEarnings: 0,
@@ -99,6 +185,7 @@ function OwnerEarningsScreenInner() {
 
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [showStatementModal, setShowStatementModal] = useState(false);
+  const [showChartModal, setShowChartModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [payoutMethod, setPayoutMethod] = useState<'bank' | 'upi'>('bank');
   const [upiId, setUpiId] = useState('');
@@ -110,6 +197,72 @@ function OwnerEarningsScreenInner() {
   const [activityFeed, setActivityFeed] = useState<any[]>([]);
   const [limit, setLimit] = useState(10);
   const [hasMore, setHasMore] = useState(true);
+
+  const handleDownloadReport = async () => {
+    if (!user) return;
+    
+    try {
+      setLoading(true);
+      const now = new Date();
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      
+      const { data, error } = await supabase
+        .from('bookings')
+        .select(`
+          id,
+          created_at,
+          total_amount,
+          payment_method,
+          status,
+          ground:grounds!inner(name, city, owner_id)
+        `)
+        .eq('ground.owner_id', user.id)
+        .in('status', ['confirmed', 'completed'])
+        .gte('created_at', firstDay)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        alert('No confirmed earnings found for this month.');
+        return;
+      }
+
+      // Generate CSV
+      const headers = ['Date', 'Venue', 'Location', 'Payment Method', 'Amount'];
+      const rows = data.map(tx => [
+        new Date(tx.created_at).toLocaleDateString(),
+        tx.ground?.name || 'Unknown',
+        tx.ground?.city || 'N/A',
+        tx.payment_method || 'Online',
+        tx.total_amount.toString()
+      ]);
+
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(r => r.map(cell => `"${cell}"`).join(','))
+      ].join('\n');
+
+      if (Platform.OS === 'web') {
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `earnings_report_${now.toLocaleString('default', { month: 'short' })}_${now.getFullYear()}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else {
+        alert('Report generated! (Native sharing integration coming soon)');
+      }
+    } catch (err) {
+      console.error('Error downloading report:', err);
+      alert('Failed to generate report.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -174,7 +327,7 @@ function OwnerEarningsScreenInner() {
       const currentYear = now.getFullYear();
 
       const venueMap = new Map<string, number>();
-      const monthMap = new Map<string, number>();
+      const dayMap = new Map<number, number>();
 
       allRows.forEach((row) => {
         const amt = row.total_amount || 0;
@@ -190,11 +343,13 @@ function OwnerEarningsScreenInner() {
         }
         
         const date = new Date(row.created_at);
+        const d = date.getDate();
         const m = date.getMonth();
         const y = date.getFullYear();
         
         if (m === currentMonth && y === currentYear) {
           thisMonthTotal += amt;
+          dayMap.set(d, (dayMap.get(d) || 0) + amt);
         }
 
         let groundName = 'Other';
@@ -210,9 +365,6 @@ function OwnerEarningsScreenInner() {
         
         const safeName = typeof groundName === 'string' ? groundName : 'Other';
         venueMap.set(safeName, (venueMap.get(safeName) || 0) + amt);
-
-        const monthKey = `${y}-${m}`;
-        monthMap.set(monthKey, (monthMap.get(monthKey) || 0) + amt);
       });
 
       const newStats = {
@@ -288,13 +440,18 @@ function OwnerEarningsScreenInner() {
       // ------------------------------------
 
       const trend: ChartPoint[] = [];
-      for (let i = 4; i >= 0; i--) {
-        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-        const mk = `${d.getFullYear()}-${d.getMonth()}`;
-        trend.push({
-          label: d.toLocaleString('default', { month: 'short' }),
-          value: monthMap.get(mk) || 0
-        });
+      const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+      const todayDay = now.getDate();
+      let runningTotal = 0;
+      for (let i = 1; i <= daysInMonth; i++) {
+        runningTotal += (dayMap.get(i) || 0);
+        // Only add points up to today
+        if (i <= todayDay) {
+          trend.push({
+            label: i.toString(),
+            value: runningTotal
+          });
+        }
       }
       setChartData(trend);
 
@@ -415,6 +572,21 @@ function OwnerEarningsScreenInner() {
         </View>
         <Wallet size={64} color="#043529" strokeWidth={1} style={{ opacity: 0.2 }} />
       </View>
+  
+      <View style={[styles.sectionCard, { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+           <History size={20} color="#92400E" />
+           <Text style={[styles.sectionTitle, { color: '#92400E', marginBottom: 0 }]}>Cash Received (Offline)</Text>
+        </View>
+        <View style={{ alignItems: 'center', paddingVertical: 10 }}>
+          <Text style={{ fontSize: 36, fontWeight: '800', color: '#92400E' }}>{formatCurrency(offlineEarnings)}</Text>
+          <Text style={{ fontSize: 14, color: '#B45309', fontWeight: '600', marginTop: 8 }}>Total collection at venue</Text>
+          <View style={{ height: 1, backgroundColor: '#FDE68A', width: '100%', marginVertical: 16 }} />
+          <Text style={{ fontSize: 12, color: '#D97706', textAlign: 'center', fontStyle: 'italic' }}>
+            Note: This amount is collected directly by you and is not part of the platform's transferable balance.
+          </Text>
+        </View>
+      </View>
 
       <View style={styles.sectionCard}>
         <Text style={styles.sectionTitle}>Recent Transactions</Text>
@@ -520,9 +692,16 @@ function OwnerEarningsScreenInner() {
         </View>
       </View>
 
-      <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>Earnings Analytics</Text>
-        <LineChart data={chartData} />
+      <TouchableOpacity 
+        style={styles.sectionCard}
+        onPress={() => setShowChartModal(true)}
+        activeOpacity={0.7}
+      >
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Earnings Analytics</Text>
+          <ChevronRight size={20} color="#64748B" />
+        </View>
+        <LineChart data={chartData} totalDays={new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()} />
         
         <View style={styles.divider} />
         
@@ -543,10 +722,16 @@ function OwnerEarningsScreenInner() {
           ))}
         </View>
 
-        <TouchableOpacity style={styles.downloadBtn}>
-          <Text style={styles.downloadBtnText}>Download Report</Text>
+        <TouchableOpacity 
+          style={styles.downloadBtn} 
+          onPress={handleDownloadReport}
+          disabled={loading}
+        >
+          <Text style={styles.downloadBtnText}>
+            {loading ? 'Generating...' : 'Download Report'}
+          </Text>
         </TouchableOpacity>
-      </View>
+      </TouchableOpacity>
 
       <View style={styles.sectionCard}>
         <Text style={styles.sectionTitle}>Recent Activity Feed</Text>
@@ -569,20 +754,49 @@ function OwnerEarningsScreenInner() {
         </View>
       </View>
 
-      <View style={[styles.sectionCard, { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-           <History size={20} color="#92400E" />
-           <Text style={[styles.sectionTitle, { color: '#92400E', marginBottom: 0 }]}>Cash Received (Offline)</Text>
+      {/* Chart Enlarged Modal */}
+      <Modal
+        visible={showChartModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowChartModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity 
+            style={styles.modalBackdrop} 
+            activeOpacity={1} 
+            onPress={() => setShowChartModal(false)} 
+          />
+          <View style={[styles.modalContent, { maxWidth: 900, width: '95%' }]}>
+            <View style={styles.modalHeader}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.modalTitle}>Detailed Earnings Analytics</Text>
+                <Text style={styles.modalSubtitle}>Daily revenue trends for the current month</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowChartModal(false)} style={styles.closeBtn}>
+                <X size={20} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={{ padding: 24, paddingBottom: 40 }}>
+              <LineChart 
+                data={chartData} 
+                height={350} 
+                totalDays={new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()} 
+              />
+              
+              <View style={{ marginTop: 40, padding: 16, backgroundColor: '#F8FAFC', borderRadius: 12 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Info size={16} color="#64748B" />
+                  <Text style={{ fontSize: 13, color: '#64748B', fontWeight: '500' }}>
+                    Showing performance overview based on confirmed bookings.
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
         </View>
-        <View style={{ alignItems: 'center', paddingVertical: 10 }}>
-          <Text style={{ fontSize: 36, fontWeight: '800', color: '#92400E' }}>{formatCurrency(offlineEarnings)}</Text>
-          <Text style={{ fontSize: 14, color: '#B45309', fontWeight: '600', marginTop: 8 }}>Total collection at venue</Text>
-          <View style={{ height: 1, backgroundColor: '#FDE68A', width: '100%', marginVertical: 16 }} />
-          <Text style={{ fontSize: 12, color: '#D97706', textAlign: 'center', fontStyle: 'italic' }}>
-            Note: This amount is collected directly by you and is not part of the platform's transferable balance.
-          </Text>
-        </View>
-      </View>
+      </Modal>
     </View>
   );
 
@@ -594,12 +808,20 @@ function OwnerEarningsScreenInner() {
         // @ts-ignore - web-only style to hide scrollbar
         contentContainerStyle={[
           styles.scrollContent,
+          { flexGrow: 1 },
           Platform.OS === 'web' && { scrollbarWidth: 'none', msOverflowStyle: 'none' } as any
         ]}
       >
-        <View style={[styles.layoutRow, !IS_WEB && { flexDirection: 'column' }]}>
-          {renderLeftColumn()}
-          {renderRightColumn()}
+        <View style={[
+          styles.layoutRow, 
+          isCompact && { flexDirection: 'column', gap: 16 }
+        ]}>
+          <View style={[styles.leftCol, isCompact && { paddingRight: 0, paddingTop: 16 }]}>
+            {renderLeftColumn()}
+          </View>
+          <View style={[styles.rightCol, isCompact && { paddingTop: 0 }]}>
+            {renderRightColumn()}
+          </View>
         </View>
       </ScrollView>
 
@@ -804,9 +1026,15 @@ function OwnerEarningsScreenInner() {
             </ScrollView>
 
             <View style={styles.modalFooter}>
-               <TouchableOpacity style={styles.downloadBtnFull} onPress={() => {}}>
+               <TouchableOpacity 
+                 style={styles.downloadBtnFull} 
+                 onPress={handleDownloadReport}
+                 disabled={loading}
+               >
                  <Download size={18} color="#043529" />
-                 <Text style={styles.downloadBtnFullText}>Export as PDF</Text>
+                 <Text style={styles.downloadBtnFullText}>
+                   {loading ? 'Exporting...' : 'Export as PDF (CSV)'}
+                 </Text>
                </TouchableOpacity>
             </View>
           </View>
@@ -828,9 +1056,7 @@ export default function OwnerEarningsScreen() {
   return (
     <View style={styles.nativeContainer}>
       <MobileAppNavbar title="Earnings" titleColor="#043529" lightBg />
-      <ScrollView refreshControl={<RefreshControl refreshing={false} />}>
-        <OwnerEarningsScreenInner />
-      </ScrollView>
+      <OwnerEarningsScreenInner />
     </View>
   );
 }
@@ -846,7 +1072,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     // Moved padding to individual columns
-    paddingBottom: 60,
   },
   pageTitle: {
     fontSize: 32,
@@ -858,21 +1083,18 @@ const styles = StyleSheet.create({
   layoutRow: {
     flexDirection: 'row',
     gap: 24,
+    paddingHorizontal: 16,
   },
   leftCol: {
     flex: 1.5,
     gap: 24,
-    paddingLeft: 0,
-    paddingTop: 0,
-    paddingRight: 12, // Half of gap to keep spacing even
+    paddingTop: 40,
   },
   rightCol: {
     flex: 1,
     gap: 24,
-    paddingTop: 0,
-    paddingLeft: 0,
-    paddingRight: 0,
-    paddingBottom: IS_WEB ? 24 : 16,
+    paddingTop: 40,
+    paddingBottom: 24,
   },
   totalEarningsCard: {
     backgroundColor: '#d9f99d', // Light lime green
@@ -883,15 +1105,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   totalEarningsLabel: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '500',
     color: '#043529',
     marginBottom: 8,
     fontFamily: 'Inter',
   },
   totalEarningsValue: {
-    fontSize: 48,
-    fontWeight: '800',
+    fontSize: 36,
+    fontWeight: '700',
     color: '#043529',
     marginBottom: 8,
     fontFamily: 'Inter',
@@ -910,11 +1132,13 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#0F172A',
-    marginBottom: 20,
+    marginBottom: 16,
     fontFamily: 'Inter',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   table: {
     width: '100%',
@@ -971,9 +1195,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   withdrawBtnText: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
     color: '#043529',
+    fontFamily: 'Inter',
   },
   downloadBtn: {
     backgroundColor: '#d9f99d',
@@ -983,27 +1208,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   downloadBtnText: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
     color: '#043529',
-  },
-  chartContainer: {
-    height: 150,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-  },
-  chartLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    paddingHorizontal: 20,
-    marginTop: 8,
-  },
-  chartLabelText: {
-    fontSize: 12,
-    color: '#64748B',
-    fontWeight: '500',
+    fontFamily: 'Inter',
   },
   divider: {
     height: 1,
@@ -1044,7 +1252,6 @@ const styles = StyleSheet.create({
   },
   activityFeed: {
     gap: 16,
-    backgroundColor: '#fefce8', // Very light greenish/yellow tint like mockup
     padding: 16,
     borderRadius: 16,
   },
@@ -1100,8 +1307,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '700',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
@@ -1160,8 +1367,9 @@ const styles = StyleSheet.create({
   },
   submitBtnText: {
     color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: 'Inter',
   },
   closeBtn: {
     padding: 8,
@@ -1230,9 +1438,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   statementBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
     color: '#64748B',
+    fontFamily: 'Inter',
   },
   withdrawBtnInline: {
     flex: 1,
@@ -1245,9 +1454,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#d9f99d',
   },
   withdrawBtnTextInline: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
     color: '#043529',
+    fontFamily: 'Inter',
   },
   modalFooter: {
     padding: 24,
@@ -1284,9 +1494,10 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   bifurcationValue: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '700',
     marginBottom: 4,
+    fontFamily: 'Inter',
   },
   bifurcationSubtext: {
     fontSize: 10,

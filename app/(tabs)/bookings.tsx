@@ -780,7 +780,7 @@ export default function BookingsScreen() {
 
   return (
     <View style={styles.nativeScreen}>
-      <MobileAppNavbar title="My bookings" titleColor="#043529" lightBg />
+      <MobileAppNavbar title="My Bookings" titleColor="#111827" lightBg />
       <View style={styles.nativeBody}>
         {content}
         
@@ -845,11 +845,11 @@ const styles = StyleSheet.create({
   },
   nativeScreen: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: '#FFFFFF',
   },
   nativeBody: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: '#FFFFFF',
   },
   nativeFilterBar: {
     backgroundColor: '#FFFFFF',
@@ -916,20 +916,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   nativeTabChipActive: {
-    backgroundColor: '#00ea6b',
-    borderColor: '#00ea6b',
+    backgroundColor: '#01b854',
+    borderColor: '#01b854',
   },
   nativeTabChipPressed: {
     opacity: 0.85,
   },
   nativeTabChipText: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '500',
     color: '#4B5563',
     fontFamily: 'Inter',
   },
   nativeTabChipTextActive: {
-    color: '#043529',
+    color: '#FFFFFF',
     fontFamily: 'Inter',
   },
   header: {
@@ -954,8 +954,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   title: {
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '600',
     color: '#111827',
     marginBottom: 4,
     fontFamily: 'Inter',
@@ -969,14 +969,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 0,
     width: '100%',
-    maxWidth: 1180,
+    maxWidth: 1000,
     alignSelf: 'center',
   },
   list: {
     padding: 16,
   },
   listNative: {
-    padding: 24,
+    padding: 16,
     paddingBottom: 32,
     flexGrow: 1,
   },
@@ -1477,8 +1477,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   webPageTitle: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '500',
     color: '#0F172A',
     fontFamily: 'Inter',
     marginBottom: 4,
@@ -1531,7 +1531,7 @@ const styles = StyleSheet.create({
   },
   webTabTextActive: {
     color: '#00ea6b',
-    fontWeight: '600',
+    fontWeight: '700',
     fontFamily: 'Inter',
   },
   cardList: {
@@ -1588,8 +1588,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   bGroundName: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '500',
     color: '#0F172A',
     fontFamily: 'Inter',
     flex: 1,
@@ -1674,8 +1674,8 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   summaryValue: {
-    fontSize: 28,
-    fontWeight: '800',
+    fontSize: 24,
+    fontWeight: '700',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
@@ -1709,8 +1709,8 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   totalAmount: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '700',
     color: '#0F172A',
     fontFamily: 'Inter',
   },

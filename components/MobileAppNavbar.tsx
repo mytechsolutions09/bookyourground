@@ -97,10 +97,10 @@ const styles = StyleSheet.create({
   titleText: {
     marginTop: 8,
     marginBottom: 6,
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '700',
     fontFamily: 'Inter',
-    letterSpacing: 0.8,
+    letterSpacing: 1,
     textTransform: 'uppercase',
   },
   rightActionContainer: {

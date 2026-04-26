@@ -487,6 +487,11 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    maxWidth: 1000,
+    alignSelf: 'center',
+    width: '100%',
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
   pageHeader: {
     backgroundColor: 'transparent',
@@ -503,8 +508,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: 'Inter',
-    fontSize: 24,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '500',
     color: '#111827',
   },
   subtitle: {
@@ -573,7 +578,7 @@ const styles = StyleSheet.create({
   },
   filterTagTextActive: {
     color: '#0F172A',
-    fontWeight: '800',
+    fontWeight: '700',
   },
   dateSearchContainer: {
     flexDirection: 'row',
@@ -641,8 +646,8 @@ const styles = StyleSheet.create({
   },
   groundName: {
     fontFamily: 'Inter',
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '500',
     color: '#111827',
   },
   groundLocation: {
@@ -658,8 +663,8 @@ const styles = StyleSheet.create({
   },
   inventoryTitle: {
     fontFamily: 'Inter',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '500',
     color: '#374151',
     marginBottom: 16,
     textTransform: 'uppercase',
@@ -675,8 +680,8 @@ const styles = StyleSheet.create({
   },
   dateLabel: {
     fontFamily: 'Inter',
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '600',
     color: '#0F172A',
     backgroundColor: '#F1F5F9',
     paddingHorizontal: 10,
@@ -711,7 +716,7 @@ const styles = StyleSheet.create({
   slotStatus: {
     fontFamily: 'Inter',
     fontSize: 8,
-    fontWeight: '800',
+    fontWeight: '700',
     marginTop: 2,
     textTransform: 'uppercase',
   },
