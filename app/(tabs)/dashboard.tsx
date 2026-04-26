@@ -399,7 +399,7 @@ function DashboardContent() {
       <View style={[styles.mainLayout, isCompact && { flexDirection: 'column' }]}>
         <View style={styles.centerContent}>
           {/* Greeting Row */}
-          <View style={styles.greetingRow}>
+          <View style={[styles.greetingRow, isCompact && { flexDirection: 'column', alignItems: 'flex-start', gap: 12 }]}>
             <View>
               <Text style={styles.greetingText}>
                 {new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening'}, {profile?.full_name?.split(' ')[0] || 'Player'} 👋
@@ -841,23 +841,24 @@ const styles = StyleSheet.create({
   calendarGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    width: '100%',
   },
   calendarDayLabel: {
-    width: 32,
+    width: '14.28%',
     textAlign: 'center',
     fontSize: 11,
     fontWeight: '700',
     color: '#94A3B8',
-    marginBottom: 4,
+    marginBottom: 10,
     fontFamily: 'Inter',
   },
   calendarDay: {
-    width: 32,
-    height: 32,
+    width: '14.28%',
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 8,
+    borderRadius: 10,
+    marginBottom: 4,
   },
   calendarDayText: {
     fontSize: 12,
