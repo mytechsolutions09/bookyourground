@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, Platform, TouchableOpacity, ScrollView, TextInput, useWindowDimensions, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, Platform, TouchableOpacity, ScrollView, TextInput, useWindowDimensions, Image, ActivityIndicator } from 'react-native';
 import { Calendar, Filter, X, Save, CheckCircle2, Circle, User, Clock } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -129,18 +129,34 @@ export default function OwnerBookingsScreen() {
   const [sortKey, setSortKey] = useState<'date' | 'ground' | 'amount' | 'status' | 'booked_at' | 'paid' | 'teams' | 'name'>(Platform.OS === 'web' ? 'booked_at' : 'date');
   const [sortAsc, setSortAsc] = useState(false);
   const [showDatePickerMobile, setShowDatePickerMobile] = useState(false);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const PAGE_SIZE = 10;
 
   useEffect(() => {
     if (user) {
-      loadBookings();
+      loadBookings(false);
     }
   }, [user]);
 
-  const loadBookings = async () => {
+  const loadBookings = async (isLoadMore = false) => {
     if (!user) return;
+    if (isLoadMore && (!hasMore || loadingMore)) return;
 
     try {
-      setLoading(true);
+      if (isLoadMore) {
+        setLoadingMore(true);
+      } else {
+        setLoading(true);
+        setPage(0);
+        setHasMore(true);
+      }
+
+      const currentPage = isLoadMore ? page + 1 : 0;
+      const from = currentPage * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
       // 1) Bookings on grounds owned by this user
       const ownedPromise = supabase
         .from('bookings')
@@ -155,7 +171,9 @@ export default function OwnerBookingsScreen() {
         `,
         )
         .eq('ground.owner_id', user.id)
-        .neq('status', 'pending');
+        .neq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .range(from, to);
 
       // 2) Bookings this user made as a player (any ground)
       const selfPromise = supabase
@@ -171,7 +189,9 @@ export default function OwnerBookingsScreen() {
         `,
         )
         .eq('user_id', user.id)
-        .neq('status', 'pending');
+        .neq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .range(from, to);
 
       const [{ data: ownedData, error: ownedError }, { data: selfData, error: selfError }] =
         await Promise.all([ownedPromise, selfPromise]);
@@ -179,19 +199,30 @@ export default function OwnerBookingsScreen() {
       if (ownedError) throw ownedError;
       if (selfError) throw selfError;
 
-      const map = new Map<string, BookingWithDetails>();
-      (ownedData as BookingWithDetails[] | null)?.forEach((b) => map.set(b.id, b));
-      (selfData as BookingWithDetails[] | null)?.forEach((b) => map.set(b.id, b));
-
-      const merged = Array.from(map.values()).sort((a, b) =>
+      const mergedBatch = [...(ownedData || []), ...(selfData || [])];
+      const uniqueBatch = mergedBatch.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+      
+      uniqueBatch.sort((a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
       );
 
-      setBookings(merged);
+      if (isLoadMore) {
+        setBookings(prev => {
+          const combined = [...prev, ...uniqueBatch];
+          return combined.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i)
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        });
+      } else {
+        setBookings(uniqueBatch);
+      }
+
+      setPage(currentPage);
+      setHasMore((ownedData?.length === PAGE_SIZE) || (selfData?.length === PAGE_SIZE));
     } catch (error) {
       console.error('Error loading bookings:', error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -943,12 +974,14 @@ export default function OwnerBookingsScreen() {
                      onPress={() => item.status === 'confirmed' && handleCancelBooking(item)}
                      disabled={item.status !== 'confirmed'}
                    >
-                     <Text style={[
-                       styles.statusBadgeText,
-                       item.status === 'confirmed' ? styles.statusConfirmed : styles.statusCancelled
-                     ]}>
-                       {item.status === 'confirmed' ? (isDateInPast(item.booking_date) ? 'DONE' : 'ACTIVE') : item.status.toUpperCase()}
-                     </Text>
+                      <Text style={[
+                        styles.statusBadgeText,
+                        item.status === 'confirmed' 
+                          ? (isDateInPast(item.booking_date) ? styles.statusDone : styles.statusConfirmed) 
+                          : styles.statusCancelled
+                      ]}>
+                        {item.status === 'confirmed' ? (isDateInPast(item.booking_date) ? 'DONE' : 'ACTIVE') : item.status.toUpperCase()}
+                      </Text>
                    </TouchableOpacity>
                 </View>
 
@@ -1042,17 +1075,21 @@ export default function OwnerBookingsScreen() {
                       </Text>
                     )}
                   </View>
-                  <View style={[
-                    styles.statusBadgeCompact,
-                    item.status === 'confirmed' ? styles.statusConfirmed : styles.statusCancelled
-                  ]}>
-                    <Text style={[
-                      styles.statusBadgeText,
-                      item.status === 'confirmed' ? styles.statusConfirmed : styles.statusCancelled
+                    <View style={[
+                      styles.statusBadgeCompact,
+                      item.status === 'confirmed' 
+                        ? (isDateInPast(item.booking_date) ? styles.statusDone : styles.statusConfirmed) 
+                        : styles.statusCancelled
                     ]}>
-                      {item.status === 'confirmed' ? (isDateInPast(item.booking_date) ? 'DONE' : 'ACTIVE') : 'CANCEL'}
-                    </Text>
-                  </View>
+                      <Text style={[
+                        styles.statusBadgeText,
+                        item.status === 'confirmed' 
+                          ? (isDateInPast(item.booking_date) ? styles.statusDone : styles.statusConfirmed) 
+                          : styles.statusCancelled
+                      ]}>
+                        {item.status === 'confirmed' ? (isDateInPast(item.booking_date) ? 'DONE' : 'ACTIVE') : 'CANCEL'}
+                      </Text>
+                    </View>
                 </View>
               </View>
 
@@ -1118,7 +1155,16 @@ export default function OwnerBookingsScreen() {
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={loadBookings} />
+          <RefreshControl refreshing={loading && !loadingMore} onRefresh={() => loadBookings(false)} />
+        }
+        onEndReached={() => loadBookings(true)}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={
+          loadingMore ? (
+            <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+              <ActivityIndicator color="#059669" />
+            </View>
+          ) : null
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
@@ -1483,6 +1529,10 @@ const styles = StyleSheet.create({
   statusConfirmed: {
     backgroundColor: '#DEF7EC',
     color: '#03543F',
+  },
+  statusDone: {
+    backgroundColor: '#F3E8FF',
+    color: '#7E22CE',
   },
   statusCancelled: {
     backgroundColor: '#FDE8E8',

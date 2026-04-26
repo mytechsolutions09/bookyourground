@@ -139,10 +139,7 @@ export default function UserOrdersScreen() {
       <WebLayout>
         <View style={styles.webContainer}>
           <View style={styles.webHeader}>
-             <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-                <ChevronLeft size={20} color="#64748B" />
-                <Text style={styles.backText}>Back to Profile</Text>
-             </TouchableOpacity>
+
              <Text style={styles.webTitle}>My Orders</Text>
           </View>
           {content}

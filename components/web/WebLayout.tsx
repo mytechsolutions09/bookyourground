@@ -722,7 +722,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
               />
             </TouchableOpacity>
 
-            {(cleanPath.includes('/products') || cleanPath.includes('/orders')) && !isCompact && (
+            {(cleanPath.includes('/products') || cleanPath.includes('/orders')) && !isCompact && isSuperAdmin && (
               <View style={{ flexDirection: 'row', gap: 24, marginLeft: 32, alignItems: 'center' }}>
                 <Text 
                   style={styles.headerNavLink}
@@ -963,7 +963,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                         <NavLink href="/wallet" icon={Wallet} label="Wallet" />
 
                         <NavLink href="/(owner)/ground-bookings" icon={ClipboardList} label="Bookings" />
-
+                        <NavLink href="/profile/orders" icon={ShoppingBag} label="My Orders" />
                         <NavLink href="/(tabs)/bookings" icon={Ticket} label="My Bookings" />
                         <NavLink href="/(owner)/earnings" icon={IndianRupee} label="Earnings" />
                         <NavLink href="/(owner)/add-ground" icon={PlusCircle} label="Add ground" />

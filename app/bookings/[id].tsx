@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, Alert, Platform, useWindowDimensions, TextInput, Pressable, Animated, Alert as RNAlert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, Alert, Platform, useWindowDimensions, TextInput, Pressable, Animated, Alert as RNAlert, ActivityIndicator, Share, Modal } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { MapPin, Calendar, Clock, User, Users, Star, CheckCircle2, CreditCard, ShieldCheck, Info, ChevronLeft, Share2 } from 'lucide-react-native';
+import { MapPin, Calendar, Clock, User, Users, Star, CheckCircle2, CreditCard, ShieldCheck, Info, ChevronLeft, Share2, Globe, FileText, Copy, Check } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { BookingWithDetails } from '@/types';
 import { formatCurrency, formatDate } from '@/utils/helpers';
@@ -9,35 +9,28 @@ import { formatBookingSlotSummary } from '@/utils/bookingSlotFormat';
 import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
 import { getBookingDisplayAmount } from '@/utils/bookingPricing';
 import { useAuth } from '@/contexts/AuthContext';
-import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
 import Button from '@/components/ui/Button';
-import Modal from '@/components/ui/Modal';
 
 export default function BookingDetailsScreen() {
   const { id } = useLocalSearchParams();
   const bookingId = Array.isArray(id) ? id[0] : id;
-  const { user, profile: userProfile } = useAuth();
+  const { user } = useAuth();
   
   const [booking, setBooking] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const { width } = useWindowDimensions();
   const [fadeAnim] = useState(new Animated.Value(0));
   
-  const [reviewRating, setReviewRating] = useState<number>(5);
-  const [reviewComment, setReviewComment] = useState<string>('');
-  const [existingReviewId, setExistingReviewId] = useState<string | null>(null);
-  const [submittingReview, setSubmittingReview] = useState(false);
-  const [successModalVisible, setSuccessModalVisible] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [receiptOpen, setReceiptOpen] = useState(false);
 
   const isWeb = Platform.OS === 'web';
-  const isDesktop = width > 1024;
-  const isTablet = width > 768;
+  const isDesktop = width > 900;
 
   useEffect(() => {
     if (bookingId) {
       loadBooking();
-      fetchReview();
     }
   }, [bookingId]);
 
@@ -73,93 +66,44 @@ export default function BookingDetailsScreen() {
     }
   };
 
-  const fetchReview = async () => {
-    if (!bookingId || !user) return;
-    try {
-      const { data, error } = await supabase
-        .from('reviews')
-        .select('id, rating, comment')
-        .eq('booking_id', bookingId)
-        .maybeSingle();
-
-      if (error && error.code !== 'PGRST116') throw error;
-      if (data) {
-        setExistingReviewId(data.id);
-        setReviewRating(data.rating || 5);
-        setReviewComment(data.comment || '');
-      }
-    } catch (e) {
-      console.warn('Error fetching review:', e);
+  const handleCopy = async () => {
+    if (isWeb) {
+      navigator.clipboard?.writeText(bookingId);
     }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleSubmitReview = async () => {
-    if (!user) {
-      const msg = 'Please log in to submit a review.';
-      if (isWeb) alert(msg);
-      else RNAlert.alert('Login Required', msg);
-      return;
-    }
+  const handleShare = async () => {
     if (!booking) return;
-
     try {
-      setSubmittingReview(true);
-      if (existingReviewId) {
-        const { error } = await supabase
-          .from('reviews')
-          .update({
-            rating: reviewRating,
-            comment: reviewComment.trim() || null,
-          })
-          .eq('id', existingReviewId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('reviews')
-          .insert({
-            user_id: user.id,
-            ground_id: booking.ground_id,
-            booking_id: bookingId,
-            rating: reviewRating,
-            comment: reviewComment.trim() || null,
+      const message = `Booking at ${booking.ground.name} on ${formatDate(booking.booking_date)} at ${formatBookingSlotSummary(booking.start_time, booking.end_time, booking.ground.pitch_type)}. Booking ID: #${bookingId.substring(0, 8).toUpperCase()}`;
+      if (isWeb) {
+        if (navigator.share) {
+          await navigator.share({
+            title: 'Booking Details',
+            text: message,
+            url: window.location.href,
           });
-        if (error) throw error;
+        } else {
+          await navigator.clipboard.writeText(`${message}\n${window.location.href}`);
+          alert('Booking details copied to clipboard!');
+        }
+      } else {
+        await Share.share({
+          message,
+        });
       }
-      
-      setSuccessModalVisible(true);
-      await fetchReview();
-    } catch (e: any) {
-      console.error('Error saving review:', e);
-      const errMsg = e.message || 'Failed to save review';
-      if (isWeb) alert(errMsg);
-      else RNAlert.alert('Error', errMsg);
-    } finally {
-      setSubmittingReview(false);
+    } catch (error: any) {
+      console.error('Error sharing:', error);
     }
   };
 
-  // Priority: Use the actual stored amount from the DB if available (> 0), 
-  // otherwise fall back to the utility's recalculation logic (mostly for drafts).
   const storedTotal = Number(booking?.total_amount || 0);
-  const discountAmount = Number(booking?.discount_amount || 0);
-  
   const displayTotalAmount = useMemo(() => {
     if (storedTotal > 0) return storedTotal;
     return getBookingDisplayAmount(booking);
   }, [booking, storedTotal]);
-
-  const originalAmount = useMemo(() => {
-    // If we have a stored total, the original price is total + discount
-    if (storedTotal > 0) return storedTotal + discountAmount;
-    // Fallback to utility recalculation
-    return getBookingDisplayAmount(booking) + discountAmount;
-  }, [booking, storedTotal, discountAmount]);
-  
-  const isPastBooking = useMemo(() => {
-    if (!booking) return false;
-    const today = new Date().toISOString().split('T')[0];
-    return booking.booking_date < today;
-  }, [booking]);
 
   const cricketTeamsLabel = useMemo(() => {
     if (!booking) return null;
@@ -169,8 +113,7 @@ export default function BookingDetailsScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#10b981" />
-        <Text style={[styles.loadingText, { marginTop: 12 }]}>Loading details...</Text>
+        <ActivityIndicator size="large" color="#01C45A" />
       </View>
     );
   }
@@ -185,226 +128,194 @@ export default function BookingDetailsScreen() {
   }
 
   const primaryImage = booking.ground.ground_images?.[0]?.image_url ||
-    'https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=1200&auto=format&fit=crop';
+    'https://images.pexels.com/photos/3628912/pexels-photo-3628912.jpeg?auto=compress&cs=tinysrgb&w=1200';
 
   const content = (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.scrollContent}
-      showsVerticalScrollIndicator={false}
-    >
-      <Animated.View style={[styles.mainWrapper, { opacity: fadeAnim }]}>
-        {/* Banner Section */}
-        <View style={styles.bannerContainer}>
-          <Image source={{ uri: primaryImage }} style={styles.bannerImage} />
-          <View style={styles.bannerOverlay}>
-            <Pressable onPress={() => router.back()} style={styles.backButton}>
-              <ChevronLeft size={24} color="#FFF" />
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+      {/* Hero */}
+      <View style={styles.heroContainer}>
+        <View style={styles.hero}>
+          <Image source={{ uri: primaryImage }} style={styles.heroImage} />
+          <View style={styles.heroOverlay} />
+          <Pressable onPress={() => router.back()} style={styles.backBtn}>
+            <ChevronLeft size={20} color="#FFF" />
+          </Pressable>
+          <View style={styles.statusPill}>
+            <Text style={styles.statusText}>{booking.status.toUpperCase()}</Text>
+          </View>
+          <View style={styles.heroBottom}>
+            <View style={{ flex: 1, marginRight: 20 }}>
+              <Text style={styles.groundTitle} numberOfLines={1}>{booking.ground.name}</Text>
+              <View style={styles.groundSport}>
+                <Globe size={12} color="#FFF" />
+                <Text style={styles.sportText}>{booking.ground.pitch_type || 'Cricket'}</Text>
+              </View>
+            </View>
+            <Pressable style={styles.bookingIdChip} onPress={handleCopy}>
+              <Text style={styles.idLabel}>Booking ID</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Text style={styles.idValue}>#{bookingId.substring(0, 8).toUpperCase()}</Text>
+                {copied ? <Check size={12} color="#01C45A" /> : <Copy size={12} color="rgba(255,255,255,0.6)" />}
+              </View>
+              {copied && <Text style={styles.copiedBadge}>Copied ✓</Text>}
             </Pressable>
-            <View style={styles.bannerBadge}>
-              <Text style={styles.bannerBadgeText}>{booking.status === 'confirmed' ? (isPastBooking ? 'COMPLETED' : 'UPCOMING') : booking.status.toUpperCase()}</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Body */}
+      <View style={[styles.pageBody, isDesktop && styles.pageBodyDesktop]}>
+        {/* Left Column */}
+        <View style={styles.leftColumn}>
+          {/* Slot Card */}
+          <View style={styles.card}>
+            <View style={styles.cardInner}>
+              <View style={styles.addressRow}>
+                <MapPin size={14} color="#01C45A" />
+                <Text style={styles.addressText}>{booking.ground.address}, {booking.ground.city}</Text>
+              </View>
+              <View style={styles.slotGrid}>
+                <View style={styles.slotItem}>
+                  <View style={styles.slotLabel}>
+                    <Calendar size={11} color="#01C45A" strokeWidth={2.5} />
+                    <Text style={styles.slotLabelText}>Date</Text>
+                  </View>
+                  <Text style={styles.slotValue}>{formatDate(booking.booking_date)}</Text>
+                </View>
+                <View style={styles.slotItem}>
+                  <View style={styles.slotLabel}>
+                    <Clock size={11} color="#01C45A" strokeWidth={2.5} />
+                    <Text style={styles.slotLabelText}>Time slot</Text>
+                  </View>
+                  <Text style={styles.slotValue}>
+                    {formatBookingSlotSummary(booking.start_time, booking.end_time, booking.ground.pitch_type)}
+                  </Text>
+                </View>
+                <View style={styles.slotItem}>
+                  <View style={styles.slotLabel}>
+                    <Users size={11} color="#01C45A" strokeWidth={2.5} />
+                    <Text style={styles.slotLabelText}>Teams</Text>
+                  </View>
+                  <Text style={styles.slotValue}>{cricketTeamsLabel || '1 Team'}</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* Venue Rules */}
+          <View style={styles.card}>
+            <View style={styles.cardInner}>
+              <Text style={styles.sectionTitle}>Venue rules</Text>
+              {[
+                "Please arrive 15 minutes before your slot.",
+                "Proper footwear is mandatory for the pitch.",
+                "Respect the ground staff and other players.",
+                "No littering or smoking allowed inside the premises.",
+              ].map((rule, i) => (
+                <View key={i} style={styles.ruleItem}>
+                  <View style={styles.ruleDot} />
+                  <Text style={styles.ruleText}>{rule}</Text>
+                </View>
+              ))}
             </View>
           </View>
         </View>
 
-        <View style={[styles.contentLayout, isDesktop && styles.contentLayoutDesktop]}>
-          {/* Main Details Column */}
-          <View style={styles.detailsColumn}>
-            <Card style={styles.mainInfoCard}>
-              <View style={styles.headerRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.groundName}>{booking.ground.name}</Text>
-                  <View style={styles.locationRow}>
-                    <MapPin size={16} color="#64748b" />
-                    <Text style={styles.locationText}>{booking.ground.address}, {booking.ground.city}</Text>
+        {/* Right Column */}
+        <View style={styles.rightColumn}>
+          <View style={styles.card}>
+            <View style={styles.cardInner}>
+              <Text style={styles.sectionTitle}>Payment summary</Text>
+
+              <View style={styles.summaryRow}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={styles.summaryLabel}>Booking price</Text>
+                  <View style={styles.teamTag}>
+                    <Text style={styles.teamTagText}>{cricketTeamsLabel || '1 team'}</Text>
                   </View>
                 </View>
-                <View style={styles.bookingIdBox}>
-                   <Text style={styles.bookingIdLabel}>BOOKING ID</Text>
-                   <Text style={styles.bookingIdValue}>#{bookingId.substring(0, 8).toUpperCase()}</Text>
-                </View>
+                <Text style={styles.summaryValue}>₹{Number(displayTotalAmount).toLocaleString('en-IN')}.00</Text>
               </View>
-
+              <View style={styles.summaryRow}>
+                <Text style={styles.summaryLabel}>Taxes & fees</Text>
+                <Text style={styles.summaryValueMuted}>₹0.00</Text>
+              </View>
               <View style={styles.divider} />
-
-              <View style={styles.infoGrid}>
-                <View style={styles.infoItem}>
-                  <View style={styles.infoIconWrapper}>
-                    <Calendar size={20} color="#10b981" />
-                  </View>
-                  <View>
-                    <Text style={styles.infoItemLabel}>Date</Text>
-                    <Text style={styles.infoItemValue}>{formatDate(booking.booking_date)}</Text>
-                  </View>
-                </View>
-                <View style={styles.infoItem}>
-                  <View style={styles.infoIconWrapper}>
-                    <Clock size={20} color="#10b981" />
-                  </View>
-                  <View>
-                    <Text style={styles.infoItemLabel}>Time Slot</Text>
-                    <Text style={styles.infoItemValue}>
-                      {formatBookingSlotSummary(booking.start_time, booking.end_time, booking.ground.pitch_type)}
-                    </Text>
-                  </View>
-                </View>
-                {cricketTeamsLabel && (
-                  <View style={styles.infoItem}>
-                    <View style={styles.infoIconWrapper}>
-                      <Users size={20} color="#10b981" />
-                    </View>
-                    <View>
-                      <Text style={styles.infoItemLabel}>Match Type</Text>
-                      <Text style={styles.infoItemValue}>{cricketTeamsLabel}</Text>
-                    </View>
-                  </View>
-                )}
-              </View>
-            </Card>
-
-            <Card style={styles.rulesCard}>
-              <View style={styles.cardHeader}>
-                <Info size={20} color="#0f172a" />
-                <Text style={styles.cardTitle}>Venue Rules</Text>
-              </View>
-              <View style={styles.rulesList}>
-                 <Text style={styles.ruleItem}>• Please arrive 15 minutes before your slot.</Text>
-                 <Text style={styles.ruleItem}>• Proper footwear is mandatory for the pitch.</Text>
-                 <Text style={styles.ruleItem}>• Respect the ground staff and other players.</Text>
-                 <Text style={styles.ruleItem}>• No littering or smoking allowed inside the premises.</Text>
-              </View>
-            </Card>
-
-            {isPastBooking && (booking.status === 'confirmed' || booking.status === 'completed') && (
-              <Card style={styles.reviewCard}>
-                <View style={styles.cardHeader}>
-                  <Star size={20} color="#0f172a" />
-                  <Text style={styles.cardTitle}>Rate Your Experience</Text>
-                </View>
-                <View style={styles.starsContainer}>
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Pressable key={star} onPress={() => setReviewRating(star)} style={styles.starBtn}>
-                      <Star
-                        size={32}
-                        color={reviewRating >= star ? "#10b981" : "#e2e8f0"}
-                        fill={reviewRating >= star ? "#10b981" : "none"}
-                      />
-                    </Pressable>
-                  ))}
-                </View>
-                <TextInput
-                  style={styles.reviewInput}
-                  placeholder="Tell us about the ground conditions, amenities, and staff..."
-                  placeholderTextColor="#94a3b8"
-                  value={reviewComment}
-                  onChangeText={setReviewComment}
-                  multiline
-                />
-                <Button
-                  title={submittingReview ? "Submitting..." : (existingReviewId ? "Update Review" : "Post Review")}
-                  onPress={handleSubmitReview}
-                  disabled={submittingReview}
-                  style={styles.reviewSubmitBtn}
-                />
-              </Card>
-            )}
-          </View>
-
-          {/* Payment Sidebar */}
-          <View style={styles.sidebarColumn}>
-            <Card style={styles.paymentCard}>
-              <Text style={styles.paymentTitle}>Payment Summary</Text>
-              
-              <View style={styles.priceBreakdown}>
-                <View style={styles.priceRow}>
-                  <Text style={styles.priceLabel}>
-                    Booking Price {cricketTeamsLabel ? `(${cricketTeamsLabel === '1 team' ? '1 Team' : 'Both Teams'})` : ''}
-                  </Text>
-                  <Text style={styles.priceValue}>{formatCurrency(originalAmount)}</Text>
-                </View>
-                
-                {discountAmount > 0 && (
-                  <View style={styles.priceRow}>
-                    <Text style={styles.discountLabel}>Discount Applied</Text>
-                    <Text style={styles.discountValue}>-{formatCurrency(discountAmount)}</Text>
-                  </View>
-                )}
-
-                <View style={styles.priceRow}>
-                  <Text style={styles.priceLabel}>Taxes & Fees</Text>
-                  <Text style={styles.priceValue}>₹0.00</Text>
-                </View>
-              </View>
-
               <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>Grand Total</Text>
-                <Text style={styles.totalValue}>{formatCurrency(displayTotalAmount)}</Text>
+                <Text style={styles.totalLabel}>Grand total</Text>
+                <Text style={styles.totalValue}>₹{Number(displayTotalAmount).toLocaleString('en-IN')}.00</Text>
               </View>
 
-              <View style={styles.paymentMethodBox}>
-                <View style={styles.methodIconWrapper}>
-                   {booking.payment_method === 'cash' ? <CreditCard size={18} color="#64748b" /> : <ShieldCheck size={18} color="#10b981" />}
+              <View style={styles.paymentMethodCard}>
+                <View style={styles.pmIcon}>
+                  <CreditCard size={18} color="#5A6555" strokeWidth={1.5} />
                 </View>
                 <View>
-                   <Text style={styles.methodLabel}>PAYMENT METHOD</Text>
-                   <Text style={styles.methodValue}>
-                     {booking.payment_method === 'cash' ? 'Cash at Ground' : (booking.payment_method?.toUpperCase() || 'PAID ONLINE')}
-                   </Text>
+                  <Text style={styles.pmLabel}>Payment method</Text>
+                  <Text style={styles.pmValue}>{booking.payment_method === 'cash' ? 'Cash at Ground' : (booking.payment_method?.toUpperCase() || 'PAID ONLINE')}</Text>
                 </View>
               </View>
 
-              <View style={styles.trustBadge}>
-                <ShieldCheck size={14} color="#10b981" />
-                <Text style={styles.trustText}>Secure booking via Book Your Ground</Text>
+              <View style={styles.secureNote}>
+                <ShieldCheck size={12} color="#01C45A" strokeWidth={2} />
+                <Text style={styles.secureNoteText}>Secure booking via Book Your Ground</Text>
               </View>
-            </Card>
-
-            <View style={styles.actionsBox}>
-               <Button 
-                 title="Share Booking" 
-                 variant="outline" 
-                 icon={Share2} 
-                 onPress={() => {}}
-                 fullWidth
-                 style={styles.actionBtn}
-               />
-               <Button 
-                 title="View Receipt" 
-                 variant="outline" 
-                 onPress={() => {}}
-                 fullWidth
-                 style={styles.actionBtn}
-               />
             </View>
           </View>
+
+          <Pressable style={[styles.actionBtn, styles.btnOutline]} onPress={handleShare}>
+            <Share2 size={14} color="#01A34B" strokeWidth={2} />
+            <Text style={styles.btnOutlineText}>Share booking</Text>
+          </Pressable>
+          <Pressable style={[styles.actionBtn, styles.btnSolid]} onPress={() => setReceiptOpen(true)}>
+            <FileText size={14} color="#FFF" strokeWidth={2} />
+            <Text style={styles.btnSolidText}>View receipt</Text>
+          </Pressable>
         </View>
-      </Animated.View>
+      </View>
+
+      {/* Receipt Modal */}
+      <Modal visible={receiptOpen} transparent animationType="fade" onRequestClose={() => setReceiptOpen(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setReceiptOpen(false)}>
+          <Pressable style={styles.modal} onPress={e => e.stopPropagation()}>
+            <View style={styles.receiptHeader}>
+              <View>
+                <Text style={styles.receiptHeaderSub}>Booking confirmed</Text>
+                <Text style={styles.receiptTitle}>Book Your Ground</Text>
+              </View>
+              <View style={styles.receiptCheck}>
+                <CheckCircle2 size={18} color="#FFF" strokeWidth={2.5} />
+              </View>
+            </View>
+            <View style={styles.receiptBody}>
+              {[
+                ["Ground", booking.ground.name],
+                ["Booking ID", `#${bookingId.substring(0, 8).toUpperCase()}`],
+                ["Date", formatDate(booking.booking_date)],
+                ["Slot", formatBookingSlotSummary(booking.start_time, booking.end_time, booking.ground.pitch_type)],
+                ["Teams", cricketTeamsLabel || '1 Team'],
+                ["Payment", booking.payment_method === 'cash' ? 'Cash at Ground' : 'Online'],
+                ["Amount", `₹${Number(displayTotalAmount).toLocaleString('en-IN')}.00`],
+              ].map(([k, v]) => (
+                <View key={k} style={styles.receiptRow}>
+                  <Text style={styles.receiptKey}>{k}</Text>
+                  <Text style={styles.receiptVal}>{v}</Text>
+                </View>
+              ))}
+              <Pressable style={styles.closeBtn} onPress={() => setReceiptOpen(false)}>
+                <Text style={styles.closeBtnText}>Close</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ScrollView>
   );
 
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      {isWeb ? <WebLayout>{content}</WebLayout> : content}
-
-      <Modal
-        visible={successModalVisible}
-        onClose={() => setSuccessModalVisible(false)}
-        title="Review Submitted"
-        maxWidth={400}
-      >
-        <View style={styles.modalBody}>
-          <View style={styles.modalIcon}>
-            <CheckCircle2 size={48} color="#10b981" />
-          </View>
-          <Text style={styles.modalText}>Thank you for your feedback! It helps other players choose the best grounds.</Text>
-          <Button
-            title="CLOSE"
-            onPress={() => setSuccessModalVisible(false)}
-            fullWidth
-          />
-        </View>
-      </Modal>
+      {isWeb ? <WebLayout noCard>{content}</WebLayout> : content}
     </>
   );
 }
@@ -412,342 +323,443 @@ export default function BookingDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#F4F6F0',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
+    backgroundColor: '#F4F6F0',
   },
   loadingText: {
     fontSize: 16,
-    color: '#64748b',
-    fontWeight: '600',
+    color: '#8A9580',
+    fontFamily: 'Inter',
   },
   scrollContent: {
     flexGrow: 1,
+    paddingBottom: 100,
   },
-  mainWrapper: {
+  heroContainer: {
     width: '100%',
-    alignSelf: 'center',
+    backgroundColor: '#000',
+    alignItems: 'center',
+  },
+  hero: {
+    height: Platform.OS === 'web' ? 380 : 300,
+    width: '100%',
     maxWidth: 1200,
-    paddingBottom: 60,
-  },
-  bannerContainer: {
-    width: '100%',
-    height: Platform.OS === 'web' ? 400 : 250,
     position: 'relative',
+    overflow: 'hidden',
   },
-  bannerImage: {
+  heroImage: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
   },
-  bannerOverlay: {
+  heroOverlay: {
     ...StyleSheet.absoluteFillObject,
-    padding: 24,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    backgroundColor: 'rgba(0,0,0,0.2)',
+    backgroundColor: 'rgba(0,0,0,0.3)',
   },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  bannerBadge: {
-    backgroundColor: '#10b981',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 99,
-  },
-  bannerBadgeText: {
-    color: '#FFF',
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  contentLayout: {
-    flexDirection: 'column',
-    padding: 20,
-    gap: 24,
-    marginTop: Platform.OS === 'web' ? -60 : 0,
-  },
-  contentLayoutDesktop: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  detailsColumn: {
-    flex: 1.8,
-    gap: 24,
-  },
-  sidebarColumn: {
-    flex: 1,
-    gap: 24,
-  },
-  mainInfoCard: {
-    padding: 32,
-    borderRadius: 24,
+  backBtn: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.18)',
     borderWidth: 1,
-    borderColor: '#f1f5f9',
+    borderColor: 'rgba(255,255,255,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  headerRow: {
+  statusPill: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    backgroundColor: '#01C45A',
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  statusText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    fontFamily: 'Inter',
+  },
+  heroBottom: {
+    position: 'absolute',
+    bottom: 20,
+    left: 24,
+    right: 24,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    flexWrap: 'wrap',
-    gap: 16,
+    alignItems: 'flex-end',
   },
-  groundName: {
+  groundTitle: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#0f172a',
-    marginBottom: 8,
+    color: '#FFF',
+    fontFamily: 'Inter',
+    letterSpacing: -0.5,
   },
-  locationRow: {
+  groundSport: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+    marginTop: 6,
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
   },
-  locationText: {
-    fontSize: 16,
-    color: '#64748b',
+  sportText: {
+    color: '#FFF',
+    fontSize: 11,
+    fontWeight: '600',
+    fontFamily: 'Inter',
   },
-  bookingIdBox: {
-    backgroundColor: '#f8fafc',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 16,
+  bookingIdChip: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
     alignItems: 'flex-end',
   },
-  bookingIdLabel: {
-    fontSize: 10,
+  idLabel: {
+    fontSize: 9,
+    color: 'rgba(255,255,255,0.7)',
     fontWeight: '700',
-    color: '#94a3b8',
-    letterSpacing: 1,
-    marginBottom: 4,
-  },
-  bookingIdValue: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#1e293b',
-    letterSpacing: 1,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#f1f5f9',
-    marginVertical: 32,
-  },
-  infoGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 32,
-  },
-  infoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  infoIconWrapper: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    backgroundColor: '#f0fdf4',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  infoItemLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#94a3b8',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 4,
+    letterSpacing: 1,
+    marginBottom: 2,
   },
-  infoItemValue: {
-    fontSize: 16,
+  idValue: {
+    fontSize: 13,
     fontWeight: '700',
-    color: '#1e293b',
+    color: '#FFF',
+    fontFamily: 'monospace',
   },
-  rulesCard: {
-    padding: 32,
-    borderRadius: 24,
+  copiedBadge: {
+    position: 'absolute',
+    bottom: -18,
+    right: 0,
+    fontSize: 10,
+    color: '#01C45A',
+    fontWeight: '700',
   },
-  cardHeader: {
+  pageBody: {
+    maxWidth: 900,
+    width: '100%',
+    alignSelf: 'center',
+    padding: 24,
+    gap: 20,
+  },
+  pageBodyDesktop: {
+    flexDirection: 'row',
+  },
+  leftColumn: {
+    flex: 1,
+    gap: 16,
+  },
+  rightColumn: {
+    width: Platform.OS === 'web' ? 340 : '100%',
+    gap: 16,
+  },
+  card: {
+    backgroundColor: '#FFF',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#E8EDE4',
+    overflow: 'hidden',
+  },
+  cardInner: {
+    padding: 22,
+  },
+  addressRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  addressText: {
+    fontSize: 12,
+    color: '#7A8575',
+    flex: 1,
+    fontFamily: 'Inter',
+  },
+  slotGrid: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  slotItem: {
+    flex: 1,
+    backgroundColor: '#F4F6F0',
+    padding: 12,
+    borderRadius: 12,
+  },
+  slotLabel: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 24,
+    gap: 5,
+    marginBottom: 5,
   },
-  cardTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#0f172a',
+  slotLabelText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#8A9580',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
-  rulesList: {
-    gap: 16,
+  slotValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1A2215',
+    fontFamily: 'Inter',
+  },
+  sectionTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#8A9580',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 14,
+    fontFamily: 'Inter',
   },
   ruleItem: {
-    fontSize: 15,
-    color: '#64748b',
-    lineHeight: 22,
-  },
-  reviewCard: {
-    padding: 32,
-    borderRadius: 24,
-  },
-  starsContainer: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 24,
+    gap: 10,
+    paddingVertical: 9,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F3EC',
   },
-  starBtn: {
-    padding: 4,
+  ruleDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: '#01C45A',
+    marginTop: 6,
   },
-  reviewInput: {
-    backgroundColor: '#f8fafc',
-    borderRadius: 16,
-    padding: 20,
-    color: '#1e293b',
-    fontSize: 16,
-    height: 120,
-    textAlignVertical: 'top',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
+  ruleText: {
+    fontSize: 13,
+    color: '#3A4535',
+    lineHeight: 18,
+    fontFamily: 'Inter',
   },
-  reviewSubmitBtn: {
-    marginTop: 20,
-    height: 56,
-    borderRadius: 16,
-  },
-  paymentCard: {
-    padding: 32,
-    borderRadius: 24,
-    backgroundColor: '#FFF',
-    borderWidth: 1,
-    borderColor: '#f1f5f9',
-  },
-  paymentTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0f172a',
-    marginBottom: 24,
-  },
-  priceBreakdown: {
-    gap: 16,
-    marginBottom: 24,
-  },
-  priceRow: {
+  summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: 9,
   },
-  priceLabel: {
-    fontSize: 15,
-    color: '#64748b',
+  summaryLabel: {
+    fontSize: 13,
+    color: '#7A8575',
+    fontFamily: 'Inter',
   },
-  priceValue: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#1e293b',
+  teamTag: {
+    backgroundColor: '#F4F6F0',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
-  discountLabel: {
-    fontSize: 15,
-    color: '#10b981',
-    fontWeight: '600',
-  },
-  discountValue: {
-    fontSize: 15,
+  teamTagText: {
+    fontSize: 10,
     fontWeight: '700',
-    color: '#10b981',
+    color: '#5A6555',
+  },
+  summaryValue: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1A2215',
+  },
+  summaryValueMuted: {
+    fontSize: 13,
+    color: '#B0B8AA',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#EEF1EA',
+    marginVertical: 6,
   },
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 24,
-    borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
-    marginBottom: 32,
+    paddingVertical: 14,
   },
   totalLabel: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#0f172a',
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1A2215',
+    fontFamily: 'Inter',
   },
   totalValue: {
     fontSize: 28,
     fontWeight: '900',
-    color: '#10b981',
+    color: '#01A34B',
+    letterSpacing: -0.5,
+    fontFamily: 'Inter',
   },
-  paymentMethodBox: {
+  paymentMethodCard: {
+    backgroundColor: '#F4F6F0',
+    padding: 12,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
-    backgroundColor: '#f8fafc',
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 24,
+    gap: 12,
+    marginVertical: 16,
   },
-  methodIconWrapper: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+  pmIcon: {
+    width: 36,
+    height: 36,
     backgroundColor: '#FFF',
-    justifyContent: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E0E5DC',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    justifyContent: 'center',
   },
-  methodLabel: {
+  pmLabel: {
     fontSize: 10,
-    fontWeight: '800',
-    color: '#94a3b8',
-    letterSpacing: 1,
-    marginBottom: 4,
-  },
-  methodValue: {
-    fontSize: 14,
+    color: '#8A9580',
     fontWeight: '700',
-    color: '#1e293b',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 2,
   },
-  trustBadge: {
+  pmValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1A2215',
+  },
+  secureNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 4,
+  },
+  secureNoteText: {
+    fontSize: 11,
+    color: '#8A9580',
+    fontFamily: 'Inter',
+  },
+  actionBtn: {
+    width: '100%',
+    padding: 13,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
   },
-  trustText: {
-    fontSize: 12,
-    color: '#94a3b8',
-    fontWeight: '500',
+  btnOutline: {
+    borderWidth: 1.5,
+    borderColor: '#01C45A',
   },
-  actionsBox: {
-    gap: 12,
+  btnOutlineText: {
+    color: '#01A34B',
+    fontSize: 13,
+    fontWeight: '700',
   },
-  actionBtn: {
-    height: 52,
-    borderRadius: 12,
+  btnSolid: {
+    backgroundColor: '#01C45A',
+    borderWidth: 1.5,
+    borderColor: '#01C45A',
+    shadowColor: '#01C45A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 14,
+    elevation: 4,
   },
-  modalBody: {
+  btnSolidText: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: 20,
   },
-  modalIcon: {
-    marginBottom: 20,
+  modal: {
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    width: '100%',
+    maxWidth: 380,
+    overflow: 'hidden',
   },
-  modalText: {
-    fontSize: 16,
-    color: '#64748b',
-    textAlign: 'center',
-    lineHeight: 24,
-    marginBottom: 32,
+  receiptHeader: {
+    backgroundColor: '#01C45A',
+    padding: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  receiptHeaderSub: {
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.7)',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  receiptTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#FFF',
+    fontFamily: 'Inter',
+  },
+  receiptCheck: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  receiptBody: {
+    padding: 20,
+  },
+  receiptRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F3EC',
+  },
+  receiptKey: {
+    fontSize: 12,
+    color: '#8A9580',
+    fontFamily: 'Inter',
+  },
+  receiptVal: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1A2215',
+    fontFamily: 'monospace',
+  },
+  closeBtn: {
+    backgroundColor: '#F4F6F0',
+    padding: 13,
+    borderRadius: 12,
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  closeBtnText: {
+    color: '#3A4535',
+    fontSize: 13,
+    fontWeight: '700',
   },
 });
+

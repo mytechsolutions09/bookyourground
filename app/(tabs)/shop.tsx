@@ -474,24 +474,7 @@ export default function ShopScreen() {
           )}
         </View>
 
-        {/* Special Offers Section */}
-        <View style={styles.promoSection}>
-           <LinearGradient
-            colors={['#dc8d3c', '#dcc093']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.promoCard}
-           >
-              <View>
-                <RNText style={styles.promoTitle}>Season Sale</RNText>
-                <RNText style={styles.promoSubtitle}>Up to 40% OFF on Bats</RNText>
-              </View>
-              <View style={styles.promoBadge}>
-                 <Tag size={16} color="#FFFFFF" fill="#FFFFFF" />
-                 <RNText style={styles.promoCode}>GEAR40</RNText>
-              </View>
-           </LinearGradient>
-        </View>
+
 
         {/* Products Grid */}
         <View style={styles.productsSection}>
