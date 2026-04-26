@@ -8,3 +8,7 @@ for = "/overlay/*"
 [headers.values]
 X-Frame-Options = "ALLOWALL"
 Content-Security-Policy = "frame-ancestors *"
+
+[context.dev]
+  command = "npm run build"
+  publish = "dist"
