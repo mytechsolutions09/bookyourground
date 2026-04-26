@@ -649,7 +649,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   sidebarTabActive: {
-    backgroundColor: 'rgba(1, 184, 84, 0.08)',
+    backgroundColor: 'rgba(216, 247, 157, 0.08)',
   },
   sidebarTabText: {
     fontSize: 14,

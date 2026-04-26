@@ -7,10 +7,11 @@
 #2a533a
 #d8f79d neon
 #bfff49
+#00fd73 -logo green
 
 
 
-npx expo start
+npx expo star
 npx expo start --web
 
 

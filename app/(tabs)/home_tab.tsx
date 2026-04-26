@@ -654,7 +654,7 @@ const styles = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: 'rgba(1, 184, 84, 0.08)',
+    backgroundColor: 'rgba(216, 247, 157, 0.08)',
   },
   heroHeaderRow: {
     flexDirection: 'row',
@@ -1086,7 +1086,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 14,
-    backgroundColor: 'rgba(1, 184, 84, 0.1)',
+    backgroundColor: 'rgba(216, 247, 157, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 12,
@@ -1129,7 +1129,7 @@ const styles = StyleSheet.create({
     width: 300,
     height: 300,
     borderRadius: 999,
-    backgroundColor: 'rgba(1, 184, 84, 0.15)',
+    backgroundColor: 'rgba(216, 247, 157, 0.15)',
   },
   ctaTitle: {
     fontSize: 28,

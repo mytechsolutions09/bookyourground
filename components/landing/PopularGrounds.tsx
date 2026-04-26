@@ -1,14 +1,32 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Platform, ActivityIndicator, ScrollView, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, Platform, ActivityIndicator, ScrollView, TouchableOpacity, Image, useWindowDimensions } from 'react-native';
 import { Star } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { GroundWithImages } from '@/types';
-import GroundCard from '@/components/grounds/GroundCard';
 import { router } from 'expo-router';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withTiming, 
+  withDelay,
+  Easing 
+} from 'react-native-reanimated';
+import { DeviceEventEmitter } from 'react-native';
 
 export default function PopularGrounds() {
+  const { width } = useWindowDimensions();
   const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Animation values
+  const headingOpacity = useSharedValue(0);
+  const headingTranslateY = useSharedValue(30);
+  const cardTranslateX1 = useSharedValue(width > 900 ? 100 : 0);
+  const cardTranslateX2 = useSharedValue(width > 900 ? 150 : 0);
+  const cardTranslateX3 = useSharedValue(width > 900 ? 200 : 0);
+  const cardOpacity1 = useSharedValue(0);
+  const cardOpacity2 = useSharedValue(0);
+  const cardOpacity3 = useSharedValue(0);
 
   useEffect(() => {
     const load = async () => {
@@ -53,7 +71,48 @@ export default function PopularGrounds() {
     };
 
     load();
-  }, []);
+
+    // Scroll animation trigger
+    const subscription = DeviceEventEmitter.addListener('mainScroll', ({ y }) => {
+      // Trigger when scrolling past the hero and stats (~1200px)
+      if (y > 1100) {
+        headingOpacity.value = withTiming(1, { duration: 800 });
+        headingTranslateY.value = withTiming(0, { duration: 800, easing: Easing.out(Easing.exp) });
+        
+        // Staggered cards
+        cardOpacity1.value = withDelay(200, withTiming(1, { duration: 600 }));
+        cardTranslateX1.value = withDelay(200, withTiming(0, { duration: 800, easing: Easing.out(Easing.exp) }));
+        
+        cardOpacity2.value = withDelay(400, withTiming(1, { duration: 600 }));
+        cardTranslateX2.value = withDelay(400, withTiming(0, { duration: 800, easing: Easing.out(Easing.exp) }));
+        
+        cardOpacity3.value = withDelay(600, withTiming(1, { duration: 600 }));
+        cardTranslateX3.value = withDelay(600, withTiming(0, { duration: 800, easing: Easing.out(Easing.exp) }));
+      }
+    });
+
+    return () => subscription.remove();
+  }, [width]);
+
+  const headingAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: headingOpacity.value,
+    transform: [{ translateY: headingTranslateY.value }],
+  }));
+
+  const card1Style = useAnimatedStyle(() => ({
+    opacity: cardOpacity1.value,
+    transform: [{ translateX: cardTranslateX1.value }],
+  }));
+
+  const card2Style = useAnimatedStyle(() => ({
+    opacity: cardOpacity2.value,
+    transform: [{ translateX: cardTranslateX2.value }],
+  }));
+
+  const card3Style = useAnimatedStyle(() => ({
+    opacity: cardOpacity3.value,
+    transform: [{ translateX: cardTranslateX3.value }],
+  }));
 
   if (loading && grounds.length === 0) {
     return (
@@ -133,16 +192,6 @@ export default function PopularGrounds() {
 
         <View style={styles.cardBody}>
           <View style={styles.metaRow}>
-            <Text style={styles.metaLabel}>Type</Text>
-            <Text style={styles.metaValue}>{g.pitch_type || 'Standard ground'}</Text>
-          </View>
-          <View style={styles.metaRow}>
-            <Text style={styles.metaLabel}>Reviews</Text>
-            <Text style={styles.metaValue}>
-              {reviewCount > 0 ? `${reviewCount} reviews` : 'No reviews yet'}
-            </Text>
-          </View>
-          <View style={styles.metaRow}>
             <Text style={styles.metaLabel}>Facilities</Text>
             <Text style={styles.metaValue} numberOfLines={1}>
               {[
@@ -183,18 +232,26 @@ export default function PopularGrounds() {
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.label}>Popular grounds</Text>
-        <Text style={styles.title}>Trending near you</Text>
-        <Text style={styles.subtitle}>
-          See what other players are booking most often this week.
-        </Text>
+        <Animated.View style={headingAnimatedStyle}>
+          <Text style={styles.label}>Popular grounds</Text>
+          <Text style={styles.title}>Trending near you</Text>
+          <Text style={styles.subtitle}>
+            See what other players are booking most often this week.
+          </Text>
+        </Animated.View>
 
         {Platform.OS === 'web' ? (
           <View style={styles.grid}>
-            {grounds.map((g, index) => (
-              <View key={g.id} style={styles.gridItem}>
+            {grounds.slice(0, 3).map((g, index) => (
+              <Animated.View 
+                key={g.id} 
+                style={[
+                  styles.gridItem, 
+                  index === 0 ? card1Style : index === 1 ? card2Style : card3Style
+                ]}
+              >
                 {renderCard(g, index)}
-              </View>
+              </Animated.View>
             ))}
           </View>
         ) : (

@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
     width: 400,
     height: 400,
     borderRadius: 999,
-    backgroundColor: 'rgba(1, 184, 84, 0.12)',
+    backgroundColor: 'rgba(216, 247, 157, 0.12)',
   },
   container: {
     maxWidth: 1200,

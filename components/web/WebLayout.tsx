@@ -51,6 +51,7 @@ import {
   Sun,
   Info,
 } from 'lucide-react-native';
+import { BlurView } from 'expo-blur';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { makeGroundPath } from '@/utils/groundSlug';
@@ -80,6 +81,8 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [favoritesCount, setFavoritesCount] = useState(0);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
+  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  const searchInputRef = React.useRef<TextInput>(null);
 
   useEffect(() => {
     async function fetchSidebarData() {
@@ -270,9 +273,16 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
       setScrolled(y > 8);
     };
 
+    const sub = DeviceEventEmitter.addListener('mainScroll', (data) => {
+      setScrolled(data.y > 8);
+    });
+
     handleScroll();
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      sub.remove();
+    };
   }, []);
 
   // Navbar search: fetch ground suggestions as user types on landing pages.
@@ -473,13 +483,20 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
             styles.heroHeader,
             isGroundDetails && styles.heroHeaderGround,
             isMarketing && styles.heroHeaderMarketing,
-            !isGroundDetails && !isMarketing && scrolled && styles.heroHeaderScrolled,
+            scrolled && styles.heroHeaderScrolled,
           ]}
         >
+          {scrolled && Platform.OS === 'web' && (
+            <BlurView 
+              intensity={40} 
+              tint="light" 
+              style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(255,255,255,0.7)' }]} 
+            />
+          )}
           <View style={[styles.headerContent, isCompact && styles.headerContentCompact]}>
             <TouchableOpacity
               onPress={() => router.replace('/')}
-              style={[styles.logo, scrolled && styles.logoScrolled]}
+              style={styles.logo}
               accessibilityRole="link"
               accessibilityLabel="Book my ground — home"
             >
@@ -494,88 +511,110 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
             <View style={styles.headerRight}>
                 <>
                   {!isCompact && (
-                    <View style={styles.headerSearch}>
-                      <Search size={16} color="#9CA3AF" style={styles.headerSearchIcon} />
-                      <TextInput
-                        placeholder="Search by city or venue name..."
-                        placeholderTextColor="#9CA3AF"
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                        onFocus={() => setSearchFocused(true)}
-                        onBlur={() => {
-                          // Small delay to allow result clicks to register before unmounting
-                          setTimeout(() => setSearchFocused(false), 200);
-                        }}
-                        onSubmitEditing={() => {
-                          if (searchQuery.trim().length >= 2) {
-                            setSearchFocused(false);
-                            router.push({
-                              pathname: '/search',
-                              params: { q: searchQuery.trim() }
-                            } as any);
-                          }
-                        }}
-                        returnKeyType="search"
-                        style={[
-                          styles.headerSearchInput,
-                          searchFocused && { borderColor: 'rgba(0,234,107,0.3)' } as any,
-                        ]}
-                      />
+                    <View style={styles.headerSearchContainer}>
+                      {!isSearchExpanded ? (
+                        <TouchableOpacity 
+                          onPress={() => {
+                            setIsSearchExpanded(true);
+                            setTimeout(() => searchInputRef.current?.focus(), 50);
+                          }}
+                          style={styles.searchIconButton}
+                        >
+                          <Search size={20} color={scrolled ? "#475569" : "#FFFFFF"} />
+                        </TouchableOpacity>
+                      ) : (
+                        <View style={[
+                          styles.headerSearch,
+                          { width: 300 },
+                          scrolled && { backgroundColor: 'rgba(0,0,0,0.05)', borderColor: 'rgba(0,0,0,0.05)' } as any
+                        ]}>
+                          <Search size={16} color={scrolled ? "#64748B" : "#9CA3AF"} style={styles.headerSearchIcon} />
+                          <TextInput
+                            ref={searchInputRef}
+                            placeholder="Search city or venue..."
+                            placeholderTextColor={scrolled ? "#475569" : "#D1D5DB"}
+                            value={searchQuery}
+                            onChangeText={setSearchQuery}
+                            onFocus={() => setSearchFocused(true)}
+                            onBlur={() => {
+                              setTimeout(() => {
+                                setSearchFocused(false);
+                                if (!searchQuery) setIsSearchExpanded(false);
+                              }, 200);
+                            }}
+                            onSubmitEditing={() => {
+                              if (searchQuery.trim().length >= 2) {
+                                setSearchFocused(false);
+                                router.push({
+                                  pathname: '/search',
+                                  params: { q: searchQuery.trim() }
+                                } as any);
+                              }
+                            }}
+                            returnKeyType="search"
+                            style={[
+                              styles.headerSearchInput,
+                              scrolled && { color: '#0F172A' } as any,
+                              searchFocused && { borderColor: 'rgba(0,234,107,0.3)' } as any,
+                            ]}
+                          />
 
-                      {searchFocused && (searchQuery.length >= 2) && (
-                        <View style={styles.searchDropdown}>
-                          {isSearching ? (
-                            <Text style={styles.searchDropdownText}>Searching...</Text>
-                          ) : (searchResults.grounds.length === 0 && searchResults.matches.length === 0) ? (
-                            <Text style={styles.searchDropdownText}>No results found for "{searchQuery}"</Text>
-                          ) : (
-                            <ScrollView style={styles.searchDropdownScroll} keyboardShouldPersistTaps="handled">
-                              {searchResults.grounds.length > 0 && (
-                                <View style={styles.searchSection}>
-                                  <Text style={styles.searchSectionTitle}>VENUES</Text>
-                                  {searchResults.grounds.map(g => (
-                                    <TouchableOpacity
-                                      key={g.id}
-                                      style={styles.searchItem}
-                                      onPress={() => handleResultPress('ground', g)}
-                                    >
-                                      <View style={styles.searchItemIcon}>
-                                        <Building2 size={14} color="#01b854" />
-                                      </View>
-                                      <View style={styles.searchItemInfo}>
-                                        <Text style={styles.searchItemName}>{g.name}</Text>
-                                        <Text style={styles.searchItemMeta}>{g.city}, {g.state}</Text>
-                                      </View>
-                                    </TouchableOpacity>
-                                  ))}
-                                </View>
-                              )}
+                          {searchFocused && (searchQuery.length >= 2) && (
+                            <View style={styles.searchDropdown}>
+                              {isSearching ? (
+                                <Text style={styles.searchDropdownText}>Searching...</Text>
+                              ) : (searchResults.grounds.length === 0 && searchResults.matches.length === 0) ? (
+                                <Text style={styles.searchDropdownText}>No results found for "{searchQuery}"</Text>
+                              ) : (
+                                <ScrollView style={styles.searchDropdownScroll} keyboardShouldPersistTaps="handled">
+                                  {searchResults.grounds.length > 0 && (
+                                    <View style={styles.searchSection}>
+                                      <Text style={styles.searchSectionTitle}>VENUES</Text>
+                                      {searchResults.grounds.map(g => (
+                                        <TouchableOpacity
+                                          key={g.id}
+                                          style={styles.searchItem}
+                                          onPress={() => handleResultPress('ground', g)}
+                                        >
+                                          <View style={styles.searchItemIcon}>
+                                            <Building2 size={14} color="#01b854" />
+                                          </View>
+                                          <View style={styles.searchItemInfo}>
+                                            <Text style={styles.searchItemName}>{g.name}</Text>
+                                            <Text style={styles.searchItemMeta}>{g.city}, {g.state}</Text>
+                                          </View>
+                                        </TouchableOpacity>
+                                      ))}
+                                    </View>
+                                  )}
 
-                              {searchResults.matches.length > 0 && (
-                                <View style={styles.searchSection}>
-                                  <Text style={styles.searchSectionTitle}>AVAILABLE MATCHES</Text>
-                                  {searchResults.matches.map(m => (
-                                    <TouchableOpacity
-                                      key={m.id}
-                                      style={styles.searchItem}
-                                      onPress={() => handleResultPress('match', m)}
-                                    >
-                                      <View style={[styles.searchItemIcon, { backgroundColor: 'rgba(0,234,107,0.1)' }]}>
-                                        <Swords size={14} color="#01b854" />
-                                      </View>
-                                      <View style={styles.searchItemInfo}>
-                                        <Text style={styles.searchItemName}>
-                                          {m.user?.team_name || m.user?.full_name || 'Anonymous Match'}
-                                        </Text>
-                                        <Text style={styles.searchItemMeta}>
-                                          {m.ground?.name} • {m.ground?.city}
-                                        </Text>
-                                      </View>
-                                    </TouchableOpacity>
-                                  ))}
-                                </View>
+                                  {searchResults.matches.length > 0 && (
+                                    <View style={styles.searchSection}>
+                                      <Text style={styles.searchSectionTitle}>AVAILABLE MATCHES</Text>
+                                      {searchResults.matches.map(m => (
+                                        <TouchableOpacity
+                                          key={m.id}
+                                          style={styles.searchItem}
+                                          onPress={() => handleResultPress('match', m)}
+                                        >
+                                          <View style={[styles.searchItemIcon, { backgroundColor: 'rgba(0,234,107,0.1)' }]}>
+                                            <Swords size={14} color="#01b854" />
+                                          </View>
+                                          <View style={styles.searchItemInfo}>
+                                            <Text style={styles.searchItemName}>
+                                              {m.user?.team_name || m.user?.full_name || 'Anonymous Match'}
+                                            </Text>
+                                            <Text style={styles.searchItemMeta}>
+                                              {m.ground?.name} • {m.ground?.city}
+                                            </Text>
+                                          </View>
+                                        </TouchableOpacity>
+                                      ))}
+                                    </View>
+                                  )}
+                                </ScrollView>
                               )}
-                            </ScrollView>
+                            </View>
                           )}
                         </View>
                       )}
@@ -1070,9 +1109,14 @@ const styles = StyleSheet.create({
   },
   heroHeaderScrolled: {
     position: 'fixed' as any,
-    backgroundColor: '#06392e',
+    backgroundColor: Platform.OS === 'web' ? 'transparent' : '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#043529',
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
   },
   headerContent: {
     flexDirection: 'row',
@@ -1091,12 +1135,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  logoScrolled: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: 'rgba(15,23,42,0.85)',
-  },
   logoImage: {
     height: 38,
     width: 200,
@@ -1106,6 +1144,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
+  },
+  headerSearchContainer: {
+    marginRight: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  searchIconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.08)',
   },
   headerSearch: {
     minWidth: 260,

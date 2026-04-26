@@ -341,95 +341,82 @@ export default function GroundDetailsPrettyUrlScreen() {
             </View>
           )}
 
-          {/* ── Name & Quick Actions Bar (Web Large Only) ── */}
-          {isLargeWeb && (
-            <View style={styles.webActionBar}>
-              <View style={styles.webNameSection}>
-                <Text style={styles.webGroundName}>{ground.name}</Text>
-                <View style={styles.webLocationRow}>
-                  <MapPin size={16} color="#6B7280" />
-                  <Text style={styles.webLocationText}>{ground.city}, {ground.state}</Text>
-                </View>
-              </View>
-              <View style={styles.webButtonActions}>
-                <Button
-                  title="Directions"
-                  variant="outline"
-                  icon={Navigation2}
-                  onPress={() => mapsUrl && Linking.openURL(mapsUrl)}
-                  style={styles.webActionBtn}
-                />
-                <Button
-                  title="Share"
-                  variant="outline"
-                  icon={Share2}
-                  onPress={() => {
-                    const url = typeof window !== 'undefined' ? window.location.href : '';
-                    Share.share({
-                      message: `Check out ${ground.name} on BookYourGround!`,
-                      url: url,
-                      title: ground.name
-                    });
-                  }}
-                  style={styles.webActionBtn}
-                />
-                <Button
-                  title={isFavorite ? "Saved" : "Save"}
-                  variant={isFavorite ? "primary" : "outline"}
-                  icon={Heart}
-                  onPress={toggleFavorite}
-                  loading={favoriteLoading}
-                  style={styles.webActionBtn}
-                />
-              </View>
-            </View>
-          )}
+          {/* webActionBar removed as requested */}
 
           {isLargeWeb ? (
             <View style={styles.webTwoColumnLayout}>
               <View style={styles.webLeftColumn}>
                 <Card style={styles.section}>
-                  <Text style={styles.name}>{ground.name}</Text>
-                  <View style={styles.locationRow}>
-                    <Text style={styles.location}>
-                      {ground.address}, {ground.city}, {ground.state} - {ground.pincode}
-                    </Text>
-                  </View>
-                  <View style={styles.starsSummaryRow}>
-                    {[1, 2, 3, 4, 5].map((i) => {
-                      const filled = reviews.length > 0 && i <= Math.round(averageRating);
-                      return (
-                        <Star
-                          key={i}
-                          size={16}
-                          color={filled ? '#dcc093' : '#374151'}
-                          fill={filled ? '#dcc093' : 'none'}
-                        />
-                      );
-                    })}
-                    <Text style={styles.rating}>
-                      {reviews.length > 0
-                        ? `${averageRating.toFixed(1)} (${reviews.length} reviews)`
-                        : 'No reviews yet'}
-                    </Text>
+                  <View style={styles.infoCardHeader}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.name}>{ground.name}</Text>
+                      <View style={styles.locationRow}>
+                        <Text style={styles.location}>
+                          {ground.address}, {ground.city}, {ground.state} - {ground.pincode}
+                        </Text>
+                      </View>
+                      <View style={styles.starsSummaryRow}>
+                        {[1, 2, 3, 4, 5].map((i) => {
+                          const filled = reviews.length > 0 && i <= Math.round(averageRating);
+                          return (
+                            <Star
+                              key={i}
+                              size={16}
+                              color={filled ? '#dcc093' : '#374151'}
+                              fill={filled ? '#dcc093' : 'none'}
+                            />
+                          );
+                        })}
+                        <Text style={styles.rating}>
+                          {reviews.length > 0
+                            ? `${averageRating.toFixed(1)} (${reviews.length} reviews)`
+                            : 'No reviews yet'}
+                        </Text>
+                      </View>
+                    </View>
+                    {isLargeWeb && (
+                      <Button
+                        title={isFavorite ? "Saved" : "Save"}
+                        variant={isFavorite ? "primary" : "outline"}
+                        icon={Heart}
+                        onPress={toggleFavorite}
+                        loading={favoriteLoading}
+                        style={styles.inlineSaveBtn}
+                      />
+                    )}
                   </View>
                 </Card>
 
-                {/* Map Section - Moved under images/name */}
+                {/* Map Section - Expanded edge-to-edge */}
                 <Card style={[styles.section, styles.mapSection]}>
-                  <Text style={styles.sectionTitle}>Location</Text>
                   <View style={styles.webMapContainer}>
                     <WebMap ground={ground} />
                   </View>
-                  {mapsUrl && (
-                    <Pressable
-                      onPress={() => { void Linking.openURL(mapsUrl); }}
-                      style={styles.mapsLinkWrap}
-                    >
-                      <MapPin size={14} color="#01b854" strokeWidth={2.5} />
-                      <Text style={styles.mapsLinkText}>Open in Google Maps</Text>
-                    </Pressable>
-                  )}
+                  <View style={styles.mapActionsContainer}>
+                    <Button
+                      title="Directions"
+                      variant="outline"
+                      icon={Navigation2}
+                      onPress={() => mapsUrl && Linking.openURL(mapsUrl)}
+                      style={styles.mapActionBtn}
+                      textStyle={{ color: '#01b854' }}
+                    />
+                    <Button
+                      title="Share"
+                      variant="outline"
+                      icon={Share2}
+                      onPress={() => {
+                        const url = typeof window !== 'undefined' ? window.location.href : '';
+                        Share.share({
+                          message: `Check out ${ground.name} on BookYourGround!`,
+                          url: url,
+                          title: ground.name
+                        });
+                      }}
+                      style={styles.mapActionBtn}
+                      textStyle={{ color: '#01b854' }}
+                    />
+                  </View>
                 </Card>
 
                 {ground.description && (
@@ -645,7 +632,7 @@ export default function GroundDetailsPrettyUrlScreen() {
           )}
 
           {/* ── Reviews ── */}
-          <View style={styles.section}>
+          <Section style={styles.section}>
             <View style={styles.reviewHeaderMain}>
               <Text style={styles.sectionTitle}>Customer Reviews</Text>
               
@@ -725,7 +712,7 @@ export default function GroundDetailsPrettyUrlScreen() {
                 ))}
               </View>
             )}
-          </View>
+          </Section>
         </View>
       </ScrollView>
     </>
@@ -884,23 +871,53 @@ function WebMap({ ground }: { ground: GroundWithImages }) {
 
   return (
     <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
-      <Map
-        defaultCenter={coords || { lat: 28.4595, lng: 77.0266 }}
-        center={coords}
-        defaultZoom={15}
-        mapId={MAP_ID}
-        style={{ width: '100%', height: '100%', borderRadius: 16 }}
-        gestureHandling={'greedy'}
-        disableDefaultUI={true}
-        styles={CLEAN_MAP_STYLES}
-      >
-        {coords && (
-          <>
-            <Marker position={coords} icon="https://maps.google.com/mapfiles/ms/icons/green-dot.png" />
-            <MapHandler coords={coords} />
-          </>
-        )}
-      </Map>
+      <View style={{ flex: 1, position: 'relative', height: '100%' }}>
+        {/* Global SVG Definitions to prevent insertBefore errors */}
+        <svg width="0" height="0" style={{ position: 'absolute' }}>
+          <defs>
+            <linearGradient id="neonPinGradientDetail" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" style={{ stopColor: '#d8f79d', stopOpacity: 1 }} />
+              <stop offset="50%" style={{ stopColor: '#bfff49', stopOpacity: 1 }} />
+              <stop offset="100%" style={{ stopColor: '#00fd73', stopOpacity: 1 }} />
+            </linearGradient>
+          </defs>
+        </svg>
+
+        <Map
+          defaultCenter={coords || { lat: 28.4595, lng: 77.0266 }}
+          center={coords}
+          defaultZoom={15}
+          mapId={MAP_ID}
+          style={{ width: '100%', height: '100%', borderRadius: 16 }}
+          gestureHandling={'greedy'}
+          disableDefaultUI={true}
+          styles={CLEAN_MAP_STYLES}
+        >
+          {coords && (
+            <>
+              <AdvancedMarker position={coords}>
+                <View style={{
+                  width: 44,
+                  height: 44,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                  <svg width="100%" height="100%" viewBox="0 0 24 24" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}>
+                    <path 
+                      d="M12 0C7.58 0 4 3.58 4 8c0 5.25 8 13 8 13s8-7.75 8-13c0-4.42-3.58-8-8-8zm0 11c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z" 
+                      fill="url(#neonPinGradientDetail)"
+                      stroke="#FFFFFF"
+                      strokeWidth="1.5"
+                    />
+                    <circle cx="12" cy="8" r="3.2" fill="#FFFFFF" />
+                  </svg>
+                </View>
+              </AdvancedMarker>
+              <MapHandler coords={coords} />
+            </>
+          )}
+        </Map>
+      </View>
     </APIProvider>
   );
 }
@@ -1079,8 +1096,18 @@ const styles = StyleSheet.create({
   webMapContainer: {
     height: 400,
     width: '100%',
-    borderRadius: 16,
     overflow: 'hidden',
+  },
+  mapActionsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  mapActionBtn: {
+    flex: 1,
+    borderColor: '#01b854',
   },
   webHeroImage: {
     width: '100%',
@@ -1168,6 +1195,15 @@ const styles = StyleSheet.create({
   },
   webActionBtn: {
     minWidth: 120,
+  },
+  infoCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 20,
+  },
+  inlineSaveBtn: {
+    minWidth: 100,
   },
 
   // ── Shell ──────────────────────────────────────────────

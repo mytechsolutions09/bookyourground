@@ -174,8 +174,25 @@ export default function HeroWeb() {
       
       <View style={styles.container}>
         <View style={styles.content}>
-          <Text style={styles.title}>Book your ground</Text>
-          <Text style={styles.subtitle}>Play where the game belongs</Text>
+          <Text style={[
+            styles.title,
+            { 
+              fontSize: width < 600 ? 32 : (width < 900 ? 40 : 48),
+              lineHeight: width < 600 ? 40 : 52
+            }
+          ]}>
+            Elevate Your Game
+          </Text>
+          <Text style={[
+            styles.subtitle,
+            {
+              fontSize: width < 600 ? 14 : 16,
+              lineHeight: width < 600 ? 22 : 26,
+              maxWidth: width < 600 ? '90%' : 600,
+            }
+          ]}>
+            Book premium sports venues in seconds and take your performance to the next level.
+          </Text>
 
           <View style={styles.featuresRow}>
             <View style={styles.featureItem}>
@@ -349,7 +366,7 @@ export default function HeroWeb() {
                     {selectedTime || 'Select Time'}
                   </Text>
                   {loadingTimes ? (
-                    <ActivityIndicator size="small" color="#01b854" />
+                    <ActivityIndicator size="small" color="#043529" />
                   ) : (
                     <ChevronDown size={16} color="#64748B" />
                   )}
@@ -404,16 +421,16 @@ const styles = StyleSheet.create({
     width: '100%',
     justifyContent: 'flex-start',
     alignItems: 'center',
-    paddingTop: Platform.OS === 'web' ? 120 : 80,
+    paddingTop: Platform.OS === 'web' ? 80 : 60,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.25)',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
   },
   container: {
     width: '100%',
     maxWidth: 1200,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     zIndex: 10,
     overflow: 'visible',
   },
@@ -423,29 +440,35 @@ const styles = StyleSheet.create({
     overflow: 'visible',
   },
   title: {
-    fontSize: Platform.OS === 'web' ? 60 : 42,
-    fontWeight: '800',
+    fontSize: 48,
+    fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 8,
-    letterSpacing: -1.2,
+    marginBottom: 12,
+    letterSpacing: -1,
     fontFamily: 'Inter',
+    textAlign: 'center',
+    lineHeight: 52,
     textShadowColor: 'rgba(0, 0, 0, 0.3)',
     textShadowOffset: { width: 0, height: 4 },
     textShadowRadius: 10,
   },
   subtitle: {
-    fontSize: Platform.OS === 'web' ? 18 : 16,
+    fontSize: 16,
     color: '#FFFFFF',
     fontWeight: '500',
-    marginBottom: 40,
+    marginBottom: 32,
     fontFamily: 'Inter',
     opacity: 0.95,
+    letterSpacing: -0.2,
+    lineHeight: 26,
+    textAlign: 'center',
+    maxWidth: 600,
   },
   featuresRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 24,
-    marginBottom: 40,
+    gap: 28,
+    marginBottom: 44,
     flexWrap: 'wrap',
     justifyContent: 'center',
   },
@@ -458,32 +481,32 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 8,
   },
   featureText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#FFFFFF',
     fontFamily: 'Inter',
+    letterSpacing: -0.2,
   },
   searchFormContainer: {
     width: '100%',
-    maxWidth: 840,
-    backgroundColor: 'rgba(255, 255, 255, 0.92)',
-    borderRadius: 16,
-    padding: 6,
+    maxWidth: 900,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.15,
-    shadowRadius: 30,
-    elevation: 10,
-    backdropFilter: 'blur(10px)',
+    shadowOffset: { width: 0, height: 24 },
+    shadowOpacity: 0.12,
+    shadowRadius: 40,
+    elevation: 20,
     overflow: 'visible',
     zIndex: 50,
   } as any,
@@ -504,9 +527,9 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    height: 48,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    height: 56,
     position: 'relative',
   },
   formFieldMobile: {
@@ -517,10 +540,10 @@ const styles = StyleSheet.create({
   },
   fieldDivider: {
     borderRightWidth: 1,
-    borderRightColor: '#E2E8F0',
+    borderRightColor: '#F1F5F9',
   },
   fieldIcon: {
-    marginRight: 12,
+    marginRight: 14,
   },
   fieldContent: {
     flex: 1,
@@ -531,33 +554,40 @@ const styles = StyleSheet.create({
   fieldInput: {
     flex: 1,
     fontSize: 16,
-    color: '#1E293B',
+    color: '#0F172A',
     fontWeight: '600',
     fontFamily: 'Inter',
+    letterSpacing: -0.3,
     ...Platform.select({
       web: { outlineStyle: 'none' }
     }) as any,
   },
   fieldText: {
     fontSize: 16,
-    color: '#1E293B',
+    color: '#0F172A',
     fontWeight: '600',
     fontFamily: 'Inter',
+    letterSpacing: -0.3,
   },
   placeholderText: {
-    color: '#64748B',
+    color: '#94A3B8',
     fontWeight: '500',
     fontFamily: 'Inter',
+    letterSpacing: -0.3,
   },
   searchButton: {
-    backgroundColor: '#043529',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 10,
-    marginLeft: 6,
-    minWidth: 140,
+    backgroundColor: '#01b854',
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    borderRadius: 14,
+    marginLeft: 10,
+    minWidth: 180,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#01b854',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
   },
   searchButtonMobile: {
     width: '100%',
@@ -569,34 +599,37 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     fontFamily: 'Inter',
+    letterSpacing: -0.2,
   },
   dropdown: {
     position: 'absolute',
-    top: 52,
+    top: 64,
     left: 0,
     right: 0,
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
-    shadowRadius: 15,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.15,
+    shadowRadius: 30,
+    elevation: 10,
     zIndex: 100,
     borderWidth: 1,
     borderColor: '#F1F5F9',
     overflow: 'hidden',
   },
   dropdownItem: {
-    padding: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: '#F8FAFC',
   },
   dropdownItemText: {
-    fontSize: 14,
+    fontSize: 15,
     color: '#1E293B',
     fontWeight: '500',
     fontFamily: 'Inter',
+    letterSpacing: -0.2,
   },
   dropdownEmpty: {
     padding: 20,
@@ -609,34 +642,37 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   calendarDropdown: {
-    width: 320,
-    padding: 16,
+    position: 'absolute',
+    bottom: 70,
+    top: 'auto' as any,
+    width: 240,
+    padding: 8,
   },
   calendarHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   calendarNav: {
     padding: 4,
-    borderRadius: 8,
+    borderRadius: 6,
     backgroundColor: '#F1F5F9',
   },
   calendarMonthTitle: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: '700',
     color: '#1E293B',
     fontFamily: 'Inter',
   },
   calendarWeekdays: {
     flexDirection: 'row',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   weekdayText: {
     flex: 1,
     textAlign: 'center',
-    fontSize: 12,
+    fontSize: 9,
     fontWeight: '600',
     color: '#94A3B8',
     textTransform: 'uppercase',
@@ -648,10 +684,10 @@ const styles = StyleSheet.create({
   },
   calendarDay: {
     width: '14.28%',
-    height: 40,
+    height: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: 6,
   },
   calendarDayEmpty: {
     opacity: 0,
@@ -660,7 +696,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#01b854',
   },
   dayText: {
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: '500',
     color: '#1E293B',
     fontFamily: 'Inter',

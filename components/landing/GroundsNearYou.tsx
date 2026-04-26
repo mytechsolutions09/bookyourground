@@ -85,13 +85,34 @@ function MultiMarkerMap({
     }
   }, [focusedGroundId, map, resolvedCoords]);
 
-  // Pan to user location when first detected
+  // Auto-fit all markers if on small screen or no focus
   useEffect(() => {
-    if (userLocation && map && !focusedGroundId) {
-      map.panTo(userLocation);
-      map.setZoom(11); // Slightly closer zoom for user location
+    if (map && grounds.length > 0 && !focusedGroundId) {
+      const bounds = new google.maps.LatLngBounds();
+      let hasValidCoords = false;
+      
+      grounds.forEach(g => {
+        const lat = parseFloat(g.latitude) || resolvedCoords[g.id]?.lat;
+        const lng = parseFloat(g.longitude) || resolvedCoords[g.id]?.lng;
+        if (lat && lng) {
+          bounds.extend({ lat, lng });
+          hasValidCoords = true;
+        }
+      });
+      
+      if (hasValidCoords) {
+        map.fitBounds(bounds, { top: 50, right: 50, bottom: 50, left: 50 });
+      }
     }
-  }, [userLocation, map]);
+  }, [map, grounds, resolvedCoords, focusedGroundId]);
+
+  // Pan to user location when first detected (if no markers or focus)
+  useEffect(() => {
+    if (userLocation && map && !focusedGroundId && grounds.length === 0) {
+      map.panTo(userLocation);
+      map.setZoom(11);
+    }
+  }, [userLocation, map, grounds.length]);
 
   // Geocode grounds missing coordinates
   useEffect(() => {
@@ -126,69 +147,91 @@ function MultiMarkerMap({
   const defaultCenter = userLocation || { lat: 28.4595, lng: 77.0266 }; // Gurgaon default
 
   return (
-    <Map
-      style={{ width: '100%', height: '100%' }}
-      defaultCenter={defaultCenter}
-      defaultZoom={10}
-      mapId={MAP_ID}
-      gestureHandling={'greedy'}
-      disableDefaultUI={false}
-      styles={CLEAN_MAP_STYLES}
-      clickableIcons={false}
-    >
-      {grounds.map((g) => {
-        let lat = parseFloat(g.latitude);
-        let lng = parseFloat(g.longitude);
-        
-        // Fallback to resolved coords if missing in DB
-        if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
-          if (resolvedCoords[g.id]) {
-            lat = resolvedCoords[g.id].lat;
-            lng = resolvedCoords[g.id].lng;
-          } else {
-            return null;
+    <View style={{ flex: 1, position: 'relative' }}>
+      {/* Global SVG Definitions to prevent insertBefore errors */}
+      <svg width="0" height="0" style={{ position: 'absolute' }}>
+        <defs>
+          <linearGradient id="neonPinGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style={{ stopColor: '#d8f79d', stopOpacity: 1 }} />
+            <stop offset="50%" style={{ stopColor: '#bfff49', stopOpacity: 1 }} />
+            <stop offset="100%" style={{ stopColor: '#00fd73', stopOpacity: 1 }} />
+          </linearGradient>
+        </defs>
+      </svg>
+
+      <Map
+        style={{ width: '100%', height: '100%' }}
+        defaultCenter={defaultCenter}
+        defaultZoom={10}
+        mapId={MAP_ID}
+        gestureHandling={'greedy'}
+        disableDefaultUI={false}
+        styles={CLEAN_MAP_STYLES}
+        clickableIcons={false}
+      >
+        {grounds.map((g) => {
+          let lat = parseFloat(g.latitude);
+          let lng = parseFloat(g.longitude);
+          
+          // Fallback to resolved coords if missing in DB
+          if (isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
+            if (resolvedCoords[g.id]) {
+              lat = resolvedCoords[g.id].lat;
+              lng = resolvedCoords[g.id].lng;
+            } else {
+              return null;
+            }
           }
-        }
 
-        const isFocused = g.id === focusedGroundId;
-        return (
-          <React.Fragment key={g.id}>
-            <AdvancedMarker
-              position={{ lat, lng }}
-              onClick={() => {
-                onMarkerClick(g.id);
-                setOpenInfoWindowId(g.id);
-              }}
-              onMouseEnter={() => setHoveredGroundId(g.id)}
-              onMouseLeave={() => setHoveredGroundId(null)}
-            >
-              <Pin 
-                background={isFocused || hoveredGroundId === g.id ? '#01b854' : '#bfff49'}
-                borderColor={'#FFFFFF'}
-                glyphColor={'#FFFFFF'}
-                scale={isFocused || hoveredGroundId === g.id ? 1.3 : 1.1}
-              />
+          const isFocused = g.id === focusedGroundId;
+          return (
+            <React.Fragment key={g.id}>
+              <AdvancedMarker
+                position={{ lat, lng }}
+                onClick={() => {
+                  onMarkerClick(g.id);
+                  setOpenInfoWindowId(g.id);
+                }}
+                onMouseEnter={() => setHoveredGroundId(g.id)}
+                onMouseLeave={() => setHoveredGroundId(null)}
+              >
+                <View style={{
+                  width: isFocused || hoveredGroundId === g.id ? 44 : 36,
+                  height: isFocused || hoveredGroundId === g.id ? 44 : 36,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
+                  <svg width="100%" height="100%" viewBox="0 0 24 24" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}>
+                    <path 
+                      d="M12 0C7.58 0 4 3.58 4 8c0 5.25 8 13 8 13s8-7.75 8-13c0-4.42-3.58-8-8-8zm0 11c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z" 
+                      fill="url(#neonPinGradient)"
+                      stroke="#FFFFFF"
+                      strokeWidth="1.5"
+                    />
+                    <circle cx="12" cy="8" r="3.2" fill="#FFFFFF" />
+                  </svg>
+                </View>
 
-              {/* Stable Hover Tooltip - always mounted to prevent child removal errors */}
-              <View style={{
-                position: 'absolute',
-                bottom: 45,
-                left: -70,
-                width: 140,
-                backgroundColor: '#FFFFFF',
-                padding: 10,
-                borderRadius: 12,
-                shadowColor: '#000',
-                shadowOpacity: 0.15,
-                shadowRadius: 12,
-                elevation: 10,
-                // @ts-ignore - Web only property to prevent flicker
-                pointerEvents: 'none',
-                zIndex: 1000,
-                borderWidth: 1,
-                borderColor: '#F1F5F9',
-                opacity: (hoveredGroundId === g.id && openInfoWindowId !== g.id) ? 1 : 0,
-              }}>
+                {/* Stable Hover Tooltip - always mounted to prevent child removal errors */}
+                <View style={{
+                  position: 'absolute',
+                  bottom: 45,
+                  left: -70,
+                  width: 140,
+                  backgroundColor: '#FFFFFF',
+                  padding: 10,
+                  borderRadius: 12,
+                  shadowColor: '#000',
+                  shadowOpacity: 0.15,
+                  shadowRadius: 12,
+                  elevation: 10,
+                  // @ts-ignore - Web only property to prevent flicker
+                  pointerEvents: 'none',
+                  zIndex: 1000,
+                  borderWidth: 1,
+                  borderColor: '#F1F5F9',
+                  opacity: (hoveredGroundId === g.id && openInfoWindowId !== g.id) ? 1 : 0,
+                }}>
                 <Text style={{ 
                   fontWeight: '800', 
                   fontSize: 13, 
@@ -243,7 +286,8 @@ function MultiMarkerMap({
           </React.Fragment>
         );
       })}
-    </Map>
+      </Map>
+    </View>
   );
 }
 

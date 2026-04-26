@@ -883,7 +883,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   sidebarItemActive: {
-    backgroundColor: 'rgba(1, 184, 84, 0.05)',
+    backgroundColor: 'rgba(216, 247, 157, 0.05)',
   },
   sidebarItemText: {
     fontSize: 14,
@@ -942,7 +942,7 @@ const styles = StyleSheet.create({
   },
   filterBtnActive: {
     borderColor: '#01b854',
-    backgroundColor: 'rgba(1, 184, 84, 0.05)',
+    backgroundColor: 'rgba(216, 247, 157, 0.05)',
   },
   filterBtnText: {
     fontSize: 11,
@@ -1173,7 +1173,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   ruleBadgeSuccess: {
-    backgroundColor: 'rgba(1, 184, 84, 0.1)',
+    backgroundColor: 'rgba(216, 247, 157, 0.1)',
     color: '#01b854',
   },
   ruleBadgeError: {

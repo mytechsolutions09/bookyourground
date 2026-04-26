@@ -523,7 +523,7 @@ const styles = StyleSheet.create({
   },
   dropdownTriggerActive: {
     borderColor: '#01b854',
-    backgroundColor: 'rgba(1, 184, 84, 0.1)',
+    backgroundColor: 'rgba(216, 247, 157, 0.1)',
   },
   dropdownTriggerText: {
     fontFamily: 'Inter',

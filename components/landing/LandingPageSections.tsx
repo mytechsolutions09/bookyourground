@@ -9,6 +9,7 @@ import Features from '@/components/landing/Features';
 import CallToAction from '@/components/landing/CallToAction';
 import SiteFooter from '@/components/web/SiteFooter';
 import CalendarTabs from '@/components/landing/CalendarTabs';
+import ScoringStatsSection from '@/components/landing/ScoringStatsSection';
 
 type Variant = 'web' | 'native';
 
@@ -17,6 +18,7 @@ export default function LandingPageSections({ variant }: { variant: Variant }) {
   return (
     <>
       {variant === 'web' ? <HeroWeb /> : <Hero />}
+      <ScoringStatsSection />
       <CalendarTabs />
       <PopularGrounds />
       <View style={styles.bookingSectionSpacer}>

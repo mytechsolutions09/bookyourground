@@ -64,36 +64,10 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
   const headerTranslateY = useSharedValue(0);
   const lastScrollY = useSharedValue(0);
   const HEADER_HEIGHT = 100;
-
-  useEffect(() => {
-    return () => setTabBarVisible(true);
-  }, []);
-
-  const verticalScrollHandler = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      const currentY = event.contentOffset.y;
-      const diff = currentY - lastScrollY.value;
-      
-      if (diff > 1 && currentY > 50) {
-        if (headerTranslateY.value === 0) {
-          headerTranslateY.value = withTiming(-HEADER_HEIGHT - insets.top, { 
-            duration: 600,
-            easing: Easing.out(Easing.exp)
-          });
-          runOnJS(setTabBarVisible)(false);
-        }
-      } else if (diff < -2 || currentY < 20) {
-        if (headerTranslateY.value < 0) {
-          headerTranslateY.value = withTiming(0, { 
-            duration: 600,
-            easing: Easing.out(Easing.exp)
-          });
-          runOnJS(setTabBarVisible)(true);
-        }
-      }
-      lastScrollY.value = currentY;
-    },
-  });
+  const summaryTranslateY = useSharedValue(-50);
+  const summaryOpacity = useSharedValue(0);
+  const webTabsOpacity = useSharedValue(1);
+  const webTabsTranslateY = useSharedValue(0);
 
   const headerAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: headerTranslateY.value }],
@@ -102,8 +76,72 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
     left: 0,
     right: 0,
     zIndex: 1000,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   }));
+
+  const webTabsAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: webTabsOpacity.value,
+    transform: [{ translateY: webTabsTranslateY.value }],
+    zIndex: 500,
+  }));
+
+  const summaryAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: summaryTranslateY.value }],
+    opacity: summaryOpacity.value,
+    position: 'absolute',
+    top: isWeb ? 64 : insets.top + 44,
+    left: 0,
+    right: 0,
+    zIndex: 1100,
+    backgroundColor: '#FFFFFF',
+    height: 52,
+    justifyContent: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+  }));
+
+  const verticalScrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      const currentY = event.contentOffset.y;
+      
+      if (currentY > 80) {
+        summaryTranslateY.value = withTiming(0, { duration: 300 });
+        summaryOpacity.value = withTiming(1, { duration: 300 });
+        webTabsOpacity.value = withTiming(0, { duration: 300 });
+        webTabsTranslateY.value = withTiming(-20, { duration: 300 });
+      } else {
+        summaryTranslateY.value = withTiming(-50, { duration: 300 });
+        summaryOpacity.value = withTiming(0, { duration: 300 });
+        webTabsOpacity.value = withTiming(1, { duration: 300 });
+        webTabsTranslateY.value = withTiming(0, { duration: 300 });
+      }
+
+      const diff = currentY - lastScrollY.value;
+      if (diff > 1 && currentY > 50) {
+        if (headerTranslateY.value === 0) {
+          headerTranslateY.value = withTiming(-HEADER_HEIGHT - (isWeb ? 0 : insets.top), { 
+            duration: 400,
+          });
+          runOnJS(setTabBarVisible)(false);
+        }
+      } else if (diff < -2 || currentY < 20) {
+        if (headerTranslateY.value < 0) {
+          headerTranslateY.value = withTiming(0, { 
+            duration: 400,
+          });
+          runOnJS(setTabBarVisible)(true);
+        }
+      }
+      lastScrollY.value = currentY;
+    },
+  });
 
   useEffect(() => {
     loadOpenSlots();
@@ -204,101 +242,105 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
 
   const content = (
     <View style={[styles.container, isWeb && !IS_DARK && styles.webContainerRoot]}>
-      {isWeb && (
-        <View style={width >= 900 ? styles.desktopTabContainer : styles.webTabContainer}>
-          <TouchableOpacity 
-            style={styles.tab}
-            onPress={() => router.push('/book-my-ground' as any)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.tabText}>Book a Ground</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.tab, styles.activeTab]}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.activeTabText}>Find an Opponent</Text>
-          </TouchableOpacity>
-        </View>
-      )}
       {isWeb && !IS_DARK ? (
         <View style={styles.webCard}>
-          <View style={[styles.header, styles.webHeader]}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.title}>Find an Opponent</Text>
-              <Text style={styles.subtitle}>
-                Slots with one team waiting for a match.
-              </Text>
-            </View>
-
-            <View style={styles.webHeaderActions}>
-              <View style={styles.searchWrapper}>
-                <Search size={18} color="#9CA3AF" />
-                <TextInput
-                  placeholder="Search grounds or cities..."
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  style={styles.searchInput}
-                />
-              </View>
-
-              <View style={styles.badgePill}>
-                <Swords size={20} color="#01b854" />
-                <Text style={styles.badgePillNumber}>{filteredMatches.length}</Text>
-                <Text style={styles.badgePillLabel}>Available</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Web Filter Bar */}
-          <View style={styles.webFilterBar}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
-              <View style={styles.filterGroup}>
-                <Text style={styles.filterLabel}>City:</Text>
-                {cities.map(city => (
-                  <Pressable
-                    key={city}
-                    onPress={() => setSelectedCity(city)}
-                    style={[styles.filterTag, selectedCity === city && styles.filterTagActive]}
+          <Animated.FlatList
+            ListHeaderComponent={
+              <>
+                <View style={width >= 900 ? styles.desktopTabContainer : styles.webTabContainer}>
+                  <TouchableOpacity 
+                    style={styles.tab}
+                    onPress={() => router.push('/book-my-ground' as any)}
+                    activeOpacity={0.7}
                   >
-                    <Text style={[styles.filterTagText, selectedCity === city && styles.filterTagTextActive]}>{city}</Text>
-                  </Pressable>
-                ))}
-              </View>
-
-              <View style={styles.filterDivider} />
-
-              <View style={styles.filterGroup}>
-                <Text style={styles.filterLabel}>Date:</Text>
-                {['All', 'Today', 'Tomorrow'].map(date => (
-                  <Pressable
-                    key={date}
-                    onPress={() => setSelectedDateFilter(date)}
-                    style={[styles.filterTag, selectedDateFilter === date && styles.filterTagActive]}
+                    <Text style={styles.tabText}>Book a Ground</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.tab, styles.activeTab]}
+                    activeOpacity={0.7}
                   >
-                    <Text style={[styles.filterTagText, selectedDateFilter === date && styles.filterTagTextActive]}>{date}</Text>
-                  </Pressable>
-                ))}
-              </View>
+                    <Text style={styles.activeTabText}>Find an Opponent</Text>
+                  </TouchableOpacity>
+                </View>
 
-              <View style={styles.filterDivider} />
+                <View style={[styles.header, styles.webHeader]}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.title}>Find an Opponent</Text>
+                    <Text style={styles.subtitle}>
+                      Slots with one team waiting for a match.
+                    </Text>
+                  </View>
 
-              <View style={styles.filterGroup}>
-                <Text style={styles.filterLabel}>Ground Type:</Text>
-                {pitches.map(pitch => (
-                  <Pressable
-                    key={pitch}
-                    onPress={() => setSelectedPitch(pitch)}
-                    style={[styles.filterTag, selectedPitch === pitch && styles.filterTagActive]}
-                  >
-                    <Text style={[styles.filterTagText, selectedPitch === pitch && styles.filterTagTextActive]}>{pitch}</Text>
-                  </Pressable>
-                ))}
-              </View>
-            </ScrollView>
-          </View>
+                  <View style={styles.webHeaderActions}>
+                    <View style={styles.searchWrapper}>
+                      <Search size={18} color="#9CA3AF" />
+                      <TextInput
+                        placeholder="Search grounds or cities..."
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                        style={styles.searchInput}
+                      />
+                    </View>
 
-          <FlatList
+                    <View style={styles.badgePill}>
+                      <Swords size={20} color="#01b854" />
+                      <Text style={styles.badgePillNumber}>{filteredMatches.length}</Text>
+                      <Text style={styles.badgePillLabel}>Available</Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Web Filter Bar */}
+                <View style={styles.webFilterBar}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+                    <View style={styles.filterGroup}>
+                      <Text style={styles.filterLabel}>City:</Text>
+                      {cities.map(city => (
+                        <Pressable
+                          key={city}
+                          onPress={() => setSelectedCity(city)}
+                          style={[styles.filterTag, selectedCity === city && styles.filterTagActive]}
+                        >
+                          <Text style={[styles.filterTagText, selectedCity === city && styles.filterTagTextActive]}>{city}</Text>
+                        </Pressable>
+                      ))}
+                    </View>
+
+                    <View style={styles.filterDivider} />
+
+                    <View style={styles.filterGroup}>
+                      <Text style={styles.filterLabel}>Date:</Text>
+                      {['All', 'Today', 'Tomorrow'].map(date => (
+                        <Pressable
+                          key={date}
+                          onPress={() => setSelectedDateFilter(date)}
+                          style={[styles.filterTag, selectedDateFilter === date && styles.filterTagActive]}
+                        >
+                          <Text style={[styles.filterTagText, selectedDateFilter === date && styles.filterTagTextActive]}>{date}</Text>
+                        </Pressable>
+                      ))}
+                    </View>
+
+                    <View style={styles.filterDivider} />
+
+                    <View style={styles.filterGroup}>
+                      <Text style={styles.filterLabel}>Ground Type:</Text>
+                      {pitches.map(pitch => (
+                        <Pressable
+                          key={pitch}
+                          onPress={() => setSelectedPitch(pitch)}
+                          style={[styles.filterTag, selectedPitch === pitch && styles.filterTagActive]}
+                        >
+                          <Text style={[styles.filterTagText, selectedPitch === pitch && styles.filterTagTextActive]}>{pitch}</Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </ScrollView>
+                </View>
+              </>
+            }
+            onScroll={verticalScrollHandler}
+            scrollEventThrottle={16}
             data={filteredMatches}
             renderItem={({ item }) => (
               <View style={styles.webItem}>
@@ -484,6 +526,49 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
 
   return (
     <View style={styles.nativeScreen}>
+      <Animated.View style={summaryAnimatedStyle}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.summaryFilterScroll}>
+          <View style={styles.summaryFilterGroup}>
+            <Text style={styles.summaryFilterLabel}>City:</Text>
+            {cities.map(city => (
+              <Pressable
+                key={city}
+                onPress={() => setSelectedCity(city)}
+                style={[styles.summaryFilterTag, selectedCity === city && styles.summaryFilterTagActive]}
+              >
+                <Text style={[styles.summaryFilterTagText, selectedCity === city && styles.summaryFilterTagTextActive]}>{city}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <View style={styles.summaryFilterDivider} />
+          <View style={styles.summaryFilterGroup}>
+            <Text style={styles.summaryFilterLabel}>Date:</Text>
+            {['All', 'Today', 'Tomorrow'].map(date => (
+              <Pressable
+                key={date}
+                onPress={() => setSelectedDateFilter(date)}
+                style={[styles.summaryFilterTag, selectedDateFilter === date && styles.summaryFilterTagActive]}
+              >
+                <Text style={[styles.summaryFilterTagText, selectedDateFilter === date && styles.summaryFilterTagTextActive]}>{date}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <View style={styles.summaryFilterDivider} />
+          <View style={styles.summaryFilterGroup}>
+            <Text style={styles.summaryFilterLabel}>Type:</Text>
+            {pitches.map(pitch => (
+              <Pressable
+                key={pitch}
+                onPress={() => setSelectedPitch(pitch)}
+                style={[styles.summaryFilterTag, selectedPitch === pitch && styles.summaryFilterTagActive]}
+              >
+                <Text style={[styles.summaryFilterTagText, selectedPitch === pitch && styles.summaryFilterTagTextActive]}>{pitch}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </ScrollView>
+      </Animated.View>
+
       <Animated.View style={headerAnimatedStyle}>
         <MobileAppNavbar 
           title="Find an Opponent" 
@@ -603,12 +688,12 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
-    paddingTop: Platform.OS === 'web' ? 96 : 0,
+    backgroundColor: '#FFFFFF',
+    paddingTop: 0,
   },
   webContainerRoot: {
-    backgroundColor: '#F9FAFB',
-    paddingTop: Platform.OS === 'web' ? 96 : 0,
+    backgroundColor: '#FFFFFF',
+    paddingTop: 0,
   },
   nativeScreen: {
     flex: 1,
@@ -653,7 +738,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: 'rgba(1, 184, 84, 0.1)',
+    backgroundColor: 'rgba(216, 247, 157, 0.1)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -731,10 +816,9 @@ const styles = StyleSheet.create({
   },
   webCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    margin: 12,
     flex: 1,
     overflow: 'hidden',
+    marginTop: 0,
   },
   webHeaderActions: {
     flexDirection: 'row',
@@ -829,7 +913,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(1, 184, 84, 0.1)',
+    backgroundColor: 'rgba(216, 247, 157, 0.1)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
@@ -847,6 +931,7 @@ const styles = StyleSheet.create({
   },
   webList: {
     padding: 20,
+    paddingTop: Platform.OS === 'web' ? 80 : 20,
     gap: 16,
   },
   webFlatList: {
@@ -901,57 +986,107 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(0,0,0,0.04)',
     borderRadius: 999,
     padding: 6,
     marginHorizontal: 16,
     marginTop: 8,
-    marginBottom: 8,
+    marginBottom: 32,
+    alignSelf: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.02)',
   },
   webTabContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(0,0,0,0.04)',
     borderRadius: 999,
     padding: 6,
-    marginBottom: 24,
-    width: '100%',
-    maxWidth: 600,
+    marginBottom: 32,
     alignSelf: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.02)',
   },
   desktopTabContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(0,0,0,0.04)',
     borderRadius: 999,
     padding: 6,
-    marginBottom: 24,
-    width: '100%',
-    maxWidth: 600,
+    marginBottom: 32,
     alignSelf: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.02)',
   },
   tab: {
-    flex: 1,
-    paddingVertical: 10,
+    paddingHorizontal: 28,
+    paddingVertical: 12,
     borderRadius: 999,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   activeTab: {
-    backgroundColor: 'transparent',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 4,
   },
   tabText: {
     color: '#334155',
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '500',
     fontFamily: 'Inter',
   },
   activeTabText: {
     color: '#01b854',
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '600',
     fontFamily: 'Inter',
+  },
+  summaryFilterScroll: {
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    gap: 8,
+  },
+  summaryFilterGroup: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  summaryFilterTag: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  summaryFilterTagActive: {
+    backgroundColor: '#01b854',
+    borderColor: '#01b854',
+  },
+  summaryFilterTagText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  summaryFilterTagTextActive: {
+    color: '#FFFFFF',
+  },
+  summaryFilterLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#94A3B8',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginRight: 4,
+    alignSelf: 'center',
+  },
+  summaryFilterDivider: {
+    width: 1,
+    height: 16,
+    backgroundColor: '#E5E7EB',
+    marginHorizontal: 4,
   },
 });

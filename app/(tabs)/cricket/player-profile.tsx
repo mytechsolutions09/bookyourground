@@ -1164,7 +1164,7 @@ function PlayerProfileView() {
           <RNText style={styles.badgeTitle}>Century Maker</RNText>
           <RNText style={styles.badgeDesc}>Scored 100+ in a match</RNText>
         </View>
-        <View style={[styles.badgeCard, { backgroundColor: 'rgba(1, 184, 84, 0.1)' }]}>
+        <View style={[styles.badgeCard, { backgroundColor: 'rgba(216, 247, 157, 0.1)' }]}>
           <Zap size={32} color="#01b854" />
           <RNText style={styles.badgeTitle}>Quick Fire</RNText>
           <RNText style={styles.badgeDesc}>200+ Strike rate match</RNText>

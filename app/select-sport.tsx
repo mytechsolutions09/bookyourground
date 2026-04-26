@@ -419,7 +419,7 @@ export default function SelectSportScreen() {
   const bgPin3Style = useAnimatedStyle(() => {
     const ty = interpolate(verticalScrollY.value, [0, SNAP_2, SNAP_4], [height, SNAP_2, SNAP_4], Extrapolate.CLAMP);
     return {
-      backgroundColor: '#d8f79d',
+      backgroundColor: '#01b854',
       transform: [{ translateY: ty }],
       zIndex: 2,
     };
@@ -470,7 +470,7 @@ export default function SelectSportScreen() {
         <Animated.View style={[styles.headerTab, locTabStyle, { height: HEADER_TABS[1], backgroundColor: '#00ea6b' }]}>
           <View style={styles.centerRow}><Text style={styles.tabTextSmall}>{loc.name}</Text></View>
         </Animated.View>
-        <Animated.View style={[styles.headerTab, dateTabStyle, { height: HEADER_TABS[2], backgroundColor: '#d8f79d' }]}>
+        <Animated.View style={[styles.headerTab, dateTabStyle, { height: HEADER_TABS[2], backgroundColor: '#01b854' }]}>
           <View style={styles.centerRow}><Text style={[styles.tabTextSmall, { color: '#06392e' }]}>{date.short}</Text></View>
         </Animated.View>
         <Animated.View style={[styles.headerTab, timeTabStyle, { height: HEADER_TABS[3], backgroundColor: '#2a533a' }]}>
@@ -540,7 +540,7 @@ export default function SelectSportScreen() {
         </View>
 
         <View style={{ height: height - (HEADER_TABS[0] + HEADER_TABS[1]) - insets.top }}>
-          <View style={[styles.pageCard, { backgroundColor: '#d8f79d' }]}>
+          <View style={[styles.pageCard, { backgroundColor: '#01b854' }]}>
             <ScrollView horizontal pagingEnabled onScroll={(e) => setActiveDateIndex(Math.round(e.nativeEvent.contentOffset.x / width))} scrollEventThrottle={16}>
               {dates.map((d) => (
                 <View key={d.id} style={styles.slide}>

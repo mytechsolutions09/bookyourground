@@ -106,10 +106,13 @@ export default function CalendarTabs() {
         };
       });
 
-      // Sort by distance if available, else by created_at
-      processed.sort((a, b) => a._distance - b._distance);
+      // 5. Filter out grounds with NO available slots
+      const withSlots = processed.filter(g => g._availableSlots.length > 0);
 
-      setGrounds(processed as any);
+      // Sort by distance if available, else by created_at
+      withSlots.sort((a, b) => a._distance - b._distance);
+
+      setGrounds(withSlots as any);
     } catch (err) {
       console.error('Error loading calendar availability:', err);
     } finally {
@@ -245,48 +248,52 @@ export default function CalendarTabs() {
           </View>
         </View>
       </Modal>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {dates.map((date, index) => {
-          const isSelected = isSameDay(date, selectedDate);
-          const dayName = index === 0 ? 'Today' : index === 1 ? 'Tomorrow' : formatDate(date, 'weekday');
-          const dayNumber = formatDate(date, 'day');
-          const monthName = formatDate(date, 'month');
+      <View style={styles.scrollWrapper}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {dates.map((date, index) => {
+            const isSelected = isSameDay(date, selectedDate);
+            const dayName = index === 0 ? 'Today' : index === 1 ? 'Tomorrow' : formatDate(date, 'weekday');
+            const dayNumber = formatDate(date, 'day');
+            const monthName = formatDate(date, 'month');
 
-          return (
-            <TouchableOpacity
-              key={index}
-              style={[
-                styles.dateCard,
-                isSelected && styles.dateCardActive,
-                index === 0 && { marginLeft: 24 },
-                index === dates.length - 1 && { marginRight: 24 },
-              ]}
-              onPress={() => setSelectedDate(date)}
-            >
-              <Text style={[styles.dayName, isSelected && styles.dayNameActive]}>
-                {dayName}
-              </Text>
-              <Text style={[styles.dayNumber, isSelected && styles.dayNumberActive]}>
-                {dayNumber}
-              </Text>
-              <Text style={[styles.monthName, isSelected && styles.monthNameActive]}>
-                {monthName}
-              </Text>
-              {isSelected && <View style={styles.activeDot} />}
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+            return (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.dateCard,
+                  isSelected && styles.dateCardActive,
+                  index === 0 && { marginLeft: 24 },
+                  index === dates.length - 1 && { marginRight: 24 },
+                ]}
+                onPress={() => setSelectedDate(date)}
+              >
+                <Text style={[styles.dayName, isSelected && styles.dayNameActive]}>
+                  {dayName}
+                </Text>
+                <Text style={[styles.dayNumber, isSelected && styles.dayNumberActive]}>
+                  {dayNumber}
+                </Text>
+                <Text style={[styles.monthName, isSelected && styles.monthNameActive]}>
+                  {monthName}
+                </Text>
+                {isSelected && <View style={styles.activeDot} />}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
 
       <View style={styles.selectedDateHeader}>
-        <View style={styles.selectedDateLine} />
-        <Text style={styles.selectedDateText}>
-          Availability for {selectedDate.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
-        </Text>
+        <View style={styles.selectedDateHeaderContent}>
+          <View style={styles.selectedDateLine} />
+          <Text style={styles.selectedDateText}>
+            Availability for {selectedDate.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
+          </Text>
+        </View>
       </View>
 
       <View style={styles.resultsContainer}>
@@ -333,7 +340,6 @@ export default function CalendarTabs() {
                   </View>
                   
                   <View style={styles.availabilityTag}>
-                    <Clock size={12} color="#10B981" />
                     <Text style={styles.availabilityText}>
                       {ground._availableSlots.length} slots left
                     </Text>
@@ -398,7 +404,14 @@ const styles = StyleSheet.create({
     color: '#043529',
     fontFamily: 'Inter',
   },
+  scrollWrapper: {
+    width: '100%',
+    maxWidth: 1200,
+    alignSelf: 'center',
+  },
   scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
     paddingRight: 24,
     paddingBottom: 8,
     paddingTop: 12,
@@ -484,15 +497,20 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#00ea6b',
-    shadowColor: '#00ea6b',
+    backgroundColor: '#01b854',
+    shadowColor: '#01b854',
     shadowOpacity: 0.8,
     shadowRadius: 4,
   },
   selectedDateHeader: {
+    width: '100%',
+    maxWidth: 1200,
+    alignSelf: 'center',
     paddingHorizontal: 24,
     marginTop: 32,
     marginBottom: 8,
+  },
+  selectedDateHeaderContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -500,7 +518,7 @@ const styles = StyleSheet.create({
   selectedDateLine: {
     width: 3,
     height: 16,
-    backgroundColor: '#10B981',
+    backgroundColor: '#01b854',
     borderRadius: 2,
   },
   selectedDateText: {
@@ -511,10 +529,15 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   resultsContainer: {
+    width: '100%',
+    maxWidth: 1200,
+    alignSelf: 'center',
     marginTop: 24,
     minHeight: 180,
   },
   resultsScroll: {
+    flexGrow: 1,
+    justifyContent: 'center',
     paddingHorizontal: 24,
     paddingBottom: 10,
     gap: 16,
@@ -592,15 +615,8 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontFamily: 'Inter',
   },
-  availabilityTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(16, 185, 129, 0.08)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
+   availabilityTag: {
+    marginTop: 2,
   },
   availabilityText: {
     fontSize: 10,

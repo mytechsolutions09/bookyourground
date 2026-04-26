@@ -18,6 +18,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { GroundWithImages, GroundType, Location } from '@/types';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
+import Modal from '@/components/ui/Modal';
 import GroundCard from '@/components/grounds/GroundCard';
 import { formatCurrency, getDayOfWeek } from '@/utils/helpers';
 import {
@@ -1098,9 +1099,14 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
         </Pressable>
 
         {open && !disabled ? (
-          <View
-            style={[styles.dropdownMenu, groundPageDropdown && styles.dropdownMenuGroundPage]}
-          >
+          <>
+            <Pressable
+              style={styles.dropdownOverlay}
+              onPress={() => setOpenNotify(false)}
+            />
+            <View
+              style={[styles.dropdownMenu, groundPageDropdown && styles.dropdownMenuGroundPage]}
+            >
             {options.map((opt) => (
               <Pressable
                 key={opt.key}
@@ -1131,11 +1137,59 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                 >
                   {opt.label}
                 </Text>
+                {opt.key === value && <View style={styles.dropdownOptionDot} />}
               </Pressable>
             ))}
           </View>
-        ) : null}
+        </>
+      ) : null}
       </View>
+    );
+  }
+
+  function ModalSelector({
+    visible,
+    onClose,
+    title,
+    value,
+    options,
+    onChange
+  }: {
+    visible: boolean;
+    onClose: () => void;
+    title: string;
+    value: string;
+    options: { key: string; label: string }[];
+    onChange: (k: string) => void;
+  }) {
+    return (
+      <Modal visible={visible} onClose={onClose} title={title}>
+        <View style={styles.modalOptionList}>
+          {options.map((opt) => (
+            <Pressable
+              key={opt.key}
+              onPress={() => {
+                onChange(opt.key);
+                onClose();
+              }}
+              style={[
+                styles.dropdownOption,
+                opt.key === value && styles.dropdownOptionActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.dropdownOptionText,
+                  opt.key === value && styles.dropdownOptionTextActive,
+                ]}
+              >
+                {opt.label}
+              </Text>
+              {opt.key === value && <View style={styles.dropdownOptionDot} />}
+            </Pressable>
+          ))}
+        </View>
+      </Modal>
     );
   }
 
@@ -1644,69 +1698,97 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
         </View>
       )}
 
-      <View
-        style={[
-          styles.section,
-          webGridSectionStyle,
-          webSingleColumnStyle,
-          openSelectMenu === 'location' && styles.sectionDropdownOpen,
-        ]}
-      >
-        <Text style={fieldLabelStyle}>Location</Text>
-        <InlineDropdown
-          label="Location"
-          value={locationKey}
-          options={locationOptions}
-          disabled={lockSlot || isLockedByInitialGround || loadingGrounds}
-          open={openSelectMenu === 'location'}
-          onOpenChange={(o) => {
-            setOpenSelectMenu(o ? 'location' : (prev) => (prev === 'location' ? null : prev));
-          }}
-          onChange={(k) => {
-            setLocationKey(k);
-            if (useLandingSearchFlow) {
-              clearSearchState();
-            } else {
-              selectGroundByLocationAndType(k, typeKey);
-            }
-          }}
-          groundPageDropdown={groundPageAccent}
-          bookGroundNative={nativeTanChrome}
-        />
+      <View style={[styles.row, !!openSelectMenu && styles.sectionDropdownOpen]}>
+        <View
+          style={[
+            styles.section,
+            styles.flex1,
+          ]}
+        >
+          <Text style={fieldLabelStyle}>Location</Text>
+          <Pressable
+            onPress={() => setOpenSelectMenu('location')}
+            disabled={lockSlot || isLockedByInitialGround || loadingGrounds}
+            style={[
+              styles.dropdownButton,
+              groundPageAccent && styles.dropdownButtonGroundPage,
+              nativeTanChrome && !groundPageAccent && styles.dropdownButtonBookGroundNative,
+              !!locationKey && !loadingGrounds && (groundPageAccent ? styles.dropdownButtonSelectedGroundPage : styles.dropdownButtonSelected),
+            ]}
+          >
+            <Text style={[
+              styles.dropdownButtonText,
+              groundPageAccent && styles.dropdownButtonTextGroundPage,
+              nativeTanChrome && !groundPageAccent && styles.dropdownButtonTextBookGroundNative,
+              !!locationKey && (groundPageAccent ? styles.dropdownButtonTextSelectedGroundPage : styles.dropdownButtonTextSelected),
+            ]}>
+              {locationOptions.find(o => o.key === locationKey)?.label || 'Location'}
+            </Text>
+          </Pressable>
+
+          <ModalSelector
+            visible={openSelectMenu === 'location'}
+            onClose={() => setOpenSelectMenu(null)}
+            title="Select Location"
+            value={locationKey}
+            options={locationOptions}
+            onChange={(k) => {
+              setLocationKey(k);
+              if (useLandingSearchFlow) {
+                clearSearchState();
+              } else {
+                selectGroundByLocationAndType(k, typeKey);
+              }
+            }}
+          />
+        </View>
+
+        <View
+          style={[
+            styles.section,
+            styles.flex1,
+          ]}
+        >
+          <Text style={fieldLabelStyle}>Type</Text>
+          <Pressable
+            onPress={() => setOpenSelectMenu('type')}
+            disabled={lockSlot || isLockedByInitialGround || loadingGrounds}
+            style={[
+              styles.dropdownButton,
+              groundPageAccent && styles.dropdownButtonGroundPage,
+              nativeTanChrome && !groundPageAccent && styles.dropdownButtonBookGroundNative,
+              !!typeKey && !loadingGrounds && (groundPageAccent ? styles.dropdownButtonSelectedGroundPage : styles.dropdownButtonSelected),
+            ]}
+          >
+            <Text style={[
+              styles.dropdownButtonText,
+              groundPageAccent && styles.dropdownButtonTextGroundPage,
+              nativeTanChrome && !groundPageAccent && styles.dropdownButtonTextBookGroundNative,
+              !!typeKey && (groundPageAccent ? styles.dropdownButtonTextSelectedGroundPage : styles.dropdownButtonTextSelected),
+            ]}>
+              {typeOptions.find(o => o.key === typeKey)?.label || 'Type'}
+            </Text>
+          </Pressable>
+
+          <ModalSelector
+            visible={openSelectMenu === 'type'}
+            onClose={() => setOpenSelectMenu(null)}
+            title="Select Type"
+            value={typeKey}
+            options={typeOptions}
+            onChange={(t) => {
+              setTypeKey(t);
+              if (useLandingSearchFlow) {
+                clearSearchState();
+              } else {
+                selectGroundByLocationAndType(locationKey, t);
+              }
+            }}
+          />
+        </View>
       </View>
 
-      <View
-        style={[
-          styles.section,
-          webGridSectionStyle,
-          webSingleColumnStyle,
-          openSelectMenu === 'type' && styles.sectionDropdownOpen,
-        ]}
-      >
-        <Text style={fieldLabelStyle}>Type</Text>
-        <InlineDropdown
-          label="Type"
-          value={typeKey}
-          options={typeOptions}
-          disabled={lockSlot || isLockedByInitialGround || loadingGrounds}
-          open={openSelectMenu === 'type'}
-          onOpenChange={(o) => {
-            setOpenSelectMenu(o ? 'type' : (prev) => (prev === 'type' ? null : prev));
-          }}
-          onChange={(t) => {
-            setTypeKey(t);
-            if (useLandingSearchFlow) {
-              clearSearchState();
-            } else {
-              selectGroundByLocationAndType(locationKey, t);
-            }
-          }}
-          groundPageDropdown={groundPageAccent}
-          bookGroundNative={nativeTanChrome}
-        />
-      </View>
-
-      {!isBoxCricket && (!useLandingSearchFlow || (bookingDate && startTime)) ? (
+      {!isBoxCricket ? (
         <View style={[styles.section, webGridSectionStyle, webSingleColumnStyle]}>
           <Text style={fieldLabelStyle}>Teams</Text>
           <View style={styles.teamToggle}>
@@ -2438,8 +2520,15 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false) =>
     paddingBottom: 4,
   },
   section: {
-    minWidth: 180,
+    minWidth: 140,
     alignSelf: 'stretch',
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  flex1: {
+    flex: 1,
   },
   /** Entire field column must stack above later flex rows so the menu isn’t covered by Date/Time. */
   sectionDropdownOpen: {
@@ -2523,7 +2612,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false) =>
   },
   groundChipActive: {
     borderColor: '#F1F5F9',
-    backgroundColor: 'rgba(1, 184, 84, 0.08)',
+    backgroundColor: 'rgba(216, 247, 157, 0.08)',
   },
   groundChipText: {
     fontSize: 13,
@@ -2751,7 +2840,9 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false) =>
     marginTop: 20,
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    padding: 20,
+    paddingVertical: 20,
+    paddingRight: 20,
+    paddingLeft: 12,
     borderWidth: 1,
     borderColor: '#F1F5F9',
     shadowColor: '#000',
@@ -2874,18 +2965,32 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false) =>
   dropdownButtonTextDisabledBookGroundNative: {
     color: isLight ? '#9CA3AF' : 'rgba(249,250,251,0.4)',
   },
+  dropdownOverlay: {
+    position: 'absolute',
+    top: -2000,
+    left: -2000,
+    right: -2000,
+    bottom: -2000,
+    backgroundColor: 'transparent',
+    zIndex: 90,
+  },
   dropdownMenu: {
     position: 'absolute',
-    top: 44,
+    top: '100%',
+    marginTop: 8,
     left: 0,
-    right: 0,
-    backgroundColor: isLight ? '#FFFFFF' : '#043529',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: isLight ? '#E5E7EB' : '#01b854',
-    borderRadius: 10,
-    paddingVertical: 6,
-    zIndex: 10000,
-    elevation: 50,
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
+    padding: 6,
+    zIndex: 100,
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    minWidth: 220,
   },
   dateDropdownMenu: {
     position: 'absolute',
@@ -2899,36 +3004,37 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false) =>
     flex: 1,
     backgroundColor: 'transparent',
   },
-  portalMenu: {
-    position: 'absolute',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    borderRadius: 20,
-    padding: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 12 },
-    elevation: 60,
+  modalOptionList: {
+    gap: 8,
   },
   dropdownOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 12,
     paddingVertical: 10,
+    borderRadius: 8,
   },
   dropdownOptionActive: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F1F5F9',
   },
   dropdownOptionText: {
-    fontSize: 14,
-    fontWeight: '400',
     fontFamily: 'Inter',
-    color: '#0F172A',
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
   },
   dropdownOptionTextActive: {
-    color: '#01b854',
-    fontWeight: '800',
+    color: '#06392e',
+    fontWeight: '700',
   },
+  dropdownOptionDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#01b854',
+  },
+
   /** Ground detail: Location / Type — web keeps green accent; native uses tan (#dcc093). */
   dropdownButtonGroundPage: {
     backgroundColor: isLight ? 'transparent' : '#043529',
@@ -2937,6 +3043,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false) =>
       default: { borderColor: isLight ? 'transparent' : '#dcc093' },
     }),
     borderWidth: isLight ? 0 : 1,
+    paddingHorizontal: 0,
   },
   dropdownButtonOpenGroundPage: {
     backgroundColor: isLight ? 'transparent' : '#043529',
@@ -2981,17 +3088,11 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false) =>
     }),
   },
   dropdownMenuGroundPage: {
-    backgroundColor: isLight ? '#FFFFFF' : '#043529',
-    ...Platform.select({
-      web: { borderColor: '#01b854' },
-      default: { borderColor: isLight ? '#E5E7EB' : '#dcc093' },
-    }),
+    backgroundColor: '#FFFFFF',
+    borderColor: '#01b854',
   },
   dropdownOptionActiveGroundPage: {
-    ...Platform.select({
-      web: { backgroundColor: 'rgba(1, 184, 84, 0.1)' },
-      default: { backgroundColor: 'rgba(220,192,147,0.1)' },
-    }),
+    backgroundColor: '#F1F5F9',
   },
   dropdownOptionTextGroundPage: {
     ...Platform.select({
