@@ -643,14 +643,7 @@ export default function CheckoutScreen() {
                  </View>
               </View>
 
-              <View style={styles.productActionsRow}>
-                <TouchableOpacity style={styles.actionBtn}>
-                  <RNText style={styles.actionBtnText}>Remove from Checkout</RNText>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.actionBtn}>
-                  <RNText style={styles.actionBtnText}>Save Match details</RNText>
-                </TouchableOpacity>
-              </View>
+
             </View>
           </Card>
 
@@ -733,37 +726,39 @@ export default function CheckoutScreen() {
               </RNText>
             </View>
 
-            <View style={styles.paymentMethodSection}>
-               <RNText style={styles.paymentMethodTitle}>Payment Method</RNText>
-               <View style={styles.methodSelector}>
-                {activeGateways.filter(g => {
-                  if (g.name === 'cash') return isGroundOwnerOrAdmin;
-                  return true;
-                }).map(g => (
-                  <TouchableOpacity 
-                    key={g.name}
-                    onPress={() => setSelectedGateway(g.name)}
-                    style={[
-                      styles.methodOption,
-                      selectedGateway === g.name && styles.methodOptionActive
-                    ]}
-                  >
-                    <View style={[styles.methodCircle, selectedGateway === g.name && styles.methodCircleActive]}>
-                      {g.name === 'cash' ? (
-                        <Wallet size={14} color={selectedGateway === g.name ? '#FFF' : '#9CA3AF'} />
-                      ) : (
-                        <CreditCard size={14} color={selectedGateway === g.name ? '#06392e' : '#9CA3AF'} />
-                      )}
-                    </View>
-                    <RNText style={[styles.methodLabel, selectedGateway === g.name && styles.methodLabelActive]}>
-                      {g.label}
-                    </RNText>
-                  </TouchableOpacity>
-                ))}
-               </View>
-            </View>
+            {isGroundOwnerOrAdmin && (
+              <View style={styles.paymentMethodSection}>
+                <RNText style={styles.paymentMethodTitle}>Payment Method</RNText>
+                <View style={styles.methodSelector}>
+                  {activeGateways.filter(g => {
+                    if (g.name === 'cash') return isGroundOwnerOrAdmin;
+                    return true;
+                  }).map(g => (
+                    <TouchableOpacity 
+                      key={g.name}
+                      onPress={() => setSelectedGateway(g.name)}
+                      style={[
+                        styles.methodOption,
+                        selectedGateway === g.name && styles.methodOptionActive
+                      ]}
+                    >
+                      <View style={[styles.methodCircle, selectedGateway === g.name && styles.methodCircleActive]}>
+                        {g.name === 'cash' ? (
+                          <Wallet size={14} color={selectedGateway === g.name ? '#FFF' : '#9CA3AF'} />
+                        ) : (
+                          <CreditCard size={14} color={selectedGateway === g.name ? '#06392e' : '#9CA3AF'} />
+                        )}
+                      </View>
+                      <RNText style={[styles.methodLabel, selectedGateway === g.name && styles.methodLabelActive]}>
+                        {g.label}
+                      </RNText>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            )}
 
-            {selectedGateway === 'razorpay' || selectedGateway === 'payu' ? (
+            {(selectedGateway === 'razorpay' || selectedGateway === 'payu' || !isGroundOwnerOrAdmin) ? (
               <Button
                 title={processing ? 'Processing...' : `Check Out`}
                 onPress={handlePayment}
@@ -774,28 +769,32 @@ export default function CheckoutScreen() {
               />
             ) : selectedGateway === 'cash' ? (
               <View style={{ gap: 12, marginBottom: 12 }}>
-                <View style={styles.cashAmountSection}>
-                  <RNText style={styles.cashAmountLabel}>Player Name (for record)</RNText>
-                  <RNTextInput
-                    style={styles.cashAmountInput}
-                    placeholder="Enter player name..."
-                    placeholderTextColor="#9CA3AF"
-                    value={bookedForName}
-                    onChangeText={setBookedForName}
-                  />
-                </View>
+              <View style={styles.cashFieldsContainer}>
+                <View style={styles.cashFieldsRow}>
+                  <View style={styles.cashFieldColumn}>
+                    <RNText style={styles.cashAmountLabel}>Player Name</RNText>
+                    <RNTextInput
+                      style={styles.cashAmountInput}
+                      placeholder="Name..."
+                      placeholderTextColor="#9CA3AF"
+                      value={bookedForName}
+                      onChangeText={setBookedForName}
+                    />
+                  </View>
 
-                <View style={styles.cashAmountSection}>
-                  <RNText style={styles.cashAmountLabel}>Ground price</RNText>
-                  <RNTextInput
-                    style={styles.cashAmountInput}
-                    placeholder="Enter amount..."
-                    placeholderTextColor="#9CA3AF"
-                    keyboardType="numeric"
-                    value={customCashAmount}
-                    onChangeText={setCustomCashAmount}
-                  />
+                  <View style={styles.cashFieldColumn}>
+                    <RNText style={styles.cashAmountLabel}>Price</RNText>
+                    <RNTextInput
+                      style={styles.cashAmountInput}
+                      placeholder="Amount..."
+                      placeholderTextColor="#9CA3AF"
+                      keyboardType="numeric"
+                      value={customCashAmount}
+                      onChangeText={setCustomCashAmount}
+                    />
+                  </View>
                 </View>
+              </View>
                 <Button
                   title={processingCash ? 'Confirming...' : 'Confirm Order'}
                   onPress={handleCashPayment}
@@ -1002,14 +1001,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginBottom: 0,
   },
-  productActionsRow: {
-    flexDirection: 'row',
-    gap: 16,
-    marginTop: 16,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-  },
+
   itemInfo: {
     flex: 1,
   },
@@ -1051,21 +1043,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#111827',
   },
-  itemActions: {
-    flexDirection: 'row',
-    gap: 16,
-    marginTop: 12,
-  },
-  actionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  actionBtnText: {
-    fontSize: 13,
-    color: '#6B7280',
-    fontWeight: '600',
-  },
+
   itemPolicyRow: {
     gap: 4,
     marginTop: 8,
@@ -1130,19 +1108,20 @@ const styles = StyleSheet.create({
   },
   couponInput: {
     flex: 1,
-    height: 38,
-    borderRadius: 19,
+    height: 32,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     fontSize: 12,
     color: '#111827',
     backgroundColor: '#FFF',
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
   },
   applyBtn: {
-    height: 32,
-    paddingHorizontal: 14,
-    borderRadius: 16,
+    height: 28,
+    paddingHorizontal: 12,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#013a30',
     alignItems: 'center',
@@ -1237,14 +1216,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    padding: 8,
-    borderRadius: 12,
-    borderWidth: 1.5,
+    padding: 6,
+    borderRadius: 10,
+    borderWidth: 1,
     borderColor: '#F3F4F6',
     backgroundColor: '#FFFFFF',
   },
   methodOptionActive: {
-    borderColor: '#01b854',
+    borderColor: 'transparent',
     backgroundColor: '#ECFDF5',
   },
   methodCircle: {
@@ -1267,8 +1246,8 @@ const styles = StyleSheet.create({
     color: '#065F46',
   },
   payButton: {
-    height: 44,
-    borderRadius: 22,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#01b854',
   },
   trustFooter: {
@@ -1372,31 +1351,37 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontWeight: '500',
   },
-  cashAmountSection: {
+  cashFieldsContainer: {
     backgroundColor: '#F0FDF4',
-    padding: 16,
+    padding: 12,
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#BBF7D0',
-    marginTop: 8,
+    marginTop: 4,
+  },
+  cashFieldsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  cashFieldColumn: {
+    flex: 1,
   },
   cashAmountLabel: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '700',
     color: '#166534',
-    marginBottom: 8,
+    marginBottom: 4,
     fontFamily: 'Inter',
   },
   cashAmountInput: {
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: '#86EFAC',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    height: 48,
-    fontSize: 18,
-    fontWeight: '800',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    height: 36,
+    fontSize: 14,
+    fontWeight: '700',
     color: '#14532D',
     fontFamily: 'Inter',
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
   },
 });

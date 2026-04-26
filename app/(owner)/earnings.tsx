@@ -91,6 +91,8 @@ function OwnerEarningsScreenInner() {
   });
   const [venueBreakdown, setVenueBreakdown] = useState<VenueBreakdown[]>([]);
   const [chartData, setChartData] = useState<ChartPoint[]>([]);
+  const [onlineEarnings, setOnlineEarnings] = useState(0);
+  const [offlineEarnings, setOfflineEarnings] = useState(0);
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [wallet, setWallet] = useState<WalletData | null>(null);
@@ -158,12 +160,14 @@ function OwnerEarningsScreenInner() {
 
       const { data: allData } = await supabase
         .from('bookings')
-        .select('total_amount, created_at, ground:grounds!inner(name, city, owner_id)')
+        .select('total_amount, created_at, payment_method, payment_received, ground:grounds!inner(name, city, owner_id)')
         .eq('ground.owner_id', user.id)
         .in('status', ['confirmed', 'completed']);
 
       const allRows = (allData ?? []) as any[];
       let total = 0;
+      let onlineEarningsTotal = 0;
+      let offlineEarningsTotal = 0;
       let thisMonthTotal = 0;
       const now = new Date();
       const currentMonth = now.getMonth();
@@ -175,6 +179,15 @@ function OwnerEarningsScreenInner() {
       allRows.forEach((row) => {
         const amt = row.total_amount || 0;
         total += amt;
+
+        if (row.payment_method === 'cash') {
+          if (row.payment_received) {
+            offlineEarningsTotal += amt;
+          }
+        } else {
+          // Online payments are considered received if they are confirmed/completed
+          onlineEarningsTotal += amt;
+        }
         
         const date = new Date(row.created_at);
         const m = date.getMonth();
@@ -202,18 +215,77 @@ function OwnerEarningsScreenInner() {
         monthMap.set(monthKey, (monthMap.get(monthKey) || 0) + amt);
       });
 
-      setStats({
+      const newStats = {
         totalEarnings: total,
         thisMonthEarnings: thisMonthTotal,
         totalConfirmedBookings: allRows.length,
-      });
+      };
 
+      setStats(newStats);
       setVenueBreakdown(
         Array.from(venueMap.entries())
           .map(([name, amount]) => ({ name, amount, percent: total > 0 ? (amount / total) * 100 : 0 }))
           .sort((a, b) => b.amount - a.amount)
           .slice(0, 4)
       );
+      setOnlineEarnings(onlineEarningsTotal);
+      setOfflineEarnings(offlineEarningsTotal);
+
+      // --- AUTOMATIC WALLET SYNC LOGIC ---
+      // Calculate what the balance SHOULD be: (All Online Earnings) - (All Completed Withdrawals)
+      const { data: completedWithdrawals } = await supabase
+        .from('withdrawals')
+        .select('amount')
+        .eq('owner_id', user.id)
+        .eq('status', 'completed');
+      
+      const totalWithdrawn = (completedWithdrawals || []).reduce((acc, w) => acc + (w.amount || 0), 0);
+      const expectedBalance = onlineEarningsTotal - totalWithdrawn;
+      
+      const currentWalletBalance = walletData?.balance || 0;
+
+      // FIX: If the balance is exactly double (common symptom of double-sync), deduct the extra
+      if (currentWalletBalance === (onlineEarningsTotal * 2) - totalWithdrawn && onlineEarningsTotal > 0) {
+          console.log("Correcting double-sync error...");
+          await supabase.rpc('add_money_to_wallet', {
+            target_user_id: user.id,
+            amount_to_add: -onlineEarningsTotal,
+            description_text: 'Correction: Double-sync deduction',
+            ref_type: 'system_correction',
+            ref_id: user.id
+          });
+          setWallet({ id: walletData?.id || '', balance: onlineEarningsTotal - totalWithdrawn });
+      }
+      // Normal Sync: If the wallet balance is out of sync (lower than expected), update it
+      else if (currentWalletBalance < expectedBalance - 0.01) {
+        const difference = expectedBalance - currentWalletBalance;
+        if (difference > 0.01) {
+          console.log(`Syncing wallet: Adding ${difference} to match online earnings.`);
+          
+          // Use a deterministic reference ID to prevent duplicates
+          const syncRef = user.id; 
+          
+          const { error: syncError } = await supabase.rpc('add_money_to_wallet', {
+            target_user_id: user.id,
+            amount_to_add: difference,
+            description_text: 'Automatic Wallet-Earnings Synchronization',
+            ref_type: 'system_sync',
+            ref_id: syncRef
+          });
+
+          if (!syncError) {
+            setWallet({ id: walletData?.id || '', balance: expectedBalance });
+          } else {
+            console.error('Wallet sync RPC failed:', syncError);
+            if (walletData) setWallet(walletData);
+          }
+        } else {
+          if (walletData) setWallet(walletData);
+        }
+      } else if (walletData) {
+        setWallet(walletData);
+      }
+      // ------------------------------------
 
       const trend: ChartPoint[] = [];
       for (let i = 4; i >= 0; i--) {
@@ -335,7 +407,7 @@ function OwnerEarningsScreenInner() {
     <View style={styles.leftCol}>
       <View style={styles.totalEarningsCard}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.totalEarningsLabel}>Transferable Balance</Text>
+          <Text style={styles.totalEarningsLabel}>Transferable Balance (Online Payments Only)</Text>
           <Text style={styles.totalEarningsValue}>{formatCurrency(Number(wallet?.balance || 0))}</Text>
           <Text style={styles.monthlySubtext}>
             Lifetime Earnings: <Text style={{ fontWeight: '700' }}>{formatCurrency(Number(stats.totalEarnings))}</Text>
@@ -432,6 +504,23 @@ function OwnerEarningsScreenInner() {
   const renderRightColumn = () => (
     <View style={styles.rightCol}>
       <View style={styles.sectionCard}>
+        <Text style={styles.sectionTitle}>Earnings Bifurcation</Text>
+        <View style={styles.bifurcationRow}>
+           <View style={styles.bifurcationItem}>
+              <Text style={styles.bifurcationLabel}>Online Earnings</Text>
+              <Text style={[styles.bifurcationValue, { color: '#01b854' }]}>{formatCurrency(onlineEarnings)}</Text>
+              <Text style={styles.bifurcationSubtext}>Razorpay, PayU, Wallet</Text>
+           </View>
+           <View style={styles.bifurcationDivider} />
+           <View style={styles.bifurcationItem}>
+              <Text style={styles.bifurcationLabel}>Offline Earnings</Text>
+              <Text style={[styles.bifurcationValue, { color: '#64748B' }]}>{formatCurrency(offlineEarnings)}</Text>
+              <Text style={styles.bifurcationSubtext}>Cash / On-venue</Text>
+           </View>
+        </View>
+      </View>
+
+      <View style={styles.sectionCard}>
         <Text style={styles.sectionTitle}>Earnings Analytics</Text>
         <LineChart data={chartData} />
         
@@ -477,6 +566,21 @@ function OwnerEarningsScreenInner() {
               </View>
             ))
           )}
+        </View>
+      </View>
+
+      <View style={[styles.sectionCard, { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+           <History size={20} color="#92400E" />
+           <Text style={[styles.sectionTitle, { color: '#92400E', marginBottom: 0 }]}>Cash Received (Offline)</Text>
+        </View>
+        <View style={{ alignItems: 'center', paddingVertical: 10 }}>
+          <Text style={{ fontSize: 36, fontWeight: '800', color: '#92400E' }}>{formatCurrency(offlineEarnings)}</Text>
+          <Text style={{ fontSize: 14, color: '#B45309', fontWeight: '600', marginTop: 8 }}>Total collection at venue</Text>
+          <View style={{ height: 1, backgroundColor: '#FDE68A', width: '100%', marginVertical: 16 }} />
+          <Text style={{ fontSize: 12, color: '#D97706', textAlign: 'center', fontStyle: 'italic' }}>
+            Note: This amount is collected directly by you and is not part of the platform's transferable balance.
+          </Text>
         </View>
       </View>
     </View>
@@ -1163,6 +1267,35 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: '#043529',
+  },
+  bifurcationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  bifurcationItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  bifurcationLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  bifurcationValue: {
+    fontSize: 20,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  bifurcationSubtext: {
+    fontSize: 10,
+    color: '#94A3B8',
+  },
+  bifurcationDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: '#E2E8F0',
   },
 });
 

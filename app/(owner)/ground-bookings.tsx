@@ -45,7 +45,7 @@ function NameInputCell({ booking, onSave }: { booking: BookingWithDetails, onSav
       >
         <User size={14} color={saving ? "#94A3B8" : "#01b854"} style={styles.nameInputIcon} />
         <TextInput
-          style={[styles.nameInput, Platform.OS === 'web' && { outlineStyle: 'none' } as any]}
+          style={[styles.nameInput, Platform.OS === 'web' && { outlineStyle: 'none', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' } as any]}
           value={localName}
           onChangeText={setLocalName}
           onFocus={() => setIsFocused(true)}
@@ -780,7 +780,7 @@ export default function OwnerBookingsScreen() {
                 if (sortKey === 'teams') setSortAsc(!sortAsc);
                 else { setSortKey('teams'); setSortAsc(true); }
               }}
-              style={[styles.colTeams, { flexDirection: 'row', gap: 4, paddingLeft: 12 }]}
+              style={[styles.colTeams, { flexDirection: 'row', gap: 4, alignItems: 'center', justifyContent: 'center' }]}
             >
               <Text style={styles.tableHeaderText}>Teams</Text>
               {sortKey === 'teams' && (
@@ -793,7 +793,7 @@ export default function OwnerBookingsScreen() {
                 if (sortKey === 'status') setSortAsc(!sortAsc);
                 else { setSortKey('status'); setSortAsc(true); }
               }}
-              style={[styles.colStatus, { flexDirection: 'row', gap: 4, paddingLeft: 12 }]}
+              style={[styles.colStatus, { flexDirection: 'row', gap: 4, alignItems: 'center', justifyContent: 'center' }]}
             >
               <Text style={styles.tableHeaderText}>Status</Text>
               {sortKey === 'status' && (
@@ -806,7 +806,7 @@ export default function OwnerBookingsScreen() {
                 if (sortKey === 'amount') setSortAsc(!sortAsc);
                 else { setSortKey('amount'); setSortAsc(true); }
               }}
-              style={[styles.colAmount, { flexDirection: 'row', alignItems: 'center', gap: 4, paddingLeft: 32 }]}
+              style={[styles.colAmount, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
             >
               <Text style={styles.tableHeaderText}>Amount</Text>
               {sortKey === 'amount' && (
@@ -814,7 +814,7 @@ export default function OwnerBookingsScreen() {
               )}
             </TouchableOpacity>
 
-            <View style={[styles.colPayment, { paddingLeft: 20 }]}>
+            <View style={styles.colPayment}>
               <Text style={styles.tableHeaderText}>Payment</Text>
             </View>
 
@@ -823,7 +823,7 @@ export default function OwnerBookingsScreen() {
                 if (sortKey === 'name') setSortAsc(!sortAsc);
                 else { setSortKey('name'); setSortAsc(true); }
               }}
-              style={[styles.colName, { flexDirection: 'row', alignItems: 'center', gap: 4, paddingLeft: 56 }]}
+              style={[styles.colName, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
             >
               <Text style={styles.tableHeaderText}>Name</Text>
               {sortKey === 'name' && (
@@ -836,7 +836,7 @@ export default function OwnerBookingsScreen() {
                 if (sortKey === 'paid') setSortAsc(!sortAsc);
                 else { setSortKey('paid'); setSortAsc(true); }
               }}
-              style={[styles.colPaymentReceived, { flexDirection: 'row', alignItems: 'center', gap: 4 }]}
+              style={[styles.colPaymentReceived, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }]}
             >
               <Text style={styles.tableHeaderText}>Paid</Text>
               {sortKey === 'paid' && (
@@ -960,18 +960,18 @@ export default function OwnerBookingsScreen() {
                   )}
                 </View>
 
-                <View style={[styles.tableCell, styles.colPayment]}>
-                   <View style={[
-                     styles.paymentBadge,
-                     item.payment_method === 'cash' ? styles.paymentCash : styles.paymentOnline
-                   ]}>
-                     <Text style={[
-                       styles.paymentBadgeText,
-                       item.payment_method === 'cash' ? styles.paymentCash : styles.paymentOnline
-                     ]}>
-                       {(item.payment_method || 'online').toUpperCase()}
-                     </Text>
-                   </View>
+                <View style={[styles.tableCell, styles.colPayment, { alignItems: 'center', justifyContent: 'center' }]}>
+                  <View style={[
+                    styles.paymentBadge,
+                    item.payment_method === 'cash' ? styles.paymentCash : styles.paymentOnline
+                  ]}>
+                    <Text style={[
+                      styles.paymentBadgeText,
+                      item.payment_method === 'cash' ? styles.paymentCash : styles.paymentOnline
+                    ]}>
+                      {item.payment_method === 'cash' ? 'CASH' : (item.payment_method === 'razorpay' ? 'RAZORPAY' : 'ONLINE')}
+                    </Text>
+                  </View>
                 </View>
 
                 <View style={[styles.tableCell, styles.colName]}>
@@ -986,11 +986,18 @@ export default function OwnerBookingsScreen() {
                     }}
                     style={styles.paymentToggle}
                   >
-                    {item.payment_received ? (
-                      <CheckCircle2 size={20} color="#00ea6b" />
-                    ) : (
-                      <Circle size={20} color="#9CA3AF" />
-                    )}
+                    <View style={{ alignItems: 'center', minWidth: 60 }}>
+                      {(item.payment_received || (item.payment_method !== 'cash' && item.status === 'confirmed')) ? (
+                        <>
+                          <CheckCircle2 size={20} color="#00ea6b" />
+                          <Text style={[styles.receivedAmountText, { maxWidth: 60 }]} numberOfLines={1}>
+                            {formatCurrency(item.total_amount)}
+                          </Text>
+                        </>
+                      ) : (
+                        <Circle size={20} color="#9CA3AF" />
+                      )}
+                    </View>
                   </TouchableOpacity>
                 </View>
               </TouchableOpacity>
@@ -1087,8 +1094,13 @@ export default function OwnerBookingsScreen() {
                     }}
                     style={styles.compactPaymentToggle}
                   >
-                    <Text style={[styles.paymentLabel, { color: isLight ? '#64748B' : '#dcc093' }]}>PAID</Text>
-                    {item.payment_received ? (
+                    <View style={{ alignItems: 'flex-end', marginRight: 8 }}>
+                       <Text style={[styles.paymentLabel, { color: isLight ? '#64748B' : '#dcc093' }]}>PAID</Text>
+                       {(item.payment_received || (item.payment_method !== 'cash' && item.status === 'confirmed')) && (
+                         <Text style={styles.receivedAmountTextCompact}>{formatCurrency(item.total_amount)}</Text>
+                       )}
+                    </View>
+                    {(item.payment_received || (item.payment_method !== 'cash' && item.status === 'confirmed')) ? (
                       <CheckCircle2 size={24} color="#00ea6b" />
                     ) : (
                       <Circle size={24} color="#9CA3AF" />
@@ -1118,7 +1130,7 @@ export default function OwnerBookingsScreen() {
   );
 
   if (Platform.OS === 'web') {
-    return <WebLayout>{content}</WebLayout>;
+    return <WebLayout noCard>{content}</WebLayout>;
   }
 
   return (
@@ -1175,7 +1187,7 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   tableHeaderContainer: {
-    marginHorizontal: 16,
+    marginHorizontal: IS_WEB ? 0 : 16,
     marginBottom: 4,
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -1189,26 +1201,27 @@ const styles = StyleSheet.create({
   },
   tableHeaderCell: {
     fontFamily: 'Inter',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: '#6B7280',
     textTransform: 'uppercase',
   },
   tableHeaderText: {
     fontFamily: 'Inter',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: '#6B7280',
     textTransform: 'uppercase',
   },
   tableRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 10,
     marginBottom: 8,
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
+    overflow: 'hidden',
   },
   tableCell: {
     // paddingRight: 16,
@@ -1218,11 +1231,11 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   colGround: {
-    flex: 1.5,
+    flex: 2,
     marginRight: 16,
   },
   colDateTime: {
-    width: 140,
+    flex: 1.2,
     marginRight: 16,
   },
   colTeams: {
@@ -1252,17 +1265,17 @@ const styles = StyleSheet.create({
   },
   bookedDateText: {
     fontFamily: 'Inter',
-    fontSize: 13,
+    fontSize: 11,
     color: '#111827',
     fontWeight: '500',
   },
   bookedTimeText: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#6B7280',
     marginTop: 1,
   },
   bookingIdTable: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700',
     color: '#01b854',
     marginTop: 4,
@@ -1270,41 +1283,41 @@ const styles = StyleSheet.create({
   },
   groundName: {
     fontFamily: 'Inter',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#111827',
   },
   groundLocation: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#6B7280',
     marginTop: 2,
   },
   amount: {
     fontFamily: 'Inter',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#111827',
   },
   dateText: {
     fontFamily: 'Inter',
-    fontSize: 13,
+    fontSize: 11,
     color: '#111827',
     fontWeight: '500',
   },
   timeText: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#6B7280',
     marginTop: 2,
   },
   teamsText: {
     fontFamily: 'Inter',
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '500',
     color: '#111827',
     textAlign: 'left',
   },
   statusTextInline: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#6B7280',
     textTransform: 'capitalize',
     marginTop: 2,
@@ -1314,14 +1327,14 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   whoPrimaryText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: '#111827',
     marginBottom: 2,
   },
   filterContainer: {
     marginTop: 8,
-    marginHorizontal: 16,
+    marginHorizontal: IS_WEB ? 0 : 16,
     marginBottom: 4,
     paddingHorizontal: 16,
     paddingVertical: 6,
@@ -1346,13 +1359,27 @@ const styles = StyleSheet.create({
     color: '#2b2f4b',
   },
   colName: {
-    width: 150,
+    width: 120,
     marginRight: 16,
+    overflow: 'hidden',
   },
   colPaymentReceived: {
-    width: 60,
+    width: 70,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  receivedAmountText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#01b854',
+    marginTop: 2,
+    fontFamily: 'Inter',
+  },
+  receivedAmountTextCompact: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#01b854',
+    fontFamily: 'Inter',
   },
   paymentToggle: {
     padding: 4,
@@ -1426,21 +1453,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  paymentBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
+  paymentBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
+    backgroundColor: '#FEF3C7',
+  },
+  paymentBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
     textAlign: 'center',
-    overflow: 'hidden',
+    fontFamily: 'Inter',
   },
   paymentCash: {
-    backgroundColor: '#FEF3C7',
     color: '#92400E',
   },
   paymentOnline: {
-    backgroundColor: '#DBEAFE',
     color: '#1E40AF',
   },
   statusBadgeText: {
@@ -1523,7 +1551,7 @@ const styles = StyleSheet.create({
   },
   nameInputWrapper: {
     flex: 1,
-    minHeight: 38,
+    minHeight: 30,
   },
   nameInputRow: {
     flexDirection: 'row',
@@ -1535,13 +1563,14 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
   nameInputIcon: {
-    marginRight: 6,
+    marginRight: 4,
   },
   nameInput: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 11,
     color: '#1E293B',
-    paddingVertical: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 0,
     fontWeight: '600',
   },
   saveBadge: {

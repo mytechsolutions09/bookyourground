@@ -22,7 +22,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUI } from '@/contexts/UIContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const AUTH_REQUIRED_TAB = new Set(['home_tab', 'dashboard', 'bookings', 'profile']);
+const AUTH_REQUIRED_TAB = new Set(['dashboard', 'bookings', 'profile']);
 
 export default function TabLayout() {
   const { width } = useWindowDimensions();

@@ -260,6 +260,7 @@ serve(async (req) => {
             notes: (team_type === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Paid via PayU: ${txnid})`,
             status: 'confirmed',
             payment_method: 'payu',
+            payment_received: true,
           })
           .select('id')
           .single();
@@ -551,6 +552,7 @@ serve(async (req) => {
             notes: (team_type === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Paid via Razorpay: ${razorpay_payment_id})`,
             status: 'confirmed',
             payment_method: 'razorpay',
+            payment_received: true,
           })
           .select('id')
           .single();

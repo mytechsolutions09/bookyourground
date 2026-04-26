@@ -63,10 +63,6 @@ export default function IndexScreen() {
     return <HomePageSkeleton />;
   }
 
-  // On web, we redirect to login if not authenticated to show login screen on loading.
-  if (os === 'web' && !loading && !user) {
-    return <Redirect href="/(auth)/login" />;
-  }
 
   // On web, we keep landing visible for authenticated users.
   if (os !== 'web') return null;
