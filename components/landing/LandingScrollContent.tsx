@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, View, Platform, useWindowDimensions } from 'react-native';
+import { ScrollView, View, Platform, useWindowDimensions, DeviceEventEmitter } from 'react-native';
 import LandingPageSections from '@/components/landing/LandingPageSections';
 import { landingScrollStyles } from '@/components/landing/landingScrollStyles';
 import HeroWeb from '@/components/landing/HeroWeb';
@@ -11,7 +11,7 @@ import GroundsNearYou from '@/components/landing/GroundsNearYou';
 import Features from '@/components/landing/Features';
 import CallToAction from '@/components/landing/CallToAction';
 import SiteFooter from '@/components/web/SiteFooter';
-import { DeviceEventEmitter } from 'react-native';
+import FindOpposition from '@/components/landing/FindOpposition';
 
 type Variant = 'web' | 'native';
 
@@ -48,7 +48,18 @@ export default function LandingScrollContent({ variant }: { variant: Variant }) 
           </View>
 
           {/* 
-            Subsequent Section 2: Scoring & Stats.
+            Subsequent Section 2: Find an Opposition
+          */}
+          <View style={{ 
+            zIndex: 5,
+            backgroundColor: '#FFFFFF',
+            position: 'relative',
+          }}>
+            <FindOpposition />
+          </View>
+
+          {/* 
+            Subsequent Section 3: Scoring & Stats.
             We make this sticky too, so it stays at top after scrolling over hero.
           */}
           <View style={{ 

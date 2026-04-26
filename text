@@ -32,3 +32,21 @@ pull from git
 
 naveen.singh.shekhawat7@gmail.com
 Naveensixflags1
+
+
+
+# Always confirm you're on dev before starting work
+git branch
+
+# Your normal commit flow
+git add .
+git commit -m "feat: your change here"
+git push
+
+# When ready to deploy to production
+git checkout main
+git merge dev
+git push
+git checkout dev
+
+Push to dev

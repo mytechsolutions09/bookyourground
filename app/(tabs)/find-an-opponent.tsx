@@ -245,6 +245,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
       {isWeb && !IS_DARK ? (
         <View style={styles.webCard}>
           <Animated.FlatList
+            showsVerticalScrollIndicator={false}
             ListHeaderComponent={
               <>
                 <View style={width >= 900 ? styles.desktopTabContainer : styles.webTabContainer}>
@@ -360,7 +361,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
             }
             style={styles.webFlatList}
             contentContainerStyle={styles.webList}
-            showsVerticalScrollIndicator
+            showsVerticalScrollIndicator={false}
             refreshControl={
               <RefreshControl refreshing={loading} onRefresh={loadOpenSlots} />
             }
@@ -398,6 +399,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
                 </View>
               )}
               keyExtractor={item => item.id}
+              showsVerticalScrollIndicator={false}
               contentContainerStyle={[styles.listNative, { paddingTop: HEADER_HEIGHT + insets.top + (showFilters ? 110 : 60), paddingBottom: 100 }]}
               refreshControl={
                 <RefreshControl
@@ -439,6 +441,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
               onScroll={externalScrollHandler || verticalScrollHandler}
               scrollEventThrottle={16}
               data={filteredMatches}
+              showsVerticalScrollIndicator={false}
               ListHeaderComponent={
                 <View style={{ backgroundColor: '#F9FAFB' }}>
                   <View style={styles.nativeSearchContainer}>
@@ -600,6 +603,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
         <Animated.FlatList
           onScroll={verticalScrollHandler}
           scrollEventThrottle={16}
+          showsVerticalScrollIndicator={false}
           data={filteredMatches}
           ListHeaderComponent={
             <View style={{ backgroundColor: '#F9FAFB' }}>

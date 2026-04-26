@@ -115,7 +115,7 @@ export default function BookMyGroundPage() {
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator
+          showsVerticalScrollIndicator={false}
         >
           <View style={styles.page}>
             <View style={styles.tabContainer}>

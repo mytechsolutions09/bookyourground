@@ -772,7 +772,11 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                         onPress={() => router.push('/(tabs)/profile' as any)}
                       >
                         <Image 
-                          source={{ uri: profile?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex' }} 
+                          source={
+                            profile?.avatar_url 
+                              ? { uri: profile.avatar_url } 
+                              : require('@/assets/images/default-avatar.png')
+                          } 
                           style={styles.userAvatar} 
                         />
                         <Text style={styles.userName}>
