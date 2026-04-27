@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Platform, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Platform, ActivityIndicator, Alert, useWindowDimensions } from 'react-native';
 import { useRouter, Stack } from 'expo-router';
 import { ChevronLeft, MapPin, CreditCard, ShoppingBag, Truck, ShieldCheck, ChevronDown } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -13,6 +13,9 @@ import WebLayout from '@/components/web/WebLayout';
 import SiteFooter from '@/components/web/SiteFooter';
 
 export default function CheckoutScreen() {
+  const { width } = useWindowDimensions();
+  const isSmall = width < 768;
+  const isCompact = width < 1024;
   const router = useRouter();
   const { user } = useAuth();
   const { setTabBarVisible } = useUI();
@@ -170,7 +173,7 @@ export default function CheckoutScreen() {
         <MobileAppNavbar 
           title="Checkout" 
           titleColor="#FFFFFF"
-          bgColor="#dc8d3c"
+          bgColor="#f8688a"
         />
       )}
 
@@ -182,7 +185,7 @@ export default function CheckoutScreen() {
           </View>
         )}
 
-        <View style={Platform.OS === 'web' ? styles.webLayoutRow : null}>
+        <View style={Platform.OS === 'web' ? [styles.webLayoutRow, isCompact && styles.webLayoutRowCompact] : null}>
           <View style={Platform.OS === 'web' ? styles.webLayoutMain : null}>
             {/* Contact Information */}
             <View style={styles.section}>
@@ -323,7 +326,7 @@ export default function CheckoutScreen() {
                   style={[styles.paymentCard, paymentMethod === 'razorpay' && styles.paymentCardActive]}
                   onPress={() => setPaymentMethod('razorpay')}
                 >
-                  <CreditCard size={20} color={paymentMethod === 'razorpay' ? '#dc8d3c' : '#9CA3AF'} />
+                  <CreditCard size={20} color={paymentMethod === 'razorpay' ? '#f8688a' : '#9CA3AF'} />
                   <Text style={[styles.paymentText, paymentMethod === 'razorpay' && styles.paymentTextActive]}>Razorpay</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
@@ -350,7 +353,7 @@ export default function CheckoutScreen() {
                 </View>
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Shipping</Text>
-                  <Text style={[styles.summaryValue, { color: '#dc8d3c' }]}>FREE</Text>
+                  <Text style={[styles.summaryValue, { color: '#f8688a' }]}>FREE</Text>
                 </View>
                 <View style={styles.divider} />
                 <View style={styles.totalRow}>
@@ -401,7 +404,6 @@ export default function CheckoutScreen() {
           </View>
         )}
 
-        {Platform.OS === 'web' && <SiteFooter />}
         <View style={{ height: 40 }} />
       </ScrollView>
 
@@ -467,7 +469,7 @@ export default function CheckoutScreen() {
   );
 
   if (Platform.OS === 'web') {
-    return <WebLayout>{content}</WebLayout>;
+    return <WebLayout hideHeader={isSmall}>{content}</WebLayout>;
   }
 
   return content;
@@ -491,7 +493,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#64748b',
     textTransform: 'uppercase',
     letterSpacing: 1.2,
@@ -512,7 +514,7 @@ const styles = StyleSheet.create({
   },
   webTitle: {
     fontSize: 32,
-    fontWeight: '900',
+    fontWeight: '600',
     color: '#2b2f4b',
     marginBottom: 8,
   },
@@ -523,6 +525,9 @@ const styles = StyleSheet.create({
   webLayoutRow: {
     flexDirection: 'row',
     gap: 24,
+  },
+  webLayoutRowCompact: {
+    flexDirection: 'column',
   },
   webLayoutMain: {
     flex: 2,
@@ -566,12 +571,12 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: '#dc8d3c',
+    borderColor: '#f8688a',
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxChecked: {
-    backgroundColor: '#dc8d3c',
+    backgroundColor: '#f8688a',
   },
   checkboxLabel: {
     fontSize: 13,
@@ -585,7 +590,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   termsLink: {
-    color: '#dc8d3c',
+    color: '#f8688a',
     textDecorationLine: 'underline',
   },
   mobileTermsContainer: {
@@ -610,8 +615,8 @@ const styles = StyleSheet.create({
   },
   smallTermsLink: {
     fontSize: 11,
-    color: '#dc8d3c',
-    fontWeight: '700',
+    color: '#f8688a',
+    fontWeight: '600',
     textDecorationLine: 'underline',
   },
   modalOverlay: {
@@ -638,12 +643,12 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#2b2f4b',
   },
   closeBtnText: {
-    color: '#dc8d3c',
-    fontWeight: '700',
+    color: '#f8688a',
+    fontWeight: '600',
     fontSize: 14,
   },
   stateItem: {
@@ -658,8 +663,8 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   stateItemTextActive: {
-    color: '#dc8d3c',
-    fontWeight: '700',
+    color: '#f8688a',
+    fontWeight: '600',
   },
   paymentOptions: {
     flexDirection: 'row',
@@ -676,8 +681,8 @@ const styles = StyleSheet.create({
     borderColor: '#F1F5F9',
   },
   paymentCardActive: {
-    borderColor: '#dc8d3c',
-    backgroundColor: 'rgba(220, 141, 60, 0.05)',
+    borderColor: '#f8688a',
+    backgroundColor: 'rgba(248, 104, 138, 0.05)',
   },
   paymentText: {
     fontSize: 12,
@@ -685,7 +690,7 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
   },
   paymentTextActive: {
-    color: '#dc8d3c',
+    color: '#f8688a',
   },
   upiIcon: {
     fontSize: 18,
@@ -693,7 +698,7 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
   },
   upiIconActive: {
-    color: '#dc8d3c',
+    color: '#f8688a',
   },
   summaryCard: {
     backgroundColor: '#2b2f4b',
@@ -712,7 +717,7 @@ const styles = StyleSheet.create({
   summaryValue: {
     color: '#FFFFFF',
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   divider: {
     height: 1,
@@ -727,12 +732,12 @@ const styles = StyleSheet.create({
   totalLabel: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '600',
   },
   totalValue: {
-    color: '#dc8d3c',
+    color: '#f8688a',
     fontSize: 20,
-    fontWeight: '900',
+    fontWeight: '600',
   },
   trustRow: {
     flexDirection: 'row',
@@ -758,12 +763,12 @@ const styles = StyleSheet.create({
     paddingBottom: Platform.OS === 'ios' ? 24 : 12,
   },
   placeOrderBtn: {
-    backgroundColor: '#dc8d3c',
+    backgroundColor: '#f8688a',
     height: 52,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#dc8d3c',
+    shadowColor: '#f8688a',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -772,6 +777,6 @@ const styles = StyleSheet.create({
   placeOrderText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '600',
   },
 });

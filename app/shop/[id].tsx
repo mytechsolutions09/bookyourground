@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, Share, ActivityIndicator, Animated, Easing } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, Share, ActivityIndicator, Animated, Easing, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { 
   ChevronLeft, 
@@ -21,6 +21,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUI } from '@/contexts/UIContext';
 
 export default function ProductDetailScreen() {
+  const { width: windowWidth } = useWindowDimensions();
+  const isCompact = windowWidth < 1024;
+  const isSmall = windowWidth < 768;
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { user } = useAuth();
@@ -205,8 +208,8 @@ export default function ProductDetailScreen() {
   if (!product) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' }}>
-        <Text>Product not found</Text>
-        <TouchableOpacity onPress={() => router.back()}><Text style={{ color: '#2b2f4b', marginTop: 12 }}>Go Back</Text></TouchableOpacity>
+        <Text style={{ color: '#2b2f4b' }}>Product not found</Text>
+        <TouchableOpacity onPress={() => router.back()}><Text style={{ color: '#f8688a', marginTop: 12 }}>Go Back</Text></TouchableOpacity>
       </View>
     );
   }
@@ -242,8 +245,8 @@ export default function ProductDetailScreen() {
                 <Star 
                   key={i} 
                   size={16} 
-                  color={i < Math.floor(product.rating || 0) ? "#dc8d3c" : "#D1D5DB"} 
-                  fill={i < Math.floor(product.rating || 0) ? "#dc8d3c" : "none"} 
+                  color={i < Math.floor(product.rating || 0) ? "#f8688a" : "#D1D5DB"} 
+                  fill={i < Math.floor(product.rating || 0) ? "#f8688a" : "none"} 
                 />
               ))}
               <Text style={styles.reviewsText}>{Number(product.rating || 0).toFixed(1)} ({product.review_count || 0} reviews)</Text>
@@ -286,7 +289,7 @@ export default function ProductDetailScreen() {
               <View style={styles.featureList}>
                 {product.features.map((feature: string, index: number) => (
                   <View key={index} style={styles.featureItem}>
-                    <CheckCircle2 size={18} color="#dc8d3c" />
+                    <CheckCircle2 size={18} color="#f8688a" />
                     <Text style={styles.featureText}>{feature}</Text>
                   </View>
                 ))}
@@ -330,8 +333,8 @@ export default function ProductDetailScreen() {
           <TouchableOpacity style={styles.actionCircle} onPress={toggleFavorite}>
             <Heart 
               size={20} 
-              color={isFavorited ? "#EF4444" : "#2b2f4b"} 
-              fill={isFavorited ? "#EF4444" : "none"} 
+              color={isFavorited ? "#f8688a" : "#2b2f4b"} 
+              fill={isFavorited ? "#f8688a" : "none"} 
             />
           </TouchableOpacity>
         </View>
@@ -362,12 +365,12 @@ export default function ProductDetailScreen() {
     </View>
   );
 
-  if (Platform.OS === 'web') {
+  if (Platform.OS === 'web' && !isSmall) {
     return (
       <WebLayout>
         <Stack.Screen options={{ title: product.name }} />
         <View style={styles.webContainer}>
-          <View style={styles.webGrid}>
+          <View style={[styles.webGrid, isCompact && styles.webGridCompact]}>
             {/* Left: Image */}
             <View style={styles.webImageCol}>
               <View style={styles.webMainImageWrapper}>
@@ -401,8 +404,8 @@ export default function ProductDetailScreen() {
                     <Star 
                       key={i} 
                       size={20} 
-                      color={i < Math.floor(Number(product.rating || 0)) ? "#dc8d3c" : "#E5E7EB"} 
-                      fill={i < Math.floor(Number(product.rating || 0)) ? "#dc8d3c" : "none"} 
+                      color={i < Math.floor(Number(product.rating || 0)) ? "#f8688a" : "#E5E7EB"} 
+                      fill={i < Math.floor(Number(product.rating || 0)) ? "#f8688a" : "none"} 
                     />
                   ))}
                 </View>
@@ -434,7 +437,7 @@ export default function ProductDetailScreen() {
                   <Text style={styles.webAddToCartText}>Add to Cart</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.webWishlistBtn} onPress={toggleFavorite}>
-                  <Heart size={20} color={isFavorited ? "#EF4444" : "#2b2f4b"} fill={isFavorited ? "#EF4444" : "none"} />
+                  <Heart size={20} color={isFavorited ? "#f8688a" : "#2b2f4b"} fill={isFavorited ? "#f8688a" : "none"} />
                 </TouchableOpacity>
               </View>
 
@@ -476,8 +479,20 @@ export default function ProductDetailScreen() {
     );
   }
 
+  if (Platform.OS === 'web') {
+    return (
+      <WebLayout isPublicNoSidebar hideHeader={isSmall}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={{ flex: 1, backgroundColor: '#FFFFFF', position: 'relative' }}>
+          {content}
+          {bottomActions}
+        </View>
+      </WebLayout>
+    );
+  }
+
   return (
-    <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+    <View style={{ flex: 1, backgroundColor: '#1a1f2e' }}>
       <Stack.Screen options={{ headerShown: false }} />
       {content}
       {bottomActions}
@@ -559,7 +574,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   heroTagText: {
-    color: '#dc8d3c',
+    color: '#f8688a',
     fontWeight: '800',
     fontSize: 12,
     fontFamily: 'Inter',
@@ -577,7 +592,7 @@ const styles = StyleSheet.create({
   },
   categoryText: {
     fontSize: 12,
-    color: '#dc8d3c',
+    color: '#f8688a',
     fontWeight: '700',
     letterSpacing: 1.5,
     textTransform: 'uppercase',
@@ -586,7 +601,7 @@ const styles = StyleSheet.create({
   },
   productName: {
     fontSize: 26,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#2b2f4b',
     marginBottom: 12,
     lineHeight: 32,
@@ -612,7 +627,7 @@ const styles = StyleSheet.create({
   },
   currentPrice: {
     fontSize: 28,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#2b2f4b',
     fontFamily: 'Inter',
   },
@@ -629,7 +644,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   discountText: {
-    color: '#dc8d3c',
+    color: '#f8688a',
     fontSize: 12,
     fontWeight: '700',
     fontFamily: 'Inter',
@@ -658,7 +673,7 @@ const styles = StyleSheet.create({
   },
   trustText: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#64748B',
     fontFamily: 'Inter',
     textTransform: 'uppercase',
@@ -670,7 +685,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#0F172A',
     marginBottom: 16,
     fontFamily: 'Inter',
@@ -714,14 +729,14 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     color: '#6B7280',
-    fontWeight: '600',
+    fontWeight: '500',
     fontFamily: 'Inter',
   },
   specValue: {
     flex: 1.5,
     fontSize: 14,
     color: '#2b2f4b',
-    fontWeight: '600',
+    fontWeight: '500',
     fontFamily: 'Inter',
   },
   footerGap: {
@@ -763,7 +778,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#dc8d3c',
+    backgroundColor: '#f8688a',
     borderWidth: 1.5,
     borderColor: '#F3F4F6',
   },
@@ -785,7 +800,7 @@ const styles = StyleSheet.create({
     flex: 1.2,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#dc8d3c',
+    backgroundColor: '#f8688a',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -798,14 +813,19 @@ const styles = StyleSheet.create({
 
   // Web Styles
   webContainer: {
-    maxWidth: 1200,
+    maxWidth: 1400,
     alignSelf: 'center',
     width: '100%',
     padding: 40,
+    backgroundColor: '#FFFFFF',
   },
   webGrid: {
     flexDirection: 'row',
     gap: 60,
+  },
+  webGridCompact: {
+    flexDirection: 'column',
+    gap: 40,
   },
   webImageCol: {
     flex: 1,
@@ -848,7 +868,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   webThumbActive: {
-    borderColor: '#2b2f4b',
+    borderColor: '#f8688a',
   },
   webThumbImage: {
     width: '100%',
@@ -859,7 +879,7 @@ const styles = StyleSheet.create({
     flex: 1.2,
   },
   webCategory: {
-    color: '#dc8d3c',
+    color: '#f8688a',
     fontSize: 14,
     fontWeight: '800',
     letterSpacing: 2,
@@ -868,7 +888,7 @@ const styles = StyleSheet.create({
   },
   webProductName: {
     fontSize: 48,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#2b2f4b',
     lineHeight: 56,
     marginBottom: 20,
@@ -896,7 +916,7 @@ const styles = StyleSheet.create({
   },
   webCurrentPrice: {
     fontSize: 36,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#2b2f4b',
   },
   webOriginalPrice: {
@@ -905,13 +925,13 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
   },
   webDiscountBadge: {
-    backgroundColor: 'rgba(220, 141, 60, 0.1)',
+    backgroundColor: 'rgba(248, 104, 138, 0.1)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 8,
   },
   webDiscountText: {
-    color: '#dc8d3c',
+    color: '#f8688a',
     fontSize: 14,
     fontWeight: '700',
   },
@@ -942,14 +962,15 @@ const styles = StyleSheet.create({
   },
   qtyText: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '500',
     width: 40,
     textAlign: 'center',
+    color: '#2b2f4b',
   },
   webAddToCartBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#dc8d3c',
+    backgroundColor: '#f8688a',
     paddingHorizontal: 32,
     height: 56,
     borderRadius: 12,
@@ -966,6 +987,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -985,7 +1007,7 @@ const styles = StyleSheet.create({
   },
   webTrustTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#2b2f4b',
     marginTop: 12,
     marginBottom: 4,
@@ -999,7 +1021,7 @@ const styles = StyleSheet.create({
   },
   webSectionTitle: {
     fontSize: 24,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#2b2f4b',
     marginBottom: 24,
   },
@@ -1008,6 +1030,7 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
     borderRadius: 16,
     overflow: 'hidden',
+    backgroundColor: '#FFFFFF',
   },
   webSpecRow: {
     flexDirection: 'row',
@@ -1019,12 +1042,12 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: '#6B7280',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   webSpecValue: {
     flex: 2,
     fontSize: 16,
     color: '#2b2f4b',
-    fontWeight: '700',
+    fontWeight: '600',
   },
 });

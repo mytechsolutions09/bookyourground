@@ -18,12 +18,6 @@ export default function BookMyGroundPage() {
   const [favorites, setFavorites] = useState<GroundWithImages[]>([]);
   const [loadingFavs, setLoadingFavs] = useState(false);
 
-  // On small web screens, always render booking under the Grounds tab (with bottom bar).
-  useEffect(() => {
-    if (Platform.OS === 'web' && width < 900) {
-      router.replace('/(tabs)/grounds' as any);
-    }
-  }, [width]);
 
   useEffect(() => {
     if (activeTab === 'favorite' && user?.id) {
@@ -68,9 +62,6 @@ export default function BookMyGroundPage() {
     }
   };
 
-  if (Platform.OS === 'web' && width < 900) {
-    return null;
-  }
 
   const initialProps = {
     initialGroundId: groundId as string,

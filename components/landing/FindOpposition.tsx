@@ -8,7 +8,7 @@ export default function FindOpposition() {
   const isMobile = width < 768;
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, isMobile && { paddingVertical: 40 }]}>
       <View style={styles.container}>
         <View style={[styles.content, isMobile && styles.contentMobile]}>
           <View style={styles.textContainer}>
@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
   root: {
     width: '100%',
     backgroundColor: '#FFFFFF',
-    paddingVertical: 80,
+    paddingVertical: Platform.OS === 'web' ? 80 : 40,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Redirect, Tabs, Stack, usePathname, useSegments } from 'expo-router';
+import { Redirect, Tabs, Stack, usePathname, useSegments, useRouter } from 'expo-router';
 import {
   Hop as Home,
   Calendar,
@@ -25,6 +25,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const AUTH_REQUIRED_TAB = new Set(['dashboard', 'bookings', 'profile']);
 
 export default function TabLayout() {
+  const router = useRouter();
   const { width } = useWindowDimensions();
   const { user, loading } = useAuth();
   const segments = useSegments();
@@ -81,7 +82,7 @@ export default function TabLayout() {
     const { isTabBarVisible } = useUI();
     if (hideTabBarOnBigScreens || !isTabBarVisible) return null;
 
-    const visibleTabNames = ['home_tab', 'grounds', 'find-an-opponent', 'cricket', 'shop'];
+    const visibleTabNames = ['home_tab', 'grounds', 'find-an-opponent', 'shop', 'cricket'];
     
     const visibleRoutes = state.routes.filter((route: any) => {
       const { options } = descriptors[route.key];
@@ -102,7 +103,11 @@ export default function TabLayout() {
               canPreventDefault: true,
             });
             if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name);
+              if (route.name === 'grounds') {
+                router.push('/book-my-ground');
+              } else {
+                navigation.navigate(route.name);
+              }
             }
           };
 
@@ -114,12 +119,12 @@ export default function TabLayout() {
               onPress={onPress}
               style={styles.tabItem}
             >
-              {Icon && Icon({ color: isFocused ? '#00ea6b' : '#9ca3af', size: 22 })}
+              {Icon && Icon({ color: isFocused ? (route.name === 'shop' ? '#f8688a' : '#00ea6b') : '#9ca3af', size: 22 })}
               <RNText 
                 numberOfLines={1} 
                 style={[
                   styles.tabLabel, 
-                  { color: isFocused ? '#00ea6b' : '#9ca3af' }
+                  { color: isFocused ? (route.name === 'shop' ? '#f8688a' : '#00ea6b') : '#9ca3af' }
                 ]}
               >
                 {options.title}
@@ -190,10 +195,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="cricket"
+        name="find-an-opponent"
         options={{
-          title: 'Cricket',
-          tabBarIcon: ({ color, size }) => <Trophy size={size} color={color} />,
+          title: 'Opposition',
+          tabBarIcon: ({ color, size }) => <Swords size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -204,10 +209,10 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="find-an-opponent"
+        name="cricket"
         options={{
-          title: 'Opposition',
-          tabBarIcon: ({ color, size }) => <Swords size={size} color={color} />,
+          title: 'Cricket',
+          tabBarIcon: ({ color, size }) => <Trophy size={size} color={color} />,
         }}
       />
 

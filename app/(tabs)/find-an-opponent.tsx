@@ -244,7 +244,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
     <View style={[styles.container, isWeb && !IS_DARK && styles.webContainerRoot]}>
       {isWeb && !IS_DARK ? (
         <View style={styles.webCard}>
-          <Animated.FlatList
+          <FlatList
             showsVerticalScrollIndicator={false}
             ListHeaderComponent={
               <>
@@ -340,7 +340,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
                 </View>
               </>
             }
-            onScroll={verticalScrollHandler}
+            onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
             scrollEventThrottle={16}
             data={filteredMatches}
             renderItem={({ item }) => (
@@ -383,8 +383,8 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
           {loading ? (
             <MatchmakingSkeleton isWeb={false} IS_DARK={true} />
           ) : (
-            <Animated.FlatList
-              onScroll={externalScrollHandler || verticalScrollHandler}
+            <FlatList
+              onScroll={Platform.OS === 'web' ? undefined : (externalScrollHandler || verticalScrollHandler)}
               scrollEventThrottle={16}
               data={filteredMatches}
               renderItem={({ item }) => (
@@ -424,8 +424,36 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
     </View>
   );
 
-  if (Platform.OS === 'web' && !isSmall) {
-    return <WebLayout>{content}</WebLayout>;
+  if (Platform.OS === 'web') {
+    return (
+      <WebLayout hideHeader={isSmall} isPublicNoSidebar={isSmall}>
+        {isSmall && (
+          <View style={[styles.headerContainerFixed, { paddingTop: insets.top }]}>
+            <MobileAppNavbar 
+              title="Find an Opponent" 
+              titleColor="#0F172A"
+              lightBg
+            />
+            <View style={styles.tabContainer}>
+              <TouchableOpacity 
+                style={styles.tab}
+                onPress={() => router.push('/book-my-ground' as any)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.tabText}>Book a Ground</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.tab, styles.activeTab]}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.activeTabText}>Find an Opponent</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+        {content}
+      </WebLayout>
+    );
   }
 
 
@@ -437,8 +465,8 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
           {loading ? (
             <MatchmakingSkeleton isWeb={false} IS_DARK={true} />
           ) : (
-            <Animated.FlatList
-              onScroll={externalScrollHandler || verticalScrollHandler}
+            <FlatList
+              onScroll={Platform.OS === 'web' ? undefined : (externalScrollHandler || verticalScrollHandler)}
               scrollEventThrottle={16}
               data={filteredMatches}
               showsVerticalScrollIndicator={false}
@@ -602,8 +630,8 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
       </Animated.View>
 
       <View style={styles.nativeBody}>
-        <Animated.FlatList
-          onScroll={verticalScrollHandler}
+        <FlatList
+          onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
           scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}
           data={filteredMatches}
@@ -692,6 +720,16 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
 }
 
 const styles = StyleSheet.create({
+  headerContainerFixed: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    backgroundColor: '#F9FAFB',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',

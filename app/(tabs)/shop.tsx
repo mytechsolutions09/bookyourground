@@ -70,7 +70,7 @@ const Skeleton = ({ width, height, style }: any) => {
   return (
     <Animated.View 
       style={[
-        { width, height, backgroundColor: '#E2E8F0', borderRadius: 12 }, 
+        { width, height, backgroundColor: '#2d3450', borderRadius: 12 }, 
         animatedStyle, 
         style
       ]} 
@@ -83,8 +83,9 @@ export default function ShopScreen() {
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const numColumns = useMemo(() => {
-    if (width > 1000) return 4;
-    if (width > 600) return 3;
+    if (width > 1600) return 5;
+    if (width > 1200) return 4;
+    if (width > 800) return 3;
     return 2;
   }, [width]);
 
@@ -342,7 +343,7 @@ export default function ShopScreen() {
           <RNText style={styles.productName} numberOfLines={1}>{product.name}</RNText>
           
           <View style={styles.ratingRow}>
-            <Star size={14} color="#dc8d3c" fill="#dc8d3c" />
+            <Star size={14} color="#f8688a" fill="#f8688a" />
             <RNText style={styles.ratingText}>{Number(product.rating || 4.5).toFixed(1)}</RNText>
             <RNText style={styles.reviewCount}>({product.review_count || 12})</RNText>
           </View>
@@ -358,7 +359,7 @@ export default function ShopScreen() {
               style={styles.addToCartBtn}
               onPress={() => addToCart(product.id)}
             >
-              <ShoppingCart size={18} color="#2b2f4b" strokeWidth={2.5} />
+              <ShoppingCart size={18} color="#FFFFFF" strokeWidth={2.5} />
             </TouchableOpacity>
           </View>
         </View>
@@ -366,10 +367,13 @@ export default function ShopScreen() {
     );
   };
 
-  const content = (onScroll?: any) => (
-    <Animated.ScrollView 
-      onScroll={onScroll}
-      scrollEventThrottle={16}
+  const content = (onScroll?: any) => {
+    const ScrollComponent = Platform.OS === 'web' ? ScrollView : Animated.ScrollView;
+    return (
+      <ScrollComponent 
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+      showsVerticalScrollIndicator={false}
       style={styles.container} 
       contentContainerStyle={[styles.scrollContent]}
     >
@@ -384,15 +388,15 @@ export default function ShopScreen() {
               style={styles.heroImageBg} 
             />
           ) : (
-            <View style={[styles.heroImageBg, { backgroundColor: '#2b2f4b' }]} />
+            <View style={[styles.heroImageBg, { backgroundColor: '#f8688a' }]} />
           )}
           <LinearGradient
-            colors={['transparent', 'rgba(43, 47, 75, 0.8)', '#2b2f4b']}
+            colors={['transparent', 'rgba(198, 45, 90, 0.7)', '#1a1f2e']}
             style={styles.heroOverlay}
           />
           <View style={[styles.heroContent, { paddingTop: insets.top + 60 }]}>
             <View style={styles.trendingBadge}>
-              <TrendingUp size={14} color="#dc8d3c" />
+              <TrendingUp size={14} color="#f8688a" />
               <RNText style={styles.trendingText}>NEW ARRIVAL</RNText>
             </View>
             <RNText style={styles.heroTitle}>{featuredProduct?.name || 'Pro Cricket Gear'}</RNText>
@@ -405,7 +409,7 @@ export default function ShopScreen() {
             >
               <RNText style={styles.heroBtnText}>Explore Collection</RNText>
               <View style={styles.heroBtnIcon}>
-                <ArrowRight size={18} color="#2b2f4b" />
+                <ArrowRight size={18} color="#FFFFFF" />
               </View>
             </TouchableOpacity>
           </View>
@@ -413,7 +417,22 @@ export default function ShopScreen() {
       )}
 
       {/* Main Content Area */}
-      <View style={styles.mainContent}>
+      <View style={Platform.OS === 'web' && width > 1200 ? { width: '100%', alignItems: 'center', backgroundColor: '#F8FAFC' } : null}>
+        <View style={[
+          styles.mainContent,
+          Platform.OS === 'web' && width > 1200 && { 
+            maxWidth: 1400, 
+            width: '100%',
+            borderLeftWidth: 1,
+            borderRightWidth: 1,
+            borderColor: '#F1F5F9',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.02,
+            shadowRadius: 20,
+            backgroundColor: '#FFFFFF',
+          }
+        ]}>
         {/* Search Bar Floating */}
         <View style={styles.searchSection}>
           <View style={styles.searchBar}>
@@ -433,7 +452,7 @@ export default function ShopScreen() {
                 setIsFilterVisible(true);
               }}
             >
-              <Filter size={20} color="#2b2f4b" />
+              <Filter size={20} color="#FFFFFF" />
               {(sortBy !== 'newest' || priceRange) && (
                 <View style={styles.filterBadge} />
               )}
@@ -484,7 +503,7 @@ export default function ShopScreen() {
             </RNText>
             <TouchableOpacity style={styles.viewAllRow}>
               <RNText style={styles.viewAllText}>View All</RNText>
-              <ChevronRight size={16} color="#dc8d3c" />
+              <ChevronRight size={16} color="#f8688a" />
             </TouchableOpacity>
           </View>
           
@@ -507,11 +526,31 @@ export default function ShopScreen() {
           )}
         </View>
       </View>
-    </Animated.ScrollView>
-  );
+    </View>
+      </ScrollComponent>
+    );
+  };
 
-  if (Platform.OS === 'web' && !isSmall) {
-    return <WebLayout>{content()}</WebLayout>;
+  if (Platform.OS === 'web') {
+    return (
+      <WebLayout hideHeader={isSmall} isPublicNoSidebar={isSmall}>
+        <View style={styles.screen}>
+          {isSmall && (
+            <View style={[styles.floatingHeader, { paddingTop: insets.top }]}>
+              <TouchableOpacity style={styles.cartIcon} onPress={() => router.push('/shop/cart')}>
+                <ShoppingCart size={24} color="#FFFFFF" strokeWidth={2.5} />
+                {cartCount > 0 && (
+                  <View style={styles.cartBadge}>
+                    <RNText style={styles.cartBadgeText}>{cartCount}</RNText>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
+          {content(Platform.OS === 'web' ? undefined : verticalScrollHandler)}
+        </View>
+      </WebLayout>
+    );
   }
 
   return (
@@ -521,13 +560,13 @@ export default function ShopScreen() {
           <ShoppingCart size={24} color="#FFFFFF" strokeWidth={2.5} />
           {cartCount > 0 && (
             <View style={styles.cartBadge}>
-               <RNText style={styles.cartBadgeText}>{cartCount}</RNText>
+              <RNText style={styles.cartBadgeText}>{cartCount}</RNText>
             </View>
           )}
         </TouchableOpacity>
       </View>
       
-      {content(verticalScrollHandler)}
+      {content(Platform.OS === 'web' ? undefined : verticalScrollHandler)}
       
       {/* Filter Modal */}
       <Modal
@@ -546,7 +585,7 @@ export default function ShopScreen() {
             <View style={styles.modalHeader}>
               <RNText style={styles.modalTitle}>Filter & Sort</RNText>
               <TouchableOpacity onPress={() => setIsFilterVisible(false)} style={styles.modalCloseBtn}>
-                <X size={24} color="#2b2f4b" />
+                <X size={24} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
 
@@ -569,7 +608,7 @@ export default function ShopScreen() {
                       <RNText style={[styles.modalOptionText, tempSortBy === option.id && styles.modalOptionTextActive]}>
                         {option.label}
                       </RNText>
-                      {tempSortBy === option.id && <Check size={16} color="#dc8d3c" />}
+                      {tempSortBy === option.id && <Check size={16} color="#FFFFFF" />}
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -600,7 +639,7 @@ export default function ShopScreen() {
                       ]}>
                         {option.label}
                       </RNText>
-                      {JSON.stringify(tempPriceRange) === JSON.stringify(option.range) && <Check size={16} color="#dc8d3c" />}
+                      {JSON.stringify(tempPriceRange) === JSON.stringify(option.range) && <Check size={16} color="#f8688a" />}
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -625,10 +664,11 @@ export default function ShopScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#1a1f2e',
   },
-  container: {
+  scroll: {
     flex: 1,
+    backgroundColor: '#1a1f2e',
   },
   scrollContent: {
     paddingBottom: 120,
@@ -658,7 +698,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 5,
     right: 5,
-    backgroundColor: '#dc8d3c',
+    backgroundColor: '#f8688a',
     width: 16,
     height: 16,
     borderRadius: 8,
@@ -697,7 +737,7 @@ const styles = StyleSheet.create({
   trendingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(220, 141, 60, 0.15)',
+    backgroundColor: 'rgba(248, 104, 138, 0.2)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -706,7 +746,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   trendingText: {
-    color: '#dc8d3c',
+    color: '#f8688a',
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 1,
@@ -730,7 +770,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   heroBtn: {
-    backgroundColor: '#2b2f4b',
+    backgroundColor: '#1a1f2e',
     paddingLeft: 24,
     paddingRight: 6,
     paddingVertical: 6,
@@ -749,7 +789,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   heroBtnIcon: {
-    backgroundColor: '#dc8d3c',
+    backgroundColor: '#f8688a',
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -758,7 +798,7 @@ const styles = StyleSheet.create({
   },
   mainContent: {
     marginTop: -30,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#1a1f2e',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     paddingTop: 32,
@@ -770,25 +810,25 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#232838',
     borderRadius: 20,
     paddingHorizontal: 16,
     height: 56,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: 'rgba(255,255,255,0.06)',
     gap: 12,
   },
   searchInput: {
     flex: 1,
     fontSize: 15,
-    color: '#0F172A',
+    color: '#FFFFFF',
     fontWeight: '600',
     fontFamily: 'Inter',
   },
   filterBtn: {
     width: 40,
     height: 40,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#2d3450',
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -808,7 +848,7 @@ const styles = StyleSheet.create({
   categoryPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#232838',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 25,
@@ -817,13 +857,13 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   categoryPillActive: {
-    backgroundColor: '#2b2f4b',
-    borderColor: '#2b2f4b',
+    backgroundColor: '#f8688a',
+    borderColor: '#f8688a',
   },
   categoryPillText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#64748B',
+    color: 'rgba(255,255,255,0.5)',
     fontFamily: 'Inter',
   },
   categoryPillTextActive: {
@@ -839,9 +879,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    backgroundColor: '#2d3450',
   },
   promoTitle: {
-    color: '#2b2f4b',
+    color: '#f8688a',
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 1,
@@ -850,13 +891,13 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   promoSubtitle: {
-    color: '#2b2f4b',
+    color: '#FFFFFF',
     fontSize: 20,
     fontWeight: '600',
     fontFamily: 'Inter',
   },
   promoBadge: {
-    backgroundColor: '#2b2f4b',
+    backgroundColor: '#1a1f2e',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
@@ -882,7 +923,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#FFFFFF',
     fontFamily: 'Inter',
     textTransform: 'uppercase',
     letterSpacing: 1,
@@ -893,7 +934,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   viewAllText: {
-    color: '#dc8d3c',
+    color: '#f8688a',
     fontWeight: '600',
     fontSize: 14,
     fontFamily: 'Inter',
@@ -904,18 +945,18 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   productCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#232838',
     borderRadius: 32,
     marginBottom: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 3,
   },
   imageWrapper: {
     height: 180,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#2d3450',
     borderRadius: 32,
     overflow: 'hidden',
     position: 'relative',
@@ -929,13 +970,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 12,
     left: 12,
-    backgroundColor: '#2b2f4b',
+    backgroundColor: '#1a1f2e',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
   },
   tagText: {
-    color: '#dc8d3c',
+    color: '#f8688a',
     fontSize: 9,
     fontWeight: '700',
     fontFamily: 'Inter',
@@ -957,7 +998,7 @@ const styles = StyleSheet.create({
   },
   productCategory: {
     fontSize: 10,
-    color: '#94A3B8',
+    color: 'rgba(255,255,255,0.35)',
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -967,7 +1008,7 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#0F172A',
+    color: '#FFFFFF',
     marginBottom: 6,
     fontFamily: 'Inter',
   },
@@ -979,7 +1020,7 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     fontSize: 12,
-    color: '#dc8d3c',
+    color: '#f8688a',
     fontWeight: '600',
     fontFamily: 'Inter',
   },
@@ -997,7 +1038,7 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#2b2f4b',
+    color: '#FFFFFF',
     fontFamily: 'Inter',
   },
   oldPrice: {
@@ -1008,15 +1049,15 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   addToCartBtn: {
-    backgroundColor: '#dc8d3c',
+    backgroundColor: '#f8688a',
     width: 40,
     height: 40,
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#dc8d3c',
+    shadowColor: '#f8688a',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
@@ -1027,7 +1068,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   emptyText: {
-    color: '#64748B',
+    color: 'rgba(255,255,255,0.5)',
     fontSize: 16,
     fontWeight: '600',
     marginTop: 16,
@@ -1035,7 +1076,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   resetText: {
-    color: '#dc8d3c',
+    color: '#f8688a',
     fontWeight: '600',
     fontSize: 14,
     fontFamily: 'Inter',
@@ -1047,9 +1088,9 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#dc8d3c',
+    backgroundColor: '#f8688a',
     borderWidth: 2,
-    borderColor: '#F8FAFC',
+    borderColor: '#232838',
   },
   modalOverlay: {
     flex: 1,
@@ -1057,10 +1098,10 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(43, 47, 75, 0.4)',
+    backgroundColor: 'rgba(26, 31, 46, 0.7)',
   },
   modalContent: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#232838',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     maxHeight: '80%',
@@ -1068,7 +1109,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -10 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.2,
     shadowRadius: 20,
     elevation: 20,
   },
@@ -1081,14 +1122,14 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#2b2f4b',
+    color: '#FFFFFF',
     fontFamily: 'Inter',
   },
   modalCloseBtn: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#2d3450',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1113,18 +1154,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 14,
     paddingHorizontal: 20,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#2d3450',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: 'rgba(255,255,255,0.06)',
   },
   modalOptionActive: {
-    backgroundColor: '#2b2f4b',
-    borderColor: '#2b2f4b',
+    backgroundColor: '#f8688a',
+    borderColor: '#f8688a',
   },
   modalOptionText: {
     fontSize: 15,
-    color: '#2b2f4b',
+    color: 'rgba(255,255,255,0.7)',
     fontWeight: '600',
     fontFamily: 'Inter',
   },
@@ -1142,10 +1183,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#2d3450',
   },
   resetBtnText: {
-    color: '#64748B',
+    color: 'rgba(255,255,255,0.5)',
     fontSize: 16,
     fontWeight: '600',
     fontFamily: 'Inter',
@@ -1156,10 +1197,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#dc8d3c',
+    backgroundColor: '#f8688a',
   },
   applyBtnText: {
-    color: '#2b2f4b',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
     fontFamily: 'Inter',

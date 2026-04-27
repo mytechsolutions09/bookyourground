@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, ActivityIndicator, Alert, useWindowDimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useRouter, Stack } from 'expo-router';
 import { ChevronLeft, Trash2, Plus, Minus, ShoppingBag, ArrowRight } from 'lucide-react-native';
@@ -10,6 +10,8 @@ import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 
 export default function CartScreen() {
+  const { width } = useWindowDimensions();
+  const isSmall = width < 768;
   const router = useRouter();
   const { user } = useAuth();
   const { setTabBarVisible } = useUI();
@@ -94,7 +96,7 @@ export default function CartScreen() {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {loading ? (
-          <ActivityIndicator color="#dc8d3c" style={{ marginTop: 100 }} />
+          <ActivityIndicator color="#f8688a" style={{ marginTop: 100 }} />
         ) : cartItems.length === 0 ? (
           <View style={styles.emptyContainer}>
             <ShoppingBag size={80} color="#D1D5DB" strokeWidth={1} />
@@ -157,7 +159,7 @@ export default function CartScreen() {
               </View>
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Delivery</Text>
-                <Text style={[styles.summaryValue, { color: '#dc8d3c' }]}>FREE</Text>
+                <Text style={[styles.summaryValue, { color: '#f8688a' }]}>FREE</Text>
               </View>
               <View style={styles.divider} />
               <View style={styles.totalRow}>
@@ -182,7 +184,7 @@ export default function CartScreen() {
 
   if (Platform.OS === 'web') {
     return (
-      <WebLayout>
+      <WebLayout hideHeader={isSmall}>
         <Stack.Screen options={{ title: 'Shopping Cart' }} />
         {content}
       </WebLayout>
@@ -220,7 +222,7 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontFamily: 'Inter',
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#2b2f4b',
     marginTop: 20,
     marginBottom: 8,
@@ -241,7 +243,7 @@ const styles = StyleSheet.create({
   },
   shopNowText: {
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontWeight: '500',
     fontSize: 16,
     fontFamily: 'Inter',
   },
@@ -288,8 +290,8 @@ const styles = StyleSheet.create({
   itemPrice: {
     fontFamily: 'Inter',
     fontSize: 14,
-    fontWeight: '600',
-    color: '#dc8d3c',
+    fontWeight: '500',
+    color: '#f8688a',
     marginBottom: 8,
   },
   qtyRow: {
@@ -317,7 +319,7 @@ const styles = StyleSheet.create({
   },
   qtyText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#2b2f4b',
     minWidth: 20,
     textAlign: 'center',
@@ -339,7 +341,7 @@ const styles = StyleSheet.create({
   summaryTitle: {
     fontFamily: 'Inter',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#FFFFFF',
     marginBottom: 20,
     textTransform: 'uppercase',
@@ -357,7 +359,7 @@ const styles = StyleSheet.create({
   summaryValue: {
     color: '#FFFFFF',
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '500',
     fontFamily: 'Inter',
   },
   divider: {
@@ -374,16 +376,16 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   totalValue: {
     fontFamily: 'Inter',
-    color: '#dc8d3c',
+    color: '#f8688a',
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   checkoutBtn: {
-    backgroundColor: '#dc8d3c',
+    backgroundColor: '#f8688a',
     height: 52,
     borderRadius: 12,
     flexDirection: 'row',
@@ -394,7 +396,7 @@ const styles = StyleSheet.create({
   checkoutBtnText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
     fontFamily: 'Inter',
   },
 });

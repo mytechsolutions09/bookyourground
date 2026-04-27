@@ -137,9 +137,6 @@ export default function BookingDetailsScreen() {
         <View style={styles.hero}>
           <Image source={{ uri: primaryImage }} style={styles.heroImage} />
           <View style={styles.heroOverlay} />
-          <Pressable onPress={() => router.back()} style={styles.backBtn}>
-            <ChevronLeft size={20} color="#FFF" />
-          </Pressable>
           <View style={styles.statusPill}>
             <Text style={styles.statusText}>{booking.status.toUpperCase()}</Text>
           </View>
@@ -478,6 +475,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     padding: 24,
     gap: 20,
+    marginTop: 40,
   },
   pageBodyDesktop: {
     flexDirection: 'row',

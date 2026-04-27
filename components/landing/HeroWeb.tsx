@@ -33,7 +33,7 @@ type LocationOption = {
 };
 
 export default function HeroWeb() {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const [locations, setLocations] = useState<LocationOption[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -167,7 +167,7 @@ export default function HeroWeb() {
   return (
     <ImageBackground
       source={require('@/assets/hero.png')}
-      style={[styles.root, { height: isMobile ? 720 : 850 }]}
+      style={[styles.root, { height: isMobile ? height : 850 }]}
       resizeMode="cover"
     >
       <View style={styles.overlay} />
@@ -177,8 +177,8 @@ export default function HeroWeb() {
           <Text style={[
             styles.title,
             { 
-              fontSize: width < 600 ? 32 : (width < 900 ? 40 : 48),
-              lineHeight: width < 600 ? 40 : 52
+              fontSize: width < 600 ? 36 : (width < 900 ? 48 : 64),
+              lineHeight: width < 600 ? 44 : 72
             }
           ]}>
             Elevate Your Game
@@ -186,32 +186,32 @@ export default function HeroWeb() {
           <Text style={[
             styles.subtitle,
             {
-              fontSize: width < 600 ? 14 : 16,
-              lineHeight: width < 600 ? 22 : 26,
-              maxWidth: width < 600 ? '90%' : 600,
+              fontSize: width < 600 ? 15 : 18,
+              lineHeight: width < 600 ? 22 : 28,
+              maxWidth: width < 600 ? '95%' : 700,
             }
           ]}>
             Book premium sports venues in seconds and take your performance to the next level.
           </Text>
 
           <View style={styles.featuresRow}>
-            <View style={styles.featureItem}>
-              <View style={styles.featureIconContainer}>
-                <CalendarCheck2 size={18} color="#043529" strokeWidth={2.5} />
+            <View style={styles.featureChip}>
+              <View style={styles.chipIcon}>
+                <CalendarCheck2 size={16} color="#043529" strokeWidth={2.5} />
               </View>
-              <Text style={styles.featureText}>Easy Booking</Text>
+              <Text style={styles.chipText}>Easy Booking</Text>
             </View>
-            <View style={styles.featureItem}>
-              <View style={styles.featureIconContainer}>
-                <MapPin size={18} color="#043529" strokeWidth={2.5} />
+            <View style={styles.featureChip}>
+              <View style={styles.chipIcon}>
+                <MapPin size={16} color="#043529" strokeWidth={2.5} />
               </View>
-              <Text style={styles.featureText}>Top Grounds</Text>
+              <Text style={styles.chipText}>Top Grounds</Text>
             </View>
-            <View style={styles.featureItem}>
-              <View style={styles.featureIconContainer}>
-                <ShieldCheck size={18} color="#043529" strokeWidth={2.5} />
+            <View style={styles.featureChip}>
+              <View style={styles.chipIcon}>
+                <ShieldCheck size={16} color="#043529" strokeWidth={2.5} />
               </View>
-              <Text style={styles.featureText}>Secure & Reliable</Text>
+              <Text style={styles.chipText}>Secure & Reliable</Text>
             </View>
           </View>
 
@@ -312,25 +312,33 @@ export default function HeroWeb() {
                           selectedDate.getMonth() === viewDate.getMonth() && 
                           selectedDate.getFullYear() === viewDate.getFullYear();
                         
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        const isPast = day ? new Date(viewDate.getFullYear(), viewDate.getMonth(), day) < today : false;
+                        
                         return (
                           <Pressable
                             key={idx}
                             style={[
                               styles.calendarDay,
                               isSelected && styles.calendarDaySelected,
-                              day === null && styles.calendarDayEmpty
+                              (day === null || isPast) && styles.calendarDayEmpty,
+                              isPast && { opacity: 0.3 }
                             ]}
                             onPress={() => {
-                              if (day) {
+                              if (day && !isPast) {
                                 setSelectedDate(new Date(viewDate.getFullYear(), viewDate.getMonth(), day));
                                 setIsDateOpen(false);
-                                // Clear time if date changes
                                 setSelectedTime('');
                               }
                             }}
-                            disabled={!day}
+                            disabled={!day || isPast}
                           >
-                            <Text style={[styles.dayText, isSelected && styles.dayTextSelected]}>
+                            <Text style={[
+                              styles.dayText, 
+                              isSelected && styles.dayTextSelected,
+                              isPast && { color: '#CBD5E1' }
+                            ]}>
                               {day}
                             </Text>
                           </Pressable>
@@ -376,18 +384,36 @@ export default function HeroWeb() {
                   <View style={styles.dropdown}>
                     <ScrollView style={{ maxHeight: 200 }}>
                       {availableTimes.length > 0 ? (
-                        availableTimes.map((time) => (
-                          <Pressable
-                            key={time}
-                            style={styles.dropdownItem}
-                            onPress={() => {
-                              setSelectedTime(time);
-                              setIsTimeOpen(false);
-                            }}
-                          >
-                            <Text style={styles.dropdownItemText}>{time}</Text>
-                          </Pressable>
-                        ))
+                        availableTimes.map((time) => {
+                          const today = new Date();
+                          const isToday = selectedDate?.toDateString() === today.toDateString();
+                          let isPast = false;
+                          
+                          if (isToday) {
+                            const [hours, minutes] = time.split(':').map(Number);
+                            const slotTime = new Date();
+                            slotTime.setHours(hours, minutes, 0, 0);
+                            isPast = slotTime < today;
+                          }
+
+                          return (
+                            <Pressable
+                              key={time}
+                              style={[styles.dropdownItem, isPast && { opacity: 0.5 }]}
+                              onPress={() => {
+                                if (!isPast) {
+                                  setSelectedTime(time);
+                                  setIsTimeOpen(false);
+                                }
+                              }}
+                              disabled={isPast}
+                            >
+                              <Text style={[styles.dropdownItemText, isPast && { color: '#94A3B8' }]}>
+                                {time} {isPast ? '(Passed)' : ''}
+                              </Text>
+                            </Pressable>
+                          );
+                        })
                       ) : (
                         <View style={styles.dropdownEmpty}>
                           <Text style={styles.dropdownEmptyText}>No slots found for this selection</Text>
@@ -419,13 +445,13 @@ export default function HeroWeb() {
 const styles = StyleSheet.create({
   root: {
     width: '100%',
-    justifyContent: 'flex-start',
+    justifyContent: Platform.OS === 'web' ? 'center' : 'flex-start',
     alignItems: 'center',
-    paddingTop: Platform.OS === 'web' ? 80 : 60,
+    paddingTop: Platform.OS === 'web' ? 60 : 80,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
   },
   container: {
     width: '100%',
@@ -438,19 +464,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     textAlign: 'center',
     overflow: 'visible',
+    paddingTop: 0,
   },
   title: {
-    fontSize: 48,
-    fontWeight: '700',
+    fontSize: 64,
+    fontWeight: '800',
     color: '#FFFFFF',
-    marginBottom: 12,
-    letterSpacing: -1,
+    marginBottom: 16,
+    letterSpacing: -1.5,
     fontFamily: 'Inter',
     textAlign: 'center',
-    lineHeight: 52,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 0, height: 4 },
-    textShadowRadius: 10,
+    lineHeight: 72,
   },
   subtitle: {
     fontSize: 16,
@@ -467,41 +491,42 @@ const styles = StyleSheet.create({
   featuresRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 28,
-    marginBottom: 44,
+    gap: 16,
+    marginBottom: 50,
     flexWrap: 'wrap',
     justifyContent: 'center',
   },
-  featureItem: {
+  featureChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    gap: 8,
   },
-  featureIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+  chipIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
   },
-  featureText: {
-    fontSize: 16,
+  chipText: {
+    fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
     fontFamily: 'Inter',
-    letterSpacing: -0.2,
   },
   searchFormContainer: {
     width: '100%',
-    maxWidth: 900,
+    maxWidth: 960,
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 8,
+    borderRadius: 100,
+    padding: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 24 },
     shadowOpacity: 0.12,
@@ -577,11 +602,12 @@ const styles = StyleSheet.create({
   },
   searchButton: {
     backgroundColor: '#01b854',
-    paddingHorizontal: 28,
+    paddingHorizontal: 32,
     paddingVertical: 14,
-    borderRadius: 14,
+    borderRadius: 100,
     marginLeft: 10,
-    minWidth: 180,
+    minWidth: 190,
+    height: 56,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#01b854',

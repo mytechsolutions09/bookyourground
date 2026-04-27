@@ -60,9 +60,10 @@ import { formatCurrency } from '@/utils/helpers';
 interface WebLayoutProps {
   children: React.ReactNode;
   noCard?: boolean;
+  hideHeader?: boolean;
 }
 
-export default function WebLayout({ children, noCard }: WebLayoutProps) {
+export default function WebLayout({ children, noCard, hideHeader }: WebLayoutProps) {
   const { profile, signOut, user } = useAuth();
   const pathname = usePathname();
   const segments = useSegments();
@@ -307,6 +308,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
   // Navbar search: fetch ground suggestions as user types on landing pages.
 
   const isCompact = useMemo(() => width < 900, [width]);
+  const isInTabs = useMemo(() => segments.includes('(tabs)'), [segments]);
   const groundsHref = isCompact ? '/(tabs)/grounds' : '/book-my-ground';
   const cleanPath = (pathname || '').split('?')[0];
   const isLanding = cleanPath === '/' || cleanPath === '';
@@ -496,7 +498,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
         (isLanding || isMarketing) && styles.containerLanding,
       ]}
     >
-      {showHeroHeader && (
+      {!hideHeader && showHeroHeader && (
         <View
           style={[
             styles.heroHeader,
@@ -508,15 +510,15 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
             style={[
               StyleSheet.absoluteFillObject, 
               Platform.OS === 'web' && {
-                backgroundColor: scrolled ? 'rgba(255,255,255,0.8)' : 'transparent',
+                backgroundColor: scrolled ? '#FFFFFF' : 'transparent',
                 backdropFilter: scrolled ? 'blur(25px)' : 'none',
                 WebkitBackdropFilter: scrolled ? 'blur(25px)' : 'none',
                 transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
                 borderBottomWidth: scrolled ? 1 : 0,
-                borderBottomColor: 'rgba(255,255,255,0.15)',
+                borderBottomColor: 'rgba(0,0,0,0.05)',
                 shadowColor: '#000',
                 shadowOffset: { width: 0, height: 12 },
-                shadowOpacity: scrolled ? 0.15 : 0,
+                shadowOpacity: scrolled ? 0.08 : 0,
                 shadowRadius: 30,
                 zIndex: -1,
               } as any
@@ -539,139 +541,140 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
 
             <View style={styles.headerRight}>
                 <>
-                  {!isCompact && (
-                    <View style={styles.headerSearchContainer}>
-                      {!isSearchExpanded ? (
-                        <TouchableOpacity 
-                          onPress={() => {
-                            setIsSearchExpanded(true);
-                            setTimeout(() => searchInputRef.current?.focus(), 50);
-                          }}
-                          style={styles.searchIconButton}
-                        >
-                          <Search size={20} color={scrolled ? "#475569" : "#FFFFFF"} />
-                        </TouchableOpacity>
-                      ) : (
-                        <View style={[
-                          styles.headerSearch,
-                          { width: 300 },
-                          scrolled && { backgroundColor: 'rgba(255,255,255,0.5)', borderColor: 'rgba(0,0,0,0.08)' } as any
-                        ]}>
-                          <Search size={16} color={scrolled ? "#64748B" : "#9CA3AF"} style={styles.headerSearchIcon} />
-                          <TextInput
-                            ref={searchInputRef}
-                            placeholder="Search city or venue..."
-                            placeholderTextColor={scrolled ? "#475569" : "#D1D5DB"}
-                            value={searchQuery}
-                            onChangeText={setSearchQuery}
-                            onFocus={() => setSearchFocused(true)}
-                            onBlur={() => {
-                              setTimeout(() => {
-                                setSearchFocused(false);
-                                if (!searchQuery) setIsSearchExpanded(false);
-                              }, 200);
+                  {!isCompact ? (
+                    <>
+                      <View style={styles.headerSearchContainer}>
+                        {!isSearchExpanded ? (
+                          <TouchableOpacity 
+                            onPress={() => {
+                              setIsSearchExpanded(true);
+                              setTimeout(() => searchInputRef.current?.focus(), 50);
                             }}
-                            onSubmitEditing={() => {
-                              if (searchQuery.trim().length >= 2) {
-                                setSearchFocused(false);
-                                router.push({
-                                  pathname: '/search',
-                                  params: { q: searchQuery.trim() }
-                                } as any);
-                              }
-                            }}
-                            returnKeyType="search"
-                            style={[
-                              styles.headerSearchInput,
-                              scrolled && { color: '#0F172A' } as any,
-                              searchFocused && { borderColor: 'rgba(0,234,107,0.3)' } as any,
-                            ]}
-                          />
+                            style={[styles.searchIconButton, scrolled && styles.searchIconButtonScrolled]}
+                          >
+                            <Search size={18} color={scrolled ? "#475569" : "#FFFFFF"} />
+                          </TouchableOpacity>
+                        ) : (
+                          <View style={[
+                            styles.headerSearch,
+                            { width: 300 },
+                            scrolled && { backgroundColor: 'rgba(255,255,255,0.5)', borderColor: 'rgba(0,0,0,0.08)' } as any
+                          ]}>
+                            <Search size={16} color={scrolled ? "#64748B" : "#9CA3AF"} style={styles.headerSearchIcon} />
+                            <TextInput
+                              ref={searchInputRef}
+                              placeholder="Search city or venue..."
+                              placeholderTextColor={scrolled ? "#475569" : "#D1D5DB"}
+                              value={searchQuery}
+                              onChangeText={setSearchQuery}
+                              onFocus={() => setSearchFocused(true)}
+                              onBlur={() => {
+                                setTimeout(() => {
+                                  setSearchFocused(false);
+                                  if (!searchQuery) setIsSearchExpanded(false);
+                                }, 200);
+                              }}
+                              onSubmitEditing={() => {
+                                if (searchQuery.trim().length >= 2) {
+                                  setSearchFocused(false);
+                                  router.push({
+                                    pathname: '/search',
+                                    params: { q: searchQuery.trim() }
+                                  } as any);
+                                }
+                              }}
+                              returnKeyType="search"
+                              style={[
+                                styles.headerSearchInput,
+                                scrolled && { color: '#0F172A' } as any,
+                                searchFocused && { borderColor: 'rgba(0,234,107,0.3)' } as any,
+                              ]}
+                            />
+                          </View>
+                        )}
+                      </View>
 
-                          {searchFocused && (searchQuery.length >= 2) && (
-                            <View style={styles.searchDropdown}>
-                              {isSearching ? (
-                                <Text style={styles.searchDropdownText}>Searching...</Text>
-                              ) : (searchResults.grounds.length === 0 && searchResults.matches.length === 0) ? (
-                                <Text style={styles.searchDropdownText}>No results found for "{searchQuery}"</Text>
-                              ) : (
-                                <ScrollView style={styles.searchDropdownScroll} keyboardShouldPersistTaps="handled">
-                                  {searchResults.grounds.length > 0 && (
-                                    <View style={styles.searchSection}>
-                                      <Text style={styles.searchSectionTitle}>VENUES</Text>
-                                      {searchResults.grounds.map(g => (
-                                        <TouchableOpacity
-                                          key={g.id}
-                                          style={styles.searchItem}
-                                          onPress={() => handleResultPress('ground', g)}
-                                        >
-                                          <View style={styles.searchItemIcon}>
-                                            <Building2 size={14} color="#01b854" />
-                                          </View>
-                                          <View style={styles.searchItemInfo}>
-                                            <Text style={styles.searchItemName}>{g.name}</Text>
-                                            <Text style={styles.searchItemMeta}>{g.city}, {g.state}</Text>
-                                          </View>
-                                        </TouchableOpacity>
-                                      ))}
-                                    </View>
-                                  )}
-
-                                  {searchResults.matches.length > 0 && (
-                                    <View style={styles.searchSection}>
-                                      <Text style={styles.searchSectionTitle}>AVAILABLE MATCHES</Text>
-                                      {searchResults.matches.map(m => (
-                                        <TouchableOpacity
-                                          key={m.id}
-                                          style={styles.searchItem}
-                                          onPress={() => handleResultPress('match', m)}
-                                        >
-                                          <View style={[styles.searchItemIcon, { backgroundColor: 'rgba(0,234,107,0.1)' }]}>
-                                            <Swords size={14} color="#01b854" />
-                                          </View>
-                                          <View style={styles.searchItemInfo}>
-                                            <Text style={styles.searchItemName}>
-                                              {m.user?.team_name || m.user?.full_name || 'Anonymous Match'}
-                                            </Text>
-                                            <Text style={styles.searchItemMeta}>
-                                              {m.ground?.name} • {m.ground?.city}
-                                            </Text>
-                                          </View>
-                                        </TouchableOpacity>
-                                      ))}
-                                    </View>
-                                  )}
-                                </ScrollView>
+                      {searchFocused && (searchQuery.length >= 2) && (
+                        <View style={styles.searchDropdown}>
+                          {isSearching ? (
+                            <Text style={styles.searchDropdownText}>Searching...</Text>
+                          ) : (searchResults.grounds.length === 0 && searchResults.matches.length === 0) ? (
+                            <Text style={styles.searchDropdownText}>No results found for "{searchQuery}"</Text>
+                          ) : (
+                            <ScrollView style={styles.searchDropdownScroll} keyboardShouldPersistTaps="handled">
+                              {searchResults.grounds.length > 0 && (
+                                <View style={styles.searchSection}>
+                                  <Text style={styles.searchSectionTitle}>VENUES</Text>
+                                  {searchResults.grounds.map(g => (
+                                    <TouchableOpacity
+                                      key={g.id}
+                                      style={styles.searchItem}
+                                      onPress={() => handleResultPress('ground', g)}
+                                    >
+                                      <View style={styles.searchItemIcon}>
+                                        <Building2 size={14} color="#01b854" />
+                                      </View>
+                                      <View style={styles.searchItemInfo}>
+                                        <Text style={styles.searchItemName}>{g.name}</Text>
+                                        <Text style={styles.searchItemMeta}>{g.city}, {g.state}</Text>
+                                      </View>
+                                    </TouchableOpacity>
+                                  ))}
+                                </View>
                               )}
-                            </View>
+
+                              {searchResults.matches.length > 0 && (
+                                <View style={styles.searchSection}>
+                                  <Text style={styles.searchSectionTitle}>AVAILABLE MATCHES</Text>
+                                  {searchResults.matches.map(m => (
+                                    <TouchableOpacity
+                                      key={m.id}
+                                      style={styles.searchItem}
+                                      onPress={() => handleResultPress('match', m)}
+                                    >
+                                      <View style={[styles.searchItemIcon, { backgroundColor: 'rgba(0,234,107,0.1)' }]}>
+                                        <Swords size={14} color="#01b854" />
+                                      </View>
+                                      <View style={styles.searchItemInfo}>
+                                        <Text style={styles.searchItemName}>
+                                          {m.user?.team_name || m.user?.full_name || 'Anonymous Match'}
+                                        </Text>
+                                        <Text style={styles.searchItemMeta}>
+                                          {m.ground?.name} • {m.ground?.city}
+                                        </Text>
+                                      </View>
+                                    </TouchableOpacity>
+                                  ))}
+                                </View>
+                              )}
+                            </ScrollView>
                           )}
                         </View>
                       )}
-                    </View>
-                  )}
-
-                  {!isCompact && (
-                    <>
+                  
                       <Text
-                        style={styles.headerPrimaryButtonText}
+                        style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}
                         onPress={() => router.push('/cricket/player-profile' as any)}
                       >
-                        Cricket
+                        CRICKET
                       </Text>
 
                       <Text
-                        style={styles.headerPrimaryButtonText}
+                        style={[
+                          styles.headerPrimaryButtonText, 
+                          scrolled && styles.headerPrimaryButtonTextScrolled,
+                          { color: '#e6ffb7' }
+                        ]}
                         onPress={() => router.push('/shop' as any)}
                       >
-                        Shop
+                        SHOP
                       </Text>
 
-
                       <Text
-                        style={styles.headerPrimaryButtonText}
+                        style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}
                         onPress={() => router.push(groundsHref as any)}
                       >
-                        Grounds
+                        GROUNDS
                       </Text>
 
                       {!isAuthenticated ? (
@@ -683,9 +686,8 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                         </Text>
                       ) : (
                         <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
-
                           <Text
-                            style={styles.headerSecondaryButtonText}
+                            style={[styles.headerSecondaryButtonText, scrolled && styles.headerSecondaryButtonTextScrolled]}
                             onPress={() => {
                               if (isSuperAdmin) {
                                 router.push('/(admin)/dashboard' as any);
@@ -698,9 +700,43 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                           >
                             Dashboard
                           </Text>
+
+                          <TouchableOpacity 
+                            style={styles.profileChip}
+                            onPress={() => router.push('/(tabs)/profile')}
+                          >
+                            <Image 
+                              source={{ uri: profile?.avatar_url || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' }} 
+                              style={styles.profileAvatar} 
+                            />
+                            <Text style={[styles.profileName, scrolled && styles.profileNameScrolled]}>
+                              {profile?.full_name?.split(' ')[0] || 'User'}
+                            </Text>
+                          </TouchableOpacity>
                         </View>
                       )}
                     </>
+                  ) : (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                      {!isAuthenticated ? (
+                        <TouchableOpacity 
+                          onPress={() => router.push('/(auth)/login' as any)}
+                          style={[styles.headerSecondaryButton, { paddingHorizontal: 12, paddingVertical: 6 }]}
+                        >
+                           <Text style={[styles.headerSecondaryButtonText, { fontSize: 13 }]}>Sign in</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <TouchableOpacity 
+                          style={styles.profileChipCompact}
+                          onPress={() => router.push('/(tabs)/profile')}
+                        >
+                          <Image 
+                            source={{ uri: profile?.avatar_url || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' }} 
+                            style={styles.profileAvatarCompact} 
+                          />
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   )}
                 </>
             </View>
@@ -708,11 +744,11 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
         </View>
       )}
 
-      {!isLanding && !isMarketing && (!isGroundDetails || isOwnerGroundsDashboard) && (
+      {!hideHeader && !isLanding && !isMarketing && (!isGroundDetails || isOwnerGroundsDashboard) && (
         <View
           style={[
             styles.header,
-            isShop && { backgroundColor: '#4f2c63', borderBottomWidth: 0 },
+            isShop && { backgroundColor: '#1a1f2e', borderBottomWidth: 0 },
             isGroundOwner && !isPublicNoSidebar && styles.ownerHeader,
             isUserRoute && !isPublicNoSidebar && styles.userHeader,
           ]}
@@ -782,7 +818,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                   <Text
                     style={[
                       styles.headerNavLink, 
-                      cleanPath === '/shop' && { color: '#2b2f4b', borderBottomWidth: 2, borderBottomColor: '#2b2f4b', paddingBottom: 4 }
+                      (cleanPath === '/shop' || isShop) ? { color: '#e6ffb7', borderBottomWidth: 2, borderBottomColor: '#e6ffb7', paddingBottom: 4, fontWeight: '700' } : { color: '#e6ffb7' }
                     ]}
                     onPress={() => router.push('/shop' as any)}
                   >
@@ -1059,20 +1095,23 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
         </View>
       </View>
 
-      {isCompact && !isCheckoutPage && (
+      {isCompact && !isInTabs && !isCheckoutPage && (
         <View style={[
           styles.bottomBar,
           !isBottomBarVisible && { transform: [{ translateY: 100 }] }
         ]}>
           {[
             { label: 'Home', icon: House, href: '/' },
-            { label: 'Grounds', icon: LandPlot, href: '/grounds' },
+            { label: 'Grounds', icon: LandPlot, href: '/book-my-ground' },
+            { label: 'Opposition', icon: Swords, href: '/find-an-opponent' },
             { label: 'Shop', icon: ShoppingBag, href: '/shop' },
             { label: 'Cricket', icon: Trophy, href: '/cricket/player-profile' },
-            { label: 'Profile', icon: CircleUser, href: '/(tabs)/profile' },
           ].map((item) => {
             const Icon = item.icon;
             const isActive = cleanPath === item.href ||
+              (item.label === 'Cricket' && cleanPath.startsWith('/cricket')) ||
+              (item.label === 'Shop' && cleanPath.startsWith('/shop')) ||
+              (item.label === 'Opposition' && cleanPath.startsWith('/find-an-opponent')) ||
               (item.href === '/grounds' && cleanPath === '/book-my-ground') ||
               (item.href === '/favorites' && cleanPath === '/favorites') ||
               (item.href === '/' && cleanPath === '');
@@ -1088,10 +1127,10 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                   }
                 }}
               >
-                <Icon size={22} color={isActive ? (item.label === 'Shop' ? '#2b2f4b' : '#00ea6b') : '#9ca3af'} />
+                <Icon size={22} color={isActive ? (item.label === 'Shop' ? '#f8688a' : '#00ea6b') : '#9ca3af'} />
                 <Text style={[
                   styles.bottomBarText, 
-                  isActive && (item.label === 'Shop' ? { color: '#2b2f4b', fontWeight: '700' } : styles.bottomBarTextActive)
+                  isActive && (item.label === 'Shop' ? { color: '#f8688a', fontWeight: '700' } : styles.bottomBarTextActive)
                 ]}>
                   {item.label}
                 </Text>
@@ -1108,6 +1147,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
+    ...Platform.select({
+      web: {
+        overflowY: 'auto' as any,
+        height: '100vh' as any,
+      }
+    })
   },
   containerLanding: {
     backgroundColor: '#F5F5F5',
@@ -1139,9 +1184,11 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
+    height: 80,
     zIndex: 2000,
     backgroundColor: 'transparent',
     borderBottomWidth: 0,
+    justifyContent: 'center',
     transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
   },
   heroHeaderGround: {
@@ -1172,7 +1219,8 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   headerContentCompact: {
-    paddingVertical: 6,
+    paddingHorizontal: 16,
+    justifyContent: 'space-between',
   },
   logo: {
     flexDirection: 'row',
@@ -1345,6 +1393,11 @@ const styles = StyleSheet.create({
     position: 'relative',
     paddingTop: 0,
     backgroundColor: '#F5F5F7',
+    ...Platform.select({
+      web: {
+        overflowY: 'auto' as any,
+      }
+    })
   },
   bodyAdmin: {
     flex: 1,
@@ -1358,6 +1411,11 @@ const styles = StyleSheet.create({
     width: '100%',
     position: 'relative',
     backgroundColor: '#F5F5F7',
+    ...Platform.select({
+      web: {
+        overflowY: 'auto' as any,
+      }
+    })
   },
   sidebarContainer: {
     paddingRight: 0,
@@ -1531,17 +1589,66 @@ const styles = StyleSheet.create({
   },
   headerPrimaryButtonText: {
     fontSize: 14,
-    fontWeight: '400',
+    fontWeight: '700',
     color: '#dcc093',
     fontFamily: 'Inter',
-    textTransform: 'uppercase' as any,
+    marginRight: 24,
+  },
+  headerPrimaryButtonTextScrolled: {
+    color: '#0F172A',
   },
   headerSecondaryButtonText: {
     fontSize: 14,
-    fontWeight: '400',
+    fontWeight: '700',
     color: '#dcc093',
     fontFamily: 'Inter',
-    textTransform: 'uppercase' as any,
+    marginRight: 24,
+  },
+  headerSecondaryButtonTextScrolled: {
+    color: '#0F172A',
+  },
+  searchIconButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  searchIconButtonScrolled: {
+    backgroundColor: '#F1F5F9',
+  },
+  profileChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingLeft: 4,
+  },
+  profileAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 8,
+  },
+  profileAvatarCompact: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  profileChipCompact: {
+    padding: 2,
+  },
+  profileName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#dcc093',
+    fontFamily: 'Inter',
+  },
+  profileNameScrolled: {
+    color: '#0F172A',
   },
   mobilePrimaryButton: {
     marginTop: 8,

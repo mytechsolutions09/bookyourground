@@ -102,18 +102,10 @@ export default function MobileTabBar() {
       
       <Pressable
         style={styles.item}
-        onPress={() => go('/(tabs)/grounds')}
+        onPress={() => go('/book-my-ground')}
       >
         <LandPlot size={size} color={activeTab === 'grounds' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'grounds' ? 2.5 : 2} />
         <Text style={[styles.label, { color: activeTab === 'grounds' ? ACTIVE : INACTIVE }]}>Grounds</Text>
-      </Pressable>
-
-      <Pressable
-        style={styles.item}
-        onPress={() => go('/(tabs)/cricket')}
-      >
-        <Trophy size={size} color={activeTab === 'cricket' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'cricket' ? 2.5 : 2} />
-        <Text style={[styles.label, { color: activeTab === 'cricket' ? ACTIVE : INACTIVE }]}>Play</Text>
       </Pressable>
 
       <Pressable
@@ -128,8 +120,16 @@ export default function MobileTabBar() {
         style={styles.item}
         onPress={() => go('/(tabs)/shop')}
       >
-        <ShoppingBag size={size} color={activeTab === 'shop' ? '#2b2f4b' : INACTIVE} strokeWidth={activeTab === 'shop' ? 2.5 : 2} />
-        <Text style={[styles.label, { color: activeTab === 'shop' ? '#2b2f4b' : INACTIVE }]}>Shop</Text>
+        <ShoppingBag size={size} color={activeTab === 'shop' ? '#f8688a' : INACTIVE} strokeWidth={activeTab === 'shop' ? 2.5 : 2} />
+        <Text style={[styles.label, { color: activeTab === 'shop' ? '#f8688a' : INACTIVE }]}>Shop</Text>
+      </Pressable>
+
+      <Pressable
+        style={styles.item}
+        onPress={() => go('/(tabs)/cricket')}
+      >
+        <Trophy size={size} color={activeTab === 'cricket' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'cricket' ? 2.5 : 2} />
+        <Text style={[styles.label, { color: activeTab === 'cricket' ? ACTIVE : INACTIVE }]}>Cricket</Text>
       </Pressable>
     </Animated.View>
   );
