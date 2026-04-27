@@ -317,10 +317,11 @@ export default function HomeScreen() {
           <View style={[styles.heroPadding, { paddingTop: insets.top + 20 }]}>
             <View style={styles.heroHeaderRow}>
               <View style={styles.heroBrandPill}>
-                <View style={[styles.pulseDot, { backgroundColor: '#00ea6b' }]} />
-                <Text style={styles.brandPillText}>BOOKYOURGROUND</Text>
-                <View style={styles.brandPillDivider} />
-                <Text style={styles.brandPillSub}>Slots ready to play</Text>
+                <Image
+                  source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
+                  style={styles.heroLogo}
+                  resizeMode="contain"
+                />
               </View>
 
               <TouchableOpacity 
@@ -699,11 +700,9 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
   },
-  brandPillText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#00ea6b',
-    letterSpacing: 1,
+  heroLogo: {
+    height: 32,
+    width: 160,
   },
   brandPillDivider: {
     width: 1,

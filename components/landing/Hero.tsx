@@ -79,7 +79,11 @@ export default function Hero() {
       <View style={styles.container}>
         <View style={styles.leftColumn}>
           <View style={styles.pill}>
-            <Text style={styles.pillLabel}>BookYourGround</Text>
+            <Image
+              source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
+              style={styles.heroLogo}
+              resizeMode="contain"
+            />
             <Text style={styles.pillDot}>•</Text>
             <Text style={styles.pillText}>From search to first whistle in minutes</Text>
           </View>
@@ -263,11 +267,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.06)',
     marginBottom: 18,
   },
-  pillLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#00ea6b',
-    fontFamily: 'Inter',
+  heroLogo: {
+    height: 28,
+    width: 140,
+    marginRight: 4,
   },
   pillDot: {
     marginHorizontal: 8,

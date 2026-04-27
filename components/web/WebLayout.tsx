@@ -272,7 +272,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
   useEffect(() => {
     const handleScroll = () => {
       const y = (window as any).scrollY || 0;
-      setScrolled(y > 8);
+      setScrolled(y > 50); // Increased threshold for stability
       
       if (Math.abs(y - lastScrollPos) > 10) {
         if (y > lastScrollPos && y > 100) {
@@ -285,7 +285,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
     };
 
     const sub = DeviceEventEmitter.addListener('mainScroll', (data) => {
-      setScrolled(data.y > 8);
+      setScrolled(data.y > 50); // Increased threshold for stability
       if (Math.abs(data.y - lastScrollPos) > 10) {
         if (data.y > lastScrollPos && data.y > 100) {
           setIsBottomBarVisible(false);
@@ -502,16 +502,26 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
             styles.heroHeader,
             isGroundDetails && styles.heroHeaderGround,
             isMarketing && styles.heroHeaderMarketing,
-            scrolled && styles.heroHeaderScrolled,
           ]}
         >
-          {scrolled && Platform.OS === 'web' && (
-            <BlurView 
-              intensity={40} 
-              tint="light" 
-              style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(255,255,255,0.7)' }]} 
-            />
-          )}
+          <View 
+            style={[
+              StyleSheet.absoluteFillObject, 
+              Platform.OS === 'web' && {
+                backgroundColor: scrolled ? 'rgba(255,255,255,0.8)' : 'transparent',
+                backdropFilter: scrolled ? 'blur(25px)' : 'none',
+                WebkitBackdropFilter: scrolled ? 'blur(25px)' : 'none',
+                transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                borderBottomWidth: scrolled ? 1 : 0,
+                borderBottomColor: 'rgba(255,255,255,0.15)',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 12 },
+                shadowOpacity: scrolled ? 0.15 : 0,
+                shadowRadius: 30,
+                zIndex: -1,
+              } as any
+            ]} 
+          />
           <View style={[styles.headerContent, isCompact && styles.headerContentCompact]}>
             <TouchableOpacity
               onPress={() => router.replace('/')}
@@ -545,7 +555,7 @@ export default function WebLayout({ children, noCard }: WebLayoutProps) {
                         <View style={[
                           styles.headerSearch,
                           { width: 300 },
-                          scrolled && { backgroundColor: 'rgba(0,0,0,0.05)', borderColor: 'rgba(0,0,0,0.05)' } as any
+                          scrolled && { backgroundColor: 'rgba(255,255,255,0.5)', borderColor: 'rgba(0,0,0,0.08)' } as any
                         ]}>
                           <Search size={16} color={scrolled ? "#64748B" : "#9CA3AF"} style={styles.headerSearchIcon} />
                           <TextInput
@@ -1125,13 +1135,14 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255,255,255,0.05)',
   },
   heroHeader: {
-    position: 'absolute' as any,
+    position: 'fixed' as any,
     top: 0,
     left: 0,
     right: 0,
     zIndex: 2000,
     backgroundColor: 'transparent',
     borderBottomWidth: 0,
+    transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
   },
   heroHeaderGround: {
     position: 'fixed' as any,
@@ -1146,15 +1157,9 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255,255,255,0.12)',
   },
   heroHeaderScrolled: {
-    position: 'fixed' as any,
-    backgroundColor: Platform.OS === 'web' ? 'transparent' : '#FFFFFF',
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,0,0,0.05)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 5,
   },
   headerContent: {
     flexDirection: 'row',
@@ -1174,8 +1179,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoImage: {
-    height: 38,
-    width: 200,
+    height: 52,
+    width: 260,
     maxWidth: '100%' as any,
   },
   headerRight: {

@@ -1461,7 +1461,7 @@ const styles = StyleSheet.create({
   name: {
     fontFamily: 'Inter',
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '400',
     color: '#111827',
     marginBottom: 4,
     letterSpacing: -0.5,
@@ -1508,7 +1508,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
     fontSize: 14,
     color: '#374151',
-    fontWeight: '600',
+    fontWeight: '500',
   },
 
   // ── Price strip (mobile) ─────────────────────────────
@@ -1522,7 +1522,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
     fontSize: 11,
     color: '#64748B',
-    fontWeight: '600',
+    fontWeight: '500',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     marginBottom: 2,
@@ -1530,7 +1530,7 @@ const styles = StyleSheet.create({
   priceValue: {
     fontFamily: 'Inter',
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#111827',
     letterSpacing: -0.5,
   },
@@ -1555,7 +1555,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontFamily: 'Inter',
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#111827',
     marginBottom: 12,
   },
@@ -1584,7 +1584,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
     fontSize: 14,
     color: '#111827',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   detailValueMuted: {
     color: '#6b7280',
@@ -1616,7 +1616,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
     fontSize: 13,
     color: '#334155',
-    fontWeight: '600',
+    fontWeight: '500',
   },
 
   // ── Reviews ───────────────────────────────────────────
@@ -1751,7 +1751,7 @@ const styles = StyleSheet.create({
   avgRatingValue: {
     fontFamily: 'Inter',
     fontSize: 15,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#111827',
   },
   avgRatingText: {
@@ -1779,7 +1779,7 @@ const styles = StyleSheet.create({
   writeReviewText: {
     fontFamily: 'Inter',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#374151',
   },
   sortContainer: {
@@ -1815,7 +1815,7 @@ const styles = StyleSheet.create({
   sortChipText: {
     fontFamily: 'Inter',
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#6B7280',
   },
   sortChipTextActive: {

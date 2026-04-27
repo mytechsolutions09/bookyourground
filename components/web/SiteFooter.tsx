@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Platform, Linking } from 'react-native';
+import { View, Text, StyleSheet, Platform, Linking, Image } from 'react-native';
 import { router } from 'expo-router';
 
 export default function SiteFooter() {
@@ -9,7 +9,11 @@ export default function SiteFooter() {
     <View style={styles.footer}>
       <View style={styles.footerMain}>
         <View style={styles.footerBrand}>
-          <Text style={styles.footerBrandTitle}>Book my ground</Text>
+          <Image
+            source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
+            style={styles.footerLogo}
+            resizeMode="contain"
+          />
           <Text style={styles.footerBrandSubtitle}>
             Simple online bookings for cricket grounds and box cricket turfs.
           </Text>
@@ -161,16 +165,14 @@ const styles = StyleSheet.create({
     paddingTop: 32,
     paddingHorizontal: 0,
   },
-  footerBrand: {
-    marginBottom: 20,
-  },
-  footerBrandTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#10B981',
+  footerLogo: {
+    height: 64,
+    width: 280,
+    marginLeft: -10,
+    marginBottom: 4,
   },
   footerBrandSubtitle: {
-    marginTop: 6,
+    marginTop: 2,
     fontSize: 13,
     color: '#64748B',
     maxWidth: 480,
