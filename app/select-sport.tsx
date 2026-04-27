@@ -129,7 +129,7 @@ export default function SelectSportScreen() {
   const [activeSportIndex, setActiveSportIndex] = useState(0);
   const [activeLocIndex, setActiveLocIndex] = useState(0);
   const [activeDateIndex, setActiveDateIndex] = useState(0);
-  const [activeTeamIndex, setActiveTeamIndex] = useState(1); // Default to Both Teams
+  const [activeTeamIndex, setActiveTeamIndex] = useState(0); // Default to first option (1 Team) to match ScrollView start
   const [activeTimeIndex, setActiveTimeIndex] = useState(0);
   const [activeResultPage, setActiveResultPage] = useState(0);
   

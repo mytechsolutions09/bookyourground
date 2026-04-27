@@ -11,6 +11,7 @@ import {
   Pressable,
   Linking,
   useWindowDimensions,
+  TouchableOpacity,
 } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { MapPin, Star, ArrowLeft, Phone, Navigation2, CheckCircle2, Heart, ChevronRight, Share2, Map as MapIcon } from 'lucide-react-native';
@@ -21,7 +22,8 @@ import {
   Pin,
   Marker,
   useMap,
-  useMapsLibrary
+  useMapsLibrary,
+  InfoWindow
 } from '@vis.gl/react-google-maps';
 import { supabase } from '@/lib/supabase';
 import { formatDate } from '@/utils/helpers';
@@ -246,12 +248,23 @@ export default function GroundDetailsPrettyUrlScreen() {
 
   const mapsUrl = useMemo(() => {
     if (!ground) return null;
-    const parts = [ground.address, ground.city, ground.state]
-      .map((v) => String(v ?? '').trim())
-      .filter(Boolean);
-    if (!parts.length) return null;
-    const query = encodeURIComponent(parts.join(', '));
-    return `https://www.google.com/maps/search/?api=1&query=${query}`;
+    const { latitude, longitude, address, city, state, name } = ground;
+    
+    // Using directions API to show routing options directly
+    const baseUrl = "https://www.google.com/maps/dir/?api=1";
+    
+    let destination;
+    if (latitude && longitude) {
+      destination = `${latitude},${longitude}`;
+    } else {
+      const parts = [address, city, state].map((v) => String(v ?? '').trim()).filter(Boolean);
+      destination = encodeURIComponent(parts.join(', '));
+    }
+    
+    if (!destination) return null;
+    
+    // travelmode=driving is a good default, but Google Maps allows switching easily
+    return `${baseUrl}&destination=${destination}&travelmode=driving`;
   }, [ground]);
 
   const handleBookNow = () => {
@@ -300,7 +313,7 @@ export default function GroundDetailsPrettyUrlScreen() {
 
         <View style={styles.content}>
           {/* ── Hero Gallery ── */}
-          {isLargeWeb ? (
+          {IS_WEB ? (
             <WebHeroGallery 
               ground={ground} 
               heroIdx={heroIdx} 
@@ -390,7 +403,7 @@ export default function GroundDetailsPrettyUrlScreen() {
                 {/* Map Section - Expanded edge-to-edge */}
                 <Card style={[styles.section, styles.mapSection]}>
                   <View style={styles.webMapContainer}>
-                    <WebMap ground={ground} />
+                    <WebMap ground={ground} mapsUrl={mapsUrl} />
                   </View>
                   <View style={styles.mapActionsContainer}>
                     <Button
@@ -516,16 +529,6 @@ export default function GroundDetailsPrettyUrlScreen() {
                     </View>
                   </Card>
                   
-                  <Card style={styles.sidebarSupportCard}>
-                    <Text style={styles.supportTitle}>Need Help?</Text>
-                    <Text style={styles.supportDesc}>Contact the ground directly for bulk bookings or tournaments.</Text>
-                    <Button 
-                      title="Contact Ground" 
-                      variant="outline" 
-                      icon={Phone} 
-                      onPress={() => ground.phone && Linking.openURL(`tel:${ground.phone}`)}
-                    />
-                  </Card>
                 </View>
               </View>
             </View>
@@ -612,8 +615,8 @@ export default function GroundDetailsPrettyUrlScreen() {
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Location</Text>
                 {Platform.OS === 'web' ? (
-                  <View style={{ height: 250, borderRadius: 16, overflow: 'hidden' }}>
-                     <WebMap ground={ground} />
+                <View style={{ height: 250, borderRadius: 16, overflow: 'hidden' }}>
+                     <WebMap ground={ground} mapsUrl={mapsUrl} />
                   </View>
                 ) : (
                   <View style={styles.mobileMapPlaceholder}>
@@ -818,23 +821,52 @@ function WebHeroGallery({
   toggleFavorite,
   favoriteLoading
 }: any) {
+  const { width } = useWindowDimensions();
+  const isSmall = width < 768;
+
   return (
-    <View style={styles.webGalleryWrapper}>
+    <View style={[styles.webGalleryWrapper, isSmall && { height: 320, borderRadius: 20 }]}>
       <View style={styles.webGalleryMain}>
         <Image
           source={{ uri: imageUrls[heroIdx] }}
           style={styles.webHeroImage}
           resizeMode="cover"
         />
+
+        {/* Floating Actions for Mobile Web */}
+        {isSmall && (
+          <View style={styles.webHeroFloatingActions}>
+            <TouchableOpacity 
+              style={styles.webHeroFloatingBtn}
+              onPress={() => router.back()}
+            >
+              <ArrowLeft size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.webHeroFloatingBtn, isFavorite && { backgroundColor: '#10b981' }]}
+              onPress={toggleFavorite}
+              disabled={favoriteLoading}
+            >
+              {favoriteLoading ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Heart size={20} color="#FFFFFF" fill={isFavorite ? "#FFFFFF" : "none"} />
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
+
         {imageUrls.length > 1 && (
-          <View style={styles.webThumbnailsWrapper}>
-            <View style={styles.webThumbnailsOverlay}>
-              {imageUrls.map((uri: string, idx: number) => (
+          <View style={[styles.webThumbnailsWrapper, isSmall && { bottom: 12 }]}>
+            <View style={[styles.webThumbnailsOverlay, isSmall && { padding: 6, gap: 8, borderRadius: 12 }]}>
+              {imageUrls.slice(0, isSmall ? 5 : 8).map((uri: string, idx: number) => (
                 <Pressable
                   key={`${uri}-${idx}`}
                   onPress={() => setHeroImageIndex(idx)}
                   style={[
                     styles.webThumb,
+                    isSmall && { width: 45, height: 32, borderRadius: 6 },
                     idx === heroIdx && styles.webThumbSelected
                   ]}
                 >
@@ -850,9 +882,10 @@ function WebHeroGallery({
 }
 
 // ── Web Map Component ──
-function WebMap({ ground }: { ground: GroundWithImages }) {
+function WebMap({ ground, mapsUrl }: { ground: GroundWithImages, mapsUrl: string | null }) {
   const geocodingLibrary = useMapsLibrary('geocoding');
   const [coords, setCoords] = useState<{lat: number, lng: number} | null>(null);
+  const [infoWindowOpen, setInfoWindowOpen] = useState(false);
 
   useEffect(() => {
     if (ground.latitude && ground.longitude) {
@@ -895,7 +928,7 @@ function WebMap({ ground }: { ground: GroundWithImages }) {
         >
           {coords && (
             <>
-              <AdvancedMarker position={coords}>
+              <AdvancedMarker position={coords} onClick={() => setInfoWindowOpen(true)}>
                 <View style={{
                   width: 44,
                   height: 44,
@@ -913,6 +946,35 @@ function WebMap({ ground }: { ground: GroundWithImages }) {
                   </svg>
                 </View>
               </AdvancedMarker>
+              
+              {infoWindowOpen && (
+                <InfoWindow 
+                  position={coords} 
+                  onCloseClick={() => setInfoWindowOpen(false)}
+                >
+                  <View style={{ padding: 4, maxWidth: 180 }}>
+                    <Text style={{ fontWeight: '800', fontSize: 13, color: '#0F172A', marginBottom: 2 }}>
+                      {ground.name}
+                    </Text>
+                    <Text style={{ fontSize: 11, color: '#64748B', marginBottom: 8 }}>
+                      {ground.address}, {ground.city}
+                    </Text>
+                    <TouchableOpacity 
+                      onPress={() => mapsUrl && Linking.openURL(mapsUrl)}
+                      style={{ 
+                        backgroundColor: '#10B981', 
+                        paddingVertical: 6, 
+                        paddingHorizontal: 12, 
+                        borderRadius: 6,
+                        alignItems: 'center'
+                      }}
+                    >
+                      <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '700' }}>DIRECTIONS</Text>
+                    </TouchableOpacity>
+                  </View>
+                </InfoWindow>
+              )}
+
               <MapHandler coords={coords} />
             </>
           )}
@@ -1355,6 +1417,24 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#EDF2F7',
   },
+  webHeroFloatingActions: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    right: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    zIndex: 10,
+  },
+  webHeroFloatingBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backdropFilter: 'blur(8px)',
+  } as any,
 
   // ── Section card ─────────────────────────────────────
   section: {

@@ -187,13 +187,20 @@ export default function AddGroundScreen() {
   const showPreviewRightPanel = Platform.OS === 'web' && windowWidth >= 900;
 
   const mapsUrl = useMemo(() => {
-    const parts = [formData.address, formData.city, formData.state, formData.pincode]
-      .map((v) => String(v ?? '').trim())
-      .filter(Boolean);
-    if (!parts.length) return null;
-    const query = encodeURIComponent(parts.join(', '));
-    return `https://www.google.com/maps/search/?api=1&query=${query}`;
-  }, [formData.address, formData.city, formData.state, formData.pincode]);
+    const { address, city, state, pincode, latitude, longitude } = formData;
+    const baseUrl = "https://www.google.com/maps/dir/?api=1";
+    
+    let destination;
+    if (latitude && longitude) {
+      destination = `${latitude},${longitude}`;
+    } else {
+      const parts = [address, city, state, pincode].map((v) => String(v ?? '').trim()).filter(Boolean);
+      destination = encodeURIComponent(parts.join(', '));
+    }
+    
+    if (!destination) return null;
+    return `${baseUrl}&destination=${destination}&travelmode=driving`;
+  }, [formData.address, formData.city, formData.state, formData.pincode, formData.latitude, formData.longitude]);
 
   const extractAddressFromGoogleMapsUrl = (rawUrl: string): string | null => {
     let url = rawUrl?.trim();

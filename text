@@ -11,7 +11,7 @@
 
 
 
-npx expo star
+npx expo start
 npx expo start --web
 
 
@@ -33,8 +33,6 @@ pull from git
 naveen.singh.shekhawat7@gmail.com
 Naveensixflags1
 
-
-
 # Always confirm you're on dev before starting work
 git branch
 
@@ -50,3 +48,8 @@ git push
 git checkout dev
 
 Push to dev
+
+npx expo export:web --clear-output
+
+
+

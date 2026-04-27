@@ -262,7 +262,7 @@ export default function UserSettingsScreen() {
 
   return (
     <View style={styles.nativeRoot}>
-      <MobileAppNavbar title="Settings" titleColor="#01b854" />
+      <MobileAppNavbar title="Settings" titleColor="#0F172A" />
       <UserSettingsInner />
     </View>
   );
@@ -279,8 +279,8 @@ const styles = StyleSheet.create({
   },
   inner: {
     width: '100%',
-    maxWidth: 900,
-    alignSelf: 'flex-start',
+    maxWidth: 1000,
+    alignSelf: 'center',
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 24,
@@ -301,14 +301,14 @@ const styles = StyleSheet.create({
   panel: {
     padding: 24,
     backgroundColor: '#FFFFFF',
-    borderColor: '#F1F5F9',
+    borderColor: '#F3F4F6',
     borderWidth: 1,
     borderRadius: 24,
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
+    shadowOpacity: 0.02,
+    shadowRadius: 15,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    elevation: 1,
   },
   sectionTitle: {
     fontFamily: 'Inter',
@@ -316,12 +316,14 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#0F172A',
     marginBottom: 6,
+    letterSpacing: -0.5,
   },
   sectionSubtitle: {
     fontFamily: 'Inter',
     fontSize: 13,
     color: '#64748B',
     marginBottom: 24,
+    lineHeight: 18,
   },
   formRow: {
     marginBottom: 20,
@@ -329,17 +331,17 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: 'Inter',
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#64748B',
     marginBottom: 8,
     textTransform: 'uppercase',
-    letterSpacing: 0.6,
+    letterSpacing: 0.5,
   },
   input: {
     fontFamily: 'Inter',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 14,
+    borderColor: '#F1F5F9',
+    borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     backgroundColor: '#F8FAFC',

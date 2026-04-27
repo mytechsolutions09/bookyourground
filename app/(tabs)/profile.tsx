@@ -1,6 +1,7 @@
-import { View, Text as RNText, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, useWindowDimensions, Pressable, Image } from 'react-native';
+import { View, Text as RNText, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, useWindowDimensions, Pressable, Image, ActivityIndicator } from 'react-native';
 import { ExpoImage } from 'expo-image';
 import { router } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import {
   User,
   Phone,
@@ -24,8 +25,10 @@ import {
   Swords,
   LayoutGrid,
   Trophy,
+  Camera,
 } from 'lucide-react-native';
 import React, { useState } from 'react';
+import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -56,6 +59,8 @@ export default function ProfileScreen() {
   const isCompact = width < 900;
   const isWeb = Platform.OS === 'web';
 
+  const [uploading, setUploading] = useState(false);
+
   const adminEmail = 'invirtualcoin@gmail.com';
   const isSuperAdmin =
     profile?.role === 'super_admin' ||
@@ -70,6 +75,76 @@ export default function ProfileScreen() {
   const themeMuted = isLight ? LIGHT_MUTED : DARK_TEXT;
 
   const [showInfoModal, setShowInfoModal] = useState(false);
+
+  const uploadAvatar = async (uri: string) => {
+    if (!user?.id) return;
+    try {
+      setUploading(true);
+      const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      const filePath = `${fileName}`;
+      const contentType = `image/${fileExt === 'png' ? 'png' : 'jpeg'}`;
+
+      const response = await fetch(uri);
+      const arrayBuffer = await response.arrayBuffer();
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, arrayBuffer, {
+          contentType,
+          upsert: true
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      // Update the profile in the database
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', user.id);
+        
+      if (updateError) throw updateError;
+        
+      if (Platform.OS === 'web') {
+        alert('Profile photo updated successfully!');
+      } else {
+        Alert.alert('Success', 'Profile photo updated successfully!');
+      }
+    } catch (err: any) {
+      console.error('Error uploading avatar:', err);
+      if (Platform.OS === 'web') {
+        alert(err.message || 'Failed to upload image.');
+      } else {
+        Alert.alert('Upload Failed', err.message || 'Failed to upload image.');
+      }
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const pickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        uploadAvatar(result.assets[0].uri);
+      }
+    } catch (err: any) {
+      console.error('Error picking image:', err);
+      if (Platform.OS !== 'web') {
+        Alert.alert('Gallery Error', 'Could not open image gallery.');
+      }
+    }
+  };
 
   const handleSignOut = () => {
     if (isWeb) {
@@ -141,10 +216,26 @@ export default function ProfileScreen() {
       {/* 1. PROFILE CARD */}
       <View style={styles.profileCardNew}>
         <View style={styles.profileCardContent}>
-          <Image
-            source={{ uri: profile?.avatar_url || 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg' }}
-            style={styles.avatarNew}
-          />
+          <TouchableOpacity 
+            activeOpacity={0.8} 
+            onPress={pickImage} 
+            disabled={uploading}
+            style={styles.avatarWrapperNew}
+          >
+            <Image
+              source={{ uri: profile?.avatar_url || 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg' }}
+              style={styles.avatarNew}
+            />
+            {uploading ? (
+              <View style={styles.avatarOverlayNew}>
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              </View>
+            ) : (
+              <View style={styles.avatarOverlayNew}>
+                <Camera size={16} color="#FFFFFF" />
+              </View>
+            )}
+          </TouchableOpacity>
           <View style={styles.profileTextContainer}>
             <RNText style={styles.nameNew}>{getFormattedName(profile?.full_name)}</RNText>
             <RNText style={styles.roleNew}>
@@ -226,8 +317,19 @@ export default function ProfileScreen() {
 
       {/* 3. PLAYER DASHBOARD (Rows) */}
       <View style={styles.sectionContainer}>
-        <RNText style={styles.sectionTitle}>PLAYER DASHBOARD</RNText>
+        <RNText style={styles.sectionTitle}>QUICK ACCESS</RNText>
         <View style={styles.rowList}>
+          <TouchableOpacity 
+            style={styles.rowItem}
+            onPress={() => router.push('/(tabs)/dashboard' as any)}
+          >
+            <View style={styles.rowLeft}>
+              <LayoutDashboard size={20} color="#10b981" />
+              <RNText style={styles.rowText}>My Dashboard</RNText>
+            </View>
+            <ChevronRight size={20} color="#94a3b8" />
+          </TouchableOpacity>
+
           <TouchableOpacity 
             style={styles.rowItem}
             onPress={() => router.push('/(tabs)/bookings' as any)}
@@ -235,6 +337,17 @@ export default function ProfileScreen() {
             <View style={styles.rowLeft}>
               <Trophy size={20} color="#10b981" />
               <RNText style={styles.rowText}>My Bookings</RNText>
+            </View>
+            <ChevronRight size={20} color="#94a3b8" />
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.rowItem}
+            onPress={() => router.push('/(tabs)/favorites' as any)}
+          >
+            <View style={styles.rowLeft}>
+              <Star size={20} color="#10b981" />
+              <RNText style={styles.rowText}>My Favourites</RNText>
             </View>
             <ChevronRight size={20} color="#94a3b8" />
           </TouchableOpacity>
@@ -252,22 +365,22 @@ export default function ProfileScreen() {
 
           <TouchableOpacity 
             style={styles.rowItem}
-            onPress={() => router.push('/shop/cart' as any)}
+            onPress={() => router.push('/(tabs)/profile/settings' as any)}
           >
             <View style={styles.rowLeft}>
-              <ShoppingCart size={20} color="#10b981" />
-              <RNText style={styles.rowText}>My Shopping Cart</RNText>
+              <Settings size={20} color="#10b981" />
+              <RNText style={styles.rowText}>Settings</RNText>
             </View>
             <ChevronRight size={20} color="#94a3b8" />
           </TouchableOpacity>
 
           <TouchableOpacity 
             style={styles.rowItem}
-            onPress={() => router.push('/(tabs)/find-an-opponent' as any)}
+            onPress={() => router.push('/(tabs)/support' as any)}
           >
             <View style={styles.rowLeft}>
-              <Swords size={20} color="#10b981" />
-              <RNText style={styles.rowText}>Find Opposition</RNText>
+              <LifeBuoy size={20} color="#10b981" />
+              <RNText style={styles.rowText}>Contact Us</RNText>
             </View>
             <ChevronRight size={20} color="#94a3b8" />
           </TouchableOpacity>
@@ -374,12 +487,12 @@ const styles = StyleSheet.create({
   content: {
     paddingBottom: 32,
     width: '100%',
-    maxWidth: 900,
+    maxWidth: 1000,
     alignSelf: 'center',
     ...Platform.select({
       web: {
         paddingHorizontal: 16,
-        paddingTop: 0,
+        paddingTop: 16,
       },
       default: {
         padding: 16,
@@ -562,6 +675,24 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
     backgroundColor: '#F1F5F9',
+  },
+  avatarWrapperNew: {
+    position: 'relative',
+    width: 80,
+    height: 80,
+  },
+  avatarOverlayNew: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: '#10b981',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
   },
   profileTextContainer: {
     flex: 1,

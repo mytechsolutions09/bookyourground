@@ -47,11 +47,12 @@ import BookingCard from '@/components/bookings/BookingCard';
 import { useUI } from '@/contexts/UIContext';
 import DashboardMap from '@/components/maps/DashboardMap';
 
-const THEME_BG = '#043529';
-const THEME_CARD_BG = '#06392e';
-const THEME_ACCENT = '#00ea6b';
-const THEME_TEXT = '#FFFFFF';
-const THEME_GOLD = '#dcc093';
+const THEME_BG = '#F8FAFC';
+const THEME_CARD_BG = '#FFFFFF';
+const THEME_ACCENT = '#10b981';
+const THEME_TEXT = '#0F172A';
+const THEME_MUTED = '#64748B';
+const THEME_BORDER = '#F1F5F9';
 
 function DashboardContent() {
   const { width } = useWindowDimensions();
@@ -109,7 +110,7 @@ function DashboardContent() {
     left: 0,
     right: 0,
     zIndex: 1000,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: THEME_BG,
   }));
 
   const loadBookings = async (isRefresh = false) => {
@@ -561,7 +562,7 @@ function DashboardContent() {
   return (
     <View style={styles.nativeWrapper}>
       <Animated.View style={headerAnimatedStyle}>
-        <MobileAppNavbar title="Dashboard" titleColor={THEME_ACCENT} />
+        <MobileAppNavbar title="Dashboard" titleColor={THEME_TEXT} />
         <View style={styles.tabContainer}>
           <TouchableOpacity 
             style={[styles.tab, activeTab === 'overview' && styles.activeTab]}
@@ -599,74 +600,76 @@ function DashboardContent() {
             showsVerticalScrollIndicator={false}
             refreshControl={<RefreshControl refreshing={loading} onRefresh={loadBookings} tintColor="#01b854" />}
           >
-            <View style={styles.centerContentNative}>
-               {/* Greeting Row */}
-               <View style={styles.greetingRowNative}>
-                <View>
-                  <Text style={styles.greetingText}>
-                    {new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening'}, {profile?.full_name?.split(' ')[0] || 'Player'} 👋
+            <View style={[styles.centerContentNative, width > 768 && styles.centerContentWide]}>
+               {/* Compact Greeting & Weather */}
+               <View style={styles.greetingRowCompact}>
+                <View style={styles.greetingTextGroup}>
+                  <Text style={styles.greetingTextSmall}>
+                    Hi, {profile?.full_name?.split(' ')[0] || 'Player'} 👋
                   </Text>
-                  <Text style={styles.dateText}>
-                    {new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })}
+                  <Text style={styles.dateTextSmall}>
+                    {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                   </Text>
                 </View>
-                <View style={styles.weatherBadge}>
-                  <WeatherIcon size={18} color={weather?.condition.toLowerCase().includes('clear') ? "#F59E0B" : "#64748B"} />
-                  <Text style={styles.weatherText}>
+                <View style={styles.weatherBadgeSmall}>
+                  <WeatherIcon size={14} color={weather?.condition.toLowerCase().includes('clear') ? "#F59E0B" : "#64748B"} />
+                  <Text style={styles.weatherTextSmall}>
                     {weather ? `${weather.temp}°C` : '22°C'}
                   </Text>
                 </View>
               </View>
 
-              {/* Live Map */}
-              <View style={styles.mapContainer}>
-                 <DashboardMap />
-              </View>
-
-              {/* Upcoming Booking */}
-              <View style={styles.contentCardLarge}>
-                <View style={styles.cardHeader}>
-                  <Text style={styles.cardHeaderTitle}>Upcoming Booking</Text>
+              <View style={[styles.responsiveRow, width > 768 && styles.responsiveRowWide]}>
+                {/* Live Map */}
+                <View style={[styles.mapContainer, width > 768 && styles.mapContainerWide]}>
+                   <DashboardMap />
                 </View>
-                {nextBooking ? (
-                  <>
-                    <Text style={styles.bookingTime}>
-                      {new Date(nextBooking.booking_date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} • {nextBooking.start_time?.slice(0, 5)}
-                    </Text>
-                    <View style={styles.bookingImagePlaceholder}>
-                      {nextBooking.ground?.ground_images?.[0]?.image_url ? (
-                        <Image 
-                          source={{ uri: nextBooking.ground.ground_images[0].image_url }} 
-                          style={StyleSheet.absoluteFill}
-                          resizeMode="cover"
-                        />
-                      ) : (
-                        <LayoutDashboard size={48} color="#CBD5E1" />
-                      )}
-                    </View>
-                    <View style={styles.bookingFooter}>
-                      <View>
-                        <Text style={styles.bookingName}>{nextBooking.ground?.name}</Text>
-                        <Text style={styles.bookingMeta}>{nextBooking.ground?.city}</Text>
+
+                {/* Upcoming Booking */}
+                <View style={[styles.contentCardLarge, width > 768 && styles.contentCardWide]}>
+                  <View style={styles.cardHeader}>
+                    <Text style={styles.cardHeaderTitle}>Upcoming Booking</Text>
+                  </View>
+                  {nextBooking ? (
+                    <>
+                      <Text style={styles.bookingTime}>
+                        {new Date(nextBooking.booking_date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} • {nextBooking.start_time?.slice(0, 5)}
+                      </Text>
+                      <View style={styles.bookingImagePlaceholder}>
+                        {nextBooking.ground?.ground_images?.[0]?.image_url ? (
+                          <Image 
+                            source={{ uri: nextBooking.ground.ground_images[0].image_url }} 
+                            style={StyleSheet.absoluteFill}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <LayoutDashboard size={48} color="#CBD5E1" />
+                        )}
                       </View>
-                      <TouchableOpacity 
-                        style={styles.qrButton}
-                        onPress={() => router.push(`/(tabs)/bookings` as any)}
-                      >
-                        <QrCode size={18} color="#FFFFFF" />
-                        <Text style={styles.qrButtonText}>View Ticket</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </>
-                ) : (
-                  <TouchableOpacity 
-                    style={styles.emptyCardInner}
-                    onPress={() => router.push('/book-my-ground' as any)}
-                  >
-                    <Calendar size={32} color="#CBD5E1" />
-                    <Text style={styles.emptyCardText}>No upcoming bookings</Text>
-                  </TouchableOpacity>
-                )}
+                      <View style={styles.bookingFooter}>
+                        <View>
+                          <Text style={styles.bookingName}>{nextBooking.ground?.name}</Text>
+                          <Text style={styles.bookingMeta}>{nextBooking.ground?.city}</Text>
+                        </View>
+                        <TouchableOpacity 
+                          style={styles.qrButton}
+                          onPress={() => router.push(`/(tabs)/bookings` as any)}
+                        >
+                          <QrCode size={18} color="#FFFFFF" />
+                          <Text style={styles.qrButtonText}>View Ticket</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </>
+                  ) : (
+                    <TouchableOpacity 
+                      style={styles.emptyCardInner}
+                      onPress={() => router.push('/book-my-ground' as any)}
+                    >
+                      <Calendar size={32} color="#CBD5E1" />
+                      <Text style={styles.emptyCardText}>No upcoming bookings</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
             </View>
           </Animated.ScrollView>
@@ -723,7 +726,7 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
   },
   rightPanel: {
-    width: 340,
+    width: 400,
     padding: 24,
     paddingLeft: 0,
     paddingBottom: 120,
@@ -770,11 +773,63 @@ const styles = StyleSheet.create({
   centerContentNative: {
     padding: 16,
   },
-  greetingRowNative: {
+  centerContentWide: {
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  responsiveRow: {
+    flexDirection: 'column',
+    gap: 16,
+  },
+  responsiveRowWide: {
+    flexDirection: 'row',
+    gap: 20,
+    alignItems: 'flex-start',
+  },
+  greetingRowCompact: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  greetingTextGroup: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+  },
+  greetingTextSmall: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  dateTextSmall: {
+    fontSize: 12,
+    color: '#64748B',
+    fontFamily: 'Inter',
+    fontWeight: '500',
+  },
+  weatherBadgeSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  weatherTextSmall: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
   },
   greetingRow: {
     flexDirection: 'row',
@@ -812,13 +867,20 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   searchHero: {
-    backgroundColor: '#043529',
+    backgroundColor: '#FFFFFF',
     borderRadius: 24,
-    padding: 32,
+    padding: 24,
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 24,
     overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
+    elevation: 4,
   },
   searchHeroText: {
     flex: 1,
@@ -827,13 +889,13 @@ const styles = StyleSheet.create({
   searchHeroTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#0F172A',
     marginBottom: 4,
     fontFamily: 'Inter',
   },
   searchHeroSub: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.7)',
+    color: '#64748B',
     marginBottom: 20,
     fontFamily: 'Inter',
   },
@@ -854,13 +916,13 @@ const styles = StyleSheet.create({
     outlineStyle: 'none',
   } as any,
   searchBtn: {
-    backgroundColor: '#00ea6b',
+    backgroundColor: THEME_ACCENT,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 10,
   },
   searchBtnText: {
-    color: '#043529',
+    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 14,
     fontFamily: 'Inter',
@@ -881,6 +943,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
     padding: 24,
+  },
+  contentCardWide: {
+    flex: 1,
   },
   contentCardSmall: {
     flex: 1,
@@ -989,6 +1054,9 @@ const styles = StyleSheet.create({
     borderWidth: 8,
     borderColor: '#FFFFFF',
   },
+  mapContainerWide: {
+    flex: 1.5,
+  },
   mapPlaceholder: {
     flex: 1,
     backgroundColor: '#F1F5F9',
@@ -1004,7 +1072,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   rightPanel: {
-    width: 340,
+    width: 400,
     padding: 24,
     paddingLeft: 0,
     paddingBottom: 120,
@@ -1068,10 +1136,10 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   calendarDayToday: {
-    backgroundColor: '#00ea6b',
+    backgroundColor: THEME_ACCENT,
   },
   calendarDayTextToday: {
-    color: '#043529',
+    color: '#FFFFFF',
     fontWeight: '800',
   },
   calendarDayBooked: {
@@ -1124,7 +1192,7 @@ const styles = StyleSheet.create({
   },
   slotStatus: {
     fontSize: 11,
-    color: '#00ea6b',
+    color: THEME_ACCENT,
     fontWeight: '600',
     marginTop: 1,
     fontFamily: 'Inter',
@@ -1154,7 +1222,7 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
     borderWidth: 10,
-    borderColor: '#00ea6b',
+    borderColor: THEME_ACCENT,
     borderLeftColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',

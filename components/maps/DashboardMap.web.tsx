@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Linking } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { GroundWithImages } from '@/types';
 import { MapPin } from 'lucide-react-native';
@@ -49,6 +49,19 @@ export default function DashboardMap() {
     } catch (e) {
       console.warn('Could not get user location for map:', e);
     }
+  };
+
+  const getDirectionsUrl = (g: GroundWithImages) => {
+    const { latitude, longitude, address, city, state } = g;
+    const baseUrl = "https://www.google.com/maps/dir/?api=1";
+    let destination;
+    if (latitude && longitude) {
+      destination = `${latitude},${longitude}`;
+    } else {
+      const parts = [address, city, state].map((v) => String(v ?? '').trim()).filter(Boolean);
+      destination = encodeURIComponent(parts.join(', '));
+    }
+    return `${baseUrl}&destination=${destination}&travelmode=driving`;
   };
 
   if (loading) {
@@ -161,9 +174,21 @@ export default function DashboardMap() {
                     position={{ lat, lng }}
                     onCloseClick={() => setOpenInfoWindowId(null)}
                   >
-                    <View style={{ padding: 4 }}>
-                      <Text style={{ fontWeight: '800', fontSize: 13 }}>{g.name}</Text>
-                      <Text style={{ fontSize: 11, color: '#64748B' }}>{g.city}</Text>
+                    <View style={{ padding: 4, minWidth: 120 }}>
+                      <Text style={{ fontWeight: '800', fontSize: 13, color: '#0F172A', marginBottom: 2 }}>{g.name}</Text>
+                      <Text style={{ fontSize: 11, color: '#64748B', marginBottom: 8 }}>{g.city}</Text>
+                      <TouchableOpacity 
+                        onPress={() => Linking.openURL(getDirectionsUrl(g))}
+                        style={{ 
+                          backgroundColor: '#10B981', 
+                          paddingVertical: 6, 
+                          paddingHorizontal: 12, 
+                          borderRadius: 6,
+                          alignItems: 'center'
+                        }}
+                      >
+                        <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '700' }}>DIRECTIONS</Text>
+                      </TouchableOpacity>
                     </View>
                   </InfoWindow>
                 )}

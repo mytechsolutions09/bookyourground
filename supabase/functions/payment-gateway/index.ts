@@ -30,6 +30,9 @@ function isBoxCricket(pitchType: string | null | undefined): boolean {
   return String(pitchType ?? '').toLowerCase().includes('box');
 }
 
+const PLATFORM_FEE_RATE = 0.05;
+const GST_RATE = 0.18;
+
 // --- AUTHORITATIVE Pricing Calculation Helper ---
 const calculateFinalAmounts = (details: any, groundType: string | null) => {
   console.log(`[Pricing] Input details: ${JSON.stringify(details)}`);
@@ -56,13 +59,34 @@ const calculateFinalAmounts = (details: any, groundType: string | null) => {
   }
   
   const net = Math.round((grossAmount - discount) * 100) / 100;
-  console.log(`[Pricing] Result -> Unit: ${priceUnit}, Gross: ${grossAmount}, Net: ${net}`);
+  
+  // New breakdown logic
+  const groundPrice = net;
+  const platformFeeUser = Math.round(groundPrice * PLATFORM_FEE_RATE * 100) / 100;
+  const gstUser = Math.round(platformFeeUser * GST_RATE * 100) / 100;
+  const totalCharged = Math.round(groundPrice + platformFeeUser + gstUser); // Round to nearest zero decimals
+  
+  const platformFeeOwner = Math.round(groundPrice * PLATFORM_FEE_RATE * 100) / 100;
+  const gstOwner = Math.round(platformFeeOwner * GST_RATE * 100) / 100;
+  const ownerSettlement = Math.round((groundPrice - platformFeeOwner - gstOwner) * 100) / 100;
+  
+  const bygNetRevenue = Math.round((platformFeeUser + platformFeeOwner) * 100) / 100;
+
+  console.log(`[Pricing] Result -> Unit: ${priceUnit}, Gross: ${grossAmount}, Net: ${net}, TotalCharged: ${totalCharged}`);
   
   return {
     pricePerHour: priceUnit,
     totalAmount: grossAmount,
     discountAmount: discount,
-    netAmount: net
+    netAmount: net,
+    groundPrice,
+    platformFeeUser,
+    gstUser,
+    totalCharged,
+    platformFeeOwner,
+    gstOwner,
+    ownerSettlement,
+    bygNetRevenue
   };
 };
 
@@ -242,7 +266,19 @@ serve(async (req) => {
 
         const { data: ground } = await supabaseClient.from('grounds').select('pitch_type').eq('id', ground_id).single();
         
-        const { pricePerHour, discountAmount, netAmount } = calculateFinalAmounts(bookingDetails, ground?.pitch_type);
+        const { 
+          pricePerHour, 
+          discountAmount, 
+          netAmount,
+          groundPrice,
+          platformFeeUser,
+          gstUser,
+          totalCharged,
+          platformFeeOwner,
+          gstOwner,
+          ownerSettlement,
+          bygNetRevenue
+        } = calculateFinalAmounts(bookingDetails, ground?.pitch_type);
 
         const { data: newBooking, error: insertError } = await supabaseClient
           .from('bookings')
@@ -255,6 +291,14 @@ serve(async (req) => {
             total_hours: Number(bookingDetails.total_hours ?? 1),
             price_per_hour: pricePerHour,
             total_amount: netAmount,
+            ground_price: groundPrice,
+            platform_fee_user: platformFeeUser,
+            platform_fee_owner: platformFeeOwner,
+            gst_user: gstUser,
+            gst_owner: gstOwner,
+            total_charged: totalCharged,
+            owner_settlement: ownerSettlement,
+            byg_net_revenue: bygNetRevenue,
             coupon_id,
             discount_amount: discountAmount,
             notes: (team_type === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Paid via PayU: ${txnid})`,
@@ -283,9 +327,16 @@ serve(async (req) => {
 
       // Credit Owner's Wallet
       if (bookingData?.ground?.owner_id) {
+        // Fetch breakdown to get owner_settlement
+        const { data: bData } = await supabaseClient
+          .from('bookings')
+          .select('owner_settlement')
+          .eq('id', finalBookingId)
+          .single();
+
         await supabaseClient.rpc('add_money_to_wallet', {
           target_user_id: bookingData.ground.owner_id,
-          amount_to_add: bookingData.total_amount,
+          amount_to_add: bData?.owner_settlement || bookingData.total_amount,
           description_text: `Earning from booking for ${bookingData.ground.name}`,
           ref_type: 'booking_revenue',
           ref_id: finalBookingId
@@ -375,7 +426,19 @@ serve(async (req) => {
             throw new Error('This slot is no longer available.');
         }
 
-        const { pricePerHour, discountAmount, netAmount } = calculateFinalAmounts(bookingDetails, ground?.pitch_type);
+        const { 
+          pricePerHour, 
+          discountAmount, 
+          netAmount,
+          groundPrice,
+          platformFeeUser,
+          gstUser,
+          totalCharged,
+          platformFeeOwner,
+          gstOwner,
+          ownerSettlement,
+          bygNetRevenue
+        } = calculateFinalAmounts(bookingDetails, ground?.pitch_type);
 
         const { data: newBooking, error: insertError } = await supabaseClient
           .from('bookings')
@@ -388,6 +451,14 @@ serve(async (req) => {
             total_hours: Number(bookingDetails.total_hours ?? 1),
             price_per_hour: pricePerHour,
             total_amount: netAmount,
+            ground_price: groundPrice,
+            platform_fee_user: platformFeeUser,
+            platform_fee_owner: platformFeeOwner,
+            gst_user: gstUser,
+            gst_owner: gstOwner,
+            total_charged: totalCharged,
+            owner_settlement: ownerSettlement,
+            byg_net_revenue: bygNetRevenue,
             coupon_id,
             discount_amount: discountAmount,
             booked_for_name: bookingDetails.booked_for_name || bookingDetails.bookedForName,
@@ -438,15 +509,29 @@ serve(async (req) => {
         transaction_reference: 'CASH_' + Date.now(),
       });
 
-      // Credit Owner's Wallet
+      // Credit Owner's Wallet (Internal tracking / Settlement)
       if (bookingData?.ground?.owner_id) {
-        await supabaseClient.rpc('add_money_to_wallet', {
-          target_user_id: bookingData.ground.owner_id,
-          amount_to_add: bookingData.total_amount,
-          description_text: `Earning from booking for ${bookingData.ground.name} (Cash)`,
-          ref_type: 'booking_revenue',
-          ref_id: finalBookingId
-        });
+        // Fetch breakdown to get owner_settlement
+        const { data: bData } = await supabaseClient
+          .from('bookings')
+          .select('owner_settlement, payment_method')
+          .eq('id', finalBookingId)
+          .single();
+
+        if (bData?.payment_method === 'cash') {
+          // For cash, owner already has the ground_price. 
+          // We should probably DEBIT the platform fee from their wallet instead of crediting.
+          // However, to keep it simple for now as requested, we just log it or handle as per policy.
+          console.log(`[Cash] Owner ${bookingData.ground.owner_id} already has cash for booking ${finalBookingId}`);
+        } else {
+          await supabaseClient.rpc('add_money_to_wallet', {
+            target_user_id: bookingData.ground.owner_id,
+            amount_to_add: bData?.owner_settlement || bookingData.total_amount,
+            description_text: `Earning from booking for ${bookingData.ground.name}`,
+            ref_type: 'booking_revenue',
+            ref_id: finalBookingId
+          });
+        }
       }
 
       console.log('[Cash] Finished successfully');
@@ -456,13 +541,48 @@ serve(async (req) => {
     }
 
     if (action === 'create-razorpay-order') {
-      const { amount, currency = 'INR', receipt } = body;
+      const { amount, currency = 'INR', receipt, groundId, bookingDetails } = body;
       
       const keyId = Deno.env.get('RAZORPAY_KEY_ID');
       const keySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
 
       if (!keyId || !keySecret) {
         throw new Error('Razorpay keys not configured in Supabase Secrets.');
+      }
+
+      // Fetch Ground & Owner details to get split account
+      const finalGroundId = groundId || bookingDetails?.ground_id;
+      let transfers = [];
+      
+      if (finalGroundId) {
+        const { data: ground } = await supabaseClient
+          .from('grounds')
+          .select('owner_id, pitch_type')
+          .eq('id', finalGroundId)
+          .single();
+          
+        if (ground?.owner_id) {
+          const { data: bankDetails } = await supabaseClient
+            .from('owner_bank_details')
+            .select('razorpay_account_id')
+            .eq('owner_id', ground.owner_id)
+            .single();
+            
+          if (bankDetails?.razorpay_account_id) {
+            // Calculate breakdown to get owner_settlement
+            // Use provided bookingDetails or fallback to amount
+            const breakdown = calculateFinalAmounts(bookingDetails || { total_amount: amount }, ground.pitch_type);
+            
+            transfers = [{
+              account: bankDetails.razorpay_account_id,
+              amount: Math.round(breakdown.ownerSettlement * 100), // convert to paise
+              currency: currency,
+              on_hold: true
+            }];
+            
+            console.log(`[Razorpay] Split transfer to ${bankDetails.razorpay_account_id}: ${breakdown.ownerSettlement}`);
+          }
+        }
       }
 
       const response = await fetch('https://api.razorpay.com/v1/orders', {
@@ -475,11 +595,13 @@ serve(async (req) => {
           amount: Math.round(amount * 100), // convert to paise
           currency,
           receipt,
+          transfers
         }),
       });
 
       const order = await response.json();
       if (!response.ok) {
+        console.error('[Razorpay] Order creation failed:', JSON.stringify(order));
         throw new Error(order.error?.description || 'Failed to create Razorpay order');
       }
 
@@ -534,7 +656,19 @@ serve(async (req) => {
 
         const { data: ground } = await supabaseClient.from('grounds').select('pitch_type').eq('id', ground_id).single();
         
-        const { pricePerHour, discountAmount, netAmount } = calculateFinalAmounts(bookingDetails, ground?.pitch_type);
+        const { 
+          pricePerHour, 
+          discountAmount, 
+          netAmount,
+          groundPrice,
+          platformFeeUser,
+          gstUser,
+          totalCharged,
+          platformFeeOwner,
+          gstOwner,
+          ownerSettlement,
+          bygNetRevenue
+        } = calculateFinalAmounts(bookingDetails, ground?.pitch_type);
 
         const { data: newBooking, error: insertError } = await supabaseClient
           .from('bookings')
@@ -547,6 +681,15 @@ serve(async (req) => {
             total_hours: Number(bookingDetails.total_hours ?? 1),
             price_per_hour: pricePerHour,
             total_amount: netAmount,
+            ground_price: groundPrice,
+            platform_fee_user: platformFeeUser,
+            platform_fee_owner: platformFeeOwner,
+            gst_user: gstUser,
+            gst_owner: gstOwner,
+            total_charged: totalCharged,
+            owner_settlement: ownerSettlement,
+            byg_net_revenue: bygNetRevenue,
+            razorpay_order_id,
             coupon_id,
             discount_amount: discountAmount,
             notes: (team_type === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Paid via Razorpay: ${razorpay_payment_id})`,
@@ -573,12 +716,19 @@ serve(async (req) => {
         transaction_reference: razorpay_payment_id,
       });
 
-      // Credit Owner's Wallet
+      // Credit Owner's Wallet (Internal tracking / Settlement)
       if (bookingData?.ground?.owner_id) {
+        // Fetch breakdown to get owner_settlement
+        const { data: bData } = await supabaseClient
+          .from('bookings')
+          .select('owner_settlement')
+          .eq('id', finalBookingId)
+          .single();
+
         await supabaseClient.rpc('add_money_to_wallet', {
           target_user_id: bookingData.ground.owner_id,
-          amount_to_add: bookingData.total_amount,
-          description_text: `Earning from booking for ${bookingData.ground.name}`,
+          amount_to_add: bData?.owner_settlement || bookingData.total_amount,
+          description_text: `Earning from booking for ${bookingData.ground.name} (Settled via Wallet/Razorpay)`,
           ref_type: 'booking_revenue',
           ref_id: finalBookingId
         });

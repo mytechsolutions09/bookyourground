@@ -1088,12 +1088,12 @@ const styles = StyleSheet.create({
   leftCol: {
     flex: 1.5,
     gap: 24,
-    paddingTop: 40,
+    paddingTop: 16,
   },
   rightCol: {
     flex: 1,
     gap: 24,
-    paddingTop: 40,
+    paddingTop: 16,
     paddingBottom: 24,
   },
   totalEarningsCard: {

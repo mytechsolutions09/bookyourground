@@ -27,6 +27,9 @@ import { CreditCard, ShieldCheck, Clock, Calendar, MapPin, ChevronLeft, Wallet, 
 import { hoursBetweenBooked, normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
 import { useUI } from '@/contexts/UIContext';
 
+const PLATFORM_FEE_RATE = 0.05;
+const GST_RATE = 0.18;
+
 export default function CheckoutScreen() {
   const { id } = useLocalSearchParams();
   const { user, profile } = useAuth();
@@ -47,6 +50,24 @@ export default function CheckoutScreen() {
   const [customCashAmount, setCustomCashAmount] = useState<string>('');
   const [bookedForName, setBookedForName] = useState<string>('');
   
+  // Pricing Calculations
+  const { baseGroundPrice, platformFeeIncGst, totalPayable } = React.useMemo(() => {
+    const bgp = (selectedGateway === 'cash' && customCashAmount && !isNaN(parseFloat(customCashAmount)))
+      ? parseFloat(customCashAmount)
+      : (booking?.total_amount || 0);
+    
+    const pf = bgp * PLATFORM_FEE_RATE;
+    const gst = pf * GST_RATE;
+    const pfGst = pf + gst;
+    const tp = Math.round(bgp + pfGst); // Round to nearest whole number
+    
+    return {
+      baseGroundPrice: bgp,
+      platformFeeIncGst: pfGst,
+      totalPayable: tp
+    };
+  }, [selectedGateway, customCashAmount, booking?.total_amount]);
+
   const [showRazorpayWebView, setShowRazorpayWebView] = useState(false);
   const [razorpayOrderData, setRazorpayOrderData] = useState<any>(null);
 
@@ -387,12 +408,30 @@ export default function CheckoutScreen() {
       
       const { data: { session } } = await supabase.auth.getSession();
       
+      // Use the pre-calculated totalPayable
+      const finalAmount = totalPayable;
+
       // 1. Create Order
       const { data: order, error: orderError } = await supabase.functions.invoke('payment-gateway', {
         body: {
           action: 'create-razorpay-order',
-          amount: booking.total_amount,
+          amount: finalAmount,
           receipt: `rcpt_${Date.now()}`,
+          groundId: booking.ground_id,
+          bookingDetails: booking.isNew ? {
+            ground_id: booking.ground_id,
+            booking_date: booking.booking_date,
+            start_time: booking.start_time,
+            end_time: booking.end_time,
+            team_type: booking.team_type,
+            coupon_id: booking.coupon_id,
+            total_hours: booking.total_hours,
+            price_per_hour: booking.price_per_hour,
+            total_amount: booking.total_amount + (booking.discount_amount || 0),
+            discount_amount: booking.discount_amount || 0,
+          } : {
+            total_amount: booking.total_amount
+          },
         },
       });
 
@@ -536,7 +575,9 @@ export default function CheckoutScreen() {
               price_per_hour: booking.price_per_hour,
               total_amount: booking.total_amount + (booking.discount_amount || 0),
               discount_amount: booking.discount_amount || 0,
-            } : null,
+            } : {
+              total_amount: booking.total_amount
+            },
           },
         });
 
@@ -806,35 +847,34 @@ export default function CheckoutScreen() {
 
             <View style={styles.breakdown}>
               <View style={styles.breakdownRow}>
-                <RNText style={styles.breakdownLabel}>Items (1)</RNText>
+                <RNText style={styles.breakdownLabel}>Ground Price</RNText>
                 <RNText style={styles.breakdownValue}>
-                  {formatCurrency(
-                    (selectedGateway === 'cash' && customCashAmount && !isNaN(parseFloat(customCashAmount)))
-                      ? parseFloat(customCashAmount) + (booking.discount_amount || 0)
-                      : booking.total_amount + (booking.discount_amount || 0)
-                  )}
+                  {formatCurrency(baseGroundPrice)}
                 </RNText>
               </View>
+              
+              <View style={styles.breakdownRow}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <RNText style={styles.breakdownLabel}>Platform Fee</RNText>
+                  <View style={styles.gstTag}>
+                    <RNText style={styles.gstTagText}>inc. 18% GST</RNText>
+                  </View>
+                </View>
+                <RNText style={styles.breakdownValue}>{formatCurrency(platformFeeIncGst)}</RNText>
+              </View>
+
               {booking.discount_amount > 0 && (
                 <View style={styles.breakdownRow}>
                   <RNText style={styles.breakdownLabel}>Your savings</RNText>
                   <RNText style={styles.breakdownDiscountValue}>-{formatCurrency(booking.discount_amount)}</RNText>
                 </View>
               )}
-              <View style={styles.breakdownRow}>
-                <RNText style={styles.breakdownLabel}>Estimated sales tax</RNText>
-                <RNText style={styles.breakdownValue}>-</RNText>
-              </View>
             </View>
 
             <View style={styles.subtotalRow}>
-              <RNText style={styles.subtotalLabel}>Sub Total :</RNText>
+              <RNText style={styles.subtotalLabel}>Total Payable :</RNText>
               <RNText style={styles.subtotalValue}>
-                {formatCurrency(
-                  (selectedGateway === 'cash' && customCashAmount && !isNaN(parseFloat(customCashAmount)))
-                    ? parseFloat(customCashAmount)
-                    : booking.total_amount
-                )}
+                {formatCurrency(totalPayable)}
               </RNText>
             </View>
 
@@ -1574,5 +1614,17 @@ const styles = StyleSheet.create({
     color: '#14532D',
     fontFamily: 'Inter',
     ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
+  },
+  gstTag: {
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  gstTagText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#6B7280',
+    letterSpacing: 0.3,
   },
 });

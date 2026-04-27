@@ -228,22 +228,36 @@ export default function BookingDetailsScreen() {
               <Text style={styles.sectionTitle}>Payment summary</Text>
 
               <View style={styles.summaryRow}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={styles.summaryLabel}>Booking price</Text>
-                  <View style={styles.teamTag}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={styles.summaryLabel}>Ground price</Text>
+                  <View style={[styles.teamTag, { marginLeft: 6 }]}>
                     <Text style={styles.teamTagText}>{cricketTeamsLabel || '1 team'}</Text>
                   </View>
                 </View>
-                <Text style={styles.summaryValue}>₹{Number(displayTotalAmount).toLocaleString('en-IN')}.00</Text>
+                <Text style={styles.summaryValue}>{formatCurrency(Number(booking.ground_price || displayTotalAmount))}</Text>
               </View>
-              <View style={styles.summaryRow}>
-                <Text style={styles.summaryLabel}>Taxes & fees</Text>
-                <Text style={styles.summaryValueMuted}>₹0.00</Text>
-              </View>
+
+              {(booking.platform_fee_user > 0 || booking.gst_user > 0) ? (
+                <View style={styles.summaryRow}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={styles.summaryLabel}>Platform fee</Text>
+                    <View style={styles.gstTagSmall}>
+                      <Text style={styles.gstTagTextSmall}>inc. GST</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.summaryValue}>{formatCurrency(Number(booking.platform_fee_user || 0) + Number(booking.gst_user || 0))}</Text>
+                </View>
+              ) : (
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Taxes & fees</Text>
+                  <Text style={styles.summaryValueMuted}>₹0.00</Text>
+                </View>
+              )}
+
               <View style={styles.divider} />
               <View style={styles.totalRow}>
                 <Text style={styles.totalLabel}>Grand total</Text>
-                <Text style={styles.totalValue}>₹{Number(displayTotalAmount).toLocaleString('en-IN')}.00</Text>
+                <Text style={styles.totalValue}>{formatCurrency(Math.round(Number(booking.total_charged || displayTotalAmount)))}</Text>
               </View>
 
               <View style={styles.paymentMethodCard}>
@@ -294,8 +308,10 @@ export default function BookingDetailsScreen() {
                 ["Date", formatDate(booking.booking_date)],
                 ["Slot", formatBookingSlotSummary(booking.start_time, booking.end_time, booking.ground.pitch_type)],
                 ["Teams", cricketTeamsLabel || '1 Team'],
+                ["Ground Price", formatCurrency(Number(booking.ground_price || displayTotalAmount))],
+                ["Platform Fee", formatCurrency(Number(booking.platform_fee_user || 0) + Number(booking.gst_user || 0))],
                 ["Payment", booking.payment_method === 'cash' ? 'Cash at Ground' : 'Online'],
-                ["Amount", `₹${Number(displayTotalAmount).toLocaleString('en-IN')}.00`],
+                ["Total Amount", formatCurrency(Math.round(Number(booking.total_charged || displayTotalAmount)))],
               ].map(([k, v]) => (
                 <View key={k} style={styles.receiptRow}>
                   <Text style={styles.receiptKey}>{k}</Text>
@@ -760,6 +776,19 @@ const styles = StyleSheet.create({
     color: '#3A4535',
     fontSize: 13,
     fontWeight: '700',
+  },
+  gstTagSmall: {
+    backgroundColor: '#F4F6F0',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 6,
+  },
+  gstTagTextSmall: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#8A9580',
+    textTransform: 'uppercase',
   },
 });
 

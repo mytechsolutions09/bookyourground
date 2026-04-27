@@ -196,12 +196,19 @@ export default function GroundDetailsScreen() {
 
   const mapsUrl = useMemo(() => {
     if (!ground) return null;
-    const parts = [ground.address, ground.city, ground.state]
-      .map((v) => String(v ?? '').trim())
-      .filter(Boolean);
-    if (!parts.length) return null;
-    const query = encodeURIComponent(parts.join(', '));
-    return `https://www.google.com/maps/search/?api=1&query=${query}`;
+    const { latitude, longitude, address, city, state } = ground;
+    const baseUrl = "https://www.google.com/maps/dir/?api=1";
+    
+    let destination;
+    if (latitude && longitude) {
+      destination = `${latitude},${longitude}`;
+    } else {
+      const parts = [address, city, state].map((v) => String(v ?? '').trim()).filter(Boolean);
+      destination = encodeURIComponent(parts.join(', '));
+    }
+    
+    if (!destination) return null;
+    return `${baseUrl}&destination=${destination}&travelmode=driving`;
   }, [ground]);
 
   // When ground + user change, check if user can review this ground.

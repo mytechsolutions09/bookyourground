@@ -275,7 +275,7 @@ export default function SupportScreen() {
 
   return (
     <View style={styles.nativeScreen}>
-      <MobileAppNavbar title="Contact Us" titleColor="#01b854" />
+      <MobileAppNavbar title="Contact Us" titleColor="#0F172A" />
       <View style={styles.nativeBody}>{mainContent}</View>
     </View>
   );
@@ -307,40 +307,36 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   tabContainer: {
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: 24,
   },
   tabBackground: {
     flexDirection: 'row',
-    backgroundColor: '#EEF2F6',
-    padding: 6,
-    borderRadius: 100,
-    minWidth: Platform.OS === 'web' ? 400 : '100%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
+    backgroundColor: '#F1F5F9',
+    padding: 4,
+    borderRadius: 12,
+    width: '100%',
+    maxWidth: Platform.OS === 'web' ? 400 : '100%',
   },
   tab: {
     flex: 1,
     paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     alignItems: 'center',
-    borderRadius: 100,
+    borderRadius: 8,
   },
   activeTab: {
     backgroundColor: '#FFFFFF',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#4B5563',
+    color: '#64748B',
   },
   activeTabText: {
     color: '#01b854',
@@ -502,9 +498,11 @@ const styles = StyleSheet.create({
   },
   nativeScreen: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: '#F8FAFC',
   },
   nativeBody: {
     flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
 });

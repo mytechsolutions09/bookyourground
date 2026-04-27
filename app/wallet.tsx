@@ -21,7 +21,13 @@ export default function WalletScreen() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [quickAdd, setQuickAdd] = useState('1600');
-  const [summary, setSummary] = useState({ added: 0, spent: 0, refunded: 0 });
+  const [summary, setSummary] = useState({ 
+    added: 0, 
+    spent: 0, 
+    refunded: 0,
+    bookingRevenue: 0,
+    adminTopups: 0
+  });
   const [stats, setStats] = useState({ bookingPercent: 0, shopPercent: 0, otherPercent: 0, avgMonthly: 0 });
   const [limit, setLimit] = useState(10);
   const [hasMore, setHasMore] = useState(true);
@@ -84,6 +90,8 @@ export default function WalletScreen() {
         setTransactions(combined.slice(0, newLimit));
 
         // Global Summary calculation from combined
+        let bookingRevenue = 0;
+        let adminTopups = 0;
         let earned = 0;
         let spent = 0;
         let refunded = 0;
@@ -91,7 +99,12 @@ export default function WalletScreen() {
         combined.forEach(tx => {
           if (tx.isPositive) {
              if (tx.type === 'refund') refunded += tx.amount;
-             else earned += tx.amount;
+             else {
+               earned += tx.amount;
+               if (tx.type === 'revenue') bookingRevenue += tx.amount;
+               else if (tx.type === 'topup' || tx.type === 'added') adminTopups += tx.amount;
+               else adminTopups += tx.amount; // fallback
+             }
           } else {
              spent += tx.amount;
           }
@@ -100,7 +113,9 @@ export default function WalletScreen() {
         setSummary({
           added: earned,
           spent: spent,
-          refunded: refunded
+          refunded: refunded,
+          bookingRevenue,
+          adminTopups
         });
 
         // Calculate Spending Stats
@@ -252,10 +267,24 @@ export default function WalletScreen() {
     <View style={styles.rightPanel}>
       <View style={styles.panelCard}>
         <Text style={styles.panelTitle}>Wallet Summary</Text>
-        <View style={styles.summaryRow}>
+        <View style={[styles.summaryRow, isOwner && { borderBottomWidth: 0, paddingBottom: 4 }]}>
           <Text style={styles.summaryLabel}>Total Earnings</Text>
           <Text style={styles.summaryValue}>{formatCurrency(summary.added)}</Text>
         </View>
+
+        {isOwner && (
+          <View style={styles.bifurcationContainer}>
+            <View style={styles.bifurcationRow}>
+              <Text style={styles.bifurcationLabel}>Booking Revenue</Text>
+              <Text style={styles.bifurcationValue}>{formatCurrency(summary.bookingRevenue)}</Text>
+            </View>
+            <View style={[styles.bifurcationRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
+              <Text style={styles.bifurcationLabel}>Admin Top-ups</Text>
+              <Text style={styles.bifurcationValue}>{formatCurrency(summary.adminTopups)}</Text>
+            </View>
+          </View>
+        )}
+
         {!isOwner && (
           <>
             <View style={styles.summaryRow}>
@@ -700,5 +729,29 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     fontWeight: '600',
     fontFamily: 'Inter',
+  },
+  bifurcationContainer: {
+    paddingLeft: 12,
+    marginBottom: 12,
+  },
+  bifurcationRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#CBD5E1',
+    opacity: 0.8,
+  },
+  bifurcationLabel: {
+    fontSize: 12,
+    color: '#475569',
+    fontFamily: 'Inter',
+    fontWeight: '500',
+  },
+  bifurcationValue: {
+    fontSize: 12,
+    color: '#0F172A',
+    fontFamily: 'Inter',
+    fontWeight: '600',
   },
 });
