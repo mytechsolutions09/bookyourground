@@ -99,7 +99,7 @@ export default function MobileTabBar() {
         <House size={size} color={activeTab === 'home' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'home' ? 2.5 : 2} />
         <Text style={[styles.label, { color: activeTab === 'home' ? ACTIVE : INACTIVE }]}>Home</Text>
       </Pressable>
-      
+
       <Pressable
         style={styles.item}
         onPress={() => go('/book-my-ground')}
@@ -107,7 +107,7 @@ export default function MobileTabBar() {
         <LandPlot size={size} color={activeTab === 'grounds' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'grounds' ? 2.5 : 2} />
         <Text style={[styles.label, { color: activeTab === 'grounds' ? ACTIVE : INACTIVE }]}>Grounds</Text>
       </Pressable>
-
+      
       <Pressable
         style={styles.item}
         onPress={() => go('/(tabs)/find-an-opponent')}

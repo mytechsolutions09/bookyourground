@@ -15,6 +15,7 @@ npx expo start
 npx expo start --web
 
 
+
 commit changes to git
 git push
 
@@ -24,3 +25,6 @@ git stash pop      # Puts your local changes back on top
 
 
 push to dev
+
+
+when owner cancels a match , send mail to person who booked the ground

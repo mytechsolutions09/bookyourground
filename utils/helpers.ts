@@ -25,6 +25,17 @@ export const formatDateDDMMYYYY = (date: string | null | undefined): string => {
 };
 
 export const formatDate = (date: string): string => {
+  if (!date) return '';
+  // Split YYYY-MM-DD to avoid timezone shift on Web
+  const parts = date.split('-');
+  if (parts.length === 3) {
+    const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    return d.toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  }
   return new Date(date).toLocaleDateString('en-IN', {
     year: 'numeric',
     month: 'short',

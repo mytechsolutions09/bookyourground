@@ -31,7 +31,6 @@ export default function LandingPageSections({ variant }: { variant: Variant }) {
       </View>
       <GroundsNearYou />
       <Features />
-      <CallToAction />
       {variant === 'web' ? <SiteFooter /> : null}
     </>
   );

@@ -750,7 +750,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 10,
   },
-  logo: { width: 300, height: 75 },
+  logo: { width: 200, height: 50 },
   headingWrap: { alignItems: 'center', marginTop: 0, marginBottom: 16 },
   card: { 
     backgroundColor: 'rgba(255, 255, 255, 0.2)', 
@@ -869,7 +869,7 @@ const webStyles = StyleSheet.create({
     overflow: 'hidden',
   },
   header: { marginBottom: 24, alignItems: 'center' },
-  logoImage: { width: 320, height: 80, marginBottom: 8 },
+  logoImage: { width: 220, height: 55, marginBottom: 8 },
   formTitle: { 
     fontSize: 26, 
     fontWeight: '900', 

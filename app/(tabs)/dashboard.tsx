@@ -586,14 +586,14 @@ function DashboardContent() {
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        onScroll={horizontalScrollHandler}
+        onScroll={Platform.OS === 'web' ? undefined : horizontalScrollHandler}
         scrollEventThrottle={16}
         style={{ flex: 1 }}
       >
         {/* Slide 1: Overview */}
         <View style={{ width }}>
           <Animated.ScrollView
-            onScroll={verticalScrollHandler}
+            onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
             scrollEventThrottle={16}
             style={styles.root}
             contentContainerStyle={[styles.scrollContent, { paddingTop: HEADER_HEIGHT + insets.top + 16 }]}
@@ -678,7 +678,7 @@ function DashboardContent() {
         {/* Slide 2: Activity/Stats */}
         <View style={{ width }}>
           <Animated.ScrollView
-            onScroll={verticalScrollHandler}
+            onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
             scrollEventThrottle={16}
             style={styles.root}
             contentContainerStyle={[styles.scrollContent, { paddingTop: HEADER_HEIGHT + insets.top + 16, paddingHorizontal: 16 }]}

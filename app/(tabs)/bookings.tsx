@@ -81,6 +81,11 @@ export default function BookingsScreen() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<'date' | 'ground' | 'amount' | 'status' | 'booked_at' | 'paid' | 'teams' | 'name'>('date');
   const [sortAsc, setSortAsc] = useState(false);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const PAGE_SIZE = 10;
+  const [totalCount, setTotalCount] = useState(0);
   
   const { width } = useWindowDimensions();
   const isWeb = Platform.OS === 'web';
@@ -112,15 +117,20 @@ export default function BookingsScreen() {
 
   useEffect(() => {
     if (user) {
-      loadBookings();
+      loadBookings(0);
     }
-  }, [user, profile]);
+  }, [user, profile, activeTab, ownerScope, selectedDate, searchQuery]);
 
-  const loadBookings = async () => {
+  const loadBookings = async (targetPage = 0, isLoadMore = false) => {
     if (!user) return;
 
     try {
-      setLoading(true);
+      if (isLoadMore) setLoadingMore(true);
+      else setLoading(true);
+
+      const from = targetPage * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
       let query = supabase
         .from('bookings')
         .select(`
@@ -134,23 +144,56 @@ export default function BookingsScreen() {
             team_name,
             phone
           )
-        `);
+        `, { count: 'exact' });
 
-      // If regular user, RLS will now allow seeing opponents, 
-      // but we still want to primarily fetch our own involvements.
-      if (profile?.role === 'user') {
-        // We fetch everything we have access to (own + matched opponents)
-        // RLS handles the security.
-      } else if (profile?.role === 'ground_owner') {
-        // Owners see all bookings for their grounds (handled by RLS)
+      // Filters
+      if (activeTab === 'upcoming') {
+        const today = new Date().toISOString().split('T')[0];
+        query = query.gte('booking_date', today).eq('status', 'confirmed');
+      } else if (activeTab === 'past') {
+        const today = new Date().toISOString().split('T')[0];
+        query = query.lt('booking_date', today).eq('status', 'confirmed');
+      } else if (activeTab === 'cancelled') {
+        query = query.eq('status', 'cancelled');
+      } else {
+        query = query.in('status', ['confirmed', 'cancelled']);
       }
 
-      const { data, error } = await query
-        .in('status', ['confirmed', 'cancelled'])
-        .order('booking_date', { ascending: false });
+      if (profile?.role === 'ground_owner' && ownerScope !== 'all') {
+        if (ownerScope === 'own') {
+           query = query.eq('ground.owner_id', user.id);
+        } else {
+           query = query.neq('ground.owner_id', user.id);
+        }
+      } else if (profile?.role === 'user') {
+        query = query.eq('user_id', user.id);
+      }
+
+      if (selectedDate) {
+        query = query.eq('booking_date', selectedDate);
+      }
+
+      if (searchQuery.trim()) {
+        query = query.ilike('ground.name', `%${searchQuery}%`);
+      }
+
+      const { data, error, count } = await query
+        .order('booking_date', { ascending: sortAsc })
+        .order('start_time', { ascending: sortAsc })
+        .range(from, to);
 
       if (error) throw error;
-      setBookings(data || []);
+      
+      const newBookings = data || [];
+      if (isLoadMore) {
+        setBookings(prev => [...prev, ...newBookings]);
+      } else {
+        setBookings(newBookings);
+      }
+      
+      setTotalCount(count || 0);
+      setHasMore(newBookings.length === PAGE_SIZE);
+      setPage(targetPage);
 
       // Fetch reviewed booking IDs
       const { data: reviewsData, error: reviewsErr } = await supabase
@@ -165,6 +208,7 @@ export default function BookingsScreen() {
       console.error('Error loading bookings:', error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -270,14 +314,7 @@ export default function BookingsScreen() {
   };
 
   /** Only confirmed / paid bookings are fetched. */
-  const listBookings = bookings;
-
   const filteredBookings = useMemo(() => {
-    const d = new Date();
-    const yyyy = d.getFullYear();
-    const mm = `${d.getMonth() + 1}`.padStart(2, '0');
-    const dd = `${d.getDate()}`.padStart(2, '0');
-    const today = `${yyyy}-${mm}-${dd}`;
     let result = bookings;
 
     // Detect matches for users
@@ -288,10 +325,8 @@ export default function BookingsScreen() {
       return acc;
     }, {} as Record<string, BookingWithDetails[]>);
 
-    // If regular user, show only one row per slot but with match info
+    // If regular user, enrich with opponent info if they happen to be in the same page
     if (profile?.role === 'user') {
-      result = result.filter(b => b.user_id === user?.id);
-      // Enrich with opponent info
       result = result.map(b => {
         const key = `${b.ground_id}_${b.booking_date}_${b.start_time}`;
         const group = slotGroups[key] || [];
@@ -306,71 +341,70 @@ export default function BookingsScreen() {
       });
     }
 
-    // Status Filter
-    if (activeTab === 'upcoming') {
-      result = result.filter(b => bookingDateOnly(b.booking_date) >= today && b.status === 'confirmed');
-    } else if (activeTab === 'past') {
-      result = result.filter(b => bookingDateOnly(b.booking_date) < today && b.status === 'confirmed');
-    } else if (activeTab === 'cancelled') {
-      result = result.filter(b => b.status === 'cancelled');
-    }
-
-    // Scope Filter (for owners)
-    if (profile?.role === 'ground_owner' && ownerScope !== 'all') {
-      result = result.filter(b => 
-        ownerScope === 'own' ? b.ground.owner_id === user?.id : b.ground.owner_id !== user?.id
-      );
-    }
-
-    // Date Filter
-    if (selectedDate) {
-      result = result.filter(b => bookingDateOnly(b.booking_date) === selectedDate);
-    }
-
-    // Search Filter
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      result = result.filter(b => 
-        (b.ground?.name || '').toLowerCase().includes(q) ||
-        (b.ground?.city || '').toLowerCase().includes(q) ||
-        (b.booked_for_name || '').toLowerCase().includes(q)
-      );
-    }
-
-    // Sort
-    result = [...result].sort((a, b) => {
-      let comparison = 0;
-      if (sortKey === 'date') {
-        const dateTimeA = `${a.booking_date}T${a.start_time}`;
-        const dateTimeB = `${b.booking_date}T${b.start_time}`;
-        comparison = dateTimeA > dateTimeB ? 1 : -1;
-      } else if (sortKey === 'ground') {
-        const nameA = (a.ground?.name || '').toLowerCase();
-        const nameB = (b.ground?.name || '').toLowerCase();
-        comparison = nameA > nameB ? 1 : -1;
-      } else if (sortKey === 'amount') {
-        comparison = a.total_amount > b.total_amount ? 1 : -1;
-      } else if (sortKey === 'status') {
-        comparison = a.status > b.status ? 1 : -1;
-      } else if (sortKey === 'booked_at') {
-        comparison = new Date(a.created_at).getTime() > new Date(b.created_at).getTime() ? 1 : -1;
-      } else if (sortKey === 'paid') {
-        comparison = (a.payment_received ? 1 : 0) > (b.payment_received ? 1 : 0) ? 1 : -1;
-      } else if (sortKey === 'teams') {
-        const teamsA = cricketTeamsLabelFromBooking(a.ground.pitch_type, a.notes);
-        const teamsB = cricketTeamsLabelFromBooking(b.ground.pitch_type, b.notes);
-        comparison = teamsA > teamsB ? 1 : -1;
-      } else if (sortKey === 'name') {
-        const nameA = (a.booked_for_name || '').toLowerCase();
-        const nameB = (b.booked_for_name || '').toLowerCase();
-        comparison = nameA > nameB ? 1 : -1;
-      }
-
-      return sortAsc ? comparison : -comparison;
-    });
-
     return result;
-  }, [bookings, activeTab, ownerScope, selectedDate, searchQuery, user?.id, profile?.role, sortAsc, sortKey]);
+  }, [bookings, profile?.role]);
+
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+
+  const renderPagination = () => {
+    if (totalPages <= 1 && !loadingMore) return null;
+
+    if (Platform.OS !== 'web') {
+      if (!hasMore) return null;
+      return (
+        <TouchableOpacity 
+          style={styles.loadMoreBtn} 
+          onPress={() => loadBookings(page + 1, true)}
+          disabled={loadingMore}
+        >
+          {loadingMore ? (
+            <ActivityIndicator color="#00ea6b" />
+          ) : (
+            <Text style={styles.loadMoreText}>Load More</Text>
+          )}
+        </TouchableOpacity>
+      );
+    }
+
+    return (
+      <View style={styles.paginationRow}>
+        <TouchableOpacity 
+          style={[styles.pageBtn, page === 0 && styles.pageBtnDisabled]} 
+          onPress={() => loadBookings(page - 1)}
+          disabled={page === 0}
+        >
+          <Text style={styles.pageBtnText}>Prev</Text>
+        </TouchableOpacity>
+        
+        {Array.from({ length: Math.min(5, totalPages) }).map((_, i) => {
+          let pageNum = i;
+          if (totalPages > 5 && page > 2) {
+            pageNum = page - 2 + i;
+            if (pageNum >= totalPages) pageNum = totalPages - 5 + i;
+          }
+          if (pageNum < 0) pageNum = i;
+
+          return (
+            <TouchableOpacity 
+              key={pageNum} 
+              style={[styles.pageBtn, page === pageNum && styles.pageBtnActive]} 
+              onPress={() => loadBookings(pageNum)}
+            >
+              <Text style={[styles.pageBtnText, page === pageNum && styles.pageBtnTextActive]}>{pageNum + 1}</Text>
+            </TouchableOpacity>
+          );
+        })}
+
+        <TouchableOpacity 
+          style={[styles.pageBtn, page === totalPages - 1 && styles.pageBtnDisabled]} 
+          onPress={() => loadBookings(page + 1)}
+          disabled={page === totalPages - 1}
+        >
+          <Text style={styles.pageBtnText}>Next</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   const showAdminColumns = profile?.role === 'ground_owner';
   const visibleBookings = filteredBookings;
@@ -544,6 +578,7 @@ export default function BookingsScreen() {
                   </TouchableOpacity>
                 );
               }}
+              ListFooterComponent={renderPagination}
             />
           </View>
 
@@ -702,10 +737,11 @@ export default function BookingsScreen() {
             numColumns={1}
             contentContainerStyle={styles.listNative}
             showsVerticalScrollIndicator={false}
+            ListFooterComponent={renderPagination}
             refreshControl={
               <RefreshControl
-                refreshing={loading}
-                onRefresh={loadBookings}
+                refreshing={loading && !loadingMore}
+                onRefresh={() => loadBookings(0)}
                 tintColor="#00ea6b"
                 colors={['#00ea6b']}
               />
@@ -1790,6 +1826,58 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginTop: 2,
+  },
+  paginationRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 24,
+    marginBottom: 40,
+    paddingHorizontal: 16,
+  },
+  pageBtn: {
+    minWidth: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  pageBtnActive: {
+    backgroundColor: '#00ea6b',
+    borderColor: '#00ea6b',
+  },
+  pageBtnDisabled: {
+    opacity: 0.5,
+    backgroundColor: '#F8FAFC',
+  },
+  pageBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748B',
+    fontFamily: 'Inter',
+  },
+  pageBtnTextActive: {
+    color: '#FFFFFF',
+  },
+  loadMoreBtn: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadMoreText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#00ea6b',
+    fontFamily: 'Inter',
   },
 });
 

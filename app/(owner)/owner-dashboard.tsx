@@ -673,14 +673,14 @@ export default function OwnerDashboardScreen() {
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        onScroll={horizontalScrollHandler}
+        onScroll={Platform.OS === 'web' ? undefined : horizontalScrollHandler}
         scrollEventThrottle={16}
         style={{ flex: 1 }}
       >
         {/* Slide 1: Owner Hub */}
         <View style={{ width }}>
           <Animated.ScrollView
-            onScroll={verticalScrollHandler}
+            onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
             scrollEventThrottle={16}
             style={styles.container}
             contentContainerStyle={[styles.scrollContent, { paddingTop: HEADER_HEIGHT + insets.top + 16, paddingHorizontal: 16 }]}
@@ -694,7 +694,7 @@ export default function OwnerDashboardScreen() {
         {/* Slide 2: Activity */}
         <View style={{ width }}>
           <Animated.ScrollView
-            onScroll={verticalScrollHandler}
+            onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
             scrollEventThrottle={16}
             style={styles.container}
             contentContainerStyle={[styles.scrollContent, { paddingTop: HEADER_HEIGHT + insets.top + 16, paddingHorizontal: 16 }]}
@@ -707,7 +707,7 @@ export default function OwnerDashboardScreen() {
         {/* Slide 3: Profile */}
         <View style={{ width }}>
           <Animated.ScrollView
-            onScroll={verticalScrollHandler}
+            onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
             scrollEventThrottle={16}
             style={styles.container}
             contentContainerStyle={[styles.scrollContent, { paddingTop: HEADER_HEIGHT + insets.top + 16, paddingHorizontal: 16 }]}

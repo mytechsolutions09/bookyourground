@@ -331,6 +331,7 @@ export default function WalletScreen() {
     <ScrollView
       style={styles.root}
       contentContainerStyle={[styles.scrollContent, (Platform.OS === 'web' && !isCompact) && styles.scrollContentWeb]}
+      showsVerticalScrollIndicator={false}
     >
       <View style={styles.mainLayout}>
         <View style={styles.centerContent}>

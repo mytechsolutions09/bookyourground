@@ -20,7 +20,7 @@ import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Modal from '@/components/ui/Modal';
 import GroundCard from '@/components/grounds/GroundCard';
-import { formatCurrency, getDayOfWeek } from '@/utils/helpers';
+import { formatCurrency, getDayOfWeek, formatTime } from '@/utils/helpers';
 import {
   getSlotTemplatesForPitch,
   hoursBetweenBooked,
@@ -28,10 +28,11 @@ import {
   normalizeDbTimeToHHMM,
 } from '@/utils/bookingSlots';
 import {
-  savePendingBookingDraft,
   peekPendingBookingDraft,
+  savePendingBookingDraft,
   clearPendingBookingDraft,
 } from '@/lib/pendingBookingDraft';
+import BookingFormSkeleton from './BookingFormSkeleton';
 
 type TimeString = string; // expected: "HH:MM"
 
@@ -194,6 +195,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
   const { width: windowWidth } = useWindowDimensions();
   const isWeb = Platform.OS === 'web';
   const IS_DARK = !isWeb || windowWidth < 900;
+  const isCompact = windowWidth < 900;
   
   const isEffectiveLight = true;
   const styles = React.useMemo(() => getStyles(isWeb, isEffectiveLight, noCard), [isWeb, isEffectiveLight, noCard]);
@@ -229,6 +231,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
   const pendingReselectGroundIdRef = useRef<string | null>(null);
   const handleSearchRef = useRef<() => Promise<void>>(async () => { });
   const loadMoreSentinelRef = useRef<any>(null);
+  const dateScrollRef = useRef<ScrollView>(null);
 
   const [locationKey, setLocationKey] = useState<string>('New Gurugram__Haryana');
   const [typeKey, setTypeKey] = useState<string>(initialType || 'Cricket Ground');
@@ -859,7 +862,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
             })
             .map((hhmm) => ({
               value: hhmm as TimeString,
-              label: hhmm,
+              label: formatTime(hhmm),
             }))
           : null;
 
@@ -873,7 +876,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
             })
             .map((hhmm) => ({
               value: hhmm as TimeString,
-              label: hhmm,
+              label: formatTime(hhmm),
             }))
           : null;
 
@@ -910,7 +913,13 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
   );
 
   useEffect(() => {
-    if (useLandingSearchFlow) return;
+    if (useLandingSearchFlow || lockSlot) return;
+    
+    // If we have an initial start time from the URL/props, give it priority.
+    // Don't auto-correct to the first available slot if the initial one is still being validated.
+    const isInitialLoading = initialStartTime && allowedStartHHMM.size === 0 && !isBoxCricket;
+    if (isInitialLoading) return;
+
     if (!availableTimeSlots.length) return;
     if (availableTimeSlots.some((s) => s.value === startTime)) return;
 
@@ -922,7 +931,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       // If no slots are currently available, keep `startTime` empty so booking can't proceed.
       setStartTime('');
     }
-  }, [useLandingSearchFlow, availableTimeSlots, startTime, allowedStartHHMM]);
+  }, [useLandingSearchFlow, availableTimeSlots, startTime, allowedStartHHMM, initialStartTime, isBoxCricket]);
 
   /** Landing: if type/date changes and the previous slot is no longer valid, clear it. */
   useEffect(() => {
@@ -951,6 +960,16 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
     if (!isWeb || webColumnCount <= 1) return undefined;
     return { width: '100%' as const, flexBasis: '100%' as const };
   }, [isWeb, webColumnCount]);
+
+  const webGridHalfWidthStyle = useMemo(() => {
+    if (!isWeb || windowWidth < 900) return undefined;
+    return {
+      flexGrow: 1,
+      flexShrink: 1,
+      flexBasis: '48.5%',
+      maxWidth: '50%',
+    };
+  }, [isWeb, windowWidth]);
 
   const webSingleColumnStyle = useMemo(() => {
     if (!isWeb || webColumnCount > 1) return undefined;
@@ -1001,19 +1020,37 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       hasNextDates: safeOffset < maxOffset,
     };
   }, [upcomingDates, dateOffset, datePageSize]);
-  
+
   useEffect(() => {
-    if (initialDate && upcomingDates.length > 0) {
-      const idx = upcomingDates.findIndex(d => d.iso === initialDate);
-      if (idx !== -1) {
-        // Try to center it, or at least make it visible
-        const half = Math.floor(datePageSize / 2);
-        const nextOffset = Math.max(0, idx - half);
+    if (!bookingDate || upcomingDates.length === 0) return;
+
+    // Use a small delay to ensure layout and state are fully synchronized
+    const timer = setTimeout(() => {
+      const idx = upcomingDates.findIndex(d => d.iso === bookingDate);
+      if (idx === -1) return;
+
+      // 1. Web pager logic (offset-based)
+      if (isWeb && !isCompact) {
+        // Position the selected date as the first visible item in the list
+        const targetOffset = idx;
         const maxOffset = Math.max(0, upcomingDates.length - datePageSize);
-        setDateOffset(Math.min(nextOffset, maxOffset));
+        const finalOffset = Math.min(Math.max(0, targetOffset), maxOffset);
+        setDateOffset(finalOffset);
+      } 
+      // 2. ScrollView logic (scrollTo-based for mobile/compact)
+      else if (dateScrollRef.current) {
+        // Approximate chip width: 64 (minWidth) + 6 (gap) = 70
+        const chipWidth = 70;
+        dateScrollRef.current.scrollTo({
+          // Scroll so the selected date is at the start of the visible area
+          x: Math.max(0, idx * chipWidth),
+          animated: true,
+        });
       }
-    }
-  }, [initialDate, upcomingDates, datePageSize]);
+    }, 150);
+
+    return () => clearTimeout(timer);
+  }, [bookingDate, upcomingDates, datePageSize, isWeb, isCompact]);
 
   function InlineDropdown({
     value,
@@ -1543,17 +1580,6 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
 
   const searchResultsBody = showSearchResults ? (
     <>
-      <Text
-        style={[
-          separateSearchResults ? styles.labelOnWhite : styles.label,
-          bookGroundScreenNative &&
-          !isWeb &&
-          !separateSearchResults &&
-          styles.labelBookGroundNative,
-        ]}
-      >
-        Available grounds
-      </Text>
       {searching ? (
         <ActivityIndicator
           style={styles.searchSpinner}
@@ -1577,20 +1603,18 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                   ? searchSlotPriceByGroundId[g.id]!
                   : null;
 
-              let displayPricePerUnit: number | null = null;
-              let unitLabelOverride: string | undefined;
+              const currentBasePrice = slotCustom ?? g.base_price_per_hour ?? 0;
+              let displayPricePerUnit: number;
+              let unitLabelOverride: string;
 
               if (isBox) {
-                const perHour = slotCustom ?? 0;
-                displayPricePerUnit = perHour;
+                displayPricePerUnit = currentBasePrice;
                 unitLabelOverride = '/hr';
               } else {
-                const baseBothTeams = slotCustom ?? 0;
-                const perMatch =
+                displayPricePerUnit =
                   teamType === 'one'
-                    ? Math.round((baseBothTeams / 2) * 100) / 100
-                    : baseBothTeams;
-                displayPricePerUnit = perMatch;
+                    ? Math.round((currentBasePrice / 2) * 100) / 100
+                    : currentBasePrice;
                 unitLabelOverride = ' / match';
               }
 
@@ -1602,7 +1626,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                     isSearchTwoColumn && styles.searchResultTileHalf,
                   ]}
                 >
-                  <GroundCard
+                   <GroundCard
                     ground={g}
                     displayPricePerUnit={displayPricePerUnit}
                     unitLabelOverride={unitLabelOverride}
@@ -1615,10 +1639,14 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                       if (startTime) {
                         query.push(`time=${encodeURIComponent(startTime)}`);
                       }
+                      if (teamType) {
+                        query.push(`teams=${encodeURIComponent(teamType)}`);
+                      }
                       const suffix = query.length ? `?${query.join('&')}` : '';
                       router.push(`${makeGroundPath(g)}${suffix}` as any);
                     }}
                     showBookingSchedule={false}
+                    showBookButton={wantsSlotFilter}
                   />
                 </View>
               );
@@ -1657,7 +1685,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
     groundPageAccent && !isWeb && styles.labelBookGroundNative,
   ];
 
-  const isCompact = windowWidth < 900;
+
   const nativeTanChrome =
     (bookGroundScreenNative || groundPageAccent) && (!isWeb || isCompact) && !lightAppTheme;
 
@@ -1698,7 +1726,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
         </View>
       )}
 
-      <View style={[styles.row, !!openSelectMenu && styles.sectionDropdownOpen]}>
+      <View style={[styles.row, isWeb && webGridHalfWidthStyle, !!openSelectMenu && styles.sectionDropdownOpen]}>
         <View
           style={[
             styles.section,
@@ -1789,7 +1817,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       </View>
 
       {!isBoxCricket ? (
-        <View style={[styles.section, webGridSectionStyle, webSingleColumnStyle]}>
+        <View style={[styles.section, isWeb ? webGridHalfWidthStyle : webGridSectionStyle, webSingleColumnStyle]}>
           <Text style={fieldLabelStyle}>Teams</Text>
           <View style={styles.teamToggle}>
             <Pressable
@@ -1962,6 +1990,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
 
           return (
             <ScrollView
+              ref={dateScrollRef}
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.dateChipsScrollContent}
@@ -2211,6 +2240,14 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
     fullWidth && !isWeb && groundPageAccent && !noCard && styles.cardGroundPageNative,
   ];
 
+  if (loadingGrounds) {
+    return (
+      <View style={[styles.wrapper, fullWidth && styles.wrapperFull]}>
+        <BookingFormSkeleton />
+      </View>
+    );
+  }
+
   return (
     <View
       style={[
@@ -2226,15 +2263,13 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
         {!hideTitle && (
           <Text style={[styles.title, (!isWeb || isCompact) && styles.titleMobile]}>Book a Ground</Text>
         )}
-        {isWeb && (
-          <Text style={styles.subtitle}>
-            {hideGroundPicker
-              ? useLandingSearchFlow
-                ? 'Choose location and type to search. Pick a date to see available time slots.'
-                : null
-              : 'Pick a ground and time slot to request your booking.'}
-          </Text>
-        )}
+        <Text style={styles.subtitle}>
+          {hideGroundPicker
+            ? useLandingSearchFlow
+              ? 'Choose location and type to search. Pick a date to see available time slots.'
+              : null
+            : 'Pick a ground and time slot to request your booking.'}
+        </Text>
 
         {isWeb && !isCompact ? (
           <View style={styles.formFieldsWeb}>{formFields}</View>
@@ -2407,7 +2442,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false) =>
     paddingTop: 8,
   },
   wrapperMobileTight: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 0,
   },
   card: {
     backgroundColor: '#FFFFFF',
@@ -2482,10 +2517,11 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false) =>
     color: '#0F172A',
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: 'Inter',
     color: '#64748B',
-    marginBottom: 12,
+    marginBottom: 20,
+    fontWeight: '500',
   },
   authRequired: {
     marginBottom: 16,
@@ -2538,30 +2574,32 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false) =>
     overflow: 'visible',
   },
   label: {
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 10,
+    fontWeight: '600',
     fontFamily: 'Inter',
-    color: '#0F172A',
-    marginBottom: 6,
+    color: '#475569',
+    marginBottom: 4,
     textTransform: isWeb ? 'uppercase' : 'none',
-    letterSpacing: isWeb ? 0.5 : 0,
+    letterSpacing: isWeb ? 1 : 0,
   },
   /** Book-a-ground native screen: field headings match neon green section labels. */
   labelBookGroundNative: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#64748B',
+    color: '#334155',
     textTransform: 'uppercase',
     letterSpacing: 1.2,
     marginBottom: 6,
   },
   /** `separateSearchResults` — heading on light card (e.g. /book-my-ground). */
   labelOnWhite: {
-    fontSize: 12,
-    fontWeight: '400',
+    fontSize: 11,
+    fontWeight: '800',
     fontFamily: 'Inter',
-    color: '#E5E7EB',
-    marginBottom: 6,
+    color: '#9CA3AF',
+    marginBottom: 16,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   input: {
     borderWidth: 1,
@@ -2640,7 +2678,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false) =>
     flex: 1,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    minHeight: 40,
+    minHeight: 48,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     borderRadius: 16,
@@ -2679,7 +2717,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false) =>
     color: '#64748B',
   },
   teamToggleTextActive: {
-    color: isLight ? '#01b854' : '#01b854',
+    color: '#01b854',
     fontWeight: '800',
   },
   teamToggleTextDisabled: {
@@ -2696,8 +2734,8 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false) =>
   },
   /** Search CTA: same row height as Location / Type / Teams (44px min, 10 vertical padding). */
   searchButtonAlignedHeight: {
-    minHeight: 44,
-    paddingVertical: 10,
+    minHeight: 48,
+    paddingVertical: 8,
     paddingHorizontal: 24,
     backgroundColor: '#01b854',
   },
@@ -2861,7 +2899,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false) =>
   searchResultsSubtitle: {
     fontSize: 14,
     fontFamily: 'Inter',
-    color: Platform.OS === 'web' ? '#6B7280' : '#E5E7EB',
+    color: isLight ? '#64748B' : '#E5E7EB',
     marginBottom: 16,
   },
   searchSpinner: {
@@ -2906,13 +2944,18 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false) =>
   },
   dropdownButton: {
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E5E7EB',
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 8,
     minHeight: 48,
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.02,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 1,
   },
   dropdownButtonOpen: {
     borderColor: '#E2E8F0',
@@ -2934,8 +2977,10 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false) =>
     color: isLight ? '#111827' : '#FFFFFF',
   },
   dropdownButtonTextSelected: {
-    color: '#64748B',
-    fontWeight: '800',
+    color: '#01b854',
+    fontWeight: '500',
+    fontSize: 14,
+    marginTop: 0,
   },
   dropdownButtonTextDisabled: {
     color: '#6B7280',
@@ -3126,14 +3171,16 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false) =>
     alignSelf: 'stretch',
   },
   dateChip: {
-    paddingVertical: 4,
-    paddingHorizontal: 16,
-    borderRadius: 999,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: isLight ? '#E5E7EB' : 'transparent',
-    backgroundColor: isLight ? '#FFFFFF' : '#043529',
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
     alignItems: 'center',
     justifyContent: 'center',
+    minWidth: 64,
+    minHeight: 48,
   },
   /** Mobile-only: smaller chip for compact horizontal scrolling. */
   dateChipMobile: {
@@ -3146,9 +3193,14 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false) =>
     gap: 2,
   },
   dateChipActive: {
-    borderColor: '#E2E8F0',
+    borderColor: '#01b854',
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
+    borderWidth: 1.5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   dateChipDisabled: {
     opacity: 0.5,
@@ -3160,8 +3212,8 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false) =>
     backgroundColor: isLight ? '#FFFFFF' : '#06392e',
   },
   dateChipText: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 11,
+    fontWeight: '600',
     fontFamily: 'Inter',
     color: isLight ? '#374151' : '#FFFFFF',
   },
@@ -3169,24 +3221,24 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false) =>
     fontSize: 11,
   },
   dateChipTextActive: {
-    color: isLight ? '#01b854' : '#01b854',
+    color: '#01b854',
     fontWeight: '800',
   },
   dateChipTextBookGroundNative: {
     color: Platform.OS === 'web' ? '#374151' : '#9ca3af',
   },
   dateChipWeekday: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '600',
     fontFamily: 'Inter',
     color: isLight ? '#6B7280' : '#FFFFFF',
-    letterSpacing: 0.2,
+    letterSpacing: 0.1,
   },
   dateChipWeekdayMobile: {
     fontSize: 9,
   },
   dateChipWeekdayActive: {
-    color: isLight ? '#01b854' : '#01b854',
+    color: '#01b854',
     fontWeight: '800',
   },
   dateChipWeekdayBookGroundNative: {
@@ -3241,12 +3293,15 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false) =>
     gap: 6,
   },
   timeSlotChip: {
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: 18,
-    borderRadius: 999,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: isLight ? '#E5E7EB' : 'transparent',
-    backgroundColor: isLight ? '#FFFFFF' : '#043529',
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+    minHeight: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   timeSlotChipBorderBookGroundNative: {
     borderColor: '#E5E7EB',
@@ -3262,9 +3317,14 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false) =>
     paddingHorizontal: 8,
   },
   timeSlotChipActive: {
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderWidth: 1.5,
+    borderColor: '#01b854',
     backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   timeSlotChipDisabled: {
     opacity: 0.5,
@@ -3295,8 +3355,8 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false) =>
     fontSize: 11,
   },
   timeSlotTextActive: {
-    color: isLight ? '#01b854' : '#01b854',
-    fontWeight: isLight ? '800' : '400',
+    color: '#01b854',
+    fontWeight: '800',
   },
   timeSlotTextBookGroundNative: {
     color: Platform.OS === 'web' ? '#374151' : '#9ca3af',

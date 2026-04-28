@@ -34,7 +34,7 @@ export default function CheckoutScreen() {
   const { id } = useLocalSearchParams();
   const { user, profile } = useAuth();
   const { width } = useWindowDimensions();
-  const isDesktop = width > 480;
+  const isDesktop = width > 768;
   
   const [booking, setBooking] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -698,7 +698,14 @@ export default function CheckoutScreen() {
       padding: Platform.OS === 'web' ? (width > 768 ? 16 : 8) : 8,
     },
     layout: {
-      gap: isDesktop ? (width > 1024 ? 24 : 16) : 0,
+      gap: isDesktop ? (width > 1024 ? 24 : 16) : 12,
+    },
+    securityInfo: {
+      marginTop: isDesktop ? 20 : 12,
+      padding: isDesktop ? 20 : 16,
+    },
+    summaryCard: {
+      padding: isDesktop ? 24 : 16,
     },
     productImg: {
       height: Platform.OS === 'web' && width > 768 ? 220 : 160,
@@ -800,7 +807,7 @@ export default function CheckoutScreen() {
             </View>
           </Card>
 
-          <View style={[styles.securityInfo, { backgroundColor: '#ECFDF5', borderColor: '#D1FAE5', borderWidth: 1 }]}>
+          <View style={[styles.securityInfo, dynamicStyles.securityInfo, { backgroundColor: '#ECFDF5', borderColor: '#D1FAE5', borderWidth: 1 }]}>
             <ShieldCheck size={16} color="#01b854" />
             <RNText style={[styles.securityText, { color: '#065F46' }]}>
                Purchase protected by Book Your Ground Security
@@ -810,7 +817,7 @@ export default function CheckoutScreen() {
 
         {/* Right Column: Order Summary */}
         <View style={[styles.sideColumn, !isDesktop && styles.sideColumnMobile, dynamicStyles.sideColumn]}>
-          <Card style={styles.summaryCard}>
+          <Card style={[styles.summaryCard, dynamicStyles.summaryCard]}>
             <RNText style={styles.summaryTitle}>Order Summary</RNText>
             
             <View style={styles.couponSection}>
@@ -1078,61 +1085,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   content: {
-    maxWidth: 1100,
-    alignSelf: 'center',
-    width: '100%',
-    paddingBottom: Platform.OS === 'web' ? 64 : 24,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-    marginTop: Platform.OS === 'web' ? 0 : 40,
-  },
-  backButton: {
-    padding: 8,
-    marginRight: 12,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#FFF',
-  },
-  layout: {
-    flexDirection: 'row',
-  },
-  layoutMobile: {
-    flexDirection: 'column',
-  },
-  mainColumn: {
-    // Flex is handled dynamically
-  },
-  mainColumnMobile: {
-    width: '100%',
-    marginBottom: 0,
-  },
-  sideColumn: {
-    minWidth: Platform.OS === 'web' ? 300 : '100%',
-  },
-  sideColumnMobile: {
-    width: '100%',
-    marginTop: 0,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
-  content: {
     paddingVertical: 24,
     maxWidth: 1400,
     width: '100%',
@@ -1173,7 +1125,7 @@ const styles = StyleSheet.create({
   },
   layoutMobile: {
     flexDirection: 'column',
-    gap: 20,
+    gap: 12,
   },
   mainColumn: {
     flex: 1.8,
@@ -1276,7 +1228,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 24,
     backgroundColor: '#ECFDF5',
-    marginTop: 20,
+    marginTop: 0,
     borderWidth: 1,
     borderColor: '#D1FAE5',
   },

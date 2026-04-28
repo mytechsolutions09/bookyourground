@@ -664,7 +664,7 @@ export default function TeamDetailsPage() {
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}
-          onScroll={horizontalScrollHandler}
+          onScroll={Platform.OS === 'web' ? undefined : horizontalScrollHandler}
           scrollEventThrottle={16}
           contentOffset={{ x: TABS.findIndex(t => t.key === activeTab) * windowWidth, y: 0 }}
         >

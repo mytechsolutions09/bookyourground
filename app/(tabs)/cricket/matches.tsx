@@ -6,36 +6,6 @@ import { supabase } from '@/lib/supabase';
 import { useCricketScoring } from '@/hooks/useCricketScoring';
 import { useAuth } from '@/contexts/AuthContext';
 
-const MATCHES_DATA: any[] = [
-  {
-    id: 'static-1',
-    type: 'League Matches',
-    tournament: 'SL T20 Cricket Cup',
-    status: 'Upcoming',
-    date: '18-Apr-26',
-    rawDate: new Date('2026-04-18'),
-    location: 'Sushant Lok 3, Gurugram',
-    team1: 'SL Titans',
-    team2: 'Sikh Squad',
-  },
-  {
-    id: 'static-2',
-    type: 'Corporate Match',
-    tournament: 'Weekend Bash',
-    status: 'Result',
-    date: '12-Apr-26',
-    rawDate: new Date('2026-04-12'),
-    location: 'Vicky Cricket Ground',
-    team1: 'Tech XI',
-    team2: 'Hustlers',
-    team1Score: '154/6',
-    team1Overs: '(20.0)',
-    team2Score: '152/10',
-    team2Overs: '(19.4)',
-    result: 'Tech XI won by 2 runs',
-  }
-];
-
 const CATEGORY_TABS = [
   { key: 'all',    label: 'All' },
   { key: 'played', label: 'Played' },
@@ -55,9 +25,14 @@ const DATE_FILTERS = [
   { key: 'this_month', label: 'This Month' },
 ];
 
-export default function CricketMatches() {
+interface CricketMatchesProps {
+  playerId?: string;
+}
+
+export default function CricketMatches({ playerId }: CricketMatchesProps) {
   const router = useRouter();
   const { session } = useAuth();
+  const effectivePlayerId = playerId || session?.user?.id;
   const { width } = useWindowDimensions();
   const isLargeScreen = width > 1024;
   
@@ -70,7 +45,7 @@ export default function CricketMatches() {
   const [userPlayedMatches, setUserPlayedMatches] = useState<string[]>([]);
   useEffect(() => {
     fetchMatches();
-    if (session?.user?.id) {
+    if (effectivePlayerId) {
        fetchUserCricketContext();
     }
 
@@ -82,25 +57,25 @@ export default function CricketMatches() {
         table: 'match_live_state'
       }, () => { 
         fetchMatches(); 
-        if (session?.user?.id) fetchUserCricketContext();
+        if (effectivePlayerId) fetchUserCricketContext();
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [session?.user?.id]);
+  }, [effectivePlayerId]);
 
   const fetchUserCricketContext = async () => {
-    if (!session?.user?.id) return;
+    if (!effectivePlayerId) return;
 
     const { data: memberEntries } = await supabase
       .from('team_members')
       .select('id, team_id')
-      .eq('profile_id', session.user.id);
+      .eq('profile_id', effectivePlayerId);
 
     const { data: ownedTeams } = await supabase
       .from('teams')
       .select('id')
-      .eq('owner_id', session.user.id);
+      .eq('owner_id', effectivePlayerId);
 
     const myProfileIds = memberEntries?.map(p => p.id).filter(id => !!id) || [];
     const myTeamIds = Array.from(new Set([
@@ -205,7 +180,7 @@ export default function CricketMatches() {
     }
   };
 
-  const allMatches = useMemo(() => [...fetchedMatches, ...MATCHES_DATA], [fetchedMatches]);
+  const allMatches = useMemo(() => fetchedMatches, [fetchedMatches]);
 
   const filteredMatches = useMemo(() => {
     const now = new Date();
@@ -217,7 +192,7 @@ export default function CricketMatches() {
     return allMatches.filter(m => {
       if (category === 'played') {
          if (!userPlayedMatches.includes(m.id)) {
-            if (typeof m.id === 'string' && !m.id.startsWith('static-')) return false;
+            return false;
          }
       }
 

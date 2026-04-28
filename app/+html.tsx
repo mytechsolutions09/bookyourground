@@ -19,6 +19,7 @@ export default function Root({ children }: { children: React.ReactNode }) {
 const responsiveBackground = `
 html, body, #root {
   height: 100%;
+  overflow: hidden;
 }
 body {
   background-color: #F5F5F5;
@@ -28,5 +29,10 @@ body {
 }
 * {
   box-sizing: border-box;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+*::-webkit-scrollbar {
+  display: none !important;
 }
 `;

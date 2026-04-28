@@ -93,13 +93,13 @@ const styles = StyleSheet.create({
   },
   nativeCard: {
     width: '100%',
-    backgroundColor: '#06392e',
-    borderColor: 'rgba(0,234,107,0.1)',
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
     marginBottom: 12,
   },
   imagePlaceholder: {
     height: 180,
-    backgroundColor: Platform.OS === 'web' ? '#F3F4F6' : '#043529',
+    backgroundColor: '#F1F5F9',
   },
   content: {
     padding: 16,
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
   },
   bar: {
     borderRadius: 4,
-    backgroundColor: Platform.OS === 'web' ? '#E5E7EB' : '#054738',
+    backgroundColor: '#E2E8F0',
   },
   titleBar: {
     marginBottom: 4,
@@ -124,13 +124,13 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: Platform.OS === 'web' ? '#E5E7EB' : '#054738',
+    backgroundColor: '#E2E8F0',
   },
   footer: {
     marginTop: 12,
   },
   buttonPlaceholder: {
     borderRadius: 12,
-    backgroundColor: Platform.OS === 'web' ? '#F3F4F6' : '#054738',
+    backgroundColor: '#F1F5F9',
   },
 });

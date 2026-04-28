@@ -31,13 +31,9 @@ export function normalizeDbTimeToHHMM(t: string | null | undefined): string | nu
 }
 
 export function formatSlotLabelHour(hour24: number): string {
-  const isNoon = hour24 === 12;
-  const isMidnight = hour24 === 0;
-  if (isNoon) return '12 Noon';
-  if (isMidnight) return '12 AM';
   const ampm = hour24 >= 12 ? 'PM' : 'AM';
   const hour12 = hour24 % 12 || 12;
-  return `${hour12} ${ampm}`;
+  return `${hour12}:00 ${ampm}`;
 }
 
 export function formatTime12h(hhmm: string): string {

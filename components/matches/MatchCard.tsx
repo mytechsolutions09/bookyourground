@@ -55,119 +55,92 @@ export default function MatchCard({
   ];
 
   return (
-    <TouchableOpacity onPress={onJoin} activeOpacity={0.8} style={styles.touchable}>
+    <TouchableOpacity onPress={onJoin} activeOpacity={0.9} style={styles.touchable}>
       <Card style={cardStyle}>
+        {/* Top Image Section with Overlay */}
         <View style={styles.imageWrapper}>
           <Image source={{ uri: primaryImage }} style={styles.image} />
-          <View style={styles.statusBadge}>
-            <Users size={12} color="#FFFFFF" />
-            <Text style={styles.statusText}>{teamsCount}</Text>
+          <View style={styles.imageGradientOverlay} />
+          <View style={styles.imageContentOverlay}>
+            <View style={styles.statusBadge}>
+              <Users size={12} color="#FFFFFF" />
+              <Text style={styles.statusText}>{teamsCount}</Text>
+            </View>
+            <View style={styles.imageBottomText}>
+              <Text style={styles.overlayName}>{match.ground.name.toUpperCase()}</Text>
+              <View style={styles.overlayLocationRow}>
+                <MapPin size={14} color="#FFFFFF" />
+                <Text style={styles.overlayLocationText}>{match.ground.city}</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        {/* Schedule & Price Info Bar */}
+        <View style={styles.infoBar}>
+          <View style={{ flex: 1, marginRight: 8 }}>
+            <Text style={styles.infoBarText}>
+              {formatDate(match.booking_date)} | {formatBookingSlotSummary(match.start_time, match.end_time, match.ground.pitch_type)}
+            </Text>
+          </View>
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={styles.infoBarPrice}>
+              {formatCurrency(Number(match.total_amount))}
+            </Text>
+            <Text style={styles.infoBarPriceUnit}>/match</Text>
           </View>
         </View>
 
         <View style={styles.content}>
-          <View style={styles.titleRow}>
-            <Text style={[styles.name, { color: titleColor }]} numberOfLines={1}>
-              {match.ground.name}
-            </Text>
-            <Text style={styles.price}>
-              {formatCurrency(Number(match.total_amount))}
-              <Text style={styles.priceUnit}> / match</Text>
-            </Text>
-          </View>
-
-          <View style={styles.subTitleRow}>
-            <View style={styles.ratingBlockRow}>
+          <Text style={styles.sectionLabel}>MATCH DETAILS</Text>
+          
+          {/* Details Box */}
+          <View style={styles.detailsBox}>
+            <View style={styles.detailsHeader}>
+              <Text style={styles.reviewsLabel}>
+                {reviewCount > 0 ? `${avgRating.toFixed(1)} RATING` : 'NO REVIEWS YET'}
+              </Text>
               <View style={styles.starRow}>
                 {[1, 2, 3, 4, 5].map((i) => {
                   const filled = reviewCount > 0 && i <= Math.round(avgRating);
                   return (
                     <Star
                       key={i}
-                      size={14}
-                      color={filled ? '#FFA000' : '#D1D5DB'}
-                      fill={filled ? '#FFA000' : 'none'}
+                      size={16}
+                      color={filled ? '#94A3B8' : '#94A3B8'}
+                      fill={filled ? '#94A3B8' : 'none'}
                     />
                   );
                 })}
               </View>
-              <Text style={[styles.ratingText, { color: isLight ? '#666' : NATIVE_TEXT }]}>
-                {reviewCount > 0
-                  ? `${avgRating.toFixed(1)} (${reviewCount})`
-                  : 'No reviews yet'}
-              </Text>
             </View>
-            <View style={styles.locationRowShort}>
-              <MapPin size={12} color={pinColor} />
-              <Text style={[styles.location, { color: pinColor }]} numberOfLines={1}>
-                {match.ground.city}
+            
+            <View style={styles.opponentRow}>
+              <Text style={styles.matchTypeLabel}>EXHIBITION MATCHES</Text>
+              <Text style={styles.opponentNames}>
+                {(match.user?.full_name || 'Anonymous Player').toUpperCase()} | {match.user?.team_name?.toUpperCase() || 'NO TEAM'}
               </Text>
             </View>
           </View>
 
-          <View style={styles.opponentSection}>
-            <View style={styles.opponentAvatar}>
-              <Users size={14} color={iconColor} />
-            </View>
-            <View style={styles.opponentInfo}>
-              <Text style={[styles.opponentLabel, { color: isLight ? '#9CA3AF' : textColor }]}>
-                OPPONENT WAITING
-              </Text>
-              <Text style={[styles.opponentName, { color: titleColor }]}>
-                {(match.user?.full_name || 'Anonymous Player').toUpperCase()}
-                {match.user?.team_name && (
-                  <Text style={styles.teamNameHighlight}> • {match.user.team_name.toUpperCase()}</Text>
-                )}
-              </Text>
+          {/* Progress Section */}
+          <View style={styles.progressSection}>
+            <Text style={styles.progressLabel}>SPOTS FILLING FAST!</Text>
+            <View style={styles.progressBarBg}>
+              <View style={[styles.progressBarFill, { width: '50%' }]} />
             </View>
           </View>
 
-          <View style={styles.divider} />
-
-          <View style={styles.scheduleBlock}>
-            <View style={styles.scheduleRow}>
-              <Calendar size={13} color={iconColor} />
-              <Text style={[styles.scheduleText, { color: textColor }]} numberOfLines={1}>
-                {formatDate(match.booking_date)}
-              </Text>
-            </View>
-            <View style={styles.scheduleRow}>
-              <Clock size={13} color={iconColor} />
-              <Text style={[styles.scheduleText, { color: textColor }]} numberOfLines={1}>
-                {formatBookingSlotSummary(match.start_time, match.end_time, match.ground.pitch_type)}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.footer}>
-            <TouchableOpacity
-              style={[styles.mapsBtn, !isLight && styles.mapsBtnNative]}
-              onPress={() => {
-                const query = encodeURIComponent(
-                  `${match.ground.address}, ${match.ground.city}, ${match.ground.state}`,
-                );
-                const url = Platform.select({
-                  ios: `maps:0,0?q=${query}`,
-                  android: `geo:0,0?q=${query}`,
-                  default: `https://www.google.com/maps/search/?api=1&query=${query}`,
-                });
-                Linking.openURL(url!);
-              }}
-            >
-              <MapIcon size={12} color={iconColor} />
-              <Text style={[styles.mapsLink, { color: isLight ? '#6B7280' : NATIVE_BORDER }]}>
-                View maps
-              </Text>
-            </TouchableOpacity>
-
-            <Button
-              title={buttonTitle}
+          {/* Action Row */}
+          <View style={styles.actionRow}>
+            <TouchableOpacity 
+              style={styles.joinButtonLarge}
               onPress={onJoin}
-              variant="primary"
-              size="small"
-              style={styles.joinButton}
-              textStyle={styles.joinButtonText}
-            />
+            >
+              <Text style={styles.joinButtonLargeText}>JOIN MATCH</Text>
+            </TouchableOpacity>
+            
+
           </View>
         </View>
       </Card>
@@ -201,21 +174,59 @@ const styles = StyleSheet.create({
   imageWrapper: {
     position: 'relative',
     width: '100%',
+    height: 200,
+    borderRadius: 16,
+    overflow: 'hidden',
   },
   image: {
     width: '100%',
-    height: undefined,
-    aspectRatio: 16 / 9,
-    backgroundColor: '#E0E0E0',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  imageGradientOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '60%',
+    backgroundColor: 'rgba(0,0,0,0.4)', // Simplified overlay, would be a LinearGradient in production
+  },
+  imageContentOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: 16,
+    justifyContent: 'space-between',
+  },
+  imageBottomText: {
+    gap: 2,
+  },
+  overlayName: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: '800',
+    fontFamily: 'Inter',
+    letterSpacing: -0.5,
+  },
+  overlayLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  overlayLocationText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'Inter',
   },
   statusBadge: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    paddingHorizontal: 8,
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 20,
+    borderRadius: 8,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
@@ -223,157 +234,161 @@ const styles = StyleSheet.create({
   statusText: {
     fontFamily: 'Inter',
     color: '#fff',
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '800',
   },
-  content: {
-    padding: 12,
-  },
-  titleRow: {
+  infoBar: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 10,
-    marginBottom: 4,
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    marginTop: 8,
+    marginHorizontal: 12,
   },
-  name: {
-    fontFamily: 'Inter',
-    flex: 1,
-    fontSize: 18,
-    fontWeight: '500',
-  },
-  price: {
-    fontFamily: 'Inter',
-    fontSize: 16,
+  infoBarText: {
+    fontSize: 13,
     fontWeight: '600',
-    color: '#02c259',
-  },
-  priceUnit: {
+    color: '#0F172A',
     fontFamily: 'Inter',
+  },
+  infoBarPrice: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#10b981',
+    fontFamily: 'Inter',
+  },
+  infoBarPriceUnit: {
     fontSize: 11,
     fontWeight: '400',
-    color: '#6B7280',
+    color: '#64748B',
   },
-  subTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  content: {
+    padding: 16,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#64748B',
     marginBottom: 8,
+    fontFamily: 'Inter',
+    letterSpacing: 0.5,
   },
-  ratingBlockRow: {
+  detailsBox: {
+    borderWidth: 1,
+    borderColor: 'rgba(0,234,107,0.3)',
+    borderRadius: 16,
+    padding: 14,
+    backgroundColor: 'rgba(0,234,107,0.02)',
+    marginBottom: 16,
+  },
+  detailsHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 6,
+    marginBottom: 10,
+  },
+  reviewsLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#0F172A',
+    fontFamily: 'Inter',
   },
   starRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     gap: 2,
   },
-  ratingText: {
-    fontFamily: 'Inter',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  locationRowShort: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-  location: {
-    fontFamily: 'Inter',
-    fontSize: 14,
-  },
-  opponentSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginTop: 4,
-    backgroundColor: 'rgba(0,234,107,0.03)',
-    padding: 8,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.08)',
-  },
-  opponentAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(0,234,107,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  opponentInfo: {
-    flex: 1,
-  },
-  opponentLabel: {
-    fontFamily: 'Inter',
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-    marginBottom: 1,
-  },
-  opponentName: {
-    fontFamily: 'Inter',
-    fontSize: 13,
-    fontWeight: '500',
-  },
-  teamNameHighlight: {
-    fontFamily: 'Inter',
-    fontWeight: '800',
-    color: '#10b981',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    marginVertical: 10,
-  },
-  scheduleBlock: {
-    marginBottom: 10,
-    gap: 6,
-  },
-  scheduleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 6,
-  },
-  scheduleText: {
-    fontFamily: 'Inter',
-    flex: 1,
-    fontSize: 12,
-    fontWeight: '600',
-    lineHeight: 16,
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  mapsBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  opponentRow: {
     gap: 4,
   },
-  mapsBtnNative: {
-    gap: 6,
-  },
-  mapsLink: {
-    fontFamily: 'Inter',
-    fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-  },
-  joinButton: {
-    borderRadius: 10,
-    minWidth: 100,
-    height: 34,
-    backgroundColor: '#00ea6b',
-  },
-  joinButtonText: {
-    fontFamily: 'Inter',
-    color: '#043529',
+  matchTypeLabel: {
+    fontSize: 10,
     fontWeight: '700',
+    color: '#64748B',
+    fontFamily: 'Inter',
+  },
+  opponentNames: {
     fontSize: 13,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  progressSection: {
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  progressLabel: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#64748B',
+    marginBottom: 6,
+    fontFamily: 'Inter',
+    letterSpacing: 0.5,
+  },
+  progressBarBg: {
+    height: 6,
+    width: '100%',
+    backgroundColor: '#E2E8F0',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#00ea6b', // Would be gradient in production
+    borderRadius: 3,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'center',
+  },
+  joinButtonLarge: {
+    flex: 1,
+    height: 48,
+    backgroundColor: '#00ea6b', // Would be gradient in production
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#00ea6b',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  joinButtonLargeText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  pricePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 12,
+    height: 48,
+    borderRadius: 12,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  walletIconBox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  pricePillText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0F172A',
+    fontFamily: 'Inter',
   },
 });

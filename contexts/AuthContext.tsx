@@ -17,6 +17,7 @@ interface Profile {
   state: string | null;
   team_name: string | null;
   player_type: string | null;
+  dob: string | null;
 }
 
 interface AuthContextType {

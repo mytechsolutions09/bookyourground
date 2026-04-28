@@ -26,6 +26,7 @@ interface GroundCardProps {
   /** Forced light theme. Default is true on Web, false on Native. */
   lightMode?: boolean;
   occupancyRate?: number | null;
+  showBookButton?: boolean;
 }
 
 export default function GroundCard({
@@ -39,6 +40,7 @@ export default function GroundCard({
   favoriteLoading = false,
   lightMode = Platform.OS === 'web',
   occupancyRate = null,
+  showBookButton = false,
 }: GroundCardProps) {
   const isWeb = Platform.OS === 'web';
   const isLight = lightMode;
@@ -192,14 +194,6 @@ export default function GroundCard({
             </View>
           )}
 
-          <View style={styles.footer}>
-            <View style={styles.amenities}>
-              {ground.has_floodlights ? <Text style={amenityStyle}>Lights</Text> : null}
-              {ground.has_parking ? <Text style={amenityStyle}>Parking</Text> : null}
-              {ground.has_changing_rooms ? (
-                <Text style={amenityStyle}>Changing rooms</Text>
-              ) : null}
-            </View>
             {mapsUrl && (
               <TouchableOpacity
                 style={[styles.mapsBtn, !isLight && styles.mapsBtnNative]}
@@ -210,7 +204,14 @@ export default function GroundCard({
                 <Text style={mapsLinkStyle}>View Maps</Text>
               </TouchableOpacity>
             )}
-          </View>
+
+          {showBookButton && (
+            <View style={styles.bookButtonWrapper}>
+              <TouchableOpacity style={styles.bookButton} onPress={onPress}>
+                <Text style={styles.bookButtonText}>Book this slot</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </Card>
     </TouchableOpacity>
@@ -519,5 +520,30 @@ const styles = StyleSheet.create({
   occupancyBarFill: {
     height: '100%',
     borderRadius: 2,
+  },
+  bookButtonWrapper: {
+    marginTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    paddingTop: 12,
+  },
+  bookButton: {
+    width: '100%',
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#10b981',
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  bookButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    fontFamily: 'Inter',
   },
 });

@@ -294,7 +294,7 @@ export default function HomeScreen() {
   return (
     <View style={styles.screen}>
       <Animated.ScrollView
-        onScroll={verticalScrollHandler}
+        onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
         scrollEventThrottle={16}
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -315,15 +315,7 @@ export default function HomeScreen() {
           <View style={styles.heroGlowSecondary} />
           
           <View style={[styles.heroPadding, { paddingTop: insets.top + 20 }]}>
-            <View style={styles.heroHeaderRow}>
-              <View style={styles.heroBrandPill}>
-                <Image
-                  source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
-                  style={styles.heroLogo}
-                  resizeMode="contain"
-                />
-              </View>
-
+            <View style={[styles.heroHeaderRow, { justifyContent: 'flex-end' }]}>
               <TouchableOpacity 
                 onPress={() => router.push('/(tabs)/profile')}
                 style={styles.profileButton}
@@ -663,17 +655,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  heroBrandPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    gap: 8,
-  },
   profileButton: {
     width: 38,
     height: 38,
@@ -694,25 +675,6 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  pulseDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  heroLogo: {
-    height: 32,
-    width: 160,
-  },
-  brandPillDivider: {
-    width: 1,
-    height: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  brandPillSub: {
-    fontSize: 10,
-    color: 'rgba(255, 255, 255, 0.5)',
-    fontWeight: '600',
   },
   heroMainTitle: {
     fontSize: 34,

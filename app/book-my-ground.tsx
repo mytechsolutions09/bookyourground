@@ -102,7 +102,7 @@ export default function BookMyGroundPage() {
 
   if (Platform.OS === 'web') {
     return (
-      <WebLayout>
+      <WebLayout hideHeader={width < 900}>
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
@@ -110,14 +110,14 @@ export default function BookMyGroundPage() {
         >
           <View style={styles.page}>
             <View style={styles.tabContainer}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.tab, activeTab === 'book' && styles.activeTab]}
                 activeOpacity={0.8}
                 onPress={() => setActiveTab('book')}
               >
                 <Text style={[styles.tabText, activeTab === 'book' && styles.activeTabText]}>Book a Ground</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.tab}
                 activeOpacity={0.8}
                 onPress={() => router.push('/find-an-opponent' as any)}
@@ -144,12 +144,11 @@ export default function BookMyGroundPage() {
 
   // Native (iOS / Android): full-screen booking form with simple navbar.
   return (
-    <View style={[styles.nativeRoot, activeTab === 'favorite' && { backgroundColor: '#F8FAFC' }]}>
-      <MobileAppNavbar title="Book a ground" />
+    <View style={styles.nativeRoot}>
+      <MobileAppNavbar title="Book a ground" bgColor="#F8FAFC" />
       <View style={styles.page}>
         <LandingBookingForm
           fullWidth
-          separateSearchResults
           noCard
           bookGroundScreenNative
           hideTitle
@@ -163,7 +162,7 @@ export default function BookMyGroundPage() {
 const styles = StyleSheet.create({
   nativeRoot: {
     flex: 1,
-    backgroundColor: '#043529',
+    backgroundColor: '#F8FAFC',
   },
   page: {
     flex: 1,

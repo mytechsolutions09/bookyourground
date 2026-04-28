@@ -70,7 +70,7 @@ const Skeleton = ({ width, height, style }: any) => {
   return (
     <Animated.View 
       style={[
-        { width, height, backgroundColor: '#2d3450', borderRadius: 12 }, 
+        { width, height, backgroundColor: '#E2E8F0', borderRadius: 12 }, 
         animatedStyle, 
         style
       ]} 
@@ -391,7 +391,7 @@ export default function ShopScreen() {
             <View style={[styles.heroImageBg, { backgroundColor: '#f8688a' }]} />
           )}
           <LinearGradient
-            colors={['transparent', 'rgba(198, 45, 90, 0.7)', '#1a1f2e']}
+            colors={['transparent', 'rgba(0,0,0,0.1)', 'rgba(0,0,0,0.6)']}
             style={styles.heroOverlay}
           />
           <View style={[styles.heroContent, { paddingTop: insets.top + 60 }]}>
@@ -452,7 +452,7 @@ export default function ShopScreen() {
                 setIsFilterVisible(true);
               }}
             >
-              <Filter size={20} color="#FFFFFF" />
+              <Filter size={20} color="#0F172A" />
               {(sortBy !== 'newest' || priceRange) && (
                 <View style={styles.filterBadge} />
               )}
@@ -538,7 +538,7 @@ export default function ShopScreen() {
           {isSmall && (
             <View style={[styles.floatingHeader, { paddingTop: insets.top }]}>
               <TouchableOpacity style={styles.cartIcon} onPress={() => router.push('/shop/cart')}>
-                <ShoppingCart size={24} color="#FFFFFF" strokeWidth={2.5} />
+                <ShoppingCart size={24} color="#0F172A" strokeWidth={2} />
                 {cartCount > 0 && (
                   <View style={styles.cartBadge}>
                     <RNText style={styles.cartBadgeText}>{cartCount}</RNText>
@@ -557,7 +557,7 @@ export default function ShopScreen() {
     <View style={styles.screen}>
       <View style={[styles.floatingHeader, { paddingTop: insets.top }]}>
         <TouchableOpacity style={styles.cartIcon} onPress={() => router.push('/shop/cart')}>
-          <ShoppingCart size={24} color="#FFFFFF" strokeWidth={2.5} />
+          <ShoppingCart size={24} color="#0F172A" strokeWidth={2} />
           {cartCount > 0 && (
             <View style={styles.cartBadge}>
               <RNText style={styles.cartBadgeText}>{cartCount}</RNText>
@@ -664,11 +664,11 @@ export default function ShopScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#1a1f2e',
+    backgroundColor: '#F8FAFC',
   },
   scroll: {
     flex: 1,
-    backgroundColor: '#1a1f2e',
+    backgroundColor: '#F8FAFC',
   },
   scrollContent: {
     paddingBottom: 120,
@@ -689,10 +689,15 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.15)',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 4,
   },
   cartBadge: {
     position: 'absolute',
@@ -717,7 +722,7 @@ const styles = StyleSheet.create({
     height: 420,
     width: '100%',
     position: 'relative',
-    backgroundColor: '#2b2f4b',
+    backgroundColor: '#F1F5F9',
   },
   heroImageBg: {
     ...StyleSheet.absoluteFillObject,
@@ -770,7 +775,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   heroBtn: {
-    backgroundColor: '#1a1f2e',
+    backgroundColor: '#FFFFFF',
     paddingLeft: 24,
     paddingRight: 6,
     paddingVertical: 6,
@@ -780,11 +785,11 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     gap: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   heroBtnText: {
-    color: '#FFFFFF',
-    fontWeight: '600',
+    color: '#0F172A',
+    fontWeight: '700',
     fontSize: 15,
     fontFamily: 'Inter',
   },
@@ -798,7 +803,7 @@ const styles = StyleSheet.create({
   },
   mainContent: {
     marginTop: -30,
-    backgroundColor: '#1a1f2e',
+    backgroundColor: '#F8FAFC',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     paddingTop: 32,
@@ -810,25 +815,30 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#232838',
+    backgroundColor: '#FFFFFF',
     borderRadius: 20,
     paddingHorizontal: 16,
     height: 56,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: '#E2E8F0',
     gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
   },
   searchInput: {
     flex: 1,
     fontSize: 15,
-    color: '#FFFFFF',
+    color: '#0F172A',
     fontWeight: '600',
     fontFamily: 'Inter',
   },
   filterBtn: {
     width: 40,
     height: 40,
-    backgroundColor: '#2d3450',
+    backgroundColor: '#f8688a',
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
@@ -848,13 +858,13 @@ const styles = StyleSheet.create({
   categoryPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#232838',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 25,
     gap: 8,
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: '#E2E8F0',
   },
   categoryPillActive: {
     backgroundColor: '#f8688a',
@@ -863,7 +873,7 @@ const styles = StyleSheet.create({
   categoryPillText: {
     fontSize: 14,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.5)',
+    color: '#64748B',
     fontFamily: 'Inter',
   },
   categoryPillTextActive: {
@@ -879,7 +889,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#2d3450',
+    backgroundColor: '#F1F5F9',
   },
   promoTitle: {
     color: '#f8688a',
@@ -891,23 +901,25 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   promoSubtitle: {
-    color: '#FFFFFF',
+    color: '#0F172A',
     fontSize: 20,
     fontWeight: '600',
     fontFamily: 'Inter',
   },
   promoBadge: {
-    backgroundColor: '#1a1f2e',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   promoCode: {
-    color: '#FFFFFF',
-    fontWeight: '600',
+    color: '#0F172A',
+    fontWeight: '700',
     fontSize: 14,
     fontFamily: 'Inter',
   },
@@ -923,7 +935,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#0F172A',
     fontFamily: 'Inter',
     textTransform: 'uppercase',
     letterSpacing: 1,
@@ -945,19 +957,21 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   productCard: {
-    backgroundColor: '#232838',
-    borderRadius: 32,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
     marginBottom: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.05,
     shadowRadius: 12,
-    elevation: 3,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
   imageWrapper: {
     height: 180,
-    backgroundColor: '#2d3450',
-    borderRadius: 32,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 24,
     overflow: 'hidden',
     position: 'relative',
   },
@@ -970,10 +984,14 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 12,
     left: 12,
-    backgroundColor: '#1a1f2e',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   tagText: {
     color: '#f8688a',
@@ -998,7 +1016,7 @@ const styles = StyleSheet.create({
   },
   productCategory: {
     fontSize: 10,
-    color: 'rgba(255,255,255,0.35)',
+    color: '#94A3B8',
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -1008,7 +1026,7 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#0F172A',
     marginBottom: 6,
     fontFamily: 'Inter',
   },
@@ -1038,7 +1056,7 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#0F172A',
     fontFamily: 'Inter',
   },
   oldPrice: {
@@ -1068,7 +1086,7 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   emptyText: {
-    color: 'rgba(255,255,255,0.5)',
+    color: '#64748B',
     fontSize: 16,
     fontWeight: '600',
     marginTop: 16,
@@ -1088,9 +1106,9 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#f8688a',
+    backgroundColor: '#0F172A',
     borderWidth: 2,
-    borderColor: '#232838',
+    borderColor: '#f8688a',
   },
   modalOverlay: {
     flex: 1,
@@ -1098,10 +1116,10 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(26, 31, 46, 0.7)',
+    backgroundColor: 'rgba(15, 23, 42, 0.5)',
   },
   modalContent: {
-    backgroundColor: '#232838',
+    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
     maxHeight: '80%',
@@ -1109,7 +1127,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -10 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.1,
     shadowRadius: 20,
     elevation: 20,
   },
@@ -1122,14 +1140,14 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#0F172A',
     fontFamily: 'Inter',
   },
   modalCloseBtn: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#2d3450',
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1154,10 +1172,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 14,
     paddingHorizontal: 20,
-    backgroundColor: '#2d3450',
+    backgroundColor: '#F8FAFC',
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: '#E2E8F0',
   },
   modalOptionActive: {
     backgroundColor: '#f8688a',
@@ -1165,7 +1183,7 @@ const styles = StyleSheet.create({
   },
   modalOptionText: {
     fontSize: 15,
-    color: 'rgba(255,255,255,0.7)',
+    color: '#475569',
     fontWeight: '600',
     fontFamily: 'Inter',
   },
@@ -1183,10 +1201,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#2d3450',
+    backgroundColor: '#F1F5F9',
   },
   resetBtnText: {
-    color: 'rgba(255,255,255,0.5)',
+    color: '#64748B',
     fontSize: 16,
     fontWeight: '600',
     fontFamily: 'Inter',

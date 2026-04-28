@@ -393,10 +393,10 @@ export default function CricketLayout() {
   };
 
   const horizontalScrollHandler = useAnimatedScrollHandler({
-    onMomentumEnd: (event) => {
+    onScroll: (event) => {
       const idx = Math.round(event.contentOffset.x / windowWidth);
       const tab = TABS[idx];
-      if (tab) {
+      if (tab && tab.id !== activeTabId) {
         runOnJS(setActiveTabId)(tab.id);
       }
     },
@@ -843,7 +843,7 @@ export default function CricketLayout() {
             >
               <View style={styles.contentContainer}>
                 {tab.id === 'player-profile' && <CricketPlayerProfile />}
-                {tab.id === 'matches' && <CricketMatches />}
+                {tab.id === 'matches' && <CricketMatches playerId={user?.id} />}
                 {tab.id === 'stats' && <CricketStats activeSubTab={statsTab} />}
                 {tab.id === 'trophies' && <CricketTrophies />}
                 {tab.id === 'badges' && <CricketBadges />}

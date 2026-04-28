@@ -92,7 +92,7 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
       if (!user?.id) return;
       try {
         const today = new Date().toISOString().split('T')[0];
-        
+
         const { data: bookingsData } = await supabase
           .from('bookings')
           .select('id')
@@ -106,7 +106,7 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
           supabase.from('favorites').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
           supabase.from('shop_favorites').select('*', { count: 'exact', head: true }).eq('user_id', user.id)
         ]);
-        
+
         const totalFavs = (favsRes.count || 0) + (shopFavsRes.count || 0);
         setFavoritesCount(totalFavs);
 
@@ -135,7 +135,7 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(10);
-      
+
       if (data) {
         setNotifications(data);
         setUnreadCount(data.filter(n => !n.read).length);
@@ -160,7 +160,7 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
         .update({ read: true })
         .eq('user_id', user.id)
         .eq('read', false);
-      
+
       fetchNotifications();
     } catch (err) {
       console.error('Mark as read error:', err);
@@ -274,7 +274,7 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
     const handleScroll = () => {
       const y = (window as any).scrollY || 0;
       setScrolled(y > 50); // Increased threshold for stability
-      
+
       if (Math.abs(y - lastScrollPos) > 10) {
         if (y > lastScrollPos && y > 100) {
           setIsBottomBarVisible(false);
@@ -506,9 +506,9 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
             isMarketing && styles.heroHeaderMarketing,
           ]}
         >
-          <View 
+          <View
             style={[
-              StyleSheet.absoluteFillObject, 
+              StyleSheet.absoluteFillObject,
               Platform.OS === 'web' && {
                 backgroundColor: scrolled ? '#FFFFFF' : 'transparent',
                 backdropFilter: scrolled ? 'blur(25px)' : 'none',
@@ -522,7 +522,7 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
                 shadowRadius: 30,
                 zIndex: -1,
               } as any
-            ]} 
+            ]}
           />
           <View style={[styles.headerContent, isCompact && styles.headerContentCompact]}>
             <TouchableOpacity
@@ -543,205 +543,192 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
             </TouchableOpacity>
 
             <View style={styles.headerRight}>
-                <>
-                  {!isCompact ? (
-                    <>
-                      <View style={styles.headerSearchContainer}>
-                        {!isSearchExpanded ? (
-                          <TouchableOpacity 
-                            onPress={() => {
-                              setIsSearchExpanded(true);
-                              setTimeout(() => searchInputRef.current?.focus(), 50);
-                            }}
-                            style={[styles.searchIconButton, scrolled && styles.searchIconButtonScrolled]}
-                          >
-                            <Search size={18} color={scrolled ? "#475569" : "#FFFFFF"} />
-                          </TouchableOpacity>
-                        ) : (
-                          <View style={[
-                            styles.headerSearch,
-                            { width: 300 },
-                            scrolled && { backgroundColor: 'rgba(255,255,255,0.5)', borderColor: 'rgba(0,0,0,0.08)' } as any
-                          ]}>
-                            <Search size={16} color={scrolled ? "#64748B" : "#9CA3AF"} style={styles.headerSearchIcon} />
-                            <TextInput
-                              ref={searchInputRef}
-                              placeholder="Search city or venue..."
-                              placeholderTextColor={scrolled ? "#475569" : "#D1D5DB"}
-                              value={searchQuery}
-                              onChangeText={setSearchQuery}
-                              onFocus={() => setSearchFocused(true)}
-                              onBlur={() => {
-                                setTimeout(() => {
-                                  setSearchFocused(false);
-                                  if (!searchQuery) setIsSearchExpanded(false);
-                                }, 200);
-                              }}
-                              onSubmitEditing={() => {
-                                if (searchQuery.trim().length >= 2) {
-                                  setSearchFocused(false);
-                                  router.push({
-                                    pathname: '/search',
-                                    params: { q: searchQuery.trim() }
-                                  } as any);
-                                }
-                              }}
-                              returnKeyType="search"
-                              style={[
-                                styles.headerSearchInput,
-                                scrolled && { color: '#0F172A' } as any,
-                                searchFocused && { borderColor: 'rgba(0,234,107,0.3)' } as any,
-                              ]}
-                            />
-                          </View>
-                        )}
-                      </View>
-
-                      {searchFocused && (searchQuery.length >= 2) && (
-                        <View style={styles.searchDropdown}>
-                          {isSearching ? (
-                            <Text style={styles.searchDropdownText}>Searching...</Text>
-                          ) : (searchResults.grounds.length === 0 && searchResults.matches.length === 0) ? (
-                            <Text style={styles.searchDropdownText}>No results found for "{searchQuery}"</Text>
-                          ) : (
-                            <ScrollView style={styles.searchDropdownScroll} keyboardShouldPersistTaps="handled">
-                              {searchResults.grounds.length > 0 && (
-                                <View style={styles.searchSection}>
-                                  <Text style={styles.searchSectionTitle}>VENUES</Text>
-                                  {searchResults.grounds.map(g => (
-                                    <TouchableOpacity
-                                      key={g.id}
-                                      style={styles.searchItem}
-                                      onPress={() => handleResultPress('ground', g)}
-                                    >
-                                      <View style={styles.searchItemIcon}>
-                                        <Building2 size={14} color="#01b854" />
-                                      </View>
-                                      <View style={styles.searchItemInfo}>
-                                        <Text style={styles.searchItemName}>{g.name}</Text>
-                                        <Text style={styles.searchItemMeta}>{g.city}, {g.state}</Text>
-                                      </View>
-                                    </TouchableOpacity>
-                                  ))}
-                                </View>
-                              )}
-
-                              {searchResults.matches.length > 0 && (
-                                <View style={styles.searchSection}>
-                                  <Text style={styles.searchSectionTitle}>AVAILABLE MATCHES</Text>
-                                  {searchResults.matches.map(m => (
-                                    <TouchableOpacity
-                                      key={m.id}
-                                      style={styles.searchItem}
-                                      onPress={() => handleResultPress('match', m)}
-                                    >
-                                      <View style={[styles.searchItemIcon, { backgroundColor: 'rgba(0,234,107,0.1)' }]}>
-                                        <Swords size={14} color="#01b854" />
-                                      </View>
-                                      <View style={styles.searchItemInfo}>
-                                        <Text style={styles.searchItemName}>
-                                          {m.user?.team_name || m.user?.full_name || 'Anonymous Match'}
-                                        </Text>
-                                        <Text style={styles.searchItemMeta}>
-                                          {m.ground?.name} • {m.ground?.city}
-                                        </Text>
-                                      </View>
-                                    </TouchableOpacity>
-                                  ))}
-                                </View>
-                              )}
-                            </ScrollView>
-                          )}
-                        </View>
-                      )}
-                  
-                      <Text
-                        style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}
-                        onPress={() => router.push('/cricket/player-profile' as any)}
-                      >
-                        CRICKET
-                      </Text>
-
-                      <Text
-                        style={[
-                          styles.headerPrimaryButtonText, 
-                          scrolled && styles.headerPrimaryButtonTextScrolled,
-                          { color: '#e6ffb7' }
-                        ]}
-                        onPress={() => router.push('/shop' as any)}
-                      >
-                        SHOP
-                      </Text>
-
-                      <Text
-                        style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}
-                        onPress={() => router.push(groundsHref as any)}
-                      >
-                        GROUNDS
-                      </Text>
-
-                      {!isAuthenticated ? (
-                        <Text
-                          style={styles.headerSecondaryButtonText}
-                          onPress={() => router.push('/(auth)/login' as any)}
+              <>
+                {!isCompact ? (
+                  <>
+                    <View style={styles.headerSearchContainer}>
+                      {!isSearchExpanded ? (
+                        <TouchableOpacity
+                          onPress={() => {
+                            setIsSearchExpanded(true);
+                            setTimeout(() => searchInputRef.current?.focus(), 50);
+                          }}
+                          style={[styles.searchIconButton, scrolled && styles.searchIconButtonScrolled]}
                         >
-                          Sign in
-                        </Text>
+                          <Search size={18} color={scrolled ? "#475569" : "#FFFFFF"} />
+                        </TouchableOpacity>
                       ) : (
-                        <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
-                          <Text
-                            style={[styles.headerSecondaryButtonText, scrolled && styles.headerSecondaryButtonTextScrolled]}
-                            onPress={() => {
-                              if (isSuperAdmin) {
-                                router.push('/(admin)/dashboard' as any);
-                              } else if (isGroundOwner) {
-                                router.push('/(owner)/owner-dashboard' as any);
-                              } else {
-                                router.push('/(tabs)/dashboard' as any);
+                        <View style={[
+                          styles.headerSearch,
+                          { width: 300 },
+                          scrolled && { backgroundColor: 'rgba(255,255,255,0.5)', borderColor: 'rgba(0,0,0,0.08)' } as any
+                        ]}>
+                          <Search size={16} color={scrolled ? "#64748B" : "#9CA3AF"} style={styles.headerSearchIcon} />
+                          <TextInput
+                            ref={searchInputRef}
+                            placeholder="Search city or venue..."
+                            placeholderTextColor={scrolled ? "#475569" : "#D1D5DB"}
+                            value={searchQuery}
+                            onChangeText={setSearchQuery}
+                            onFocus={() => setSearchFocused(true)}
+                            onBlur={() => {
+                              setTimeout(() => {
+                                setSearchFocused(false);
+                                if (!searchQuery) setIsSearchExpanded(false);
+                              }, 200);
+                            }}
+                            onSubmitEditing={() => {
+                              if (searchQuery.trim().length >= 2) {
+                                setSearchFocused(false);
+                                router.push({
+                                  pathname: '/search',
+                                  params: { q: searchQuery.trim() }
+                                } as any);
                               }
                             }}
-                          >
-                            Dashboard
-                          </Text>
-
-                          <TouchableOpacity 
-                            style={styles.profileChip}
-                            onPress={() => router.push('/(tabs)/profile')}
-                          >
-                            <Image 
-                              source={{ uri: profile?.avatar_url || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' }} 
-                              style={styles.profileAvatar} 
-                            />
-                            <Text style={[styles.profileName, scrolled && styles.profileNameScrolled]}>
-                              {profile?.full_name?.split(' ')[0] || 'User'}
-                            </Text>
-                          </TouchableOpacity>
+                            returnKeyType="search"
+                            style={[
+                              styles.headerSearchInput,
+                              scrolled && { color: '#0F172A' } as any,
+                              searchFocused && { borderColor: 'rgba(0,234,107,0.3)' } as any,
+                            ]}
+                          />
                         </View>
                       )}
-                    </>
-                  ) : (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                      {!isAuthenticated ? (
-                        <TouchableOpacity 
-                          onPress={() => router.push('/(auth)/login' as any)}
-                          style={[styles.headerSecondaryButton, { paddingHorizontal: 12, paddingVertical: 6 }]}
-                        >
-                           <Text style={[styles.headerSecondaryButtonText, { fontSize: 13 }]}>Sign in</Text>
-                        </TouchableOpacity>
-                      ) : (
-                        <TouchableOpacity 
-                          style={styles.profileChipCompact}
+                    </View>
+
+                    {searchFocused && (searchQuery.length >= 2) && (
+                      <View style={styles.searchDropdown}>
+                        {isSearching ? (
+                          <Text style={styles.searchDropdownText}>Searching...</Text>
+                        ) : (searchResults.grounds.length === 0 && searchResults.matches.length === 0) ? (
+                          <Text style={styles.searchDropdownText}>No results found for "{searchQuery}"</Text>
+                        ) : (
+                          <ScrollView style={styles.searchDropdownScroll} keyboardShouldPersistTaps="handled">
+                            {searchResults.grounds.length > 0 && (
+                              <View style={styles.searchSection}>
+                                <Text style={styles.searchSectionTitle}>VENUES</Text>
+                                {searchResults.grounds.map(g => (
+                                  <TouchableOpacity
+                                    key={g.id}
+                                    style={styles.searchItem}
+                                    onPress={() => handleResultPress('ground', g)}
+                                  >
+                                    <View style={styles.searchItemIcon}>
+                                      <Building2 size={14} color="#01b854" />
+                                    </View>
+                                    <View style={styles.searchItemInfo}>
+                                      <Text style={styles.searchItemName}>{g.name}</Text>
+                                      <Text style={styles.searchItemMeta}>{g.city}, {g.state}</Text>
+                                    </View>
+                                  </TouchableOpacity>
+                                ))}
+                              </View>
+                            )}
+
+                            {searchResults.matches.length > 0 && (
+                              <View style={styles.searchSection}>
+                                <Text style={styles.searchSectionTitle}>AVAILABLE MATCHES</Text>
+                                {searchResults.matches.map(m => (
+                                  <TouchableOpacity
+                                    key={m.id}
+                                    style={styles.searchItem}
+                                    onPress={() => handleResultPress('match', m)}
+                                  >
+                                    <View style={[styles.searchItemIcon, { backgroundColor: 'rgba(0,234,107,0.1)' }]}>
+                                      <Swords size={14} color="#01b854" />
+                                    </View>
+                                    <View style={styles.searchItemInfo}>
+                                      <Text style={styles.searchItemName}>
+                                        {m.user?.team_name || m.user?.full_name || 'Anonymous Match'}
+                                      </Text>
+                                      <Text style={styles.searchItemMeta}>
+                                        {m.ground?.name} • {m.ground?.city}
+                                      </Text>
+                                    </View>
+                                  </TouchableOpacity>
+                                ))}
+                              </View>
+                            )}
+                          </ScrollView>
+                        )}
+                      </View>
+                    )}
+
+                    <Text
+                      style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}
+                      onPress={() => router.push('/cricket/player-profile' as any)}
+                    >
+                      CRICKET
+                    </Text>
+
+                    <Text
+                      style={[
+                        styles.headerPrimaryButtonText,
+                        scrolled && styles.headerPrimaryButtonTextScrolled,
+                        { color: '#e6ffb7' }
+                      ]}
+                      onPress={() => router.push('/shop' as any)}
+                    >
+                      SHOP
+                    </Text>
+
+                    <Text
+                      style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}
+                      onPress={() => router.push(groundsHref as any)}
+                    >
+                      GROUNDS
+                    </Text>
+
+                    {!isAuthenticated ? (
+                      <Text
+                        style={styles.headerSecondaryButtonText}
+                        onPress={() => router.push('/(auth)/login' as any)}
+                      >
+                        SIGN IN
+                      </Text>
+                    ) : (
+                      <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
+
+
+                        <TouchableOpacity
+                          style={styles.profileChip}
                           onPress={() => router.push('/(tabs)/profile')}
                         >
-                          <Image 
-                            source={{ uri: profile?.avatar_url || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' }} 
-                            style={styles.profileAvatarCompact} 
+                          <Image
+                            source={{ uri: profile?.avatar_url || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' }}
+                            style={styles.profileAvatar}
                           />
+                          <Text style={[styles.profileName, scrolled && styles.profileNameScrolled]}>
+                            {profile?.full_name?.split(' ')[0] || 'User'}
+                          </Text>
                         </TouchableOpacity>
-                      )}
-                    </View>
-                  )}
-                </>
+                      </View>
+                    )}
+                  </>
+                ) : (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    {!isAuthenticated ? (
+                      <TouchableOpacity
+                        onPress={() => router.push('/(auth)/login' as any)}
+                        style={[styles.headerSecondaryButton, { paddingHorizontal: 12, paddingVertical: 6 }]}
+                      >
+                        <Text style={[styles.headerSecondaryButtonText, { fontSize: 13 }]}>SIGN IN</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.profileChipCompact}
+                        onPress={() => router.push('/(tabs)/profile')}
+                      >
+                        <Image
+                          source={{ uri: profile?.avatar_url || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' }}
+                          style={styles.profileAvatarCompact}
+                        />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+              </>
             </View>
           </View>
         </View>
@@ -776,13 +763,13 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
 
             {(cleanPath.includes('/products') || cleanPath.includes('/orders')) && !isCompact && isSuperAdmin && (
               <View style={{ flexDirection: 'row', gap: 24, marginLeft: 32, alignItems: 'center' }}>
-                <Text 
+                <Text
                   style={styles.headerNavLink}
                   onPress={() => router.push('/(admin)/orders')}
                 >
-                  Shop Orders
+                  SHOP ORDERS
                 </Text>
-                <Text 
+                <Text
                   style={styles.headerNavLink}
                   onPress={() => {
                     if (!cleanPath.includes('/products')) {
@@ -799,36 +786,29 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
                     }
                   }}
                 >
-                  Add Product
+                  ADD PRODUCT
                 </Text>
               </View>
             )}
 
             <View style={styles.headerRight}>
               {!isCompact && !isAdminLayout && (
-                <View style={{ flexDirection: 'row', gap: 32, alignItems: 'center' }}>
-                  {!isGroundOwner && (
-                    <Text
-                      style={[styles.headerNavLink, (cleanPath === '/(tabs)/dashboard' || cleanPath === '/dashboard') && styles.headerNavLinkActive]}
-                      onPress={() => router.push('/(tabs)/dashboard' as any)}
-                    >
-                      Dashboard
-                    </Text>
-                  )}
+                <View style={{ flexDirection: 'row', gap: 20, alignItems: 'center' }}>
+
                   <Text
                     style={[styles.headerNavLink, cleanPath === '/(tabs)/bookings' && styles.headerNavLinkActive]}
                     onPress={() => router.push('/(tabs)/bookings' as any)}
                   >
-                    Bookings
+                    BOOKINGS
                   </Text>
                   <Text
                     style={[
-                      styles.headerNavLink, 
-                      (cleanPath === '/shop' || isShop) ? { color: '#e6ffb7', borderBottomWidth: 2, borderBottomColor: '#e6ffb7', paddingBottom: 4, fontWeight: '700' } : { color: '#e6ffb7' }
+                      styles.headerNavLink,
+                      (cleanPath === '/shop' || isShop) ? { color: '#f8688a', borderBottomWidth: 2, borderBottomColor: '#f8688a', paddingBottom: 4, fontWeight: '700' } : { color: '#FFFFFF' }
                     ]}
                     onPress={() => router.push('/shop' as any)}
                   >
-                    Shop
+                    SHOP
                   </Text>
 
 
@@ -837,28 +817,22 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
                       style={styles.headerSecondaryButtonText}
                       onPress={() => router.push('/(auth)/login' as any)}
                     >
-                      Sign in
+                      SIGN IN
                     </Text>
                   ) : (
                     <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         style={styles.userProfilePill}
                         onPress={() => router.push('/(tabs)/profile' as any)}
                       >
-                        <Image 
+                        <Image
                           source={
-                            profile?.avatar_url 
-                              ? { uri: profile.avatar_url } 
+                            profile?.avatar_url
+                              ? { uri: profile.avatar_url }
                               : require('@/assets/images/default-avatar.png')
-                          } 
-                          style={styles.userAvatar} 
+                          }
+                          style={styles.userAvatar}
                         />
-                        <Text style={styles.userName}>
-                          {(() => {
-                            const rawName = profile?.full_name?.split(' ')[0] || 'Alex';
-                            return rawName.charAt(0).toUpperCase() + rawName.slice(1).toLowerCase();
-                          })()}
-                        </Text>
                       </TouchableOpacity>
 
 
@@ -888,6 +862,9 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
             >
               <ScrollView
                 showsVerticalScrollIndicator={false}
+                showsHorizontalScrollIndicator={false}
+                overScrollMode="never"
+                bounces={false}
                 contentContainerStyle={{ paddingBottom: 20 }}
               >
                 {isAuthenticated && !isPublicNoSidebar && (
@@ -1040,39 +1017,39 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
                           isActiveOverride={cleanPath === '/(tabs)/dashboard' || cleanPath === '/dashboard'}
                         />
 
-                        <NavLink 
-                          href="/profile/orders" 
-                          icon={ShoppingBag} 
-                          label="Shop Orders" 
+                        <NavLink
+                          href="/profile/orders"
+                          icon={ShoppingBag}
+                          label="Shop Orders"
                         />
 
-                        <NavLink 
-                          href="/(tabs)/bookings" 
-                          icon={ClipboardList} 
-                          label="My Bookings" 
-                          badge={loading ? undefined : bookings.length} 
+                        <NavLink
+                          href="/(tabs)/bookings"
+                          icon={ClipboardList}
+                          label="My Bookings"
+                          badge={loading ? undefined : bookings.length}
                         />
-                        <NavLink 
-                          href="/favorites" 
-                          icon={Heart} 
-                          label="Favorites" 
+                        <NavLink
+                          href="/favorites"
+                          icon={Heart}
+                          label="Favorites"
                           badge={loading ? undefined : favoritesCount}
                         />
-                        <NavLink 
-                          href="/wallet" 
-                          icon={Wallet} 
-                          label="Wallet" 
+                        <NavLink
+                          href="/wallet"
+                          icon={Wallet}
+                          label="Wallet"
                           meta={walletBalance !== null ? formatCurrency(walletBalance) : undefined}
                         />
-                        <NavLink 
-                          href="/cricket/player-profile" 
-                          icon={Trophy} 
-                          label="Cricket Hub" 
+                        <NavLink
+                          href="/cricket/player-profile"
+                          icon={Trophy}
+                          label="Cricket Hub"
                         />
-                        <NavLink 
-                          href="/(tabs)/support" 
-                          icon={Info} 
-                          label="Help" 
+                        <NavLink
+                          href="/(tabs)/support"
+                          icon={Info}
+                          label="Help"
                         />
 
                         <View style={styles.sidebarDivider} />
@@ -1135,7 +1112,7 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
               >
                 <Icon size={22} color={isActive ? (item.label === 'Shop' ? '#f8688a' : '#00ea6b') : '#9ca3af'} />
                 <Text style={[
-                  styles.bottomBarText, 
+                  styles.bottomBarText,
                   isActive && (item.label === 'Shop' ? { color: '#f8688a', fontWeight: '700' } : styles.bottomBarTextActive)
                 ]}>
                   {item.label}
@@ -1155,7 +1132,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
     ...Platform.select({
       web: {
-        overflowY: 'auto' as any,
+        overflow: 'hidden' as any,
         height: '100vh' as any,
       }
     })
@@ -1190,7 +1167,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 80,
+    height: 72,
     zIndex: 2000,
     backgroundColor: 'transparent',
     borderBottomWidth: 0,
@@ -1235,12 +1212,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoImage: {
-    height: 52,
-    width: 180,
+    height: 40,
+    width: 140,
   },
   logoImageCompact: {
-    height: 40,
-    width: 130,
+    height: 32,
+    width: 110,
   },
   headerRight: {
     flexDirection: 'row',
@@ -1248,7 +1225,6 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   headerSearchContainer: {
-    marginRight: 16,
     flexDirection: 'row',
     alignItems: 'center',
   },
@@ -1362,12 +1338,6 @@ const styles = StyleSheet.create({
     marginTop: 1,
     fontFamily: 'Inter',
   },
-  userName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
-    fontFamily: 'Inter',
-  },
   signOutButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1406,7 +1376,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F7',
     ...Platform.select({
       web: {
-        overflowY: 'auto' as any,
+        overflow: 'hidden' as any,
+        scrollbarWidth: 'none' as any,
+        msOverflowStyle: 'none' as any,
       }
     })
   },
@@ -1424,7 +1396,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F7',
     ...Platform.select({
       web: {
-        overflowY: 'auto' as any,
+        overflow: 'hidden' as any,
+        scrollbarWidth: 'none' as any,
+        msOverflowStyle: 'none' as any,
       }
     })
   },
@@ -1450,6 +1424,8 @@ const styles = StyleSheet.create({
         minHeight: '100vh' as any,
         transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
         overflow: 'hidden',
+        scrollbarWidth: 'none' as any,
+        msOverflowStyle: 'none' as any,
       },
       default: {
         height: '100%',
@@ -1515,7 +1491,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F5F9',
     ...Platform.select({
       web: {
-        minHeight: '100vh' as any,
+        maxHeight: 'calc(100vh - 72px)' as any,
+        overflow: 'hidden' as any,
+        scrollbarWidth: 'none' as any,
+        msOverflowStyle: 'none' as any,
       },
     }),
   },
@@ -1600,20 +1579,20 @@ const styles = StyleSheet.create({
   },
   headerPrimaryButtonText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#dcc093',
     fontFamily: 'Inter',
-    marginRight: 24,
+    textTransform: 'uppercase',
   },
   headerPrimaryButtonTextScrolled: {
     color: '#0F172A',
   },
   headerSecondaryButtonText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#dcc093',
     fontFamily: 'Inter',
-    marginRight: 24,
+    textTransform: 'uppercase',
   },
   headerSecondaryButtonTextScrolled: {
     color: '#0F172A',
@@ -1640,7 +1619,6 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    marginRight: 8,
   },
   profileAvatarCompact: {
     width: 34,
@@ -1671,9 +1649,10 @@ const styles = StyleSheet.create({
   },
   headerNavLink: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '500',
     color: 'rgba(255,255,255,0.7)',
     fontFamily: 'Inter',
+    textTransform: 'uppercase',
   },
   headerNavLinkActive: {
     color: '#00ea6b',
@@ -1708,17 +1687,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.08)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    padding: 4,
     borderRadius: 99,
-    gap: 8,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.05)',
   },
   userAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: '#F1F5F9',
   },
   notificationPill: {

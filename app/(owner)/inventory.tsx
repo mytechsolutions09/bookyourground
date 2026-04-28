@@ -3,47 +3,51 @@ import {
   View,
   Text,
   StyleSheet,
-  FlatList,
   RefreshControl,
   TouchableOpacity,
   Platform,
   ScrollView,
   ActivityIndicator,
   TextInput,
-  Alert,
   Modal,
-  useWindowDimensions,
 } from 'react-native';
 
 const IS_WEB = Platform.OS === 'web';
+import { 
+  ChevronRight, 
+  ChevronDown, 
+  Calendar, 
+  Search, 
+  Filter, 
+  Building2, 
+  LayoutGrid,
+  Clock
+} from 'lucide-react-native';
 import { router } from 'expo-router';
-import { ChevronRight, ChevronDown, Calendar, Search, Filter, CalendarClock } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { GroundWithImages, BookingWithDetails } from '@/types';
 import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import Card from '@/components/ui/Card';
-import { formatDateDDMMYY } from '@/utils/helpers';
+import { formatDateDDMMYY, formatCurrency } from '@/utils/helpers';
 import { normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
 import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
-import { slugifyGroundSegment } from '@/utils/groundSlug';
 
 export default function OwnerInventoryScreen() {
   const { user } = useAuth();
   const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
   const [bookings, setBookings] = useState<BookingWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedGroundId, setExpandedGroundId] = useState<string | null>(null);
+  
+  const [selectedGroundId, setSelectedGroundId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
-  const [selectedDateFilter, setSelectedDateFilter] = useState<string | null>(null);
-  const [daysToShow, setDaysToShow] = useState<number>(30);
+  const [selectedDateFilter, setSelectedDateFilter] = useState<string | null>(new Date().toISOString().split('T')[0]);
+  const [daysToShow, setDaysToShow] = useState<number>(7);
   const [bookingChoice, setBookingChoice] = useState<any | null>(null);
 
   const isWeb = Platform.OS === 'web';
-  const { width } = useWindowDimensions();
-  const isMobile = width < 768;
 
   useEffect(() => {
     if (user) loadData();
@@ -77,7 +81,7 @@ export default function OwnerInventoryScreen() {
           ground:grounds(*, ground_images(*)),
           user:profiles(*)
         `)
-        .eq('ground.owner_id', user.id) // Only bookings for my grounds
+        .eq('ground.owner_id', user.id)
         .gte('booking_date', startDate)
         .lte('booking_date', endDate)
         .in('status', ['confirmed', 'completed']);
@@ -86,6 +90,11 @@ export default function OwnerInventoryScreen() {
 
       setGrounds(groundsData || []);
       setBookings(bookingsData || []);
+      
+      // Auto-select first ground if none selected
+      if (!selectedGroundId && groundsData && groundsData.length > 0) {
+        setSelectedGroundId(groundsData[0].id);
+      }
     } catch (error) {
       console.error('Error loading inventory data:', error);
     } finally {
@@ -95,11 +104,16 @@ export default function OwnerInventoryScreen() {
 
   const filteredGrounds = useMemo(() => {
     if (!searchQuery) return grounds;
+    const q = searchQuery.toLowerCase();
     return grounds.filter(g => 
-      g.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      g.city.toLowerCase().includes(searchQuery.toLowerCase())
+      g.name.toLowerCase().includes(q) ||
+      g.city.toLowerCase().includes(q)
     );
   }, [grounds, searchQuery]);
+
+  const currentGround = useMemo(() => 
+    grounds.find(g => g.id === selectedGroundId),
+  [grounds, selectedGroundId]);
 
   // Group bookings by ground, date, and slot
   const bookingsMap = useMemo(() => {
@@ -146,9 +160,9 @@ export default function OwnerInventoryScreen() {
 
     if (filteredSlots.length === 0) {
       if (slots.length > 0) {
-        return <Text style={styles.noSlotsText}>No slots match selected filters</Text>;
+        return <Text style={styles.noSlotsText}>No slots match filters</Text>;
       }
-      return <Text style={styles.noSlotsText}>No slots configured for {dayOfWeek}</Text>;
+      return <Text style={styles.noSlotsText}>No slots for {dayOfWeek}</Text>;
     }
     
     return (
@@ -157,19 +171,18 @@ export default function OwnerInventoryScreen() {
           const occupancy = getOccupancy(ground.id, dateStr, s.start_time, ground.pitch_type);
           const statusText = getSlotStatus(occupancy);
           
-          let statusColor = '#F3F4F6';
+          let statusColor = '#F3F4F6'; // Empty
           let textColor = '#6B7280';
 
           if (statusText === 'FULL') {
-            statusColor = '#F0FDF4';
-            textColor = '#166534';
+            statusColor = '#DEF7EC';
+            textColor = '#03543F';
           } else if (statusText === 'PARTIAL') {
-            statusColor = '#FFFBEB';
+            statusColor = '#FEF3C7';
             textColor = '#92400E';
           }
 
           const isClickable = statusText !== 'FULL';
-          const teamParam = statusText === 'PARTIAL' ? 'one' : 'both';
 
           return (
             <TouchableOpacity 
@@ -208,7 +221,7 @@ export default function OwnerInventoryScreen() {
                     basePrice,
                   });
                 } else {
-                  goToCheckout(teamParam as 'one' | 'both');
+                  goToCheckout(statusText === 'PARTIAL' ? 'one' : 'both');
                 }
               }}
             >
@@ -223,73 +236,45 @@ export default function OwnerInventoryScreen() {
     );
   };
 
-  const toggleStatusFilter = (status: string) => {
-    setStatusFilter(status);
-  };
+  const [isScrolled, setIsScrolled] = useState(false);
 
-  const renderGroundRow = ({ item: ground }: { item: GroundWithImages }) => {
-    const isExpanded = expandedGroundId === ground.id;
-    
-    return (
-      <Card style={styles.groundCard}>
-        <TouchableOpacity 
-          style={styles.groundHeader} 
-          onPress={() => setExpandedGroundId(isExpanded ? null : ground.id)}
-        >
-          <View style={styles.groundInfo}>
-            <Text style={styles.groundName}>{ground.name}</Text>
-            <Text style={styles.groundLocation}>{ground.city}, {ground.state}</Text>
-          </View>
-          {isExpanded ? <ChevronDown size={20} color="#666" /> : <ChevronRight size={20} color="#666" />}
-        </TouchableOpacity>
-
-        {isExpanded && (
-          <View style={styles.expandedContent}>
-            <Text style={styles.inventoryTitle}>{daysToShow}-Day Inventory</Text>
-            {Array.from({ length: daysToShow }).map((_, i) => {
-              const d = new Date();
-              if (selectedDateFilter) {
-                const [y, m, day] = selectedDateFilter.split('-').map(Number);
-                d.setFullYear(y, m - 1, day);
-              }
-              d.setDate(d.getDate() + i);
-              const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-              const displayDate = d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
-
-              return (
-                <View key={dateStr} style={styles.dateRow}>
-                  <View style={styles.dateLabelContainer}>
-                    <Text style={styles.dateLabel}>{displayDate}</Text>
-                  </View>
-                  {renderSlotsForDate(ground, dateStr)}
-                </View>
-              );
-            })}
-          </View>
-        )}
-      </Card>
-    );
+  const handleScroll = (event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    setIsScrolled(offsetY > 20);
   };
 
   const content = (
     <View style={styles.content}>
       <View style={[styles.pageHeader, isWeb && styles.webPageHeader]}>
-        <View style={[styles.headerTop, isMobile && styles.headerTopMobile]}>
+        <View style={styles.headerTop}>
           <View>
-            <Text style={styles.title}>Inventory</Text>
-            <Text style={styles.subtitle}>Manage your ground occupancy and slots</Text>
+            <Text style={styles.title}>Inventory Management</Text>
+            {isScrolled && currentGround ? (
+              <View style={styles.headerContext}>
+                <View style={styles.contextBadge}>
+                  <Building2 size={12} color="#00ea6b" />
+                  <Text style={styles.contextText}>{currentGround.name}</Text>
+                </View>
+              </View>
+            ) : (
+              <Text style={styles.subtitle}>Owner Dashboard</Text>
+            )}
           </View>
           
-          <Card style={[styles.filterCard, isMobile && styles.filterCardMobile]}>
-            <View style={[styles.filtersContainer, isMobile && styles.filtersContainerMobile]}>
+          <Card style={styles.filterCard}>
+            <View style={styles.filtersContainer}>
                <View style={styles.statusFilters}>
                   {['ALL', 'EMPTY', 'PARTIAL', 'FULL'].map(status => (
                     <TouchableOpacity
                       key={status}
-                      onPress={() => toggleStatusFilter(status)}
+                      onPress={() => setStatusFilter(status)}
                       style={[
                         styles.filterTag,
                         statusFilter === status && styles.filterTagActive,
+                        status === 'ALL' && statusFilter === 'ALL' && styles.tagAll,
+                        status === 'EMPTY' && statusFilter === 'EMPTY' && styles.tagEmpty,
+                        status === 'PARTIAL' && statusFilter === 'PARTIAL' && styles.tagPartial,
+                        status === 'FULL' && statusFilter === 'FULL' && styles.tagFull,
                       ]}
                     >
                       <Text style={[
@@ -299,47 +284,30 @@ export default function OwnerInventoryScreen() {
                     </TouchableOpacity>
                   ))}
                </View>
-
+  
                <View style={styles.dateSearchContainer}>
                   {IS_WEB ? (
-                    <>
-                      <input
-                        type="date"
-                        value={selectedDateFilter || ''}
-                        onChange={(e) => setSelectedDateFilter(e.target.value)}
-                        style={{
-                          border: 'none',
-                          backgroundColor: 'transparent',
-                          fontSize: '13px',
-                          color: '#374151',
-                          outline: 'none',
-                          width: '130px',
-                          height: '100%',
-                          paddingLeft: '32px',
-                          cursor: 'pointer',
-                          backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'16\' height=\'16\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%236B7280\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Crect x=\'3\' y=\'4\' width=\'18\' height=\'18\' rx=\'2\' ry=\'2\'/%3E%3Cline x1=\'16\' y1=\'2\' x2=\'16\' y2=\'6\'/%3E%3Cline x1=\'8\' y1=\'2\' x2=\'8\' y2=\'6\'/%3E%3Cline x1=\'3\' y1=\'10\' x2=\'21\' y2=\'10\'/%3E%3C/svg%3E")',
-                          backgroundRepeat: 'no-repeat',
-                          backgroundPosition: '8px center',
-                          WebkitAppearance: 'none',
-                          appearance: 'none',
-                        }}
-                      />
-                      <style dangerouslySetInnerHTML={{ __html: `
-                        input[type="date"]::-webkit-calendar-picker-indicator {
-                          background: transparent;
-                          bottom: 0;
-                          color: transparent;
-                          cursor: pointer;
-                          height: auto;
-                          left: 0;
-                          position: absolute;
-                          right: 0;
-                          top: 0;
-                          width: auto;
-                          -webkit-appearance: none;
-                        }
-                      `}} />
-                    </>
+                    <input
+                      type="date"
+                      value={selectedDateFilter || ''}
+                      onChange={(e) => setSelectedDateFilter(e.target.value)}
+                      style={{
+                        border: 'none',
+                        backgroundColor: 'transparent',
+                        fontSize: '13px',
+                        color: '#374151',
+                        outline: 'none',
+                        width: '130px',
+                        height: '100%',
+                        paddingLeft: '32px',
+                        cursor: 'pointer',
+                        backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'16\' height=\'16\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%236B7280\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Crect x=\'3\' y=\'4\' width=\'18\' height=\'18\' rx=\'2\' ry=\'2\'/%3E%3Cline x1=\'16\' y1=\'2\' x2=\'16\' y2=\'6\'/%3E%3Cline x1=\'8\' y1=\'2\' x2=\'8\' y2=\'6\'/%3E%3Cline x1=\'3\' y1=\'10\' x2=\'21\' y2=\'10\'/%3E%3C/svg%3E")',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: '8px center',
+                        WebkitAppearance: 'none',
+                        appearance: 'none',
+                      } as any}
+                    />
                   ) : (
                     <>
                       <Calendar size={16} color="#6B7280" />
@@ -347,63 +315,121 @@ export default function OwnerInventoryScreen() {
                         style={styles.dateInput}
                         placeholder="YYYY-MM-DD"
                         value={selectedDateFilter || ''}
-                        onChangeText={(val) => {
-                          setSelectedDateFilter(val || null);
-                        }}
+                        onChangeText={setSelectedDateFilter}
                         maxLength={10}
                       />
                     </>
                   )}
                </View>
+  
+               <View style={styles.rangeSelector}>
+                  {[7, 14, 30, 90].map(days => (
+                    <TouchableOpacity
+                      key={days}
+                      onPress={() => setDaysToShow(days)}
+                      style={[styles.rangeBtn, daysToShow === days && styles.rangeBtnActive]}
+                    >
+                      <Text style={[styles.rangeBtnText, daysToShow === days && styles.rangeBtnTextActive]}>{days}D</Text>
+                    </TouchableOpacity>
+                  ))}
+               </View>
 
-                <View style={styles.rangeSelector}>
-                   <TouchableOpacity
-                     onPress={() => setDaysToShow(7)}
-                     style={[styles.rangeBtn, daysToShow === 7 && styles.rangeBtnActive]}
-                   >
-                     <Text style={[styles.rangeBtnText, daysToShow === 7 && styles.rangeBtnTextActive]}>7D</Text>
-                   </TouchableOpacity>
-                   <TouchableOpacity
-                     onPress={() => setDaysToShow(30)}
-                     style={[styles.rangeBtn, daysToShow === 30 && styles.rangeBtnActive]}
-                   >
-                     <Text style={[styles.rangeBtnText, daysToShow === 30 && styles.rangeBtnTextActive]}>30D</Text>
-                   </TouchableOpacity>
-                   <TouchableOpacity
-                     onPress={() => setDaysToShow(90)}
-                     style={[styles.rangeBtn, daysToShow === 90 && styles.rangeBtnActive]}
-                   >
-                     <Text style={[styles.rangeBtnText, daysToShow === 90 && styles.rangeBtnTextActive]}>90D</Text>
-                   </TouchableOpacity>
-                </View>
+               <View style={styles.searchContainer}>
+                  <Search size={16} color="#6B7280" />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search Ground..."
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                  />
+               </View>
             </View>
           </Card>
         </View>
       </View>
 
-      <FlatList
-        data={filteredGrounds}
-        renderItem={renderGroundRow}
-        keyExtractor={item => item.id}
-        contentContainerStyle={styles.list}
+      <ScrollView 
+        style={styles.mainScroll} 
+        contentContainerStyle={styles.mainScrollContent}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}
+        overScrollMode="never"
+        bounces={false}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
-        ListEmptyComponent={
-          loading ? (
-            <ActivityIndicator size="large" color="#01b854" style={{ marginTop: 40 }} />
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No grounds found in your inventory</Text>
-            </View>
-          )
-        }
-      />
-    </View>
-  );
+      >
+        {!isScrolled && grounds.length > 0 && (
+          <View style={styles.selectionTabs}>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false} 
+              showsVerticalScrollIndicator={false}
+              overScrollMode="never"
+              bounces={false}
+              contentContainerStyle={styles.tabsScroll}
+            >
+              {filteredGrounds.map(ground => {
+                const isSelected = selectedGroundId === ground.id;
+                return (
+                  <TouchableOpacity 
+                    key={ground.id}
+                    style={[styles.tabChip, isSelected && styles.tabChipSelected]}
+                    onPress={() => setSelectedGroundId(ground.id)}
+                  >
+                    <Building2 size={12} color={isSelected ? '#FFFFFF' : '#6B7280'} />
+                    <Text style={[styles.tabChipText, isSelected && styles.tabChipTextSelected]}>
+                      {ground.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
 
-  return (
-    <>
-      {!isWeb && <MobileAppNavbar title="Inventory Plan" titleColor="#01b854" />}
-      {isWeb ? <WebLayout>{content}</WebLayout> : <View style={styles.screen}>{content}</View>}
+        <View style={styles.hierarchyContainer}>
+          <View style={[styles.inventoryContainer, isScrolled && styles.inventoryContainerExpanded]}>
+            <View style={styles.sectionHeader}>
+              <LayoutGrid size={16} color="#111827" />
+              <Text style={styles.sectionTitle}>
+                {currentGround ? `Inventory: ${currentGround.name}` : 'Select a ground'}
+              </Text>
+            </View>
+
+            {currentGround ? (
+              <View style={styles.inventoryStaticList}>
+                {Array.from({ length: daysToShow }).map((_, i) => {
+                  const d = new Date();
+                  if (selectedDateFilter) {
+                    const [y, m, day] = selectedDateFilter.split('-').map(Number);
+                    d.setFullYear(y, m - 1, day);
+                  }
+                  d.setDate(d.getDate() + i);
+                  const dateStr = d.toISOString().split('T')[0];
+                  const displayDate = d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+
+                  return (
+                    <View key={dateStr} style={styles.compactDateRow}>
+                      <View style={styles.compactDateLabel}>
+                        <Text style={styles.dateDay}>{displayDate.split(' ')[0]}</Text>
+                        <Text style={styles.dateNum}>{displayDate.split(' ')[1]} {displayDate.split(' ')[2]}</Text>
+                      </View>
+                      <View style={styles.slotsWrapper}>
+                        {renderSlotsForDate(currentGround, dateStr)}
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            ) : (
+              <View style={styles.noGroundSelected}>
+                 <ActivityIndicator size="small" color="#00ea6b" />
+                 <Text style={styles.emptyText}>No grounds found in your inventory</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </ScrollView>
 
       <Modal
         visible={!!bookingChoice}
@@ -476,6 +502,13 @@ export default function OwnerInventoryScreen() {
           </Card>
         </View>
       </Modal>
+    </View>
+  );
+
+  return (
+    <>
+      {!isWeb && <MobileAppNavbar title="Inventory" titleColor="#00ea6b" />}
+      {isWeb ? <WebLayout noCard>{content}</WebLayout> : <View style={styles.screen}>{content}</View>}
     </>
   );
 }
@@ -483,53 +516,72 @@ export default function OwnerInventoryScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: 'transparent',
+    backgroundColor: '#F9FAFB',
   },
   content: {
     flex: 1,
-    maxWidth: 1000,
-    alignSelf: 'center',
-    width: '100%',
-    paddingHorizontal: 16,
-    paddingTop: 16,
   },
   pageHeader: {
-    backgroundColor: 'transparent',
-    padding: 0,
-    paddingBottom: 16,
+    backgroundColor: '#FFFFFF',
+    padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },
   webPageHeader: {
-    paddingTop: 0,
+    paddingTop: 10,
     backgroundColor: 'transparent',
     borderBottomWidth: 0,
     width: '100%',
   },
   title: {
-    fontFamily: 'Inter',
-    fontSize: 20,
-    fontWeight: '500',
+    fontSize: 22,
+    fontWeight: '800',
     color: '#111827',
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontFamily: 'Inter',
-    fontSize: 14,
-    fontWeight: '400',
+    fontSize: 12,
     color: '#6B7280',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
     marginTop: 2,
+  },
+  headerContext: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+  contextBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  contextText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#374151',
   },
   headerTop: {
     flexDirection: Platform.OS === 'web' ? 'row' : 'column',
     justifyContent: 'space-between',
     alignItems: Platform.OS === 'web' ? 'center' : 'flex-start',
-    gap: 16,
+    gap: 12,
   },
   filterCard: {
-    padding: 4,
+    padding: 8,
     borderRadius: 16,
-    marginTop: 0,
-    backgroundColor: 'transparent',
+    backgroundColor: '#FFFFFF',
+    ...Platform.select({
+       web: {
+         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+       } as any
+    })
   },
   filtersContainer: {
     flexDirection: 'row',
@@ -537,62 +589,46 @@ const styles = StyleSheet.create({
     gap: 12,
     flexWrap: 'wrap',
   },
-  filtersContainerMobile: {
-    justifyContent: 'flex-start',
-    gap: 8,
-  },
-  headerTopMobile: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  filterCardMobile: {
-    width: '100%',
-    padding: 0,
-  },
   statusFilters: {
     flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
-    borderRadius: 12,
+    gap: 4,
+    backgroundColor: '#F3F4F6',
     padding: 3,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderRadius: 8,
   },
   filterTag: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 9,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
   },
   filterTagActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
+    transform: [{ scale: 1.02 }],
   },
+  tagAll: { backgroundColor: '#00ea6b' },
+  tagEmpty: { backgroundColor: '#E5E7EB' },
+  tagPartial: { backgroundColor: '#FEF3C7' },
+  tagFull: { backgroundColor: '#DEF7EC' },
   filterTagText: {
-    fontFamily: 'Inter',
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '800',
     color: '#6B7280',
   },
   filterTagTextActive: {
-    color: '#0F172A',
-    fontWeight: '700',
+    color: '#043529',
   },
   dateSearchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F3F4F6',
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     borderRadius: 8,
-    height: 36,
-    gap: 8,
+    height: 32,
+    gap: 6,
   },
   dateInput: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#374151',
-    width: IS_WEB ? 150 : 100,
+    width: 90,
     outlineStyle: 'none',
     borderWidth: 0,
     backgroundColor: 'transparent',
@@ -605,89 +641,138 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   rangeBtn: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
   },
   rangeBtnActive: {
     backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
   },
   rangeBtnText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
     color: '#6B7280',
   },
   rangeBtnTextActive: {
-    color: '#01b854',
+    color: '#00ea6b',
   },
-  list: {
-    padding: 0,
-    width: '100%',
-  },
-  groundCard: {
-    marginBottom: 16,
-    padding: 0,
-    overflow: 'hidden',
-    borderRadius: 24,
-  },
-  groundHeader: {
+  searchContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    height: 32,
+    width: 150,
+    gap: 8,
   },
-  groundInfo: {
+  searchInput: {
+    fontSize: 12,
+    color: '#111827',
+    flex: 1,
+    outlineStyle: 'none',
+  } as any,
+  mainScroll: {
     flex: 1,
   },
-  groundName: {
-    fontFamily: 'Inter',
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#111827',
+  mainScrollContent: {
+    paddingBottom: 40,
   },
-  groundLocation: {
-    fontSize: 13,
-    color: '#6B7280',
-    marginTop: 2,
+  selectionTabs: {
+    backgroundColor: '#FFFFFF',
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
-  expandedContent: {
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-    backgroundColor: '#FAFAFA',
+  tabsScroll: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    gap: 8,
   },
-  inventoryTitle: {
-    fontFamily: 'Inter',
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#374151',
-    marginBottom: 16,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  dateRow: {
-    marginBottom: 20,
-  },
-  dateLabelContainer: {
-    marginBottom: 8,
+  tabChip: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  dateLabel: {
-    fontFamily: 'Inter',
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#0F172A',
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#F3F4F6',
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  tabChipSelected: {
+    backgroundColor: '#111827',
+    borderColor: '#111827',
+  },
+  tabChipText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  tabChipTextSelected: {
+    color: '#FFFFFF',
+  },
+  hierarchyContainer: {
+    flex: 1,
+    padding: 16,
+    paddingTop: 8,
+    gap: 16,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  sectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#111827',
     textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  inventoryContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#F0F0F0',
+  },
+  inventoryContainerExpanded: {
+    borderRadius: 0,
+    borderWidth: 0,
+    padding: 12,
+  },
+  inventoryStaticList: {
+    marginTop: 12,
+  },
+  compactDateRow: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F9FAFB',
+    paddingBottom: 12,
+  },
+  compactDateLabel: {
+    width: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dateDay: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+  },
+  dateNum: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  slotsWrapper: {
+    flex: 1,
   },
   noSlotsText: {
     fontSize: 12,
@@ -709,24 +794,23 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0,0,0,0.05)',
   },
   slotTime: {
-    fontFamily: 'Inter',
     fontSize: 11,
     fontWeight: '600',
   },
   slotStatus: {
-    fontFamily: 'Inter',
     fontSize: 8,
     fontWeight: '700',
     marginTop: 2,
     textTransform: 'uppercase',
   },
-  emptyContainer: {
+  noGroundSelected: {
+    padding: 40,
     alignItems: 'center',
-    paddingVertical: 40,
+    gap: 12,
   },
   emptyText: {
     color: '#6B7280',
-    fontSize: 15,
+    fontSize: 14,
   },
   modalOverlay: {
     flex: 1,

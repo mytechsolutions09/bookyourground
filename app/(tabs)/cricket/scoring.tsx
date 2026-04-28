@@ -96,53 +96,6 @@ const TABS = [
   { id: 'highlights', label: 'Highlights', icon: PlayCircle },
 ];
 
-const MATCHES_DATA = [
-  {
-    id: '1',
-    type: 'League Matches',
-    tournament: 'SL T20 Cricket Cup',
-    status: 'Upcoming',
-    date: '18-Apr-26',
-    overs: '20 Ov.',
-    location: 'Gurugram (Gurgaon), SL Cricke..',
-    team1: 'Super Strikers',
-    team2: 'Ggn Titans',
-    message: 'Match scheduled to begin on Saturday, 18th Apr at 7:20 AM',
-  },
-  {
-    id: '2',
-    type: 'League Matches',
-    tournament: '5th Vikram singh cup (mj spo..',
-    status: 'Result',
-    date: 'Yesterday',
-    overs: '25 Ov.',
-    location: 'Gurugram (Gurgaon), SKS Spor..',
-    team1: 'Phoenix Risers.',
-    team1Score: '274/6',
-    team1Overs: '(25.0 Ov)',
-    team2: 'Ggn Titans',
-    team2Score: '195/10',
-    team2Overs: '(21.4 Ov)',
-    result: 'Phoenix Risers. won by 79 runs',
-  },
-  {
-    id: 'f47ac10b-58cc-4372-a567-0e02b2c3d470',
-    type: 'League Matches',
-    tournament: '12th Vikram Singh WrestleM..',
-    status: 'Result',
-    date: '08-Apr-26',
-    overs: '20 Ov.',
-    location: 'Gurugram (Gurgaon), BattleSta..',
-    team1: 'Ggn Titans',
-    team1Score: '181/6',
-    team1Overs: '(20.0 Ov)',
-    team2: 'Titans Of The Pitch',
-    team2Score: '183/5',
-    team2Overs: '(19.4 Ov)',
-    result: 'Titans Of The Pitch won by 5 wickets',
-  }
-];
-
 const TOURNAMENTS_DATA = [
   {
     id: 'f47ac10b-58cc-4372-a567-0e02b2c3d47e',
@@ -7781,7 +7734,7 @@ export default function CricketScreen() {
         return (
           <View style={{ gap: 12 }}>
             <Text style={styles.sectionHeading}>Upcoming Matches</Text>
-            {MATCHES_DATA.slice(0, 1).map(match => <MatchCard key={match.id} match={match} />)}
+            {fetchedMatches.slice(0, 1).map(match => <MatchCard key={match.id} match={match} />)}
             <Text style={[styles.sectionHeading, { marginTop: 20 }]}>Past Matches</Text>
             <View style={styles.profilePlaceholder}>
                <History size={48} color="#E5E7EB" />
@@ -8360,7 +8313,7 @@ export default function CricketScreen() {
             </View>
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 100 }}>
               <View style={styles.matchesList}>
-                {[...fetchedMatches, ...MATCHES_DATA]
+                {fetchedMatches
                   .filter(m => {
                     if (subTab === 'all') return true;
                     if (subTab === 'played') return m.status === 'Result' || m.status === 'completed';

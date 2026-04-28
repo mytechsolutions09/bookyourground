@@ -336,7 +336,7 @@ export default function AdminInventoryScreen() {
                </View>
   
                <View style={styles.rangeSelector}>
-                  {[7, 14, 30].map(days => (
+                  {[7, 14, 30, 90].map(days => (
                     <TouchableOpacity
                       key={days}
                       onPress={() => setDaysToShow(days)}

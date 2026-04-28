@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 10,
   },
-  logo: { width: 300, height: 75 },
+  logo: { width: 200, height: 50 },
   card: { 
     backgroundColor: 'rgba(255, 255, 255, 0.2)', 
     borderRadius: 32, 
@@ -355,7 +355,7 @@ const webStyles = StyleSheet.create({
     alignItems: 'stretch' 
   },
   header: { marginBottom: 16, alignItems: 'center' },
-  logoImage: { width: 240, height: 60, marginBottom: 8 },
+  logoImage: { width: 180, height: 45, marginBottom: 8 },
   form: { },
   heroColumn: { flex: 1, width: '50%' as any },
   formContainer: { 

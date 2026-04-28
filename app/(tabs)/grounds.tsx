@@ -108,7 +108,7 @@ export default function GroundsTabScreen() {
     left: 0,
     right: 0,
     zIndex: 1000,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFFFFF',
   }));
 
   useEffect(() => {
@@ -199,15 +199,24 @@ export default function GroundsTabScreen() {
     </View>
   );
 
-  if (Platform.OS === 'web' && !isSmall) {
+  const renderHeader = () => (
+    <View style={styles.customHeader}>
+      {Platform.OS !== 'web' && <Text style={styles.headerTitle}>BOOK A GROUND</Text>}
+      {renderTabs(styles.nativeTabContainer)}
+    </View>
+  );
+
+  if (Platform.OS === 'web') {
     return (
-      <WebLayout>
+      <WebLayout hideHeader={isSmall} isPublicNoSidebar={isSmall}>
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator
         >
-          {renderTabs(isSmall ? styles.webTabContainerNative : styles.webTabContainer)}
+          {isSmall && renderTabs(styles.webTabContainerNative)}
+          {!isSmall && renderTabs(styles.webTabContainer)}
+
           <View style={styles.page}>
             {activeTab === 'book' ? (
               <View>
@@ -226,13 +235,11 @@ export default function GroundsTabScreen() {
   // Native: full-screen booking with navbar + tabs.
   return (
     <View style={styles.nativeRoot}>
-      <Animated.View style={headerAnimatedStyle}>
-        <MobileAppNavbar
-          title={activeTab === 'book' ? "Book a Ground" : (activeTab === 'opponent' ? "Find an Opponent" : "Favourites")}
-          smallerTitle={true}
-        />
-        {renderTabs(styles.nativeTabContainer)}
-      </Animated.View>
+      {Platform.OS !== 'web' && (
+        <Animated.View style={headerAnimatedStyle}>
+          {renderHeader()}
+        </Animated.View>
+      )}
 
       <Animated.ScrollView
         ref={horizontalPagerRef}
@@ -240,20 +247,24 @@ export default function GroundsTabScreen() {
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         contentOffset={{ x: TABS_LIST.find(t => t.id === activeTab)?.index! * width, y: 0 }}
-        onScroll={horizontalScrollHandler}
+        onScroll={Platform.OS === 'web' ? undefined : horizontalScrollHandler}
         scrollEventThrottle={16}
         style={{ flex: 1 }}
       >
         {/* Slide 1: Book a Ground */}
         <View style={{ width }}>
           <Animated.ScrollView
-            onScroll={verticalScrollHandler}
+            onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
             scrollEventThrottle={16}
             style={styles.page}
-            contentContainerStyle={{ paddingTop: HEADER_HEIGHT + insets.top + 4, paddingBottom: 100 }}
+            contentContainerStyle={{
+              paddingTop: Platform.OS === 'web' ? 20 : (HEADER_HEIGHT + insets.top + 4),
+              paddingBottom: 100
+            }}
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="always"
           >
+            {Platform.OS === 'web' && renderTabs(styles.webTabContainer)}
             <GroundsSearchBar lightMode={true} />
             <LandingBookingForm fullWidth noCard bookGroundScreenNative hideTitle lightAppTheme initialType={type as string} />
           </Animated.ScrollView>
@@ -274,14 +285,14 @@ export default function GroundsTabScreen() {
 const styles = StyleSheet.create({
   nativeRoot: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFFFFF',
   },
   page: {
     flex: 1,
     width: '100%',
     maxWidth: 800,
     alignSelf: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: Platform.OS === 'web' ? 0 : 16,
     paddingTop: 8,
   },
   scroll: {
@@ -294,12 +305,15 @@ const styles = StyleSheet.create({
   },
   tabContainerBase: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8FAFC',
     borderRadius: 20,
     padding: 6,
+    width: '90%',
+    alignSelf: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#F1F5F9',
+    marginTop: 8,
+    marginBottom: 12,
   },
   nativeTabContainer: {
     marginHorizontal: 16,
@@ -343,6 +357,19 @@ const styles = StyleSheet.create({
     color: '#01b854',
     fontSize: 12,
     fontWeight: '700',
+    fontFamily: 'Inter',
+  },
+  customHeader: {
+    paddingTop: 12,
+    backgroundColor: '#FFFFFF',
+  },
+  headerTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#01b854',
+    textAlign: 'center',
+    marginBottom: 16,
+    letterSpacing: 0.5,
     fontFamily: 'Inter',
   },
   favoritesContainer: {

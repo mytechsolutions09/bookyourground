@@ -507,7 +507,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 10,
   },
-  logo: { width: 340, height: 85 },
+  logo: { width: 180, height: 45 },
   headingWrap: {
     alignItems: 'center',
     marginTop: 0,
@@ -644,7 +644,7 @@ const webStyles = StyleSheet.create({
     overflow: 'hidden',
   },
   header: { marginBottom: 24, alignItems: 'center' },
-  logoImage: { width: 320, height: 80, marginBottom: 8 },
+  logoImage: { width: 160, height: 40, marginBottom: 8 },
   formTitle: { 
     fontSize: 26, 
     fontWeight: '900', 

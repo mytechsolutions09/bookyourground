@@ -575,27 +575,21 @@ export default function GroundDetailsPrettyUrlScreen() {
                   const maxPrice = Math.max(...prices);
                   const hasVariation = minPrice !== maxPrice;
 
-                  return (
-                    <View style={styles.priceStrip}>
-                      <Text style={styles.priceLabel}>{hasVariation ? 'Starting from' : 'Price'}</Text>
-                      <Text style={styles.priceValue}>
-                        ₹{minPrice.toLocaleString('en-IN')}
-                        <Text style={styles.priceUnit}>
-                          {String(ground.pitch_type ?? '').toLowerCase().includes('box') ? ' /hr' : ' /match'}
-                        </Text>
-                      </Text>
-                    </View>
-                  );
+                {null}
                 })()}
                 
                 <View style={styles.formContainer}>
                   <LandingBookingForm
                     initialGroundId={String(ground.id)}
                     hideGroundPicker
+                    initialDate={typeof date === 'string' ? date : undefined}
+                    initialStartTime={typeof time === 'string' ? time : undefined}
+                    initialTeamType={teams === 'one' || teams === 'both' ? (teams as 'one' | 'both') : undefined}
                     fullWidth
                     noCard
                     hideTitle
                     groundPageAccent
+                    lockSlot={lock === 'true'}
                   />
                 </View>
               </View>
@@ -1460,10 +1454,10 @@ const styles = StyleSheet.create({
   // ── Name / location / rating ──────────────────────────
   name: {
     fontFamily: 'Inter',
-    fontSize: 14,
-    fontWeight: '400',
+    fontSize: 22,
+    fontWeight: '700',
     color: '#111827',
-    marginBottom: 4,
+    marginBottom: 8,
     letterSpacing: -0.5,
   },
   formContainer: {

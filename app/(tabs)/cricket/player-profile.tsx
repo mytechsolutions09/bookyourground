@@ -63,6 +63,10 @@ const PlayerProfileView = () => {
   const [saving, setSaving] = useState(false);
   const [editedData, setEditedData] = useState<any>({});
   
+  const [recentMatches, setRecentMatches] = useState<any[]>([]);
+  const [globalStats, setGlobalStats] = useState<any>(null);
+  const [fetchingData, setFetchingData] = useState(true);
+
   const isSmall = width < 900;
 
   useEffect(() => {
@@ -72,22 +76,167 @@ const PlayerProfileView = () => {
         player_type: profile.player_type,
         batting_style: profile.batting_style,
         bowling_style: profile.bowling_style,
+        dob: profile.dob ? formatDateDisplay(profile.dob) : '',
+        state: profile.state,
       });
     }
   }, [profile]);
+
+  useEffect(() => {
+    if (user) {
+      loadProfileData();
+    }
+  }, [user]);
+
+  const loadProfileData = async () => {
+    if (!user) return;
+    setFetchingData(true);
+    try {
+      // 1. Fetch team members for the user to get their player IDs
+      const { data: members } = await supabase
+        .from('team_members')
+        .select('id, team_id')
+        .eq('profile_id', user.id);
+      
+      const memberIds = members?.map(m => m.id) || [];
+
+      if (memberIds.length > 0) {
+        // 2. Fetch global stats from player_ball_stats
+        const { data: statsData } = await supabase
+          .from('player_ball_stats')
+          .select('*')
+          .in('member_id', memberIds);
+        
+        if (statsData && statsData.length > 0) {
+          const summed = statsData.reduce((acc, curr) => ({
+            total_runs: (acc.total_runs || 0) + (curr.total_runs || 0),
+            total_wickets: (acc.total_wickets || 0) + (curr.total_wickets || 0),
+            matches_played: (acc.matches_played || 0) + (curr.matches_played || 0),
+            innings_batted: (acc.innings_batted || 0) + (curr.innings_batted || 0),
+            not_outs: (acc.not_outs || 0) + (curr.not_outs || 0),
+            runs_conceded: (acc.runs_conceded || 0) + (curr.runs_conceded || 0),
+            overs_bowled: (acc.overs_bowled || 0) + (curr.overs_bowled || 0),
+          }), {} as any);
+
+          const batting_avg = summed.total_runs / (summed.innings_batted - summed.not_outs || 1);
+          setGlobalStats({
+            ...summed,
+            batting_avg: batting_avg.toFixed(1)
+          });
+        }
+
+        // 3. Fetch recent matches where the user played
+        const { data: playingXi } = await supabase
+          .from('match_playing_xi')
+          .select('match_id')
+          .in('player_id', memberIds);
+        
+        const matchIds = playingXi?.map(p => p.match_id) || [];
+
+        if (matchIds.length > 0) {
+          const { data: matchesData } = await supabase
+            .from('matches')
+            .select(`
+              id,
+              team_a,
+              team_b,
+              team_a_id,
+              team_b_id,
+              date_time,
+              status,
+              innings(*)
+            `)
+            .in('id', matchIds)
+            .order('date_time', { ascending: false })
+            .limit(5);
+          
+          if (matchesData) {
+            const formattedMatches = matchesData.map(m => {
+              // Find user's performance in this match's innings
+              let performance: any = null;
+              let type: 'Batting' | 'Bowling' = 'Batting';
+
+              m.innings?.forEach(inn => {
+                const batters = inn.batting_players || [];
+                const bowlers = inn.bowling_players || [];
+
+                // Try to find by name (approximate) or if we had player_id in JSON
+                const batter = batters.find((b: any) => b.name === (profile?.full_name || ''));
+                const bowler = bowlers.find((b: any) => b.name === (profile?.full_name || ''));
+
+                if (batter) {
+                  performance = `${batter.runs} (${batter.balls})`;
+                  type = 'Batting';
+                } else if (bowler) {
+                  performance = `${bowler.wickets}/${bowler.runs} (${bowler.overs})`;
+                  type = 'Bowling';
+                }
+              });
+
+              // Determine opponent
+              // Find which team the user belongs to in this match
+              const userIsTeamA = members?.some(mem => mem.team_id === m.team_a_id);
+              const opponent = userIsTeamA ? m.team_b : m.team_a;
+
+              return {
+                id: m.id,
+                opponent: opponent || 'Unknown Opponent',
+                date: new Date(m.date_time).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+                status: m.status === 'completed' ? 'Won' : m.status, // Placeholder for result logic
+                score: performance || 'DNP',
+                type: type
+              };
+            });
+            setRecentMatches(formattedMatches);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error loading profile data:', err);
+    } finally {
+      setFetchingData(false);
+    }
+  };
+
+  const formatDateDisplay = (dateStr: string | null) => {
+    if (!dateStr) return 'Not Set';
+    try {
+      const [y, m, d] = dateStr.split('-');
+      if (!y || !m || !d) return dateStr;
+      return `${d}-${m}-${y}`;
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const formatDateStorage = (dateStr: string | null) => {
+    if (!dateStr) return null;
+    try {
+      const [d, m, y] = dateStr.split('-');
+      if (!d || !m || !y) return dateStr;
+      return `${y}-${m}-${d}`;
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const { updateProfile } = useAuth();
 
   const handleSave = async () => {
     if (!user) return;
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update(editedData)
-        .eq('id', user.id);
+      const dataToSave = {
+        ...editedData,
+        dob: formatDateStorage(editedData.dob)
+      };
+      const { error } = await updateProfile(dataToSave);
       
       if (!error) {
         setIsEditing(false);
         Alert.alert('Success', 'Profile updated successfully');
+      } else {
+        throw error;
       }
     } catch (err) {
       console.error(err);
@@ -100,53 +249,31 @@ const PlayerProfileView = () => {
   const content = (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.section}>
-        <View style={styles.headerCard}>
-          <View style={styles.profileMain}>
-            <View style={styles.avatarBox}>
-               <Image 
-                 source={{ uri: profile?.avatar_url || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' }} 
-                 style={styles.avatarLarge} 
-               />
-               <TouchableOpacity style={styles.cameraIcon}>
-                 <Camera size={16} color="#FFFFFF" />
-               </TouchableOpacity>
-            </View>
-            <View style={styles.profileInfo}>
-              <RNText style={styles.playerName}>{profile?.full_name || 'Anonymous'}</RNText>
-              <View style={styles.locationRow}>
-                <MapPin size={14} color="#94A3B8" />
-                <RNText style={styles.locationText}>{profile?.city || 'No Location'}, {profile?.state || ''}</RNText>
-              </View>
-              <View style={styles.tagsContainer}>
-                {getPlayerTags(profile).map((tag: string) => (
-                  <View key={tag} style={styles.tag}>
-                    <RNText style={styles.tagText}>{tag}</RNText>
-                  </View>
-                ))}
-              </View>
-            </View>
-          </View>
-        </View>
-
         <View style={styles.statsGrid}>
           <View style={styles.statBox}>
-             <RNText style={styles.statValue}>{profile?.total_runs || 0}</RNText>
+             <RNText style={styles.statValue}>{globalStats?.total_runs || 0}</RNText>
              <RNText style={styles.statLabel}>Runs</RNText>
           </View>
           <View style={styles.statBox}>
-             <RNText style={styles.statValue}>{profile?.total_wickets || 0}</RNText>
+             <RNText style={styles.statValue}>{globalStats?.total_wickets || 0}</RNText>
              <RNText style={styles.statLabel}>Wickets</RNText>
           </View>
           <View style={styles.statBox}>
-             <RNText style={styles.statValue}>{profile?.matches_played || 0}</RNText>
+             <RNText style={styles.statValue}>{globalStats?.matches_played || 0}</RNText>
              <RNText style={styles.statLabel}>Matches</RNText>
           </View>
           <View style={styles.statBox}>
-             <RNText style={styles.statValue}>{profile?.batting_avg || '0.0'}</RNText>
+             <RNText style={styles.statValue}>{globalStats?.batting_avg || '0.0'}</RNText>
              <RNText style={styles.statLabel}>Average</RNText>
           </View>
         </View>
       </View>
+
+      {fetchingData && (
+        <View style={{ padding: 20 }}>
+          <ActivityIndicator color="#01b854" />
+        </View>
+      )}
 
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
@@ -168,6 +295,31 @@ const PlayerProfileView = () => {
                 value={editedData.full_name}
                 onChangeText={(t) => setEditedData({ ...editedData, full_name: t })}
               />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <RNText style={styles.inputLabel}>Birthday (DD-MM-YYYY)</RNText>
+              <RNTextInput 
+                style={styles.monoInput}
+                value={editedData.dob}
+                placeholder="25-10-1995"
+                onChangeText={(t) => setEditedData({ ...editedData, dob: t })}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <RNText style={styles.inputLabel}>State</RNText>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.monoChips}>
+                {INDIAN_STATES.map(s => (
+                  <TouchableOpacity 
+                    key={s} 
+                    style={[styles.monoChip, editedData.state === s && styles.monoChipActive]}
+                    onPress={() => setEditedData({ ...editedData, state: s })}
+                  >
+                    <RNText style={[styles.monoChipText, editedData.state === s && styles.monoChipTextActive]}>{s}</RNText>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
             </View>
             
             <View style={styles.inputGroup}>
@@ -227,14 +379,16 @@ const PlayerProfileView = () => {
         ) : (
           <View style={styles.detailsRowsMinimal}>
             {[
-              { label: 'Birthday', value: profile?.dob || 'Not Set' },
+              { label: 'Birthday', value: formatDateDisplay(profile?.dob), icon: <Target size={14} color="#94A3B8" /> },
               { label: 'State', value: profile?.state || 'Not Set' },
               { label: 'Role', value: profile?.player_type || 'Not Set' },
               { label: 'Batting', value: profile?.batting_style || 'Not Set' },
               { label: 'Bowling', value: profile?.bowling_style || 'Not Set' },
             ].map((item, idx) => (
               <View key={idx} style={styles.detailRowMinimal}>
-                <RNText style={styles.detailLabelMinimal}>{item.label}</RNText>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <RNText style={styles.detailLabelMinimal}>{item.label}</RNText>
+                </View>
                 <RNText style={styles.detailValueMinimal}>{item.value}</RNText>
               </View>
             ))}
@@ -251,27 +405,27 @@ const PlayerProfileView = () => {
         </View>
 
         <View style={styles.formCard}>
-          <View style={styles.formRow}>
-             <View style={styles.matchInfo}>
-                <RNText style={styles.matchOpponent}>vs Ggn Titans</RNText>
-                <RNText style={styles.matchDate}>15 Apr 2026 • Won</RNText>
-             </View>
-             <View style={styles.matchScore}>
-                <RNText style={styles.scoreText}>42 (28)</RNText>
-                <RNText style={styles.perfLabel}>Batting</RNText>
-             </View>
-          </View>
-          <View style={styles.formDivider} />
-          <View style={styles.formRow}>
-             <View style={styles.matchInfo}>
-                <RNText style={styles.matchOpponent}>vs SL Titans</RNText>
-                <RNText style={styles.matchDate}>12 Apr 2026 • Lost</RNText>
-             </View>
-             <View style={styles.matchScore}>
-                <RNText style={styles.scoreText}>1/18 (4.0)</RNText>
-                <RNText style={styles.perfLabel}>Bowling</RNText>
-             </View>
-          </View>
+          {recentMatches.length > 0 ? (
+            recentMatches.map((m, idx) => (
+              <React.Fragment key={m.id}>
+                <View style={styles.formRow}>
+                  <View style={styles.matchInfo}>
+                    <RNText style={styles.matchOpponent}>vs {m.opponent}</RNText>
+                    <RNText style={styles.matchDate}>{m.date} • {m.status}</RNText>
+                  </View>
+                  <View style={styles.matchScore}>
+                    <RNText style={styles.scoreText}>{m.score}</RNText>
+                    <RNText style={styles.perfLabel}>{m.type}</RNText>
+                  </View>
+                </View>
+                {idx < recentMatches.length - 1 && <View style={styles.formDivider} />}
+              </React.Fragment>
+            ))
+          ) : (
+            <View style={{ padding: 20, alignItems: 'center' }}>
+              <RNText style={{ color: '#94A3B8', fontSize: 13 }}>No recent matches found</RNText>
+            </View>
+          )}
         </View>
       </View>
 
@@ -291,11 +445,7 @@ const PlayerProfileView = () => {
   );
 
   if (Platform.OS === 'web') {
-    return (
-      <WebLayout hideHeader={isSmall} isPublicNoSidebar={isSmall}>
-        {content}
-      </WebLayout>
-    );
+    return content;
   }
 
   return content;
@@ -378,25 +528,26 @@ const styles = StyleSheet.create({
   },
   statsGrid: {
     flexDirection: 'row',
-    marginTop: 20,
-    gap: 12,
+    marginTop: 12,
+    gap: 8,
   },
   statBox: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    padding: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     borderRadius: 16,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#F1F5F9',
   },
   statValue: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800',
     color: '#0F172A',
   },
   statLabel: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#64748B',
     marginTop: 2,
   },
