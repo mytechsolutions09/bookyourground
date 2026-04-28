@@ -533,7 +533,10 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
             >
               <Image
                 source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
-                style={styles.logoImage}
+                style={[
+                  styles.logoImage,
+                  isCompact && styles.logoImageCompact,
+                ]}
                 resizeMode="contain"
                 accessibilityIgnoresInvertColors
               />
@@ -762,7 +765,10 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
             >
               <Image
                 source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
-                style={styles.logoImage}
+                style={[
+                  styles.logoImage,
+                  isCompact && styles.logoImageCompact,
+                ]}
                 resizeMode="contain"
                 accessibilityIgnoresInvertColors
               />
@@ -1221,6 +1227,8 @@ const styles = StyleSheet.create({
   headerContentCompact: {
     paddingHorizontal: 16,
     justifyContent: 'space-between',
+    marginHorizontal: 0,
+    width: '100%',
   },
   logo: {
     flexDirection: 'row',
@@ -1228,8 +1236,11 @@ const styles = StyleSheet.create({
   },
   logoImage: {
     height: 52,
-    width: 260,
-    maxWidth: '100%' as any,
+    width: 180,
+  },
+  logoImageCompact: {
+    height: 40,
+    width: 130,
   },
   headerRight: {
     flexDirection: 'row',
