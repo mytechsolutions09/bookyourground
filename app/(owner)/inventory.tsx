@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,19 @@ import {
   ActivityIndicator,
   TextInput,
   Modal,
+  useWindowDimensions,
+  DeviceEventEmitter,
 } from 'react-native';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withTiming, 
+  useAnimatedScrollHandler,
+  runOnJS 
+} from 'react-native-reanimated';
+import { useFocusEffect } from '@react-navigation/native';
+import { useUI } from '@/contexts/UIContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const IS_WEB = Platform.OS === 'web';
 import { 
@@ -21,7 +33,9 @@ import {
   Filter, 
   Building2, 
   LayoutGrid,
-  Clock
+  Clock,
+  X,
+  Check
 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -31,8 +45,15 @@ import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import Card from '@/components/ui/Card';
 import { formatDateDDMMYY, formatCurrency } from '@/utils/helpers';
-import { normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
+import { normalizeDbTimeToHHMM, formatTime12h } from '@/utils/bookingSlots';
 import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
+
+function toLocalIsoDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 
 export default function OwnerInventoryScreen() {
   const { user } = useAuth();
@@ -46,12 +67,51 @@ export default function OwnerInventoryScreen() {
   const [selectedDateFilter, setSelectedDateFilter] = useState<string | null>(new Date().toISOString().split('T')[0]);
   const [daysToShow, setDaysToShow] = useState<number>(7);
   const [bookingChoice, setBookingChoice] = useState<any | null>(null);
+  const [activePicker, setActivePicker] = useState<'ground' | 'status' | 'range' | null>(null);
 
   const isWeb = Platform.OS === 'web';
+  const { width } = useWindowDimensions();
+  const isSmall = width < 900;
+  const { setTabBarVisible } = useUI();
+  const insets = useSafeAreaInsets();
+  
+  const headerTranslateY = useSharedValue(0);
+  const lastScrollY = useSharedValue(0);
+  const HEADER_HEIGHT = 100;
+  
+  const onScrollWeb = (event: any) => {
+    const currentY = event.nativeEvent.contentOffset.y;
+    DeviceEventEmitter.emit('mainScroll', { y: currentY });
+    
+    const diff = currentY - lastScrollY.value;
+    if (diff > 1 && currentY > 50) {
+      if (headerTranslateY.value === 0) {
+        headerTranslateY.value = withTiming(-HEADER_HEIGHT - insets.top - 20, { duration: 400 });
+        setTabBarVisible(false);
+      }
+    } else if (diff < -2 || currentY < 20) {
+      if (headerTranslateY.value < 0) {
+        headerTranslateY.value = withTiming(0, { duration: 400 });
+        setTabBarVisible(true);
+      }
+    }
+    lastScrollY.value = currentY;
+  };
 
-  useEffect(() => {
-    if (user) loadData();
-  }, [selectedDateFilter, daysToShow, user]);
+  const headerAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: headerTranslateY.value }],
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+  }));
+
+  useFocusEffect(
+    useCallback(() => {
+      if (user) loadData();
+    }, [selectedDateFilter, daysToShow, user, selectedGroundId])
+  );
 
   const loadData = async () => {
     if (!user) return;
@@ -69,29 +129,30 @@ export default function OwnerInventoryScreen() {
 
       if (groundsError) throw groundsError;
 
-      // 2. Fetch bookings for selected days range starting from selected date
+      // 2. Fetch bookings for selected days range
       const pivotDate = selectedDateFilter ? new Date(selectedDateFilter) : new Date();
-      const startDate = pivotDate.toISOString().split('T')[0];
-      const endDate = new Date(pivotDate.getTime() + daysToShow * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const startDate = toLocalIsoDate(pivotDate);
+      const endDateDate = new Date(pivotDate.getTime() + daysToShow * 24 * 60 * 60 * 1000);
+      const endDate = toLocalIsoDate(endDateDate);
 
+      // Use a more robust join and filter to ensure all relevant bookings are captured
       const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
         .select(`
           *,
-          ground:grounds(*, ground_images(*)),
-          user:profiles(*)
+          ground:grounds!inner(id, owner_id, pitch_type)
         `)
         .eq('ground.owner_id', user.id)
         .gte('booking_date', startDate)
         .lte('booking_date', endDate)
-        .in('status', ['confirmed', 'completed']);
+        .neq('status', 'cancelled')
+        .neq('status', 'rejected');
 
       if (bookingsError) throw bookingsError;
 
       setGrounds(groundsData || []);
       setBookings(bookingsData || []);
       
-      // Auto-select first ground if none selected
       if (!selectedGroundId && groundsData && groundsData.length > 0) {
         setSelectedGroundId(groundsData[0].id);
       }
@@ -115,11 +176,11 @@ export default function OwnerInventoryScreen() {
     grounds.find(g => g.id === selectedGroundId),
   [grounds, selectedGroundId]);
 
-  // Group bookings by ground, date, and slot
   const bookingsMap = useMemo(() => {
     const map = new Map<string, BookingWithDetails[]>();
     bookings.forEach(b => {
-      const key = `${b.ground_id}_${b.booking_date}_${b.start_time}`;
+      const startTime = normalizeDbTimeToHHMM(b.start_time);
+      const key = `${b.ground_id}_${b.booking_date}_${startTime}`;
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(b);
     });
@@ -127,13 +188,31 @@ export default function OwnerInventoryScreen() {
   }, [bookings]);
 
   const getOccupancy = (groundId: string, date: string, startTime: string, pitchType: string | null) => {
-    const key = `${groundId}_${date}_${startTime}`;
+    const normStart = normalizeDbTimeToHHMM(startTime);
+    const key = `${groundId}_${date}_${normStart}`;
     const slotBookings = bookingsMap.get(key) || [];
     
-    return slotBookings.reduce((sum, b) => {
+    // Filter to only confirmed/active/completed bookings for occupancy calculation
+    const activeBookings = slotBookings.filter(b => 
+      b.status === 'confirmed' || b.status === 'completed' || b.status === 'active'
+    );
+
+    if (activeBookings.length === 0) return 0;
+
+    const isBox = String(pitchType || '').toLowerCase().includes('box');
+
+    return activeBookings.reduce((sum, b) => {
+      if (isBox) return sum + 2; // Any booking for box cricket takes full slot (2 units)
+
+      // Cricket ground logic
+      if (b.team_type === 'one') return sum + 1;
+      if (b.team_type === 'both') return sum + 2;
+
       const label = cricketTeamsLabelFromBooking(pitchType, b.notes);
       if (label === '1 team') return sum + 1;
-      return sum + 2; // Full ground
+      if (label === 'Both teams') return sum + 2;
+      
+      return sum + 2; // Default to full ground
     }, 0);
   };
 
@@ -226,7 +305,7 @@ export default function OwnerInventoryScreen() {
               }}
             >
               <Text style={[styles.slotTime, { color: textColor }]}>
-                {normalizeDbTimeToHHMM(s.start_time)}
+                {formatTime12h(normalizeDbTimeToHHMM(s.start_time) || '')}
               </Text>
               <Text style={[styles.slotStatus, { color: textColor }]}>{statusText}</Text>
             </TouchableOpacity>
@@ -241,116 +320,139 @@ export default function OwnerInventoryScreen() {
   const handleScroll = (event: any) => {
     const offsetY = event.nativeEvent.contentOffset.y;
     setIsScrolled(offsetY > 20);
+    if (isWeb && isSmall) {
+      onScrollWeb(event);
+    }
   };
 
   const content = (
     <View style={styles.content}>
-      <View style={[styles.pageHeader, isWeb && styles.webPageHeader]}>
-        <View style={styles.headerTop}>
+      <View style={[
+        styles.pageHeader, 
+        isWeb && styles.webPageHeader,
+      ]}>
+        <View style={[
+          styles.headerTop,
+          (isWeb && !isSmall) ? { flexDirection: 'row', alignItems: 'center' } : { flexDirection: 'column', alignItems: 'flex-start' }
+        ]}>
           <View>
-            <Text style={styles.title}>Inventory Management</Text>
-            {isScrolled && currentGround ? (
-              <View style={styles.headerContext}>
-                <View style={styles.contextBadge}>
-                  <Building2 size={12} color="#00ea6b" />
-                  <Text style={styles.contextText}>{currentGround.name}</Text>
+            {!isSmall && <Text style={styles.title}>Inventory Management</Text>}
+            {!isSmall && (
+              isScrolled && currentGround ? (
+                <View style={styles.headerContext}>
+                  <View style={styles.contextBadge}>
+                    <Building2 size={12} color="#00ea6b" />
+                    <Text style={styles.contextText}>{currentGround.name}</Text>
+                  </View>
                 </View>
-              </View>
-            ) : (
-              <Text style={styles.subtitle}>Owner Dashboard</Text>
+              ) : (
+                <Text style={styles.subtitle}>Owner Dashboard</Text>
+              )
             )}
           </View>
           
-          <Card style={styles.filterCard}>
-            <View style={styles.filtersContainer}>
-               <View style={styles.statusFilters}>
-                  {['ALL', 'EMPTY', 'PARTIAL', 'FULL'].map(status => (
-                    <TouchableOpacity
-                      key={status}
-                      onPress={() => setStatusFilter(status)}
-                      style={[
-                        styles.filterTag,
-                        statusFilter === status && styles.filterTagActive,
-                        status === 'ALL' && statusFilter === 'ALL' && styles.tagAll,
-                        status === 'EMPTY' && statusFilter === 'EMPTY' && styles.tagEmpty,
-                        status === 'PARTIAL' && statusFilter === 'PARTIAL' && styles.tagPartial,
-                        status === 'FULL' && statusFilter === 'FULL' && styles.tagFull,
-                      ]}
-                    >
-                      <Text style={[
-                        styles.filterTagText,
-                        statusFilter === status && styles.filterTagTextActive
-                      ]}>{status}</Text>
-                    </TouchableOpacity>
-                  ))}
-               </View>
-  
-               <View style={styles.dateSearchContainer}>
-                  {IS_WEB ? (
-                    <input
-                      type="date"
-                      value={selectedDateFilter || ''}
-                      onChange={(e) => setSelectedDateFilter(e.target.value)}
-                      style={{
-                        border: 'none',
-                        backgroundColor: 'transparent',
-                        fontSize: '13px',
-                        color: '#374151',
-                        outline: 'none',
-                        width: '130px',
-                        height: '100%',
-                        paddingLeft: '32px',
-                        cursor: 'pointer',
-                        backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'16\' height=\'16\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%236B7280\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Crect x=\'3\' y=\'4\' width=\'18\' height=\'18\' rx=\'2\' ry=\'2\'/%3E%3Cline x1=\'16\' y1=\'2\' x2=\'16\' y2=\'6\'/%3E%3Cline x1=\'8\' y1=\'2\' x2=\'8\' y2=\'6\'/%3E%3Cline x1=\'3\' y1=\'10\' x2=\'21\' y2=\'10\'/%3E%3C/svg%3E")',
-                        backgroundRepeat: 'no-repeat',
-                        backgroundPosition: '8px center',
-                        WebkitAppearance: 'none',
-                        appearance: 'none',
-                      } as any}
-                    />
-                  ) : (
-                    <>
-                      <Calendar size={16} color="#6B7280" />
-                      <TextInput
-                        style={styles.dateInput}
-                        placeholder="YYYY-MM-DD"
-                        value={selectedDateFilter || ''}
-                        onChangeText={setSelectedDateFilter}
-                        maxLength={10}
-                      />
-                    </>
-                  )}
-               </View>
-  
-               <View style={styles.rangeSelector}>
-                  {[7, 14, 30, 90].map(days => (
-                    <TouchableOpacity
-                      key={days}
-                      onPress={() => setDaysToShow(days)}
-                      style={[styles.rangeBtn, daysToShow === days && styles.rangeBtnActive]}
-                    >
-                      <Text style={[styles.rangeBtnText, daysToShow === days && styles.rangeBtnTextActive]}>{days}D</Text>
-                    </TouchableOpacity>
-                  ))}
-               </View>
+          <Card style={[
+            styles.filterCard,
+            isSmall && { marginTop: -8 }
+          ]}>
+            {isSmall ? (
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.mobileFiltersRow}
+              >
+                {/* Ground Selector Dropdown */}
+                <TouchableOpacity 
+                  style={styles.mobileDropdown}
+                  onPress={() => setActivePicker('ground')}
+                >
+                  <Building2 size={14} color="#00ea6b" />
+                  <Text style={styles.mobileDropdownText} numberOfLines={1}>
+                    {currentGround?.name || 'Select Ground'}
+                  </Text>
+                  <ChevronDown size={14} color="#6B7280" />
+                </TouchableOpacity>
 
-               <View style={styles.searchContainer}>
-                  <Search size={16} color="#6B7280" />
-                  <TextInput
-                    style={styles.searchInput}
-                    placeholder="Search Ground..."
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                  />
-               </View>
-            </View>
+                {/* Status Selector Dropdown */}
+                <TouchableOpacity 
+                  style={styles.mobileDropdown}
+                  onPress={() => setActivePicker('status')}
+                >
+                  <Filter size={14} color="#00ea6b" />
+                  <Text style={styles.mobileDropdownText}>{statusFilter}</Text>
+                  <ChevronDown size={14} color="#6B7280" />
+                </TouchableOpacity>
+
+                {/* Range Selector */}
+                <TouchableOpacity 
+                  style={styles.mobileDropdown}
+                  onPress={() => setActivePicker('range')}
+                >
+                  <Clock size={14} color="#00ea6b" />
+                  <Text style={styles.mobileDropdownText}>{daysToShow}D</Text>
+                  <ChevronDown size={14} color="#6B7280" />
+                </TouchableOpacity>
+              </ScrollView>
+            ) : (
+              <View style={styles.filtersContainer}>
+                 <View style={styles.statusFilters}>
+                    {['ALL', 'EMPTY', 'PARTIAL', 'FULL'].map(status => (
+                      <TouchableOpacity
+                        key={status}
+                        onPress={() => setStatusFilter(status)}
+                        style={[
+                          styles.filterTag,
+                          statusFilter === status && styles.filterTagActive,
+                          status === 'ALL' && statusFilter === 'ALL' && styles.tagAll,
+                          status === 'EMPTY' && statusFilter === 'EMPTY' && styles.tagEmpty,
+                          status === 'PARTIAL' && statusFilter === 'PARTIAL' && styles.tagPartial,
+                          status === 'FULL' && statusFilter === 'FULL' && styles.tagFull,
+                        ]}
+                      >
+                        <Text style={[
+                          styles.filterTagText,
+                          statusFilter === status && styles.filterTagTextActive
+                        ]}>{status}</Text>
+                      </TouchableOpacity>
+                    ))}
+                 </View>
+    
+                 <View style={styles.rangeSelector}>
+                    {[7, 14, 30, 90].map(days => (
+                      <TouchableOpacity
+                        key={days}
+                        onPress={() => setDaysToShow(days)}
+                        style={[styles.rangeBtn, daysToShow === days && styles.rangeBtnActive]}
+                      >
+                        <Text style={[styles.rangeBtnText, daysToShow === days && styles.rangeBtnTextActive]}>{days}D</Text>
+                      </TouchableOpacity>
+                    ))}
+                 </View>
+  
+                 <View style={styles.searchContainer}>
+                    <Search size={16} color="#6B7280" />
+                    <TextInput
+                      style={styles.searchInput}
+                      placeholder="Search Ground..."
+                      value={searchQuery}
+                      onChangeText={setSearchQuery}
+                    />
+                 </View>
+              </View>
+            )}
           </Card>
         </View>
       </View>
 
       <ScrollView 
         style={styles.mainScroll} 
-        contentContainerStyle={styles.mainScrollContent}
+        contentContainerStyle={[
+          styles.mainScrollContent,
+          { 
+            paddingTop: (isWeb && isSmall) ? 50 : 0,
+            paddingBottom: isSmall ? 0 : 80
+          }
+        ]}
         onScroll={handleScroll}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
@@ -358,7 +460,7 @@ export default function OwnerInventoryScreen() {
         bounces={false}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
       >
-        {!isScrolled && grounds.length > 0 && (
+        {!isScrolled && !isSmall && grounds.length > 0 && (
           <View style={styles.selectionTabs}>
             <ScrollView 
               horizontal 
@@ -387,14 +489,23 @@ export default function OwnerInventoryScreen() {
           </View>
         )}
 
-        <View style={styles.hierarchyContainer}>
-          <View style={[styles.inventoryContainer, isScrolled && styles.inventoryContainerExpanded]}>
-            <View style={styles.sectionHeader}>
-              <LayoutGrid size={16} color="#111827" />
-              <Text style={styles.sectionTitle}>
-                {currentGround ? `Inventory: ${currentGround.name}` : 'Select a ground'}
-              </Text>
-            </View>
+        <View style={[
+          styles.hierarchyContainer,
+          isSmall && { padding: 0, paddingTop: 0, gap: 0 }
+        ]}>
+          <View style={[
+            styles.inventoryContainer,
+            (isScrolled || isSmall) && styles.inventoryContainerExpanded,
+            isSmall && { backgroundColor: 'transparent' }
+          ]}>
+            {!isSmall && (
+              <View style={styles.sectionHeader}>
+                <LayoutGrid size={16} color="#111827" />
+                <Text style={styles.sectionTitle}>
+                  {currentGround ? `Inventory: ${currentGround.name}` : 'Select a ground'}
+                </Text>
+              </View>
+            )}
 
             {currentGround ? (
               <View style={styles.inventoryStaticList}>
@@ -405,7 +516,7 @@ export default function OwnerInventoryScreen() {
                     d.setFullYear(y, m - 1, day);
                   }
                   d.setDate(d.getDate() + i);
-                  const dateStr = d.toISOString().split('T')[0];
+                  const dateStr = toLocalIsoDate(d);
                   const displayDate = d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
 
                   return (
@@ -502,13 +613,111 @@ export default function OwnerInventoryScreen() {
           </Card>
         </View>
       </Modal>
+
+      {/* Picker Modal for Mobile Dropdowns */}
+      <Modal
+        visible={!!activePicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setActivePicker(null)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setActivePicker(null)}
+        >
+          <Card style={styles.pickerCard}>
+            <View style={styles.pickerHeader}>
+              <Text style={styles.pickerTitle}>
+                {activePicker === 'ground' ? 'Select Ground' : 
+                 activePicker === 'status' ? 'Select Status' : 'Select Range'}
+              </Text>
+              <TouchableOpacity onPress={() => setActivePicker(null)}>
+                <X size={20} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.pickerOptions}>
+              {activePicker === 'ground' && filteredGrounds.map(ground => (
+                <TouchableOpacity 
+                  key={ground.id}
+                  style={[styles.pickerOption, selectedGroundId === ground.id && styles.pickerOptionActive]}
+                  onPress={() => {
+                    setSelectedGroundId(ground.id);
+                    setActivePicker(null);
+                  }}
+                >
+                  <Building2 size={16} color={selectedGroundId === ground.id ? '#00ea6b' : '#6B7280'} />
+                  <Text style={[styles.pickerOptionText, selectedGroundId === ground.id && styles.pickerOptionTextActive]}>
+                    {ground.name}
+                  </Text>
+                  {selectedGroundId === ground.id && <Check size={16} color="#00ea6b" />}
+                </TouchableOpacity>
+              ))}
+
+              {activePicker === 'status' && ['ALL', 'EMPTY', 'PARTIAL', 'FULL'].map(status => (
+                <TouchableOpacity 
+                  key={status}
+                  style={[styles.pickerOption, statusFilter === status && styles.pickerOptionActive]}
+                  onPress={() => {
+                    setStatusFilter(status);
+                    setActivePicker(null);
+                  }}
+                >
+                  <View style={[
+                    styles.statusDot, 
+                    status === 'ALL' ? { backgroundColor: '#00ea6b' } :
+                    status === 'EMPTY' ? { backgroundColor: '#E5E7EB' } :
+                    status === 'PARTIAL' ? { backgroundColor: '#FEF3C7' } :
+                    { backgroundColor: '#DEF7EC' }
+                  ]} />
+                  <Text style={[styles.pickerOptionText, statusFilter === status && styles.pickerOptionTextActive]}>
+                    {status}
+                  </Text>
+                  {statusFilter === status && <Check size={16} color="#00ea6b" />}
+                </TouchableOpacity>
+              ))}
+
+              {activePicker === 'range' && [7, 14, 30, 90].map(days => (
+                <TouchableOpacity 
+                  key={days}
+                  style={[styles.pickerOption, daysToShow === days && styles.pickerOptionActive]}
+                  onPress={() => {
+                    setDaysToShow(days);
+                    setActivePicker(null);
+                  }}
+                >
+                  <Clock size={16} color={daysToShow === days ? '#00ea6b' : '#6B7280'} />
+                  <Text style={[styles.pickerOptionText, daysToShow === days && styles.pickerOptionTextActive]}>
+                    {days} Days
+                  </Text>
+                  {daysToShow === days && <Check size={16} color="#00ea6b" />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </Card>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 
   return (
     <>
-      {!isWeb && <MobileAppNavbar title="Inventory" titleColor="#00ea6b" />}
-      {isWeb ? <WebLayout noCard>{content}</WebLayout> : <View style={styles.screen}>{content}</View>}
+      {isWeb ? (
+        <WebLayout hideHeader={isSmall} isPublicNoSidebar={isSmall}>
+          {isSmall && (
+            <Animated.View style={[headerAnimatedStyle, { paddingTop: insets.top, backgroundColor: '#FFFFFF' }]}>
+              <MobileAppNavbar title="Inventory" titleColor="#00ea6b" />
+            </Animated.View>
+          )}
+          <View style={styles.screen}>{content}</View>
+        </WebLayout>
+      ) : (
+        <>
+          <MobileAppNavbar title="Inventory" titleColor="#00ea6b" />
+          <View style={styles.screen}>{content}</View>
+        </>
+      )}
     </>
   );
 }
@@ -528,7 +737,8 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F0F0F0',
   },
   webPageHeader: {
-    paddingTop: 10,
+    paddingTop: 8,
+    paddingBottom: 0,
     backgroundColor: 'transparent',
     borderBottomWidth: 0,
     width: '100%',
@@ -568,9 +778,7 @@ const styles = StyleSheet.create({
     color: '#374151',
   },
   headerTop: {
-    flexDirection: Platform.OS === 'web' ? 'row' : 'column',
     justifyContent: 'space-between',
-    alignItems: Platform.OS === 'web' ? 'center' : 'flex-start',
     gap: 12,
   },
   filterCard: {
@@ -676,7 +884,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   mainScrollContent: {
-    paddingBottom: 40,
+    // base padding
   },
   selectionTabs: {
     backgroundColor: '#FFFFFF',
@@ -713,7 +921,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   hierarchyContainer: {
-    flex: 1,
     padding: 16,
     paddingTop: 8,
     gap: 16,
@@ -732,7 +939,6 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   inventoryContainer: {
-    flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 16,
@@ -743,6 +949,7 @@ const styles = StyleSheet.create({
     borderRadius: 0,
     borderWidth: 0,
     padding: 12,
+    backgroundColor: 'transparent',
   },
   inventoryStaticList: {
     marginTop: 12,
@@ -879,4 +1086,77 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
+  mobileFiltersRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+  },
+  mobileFilterItem: {
+    minWidth: 120,
+  },
+  mobileDropdown: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 36,
+    gap: 6,
+    minWidth: 100,
+  },
+  mobileDropdownText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#374151',
+    maxWidth: 100,
+  },
+  pickerCard: {
+    width: '90%',
+    maxHeight: '70%',
+    padding: 0,
+    borderRadius: 24,
+    overflow: 'hidden',
+  },
+  pickerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  pickerTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  pickerOptions: {
+    padding: 12,
+  },
+  pickerOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 4,
+  },
+  pickerOptionActive: {
+    backgroundColor: '#F0FDF4',
+  },
+  pickerOptionText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#374151',
+    flex: 1,
+  },
+  pickerOptionTextActive: {
+    color: '#059669',
+  },
+  statusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  }
 });

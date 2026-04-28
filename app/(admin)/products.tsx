@@ -9,6 +9,7 @@ import { Platform, Modal, DeviceEventEmitter } from 'react-native';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
+import MobileAppNavbar from '@/components/MobileAppNavbar';
 
 export default function AdminProductsScreen() {
   const [products, setProducts] = useState<any[]>([]);
@@ -155,21 +156,23 @@ export default function AdminProductsScreen() {
 
   const content = (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Shop Products</Text>
-          <Text style={styles.subtitle}>Manage your sports equipment inventory</Text>
+      {Platform.OS === 'web' && (
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.title}>Shop Products</Text>
+            <Text style={styles.subtitle}>Manage your sports equipment inventory</Text>
+          </View>
+          <View style={styles.headerActions}>
+            <TouchableOpacity 
+              style={styles.secondaryHeaderBtn} 
+              onPress={() => router.push('/(admin)/orders')}
+            >
+              <ClipboardList size={18} color="#4B5563" />
+              <Text style={styles.secondaryHeaderBtnText}>Shop Orders</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={styles.headerActions}>
-          <TouchableOpacity 
-            style={styles.secondaryHeaderBtn} 
-            onPress={() => router.push('/(admin)/orders')}
-          >
-            <ClipboardList size={18} color="#4B5563" />
-            <Text style={styles.secondaryHeaderBtnText}>Shop Orders</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      )}
 
       <View style={styles.searchBar}>
         <Search size={20} color="#9CA3AF" />
@@ -337,11 +340,18 @@ export default function AdminProductsScreen() {
     </ScrollView>
   );
 
-  if (Platform.OS === 'web') {
-    return <WebLayout>{content}</WebLayout>;
-  }
-
-  return content;
+  return (
+    <>
+      {Platform.OS === 'web' ? (
+        <WebLayout>{content}</WebLayout>
+      ) : (
+        <View style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
+          <MobileAppNavbar title="SHOP PRODUCTS" titleColor="#10b981" />
+          {content}
+        </View>
+      )}
+    </>
+  );
 }
 
 const styles = StyleSheet.create({

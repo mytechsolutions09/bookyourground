@@ -10,7 +10,7 @@ import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
 import { router } from 'expo-router';
 import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
-import { normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
+import { normalizeDbTimeToHHMM, formatTime12h } from '@/utils/bookingSlots';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import { formatCurrency, formatDate, formatDateDDMMYY, getStatusColor, isDateInPast } from '@/utils/helpers';
 
@@ -126,13 +126,13 @@ export default function OwnerBookingsScreen() {
   const [ownerScope, setOwnerScope] = useState<'all' | 'own' | 'other'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
-  const [sortKey, setSortKey] = useState<'date' | 'ground' | 'amount' | 'status' | 'booked_at' | 'paid' | 'teams' | 'name'>(Platform.OS === 'web' ? 'booked_at' : 'date');
+  const [sortKey, setSortKey] = useState<'date' | 'ground' | 'amount' | 'status' | 'booked_at' | 'paid' | 'teams' | 'name'>('booked_at');
   const [sortAsc, setSortAsc] = useState(false);
   const [showDatePickerMobile, setShowDatePickerMobile] = useState(false);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
-  const PAGE_SIZE = 10;
+  const PAGE_SIZE = 50;
 
   useEffect(() => {
     if (user) {
@@ -200,8 +200,44 @@ export default function OwnerBookingsScreen() {
       if (selfError) throw selfError;
 
       const mergedBatch = [...(ownedData || []), ...(selfData || [])];
-      const uniqueBatch = mergedBatch.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+      let uniqueBatch = mergedBatch.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
       
+      // 3) NEW: Fetch all "partner" bookings for the slots found in this batch.
+      // This ensures that occupancy (FULL/PARTIAL) is accurate even if partners are far apart in pagination.
+      if (uniqueBatch.length > 0) {
+        try {
+          const slotFilters = uniqueBatch.map(b => 
+            `and(ground_id.eq.${b.ground_id},booking_date.eq.${b.booking_date},start_time.eq.${b.start_time})`
+          );
+          
+          // Use a smaller chunk size to avoid potential URL length limits in some environments
+          const chunkSize = 15;
+          const partners: any[] = [];
+          for (let i = 0; i < slotFilters.length; i += chunkSize) {
+            const chunk = slotFilters.slice(i, i + chunkSize);
+            const { data: partnerData } = await supabase
+              .from('bookings')
+              .select(`
+                *,
+                ground:grounds(id, pitch_type, owner_id, name, ground_images(*)),
+                user:profiles(full_name, phone)
+              `)
+              .or(chunk.join(','))
+              .neq('status', 'pending')
+              .neq('status', 'cancelled')
+              .neq('status', 'rejected');
+            
+            if (partnerData) partners.push(...partnerData);
+          }
+          
+          if (partners.length > 0) {
+            uniqueBatch = [...uniqueBatch, ...partners].filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+          }
+        } catch (partnerErr) {
+          console.error('Error fetching partner bookings:', partnerErr);
+        }
+      }
+
       uniqueBatch.sort((a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
       );
@@ -209,8 +245,8 @@ export default function OwnerBookingsScreen() {
       if (isLoadMore) {
         setBookings(prev => {
           const combined = [...prev, ...uniqueBatch];
-          return combined.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i)
-            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+          const deduplicated = combined.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+          return deduplicated.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         });
       } else {
         setBookings(uniqueBatch);
@@ -365,9 +401,9 @@ export default function OwnerBookingsScreen() {
       const byStatus = activeTab === 'all' 
         ? byDate 
         : activeTab === 'upcoming'
-          ? byDate.filter((b) => b.booking_date >= todayIso && b.status === 'confirmed')
+          ? byDate.filter((b) => b.booking_date >= todayIso && (b.status === 'confirmed' || b.status === 'active' || b.status === 'completed'))
           : activeTab === 'past'
-            ? byDate.filter((b) => b.booking_date < todayIso && b.status === 'confirmed')
+            ? byDate.filter((b) => b.booking_date < todayIso && (b.status === 'confirmed' || b.status === 'active' || b.status === 'completed'))
             : byDate.filter((b) => b.status === 'cancelled');
 
       const q = searchQuery.toLowerCase();
@@ -399,9 +435,13 @@ export default function OwnerBookingsScreen() {
         } else if (sortKey === 'paid') {
           comparison = (a.payment_received ? 1 : 0) > (b.payment_received ? 1 : 0) ? 1 : -1;
         } else if (sortKey === 'teams') {
-          const teamsA = cricketTeamsLabelFromBooking(a.ground.pitch_type, a.notes);
-          const teamsB = cricketTeamsLabelFromBooking(b.ground.pitch_type, b.notes);
-          comparison = teamsA > teamsB ? 1 : -1;
+          const getTeamsVal = (b: any) => {
+            if (b.team_type === 'one') return 1;
+            if (b.team_type === 'both') return 2;
+            const label = cricketTeamsLabelFromBooking(b.ground.pitch_type, b.notes);
+            return label === '1 team' ? 1 : 2;
+          };
+          comparison = getTeamsVal(a) > getTeamsVal(b) ? 1 : -1;
         } else if (sortKey === 'name') {
           const nameA = (a.booked_for_name || '').toLowerCase();
           const nameB = (b.booked_for_name || '').toLowerCase();
@@ -694,12 +734,19 @@ export default function OwnerBookingsScreen() {
             <View style={styles.searchFilterWrap}>
               <TextInput
                 style={styles.searchBarWeb}
-                placeholder="Search ground, city or name..."
+                placeholder="Search..."
                 placeholderTextColor="#9ca3af"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
             </View>
+
+            <TouchableOpacity 
+              onPress={() => router.push('/(owner)/inventory')}
+              style={[styles.tabChip, { backgroundColor: '#059669', borderColor: '#059669', paddingHorizontal: 12 }]}
+            >
+              <Text style={[styles.tabChipText, { color: '#FFFFFF', fontWeight: '800' }]}>+ Add Booking</Text>
+            </TouchableOpacity>
 
             <View style={styles.dateFilterWrap}>
               <View 
@@ -880,6 +927,7 @@ export default function OwnerBookingsScreen() {
 
       <FlatList
         data={filteredBookings}
+        extraData={bookings}
         renderItem={({ item }) => {
           const isOwnGround = item.ground.owner_id === user?.id;
           const isSelfBooking = item.user_id === user?.id;
@@ -922,19 +970,24 @@ export default function OwnerBookingsScreen() {
                 <View style={[styles.tableCell, styles.colDateTime]}>
                   <Text style={styles.dateText}>{formatDateDDMMYY(item.booking_date)}</Text>
                   <Text style={styles.timeText}>
-                    {`${normalizeDbTimeToHHMM(item.start_time)} – ${normalizeDbTimeToHHMM(item.end_time)}`}
+                    {`${formatTime12h(normalizeDbTimeToHHMM(item.start_time) || '')} – ${formatTime12h(normalizeDbTimeToHHMM(item.end_time) || '')}`}
                   </Text>
                 </View>
 
                 {(() => {
-                  const currentSlotKey = `${item.ground_id}_${item.booking_date}_${item.start_time}`;
+                  const normStart = normalizeDbTimeToHHMM(item.start_time);
+                  const currentSlotKey = `${item.ground_id}_${item.booking_date}_${normStart}`;
                   const slotOccupancy = bookings.filter(b => 
-                    b.status === 'confirmed' && 
-                    `${b.ground_id}_${b.booking_date}_${b.start_time}` === currentSlotKey
+                    (b.status === 'confirmed' || b.status === 'active' || b.status === 'completed') && 
+                    `${b.ground_id}_${b.booking_date}_${normalizeDbTimeToHHMM(b.start_time)}` === currentSlotKey
                   ).reduce((sum, b) => {
+                    if (b.team_type === 'one') return sum + 1;
+                    if (b.team_type === 'both') return sum + 2;
+
                     const label = cricketTeamsLabelFromBooking(b.ground.pitch_type, b.notes);
                     if (label === '1 team') return sum + 1;
                     if (label === 'Both teams') return sum + 2;
+                    
                     return sum + 2;
                   }, 0);
 
@@ -948,11 +1001,11 @@ export default function OwnerBookingsScreen() {
                             <TouchableOpacity 
                               onPress={(e) => {
                                 e.stopPropagation();
-                                router.push(`/grounds/${item.ground.id}?date=${item.booking_date}&time=${item.start_time}&teams=one`);
+                                router.push(`/grounds/${item.ground.id}?date=${item.booking_date}&time=${normalizeDbTimeToHHMM(item.start_time)}&teams=one`);
                               }}
                               style={styles.partialBadge}
                             >
-                              <Text style={styles.partialBadgeText}>PARTIAL</Text>
+                              <Text style={styles.partialBadgeText}>ADD TEAM 2</Text>
                             </TouchableOpacity>
                           ) : (
                             <View style={styles.fullMatchBadge}>
@@ -1057,7 +1110,7 @@ export default function OwnerBookingsScreen() {
                   </Text>
                   <View style={styles.compactSlotRow}>
                     <Text style={[styles.compactSlotTime, !isLight && styles.compactSlotTimeNative]}>
-                      {`${normalizeDbTimeToHHMM(item.start_time)} – ${normalizeDbTimeToHHMM(item.end_time)}`}
+                      {`${formatTime12h(normalizeDbTimeToHHMM(item.start_time) || '')} – ${formatTime12h(normalizeDbTimeToHHMM(item.end_time) || '')}`}
                     </Text>
                   </View>
                   <Text style={styles.compactDateTextSub}>
@@ -1075,12 +1128,21 @@ export default function OwnerBookingsScreen() {
                       </Text>
                     )}
                   </View>
-                    <View style={[
-                      styles.statusBadgeCompact,
-                      item.status === 'confirmed' 
-                        ? (isDateInPast(item.booking_date) ? styles.statusDone : styles.statusConfirmed) 
-                        : styles.statusCancelled
-                    ]}>
+                    <TouchableOpacity 
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        if (item.status === 'confirmed' && !isDateInPast(item.booking_date)) {
+                          handleCancelBooking(item);
+                        }
+                      }}
+                      disabled={item.status !== 'confirmed' || isDateInPast(item.booking_date)}
+                      style={[
+                        styles.statusBadgeCompact,
+                        item.status === 'confirmed' 
+                          ? (isDateInPast(item.booking_date) ? styles.statusDone : styles.statusConfirmed) 
+                          : styles.statusCancelled
+                      ]}
+                    >
                       <Text style={[
                         styles.statusBadgeText,
                         item.status === 'confirmed' 
@@ -1089,7 +1151,7 @@ export default function OwnerBookingsScreen() {
                       ]}>
                         {item.status === 'confirmed' ? (isDateInPast(item.booking_date) ? 'DONE' : 'ACTIVE') : 'CANCEL'}
                       </Text>
-                    </View>
+                    </TouchableOpacity>
                 </View>
               </View>
 
@@ -1100,25 +1162,39 @@ export default function OwnerBookingsScreen() {
                   <NameInputCell booking={item} onSave={saveBookingName} />
                   
                   {(() => {
-                    const currentSlotKey = `${item.ground_id}_${item.booking_date}_${item.start_time}`;
+                    const normStart = normalizeDbTimeToHHMM(item.start_time);
+                    const currentSlotKey = `${item.ground_id}_${item.booking_date}_${normStart}`;
                     const slotOccupancy = bookings.filter(b => 
-                      b.status === 'confirmed' && 
-                      `${b.ground_id}_${b.booking_date}_${b.start_time}` === currentSlotKey
+                      (b.status === 'confirmed' || b.status === 'active' || b.status === 'completed') && 
+                      `${b.ground_id}_${b.booking_date}_${normalizeDbTimeToHHMM(b.start_time)}` === currentSlotKey
                     ).reduce((sum, b) => {
+                      if (b.team_type === 'one') return sum + 1;
+                      if (b.team_type === 'both') return sum + 2;
+
                       const label = cricketTeamsLabelFromBooking(b.ground.pitch_type, b.notes);
                       if (label === '1 team') return sum + 1;
                       if (label === 'Both teams') return sum + 2;
+                      
                       return sum + 2;
                     }, 0);
 
                     const isTrulyFull = slotOccupancy >= 2;
 
                     return isOwnGround && (
-                      <View style={isTrulyFull ? styles.fullMatchBadge : styles.partialBadge}>
+                      <TouchableOpacity 
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          if (!isTrulyFull) {
+                            router.push(`/grounds/${item.ground.id}?date=${item.booking_date}&time=${normalizeDbTimeToHHMM(item.start_time)}&teams=one`);
+                          }
+                        }}
+                        disabled={isTrulyFull}
+                        style={isTrulyFull ? styles.fullMatchBadge : styles.partialBadge}
+                      >
                         <Text style={isTrulyFull ? styles.fullMatchBadgeText : styles.partialBadgeText}>
-                          {isTrulyFull ? 'FULL MATCH' : 'NEED 1 MORE'}
+                          {isTrulyFull ? 'FULL' : 'PARTIAL'}
                         </Text>
-                      </View>
+                      </TouchableOpacity>
                     );
                   })()}
                 </View>
@@ -1466,7 +1542,7 @@ const styles = StyleSheet.create({
   },
   tabChip: {
     position: 'relative',
-    paddingHorizontal: IS_WEB ? 10 : 16,
+    paddingHorizontal: IS_WEB ? 8 : 12,
     paddingVertical: IS_WEB ? 5 : 8,
     borderRadius: IS_WEB ? 6 : 8,
     backgroundColor: '#F1F5F9',
@@ -1540,7 +1616,7 @@ const styles = StyleSheet.create({
   },
   partialBadge: {
     backgroundColor: '#fff7ed',
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     paddingVertical: 4,
     borderRadius: 6,
     borderWidth: 1,
@@ -1553,7 +1629,7 @@ const styles = StyleSheet.create({
   },
   fullMatchBadge: {
     backgroundColor: '#f0fdf4',
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     paddingVertical: 4,
     borderRadius: 6,
     borderWidth: 1,

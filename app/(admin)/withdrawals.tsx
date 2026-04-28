@@ -6,6 +6,7 @@ import Card from '@/components/ui/Card';
 import { formatCurrency } from '@/utils/helpers';
 import { CheckCircle, XCircle, Clock, Eye, Info, X } from 'lucide-react-native';
 import { TouchableOpacity, ActivityIndicator, Modal } from 'react-native';
+import MobileAppNavbar from '@/components/MobileAppNavbar';
 
 interface WithdrawalRow {
   id: string;
@@ -89,8 +90,12 @@ function AdminWithdrawalsInner() {
     >
       <View style={styles.inner}>
         <Card style={styles.panel}>
-          <Text style={styles.title}>Withdrawals</Text>
-          <Text style={styles.subtitle}>List of withdrawal requests from ground owners.</Text>
+          {Platform.OS === 'web' && (
+            <>
+              <Text style={styles.title}>Withdrawals</Text>
+              <Text style={styles.subtitle}>List of withdrawal requests from ground owners.</Text>
+            </>
+          )}
 
           {rows.length === 0 ? (
             <Text style={styles.emptyText}>No withdrawal requests yet.</Text>
@@ -244,15 +249,20 @@ function AdminWithdrawalsInner() {
 }
 
 export default function AdminWithdrawalsScreen() {
-  if (Platform.OS === 'web') {
-    return (
-      <WebLayout>
-        <AdminWithdrawalsInner />
-      </WebLayout>
-    );
-  }
-
-  return <AdminWithdrawalsInner />;
+  return (
+    <>
+      {Platform.OS === 'web' ? (
+        <WebLayout>
+          <AdminWithdrawalsInner />
+        </WebLayout>
+      ) : (
+        <View style={{ flex: 1, backgroundColor: '#F5F5F5' }}>
+          <MobileAppNavbar title="WITHDRAWALS" titleColor="#10b981" />
+          <AdminWithdrawalsInner />
+        </View>
+      )}
+    </>
+  );
 }
 
 const styles = StyleSheet.create({

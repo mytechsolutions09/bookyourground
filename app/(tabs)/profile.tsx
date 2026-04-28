@@ -26,6 +26,8 @@ import {
   LayoutGrid,
   Trophy,
   Camera,
+  CheckCircle2,
+  Users,
 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -247,8 +249,136 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {/* 2. GROUND OWNER HUB (Grid) */}
-      {profile?.role === 'ground_owner' && (
+      {/* 2. ADMIN HUB (Grid) */}
+      {isSuperAdmin && (
+        <View style={styles.sectionContainer}>
+          <RNText style={styles.sectionTitle}>SUPER ADMIN HUB</RNText>
+          <View style={styles.hubGrid}>
+            <TouchableOpacity 
+              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              onPress={() => router.push('/(admin)/dashboard' as any)}
+            >
+              <View style={styles.hubIconCircle}>
+                <Shield size={24} color="#10b981" />
+              </View>
+              <RNText style={styles.hubCardText}>Dashboard</RNText>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              onPress={() => router.push('/(admin)/manage-users' as any)}
+            >
+              <View style={styles.hubIconCircle}>
+                <User size={24} color="#10b981" />
+              </View>
+              <RNText style={styles.hubCardText}>Users</RNText>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              onPress={() => router.push('/(admin)/grounds' as any)}
+            >
+              <View style={styles.hubIconCircle}>
+                <MapPin size={24} color="#10b981" />
+              </View>
+              <RNText style={styles.hubCardText}>Grounds</RNText>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              onPress={() => router.push('/(admin)/bookings' as any)}
+            >
+              <View style={styles.hubIconCircle}>
+                <Calendar size={24} color="#10b981" />
+              </View>
+              <RNText style={styles.hubCardText}>Bookings</RNText>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              onPress={() => router.push('/(admin)/earnings' as any)}
+            >
+              <View style={styles.hubIconCircle}>
+                <IndianRupee size={24} color="#10b981" />
+              </View>
+              <RNText style={styles.hubCardText}>Earnings</RNText>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              onPress={() => router.push('/(admin)/orders' as any)}
+            >
+              <View style={styles.hubIconCircle}>
+                <ShoppingCart size={24} color="#10b981" />
+              </View>
+              <RNText style={styles.hubCardText}>Shop Orders</RNText>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              onPress={() => router.push('/(admin)/products' as any)}
+            >
+              <View style={styles.hubIconCircle}>
+                <ShoppingBag size={24} color="#10b981" />
+              </View>
+              <RNText style={styles.hubCardText}>Products</RNText>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              onPress={() => router.push('/(admin)/withdrawals' as any)}
+            >
+              <View style={styles.hubIconCircle}>
+                <IndianRupee size={24} color="#10b981" />
+              </View>
+              <RNText style={styles.hubCardText}>Payouts</RNText>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              onPress={() => router.push('/(admin)/inventory' as any)}
+            >
+              <View style={styles.hubIconCircle}>
+                <LayoutGrid size={24} color="#10b981" />
+              </View>
+              <RNText style={styles.hubCardText}>Inventory</RNText>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              onPress={() => router.push('/(admin)/messages' as any)}
+            >
+              <View style={styles.hubIconCircle}>
+                <LifeBuoy size={24} color="#10b981" />
+              </View>
+              <RNText style={styles.hubCardText}>Tickets</RNText>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              onPress={() => router.push('/(admin)/approve-grounds' as any)}
+            >
+              <View style={styles.hubIconCircle}>
+                <CheckCircle2 size={24} color="#10b981" />
+              </View>
+              <RNText style={styles.hubCardText}>Approvals</RNText>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              onPress={() => router.push('/(admin)/manage-ground-owners' as any)}
+            >
+              <View style={styles.hubIconCircle}>
+                <Users size={24} color="#10b981" />
+              </View>
+              <RNText style={styles.hubCardText}>Partners</RNText>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* 3. GROUND OWNER HUB (Grid) */}
+      {(profile?.role === 'ground_owner' || isSuperAdmin) && (
         <View style={styles.sectionContainer}>
           <RNText style={styles.sectionTitle}>GROUND OWNER HUB</RNText>
           <View style={styles.hubGrid}>

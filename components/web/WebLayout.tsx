@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -53,6 +53,7 @@ import {
 } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUI } from '@/contexts/UIContext';
 import { supabase } from '@/lib/supabase';
 import { makeGroundPath } from '@/utils/groundSlug';
 import { formatCurrency } from '@/utils/helpers';
@@ -83,8 +84,9 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
   const [favoritesCount, setFavoritesCount] = useState(0);
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+  const { isTabBarVisible } = useUI();
   const [isBottomBarVisible, setIsBottomBarVisible] = useState(true);
-  const [lastScrollPos, setLastScrollPos] = useState(0);
+  const lastScrollPosRef = useRef(0);
   const searchInputRef = React.useRef<TextInput>(null);
 
   useEffect(() => {
@@ -270,30 +272,33 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
     return <>{children}</>;
   }
 
+
+
   useEffect(() => {
     const handleScroll = () => {
-      const y = (window as any).scrollY || 0;
-      setScrolled(y > 50); // Increased threshold for stability
+      const y = window.scrollY;
+      setScrolled(y > 50);
 
-      if (Math.abs(y - lastScrollPos) > 10) {
-        if (y > lastScrollPos && y > 100) {
+      if (Math.abs(y - lastScrollPosRef.current) > 5) {
+        if (y > lastScrollPosRef.current && y > 50) {
           setIsBottomBarVisible(false);
-        } else {
+        } else if (y < lastScrollPosRef.current || y < 20) {
           setIsBottomBarVisible(true);
         }
-        setLastScrollPos(y);
+        lastScrollPosRef.current = y;
       }
     };
 
     const sub = DeviceEventEmitter.addListener('mainScroll', (data) => {
-      setScrolled(data.y > 50); // Increased threshold for stability
-      if (Math.abs(data.y - lastScrollPos) > 10) {
-        if (data.y > lastScrollPos && data.y > 100) {
+      setScrolled(data.y > 50);
+      const y = data.y;
+      if (Math.abs(y - lastScrollPosRef.current) > 5) {
+        if (y > lastScrollPosRef.current && y > 50) {
           setIsBottomBarVisible(false);
-        } else {
+        } else if (y < lastScrollPosRef.current || y < 20) {
           setIsBottomBarVisible(true);
         }
-        setLastScrollPos(data.y);
+        lastScrollPosRef.current = y;
       }
     });
 
@@ -303,7 +308,7 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
       window.removeEventListener('scroll', handleScroll);
       sub.remove();
     };
-  }, [lastScrollPos]);
+  }, []);
 
   // Navbar search: fetch ground suggestions as user types on landing pages.
 
@@ -1081,7 +1086,11 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
       {isCompact && !isInTabs && !isCheckoutPage && (
         <View style={[
           styles.bottomBar,
-          !isBottomBarVisible && { transform: [{ translateY: 100 }] }
+          (!isBottomBarVisible || !isTabBarVisible) && { 
+            transform: Platform.OS === 'web' ? [] : [{ translateY: 150 }],
+            bottom: Platform.OS === 'web' ? -100 : 0,
+            opacity: Platform.OS === 'web' ? 0 : 1
+          }
         ]}>
           {[
             { label: 'Home', icon: House, href: '/' },
@@ -1893,7 +1902,7 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        transition: 'transform 0.3s ease-in-out',
+        transition: 'transform 0.3s ease-in-out, bottom 0.3s ease-in-out, opacity 0.3s ease-in-out',
       }
     }),
   },

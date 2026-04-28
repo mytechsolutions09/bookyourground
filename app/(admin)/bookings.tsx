@@ -168,10 +168,10 @@ export default function AdminBookingsScreen() {
 
   const content = (
     <View style={styles.container}>
-      <View style={[styles.header, isWeb && styles.webHeader]}>
-        <View style={styles.headerTop}>
-          <Text style={styles.title}>All Platform Bookings</Text>
-          {isWeb && (
+      {Platform.OS === 'web' && (
+        <View style={[styles.header, styles.webHeader]}>
+          <View style={styles.headerTop}>
+            <Text style={styles.title}>All Platform Bookings</Text>
             <View style={styles.searchContainer}>
               <TextInput
                 style={styles.searchBar}
@@ -181,81 +181,79 @@ export default function AdminBookingsScreen() {
                 onChangeText={setSearchQuery}
               />
             </View>
-          )}
-        </View>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false} 
-          contentContainerStyle={styles.tabRow}
-          style={styles.tabScrollWrap}
-        >
-          <TouchableOpacity
-            onPress={() => setActiveTab('all')}
-            style={[
-              styles.tabChip,
-              activeTab === 'all' && styles.tabChipActive,
-            ]}
+          </View>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            contentContainerStyle={styles.tabRow}
+            style={styles.tabScrollWrap}
           >
-            <Text
+            <TouchableOpacity
+              onPress={() => setActiveTab('all')}
               style={[
-                styles.tabChipText,
-                activeTab === 'all' && styles.tabChipTextActive,
+                styles.tabChip,
+                activeTab === 'all' && styles.tabChipActive,
               ]}
             >
-              {`All (${bookings.length})`}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setActiveTab('upcoming')}
-            style={[
-              styles.tabChip,
-              activeTab === 'upcoming' && styles.tabChipActive,
-            ]}
-          >
-            <Text
+              <Text
+                style={[
+                  styles.tabChipText,
+                  activeTab === 'all' && styles.tabChipTextActive,
+                ]}
+              >
+                {`All (${bookings.length})`}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setActiveTab('upcoming')}
               style={[
-                styles.tabChipText,
-                activeTab === 'upcoming' && styles.tabChipTextActive,
+                styles.tabChip,
+                activeTab === 'upcoming' && styles.tabChipActive,
               ]}
             >
-              {`Upcoming (${upcomingCount})`}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setActiveTab('past')}
-            style={[
-              styles.tabChip,
-              activeTab === 'past' && styles.tabChipActive,
-            ]}
-          >
-            <Text
+              <Text
+                style={[
+                  styles.tabChipText,
+                  activeTab === 'upcoming' && styles.tabChipTextActive,
+                ]}
+              >
+                {`Upcoming (${upcomingCount})`}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setActiveTab('past')}
               style={[
-                styles.tabChipText,
-                activeTab === 'past' && styles.tabChipTextActive,
+                styles.tabChip,
+                activeTab === 'past' && styles.tabChipActive,
               ]}
             >
-              {`Past (${pastCount})`}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setActiveTab('cancelled' as any)}
-            style={[
-              styles.tabChip,
-              activeTab === ('cancelled' as any) && styles.tabChipActive,
-            ]}
-          >
-            <Text
+              <Text
+                style={[
+                  styles.tabChipText,
+                  activeTab === 'past' && styles.tabChipTextActive,
+                ]}
+              >
+                {`Past (${pastCount})`}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setActiveTab('cancelled' as any)}
               style={[
-                styles.tabChipText,
-                activeTab === ('cancelled' as any) && styles.tabChipTextActive,
+                styles.tabChip,
+                activeTab === ('cancelled' as any) && styles.tabChipActive,
               ]}
             >
-              {`Cancelled (${bookings.filter(b => b.status === 'cancelled').length})`}
-            </Text>
-          </TouchableOpacity>
+              <Text
+                style={[
+                  styles.tabChipText,
+                  activeTab === ('cancelled' as any) && styles.tabChipTextActive,
+                ]}
+              >
+                {`Cancelled (${bookings.filter(b => b.status === 'cancelled').length})`}
+              </Text>
+            </TouchableOpacity>
 
 
-          {isWeb && (
             <View style={styles.dateFilterWrap}>
               <View 
                 style={[
@@ -311,9 +309,9 @@ export default function AdminBookingsScreen() {
                 </TouchableOpacity>
               )}
             </View>
-          )}
-        </ScrollView>
-      </View>
+          </ScrollView>
+        </View>
+      )}
 
       {isWeb && bookings.length > 0 && (
         <View style={styles.tableHeaderContainer}>
@@ -470,7 +468,7 @@ export default function AdminBookingsScreen() {
 
   return (
     <View style={styles.nativeContainer}>
-      <MobileAppNavbar title="Platform Bookings" titleColor="#00ea6b" />
+      <MobileAppNavbar title="PLATFORM BOOKINGS" titleColor="#10b981" />
       {content}
     </View>
   );

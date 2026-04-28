@@ -16,6 +16,7 @@ import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
+import MobileAppNavbar from '@/components/MobileAppNavbar';
 
 interface Stats {
   totalUsers: number;
@@ -76,10 +77,12 @@ export default function AdminDashboardScreen() {
       style={styles.container}
       refreshControl={<RefreshControl refreshing={loading} onRefresh={loadStats} />}
     >
-      <View style={[styles.header, Platform.OS === 'web' && styles.webHeader]}>
-        <Text style={styles.title}>Admin Dashboard</Text>
-        <Text style={styles.subtitle}>Platform Overview</Text>
-      </View>
+      {Platform.OS === 'web' && (
+        <View style={[styles.header, styles.webHeader]}>
+          <Text style={styles.title}>Admin Dashboard</Text>
+          <Text style={styles.subtitle}>Platform Overview</Text>
+        </View>
+      )}
 
       <View style={styles.content}>
         <View style={styles.statsGrid}>
@@ -209,11 +212,18 @@ export default function AdminDashboardScreen() {
     </ScrollView>
   );
 
-  if (Platform.OS === 'web') {
-    return <WebLayout>{content}</WebLayout>;
-  }
-
-  return content;
+  return (
+    <>
+      {Platform.OS === 'web' ? (
+        <WebLayout>{content}</WebLayout>
+      ) : (
+        <View style={{ flex: 1, backgroundColor: '#F5F5F5' }}>
+          <MobileAppNavbar title="ADMIN DASHBOARD" titleColor="#10b981" />
+          {content}
+        </View>
+      )}
+    </>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -224,7 +234,6 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#FFFFFF',
     padding: 12,
-    paddingTop: Platform.OS === 'ios' ? 60 : 20,
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
   },

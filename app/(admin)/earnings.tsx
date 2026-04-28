@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import Card from '@/components/ui/Card';
 import { formatCurrency } from '@/utils/helpers';
 import { Search, TrendingUp, Users } from 'lucide-react-native';
+import MobileAppNavbar from '@/components/MobileAppNavbar';
 
 interface GroundEarning {
   ground_id: string;
@@ -137,27 +138,29 @@ function AdminEarningsInner() {
       contentContainerStyle={styles.scrollContent}
       refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
     >
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <View>
-            <Text style={styles.title}>Earnings by Owner</Text>
-            <View style={styles.totalBadge}>
-                <TrendingUp size={14} color="#10b981" />
-                <Text style={styles.totalText}>Platform Total: {formatCurrency(totalEarnings)}</Text>
+      {Platform.OS === 'web' && (
+        <View style={styles.header}>
+          <View style={styles.headerTop}>
+            <View>
+              <Text style={styles.title}>Earnings by Owner</Text>
+              <View style={styles.totalBadge}>
+                  <TrendingUp size={14} color="#10b981" />
+                  <Text style={styles.totalText}>Platform Total: {formatCurrency(totalEarnings)}</Text>
+              </View>
+            </View>
+            
+            <View style={styles.searchContainer}>
+              <Search size={16} color="#6B7280" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search owners or business..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
             </View>
           </View>
-          
-          <View style={styles.searchContainer}>
-            <Search size={16} color="#6B7280" style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search owners or business..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-          </View>
         </View>
-      </View>
+      )}
 
       <View style={styles.table}>
         <View style={styles.tableHeader}>
@@ -231,15 +234,20 @@ function AdminEarningsInner() {
 }
 
 export default function AdminEarningsScreen() {
-  if (Platform.OS === 'web') {
-    return (
-      <WebLayout>
-        <AdminEarningsInner />
-      </WebLayout>
-    );
-  }
-
-  return <AdminEarningsInner />;
+  return (
+    <>
+      {Platform.OS === 'web' ? (
+        <WebLayout>
+          <AdminEarningsInner />
+        </WebLayout>
+      ) : (
+        <View style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
+          <MobileAppNavbar title="ADMIN EARNINGS" titleColor="#10b981" />
+          <AdminEarningsInner />
+        </View>
+      )}
+    </>
+  );
 }
 
 const styles = StyleSheet.create({

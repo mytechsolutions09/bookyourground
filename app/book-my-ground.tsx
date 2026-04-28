@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Platform, View, StyleSheet, ScrollView, useWindowDimensions, Text, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, useAnimatedScrollHandler, runOnJS } from 'react-native-reanimated';
+import { DeviceEventEmitter } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import WebLayout from '@/components/web/WebLayout';
 import LandingBookingForm from '@/components/landing/LandingBookingForm';
@@ -9,9 +12,49 @@ import { useAuth } from '@/contexts/AuthContext';
 import { GroundWithImages } from '@/types';
 import GroundCard from '@/components/grounds/GroundCard';
 import { Heart } from 'lucide-react-native';
+import { useUI } from '@/contexts/UIContext';
 
 export default function BookMyGroundPage() {
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const { setTabBarVisible } = useUI();
+  const headerTranslateY = useSharedValue(0);
+  const lastScrollY = useSharedValue(0);
+  const HEADER_HEIGHT = 64 + insets.top;
+
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      if (Platform.OS === 'web') return; // Handled by onScrollWeb for web
+      const currentY = event.contentOffset.y;
+      
+      const diff = currentY - lastScrollY.value;
+      if (diff > 5 && currentY > 100) {
+        headerTranslateY.value = withTiming(-HEADER_HEIGHT, { duration: 300 });
+      } else if (diff < -5 || currentY < 50) {
+        headerTranslateY.value = withTiming(0, { duration: 300 });
+      }
+      lastScrollY.value = currentY;
+    },
+  });
+
+  const onScrollWeb = (event: any) => {
+    const currentY = event.nativeEvent.contentOffset.y;
+    DeviceEventEmitter.emit('mainScroll', { y: currentY });
+
+    const diff = currentY - lastScrollY.value;
+    if (diff > 5 && currentY > 100) {
+      headerTranslateY.value = withTiming(-HEADER_HEIGHT, { duration: 300 });
+      setTabBarVisible(false);
+    } else if (diff < -5 || currentY < 50) {
+      headerTranslateY.value = withTiming(0, { duration: 300 });
+      setTabBarVisible(true);
+    }
+    lastScrollY.value = currentY;
+  };
+
+  const headerAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: headerTranslateY.value }],
+  }));
   const { user } = useAuth();
   const { groundId, date, startTime, teamType, tab } = useLocalSearchParams();
   const [activeTab, setActiveTab] = useState<'book' | 'favorite'>((tab as any) || 'book');
@@ -103,34 +146,51 @@ export default function BookMyGroundPage() {
   if (Platform.OS === 'web') {
     return (
       <WebLayout hideHeader={width < 900}>
+        {width < 900 && (
+          <Animated.View style={[styles.headerContainerFixed, { paddingTop: insets.top }, headerAnimatedStyle]}>
+            <MobileAppNavbar
+              title="Book a ground"
+              titleColor="#0F172A"
+              lightBg
+            />
+          </Animated.View>
+        )}
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          onScroll={onScrollWeb}
+          scrollEventThrottle={16}
         >
-          <View style={styles.page}>
-            <View style={styles.tabContainer}>
-              <TouchableOpacity
-                style={[styles.tab, activeTab === 'book' && styles.activeTab]}
-                activeOpacity={0.8}
-                onPress={() => setActiveTab('book')}
-              >
-                <Text style={[styles.tabText, activeTab === 'book' && styles.activeTabText]}>Book a Ground</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.tab}
-                activeOpacity={0.8}
-                onPress={() => router.push('/find-an-opponent' as any)}
-              >
-                <Text style={styles.tabText}>Find an Opponent</Text>
-              </TouchableOpacity>
-
-            </View>
+          <View style={[
+            styles.page,
+            width < 900 && { paddingTop: 64 + insets.top, paddingHorizontal: 0 }
+          ]}>
+            {width >= 900 && (
+              <View style={styles.tabContainer}>
+                <TouchableOpacity
+                  style={[styles.tab, activeTab === 'book' && styles.activeTab]}
+                  activeOpacity={0.8}
+                  onPress={() => setActiveTab('book')}
+                >
+                  <Text style={[styles.tabText, activeTab === 'book' && styles.activeTabText]}>Book a Ground</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.tab}
+                  activeOpacity={0.8}
+                  onPress={() => router.push('/find-an-opponent' as any)}
+                >
+                  <Text style={styles.tabText}>Find an Opponent</Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
             {activeTab === 'book' ? (
               <LandingBookingForm
                 fullWidth
                 separateSearchResults
+                noCard={width < 900}
+                hideTitle={width < 900}
                 {...initialProps}
               />
             ) : (
@@ -177,6 +237,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+    paddingBottom: 64,
   },
   tabContainer: {
     flexDirection: 'row',
@@ -215,6 +276,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: 'Inter',
   },
+  activeIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    left: '20%',
+    right: '20%',
+    height: 3,
+    backgroundColor: '#01b854',
+    borderTopLeftRadius: 3,
+    borderTopRightRadius: 3,
+  },
   favoritesContainer: {
     flex: 1,
     width: '100%',
@@ -246,5 +317,15 @@ const styles = StyleSheet.create({
     color: '#64748B',
     textAlign: 'center',
     fontFamily: 'Inter',
+  },
+  headerContainerFixed: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    backgroundColor: '#F9FAFB',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
   },
 });

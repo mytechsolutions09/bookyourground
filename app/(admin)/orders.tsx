@@ -4,6 +4,7 @@ import { ShoppingBag, Package, ChevronRight, Search, Calendar, User, IndianRupee
 import { supabase } from '@/lib/supabase';
 import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
+import MobileAppNavbar from '@/components/MobileAppNavbar';
 import Modal from '@/components/ui/Modal';
 import { formatDate, formatDateTime } from '@/utils/helpers';
 
@@ -132,24 +133,26 @@ export default function AdminOrdersScreen() {
 
   const content = (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Shop Orders</Text>
-          <Text style={styles.subtitle}>Manage customer orders and fulfillment</Text>
-        </View>
-        
-        <View style={styles.headerActions}>
-          <View style={styles.searchBar}>
-            <Search size={18} color="#94A3B8" />
-            <TextInput 
-              style={styles.searchInput}
-              placeholder="Search by ID or customer..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
+      {Platform.OS === 'web' && (
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.title}>Shop Orders</Text>
+            <Text style={styles.subtitle}>Manage customer orders and fulfillment</Text>
+          </View>
+          
+          <View style={styles.headerActions}>
+            <View style={styles.searchBar}>
+              <Search size={18} color="#94A3B8" />
+              <TextInput 
+                style={styles.searchInput}
+                placeholder="Search by ID or customer..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+            </View>
           </View>
         </View>
-      </View>
+      )}
 
       <View style={styles.filterRow}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -167,14 +170,16 @@ export default function AdminOrdersScreen() {
         </ScrollView>
       </View>
 
-      <View style={styles.tableHeader}>
-        <Text style={[styles.headerLabel, { flex: 1.5 }]}>Order ID</Text>
-        <Text style={[styles.headerLabel, { flex: 2 }]}>Customer</Text>
-        <Text style={[styles.headerLabel, { flex: 1 }]}>Items</Text>
-        <Text style={[styles.headerLabel, { flex: 1.2 }]}>Total</Text>
-        <Text style={[styles.headerLabel, { flex: 1.2 }]}>Status</Text>
-        <View style={{ flex: 0.5 }} />
-      </View>
+      {Platform.OS === 'web' && (
+        <View style={styles.tableHeader}>
+          <Text style={[styles.headerLabel, { flex: 1.5 }]}>Order ID</Text>
+          <Text style={[styles.headerLabel, { flex: 2 }]}>Customer</Text>
+          <Text style={[styles.headerLabel, { flex: 1 }]}>Items</Text>
+          <Text style={[styles.headerLabel, { flex: 1.2 }]}>Total</Text>
+          <Text style={[styles.headerLabel, { flex: 1.2 }]}>Status</Text>
+          <View style={{ flex: 0.5 }} />
+        </View>
+      )}
 
       {loading ? (
         <ActivityIndicator size="large" color="#01b854" style={{ marginTop: 100 }} />
@@ -287,7 +292,18 @@ export default function AdminOrdersScreen() {
     </View>
   );
 
-  return <WebLayout>{content}</WebLayout>;
+  return (
+    <>
+      {Platform.OS === 'web' ? (
+        <WebLayout>{content}</WebLayout>
+      ) : (
+        <View style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
+          <MobileAppNavbar title="SHOP ORDERS" titleColor="#10b981" />
+          {content}
+        </View>
+      )}
+    </>
+  );
 }
 
 const styles = StyleSheet.create({

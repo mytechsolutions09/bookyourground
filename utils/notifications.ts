@@ -14,6 +14,15 @@ Notifications.setNotificationHandler({
 export async function registerForPushNotificationsAsync() {
   if (Platform.OS === 'web') return null;
 
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync('default', {
+      name: 'default',
+      importance: Notifications.AndroidImportance.MAX,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: '#FF231F7C',
+    });
+  }
+
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
   
@@ -25,7 +34,7 @@ export async function registerForPushNotificationsAsync() {
   if (finalStatus !== 'granted') {
     return null;
   }
-
+  
   return true;
 }
 
@@ -76,17 +85,20 @@ export async function scheduleMatchReminders(userId: string) {
             title: "Match Day! 🏏",
             body: `Don't forget! Your match at ${groundName} starts at ${startTime} today.`,
             data: { bookingId: booking.id },
+            // Ensure content also has channelId for Android
+            ...(Platform.OS === 'android' ? { android: { channelId: 'default' } } : {}),
           },
           trigger: {
+            // In newer Expo versions, trigger may require type and channelId
+            type: 'calendar',
             hour: 6,
             minute: 0,
             repeats: false,
-          },
+            ...(Platform.OS === 'android' ? { channelId: 'default' } : {}),
+          } as any,
         });
       } else {
         // It's already past 6 AM today. 
-        // We could schedule a one-time "Immediate" notification if we haven't shown it yet,
-        // but typically the 6 AM requirement implies a morning briefing.
         // We'll skip scheduling for today if it's already late.
       }
     }

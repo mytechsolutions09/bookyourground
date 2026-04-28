@@ -21,6 +21,7 @@ import { GroundWithImages } from '@/types';
 import GroundCard from '@/components/grounds/GroundCard';
 import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
+import MobileAppNavbar from '@/components/MobileAppNavbar';
 import { useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -1014,88 +1015,88 @@ export default function GroundsAdminScreen() {
 
   const content = (
     <View style={styles.container}>
-      <View style={[styles.header, Platform.OS === 'web' && styles.webHeader]}>
-        <View style={styles.headerTopRow}>
-          <View style={styles.headerTitleBlock}>
-            <Text style={styles.title}>Grounds</Text>
-            <Text style={styles.subtitle}>{headerSubtitle}</Text>
+      {Platform.OS === 'web' && (
+        <View style={[styles.header, styles.webHeader]}>
+          <View style={styles.headerTopRow}>
+            <View style={styles.headerTitleBlock}>
+              <Text style={styles.title}>Grounds</Text>
+              <Text style={styles.subtitle}>{headerSubtitle}</Text>
+            </View>
           </View>
-        </View>
 
-        <View style={styles.controlsRow}>
-          <View style={styles.searchBox}>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search by name, city or owner..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-          </View>
-          <View style={styles.filtersWrap}>
-            <View style={[styles.filtersGroup, { zIndex: 60 }]}>
-              <Text style={styles.filtersLabel}>Location</Text>
-              <FilterDropdown
-                options={locationOptions}
-                value={locationFilter}
-                onChange={setLocationFilter}
+          <View style={styles.controlsRow}>
+            <View style={styles.searchBox}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search by name, city or owner..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
               />
             </View>
+            <View style={styles.filtersWrap}>
+              <View style={[styles.filtersGroup, { zIndex: 60 }]}>
+                <Text style={styles.filtersLabel}>Location</Text>
+                <FilterDropdown
+                  options={locationOptions}
+                  value={locationFilter}
+                  onChange={setLocationFilter}
+                />
+              </View>
 
-            <View style={[styles.filtersGroup, { zIndex: 50 }]}>
-              <Text style={styles.filtersLabel}>Type</Text>
-              <FilterDropdown
-                options={typeOptions}
-                value={typeFilter}
-                onChange={setTypeFilter}
-              />
+              <View style={[styles.filtersGroup, { zIndex: 50 }]}>
+                <Text style={styles.filtersLabel}>Type</Text>
+                <FilterDropdown
+                  options={typeOptions}
+                  value={typeFilter}
+                  onChange={setTypeFilter}
+                />
+              </View>
             </View>
           </View>
 
-          {Platform.OS === 'web' && (
-            <View style={styles.viewToggle}>
-              <TouchableOpacity
-                onPress={handleImportGround}
-                style={[styles.viewToggleOption, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' }]}
-              >
-                <Text style={[styles.viewToggleText, { color: '#16A34A', fontWeight: '700' }]}>Import</Text>
-              </TouchableOpacity>
+          <View style={styles.viewToggle}>
+            <TouchableOpacity
+              onPress={handleImportGround}
+              style={[styles.viewToggleOption, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' }]}
+            >
+              <Text style={[styles.viewToggleText, { color: '#16A34A', fontWeight: '700' }]}>Import</Text>
+            </TouchableOpacity>
 
-              <Pressable
-                onPress={() => setViewMode('tiles')}
+            <Pressable
+              onPress={() => setViewMode('tiles')}
+              style={[
+                styles.viewToggleOption,
+                viewMode === 'tiles' && styles.viewToggleOptionActive,
+              ]}
+            >
+              <Text
                 style={[
-                  styles.viewToggleOption,
-                  viewMode === 'tiles' && styles.viewToggleOptionActive,
+                  styles.viewToggleText,
+                  viewMode === 'tiles' && styles.viewToggleTextActive,
                 ]}
               >
-                <Text
-                  style={[
-                    styles.viewToggleText,
-                    viewMode === 'tiles' && styles.viewToggleTextActive,
-                  ]}
-                >
-                  Tiles
-                </Text>
-              </Pressable>
-              <Pressable
-                onPress={() => setViewMode('list')}
+                Tiles
+              </Text>
+            </Pressable>
+            <Pressable
+              onPress={() => setViewMode('list')}
+              style={[
+                styles.viewToggleOption,
+                viewMode === 'list' && styles.viewToggleOptionActive,
+              ]}
+            >
+              <Text
                 style={[
-                  styles.viewToggleOption,
-                  viewMode === 'list' && styles.viewToggleOptionActive,
+                  styles.viewToggleText,
+                  viewMode === 'list' && styles.viewToggleTextActive,
                 ]}
               >
-                <Text
-                  style={[
-                    styles.viewToggleText,
-                    viewMode === 'list' && styles.viewToggleTextActive,
-                  ]}
-                >
-                  List
-                </Text>
-              </Pressable>
-            </View>
-          )}
+                List
+              </Text>
+            </Pressable>
+          </View>
         </View>
-      </View>
+      )}
 
       {Platform.OS === 'web' && viewMode === 'list' && filteredGrounds.length > 0 && (
         <View style={styles.tableHeaderContainer}>
@@ -1864,8 +1865,18 @@ export default function GroundsAdminScreen() {
     </View>
   );
 
-  if (Platform.OS === 'web') return <WebLayout>{content}</WebLayout>;
-  return content;
+  return (
+    <>
+      {Platform.OS === 'web' ? (
+        <WebLayout>{content}</WebLayout>
+      ) : (
+        <View style={{ flex: 1, backgroundColor: '#F5F5F5' }}>
+          <MobileAppNavbar title="PLATFORM GROUNDS" titleColor="#10b981" />
+          {content}
+        </View>
+      )}
+    </>
+  );
 }
 
 const styles = StyleSheet.create({

@@ -252,7 +252,7 @@ export default function AdminInventoryScreen() {
       <View style={[styles.pageHeader, isWeb && styles.webPageHeader]}>
         <View style={styles.headerTop}>
           <View>
-            <Text style={styles.title}>Inventory Management</Text>
+            {Platform.OS === 'web' && <Text style={styles.title}>Inventory Management</Text>}
             {isScrolled && currentOwner && currentGround ? (
               <View style={styles.headerContext}>
                 <View style={styles.contextBadge}>
@@ -771,7 +771,6 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   inventoryContainer: {
-    flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: 16,
@@ -846,7 +845,6 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
   },
   noGroundSelected: {
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,

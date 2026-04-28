@@ -17,6 +17,7 @@ import { LifeBuoy, CheckCircle2, Circle, Search, Filter, ChevronRight, User, Cal
 import { supabase } from '@/lib/supabase';
 import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
+import MobileAppNavbar from '@/components/MobileAppNavbar';
 
 interface ContactQuery {
   id: string;
@@ -172,7 +173,7 @@ export default function AdminMessagesScreen() {
     <View style={styles.container}>
       <View style={styles.sidebar}>
         <View style={styles.header}>
-          <Text style={styles.title}>Support Tickets</Text>
+          {Platform.OS === 'web' && <Text style={styles.title}>Support Tickets</Text>}
           <View style={styles.filterRow}>
             {(['all', 'pending', 'resolved'] as const).map((f) => (
               <TouchableOpacity
@@ -309,9 +310,16 @@ export default function AdminMessagesScreen() {
   );
 
   return (
-    <WebLayout>
-      {mainContent}
-    </WebLayout>
+    <>
+      {Platform.OS === 'web' ? (
+        <WebLayout>{mainContent}</WebLayout>
+      ) : (
+        <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+          <MobileAppNavbar title="SUPPORT TICKETS" titleColor="#10b981" />
+          {mainContent}
+        </View>
+      )}
+    </>
   );
 }
 

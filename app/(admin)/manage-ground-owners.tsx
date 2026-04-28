@@ -6,6 +6,7 @@ import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
 import { router } from 'expo-router';
 import { Building2, Search, Users, ExternalLink, Mail, Phone, ChevronRight } from 'lucide-react-native';
+import MobileAppNavbar from '@/components/MobileAppNavbar';
 
 type OwnerRow = Profile & {
   totalGroundsCount: number;
@@ -190,24 +191,26 @@ export default function ManageGroundOwnersScreen() {
 
   const content = (
     <View style={styles.container}>
-      <View style={styles.headerArea}>
-        <View style={styles.headerTop}>
-          <View>
-            <Text style={styles.title}>Ground Owners</Text>
-            <Text style={styles.subtitle}>{owners.length} registered partners</Text>
-          </View>
-          
-          <View style={styles.searchContainer}>
-            <Search size={18} color="#6B7280" style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search owners or business name..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
+      {Platform.OS === 'web' && (
+        <View style={styles.headerArea}>
+          <View style={styles.headerTop}>
+            <View>
+              <Text style={styles.title}>Ground Owners</Text>
+              <Text style={styles.subtitle}>{owners.length} registered partners</Text>
+            </View>
+            
+            <View style={styles.searchContainer}>
+              <Search size={18} color="#6B7280" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search owners or business name..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+            </View>
           </View>
         </View>
-      </View>
+      )}
 
       {Platform.OS === 'web' && (
         <View style={styles.tableHeader}>
@@ -233,11 +236,18 @@ export default function ManageGroundOwnersScreen() {
     </View>
   );
 
-  if (Platform.OS === 'web') {
-    return <WebLayout>{content}</WebLayout>;
-  }
-
-  return content;
+  return (
+    <>
+      {Platform.OS === 'web' ? (
+        <WebLayout>{content}</WebLayout>
+      ) : (
+        <View style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
+          <MobileAppNavbar title="MANAGE OWNERS" titleColor="#10b981" />
+          {content}
+        </View>
+      )}
+    </>
+  );
 }
 
 const styles = StyleSheet.create({

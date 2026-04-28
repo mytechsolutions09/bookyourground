@@ -6,6 +6,7 @@ import GroundCard from '@/components/grounds/GroundCard';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
+import MobileAppNavbar from '@/components/MobileAppNavbar';
 import { useLocalSearchParams } from 'expo-router';
 
 export default function ApproveGroundsScreen() {
@@ -107,12 +108,14 @@ export default function ApproveGroundsScreen() {
 
   const content = (
     <View style={styles.container}>
-      <View style={[styles.header, Platform.OS === 'web' && styles.webHeader]}>
-        <Text style={styles.title}>Approve Grounds</Text>
-        <Text style={styles.subtitle}>
-          {grounds.length} pending approval{grounds.length !== 1 ? 's' : ''}
-        </Text>
-      </View>
+      {Platform.OS === 'web' && (
+        <View style={[styles.header, styles.webHeader]}>
+          <Text style={styles.title}>Approve Grounds</Text>
+          <Text style={styles.subtitle}>
+            {grounds.length} pending approval{grounds.length !== 1 ? 's' : ''}
+          </Text>
+        </View>
+      )}
 
       <FlatList
         data={grounds}
@@ -140,11 +143,18 @@ export default function ApproveGroundsScreen() {
     </View>
   );
 
-  if (Platform.OS === 'web') {
-    return <WebLayout>{content}</WebLayout>;
-  }
-
-  return content;
+  return (
+    <>
+      {Platform.OS === 'web' ? (
+        <WebLayout>{content}</WebLayout>
+      ) : (
+        <View style={{ flex: 1, backgroundColor: '#F5F5F5' }}>
+          <MobileAppNavbar title="APPROVE GROUNDS" titleColor="#10b981" />
+          {content}
+        </View>
+      )}
+    </>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -155,7 +165,6 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#FFFFFF',
     padding: 16,
-    paddingTop: 48,
     borderBottomWidth: 1,
     borderBottomColor: '#E0E0E0',
   },

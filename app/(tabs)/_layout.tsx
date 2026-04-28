@@ -80,7 +80,7 @@ export default function TabLayout() {
   const CustomTabBar = ({ state, descriptors, navigation }: any) => {
     const insets = useSafeAreaInsets();
     const { isTabBarVisible } = useUI();
-    if (hideTabBarOnBigScreens || !isTabBarVisible) return null;
+    if (hideTabBarOnBigScreens) return null;
 
     const visibleTabNames = ['home_tab', 'grounds', 'find-an-opponent', 'shop', 'cricket'];
     
@@ -90,7 +90,11 @@ export default function TabLayout() {
     });
 
     return (
-      <View style={[styles.customTabBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+      <View style={[
+        styles.customTabBar, 
+        { paddingBottom: Math.max(insets.bottom, 8) },
+        !isTabBarVisible && { transform: [{ translateY: 100 }] }
+      ]}>
         {visibleRoutes.map((route: any) => {
           const stateIndex = state.routes.findIndex((r: any) => r.key === route.key);
           const { options } = descriptors[route.key];
@@ -272,6 +276,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-around',
     width: '100%',
+    transition: 'transform 0.3s ease-in-out',
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
   tabItem: {
     flex: 1,

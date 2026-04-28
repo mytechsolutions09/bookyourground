@@ -1551,6 +1551,17 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       Alert.alert('Unavailable slot', 'Please choose a different time slot.');
       return;
     }
+
+    if (!isBoxCricket && cricketSlotsFetched) {
+      if (teamType === 'both' && (cricketSlotsUsed ?? 0) >= 1) {
+        Alert.alert('Slot partially booked', 'This slot already has 1 team booked. Please choose "1 team" or a different slot.');
+        return;
+      }
+      if ((cricketSlotsUsed ?? 0) >= 2) {
+        Alert.alert('Slot full', 'This slot is already fully booked. Please choose a different time slot.');
+        return;
+      }
+    }
     // Submitting...
     try {
       setSubmitting(true);
@@ -2263,13 +2274,15 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
         {!hideTitle && (
           <Text style={[styles.title, (!isWeb || isCompact) && styles.titleMobile]}>Book a Ground</Text>
         )}
-        <Text style={styles.subtitle}>
-          {hideGroundPicker
-            ? useLandingSearchFlow
-              ? 'Choose location and type to search. Pick a date to see available time slots.'
-              : null
-            : 'Pick a ground and time slot to request your booking.'}
-        </Text>
+        {(!isWeb || !isCompact) && (
+          <Text style={styles.subtitle}>
+            {hideGroundPicker
+              ? useLandingSearchFlow
+                ? 'Choose location and type to search. Pick a date to see available time slots.'
+                : null
+              : 'Pick a ground and time slot to request your booking.'}
+          </Text>
+        )}
 
         {isWeb && !isCompact ? (
           <View style={styles.formFieldsWeb}>{formFields}</View>
@@ -2394,13 +2407,20 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       </ContainerComponent>
 
       {separateSearchResults && searchResultsBody ? (
-        <Card style={[styles.searchResultsCard, isWeb && styles.cardWeb]}>
+        <ContainerComponent
+          style={[
+            styles.searchResultsCard,
+            isWeb && styles.cardWeb,
+            noCard && styles.cardPlain,
+            noCard && { marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F1F5F9' }
+          ]}
+        >
           <Text style={styles.searchResultsTitle}>Search results</Text>
           <Text style={styles.searchResultsSubtitle}>
             Grounds that match your location, type, and optional date and time.
           </Text>
           {searchResultsBody}
-        </Card>
+        </ContainerComponent>
       ) : null}
     </View>
   );
@@ -2442,7 +2462,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false) =>
     paddingTop: 8,
   },
   wrapperMobileTight: {
-    paddingHorizontal: 0,
+    paddingHorizontal: 16,
   },
   card: {
     backgroundColor: '#FFFFFF',

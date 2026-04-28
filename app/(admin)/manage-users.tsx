@@ -6,6 +6,7 @@ import { Profile } from '@/types';
 import { UserRole } from '@/types/database';
 import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
+import MobileAppNavbar from '@/components/MobileAppNavbar';
 import { useAuth } from '@/contexts/AuthContext';
 import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
@@ -404,39 +405,41 @@ export default function ManageUsersScreen() {
 
   const content = (
     <View style={styles.container}>
-      <View style={styles.headerArea}>
-        <View style={styles.headerFiltersRow}>
-          <View style={styles.searchContainer}>
-            <Search size={16} color="#6B7280" style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search users..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
-                <X size={14} color="#9CA3AF" />
-              </TouchableOpacity>
-            )}
-          </View>
+      {Platform.OS === 'web' && (
+        <View style={styles.headerArea}>
+          <View style={styles.headerFiltersRow}>
+            <View style={styles.searchContainer}>
+              <Search size={16} color="#6B7280" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search users..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearButton}>
+                  <X size={14} color="#9CA3AF" />
+                </TouchableOpacity>
+              )}
+            </View>
 
-          <FilterDropdown 
-            id="role" 
-            label="System Role" 
-            value={roleFilter}
-            options={[
-              { key: 'all', label: 'All Roles' },
-              { key: 'user', label: 'Players' },
-              { key: 'ground_owner', label: 'Owners' },
-              { key: 'super_admin', label: 'Admins' },
-            ]}
-            onSelect={setRoleFilter}
-          />
+            <FilterDropdown 
+              id="role" 
+              label="System Role" 
+              value={roleFilter}
+              options={[
+                { key: 'all', label: 'All Roles' },
+                { key: 'user', label: 'Players' },
+                { key: 'ground_owner', label: 'Owners' },
+                { key: 'super_admin', label: 'Admins' },
+              ]}
+              onSelect={setRoleFilter}
+            />
+          </View>
         </View>
-      </View>
+      )}
 
       {Platform.OS === 'web' && (
         <View style={styles.tableHeader}>
@@ -520,11 +523,18 @@ export default function ManageUsersScreen() {
     </View>
   );
 
-  if (Platform.OS === 'web') {
-    return <WebLayout>{content}</WebLayout>;
-  }
-
-  return content;
+  return (
+    <>
+      {Platform.OS === 'web' ? (
+        <WebLayout>{content}</WebLayout>
+      ) : (
+        <View style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
+          <MobileAppNavbar title="MANAGE USERS" titleColor="#10b981" />
+          {content}
+        </View>
+      )}
+    </>
+  );
 }
 
 // Reuse the Building2 icon locally if needed or import correctly

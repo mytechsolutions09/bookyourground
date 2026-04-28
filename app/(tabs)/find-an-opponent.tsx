@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   LayoutAnimation,
   UIManager,
+  DeviceEventEmitter,
 } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -52,6 +53,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
   const isExtraWideWeb = Platform.OS === 'web' && width >= 1350;
   const isMediumWeb = Platform.OS === 'web' && width >= 768 && width < 1100;
   const isSmall = width < 900;
+  const FlatListComponent = isWeb ? FlatList : Animated.FlatList;
 
   // Filters
   const params = useLocalSearchParams();
@@ -113,6 +115,10 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
     onScroll: (event) => {
       const currentY = event.contentOffset.y;
 
+      if (isWeb) {
+        runOnJS(DeviceEventEmitter.emit)('mainScroll', { y: currentY });
+      }
+
       if (currentY > 80) {
         summaryTranslateY.value = withTiming(0, { duration: 300 });
         summaryOpacity.value = withTiming(1, { duration: 300 });
@@ -128,7 +134,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
       const diff = currentY - lastScrollY.value;
       if (diff > 1 && currentY > 50) {
         if (headerTranslateY.value === 0) {
-          headerTranslateY.value = withTiming(-HEADER_HEIGHT - (isWeb ? 0 : insets.top), {
+          headerTranslateY.value = withTiming(-HEADER_HEIGHT - insets.top - 20, {
             duration: 400,
           });
           runOnJS(setTabBarVisible)(false);
@@ -144,6 +150,37 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
       lastScrollY.value = currentY;
     },
   });
+
+  const onScrollWeb = (event: any) => {
+    const currentY = event.nativeEvent.contentOffset.y;
+    DeviceEventEmitter.emit('mainScroll', { y: currentY });
+
+    if (currentY > 80) {
+      summaryTranslateY.value = withTiming(0, { duration: 300 });
+      summaryOpacity.value = withTiming(1, { duration: 300 });
+      webTabsOpacity.value = withTiming(0, { duration: 300 });
+      webTabsTranslateY.value = withTiming(-20, { duration: 300 });
+    } else {
+      summaryTranslateY.value = withTiming(-50, { duration: 300 });
+      summaryOpacity.value = withTiming(0, { duration: 300 });
+      webTabsOpacity.value = withTiming(1, { duration: 300 });
+      webTabsTranslateY.value = withTiming(0, { duration: 300 });
+    }
+
+    const diff = currentY - lastScrollY.value;
+    if (diff > 1 && currentY > 50) {
+      if (headerTranslateY.value === 0) {
+        headerTranslateY.value = withTiming(-HEADER_HEIGHT - insets.top - 20, { duration: 400 });
+        setTabBarVisible(false);
+      }
+    } else if (diff < -2 || currentY < 20) {
+      if (headerTranslateY.value < 0) {
+        headerTranslateY.value = withTiming(0, { duration: 400 });
+        setTabBarVisible(true);
+      }
+    }
+    lastScrollY.value = currentY;
+  };
 
   useEffect(() => {
     loadOpenSlots();
@@ -282,7 +319,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
     <View style={[styles.container, isWeb && !IS_DARK && styles.webContainerRoot]}>
       {isWeb && !IS_DARK ? (
         <View style={styles.webCard}>
-          <Animated.FlatList
+          <FlatListComponent
             showsVerticalScrollIndicator={false}
             ListHeaderComponent={
               <>
@@ -378,7 +415,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
                 </View>
               </>
             }
-            onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
+            onScroll={onScrollWeb}
             scrollEventThrottle={16}
             data={filteredMatches}
             renderItem={({ item }) => (
@@ -421,8 +458,8 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
           {loading ? (
             <MatchmakingSkeleton isWeb={false} IS_DARK={false} />
           ) : (
-            <Animated.FlatList
-              onScroll={Platform.OS === 'web' ? undefined : (externalScrollHandler || verticalScrollHandler)}
+            <FlatListComponent
+              onScroll={isWeb ? onScrollWeb : (externalScrollHandler || verticalScrollHandler)}
               scrollEventThrottle={16}
               data={filteredMatches}
               ListHeaderComponent={
@@ -452,7 +489,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
               )}
               keyExtractor={item => item.id}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={[styles.listNative, { paddingTop: 110 + insets.top, paddingBottom: 100 }]}
+              contentContainerStyle={[styles.listNative, { paddingTop: 110 + insets.top, paddingBottom: isWeb ? 64 : 100 }]}
               refreshControl={
                 <RefreshControl
                   refreshing={loading}
@@ -480,7 +517,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
     return (
       <WebLayout hideHeader={isSmall} isPublicNoSidebar={isSmall}>
         {isSmall && (
-          <View style={[styles.headerContainerFixed, { paddingTop: insets.top }]}>
+          <Animated.View style={[styles.headerContainerFixed, { paddingTop: insets.top }, headerAnimatedStyle]}>
             <MobileAppNavbar
               title="Find an Opponent"
               titleColor="#0F172A"
@@ -516,7 +553,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
                 </TouchableOpacity>
               </ScrollView>
             </View>
-          </View>
+          </Animated.View>
         )}
         {content}
       </WebLayout>
@@ -532,8 +569,8 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
           {loading ? (
             <MatchmakingSkeleton isWeb={false} IS_DARK={false} />
           ) : (
-            <Animated.FlatList
-              onScroll={Platform.OS === 'web' ? undefined : (externalScrollHandler || verticalScrollHandler)}
+            <FlatListComponent
+              onScroll={isWeb ? onScrollWeb : (externalScrollHandler || verticalScrollHandler)}
               scrollEventThrottle={16}
               data={filteredMatches}
               showsVerticalScrollIndicator={false}
@@ -595,7 +632,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
                 </View>
               )}
               keyExtractor={item => item.id}
-              contentContainerStyle={[styles.listNative, { paddingTop: 105 + insets.top, paddingBottom: 100 }]}
+              contentContainerStyle={[styles.listNative, { paddingTop: 105 + insets.top, paddingBottom: isWeb ? 64 : 100 }]}
               refreshControl={
                 <RefreshControl
                   refreshing={loading}
@@ -692,8 +729,8 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
       </Modal>
 
       <View style={styles.nativeBody}>
-        <Animated.FlatList
-          onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
+        <FlatListComponent
+          onScroll={isWeb ? onScrollWeb : verticalScrollHandler}
           scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}
           data={filteredMatches}
@@ -723,7 +760,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
             </View>
           )}
           keyExtractor={item => item.id}
-          contentContainerStyle={[styles.listNative, { paddingTop: 105 + insets.top, paddingBottom: 100 }]}
+          contentContainerStyle={[styles.listNative, { paddingTop: 105 + insets.top, paddingBottom: isWeb ? 64 : 100 }]}
           refreshControl={
             <RefreshControl
               refreshing={loading}
