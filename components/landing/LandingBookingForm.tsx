@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -171,6 +172,9 @@ interface LandingBookingFormProps {
   /** Initial ground type to pre-select. */
   initialType?: string;
   onFinalAmountChange?: (amount: number | null) => void;
+  onScroll?: any;
+  scrollEventThrottle?: number;
+  contentPaddingTop?: number;
 }
 
 export default function LandingBookingForm(props: LandingBookingFormProps) {
@@ -190,6 +194,9 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
     lightAppTheme = true,
     initialType,
     onFinalAmountChange,
+    onScroll,
+    scrollEventThrottle,
+    contentPaddingTop = 0,
   } = props;
   const { user } = useAuth();
   const { width: windowWidth } = useWindowDimensions();
@@ -2274,28 +2281,21 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
         {!hideTitle && (
           <Text style={[styles.title, (!isWeb || isCompact) && styles.titleMobile]}>Book a Ground</Text>
         )}
-        {(!isWeb || !isCompact) && (
-          <Text style={styles.subtitle}>
-            {hideGroundPicker
-              ? useLandingSearchFlow
-                ? 'Choose location and type to search. Pick a date to see available time slots.'
-                : null
-              : 'Pick a ground and time slot to request your booking.'}
-          </Text>
-        )}
 
         {isWeb && !isCompact ? (
           <View style={styles.formFieldsWeb}>{formFields}</View>
         ) : isWeb ? (
           <View style={styles.formFieldsNative}>{formFields}</View>
         ) : (
-          <ScrollView
+          <Animated.ScrollView
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.formFieldsNative}
+            contentContainerStyle={[styles.formFieldsNative, { paddingTop: contentPaddingTop }]}
+            onScroll={onScroll}
+            scrollEventThrottle={scrollEventThrottle}
           >
             {formFields}
-          </ScrollView>
+          </Animated.ScrollView>
         )}
 
         {computed && (!useLandingSearchFlow || groundSelectedFromSearch) && (

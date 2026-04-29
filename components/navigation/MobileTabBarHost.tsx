@@ -12,7 +12,7 @@ export function MobileTabBarHost() {
   const segments = useSegments();
   const { isTabBarVisible } = useUI();
   
-  if (Platform.OS === 'web' || !isTabBarVisible) return null;
+  if (Platform.OS === 'web') return null;
 
   const root = segments[0];
   if (

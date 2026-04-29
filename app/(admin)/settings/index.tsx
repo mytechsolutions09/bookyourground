@@ -9,10 +9,12 @@ export default function AdminSettingsIndex() {
   const inner = (
     <SettingsSubbar>
       <ScrollView style={styles.page} contentContainerStyle={styles.pageContent}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Settings</Text>
-          <Text style={styles.subtitle}>Platform preferences for super admins</Text>
-        </View>
+        {Platform.OS === 'web' && (
+          <View style={styles.header}>
+            <Text style={styles.title}>Settings</Text>
+            <Text style={styles.subtitle}>Platform preferences for super admins</Text>
+          </View>
+        )}
 
         <Card style={styles.card}>
           <View style={styles.row}>
@@ -50,7 +52,12 @@ export default function AdminSettingsIndex() {
   );
 
   if (Platform.OS === 'web') return <WebLayout noCard>{inner}</WebLayout>;
-  return inner;
+  return (
+    <View style={{ flex: 1, backgroundColor: '#F5F5F5' }}>
+      <MobileAppNavbar title="PLATFORM SETTINGS" titleColor="#10b981" />
+      {inner}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({

@@ -42,32 +42,58 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        loadProfile(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
+    const initAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.warn('Initial session retrieval error:', error.message);
+          // If the refresh token is invalid or not found, we must sign out 
+          // to clear the local storage and prevent future refresh loops
+          if (error.message.includes('Refresh Token')) {
+            await supabase.auth.signOut();
+            setSession(null);
+            setUser(null);
+            setLoading(false);
+            return;
+          }
+        }
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      (async () => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
           await loadProfile(session.user.id);
-          // Schedule 6 AM reminders for today's matches
-          void scheduleMatchReminders(session.user.id);
         } else {
-          setProfile(null);
           setLoading(false);
         }
-      })();
+      } catch (err) {
+        console.error('Unexpected auth initialization error:', err);
+        setLoading(false);
+      }
+    };
+
+    initAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // console.log('Auth state change:', event, !!session);
+      
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        await loadProfile(session.user.id);
+        // Schedule 6 AM reminders for today's matches
+        void scheduleMatchReminders(session.user.id);
+      } else {
+        setProfile(null);
+        // If we get a SIGNED_OUT event or similar without a session, ensure loading is stopped
+        setLoading(false);
+      }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   const loadProfile = async (userId: string) => {

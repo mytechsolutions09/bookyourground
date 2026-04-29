@@ -11,7 +11,7 @@ import {
   ScrollView,
   DeviceEventEmitter,
 } from 'react-native';
-import { router, usePathname, useSegments } from 'expo-router';
+import { router, usePathname, useSegments, useLocalSearchParams } from 'expo-router';
 import {
   Hop as Home, // still used for some public nav
   LayoutDashboard,
@@ -62,9 +62,12 @@ interface WebLayoutProps {
   children: React.ReactNode;
   noCard?: boolean;
   hideHeader?: boolean;
+  viewMode?: 'products' | 'categories';
+  showAddForm?: boolean;
+  isPublicNoSidebar?: boolean;
 }
 
-export default function WebLayout({ children, noCard, hideHeader }: WebLayoutProps) {
+export default function WebLayout({ children, noCard, hideHeader, viewMode, showAddForm, isPublicNoSidebar: propIsPublicNoSidebar }: WebLayoutProps) {
   const { profile, signOut, user } = useAuth();
   const pathname = usePathname();
   const segments = useSegments();
@@ -396,7 +399,7 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
   // On ground info (/grounds/[id]) and booking info (/bookings/[id]) pages,
   // hide the left sidebar for all roles so the content can take full width.
   const isPublicNoSidebar =
-    isLanding || (isMarketing && !isSuperAdmin && !isOwnerGroundsDashboard) || isGroundInfoPage || isBookingDetails || isCheckoutPage || isLegalOrInfoPage || (cleanPath === '/find-an-opponent' && !isSuperAdmin) || cleanPath === '/(tabs)/grounds' || cleanPath === '/shop' || cleanPath.startsWith('/shop/') || cleanPath === '/search' || cleanPath.startsWith('/live/') || (cleanPath.startsWith('/cricket/') && !cleanPath.startsWith('/cricketdata'));
+    propIsPublicNoSidebar || isLanding || (isMarketing && !isSuperAdmin && !isOwnerGroundsDashboard) || isGroundInfoPage || isBookingDetails || isCheckoutPage || isLegalOrInfoPage || (cleanPath === '/find-an-opponent' && !isSuperAdmin) || cleanPath === '/(tabs)/grounds' || cleanPath === '/shop' || cleanPath.startsWith('/shop/') || cleanPath === '/search' || cleanPath.startsWith('/live/') || (cleanPath.startsWith('/cricket/') && !cleanPath.startsWith('/cricketdata'));
   // Treat the presence of a Supabase `user` as authenticated even if `profile`
   // hasn't loaded yet (prevents briefly showing "Sign In").
   const isAuthenticated = !!user || !!profile || isSuperAdmin;
@@ -782,25 +785,51 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
             {(cleanPath.includes('/products') || cleanPath.includes('/orders')) && !isCompact && isSuperAdmin && (
               <View style={{ flexDirection: 'row', gap: 24, marginLeft: 32, alignItems: 'center' }}>
                 <Text
-                  style={styles.headerNavLink}
+                  style={[styles.headerNavLink, cleanPath.includes('/orders') && styles.headerNavLinkActive]}
                   onPress={() => router.push('/(admin)/orders')}
                 >
                   SHOP ORDERS
                 </Text>
                 <Text
-                  style={styles.headerNavLink}
+                  style={[styles.headerNavLink, viewMode === 'products' && !showAddForm && styles.headerNavLinkActive]}
                   onPress={() => {
                     if (!cleanPath.includes('/products')) {
                       router.push('/(admin)/products');
-                      // We'll give it a moment to mount then trigger if needed, 
-                      // but usually a simple navigate to the right page is what's expected if not there.
-                      // Alternatively, we can use a timeout or a query param.
-                    } else {
-                      if (Platform.OS === 'web') {
-                        window.dispatchEvent(new Event('openAddProduct'));
-                      } else if (DeviceEventEmitter) {
-                        DeviceEventEmitter.emit('openAddProduct');
-                      }
+                    }
+                    if (Platform.OS === 'web') {
+                      window.dispatchEvent(new CustomEvent('setShopView', { detail: 'products' }));
+                    } else if (DeviceEventEmitter) {
+                      DeviceEventEmitter.emit('setShopView', 'products');
+                    }
+                  }}
+                >
+                  PRODUCTS
+                </Text>
+                <Text
+                  style={[styles.headerNavLink, viewMode === 'categories' && styles.headerNavLinkActive]}
+                  onPress={() => {
+                    if (!cleanPath.includes('/products')) {
+                      router.push('/(admin)/products');
+                    }
+                    if (Platform.OS === 'web') {
+                      window.dispatchEvent(new CustomEvent('setShopView', { detail: 'categories' }));
+                    } else if (DeviceEventEmitter) {
+                      DeviceEventEmitter.emit('setShopView', 'categories');
+                    }
+                  }}
+                >
+                  CATEGORIES
+                </Text>
+                <Text
+                  style={[styles.headerNavLink, showAddForm && styles.headerNavLinkActive]}
+                  onPress={() => {
+                    if (!cleanPath.includes('/products')) {
+                      router.push('/(admin)/products');
+                    }
+                    if (Platform.OS === 'web') {
+                      window.dispatchEvent(new Event('openAddProduct'));
+                    } else if (DeviceEventEmitter) {
+                      DeviceEventEmitter.emit('openAddProduct');
                     }
                   }}
                 >
@@ -1015,6 +1044,7 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
                         <NavLink href="/profile/orders" icon={ShoppingBag} label="My Orders" />
                         <NavLink href="/(tabs)/bookings" icon={Ticket} label="My Bookings" />
                         <NavLink href="/(owner)/earnings" icon={IndianRupee} label="Earnings" />
+                        
                         <NavLink href="/(owner)/add-ground" icon={PlusCircle} label="Add ground" />
                         <NavLink href="/(owner)/settings" icon={Settings} label="Settings" />
                         <NavLink href="/(tabs)/support" icon={Phone} label="Contact Us" />

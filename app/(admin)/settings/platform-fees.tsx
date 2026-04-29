@@ -80,10 +80,12 @@ export default function PlatformFeesSettings() {
   const inner = (
     <SettingsSubbar>
       <ScrollView style={styles.page} contentContainerStyle={styles.pageContent}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Platform Fees</Text>
-          <Text style={styles.subtitle}>Configure service charges and tax rates</Text>
-        </View>
+        {Platform.OS === 'web' && (
+          <View style={styles.header}>
+            <Text style={styles.title}>Platform Fees</Text>
+            <Text style={styles.subtitle}>Configure service charges and tax rates</Text>
+          </View>
+        )}
 
         <View style={styles.form}>
           <Card style={styles.card}>
@@ -167,7 +169,12 @@ export default function PlatformFeesSettings() {
   );
 
   if (Platform.OS === 'web') return <WebLayout noCard>{inner}</WebLayout>;
-  return inner;
+  return (
+    <View style={{ flex: 1, backgroundColor: '#F5F5F5' }}>
+      <MobileAppNavbar title="PLATFORM FEES" titleColor="#10b981" />
+      {inner}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({

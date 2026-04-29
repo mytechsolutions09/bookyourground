@@ -12,7 +12,8 @@ import {
   RotateCcw,
   CheckCircle2,
   Package,
-  ArrowRight
+  ArrowRight,
+  TrendingUp
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import WebLayout from '@/components/web/WebLayout';
@@ -30,6 +31,9 @@ export default function ProductDetailScreen() {
   const { setTabBarVisible } = useUI();
   const [product, setProduct] = useState<any>(null);
   const [isFavorited, setIsFavorited] = useState(false);
+  const [selectedColor, setSelectedColor] = useState<any>(null);
+  const [selectedSize, setSelectedSize] = useState<any>(null);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -58,6 +62,19 @@ export default function ProductDetailScreen() {
       
       if (error) throw error;
       setProduct(data);
+      // Auto-select first color
+      if (data.specifications?.colors && data.specifications.colors.length > 0) {
+        setSelectedColor(data.specifications.colors[0]);
+      } else {
+        setSelectedColor({ name: 'Red Rush', hex: '#f8688a' });
+      }
+
+      // Auto-select first size
+      if (data.specifications?.sizes && data.specifications.sizes.length > 0) {
+        setSelectedSize(data.specifications.sizes[0]);
+      } else {
+        setSelectedSize(8);
+      }
     } catch (err) {
       console.error('Error loading product:', err);
     } finally {
@@ -125,9 +142,20 @@ export default function ProductDetailScreen() {
     }
     if (!product) return;
     try {
+      const selected_attributes = {
+        size: selectedSize,
+        color: selectedColor?.name
+      };
+
       const { error } = await supabase
         .from('shop_cart')
-        .upsert({ user_id: user.id, product_id: product.id }, { onConflict: 'user_id,product_id' });
+        .upsert({ 
+          user_id: user.id, 
+          product_id: product.id,
+          selected_attributes 
+        }, { 
+          onConflict: 'user_id,product_id,selected_attributes' 
+        });
       
       if (error) throw error;
       router.push('/shop/cart');
@@ -219,9 +247,24 @@ export default function ProductDetailScreen() {
       {/* Fixed Background Image */}
       <View style={styles.fixedImageContainer}>
         <Image 
-          source={{ uri: product.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80' }} 
+          source={{ uri: product.images?.[activeImageIndex] || product.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80' }} 
           style={styles.mainImage} 
         />
+        {product.images && product.images.length > 1 && (
+          <View style={styles.mobileThumbnailsOverlay}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 20 }}>
+              {product.images.map((img: string, i: number) => (
+                <TouchableOpacity 
+                  key={i} 
+                  style={[styles.mobileThumb, activeImageIndex === i && styles.mobileThumbActive]}
+                  onPress={() => setActiveImageIndex(i)}
+                >
+                  <Image source={{ uri: img }} style={styles.mobileThumbImage} />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
         {product.tag && (
           <View style={styles.heroTag}>
             <Text style={styles.heroTagText}>{product.tag}</Text>
@@ -275,6 +318,44 @@ export default function ProductDetailScreen() {
               <Text style={styles.trustText}>7 Day Return</Text>
             </View>
           </View>
+          
+          {product.category?.name === 'Shoes' && (
+            <View style={[styles.section, { borderBottomWidth: 0 }]}>
+              <Text style={styles.shoesSectionTitle}>COLORS</Text>
+              <View style={styles.shoesColorRow}>
+                {((product.specifications?.colors && product.specifications.colors.length > 0) ? product.specifications.colors : [
+                  { name: 'Red Rush', hex: '#f8688a' },
+                  { name: 'Midnight', hex: '#2b2f4b' },
+                  { name: 'Lime', hex: '#bef264' },
+                  { name: 'Pure', hex: '#ffffff' }
+                ]).map((color: any, idx: number) => {
+                  const isSelected = selectedColor?.name === color.name;
+                  return (
+                    <TouchableOpacity 
+                      key={idx} 
+                      style={[styles.shoesColorCircle, isSelected && styles.shoesColorCircleActive]}
+                      onPress={() => setSelectedColor(color)}
+                    >
+                      <View style={[styles.colorInnerCircle, { backgroundColor: color.hex || color.hex1 }]} />
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Text style={[styles.shoesSectionTitle, { marginTop: 24 }]}>SIZE</Text>
+              <View style={styles.shoesSizeRow}>
+                {((product.specifications?.sizes && product.specifications.sizes.length > 0) ? product.specifications.sizes : [6, 7, 7.5, 8, 8.5, 9, 10, 11]).map((size: any, idx: number) => (
+                  <TouchableOpacity 
+                    key={idx} 
+                    style={[styles.sizeBox, selectedSize === size && styles.sizeBoxActive]}
+                    onPress={() => setSelectedSize(size)}
+                  >
+                    <Text style={[styles.sizeBoxText, selectedSize === size && styles.sizeBoxTextActive]}>{size}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
 
           {/* Description */}
           <View style={styles.section}>
@@ -366,115 +447,190 @@ export default function ProductDetailScreen() {
   );
 
   if (Platform.OS === 'web' && !isSmall) {
+    const isShoes = product.category?.name === 'Shoes';
+    
     return (
       <WebLayout>
         <Stack.Screen options={{ title: product.name }} />
-        <View style={styles.webContainer}>
-          <View style={[styles.webGrid, isCompact && styles.webGridCompact]}>
-            {/* Left: Image */}
-            <View style={styles.webImageCol}>
-              <View style={styles.webMainImageWrapper}>
-                <Image 
-                  source={{ uri: product.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80' }} 
-                  style={styles.webMainImage} 
-                />
-                {product.tag && (
-                  <View style={styles.webHeroTag}>
-                    <Text style={styles.heroTagText}>{product.tag}</Text>
-                  </View>
-                )}
-              </View>
-              <View style={styles.webThumbnails}>
-                {(product.images || []).map((img: string, i: number) => (
-                  <View key={i} style={[styles.webThumb, i === 0 && styles.webThumbActive]}>
-                    <Image source={{ uri: img }} style={styles.webThumbImage} />
-                  </View>
-                ))}
-              </View>
-            </View>
-
-            {/* Right: Info */}
-            <View style={styles.webInfoCol}>
-              <Text style={styles.webCategory}>{product.category?.name || 'Equipment'}</Text>
-              <Text style={styles.webProductName}>{product.name}</Text>
-              
-              <View style={styles.webRatingRow}>
-                <View style={styles.webStars}>
-                  {[1, 2, 3, 4, 5].map((_, i) => (
-                    <Star 
-                      key={i} 
-                      size={20} 
-                      color={i < Math.floor(Number(product.rating || 0)) ? "#f8688a" : "#E5E7EB"} 
-                      fill={i < Math.floor(Number(product.rating || 0)) ? "#f8688a" : "none"} 
-                    />
-                  ))}
-                </View>
-                <Text style={styles.webReviewsText}>{Number(product.rating || 0).toFixed(1)} ({product.review_count || 0} customer reviews)</Text>
-              </View>
-
-              <View style={styles.webPriceContainer}>
-                <Text style={styles.webCurrentPrice}>₹{Number(product.price).toLocaleString('en-IN')}</Text>
-                {product.discount_price && (
-                  <Text style={styles.webOriginalPrice}>₹{Number(product.discount_price).toLocaleString('en-IN')}</Text>
-                )}
-                {product.tag && (
-                  <View style={styles.webDiscountBadge}>
-                    <Text style={styles.webDiscountText}>{product.tag}</Text>
-                  </View>
-                )}
-              </View>
-
-              <Text style={styles.webDescription}>{product.description}</Text>
-
-              <View style={styles.webActionRow}>
-                <View style={styles.quantitySelector}>
-                  <TouchableOpacity style={styles.qtyBtn}><Text>-</Text></TouchableOpacity>
-                  <Text style={styles.qtyText}>1</Text>
-                  <TouchableOpacity style={styles.qtyBtn}><Text>+</Text></TouchableOpacity>
-                </View>
-                <TouchableOpacity style={styles.webAddToCartBtn} onPress={addToCart}>
-                  <ShoppingCart size={20} color="#FFFFFF" />
-                  <Text style={styles.webAddToCartText}>Add to Cart</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.webWishlistBtn} onPress={toggleFavorite}>
-                  <Heart size={20} color={isFavorited ? "#f8688a" : "#2b2f4b"} fill={isFavorited ? "#f8688a" : "none"} />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.webTrustGrid}>
-                <View style={styles.webTrustItem}>
-                  <Truck size={24} color="#2b2f4b" />
-                  <Text style={styles.webTrustTitle}>Free Shipping</Text>
-                  <Text style={styles.webTrustSub}>On orders over ₹999</Text>
-                </View>
-                <View style={styles.webTrustItem}>
-                  <ShieldCheck size={24} color="#2b2f4b" />
-                  <Text style={styles.webTrustTitle}>Secure Payment</Text>
-                  <Text style={styles.webTrustSub}>100% Secure Checkout</Text>
-                </View>
-                <View style={styles.webTrustItem}>
-                  <RotateCcw size={24} color="#2b2f4b" />
-                  <Text style={styles.webTrustTitle}>Easy Returns</Text>
-                  <Text style={styles.webTrustSub}>7-day return policy</Text>
-                </View>
-              </View>
-
-              <View style={styles.webSpecSection}>
-                <Text style={styles.webSectionTitle}>Product Details</Text>
-                <View style={styles.webSpecTable}>
-                  {Object.entries(product.specifications || {}).map(([key, value]: [string, any]) => (
-                    <View key={key} style={styles.webSpecRow}>
-                      <Text style={styles.webSpecKey}>{key}</Text>
-                      <Text style={styles.webSpecValue}>
-                        {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                      </Text>
+        <ScrollView style={{ flex: 1, backgroundColor: '#FFFFFF' }} showsVerticalScrollIndicator={false}>
+          <View style={[styles.webContainer, isShoes && styles.shoesWebContainer]}>
+            <View style={[styles.webGrid, isCompact && styles.webGridCompact, isShoes && styles.shoesWebGrid]}>
+              {/* Left: Image */}
+              <View style={[styles.webImageCol, isShoes && styles.shoesImageCol]}>
+                <View style={[styles.webMainImageWrapper, isShoes && styles.shoesMainImageWrapper]}>
+                  <Image 
+                    source={{ uri: product.images?.[activeImageIndex] || product.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80' }} 
+                    style={styles.webMainImage} 
+                  />
+                  {isShoes && (
+                    <View style={styles.shoesNikeLogo}>
+                      <LinearGradient 
+                        colors={['rgba(248, 104, 138, 0.4)', 'rgba(248, 104, 138, 0.05)']} 
+                        style={styles.shoesSwoosh}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                      />
                     </View>
-                  ))}
+                  )}
+                  {isShoes && (
+                    <View style={styles.webHeroTag}>
+                      <Text style={styles.webHeroTagText}>NEW COLORWAY</Text>
+                    </View>
+                  )}
                 </View>
+                
+                {product.images && product.images.length > 1 && (
+                  <View style={styles.webThumbnails}>
+                    {(product.images || []).map((img: string, i: number) => (
+                      <TouchableOpacity 
+                        key={i} 
+                        style={[styles.webThumb, i === activeImageIndex && styles.webThumbActive]}
+                        onPress={() => setActiveImageIndex(i)}
+                      >
+                        <Image source={{ uri: img }} style={styles.webThumbImage} />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
+
+              {/* Right: Info */}
+              <View style={[styles.webInfoCol, isShoes && styles.shoesInfoCol]}>
+                <Text style={isShoes ? styles.shoesTitle : styles.webProductName}>
+                  {isShoes ? (product.name.toUpperCase()) : product.name}
+                </Text>
+                
+                {isShoes ? (
+                  <>
+                    <Text style={styles.shoesSubtitle}>
+                      Limited Edition - {selectedColor?.name || (product.specifications?.colors?.[0]?.name || 'Coral Rush')}
+                    </Text>
+                    
+                    <View style={styles.shoesPriceRow}>
+                      <Text style={styles.shoesPrice}>₹{product.price.toLocaleString('en-IN')}</Text>
+                      {product.discount_price && (
+                        <Text style={styles.shoesOriginalPrice}>₹{product.discount_price.toLocaleString('en-IN')}</Text>
+                      )}
+                    </View>
+
+                    <View style={styles.ratingRow}>
+                      <View style={{ flexDirection: 'row', gap: 4 }}>
+                        {[1,2,3,4,5].map(i => <Star key={i} size={18} color="#f8688a" fill="#f8688a" />)}
+                      </View>
+                      <Text style={styles.ratingText}>({product.review_count || 248})</Text>
+                    </View>
+
+                    <View style={styles.shoesSection}>
+                      <Text style={styles.shoesSectionTitle}>COLORS</Text>
+                      <View style={styles.shoesColorRow}>
+                        {((product.specifications?.colors && product.specifications.colors.length > 0) ? product.specifications.colors : [
+                          { name: 'Red Rush', hex: '#f8688a' },
+                          { name: 'Midnight', hex: '#2b2f4b' },
+                          { name: 'Lime', hex: '#bef264' },
+                          { name: 'Pure', hex: '#ffffff' }
+                        ]).map((color: any, idx: number) => {
+                          const isSelected = selectedColor?.name === color.name;
+                          return (
+                            <TouchableOpacity 
+                              key={idx} 
+                              style={[styles.shoesColorCircle, isSelected && styles.shoesColorCircleActive]}
+                              onPress={() => setSelectedColor(color)}
+                            >
+                              <View style={[styles.colorInnerCircle, { backgroundColor: color.hex || color.hex1 }]} />
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </View>
+
+                    <View style={styles.shoesSection}>
+                      <Text style={styles.shoesSectionTitle}>SIZE</Text>
+                      <View style={styles.shoesSizeRow}>
+                        {((product.specifications?.sizes && product.specifications.sizes.length > 0) ? product.specifications.sizes : [6, 7, 7.5, 8, 8.5, 9, 10, 11]).map((size: any, idx: number) => (
+                          <TouchableOpacity 
+                            key={idx} 
+                            style={[styles.sizeBox, selectedSize === size && styles.sizeBoxActive]}
+                            onPress={() => setSelectedSize(size)}
+                          >
+                            <Text style={[styles.sizeBoxText, selectedSize === size && styles.sizeBoxTextActive]}>{size}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+
+                    <View style={styles.shoesActionRow}>
+                      <TouchableOpacity style={styles.shoesAddToCartBtn} onPress={addToCart}>
+                        <Text style={styles.shoesAddToCartText}>ADD TO CART</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.shoesAddToCartBtn, { backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#1e293b', marginTop: 12, shadowOpacity: 0 }]}>
+                        <Text style={[styles.shoesAddToCartText, { color: '#1e293b' }]}>SAVE FOR LATER</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.webTabsContainer}>
+                      <View style={styles.webTabsHeader}>
+                        <TouchableOpacity style={[styles.webTab, styles.webTabActive]}>
+                          <Text style={styles.webTabTextActive}>DETAILS</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.webTab}>
+                          <Text style={styles.webTabText}>DETAILS</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.webTab}>
+                          <Text style={styles.webTabText}>LATERS</Text>
+                        </TouchableOpacity>
+                      </View>
+                      
+                      <View style={styles.webTabContent}>
+                        <Text style={styles.webDetailDescription}>
+                          {product.description || 'Engineered knit upper for breathability • Nitrogen-infused midsole • 8.2 oz • 6mm drop • Ideal for tempo runs and daily training'}
+                        </Text>
+                        
+                        <View style={styles.webFeaturesGrid}>
+                          <View style={styles.webFeatureItem}>
+                            <TrendingUp size={18} color="#2b2f4b" />
+                            <Text style={styles.webFeatureText}>Lightweight</Text>
+                          </View>
+                          <View style={styles.webFeatureItem}>
+                            <Star size={18} color="#2b2f4b" />
+                            <Text style={styles.webFeatureText}>Responsive</Text>
+                          </View>
+                          <View style={styles.webFeatureItem}>
+                            <ShieldCheck size={18} color="#2b2f4b" />
+                            <Text style={styles.webFeatureText}>12-month warranty</Text>
+                          </View>
+                        </View>
+                      </View>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.webPriceContainer}>
+                      <Text style={styles.webCurrentPrice}>₹{Number(product.price).toLocaleString('en-IN')}</Text>
+                    </View>
+                    <Text style={styles.webDescription}>{product.description}</Text>
+                    <View style={styles.webActionRow}>
+                      <TouchableOpacity style={styles.webAddToCartBtn} onPress={addToCart}>
+                        <Text style={styles.webAddToCartText}>ADD TO CART</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <View style={styles.webTrustGrid}>
+                      <View style={styles.webTrustItem}>
+                        <Truck size={24} color="#2b2f4b" />
+                        <Text style={styles.webTrustTitle}>Free Shipping</Text>
+                        <Text style={styles.webTrustSub}>On orders over ₹999</Text>
+                      </View>
+                      <View style={styles.webTrustItem}>
+                        <ShieldCheck size={24} color="#2b2f4b" />
+                        <Text style={styles.webTrustTitle}>Secure Payment</Text>
+                        <Text style={styles.webTrustSub}>100% Secure Checkout</Text>
+                      </View>
+                    </View>
+                  </>
+                )}
               </View>
             </View>
           </View>
-        </View>
+        </ScrollView>
       </WebLayout>
     );
   }
@@ -813,15 +969,15 @@ const styles = StyleSheet.create({
 
   // Web Styles
   webContainer: {
-    maxWidth: 1400,
-    alignSelf: 'center',
     width: '100%',
-    padding: 40,
+    alignSelf: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
     backgroundColor: '#FFFFFF',
   },
   webGrid: {
     flexDirection: 'row',
-    gap: 60,
+    gap: 40,
   },
   webGridCompact: {
     flexDirection: 'column',
@@ -849,10 +1005,17 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 20,
     right: 20,
-    backgroundColor: '#2b2f4b',
+    backgroundColor: '#f8688a',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 10,
+    zIndex: 20,
+  },
+  webHeroTagText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 1,
   },
   webThumbnails: {
     flexDirection: 'row',
@@ -978,8 +1141,9 @@ const styles = StyleSheet.create({
   },
   webAddToCartText: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
+    fontFamily: 'Inter',
   },
   webWishlistBtn: {
     width: 56,
@@ -1049,5 +1213,284 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#2b2f4b',
     fontWeight: '600',
+  },
+  // Shoes Special Design
+  shoesWebContainer: {
+    backgroundColor: 'transparent',
+    paddingVertical: 20,
+  },
+  shoesWebGrid: {
+    backgroundColor: '#FFFFFF',
+    padding: 30,
+    gap: 40,
+  },
+  shoesImageCol: {
+    flex: 1,
+  },
+  shoesMainImageWrapper: {
+    aspectRatio: 1,
+    borderRadius: 20,
+    overflow: 'hidden',
+    backgroundColor: '#F3F4F6',
+    borderWidth: 0,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 40,
+    shadowOffset: { width: 0, height: 20 },
+  },
+  shoesNikeLogo: {
+    position: 'absolute',
+    top: -20,
+    left: -20,
+    right: -20,
+    bottom: -20,
+    zIndex: -1,
+  },
+  shoesSwoosh: {
+    width: '100%',
+    height: '100%',
+    opacity: 0.3,
+  },
+  shoesInfoCol: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  newSeasonBadge: {
+    backgroundColor: '#f8688a',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+    marginBottom: 20,
+  },
+  newSeasonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  shoesTitle: {
+    fontSize: 48,
+    fontWeight: '800',
+    color: '#1e293b',
+    lineHeight: 52,
+    marginBottom: 4,
+    letterSpacing: -1,
+    fontFamily: 'Inter',
+  },
+  shoesSubtitle: {
+    fontSize: 18,
+    color: '#f8688a',
+    fontWeight: '500',
+    marginBottom: 12,
+    fontFamily: 'Inter',
+  },
+  shoesPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 12,
+    marginBottom: 16,
+  },
+  shoesPrice: {
+    fontSize: 36,
+    fontWeight: '900',
+    color: '#1e293b',
+  },
+  shoesOriginalPrice: {
+    fontSize: 24,
+    color: '#94a3b8',
+    textDecorationLine: 'line-through',
+  },
+  shoesPriceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 20,
+    marginBottom: 40,
+  },
+  freeShippingText: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  shoesSection: {
+    marginBottom: 24,
+  },
+  shoesSectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#64748B',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontFamily: 'Inter',
+  },
+  shoesColorRow: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  shoesColorCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    padding: 3,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  shoesColorCircleActive: {
+    borderColor: '#1e293b',
+    borderWidth: 2,
+  },
+  colorInnerCircle: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 12,
+  },
+  shoesSizeRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  sizeBox: {
+    width: 52,
+    height: 40,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+  },
+  sizeBoxActive: {
+    backgroundColor: '#f8688a',
+    borderColor: '#f8688a',
+  },
+  sizeBoxText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1e293b',
+  },
+  sizeBoxTextActive: {
+    color: '#FFFFFF',
+  },
+  shoesActionRow: {
+    marginTop: 12,
+    marginBottom: 24,
+  },
+  shoesAddToCartBtn: {
+    backgroundColor: '#f8688a',
+    height: 64,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#f8688a',
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+  },
+  shoesAddToCartText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  socialProof: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 20,
+    backgroundColor: 'rgba(248, 104, 138, 0.05)',
+    padding: 12,
+    borderRadius: 12,
+  },
+  proofIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#f8688a',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  proofText: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  webTabsContainer: {
+    marginTop: 40,
+    borderTopWidth: 1,
+    borderTopColor: '#e2e8f0',
+  },
+  webTabsHeader: {
+    flexDirection: 'row',
+    gap: 40,
+  },
+  webTab: {
+    paddingVertical: 16,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  webTabActive: {
+    borderBottomColor: '#f8688a',
+  },
+  webTabText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#94a3b8',
+    letterSpacing: 1,
+  },
+  webTabTextActive: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#1e293b',
+    letterSpacing: 1,
+  },
+  webTabContent: {
+    paddingVertical: 24,
+  },
+  webDetailDescription: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#475569',
+    marginBottom: 32,
+  },
+  webFeaturesGrid: {
+    flexDirection: 'row',
+    gap: 32,
+    marginTop: 8,
+  },
+  webFeatureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  webFeatureText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e293b',
+  },
+  mobileThumbnailsOverlay: {
+    position: 'absolute',
+    bottom: 40,
+    left: 0,
+    right: 0,
+    zIndex: 20,
+  },
+  mobileThumb: {
+    width: 60,
+    height: 60,
+    borderRadius: 12,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  mobileThumbActive: {
+    borderColor: '#f8688a',
+  },
+  mobileThumbImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
   },
 });

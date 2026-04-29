@@ -6,6 +6,9 @@ export function useLiveMatch(matchId?: string) {
   const { session } = useAuth();
   const [liveState, setLiveState] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [viewerCount, setViewerCount] = useState(0);
+  const [reactions, setReactions] = useState<{ id: string; emoji: string }[]>([]);
+  const [channel, setChannel] = useState<any>(null);
 
   // Initial fetch and subscription
   useEffect(() => {
@@ -24,8 +27,14 @@ export function useLiveMatch(matchId?: string) {
 
     fetchInitial();
 
-    const channel = supabase
-      .channel(`match:${matchId}`)
+    const channel = supabase.channel(`match:${matchId}`, {
+      config: {
+        broadcast: { self: false },
+        presence: { key: matchId },
+      },
+    });
+
+    channel
       .on(
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'match_live_state', filter: `match_id=eq.${matchId}` },
@@ -33,7 +42,27 @@ export function useLiveMatch(matchId?: string) {
           setLiveState(payload.new);
         }
       )
-      .subscribe();
+      .on('broadcast', { event: 'reaction' }, (payload) => {
+        const newReaction = {
+          id: Math.random().toString(36).substr(2, 9),
+          emoji: payload.payload.emoji
+        };
+        setReactions((prev) => [...prev.slice(-10), newReaction]); // Keep last 10
+      })
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState();
+        setViewerCount(Object.keys(state).length);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await channel.track({
+            viewer_id: Math.random().toString(36).substr(2, 9),
+            joined_at: new Date().toISOString(),
+          });
+        }
+      });
+
+    setChannel(channel);
 
     return () => {
       supabase.removeChannel(channel);
@@ -91,10 +120,28 @@ export function useLiveMatch(matchId?: string) {
     if (error) console.error('Error updating live state:', error);
   }, [matchId, session]);
 
+  const sendReaction = useCallback((emoji: string) => {
+    if (!channel) return;
+    channel.send({
+      type: 'broadcast',
+      event: 'reaction',
+      payload: { emoji }
+    });
+    // Optimistic UI for self
+    const newReaction = {
+      id: Math.random().toString(36).substr(2, 9),
+      emoji
+    };
+    setReactions((prev) => [...prev.slice(-10), newReaction]);
+  }, [channel]);
+
   return {
     liveState,
     loading,
     startLiveMatch,
-    updateLiveState
+    updateLiveState,
+    viewerCount,
+    reactions,
+    sendReaction
   };
 }

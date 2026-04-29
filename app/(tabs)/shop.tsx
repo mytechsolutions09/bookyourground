@@ -388,14 +388,10 @@ export default function ShopScreen() {
         <HeroSkeleton />
       ) : (
         <Animated.View style={[styles.heroWrapper, bannerAnimatedStyle]}>
-          {featuredProduct ? (
-            <Image 
-              source={{ uri: featuredProduct.images?.[0] || 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=800&q=80' }} 
-              style={styles.heroImageBg} 
-            />
-          ) : (
-            <View style={[styles.heroImageBg, { backgroundColor: '#f8688a' }]} />
-          )}
+          <Image 
+            source={activeCategory === 'Shoes' ? require('@/assets/shoes-hero.png') : require('@/assets/shop-hero.png')} 
+            style={styles.heroImageBg} 
+          />
           <LinearGradient
             colors={['transparent', 'rgba(0,0,0,0.1)', 'rgba(0,0,0,0.6)']}
             style={styles.heroOverlay}
@@ -403,21 +399,18 @@ export default function ShopScreen() {
           <View style={[styles.heroContent, { paddingTop: insets.top + 60 }]}>
             <View style={styles.trendingBadge}>
               <TrendingUp size={14} color="#f8688a" />
-              <RNText style={styles.trendingText}>NEW ARRIVAL</RNText>
+              <RNText style={styles.trendingText}>
+                {activeCategory === 'Shoes' ? 'PERFORMANCE FOOTWEAR' : 'NEW ARRIVAL'}
+              </RNText>
             </View>
-            <RNText style={styles.heroTitle}>{featuredProduct?.name || 'Pro Cricket Gear'}</RNText>
-            <RNText style={styles.heroSubtitle} numberOfLines={2}>
-              {featuredProduct?.description || 'Experience the next generation of performance equipment designed for elite athletes.'}
+            <RNText style={styles.heroTitle}>
+              {activeCategory === 'Shoes' ? 'Step Up Your Game' : (featuredProduct?.name || 'Pro Cricket Gear')}
             </RNText>
-            <TouchableOpacity 
-              style={styles.heroBtn}
-              onPress={() => featuredProduct && router.push({ pathname: '/shop/[id]', params: { id: featuredProduct.id } })}
-            >
-              <RNText style={styles.heroBtnText}>Explore Collection</RNText>
-              <View style={styles.heroBtnIcon}>
-                <ArrowRight size={18} color="#FFFFFF" />
-              </View>
-            </TouchableOpacity>
+            {activeCategory === 'Shoes' && (
+              <RNText style={styles.heroSubtitle}>
+                Experience ultimate comfort and grip with our professional range of cricket spikes and training shoes.
+              </RNText>
+            )}
           </View>
         </Animated.View>
       )}
@@ -507,7 +500,15 @@ export default function ShopScreen() {
             <RNText style={styles.sectionTitle}>
               {activeCategory === 'all' ? 'Featured Items' : activeCategory}
             </RNText>
-            <TouchableOpacity style={styles.viewAllRow}>
+            <TouchableOpacity 
+              style={styles.viewAllRow}
+              onPress={() => {
+                setActiveCategory('all');
+                setSearchQuery('');
+                setPriceRange(null);
+                setSortBy('newest');
+              }}
+            >
               <RNText style={styles.viewAllText}>View All</RNText>
               <ChevronRight size={16} color="#f8688a" />
             </TouchableOpacity>
@@ -537,6 +538,95 @@ export default function ShopScreen() {
     );
   };
 
+  const renderFilterModal = () => (
+    <Modal
+      visible={isFilterVisible}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setIsFilterVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <TouchableOpacity 
+          style={styles.modalBackdrop} 
+          activeOpacity={1} 
+          onPress={() => setIsFilterVisible(false)} 
+        />
+        <View style={[styles.modalContent, { paddingBottom: insets.bottom + 20 }]}>
+          <View style={styles.modalHeader}>
+            <RNText style={styles.modalTitle}>Filter & Sort</RNText>
+            <TouchableOpacity onPress={() => setIsFilterVisible(false)} style={styles.modalCloseBtn}>
+              <X size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <View style={styles.modalSection}>
+              <RNText style={styles.modalSectionTitle}>Sort By</RNText>
+              <View style={styles.modalGrid}>
+                {[
+                  { id: 'newest', label: 'Newest Arrivals' },
+                  { id: 'price_low', label: 'Price: Low to High' },
+                  { id: 'price_high', label: 'Price: High to Low' },
+                  { id: 'rating', label: 'Best Rating' }
+                ].map(option => (
+                  <TouchableOpacity 
+                    key={option.id}
+                    style={[styles.modalOption, tempSortBy === option.id && styles.modalOptionActive]}
+                    onPress={() => setTempSortBy(option.id)}
+                  >
+                    <RNText style={[styles.modalOptionText, tempSortBy === option.id && styles.modalOptionTextActive]}>
+                      {option.label}
+                    </RNText>
+                    {tempSortBy === option.id && <Check size={16} color="#FFFFFF" />}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.modalSection}>
+              <RNText style={styles.modalSectionTitle}>Price Range</RNText>
+              <View style={styles.modalGrid}>
+                {[
+                  { label: 'All', range: null },
+                  { label: 'Under ₹500', range: [0, 500] },
+                  { label: '₹500 - ₹2000', range: [500, 2000] },
+                  { label: '₹2000 - ₹5000', range: [2000, 5000] },
+                  { label: '₹5000+', range: [5000, 100000] }
+                ].map((option, idx) => (
+                  <TouchableOpacity 
+                    key={idx}
+                    style={[
+                      styles.modalOption, 
+                      JSON.stringify(tempPriceRange) === JSON.stringify(option.range) && styles.modalOptionActive
+                    ]}
+                    onPress={() => setTempPriceRange(option.range as [number, number] | null)}
+                  >
+                    <RNText style={[
+                      styles.modalOptionText, 
+                      JSON.stringify(tempPriceRange) === JSON.stringify(option.range) && styles.modalOptionTextActive
+                    ]}>
+                      {option.label}
+                    </RNText>
+                    {JSON.stringify(tempPriceRange) === JSON.stringify(option.range) && <Check size={16} color="#FFFFFF" />}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </ScrollView>
+
+          <View style={styles.modalFooter}>
+            <TouchableOpacity style={styles.resetBtn} onPress={resetFilters}>
+              <RNText style={styles.resetBtnText}>Reset All</RNText>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.applyBtn} onPress={applyFilters}>
+              <RNText style={styles.applyBtnText}>Apply Filters</RNText>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
   if (Platform.OS === 'web') {
     return (
       <WebLayout hideHeader={isSmall} isPublicNoSidebar={isSmall}>
@@ -555,6 +645,7 @@ export default function ShopScreen() {
           )}
           {content(Platform.OS === 'web' ? undefined : verticalScrollHandler)}
         </View>
+        {renderFilterModal()}
       </WebLayout>
     );
   }
@@ -573,96 +664,7 @@ export default function ShopScreen() {
       </View>
       
       {content(Platform.OS === 'web' ? undefined : verticalScrollHandler)}
-      
-      {/* Filter Modal */}
-      <Modal
-        visible={isFilterVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setIsFilterVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <TouchableOpacity 
-            style={styles.modalBackdrop} 
-            activeOpacity={1} 
-            onPress={() => setIsFilterVisible(false)} 
-          />
-          <View style={[styles.modalContent, { paddingBottom: insets.bottom + 20 }]}>
-            <View style={styles.modalHeader}>
-              <RNText style={styles.modalTitle}>Filter & Sort</RNText>
-              <TouchableOpacity onPress={() => setIsFilterVisible(false)} style={styles.modalCloseBtn}>
-                <X size={24} color="#FFFFFF" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {/* Sort Section */}
-              <View style={styles.modalSection}>
-                <RNText style={styles.modalSectionTitle}>Sort By</RNText>
-                <View style={styles.modalGrid}>
-                  {[
-                    { id: 'newest', label: 'Newest Arrivals' },
-                    { id: 'price_low', label: 'Price: Low to High' },
-                    { id: 'price_high', label: 'Price: High to Low' },
-                    { id: 'rating', label: 'Best Rating' }
-                  ].map(option => (
-                    <TouchableOpacity 
-                      key={option.id}
-                      style={[styles.modalOption, tempSortBy === option.id && styles.modalOptionActive]}
-                      onPress={() => setTempSortBy(option.id)}
-                    >
-                      <RNText style={[styles.modalOptionText, tempSortBy === option.id && styles.modalOptionTextActive]}>
-                        {option.label}
-                      </RNText>
-                      {tempSortBy === option.id && <Check size={16} color="#FFFFFF" />}
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              {/* Price Section */}
-              <View style={styles.modalSection}>
-                <RNText style={styles.modalSectionTitle}>Price Range</RNText>
-                <View style={styles.modalGrid}>
-                  {[
-                    { label: 'All', range: null },
-                    { label: 'Under ₹500', range: [0, 500] },
-                    { label: '₹500 - ₹2000', range: [500, 2000] },
-                    { label: '₹2000 - ₹5000', range: [2000, 5000] },
-                    { label: '₹5000+', range: [5000, 100000] }
-                  ].map((option, idx) => (
-                    <TouchableOpacity 
-                      key={idx}
-                      style={[
-                        styles.modalOption, 
-                        JSON.stringify(tempPriceRange) === JSON.stringify(option.range) && styles.modalOptionActive
-                      ]}
-                      onPress={() => setTempPriceRange(option.range as [number, number] | null)}
-                    >
-                      <RNText style={[
-                        styles.modalOptionText, 
-                        JSON.stringify(tempPriceRange) === JSON.stringify(option.range) && styles.modalOptionTextActive
-                      ]}>
-                        {option.label}
-                      </RNText>
-                      {JSON.stringify(tempPriceRange) === JSON.stringify(option.range) && <Check size={16} color="#f8688a" />}
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity style={styles.resetBtn} onPress={resetFilters}>
-                <RNText style={styles.resetBtnText}>Reset All</RNText>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.applyBtn} onPress={applyFilters}>
-                <RNText style={styles.applyBtnText}>Apply Filters</RNText>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {renderFilterModal()}
     </View>
   );
 }
@@ -859,27 +861,23 @@ const styles = StyleSheet.create({
   },
   categoryList: {
     paddingHorizontal: 20,
-    gap: 10,
+    gap: 8,
   },
   categoryPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F1F5F9',
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 25,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    paddingVertical: 10,
+    borderRadius: 12,
   },
   categoryPillActive: {
     backgroundColor: '#f8688a',
-    borderColor: '#f8688a',
   },
   categoryPillText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#475569',
     fontFamily: 'Inter',
   },
   categoryPillTextActive: {

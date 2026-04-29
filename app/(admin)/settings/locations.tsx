@@ -15,5 +15,10 @@ export default function AdminSettingsLocations() {
   );
 
   if (Platform.OS === 'web') return <WebLayout noCard>{inner}</WebLayout>;
-  return inner;
+  return (
+    <View style={{ flex: 1, backgroundColor: '#F5F5F5' }}>
+      <MobileAppNavbar title="LOCATIONS" titleColor="#10b981" />
+      {inner}
+    </View>
+  );
 }

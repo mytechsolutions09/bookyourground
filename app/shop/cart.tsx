@@ -36,6 +36,7 @@ export default function CartScreen() {
         .select(`
           id,
           quantity,
+          selected_attributes,
           product:shop_products(*)
         `)
         .eq('user_id', user?.id);
@@ -120,6 +121,16 @@ export default function CartScreen() {
                   />
                   <View style={styles.itemInfo}>
                     <Text style={styles.itemName} numberOfLines={1}>{item.product.name}</Text>
+                    {item.selected_attributes && (
+                      <View style={styles.attributesRow}>
+                        {item.selected_attributes.size && (
+                          <Text style={styles.attributeText}>Size: {item.selected_attributes.size}</Text>
+                        )}
+                        {item.selected_attributes.color && (
+                          <Text style={styles.attributeText}>Color: {item.selected_attributes.color}</Text>
+                        )}
+                      </View>
+                    )}
                     <Text style={styles.itemCategory}>{item.product.tag || 'Standard'}</Text>
                     <Text style={styles.itemPrice}>₹{item.product.price.toLocaleString('en-IN')}</Text>
                     
@@ -327,6 +338,16 @@ const styles = StyleSheet.create({
   },
   removeBtn: {
     padding: 8,
+  },
+  attributesRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 4,
+  },
+  attributeText: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
   },
   summaryCard: {
     backgroundColor: '#2b2f4b',

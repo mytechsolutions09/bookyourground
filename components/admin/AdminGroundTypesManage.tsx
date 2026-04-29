@@ -150,12 +150,14 @@ export default function AdminGroundTypesManage() {
 
   const listHeader = (
     <>
-      <View style={[styles.header, Platform.OS === 'web' && styles.webHeader]}>
-        <Text style={styles.title}>Ground types</Text>
-        <Text style={styles.subtitle}>
-          Pitch / ground categories for filters and booking. {rows.length} total
-        </Text>
-      </View>
+      {Platform.OS === 'web' && (
+        <View style={[styles.header, styles.webHeader]}>
+          <Text style={styles.title}>Ground types</Text>
+          <Text style={styles.subtitle}>
+            Pitch / ground categories for filters and booking. {rows.length} total
+          </Text>
+        </View>
+      )}
 
       <Card style={styles.formCard}>
         <Text style={styles.formTitle}>Add ground type</Text>

@@ -83,6 +83,7 @@ export default function CheckoutScreen() {
         .select(`
           id,
           quantity,
+          selected_attributes,
           product:shop_products(*)
         `)
         .eq('user_id', user.id);
@@ -130,7 +131,8 @@ export default function CheckoutScreen() {
         order_id: order.id,
         product_id: item.product.id,
         quantity: item.quantity,
-        price_at_purchase: item.product.price
+        price_at_purchase: item.product.price,
+        selected_attributes: item.selected_attributes
       }));
 
       const { error: itemsError } = await supabase

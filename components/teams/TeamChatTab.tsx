@@ -24,8 +24,18 @@ interface TeamChatTabProps {
 
 export default function TeamChatTab({ teamId, isMember }: TeamChatTabProps) {
   const { user } = useAuth();
-  const { messages, loading, sending, sendMessage, sendMedia } = useTeamChat(teamId);
+  const { 
+    messages, 
+    loading, 
+    sending, 
+    sendMessage, 
+    sendMedia,
+    onlineUsers,
+    typingUsers,
+    setTyping
+  } = useTeamChat(teamId);
   const [inputText, setInputText] = useState('');
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const flatListRef = useRef<FlatList>(null);
 
   const handleSend = async () => {
@@ -33,6 +43,7 @@ export default function TeamChatTab({ teamId, isMember }: TeamChatTabProps) {
     try {
       await sendMessage(inputText);
       setInputText('');
+      setTyping(false);
     } catch (err) {
       Alert.alert('Error', 'Failed to send message. Please try again.');
     }
@@ -105,6 +116,17 @@ export default function TeamChatTab({ teamId, isMember }: TeamChatTabProps) {
         }
       />
 
+      {/* Typing Indicator */}
+      {typingUsers.length > 0 && (
+        <View style={styles.typingIndicator}>
+          <Text style={styles.typingText}>
+            {typingUsers.length === 1 
+              ? `${typingUsers[0]} is typing...` 
+              : `${typingUsers.length} people are typing...`}
+          </Text>
+        </View>
+      )}
+
       <View style={styles.inputArea}>
         <View style={styles.inputContainer}>
           <TouchableOpacity 
@@ -117,7 +139,18 @@ export default function TeamChatTab({ teamId, isMember }: TeamChatTabProps) {
           <TextInput
             style={styles.input}
             value={inputText}
-            onChangeText={setInputText}
+            onChangeText={(text) => {
+              setInputText(text);
+              
+              // Broadcast typing status
+              if (text.length > 0) {
+                setTyping(true);
+                if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+                typingTimeoutRef.current = setTimeout(() => setTyping(false), 3000);
+              } else {
+                setTyping(false);
+              }
+            }}
             placeholder="Type a message..."
             placeholderTextColor="#94A3B8"
             multiline
@@ -227,5 +260,15 @@ const styles = StyleSheet.create({
   sendBtnDisabled: {
     backgroundColor: '#94A3AF',
     shadowOpacity: 0,
+  },
+  typingIndicator: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+  },
+  typingText: {
+    fontSize: 12,
+    color: '#64748B',
+    fontStyle: 'italic',
   },
 });

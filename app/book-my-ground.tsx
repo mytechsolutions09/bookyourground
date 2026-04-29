@@ -24,14 +24,20 @@ export default function BookMyGroundPage() {
 
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
-      if (Platform.OS === 'web') return; // Handled by onScrollWeb for web
+      if (Platform.OS === 'web') return; 
       const currentY = event.contentOffset.y;
       
       const diff = currentY - lastScrollY.value;
-      if (diff > 5 && currentY > 100) {
-        headerTranslateY.value = withTiming(-HEADER_HEIGHT, { duration: 300 });
-      } else if (diff < -5 || currentY < 50) {
-        headerTranslateY.value = withTiming(0, { duration: 300 });
+      if (diff > 2 && currentY > 60) {
+        if (headerTranslateY.value === 0) {
+          headerTranslateY.value = withTiming(-HEADER_HEIGHT - 20, { duration: 400 });
+          runOnJS(setTabBarVisible)(false);
+        }
+      } else if (diff < -2 || currentY < 20) {
+        if (headerTranslateY.value < 0) {
+          headerTranslateY.value = withTiming(0, { duration: 400 });
+          runOnJS(setTabBarVisible)(true);
+        }
       }
       lastScrollY.value = currentY;
     },
@@ -42,12 +48,16 @@ export default function BookMyGroundPage() {
     DeviceEventEmitter.emit('mainScroll', { y: currentY });
 
     const diff = currentY - lastScrollY.value;
-    if (diff > 5 && currentY > 100) {
-      headerTranslateY.value = withTiming(-HEADER_HEIGHT, { duration: 300 });
-      setTabBarVisible(false);
-    } else if (diff < -5 || currentY < 50) {
-      headerTranslateY.value = withTiming(0, { duration: 300 });
-      setTabBarVisible(true);
+    if (diff > 2 && currentY > 60) {
+      if (headerTranslateY.value === 0) {
+        headerTranslateY.value = withTiming(-HEADER_HEIGHT - 20, { duration: 400 });
+        setTabBarVisible(false);
+      }
+    } else if (diff < -2 || currentY < 20) {
+      if (headerTranslateY.value < 0) {
+        headerTranslateY.value = withTiming(0, { duration: 400 });
+        setTabBarVisible(true);
+      }
     }
     lastScrollY.value = currentY;
   };
@@ -205,13 +215,18 @@ export default function BookMyGroundPage() {
   // Native (iOS / Android): full-screen booking form with simple navbar.
   return (
     <View style={styles.nativeRoot}>
-      <MobileAppNavbar title="Book a ground" bgColor="#F8FAFC" />
-      <View style={styles.page}>
+      <Animated.View style={[{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000, backgroundColor: 'transparent' }, headerAnimatedStyle]}>
+        <MobileAppNavbar title="Book a ground" titleColor="#0F172A" lightBg />
+      </Animated.View>
+      <View style={[styles.page, { paddingTop: 0 }]}>
         <LandingBookingForm
           fullWidth
           noCard
           bookGroundScreenNative
           hideTitle
+          onScroll={scrollHandler}
+          scrollEventThrottle={16}
+          contentPaddingTop={80}
           {...initialProps}
         />
       </View>

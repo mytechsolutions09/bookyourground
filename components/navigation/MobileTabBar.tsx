@@ -61,8 +61,8 @@ export default function MobileTabBar() {
 
   React.useEffect(() => {
     translateY.value = withTiming(isTabBarVisible ? 0 : 120, {
-      duration: 500,
-      easing: Easing.out(Easing.exp),
+      duration: 400,
+      easing: Easing.bezier(0.25, 0.1, 0.25, 1),
     });
   }, [isTabBarVisible]);
 

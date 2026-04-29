@@ -12,5 +12,10 @@ export default function AdminSettingsGroundTypes() {
   );
 
   if (Platform.OS === 'web') return <WebLayout>{inner}</WebLayout>;
-  return inner;
+  return (
+    <View style={{ flex: 1, backgroundColor: '#F5F5F5' }}>
+      <MobileAppNavbar title="GROUND TYPES" titleColor="#10b981" />
+      {inner}
+    </View>
+  );
 }

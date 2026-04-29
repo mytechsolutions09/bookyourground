@@ -326,7 +326,7 @@ export default function ProfileScreen() {
 
             <TouchableOpacity 
               style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
-              onPress={() => router.push('/(admin)/withdrawals' as any)}
+              onPress={() => router.push('/(admin)/payouts' as any)}
             >
               <View style={styles.hubIconCircle}>
                 <IndianRupee size={24} color="#10b981" />

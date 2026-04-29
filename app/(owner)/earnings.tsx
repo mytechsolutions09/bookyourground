@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, Platform, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Modal, TextInput as RNTextInput, useWindowDimensions } from 'react-native';
+import { useLocalSearchParams, router } from 'expo-router';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import WebLayout from '@/components/web/WebLayout';
 import { supabase } from '@/lib/supabase';
@@ -182,7 +183,14 @@ function OwnerEarningsScreenInner() {
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [wallet, setWallet] = useState<WalletData | null>(null);
-  const [viewMode, setViewMode] = useState<'preview' | 'summary' | 'analytics' | 'payouts'>('preview');
+  const { tab } = useLocalSearchParams<{ tab: string }>();
+  const [viewMode, setViewMode] = useState<'preview' | 'summary' | 'analytics' | 'payouts'>((tab as any) || 'preview');
+
+  useEffect(() => {
+    if (tab && (tab === 'preview' || tab === 'summary' || tab === 'analytics' || tab === 'payouts')) {
+      setViewMode(tab as any);
+    }
+  }, [tab]);
 
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [showStatementModal, setShowStatementModal] = useState(false);
@@ -577,11 +585,11 @@ function OwnerEarningsScreenInner() {
         </View>
 
         <View style={styles.table}>
-          <View style={[styles.tableHeader, { backgroundColor: '#F8FAFC', borderTopLeftRadius: 12, borderTopRightRadius: 12 }]}>
-            <Text style={[styles.headerText, { width: 100 }]}>Date</Text>
+          <View style={[styles.tableHeader, { backgroundColor: '#F8FAFC', borderTopLeftRadius: 12, borderTopRightRadius: 12, paddingHorizontal: 16 }]}>
+            <Text style={[styles.headerText, { width: 110 }]}>Date & Time</Text>
             <Text style={[styles.headerText, { flex: 1.5 }]}>Venue & Customer</Text>
-            <Text style={[styles.headerText, { width: 100 }]}>Method</Text>
-            <Text style={[styles.headerText, { width: 100, textAlign: 'right' }]}>Amount</Text>
+            <Text style={[styles.headerText, { width: 100 }]}>Payment</Text>
+            <Text style={[styles.headerText, { width: 120, textAlign: 'right' }]}>Amount</Text>
           </View>
           
           {transactions.length === 0 ? (
@@ -590,13 +598,13 @@ function OwnerEarningsScreenInner() {
             </View>
           ) : (
             transactions.map((tx) => (
-              <View key={tx.id} style={styles.tableRow}>
-                <View style={{ width: 100 }}>
+              <View key={tx.id} style={[styles.tableRow, { paddingHorizontal: 16 }]}>
+                <View style={{ width: 110 }}>
                   <Text style={styles.cellTextMain}>
-                    {new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
+                    {new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
                   </Text>
                   <Text style={styles.cellTextSub}>
-                    {new Date(tx.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                    {new Date(tx.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                   </Text>
                 </View>
                 
@@ -623,13 +631,16 @@ function OwnerEarningsScreenInner() {
                   </View>
                 </View>
 
-                <View style={{ width: 100, alignItems: 'flex-end' }}>
-                  <Text style={[styles.cellTextMain, { fontSize: 15 }]}>
+                <View style={{ width: 120, alignItems: 'flex-end' }}>
+                  <Text style={[styles.cellTextMain, { fontSize: 16, fontWeight: '700' }]}>
                     {formatCurrency(tx.total_amount)}
                   </Text>
-                  <Text style={[styles.cellTextSub, { fontSize: 10, color: '#059669' }]}>
-                    Confirmed
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <CheckCircle2 size={10} color="#059669" />
+                    <Text style={[styles.cellTextSub, { fontSize: 10, color: '#059669', fontWeight: '600' }]}>
+                      Confirmed
+                    </Text>
+                  </View>
                 </View>
               </View>
             ))
@@ -781,16 +792,16 @@ function OwnerEarningsScreenInner() {
                     <Text style={[styles.cellTextMain, { color: '#64748B' }]}>{p.matches} {p.matches === 1 ? 'Match' : 'Matches'}</Text>
                   </View>
                   <View style={{ width: 100, alignItems: 'flex-end' }}>
-                    <Text style={[styles.cellTextMain, { color: '#EF4444' }]}>-₹{Math.round(p.fees)}</Text>
+                    <Text style={[styles.cellTextMain, { color: '#64748B' }]}>-₹{Math.round(p.fees)}</Text>
                   </View>
                   <View style={{ width: 100, alignItems: 'flex-end' }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <Text style={[styles.cellTextMain, { color: p.net <= 0 ? '#EF4444' : '#059669', fontWeight: '800' }]}>
+                      <Text style={[styles.cellTextMain, { color: p.net <= 0 ? '#94A3B8' : '#059669', fontWeight: '800' }]}>
                         {formatCurrency(Math.max(0, p.net))}
                       </Text>
                       {p.net < 0 && (
                          <View style={styles.debtBadge}>
-                           <Text style={styles.debtText}>DEBT</Text>
+                           <Text style={styles.debtText}>ADJUSTMENT</Text>
                          </View>
                       )}
                     </View>
@@ -963,7 +974,7 @@ function OwnerEarningsScreenInner() {
                  <Text style={styles.venueAmount}>{formatCurrency(Number(v.amount))} ({Math.round(Number(v.percent))}%)</Text>
                </View>
                <View style={styles.progressBg}>
-                 <View style={[styles.progressFill, { width: `${v.percent}%`, backgroundColor: i === 3 ? '#EF4444' : '#01b854' }]} />
+                 <View style={[styles.progressFill, { width: `${v.percent}%`, backgroundColor: i === 0 ? '#01b854' : (i === 1 ? '#3B82F6' : (i === 2 ? '#8B5CF6' : '#64748B')) }]} />
                </View>
             </View>
           ))}
@@ -1055,32 +1066,32 @@ function OwnerEarningsScreenInner() {
       // @ts-ignore - web-only style to hide scrollbar
       contentContainerStyle={[
         styles.scrollContent,
-        { flexGrow: 1, paddingVertical: 24 },
+        { flexGrow: 1, paddingBottom: 24 },
         Platform.OS === 'web' && { scrollbarWidth: 'none', msOverflowStyle: 'none' } as any
       ]}
     >
-      <View style={[styles.viewToggleContainer, isCompact && { alignSelf: 'stretch', minWidth: 0 }, { marginHorizontal: 24, marginBottom: 32 }]}>
+      <View style={styles.viewToggleContainer}>
         <TouchableOpacity 
           style={[styles.viewToggleBtn, viewMode === 'preview' && styles.viewToggleBtnActive]}
-          onPress={() => setViewMode('preview')}
+          onPress={() => router.push('/(owner)/earnings?tab=preview')}
         >
           <Text style={[styles.viewToggleBtnText, viewMode === 'preview' && styles.viewToggleBtnTextActive]}>Preview</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={[styles.viewToggleBtn, viewMode === 'summary' && styles.viewToggleBtnActive]}
-          onPress={() => setViewMode('summary')}
+          onPress={() => router.push('/(owner)/earnings?tab=summary')}
         >
           <Text style={[styles.viewToggleBtnText, viewMode === 'summary' && styles.viewToggleBtnTextActive]}>Summary</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={[styles.viewToggleBtn, viewMode === 'analytics' && styles.viewToggleBtnActive]}
-          onPress={() => setViewMode('analytics')}
+          onPress={() => router.push('/(owner)/earnings?tab=analytics')}
         >
           <Text style={[styles.viewToggleBtnText, viewMode === 'analytics' && styles.viewToggleBtnTextActive]}>Analytics</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           style={[styles.viewToggleBtn, viewMode === 'payouts' && styles.viewToggleBtnActive]}
-          onPress={() => setViewMode('payouts')}
+          onPress={() => router.push('/(owner)/earnings?tab=payouts')}
         >
           <Text style={[styles.viewToggleBtnText, viewMode === 'payouts' && styles.viewToggleBtnTextActive]}>Payouts</Text>
         </TouchableOpacity>
@@ -1807,12 +1818,11 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 6,
     marginHorizontal: 24,
-    marginTop: 16,
-    marginBottom: 24,
+    marginTop: 0,
+    marginBottom: 32,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    alignSelf: 'flex-start',
-    minWidth: 400,
+    alignSelf: 'stretch',
   },
   viewToggleBtn: {
     flex: 1,

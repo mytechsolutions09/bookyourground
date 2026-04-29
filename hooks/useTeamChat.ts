@@ -21,6 +21,9 @@ export function useTeamChat(teamId: string) {
   const [messages, setMessages] = useState<TeamMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState<any[]>([]);
+  const [typingUsers, setTypingUsers] = useState<Record<string, string>>({});
+  const [activeChannel, setActiveChannel] = useState<any>(null);
 
   useEffect(() => {
     if (!teamId) return;
@@ -36,8 +39,11 @@ export function useTeamChat(teamId: string) {
     const channel = supabase.channel(channelName, {
       config: {
         broadcast: { self: true },
+        presence: { key: user?.id || 'anon' },
       },
     });
+
+    setActiveChannel(channel);
 
     channel
       .on(
@@ -83,7 +89,37 @@ export function useTeamChat(teamId: string) {
         };
         setMessages((prev) => [mediaMsg, ...prev]);
       })
-      .subscribe();
+      .on('broadcast', { event: 'typing' }, (payload) => {
+        if (!isSubscribed) return;
+        const { userId, userName, isTyping } = payload.payload;
+        if (userId === user?.id) return;
+
+        setTypingUsers((prev) => {
+          const next = { ...prev };
+          if (isTyping) {
+            next[userId] = userName;
+          } else {
+            delete next[userId];
+          }
+          return next;
+        });
+      })
+      .on('presence', { event: 'sync' }, () => {
+        if (!isSubscribed) return;
+        const state = channel.presenceState();
+        const users = Object.values(state).flat();
+        setOnlineUsers(users);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED' && user) {
+          await channel.track({
+            id: user.id,
+            full_name: user.full_name || 'Player',
+            avatar_url: user.avatar_url,
+            online_at: new Date().toISOString(),
+          });
+        }
+      });
 
     return () => {
       isSubscribed = false;
@@ -183,6 +219,17 @@ export function useTeamChat(teamId: string) {
     } finally {
       setSending(false);
     }
+  const setTyping = (isTyping: boolean) => {
+    if (!activeChannel || !user) return;
+    activeChannel.send({
+      type: 'broadcast',
+      event: 'typing',
+      payload: {
+        userId: user.id,
+        userName: user.full_name || 'Someone',
+        isTyping
+      }
+    });
   };
 
   return {
@@ -191,6 +238,9 @@ export function useTeamChat(teamId: string) {
     sending,
     sendMessage,
     sendMedia,
-    refreshChat: loadMessages
+    refreshChat: loadMessages,
+    onlineUsers,
+    typingUsers: Object.values(typingUsers),
+    setTyping
   };
 }

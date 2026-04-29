@@ -156,7 +156,7 @@ function AdminPayoutsInner() {
 
   const content = (
     <View style={styles.container}>
-      {renderHeader()}
+      {Platform.OS === 'web' && renderHeader()}
 
       {isWeb && (
         <View style={styles.tableHeaderContainer}>
