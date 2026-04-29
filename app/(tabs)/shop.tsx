@@ -48,6 +48,9 @@ import { useUI } from '@/contexts/UIContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { DeviceEventEmitter } from 'react-native';
+
+const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
 
 const Skeleton = ({ width, height, style }: any) => {
   const opacity = useSharedValue(0.4);
@@ -368,15 +371,13 @@ export default function ShopScreen() {
   };
 
   const content = (onScroll?: any) => {
-    const ScrollComponent = Platform.OS === 'web' ? ScrollView : Animated.ScrollView;
+    const ScrollComponent = Platform.OS === 'web' ? ScrollView : AnimatedScrollView;
     return (
       <ScrollComponent 
-        onScroll={(e) => {
-          if (Platform.OS === 'web') {
-            DeviceEventEmitter.emit('mainScroll', { y: e.nativeEvent.contentOffset.y });
-          }
+        onScroll={Platform.OS === 'web' ? (e) => {
+          DeviceEventEmitter.emit('mainScroll', { y: e.nativeEvent.contentOffset.y });
           if (onScroll) onScroll(e);
-        }}
+        } : onScroll}
         scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         style={styles.container} 

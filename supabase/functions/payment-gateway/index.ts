@@ -500,26 +500,47 @@ serve(async (req) => {
            throw new Error(`Booking creation failed: ${insertError.message}`);
         }
         finalBookingId = newBooking.id;
-      } else {
-          console.log(`[Cash] Confirm existing mode for booking: ${bookingId}`);
-          
-          const updatePayload: any = { 
-            status: 'confirmed', 
-            payment_method: 'cash',
-            notes: 'Cash Payment confirmed by Owner'
-          };
-          
-          if (bookingDetails?.total_amount != null) {
-             updatePayload.total_amount = Number(bookingDetails.total_amount);
-          }
-          
-          if (bookingDetails?.booked_for_name || bookingDetails?.bookedForName) {
-             updatePayload.booked_for_name = bookingDetails.booked_for_name || bookingDetails.bookedForName;
-             updatePayload.notes = `(Player: ${bookingDetails.booked_for_name || bookingDetails.bookedForName}) Cash Payment confirmed by Owner`;
-          }
-          
-          const { error: updateError } = await supabaseClient.from('bookings').update(updatePayload).eq('id', bookingId);
-          if (updateError) throw new Error(`Booking update failed: ${updateError.message}`);
+        // For existing bookings being confirmed via cash, we should also calculate fees
+        const { data: bData, error: bFetchError } = await supabaseClient.from('bookings').select('*, ground:grounds(pitch_type, owner:profiles!owner_id(charge_platform_fee))').eq('id', bookingId).single();
+        if (bFetchError) throw new Error(`Booking not found: ${bFetchError.message}`);
+
+        const { 
+          pricePerHour, 
+          discountAmount, 
+          netAmount,
+          groundPrice,
+          platformFeeUser,
+          gstUser,
+          totalCharged,
+          platformFeeOwner,
+          gstOwner,
+          ownerSettlement,
+          bygNetRevenue
+        } = calculateFinalAmounts(bookingDetails || bData, bData.ground?.pitch_type, settings, bData.ground?.owner?.charge_platform_fee === false);
+
+        const updatePayload: any = { 
+          status: 'confirmed', 
+          payment_method: 'cash',
+          price_per_hour: pricePerHour,
+          total_amount: netAmount,
+          ground_price: groundPrice,
+          platform_fee_user: platformFeeUser,
+          platform_fee_owner: platformFeeOwner,
+          gst_user: gstUser,
+          gst_owner: gstOwner,
+          total_charged: totalCharged,
+          owner_settlement: ownerSettlement,
+          byg_net_revenue: bygNetRevenue,
+          notes: 'Cash Payment confirmed by Owner'
+        };
+        
+        if (bookingDetails?.booked_for_name || bookingDetails?.bookedForName) {
+           updatePayload.booked_for_name = bookingDetails.booked_for_name || bookingDetails.bookedForName;
+           updatePayload.notes = `(Player: ${bookingDetails.booked_for_name || bookingDetails.bookedForName}) Cash Payment confirmed by Owner`;
+        }
+        
+        const { error: updateError } = await supabaseClient.from('bookings').update(updatePayload).eq('id', bookingId);
+        if (updateError) throw new Error(`Booking update failed: ${updateError.message}`);
       }
 
       // Record transaction
@@ -664,6 +685,25 @@ serve(async (req) => {
         throw new Error('Invalid Razorpay signature.');
       }
 
+      // Fetch Transfer ID from Razorpay
+      let razorpayTransferId = null;
+      try {
+        const keyId = Deno.env.get('RAZORPAY_KEY_ID');
+        const keySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
+        const response = await fetch(`https://api.razorpay.com/v1/payments/${razorpay_payment_id}/transfers`, {
+          headers: {
+            'Authorization': 'Basic ' + btoa(`${keyId}:${keySecret}`),
+          },
+        });
+        const transfersData = await response.json();
+        if (transfersData.items && transfersData.items.length > 0) {
+          razorpayTransferId = transfersData.items[0].id;
+          console.log(`[Razorpay] Found transfer ID: ${razorpayTransferId}`);
+        }
+      } catch (err) {
+        console.error('[Razorpay] Error fetching transfer ID:', err.message);
+      }
+
       let finalBookingId = bookingId;
 
       if ((!finalBookingId || finalBookingId === 'pending') && bookingDetails) {
@@ -716,6 +756,7 @@ serve(async (req) => {
             owner_settlement: ownerSettlement,
             byg_net_revenue: bygNetRevenue,
             razorpay_order_id,
+            razorpay_transfer_id: razorpayTransferId, // Store the transfer ID
             coupon_id,
             discount_amount: discountAmount,
             notes: (team_type === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Paid via Razorpay: ${razorpay_payment_id})`,
@@ -728,6 +769,13 @@ serve(async (req) => {
 
         if (insertError) throw insertError;
         finalBookingId = newBooking.id;
+      } else {
+        // Update existing booking with transfer ID if not already set
+        await supabaseClient.from('bookings').update({
+          razorpay_transfer_id: razorpayTransferId,
+          payment_received: true,
+          status: 'confirmed'
+        }).eq('id', finalBookingId);
       }
 
       // Record transaction

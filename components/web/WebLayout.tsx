@@ -92,7 +92,7 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
   const groundsHref = isCompact ? '/(tabs)/grounds' : '/book-my-ground';
   const cleanPath = (pathname || '').split('?')[0];
   const isLanding = cleanPath === '/' || cleanPath === '';
-  const isMarketing = cleanPath === '/book-my-ground' || cleanPath === '/find-an-opponent' || cleanPath === '/grounds' || cleanPath === '/(tabs)/grounds';
+  const isMarketing = (cleanPath === '/book-my-ground' || cleanPath === '/find-an-opponent' || cleanPath === '/grounds' || cleanPath === '/(tabs)/grounds') && !segments.includes('(admin)');
   const isShop = cleanPath === '/shop' || cleanPath.startsWith('/shop/');
   // Treat only ground detail routes as "ground details" (hide sidebar, use hero header).
   // Plain /grounds (lists, dashboards) should use the normal app navbar.
@@ -347,7 +347,7 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
     '/bookings',
     '/grounds',
     '/earnings',
-    '/withdrawals',
+    '/payouts',
     '/inventory',
     '/orders',
     '/(admin)/orders',
@@ -396,7 +396,7 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
   // On ground info (/grounds/[id]) and booking info (/bookings/[id]) pages,
   // hide the left sidebar for all roles so the content can take full width.
   const isPublicNoSidebar =
-    isLanding || isMarketing || isGroundInfoPage || isBookingDetails || isCheckoutPage || isLegalOrInfoPage || (cleanPath === '/find-an-opponent' && !isSuperAdmin) || cleanPath === '/(tabs)/grounds' || cleanPath === '/shop' || cleanPath.startsWith('/shop/') || cleanPath === '/search' || cleanPath.startsWith('/live/') || (cleanPath.startsWith('/cricket/') && !cleanPath.startsWith('/cricketdata'));
+    isLanding || (isMarketing && !isSuperAdmin && !isOwnerGroundsDashboard) || isGroundInfoPage || isBookingDetails || isCheckoutPage || isLegalOrInfoPage || (cleanPath === '/find-an-opponent' && !isSuperAdmin) || cleanPath === '/(tabs)/grounds' || cleanPath === '/shop' || cleanPath.startsWith('/shop/') || cleanPath === '/search' || cleanPath.startsWith('/live/') || (cleanPath.startsWith('/cricket/') && !cleanPath.startsWith('/cricketdata'));
   // Treat the presence of a Supabase `user` as authenticated even if `profile`
   // hasn't loaded yet (prevents briefly showing "Sign In").
   const isAuthenticated = !!user || !!profile || isSuperAdmin;
@@ -465,11 +465,12 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
         {...(Platform.OS === 'web' ? {
           onMouseEnter: () => setHovered(true),
           onMouseLeave: () => setHovered(false),
+          title: hideLabel ? label : undefined,
         } : {})}
       >
         <Icon size={18} color={iconColor} />
-        {!isCompact && hideLabel && hovered && Platform.OS === 'web' && (
-          <View style={styles.tooltip}>
+        {!isCompact && hideLabel && Platform.OS === 'web' && (
+          <View style={[styles.tooltip, { opacity: hovered ? 1 : 0 }]}>
             <Text style={styles.tooltipText}>{label}</Text>
           </View>
         )}
@@ -883,6 +884,7 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
                 overScrollMode="never"
                 bounces={false}
                 contentContainerStyle={{ paddingBottom: 20 }}
+                style={Platform.OS === 'web' ? { overflow: 'visible' } : undefined}
               >
                 {isAuthenticated && !isPublicNoSidebar && (
                   <>
@@ -948,9 +950,9 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
                           hideLabel={sidebarCollapsed}
                         />
                         <NavLink
-                          href="/(admin)/withdrawals"
+                          href="/(admin)/payouts"
                           icon={Wallet2}
-                          label="Withdraw"
+                          label="Payouts"
                           hideLabel={sidebarCollapsed}
                         />
                         <NavLink
@@ -989,12 +991,13 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
                           {...(Platform.OS === 'web' ? {
                             onMouseEnter: () => setSignOutHovered(true),
                             onMouseLeave: () => setSignOutHovered(false),
+                            title: sidebarCollapsed ? 'Sign out' : undefined,
                           } : {})}
                         >
                           <LogOut size={18} color="#01b854" />
                           {!sidebarCollapsed && <Text style={styles.signOutText}>Sign out</Text>}
-                          {sidebarCollapsed && signOutHovered && Platform.OS === 'web' && (
-                            <View style={styles.tooltip}>
+                          {sidebarCollapsed && Platform.OS === 'web' && (
+                            <View style={[styles.tooltip, { opacity: signOutHovered ? 1 : 0 }]}>
                               <Text style={styles.tooltipText}>Sign out</Text>
                             </View>
                           )}
@@ -1446,9 +1449,10 @@ const styles = StyleSheet.create({
         height: '100vh' as any,
         minHeight: '100vh' as any,
         transition: 'all 0.35s cubic-bezier(0.4, 0, 0.2, 1)',
-        overflow: 'hidden',
+        overflow: 'visible',
         scrollbarWidth: 'none' as any,
         msOverflowStyle: 'none' as any,
+        zIndex: 2000,
       },
       default: {
         height: '100%',
@@ -1456,7 +1460,7 @@ const styles = StyleSheet.create({
     }),
   },
   sidebarCollapsed: {
-    width: 68,
+    width: 72,
     paddingHorizontal: 8,
     overflow: 'visible',
   },
@@ -1573,19 +1577,21 @@ const styles = StyleSheet.create({
   },
   tooltip: {
     position: 'absolute' as any,
-    left: 54,
-    backgroundColor: '#111827',
+    left: 72,
+    backgroundColor: '#1F2937',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
     zIndex: 10000,
     shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    shadowOffset: { width: 4, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    shadowOffset: { width: 4, height: 4 },
     ...Platform.select({
       web: {
         pointerEvents: 'none',
+        whiteSpace: 'nowrap',
+        transition: 'opacity 0.2s ease-in-out',
       }
     }) as any,
   },

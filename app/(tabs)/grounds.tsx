@@ -27,13 +27,15 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
+
 export default function GroundsTabScreen() {
   const { width } = useWindowDimensions();
   const { user } = useAuth();
   const { tab, type } = useLocalSearchParams();
   const isSmall = width < 900;
   const [activeTab, setActiveTab] = useState<'book' | 'opponent' | 'favorite'>((tab as any) || 'book');
-  const horizontalPagerRef = React.useRef<Animated.ScrollView>(null);
+  const horizontalPagerRef = React.useRef<any>(null);
   const tabScrollRef = React.useRef<ScrollView>(null);
   const [favorites, setFavorites] = useState<GroundWithImages[]>([]);
   const [loadingFavs, setLoadingFavs] = useState(false);
@@ -245,7 +247,7 @@ export default function GroundsTabScreen() {
         </Animated.View>
       )}
 
-      <Animated.ScrollView
+      <AnimatedScrollView
         ref={horizontalPagerRef}
         horizontal
         pagingEnabled
@@ -257,7 +259,7 @@ export default function GroundsTabScreen() {
       >
         {/* Slide 1: Book a Ground */}
         <View style={{ width }}>
-          <Animated.ScrollView
+          <AnimatedScrollView
             onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
             scrollEventThrottle={16}
             style={styles.page}
@@ -271,7 +273,7 @@ export default function GroundsTabScreen() {
             {Platform.OS === 'web' && renderTabs(styles.webTabContainer)}
             <GroundsSearchBar lightMode={true} />
             <LandingBookingForm fullWidth noCard bookGroundScreenNative hideTitle lightAppTheme initialType={type as string} />
-          </Animated.ScrollView>
+          </AnimatedScrollView>
         </View>
 
         {/* Slide 2: Find an Opponent */}
@@ -281,7 +283,7 @@ export default function GroundsTabScreen() {
             externalScrollHandler={verticalScrollHandler}
           />
         </View>
-      </Animated.ScrollView>
+      </AnimatedScrollView>
     </View>
   );
 }

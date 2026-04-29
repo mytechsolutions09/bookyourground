@@ -5,7 +5,7 @@ import WebLayout from '@/components/web/WebLayout';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency } from '@/utils/helpers';
-import { TrendingUp, Download, ArrowRight, Wallet, History, Info, ChevronRight, X } from 'lucide-react-native';
+import { TrendingUp, Download, ArrowRight, Wallet, History, Info, ChevronRight, X, CheckCircle2 } from 'lucide-react-native';
 import Svg, { Path, Circle, Defs, LinearGradient, Stop, Text as SvgText } from 'react-native-svg';
 
 const IS_WEB = Platform.OS === 'web';
@@ -182,7 +182,7 @@ function OwnerEarningsScreenInner() {
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [wallet, setWallet] = useState<WalletData | null>(null);
-  const [viewMode, setViewMode] = useState<'preview' | 'summary' | 'analytics'>('preview');
+  const [viewMode, setViewMode] = useState<'preview' | 'summary' | 'analytics' | 'payouts'>('preview');
 
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [showStatementModal, setShowStatementModal] = useState(false);
@@ -724,17 +724,107 @@ function OwnerEarningsScreenInner() {
     </View>
   );
 
+  const renderPayoutsHistory = () => {
+    // Group transactions by payout date
+    const payouts = transactions
+      .filter(tx => tx.payout_status === 'completed')
+      .reduce((acc: any[], tx) => {
+        const date = tx.payout_processed_at ? new Date(tx.payout_processed_at).toISOString().split('T')[0] : 'Pending';
+        const existing = acc.find(p => p.date === date);
+        
+        const isOnline = tx.payment_method === 'razorpay';
+        const fee = (Number(tx.platform_fee_owner || 0) + Number(tx.gst_owner || 0));
+        
+        // Net amount logic: 
+        // If Online: revenue - fee
+        // If Offline: -fee (deducted from online pool)
+        const netContribution = isOnline ? (Number(tx.ground_price || 0) - fee) : -fee;
+
+        if (existing) {
+          existing.net += netContribution;
+          existing.fees += fee;
+          existing.matches += 1;
+        } else {
+          acc.push({ date, net: netContribution, fees: fee, matches: 1 });
+        }
+        return acc;
+      }, [])
+      .sort((a, b) => b.date.localeCompare(a.date));
+
+    return (
+      <View style={styles.summaryTableWrapper}>
+        <View style={styles.sectionCard}>
+          <Text style={styles.sectionTitle}>Payout History</Text>
+          <Text style={styles.sectionSubtitle}>List of automated daily settlements to your bank account.</Text>
+
+          <View style={[styles.table, { marginTop: 12 }]}>
+            <View style={[styles.tableHeader, { backgroundColor: '#F8FAFC', borderTopLeftRadius: 12, borderTopRightRadius: 12 }]}>
+              <Text style={[styles.headerText, { width: 120 }]}>Settled Date</Text>
+              <Text style={[styles.headerText, { flex: 1 }]}>Matches</Text>
+              <Text style={[styles.headerText, { width: 100, textAlign: 'right' }]}>Total Fees</Text>
+              <Text style={[styles.headerText, { width: 100, textAlign: 'right' }]}>Net Payout</Text>
+            </View>
+
+            {payouts.length === 0 ? (
+              <View style={styles.emptyTable}>
+                <Text style={styles.emptyTableText}>No payout history found yet.</Text>
+              </View>
+            ) : (
+              payouts.map((p, i) => (
+                <View key={i} style={styles.tableRow}>
+                  <View style={{ width: 120 }}>
+                    <Text style={styles.cellTextMain}>
+                      {p.date === 'Pending' ? 'Pending' : new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
+                    </Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.cellTextMain, { color: '#64748B' }]}>{p.matches} {p.matches === 1 ? 'Match' : 'Matches'}</Text>
+                  </View>
+                  <View style={{ width: 100, alignItems: 'flex-end' }}>
+                    <Text style={[styles.cellTextMain, { color: '#EF4444' }]}>-₹{Math.round(p.fees)}</Text>
+                  </View>
+                  <View style={{ width: 100, alignItems: 'flex-end' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Text style={[styles.cellTextMain, { color: p.net <= 0 ? '#EF4444' : '#059669', fontWeight: '800' }]}>
+                        {formatCurrency(Math.max(0, p.net))}
+                      </Text>
+                      {p.net < 0 && (
+                         <View style={styles.debtBadge}>
+                           <Text style={styles.debtText}>DEBT</Text>
+                         </View>
+                      )}
+                    </View>
+                  </View>
+                </View>
+              ))
+            )}
+          </View>
+        </View>
+      </View>
+    );
+  };
+
   const renderLeftColumn = () => (
     <View style={styles.leftCol}>
       <View style={styles.totalEarningsCard}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.totalEarningsLabel}>Transferable Balance (Online Payments Only)</Text>
+          <Text style={styles.totalEarningsLabel}>Transferable Balance (Automated Daily Settlement)</Text>
           <Text style={styles.totalEarningsValue}>{formatCurrency(Number(wallet?.balance || 0))}</Text>
           <Text style={styles.monthlySubtext}>
-            Lifetime Earnings: <Text style={{ fontWeight: '700' }}>{formatCurrency(Number(stats.totalEarnings))}</Text>
+            Settlements happen daily at <Text style={{ fontWeight: '700' }}>9:00 AM IST</Text>
           </Text>
         </View>
         <Wallet size={64} color="#043529" strokeWidth={1} style={{ opacity: 0.2 }} />
+      </View>
+
+      <View style={[styles.sectionCard, { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+          <CheckCircle2 size={20} color="#059669" />
+          <Text style={[styles.sectionTitle, { color: '#065F46', marginBottom: 0 }]}>Automated Payouts Enabled</Text>
+        </View>
+        <Text style={{ fontSize: 14, color: '#065F46', lineHeight: 20 }}>
+          Your earnings for matches completed <Text style={{ fontWeight: '700' }}>2 days ago (T-2)</Text> are automatically settled to your bank account every morning at 9:00 AM. No manual request is needed.
+        </Text>
       </View>
   
       <View style={[styles.sectionCard, { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}>
@@ -790,18 +880,11 @@ function OwnerEarningsScreenInner() {
         </View>
           <View style={styles.transactionActions}>
             <TouchableOpacity 
-              style={styles.statementBtn}
+              style={[styles.statementBtn, { flex: 1 }]}
               onPress={() => setShowStatementModal(true)}
             >
               <History size={16} color="#64748B" />
               <Text style={styles.statementBtnText}>View Full Statement</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.withdrawBtnInline}
-              onPress={() => setShowWithdrawModal(true)}
-            >
-              <Wallet size={16} color="#043529" />
-              <Text style={styles.withdrawBtnTextInline}>Withdraw</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -995,6 +1078,12 @@ function OwnerEarningsScreenInner() {
         >
           <Text style={[styles.viewToggleBtnText, viewMode === 'analytics' && styles.viewToggleBtnTextActive]}>Analytics</Text>
         </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.viewToggleBtn, viewMode === 'payouts' && styles.viewToggleBtnActive]}
+          onPress={() => setViewMode('payouts')}
+        >
+          <Text style={[styles.viewToggleBtnText, viewMode === 'payouts' && styles.viewToggleBtnTextActive]}>Payouts</Text>
+        </TouchableOpacity>
       </View>
 
         {viewMode === 'preview' ? (
@@ -1011,8 +1100,10 @@ function OwnerEarningsScreenInner() {
           </View>
         ) : viewMode === 'summary' ? (
           renderSummaryTable()
-        ) : (
+        ) : viewMode === 'analytics' ? (
           renderAnalyticsView()
+        ) : (
+          renderPayoutsHistory()
         )}
       </ScrollView>
 
@@ -1330,6 +1421,17 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  debtBadge: {
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  debtText: {
+    fontSize: 8,
+    color: '#B91C1C',
+    fontWeight: '900',
   },
   table: {
     width: '100%',

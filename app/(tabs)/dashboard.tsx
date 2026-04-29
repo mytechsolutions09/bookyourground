@@ -39,6 +39,8 @@ import Animated, {
   runOnJS
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
 import * as ExpoLocation from 'expo-location';
 import { fetchWeather, fetchCityName } from '@/utils/weather';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
@@ -581,7 +583,7 @@ function DashboardContent() {
         </View>
       </Animated.View>
 
-      <Animated.ScrollView
+      <AnimatedScrollView
         ref={horizontalPagerRef}
         horizontal
         pagingEnabled
@@ -592,7 +594,7 @@ function DashboardContent() {
       >
         {/* Slide 1: Overview */}
         <View style={{ width }}>
-          <Animated.ScrollView
+          <AnimatedScrollView
             onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
             scrollEventThrottle={16}
             style={styles.root}
@@ -672,12 +674,12 @@ function DashboardContent() {
                 </View>
               </View>
             </View>
-          </Animated.ScrollView>
+          </AnimatedScrollView>
         </View>
 
         {/* Slide 2: Activity/Stats */}
         <View style={{ width }}>
-          <Animated.ScrollView
+          <AnimatedScrollView
             onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
             scrollEventThrottle={16}
             style={styles.root}
@@ -685,9 +687,9 @@ function DashboardContent() {
             showsVerticalScrollIndicator={false}
           >
             {renderRightPanel()}
-          </Animated.ScrollView>
+          </AnimatedScrollView>
         </View>
-      </Animated.ScrollView>
+      </AnimatedScrollView>
     </View>
   );
 }

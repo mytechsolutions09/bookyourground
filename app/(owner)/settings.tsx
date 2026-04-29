@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams } from 'expo-router';
 
 const IS_WEB = Platform.OS === 'web';
+const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
 
 function OwnerSettingsInner() {
   const { user } = useAuth();
@@ -27,7 +28,7 @@ function OwnerSettingsInner() {
   const { tab } = useLocalSearchParams<{ tab: string }>();
   const [activeTab, setActiveTab] = useState<'payout' | 'bank' | 'coupons' | 'help'>((tab as any) || 'payout');
   
-  const horizontalPagerRef = React.useRef<Animated.ScrollView>(null);
+  const horizontalPagerRef = React.useRef<any>(null);
   const lastScrollY = useSharedValue(0);
   const headerTranslateY = useSharedValue(0);
   const HEADER_HEIGHT = 100;
@@ -197,43 +198,18 @@ function OwnerSettingsInner() {
 
   const renderPayouts = () => (
     <Card style={styles.panel}>
-      <Text style={styles.sectionTitle}>Withdraw earnings</Text>
+      <Text style={styles.sectionTitle}>Automated Settlements</Text>
       <Text style={styles.sectionSubtitle}>
-        Request a payout of your available earnings. Actual transfers are processed manually.
+        Your earnings are automatically transferred to your bank account every day at 9:00 AM IST.
       </Text>
 
-      <View style={styles.formRowHorizontal}>
-        <View style={styles.formCol}>
-          <Text style={styles.label}>Amount (₹)</Text>
-          <TextInput
-            value={amount}
-            onChangeText={setAmount}
-            keyboardType="numeric"
-            placeholder="Enter amount to withdraw"
-            style={styles.input}
-          />
-        </View>
-
-        <View style={styles.formCol}>
-          <Text style={styles.label}>UPI / bank details</Text>
-          <TextInput
-            value={accountDetails}
-            onChangeText={setAccountDetails}
-            placeholder="Enter UPI ID or bank account details"
-            style={[styles.input, styles.multilineInput]}
-            multiline
-          />
-        </View>
-      </View>
-
-      <View style={styles.actionsRow}>
-        <Button
-          title={submitting ? 'Requesting...' : 'Request withdrawal'}
-          onPress={handleWithdraw}
-          loading={submitting}
-          disabled={submitting}
-          style={styles.submitButton}
-        />
+      <View style={{ backgroundColor: '#EEF2FF', padding: 16, borderRadius: 16, borderLeftWidth: 4, borderLeftColor: '#4F46E5' }}>
+        <Text style={{ fontSize: 14, fontWeight: '700', color: '#1E1B4B', marginBottom: 4 }}>How it works:</Text>
+        <Text style={{ fontSize: 13, color: '#312E81', lineHeight: 18 }}>
+          • Matches completed on <Text style={{ fontWeight: '700' }}>Monday</Text> are processed on <Text style={{ fontWeight: '700' }}>Wednesday</Text>.{"\n"}
+          • Platform fees for both Online and Offline bookings are deducted from your online revenue.{"\n"}
+          • Ensure your bank details in the next tab are correct to avoid settlement failures.
+        </Text>
       </View>
     </Card>
   );
@@ -596,67 +572,67 @@ function OwnerSettingsInner() {
         </View>
       </Animated.View>
 
-      <Animated.ScrollView
+      <AnimatedScrollView
         ref={horizontalPagerRef}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        onScroll={horizontalScrollHandler}
+        onScroll={Platform.OS === 'web' ? undefined : horizontalScrollHandler}
         scrollEventThrottle={16}
         style={{ flex: 1 }}
       >
         {/* Slide 1: Payouts */}
         <View style={{ width }}>
-          <Animated.ScrollView
-            onScroll={verticalScrollHandler}
+          <AnimatedScrollView
+            onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
             scrollEventThrottle={16}
             style={styles.container}
             contentContainerStyle={[styles.scrollContent, { paddingTop: HEADER_HEIGHT + insets.top + 16, paddingHorizontal: 16 }]}
             showsVerticalScrollIndicator={false}
           >
             {renderPayouts()}
-          </Animated.ScrollView>
+          </AnimatedScrollView>
         </View>
 
         {/* Slide 2: Bank */}
         <View style={{ width }}>
-          <Animated.ScrollView
-            onScroll={verticalScrollHandler}
+          <AnimatedScrollView
+            onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
             scrollEventThrottle={16}
             style={styles.container}
             contentContainerStyle={[styles.scrollContent, { paddingTop: HEADER_HEIGHT + insets.top + 16, paddingHorizontal: 16 }]}
             showsVerticalScrollIndicator={false}
           >
             {renderBank()}
-          </Animated.ScrollView>
+          </AnimatedScrollView>
         </View>
 
         {/* Slide 3: Coupons */}
         <View style={{ width }}>
-          <Animated.ScrollView
-            onScroll={verticalScrollHandler}
+          <AnimatedScrollView
+            onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
             scrollEventThrottle={16}
             style={styles.container}
             contentContainerStyle={[styles.scrollContent, { paddingTop: HEADER_HEIGHT + insets.top + 16, paddingHorizontal: 16 }]}
             showsVerticalScrollIndicator={false}
           >
             {renderCoupons()}
-          </Animated.ScrollView>
+          </AnimatedScrollView>
         </View>
 
         {/* Slide 4: Help */}
         <View style={{ width }}>
-          <Animated.ScrollView
-            onScroll={verticalScrollHandler}
+          <AnimatedScrollView
+            onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
             scrollEventThrottle={16}
             style={styles.container}
             contentContainerStyle={[styles.scrollContent, { paddingTop: HEADER_HEIGHT + insets.top + 16, paddingHorizontal: 16 }]}
             showsVerticalScrollIndicator={false}
           >
             {renderHelp()}
-          </Animated.ScrollView>
+          </AnimatedScrollView>
         </View>
-      </Animated.ScrollView>
+      </AnimatedScrollView>
     </View>
   );
 }

@@ -131,8 +131,23 @@ export default function AdminBookingsScreen() {
     );
   };
 
+  const handleTogglePayout = async (bookingId: string, currentEnabled: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ payout_enabled: !currentEnabled })
+        .eq('id', bookingId);
 
-
+      if (error) throw error;
+      
+      setBookings(prev => 
+        prev.map(b => b.id === bookingId ? { ...b, payout_enabled: !currentEnabled } : b)
+      );
+    } catch (err: any) {
+      if (Platform.OS === 'web') alert(err.message || 'Failed to update payout');
+      else Alert.alert('Error', err.message || 'Failed to update payout');
+    }
+  };
   const filteredBookings = useMemo(
     () => {
       const d = new Date();
@@ -346,6 +361,7 @@ export default function AdminBookingsScreen() {
             <Text style={[styles.tableHeaderCell, styles.colStatus]}>Status</Text>
             <Text style={[styles.tableHeaderCell, styles.colAmount]}>Amount</Text>
             <Text style={[styles.tableHeaderCell, styles.colPayment]}>Payment</Text>
+            <Text style={[styles.tableHeaderCell, styles.colPayout]}>Payout</Text>
             <Text style={[styles.tableHeaderCell, styles.colWho]}>Customer</Text>
 
 
@@ -447,18 +463,42 @@ export default function AdminBookingsScreen() {
                 </View>
 
 
-                <View style={[styles.tableCell, styles.colPayment]}>
-                   <Text style={[styles.paymentBadgeText, item.payment_method === 'cash' ? styles.paymentCash : styles.paymentOnline]}>
-                      {item.payment_method === 'cash' ? 'CASH' : 'ONLINE'}
-                   </Text>
-                </View>
+                 <View style={[styles.tableCell, styles.colPayment]}>
+                    <Text style={[styles.paymentBadgeText, item.payment_method === 'cash' ? styles.paymentCash : styles.paymentOnline]}>
+                       {item.payment_method === 'cash' ? 'CASH' : 'ONLINE'}
+                    </Text>
+                 </View>
 
-                <View style={[styles.tableCell, styles.colWho]}>
-                  <Text style={styles.whoPrimaryText}>
-                    {item.user?.full_name ?? 'Guest'}
-                  </Text>
-                  <Text style={styles.metaInline}>{item.user?.phone ?? 'No phone'}</Text>
-                </View>
+                 <View style={[styles.tableCell, styles.colPayout]}>
+                   {item.payment_method !== 'cash' ? (
+                     <TouchableOpacity 
+                       onPress={(e) => {
+                         e.stopPropagation();
+                         handleTogglePayout(item.id, !!item.payout_enabled);
+                       }}
+                       style={[
+                         styles.payoutToggle,
+                         item.payout_enabled ? styles.payoutOn : styles.payoutOff
+                       ]}
+                     >
+                       <Text style={styles.payoutToggleText}>
+                         {item.payout_enabled ? 'ON' : 'OFF'}
+                       </Text>
+                     </TouchableOpacity>
+                   ) : (
+                     <Text style={styles.payoutLabelNA}>N/A</Text>
+                   )}
+                   {item.payout_status === 'completed' && (
+                     <Text style={styles.payoutDoneLabel}>DONE</Text>
+                   )}
+                 </View>
+
+                 <View style={[styles.tableCell, styles.colWho]}>
+                   <Text style={styles.whoPrimaryText}>
+                     {item.user?.full_name ?? 'Guest'}
+                   </Text>
+                   <Text style={styles.metaInline}>{item.user?.phone ?? 'No phone'}</Text>
+                 </View>
               </TouchableOpacity>
             );
           }
@@ -632,6 +672,10 @@ const styles = StyleSheet.create({
   colPayment: {
     width: 90,
   },
+  colPayout: {
+    width: 80,
+    alignItems: 'center',
+  },
   colWho: {
     flex: 1.8,
   },
@@ -793,6 +837,38 @@ const styles = StyleSheet.create({
   statusCancelled: {
     backgroundColor: '#FDE8E8',
     color: '#9B1C1C',
+  },
+  payoutToggle: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+    borderWidth: 1,
+    minWidth: 50,
+    alignItems: 'center',
+  },
+  payoutOn: {
+    backgroundColor: '#10B981',
+    borderColor: '#10B981',
+  },
+  payoutOff: {
+    backgroundColor: '#6B7280',
+    borderColor: '#6B7280',
+  },
+  payoutToggleText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  payoutLabelNA: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    fontWeight: '600',
+  },
+  payoutDoneLabel: {
+    fontSize: 9,
+    color: '#10B981',
+    fontWeight: '700',
+    marginTop: 4,
   },
   partialBadge: {
     backgroundColor: '#fff7ed',

@@ -45,7 +45,7 @@ export default function AdminLayout() {
       <Stack.Screen name="bookings" />
       <Stack.Screen name="orders" />
       <Stack.Screen name="earnings" />
-      <Stack.Screen name="withdrawals" />
+      <Stack.Screen name="payouts" />
       <Stack.Screen name="manage-ground-owners" />
       <Stack.Screen name="manage-users" />
       <Stack.Screen name="messages" />

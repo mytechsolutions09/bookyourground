@@ -25,6 +25,7 @@ const THEME_TEXT = '#0F172A';
 const THEME_GOLD = '#10B981';
 const THEME_BORDER = '#F1F5F9';
 const THEME_MUTED = '#64748B';
+const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
 
 interface DashboardStats {
   totalGrounds: number;
@@ -256,7 +257,7 @@ export default function OwnerDashboardScreen() {
   };
 
   const insets = useSafeAreaInsets();
-  const horizontalPagerRef = React.useRef<Animated.ScrollView>(null);
+  const horizontalPagerRef = React.useRef<any>(null);
   const lastScrollY = useSharedValue(0);
   const headerTranslateY = useSharedValue(0);
   const HEADER_HEIGHT = 100;
@@ -834,7 +835,7 @@ export default function OwnerDashboardScreen() {
         </View>
       </Animated.View>
 
-      <Animated.ScrollView
+      <AnimatedScrollView
         ref={horizontalPagerRef}
         horizontal
         pagingEnabled
@@ -845,7 +846,7 @@ export default function OwnerDashboardScreen() {
       >
         {/* Slide 1: Owner Hub */}
         <View style={{ width }}>
-          <Animated.ScrollView
+          <AnimatedScrollView
             onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
             scrollEventThrottle={16}
             style={styles.container}
@@ -854,12 +855,12 @@ export default function OwnerDashboardScreen() {
             refreshControl={<RefreshControl refreshing={loading} onRefresh={loadStats} tintColor={THEME_ACCENT} />}
           >
             {renderOwnerHub()}
-          </Animated.ScrollView>
+          </AnimatedScrollView>
         </View>
 
         {/* Slide 2: Activity */}
         <View style={{ width }}>
-          <Animated.ScrollView
+          <AnimatedScrollView
             onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
             scrollEventThrottle={16}
             style={styles.container}
@@ -867,12 +868,12 @@ export default function OwnerDashboardScreen() {
             showsVerticalScrollIndicator={false}
           >
             {renderPersonalActivity()}
-          </Animated.ScrollView>
+          </AnimatedScrollView>
         </View>
 
         {/* Slide 3: Profile */}
         <View style={{ width }}>
-          <Animated.ScrollView
+          <AnimatedScrollView
             onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
             scrollEventThrottle={16}
             style={styles.container}
@@ -880,13 +881,13 @@ export default function OwnerDashboardScreen() {
             showsVerticalScrollIndicator={false}
           >
             {renderProfileTab()}
-          </Animated.ScrollView>
+          </AnimatedScrollView>
         </View>
 
         {/* Slide 4: Payout Setup */}
         {!hasBanking && (
           <View style={{ width }}>
-            <Animated.ScrollView
+            <AnimatedScrollView
               onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
               scrollEventThrottle={16}
               style={styles.container}
@@ -894,10 +895,10 @@ export default function OwnerDashboardScreen() {
               showsVerticalScrollIndicator={false}
             >
               {renderPayoutSetup()}
-            </Animated.ScrollView>
+            </AnimatedScrollView>
           </View>
         )}
-      </Animated.ScrollView>
+      </AnimatedScrollView>
     </View>
   );
 }
