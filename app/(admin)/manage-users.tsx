@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, TouchableOpacity, Platform, TextInput } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, TouchableOpacity, Platform, TextInput, Switch } from 'react-native';
 import { User, Shield, Search, X, Mail, Phone, Calendar, ChevronRight, UserCircle2 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { Profile } from '@/types';
@@ -176,6 +176,38 @@ export default function ManageUsersScreen() {
     }
   };
 
+  const toggleUserStatus = async (userId: string, currentStatus: boolean) => {
+    const performToggle = async () => {
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ is_active: !currentStatus })
+          .eq('id', userId);
+
+        if (error) throw error;
+        
+        loadUsers();
+      } catch (error: any) {
+        Alert.alert('Error', error.message);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Are you sure you want to ${currentStatus ? 'deactivate' : 'activate'} this user account?`)) {
+        performToggle();
+      }
+    } else {
+      Alert.alert(
+        `${currentStatus ? 'Deactivate' : 'Activate'} User`,
+        `Are you sure you want to ${currentStatus ? 'deactivate' : 'activate'} this user account?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Confirm', onPress: performToggle },
+        ]
+      );
+    }
+  };
+
   const getRoleLabel = (role: UserRole) => {
     switch (role) {
       case 'ground_owner': return 'Ground Owner';
@@ -227,7 +259,7 @@ export default function ManageUsersScreen() {
         <TouchableOpacity 
           activeOpacity={0.8}
           onPress={() => setSelectedUserId(isExpanded ? null : item.id)}
-          style={[styles.webRow, isExpanded && styles.rowExpanded]}
+          style={[styles.webRow, isExpanded && styles.rowExpanded, !item.is_active && { opacity: 0.6, backgroundColor: '#F9FAFB' }]}
         >
           <View style={[styles.cell, styles.colUser]}>
             <View style={styles.userProfileInfo}>
@@ -277,6 +309,11 @@ export default function ManageUsersScreen() {
                     {getRoleLabel(item.role)}
                 </Text>
              </View>
+             {!item.is_active && (
+                <View style={[styles.roleBadge, { backgroundColor: '#FEE2E2', marginTop: 4 }]}>
+                   <Text style={[styles.roleText, { color: '#EF4444' }]}>INACTIVE</Text>
+                </View>
+             )}
           </View>
 
           <View style={[styles.cell, styles.colActions]}>
@@ -308,6 +345,27 @@ export default function ManageUsersScreen() {
                       </Text>
                     </TouchableOpacity>
                   ))}
+                </View>
+              </View>
+
+              <View style={[styles.rolesPanel, { borderLeftWidth: 1, borderLeftColor: '#D1FAE5', paddingLeft: 24 }]}>
+                <Text style={styles.expandedTitle}>Account Status</Text>
+                <View style={styles.statusToggleRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.statusLabel}>
+                      {item.is_active ? 'Account is Active' : 'Account is Deactivated'}
+                    </Text>
+                    <Text style={styles.statusSubtext}>
+                      {item.is_active 
+                        ? 'Deactivating this user will prevent them from logging in and booking grounds.' 
+                        : 'Activating this user will restore their access to the platform.'}
+                    </Text>
+                  </View>
+                  <Switch
+                    value={item.is_active}
+                    onValueChange={() => toggleUserStatus(item.id, item.is_active)}
+                    trackColor={{ false: '#EF4444', true: '#10b981' }}
+                  />
                 </View>
               </View>
 
@@ -355,10 +413,17 @@ export default function ManageUsersScreen() {
             <Text style={styles.userEmail}>{item.email}</Text>
             {item.team_name && <Text style={styles.mobileTeamText}>Team: {item.team_name}</Text>}
           </View>
-          <View style={[styles.mobileRoleBadge, item.role === 'super_admin' ? styles.badgeAdmin : item.role === 'ground_owner' ? styles.badgeOwner : styles.badgePlayer]}>
-             <Text style={[styles.mobileRoleText, item.role === 'super_admin' ? styles.textAdmin : item.role === 'ground_owner' ? styles.textOwner : styles.textPlayer]}>
-                {item.role.charAt(0).toUpperCase()}
-             </Text>
+          <View style={{ gap: 4, alignItems: 'flex-end' }}>
+            <View style={[styles.mobileRoleBadge, item.role === 'super_admin' ? styles.badgeAdmin : item.role === 'ground_owner' ? styles.badgeOwner : styles.badgePlayer]}>
+              <Text style={[styles.mobileRoleText, item.role === 'super_admin' ? styles.textAdmin : item.role === 'ground_owner' ? styles.textOwner : styles.textPlayer]}>
+                  {item.role.charAt(0).toUpperCase()}
+              </Text>
+            </View>
+            {!item.is_active && (
+               <View style={[styles.statusBadgeSmall]}>
+                  <Text style={styles.statusBadgeTextSmall}>OFF</Text>
+               </View>
+            )}
           </View>
         </View>
 
@@ -377,6 +442,15 @@ export default function ManageUsersScreen() {
                     <TouchableOpacity onPress={() => updateUserRole(item.id, 'user')} style={styles.pickerItem}><Text style={styles.pickerText}>Player</Text></TouchableOpacity>
                     <TouchableOpacity onPress={() => updateUserRole(item.id, 'ground_owner')} style={styles.pickerItem}><Text style={styles.pickerText}>Owner</Text></TouchableOpacity>
                     <TouchableOpacity onPress={() => updateUserRole(item.id, 'super_admin')} style={styles.pickerItem}><Text style={styles.pickerText}>Admin</Text></TouchableOpacity>
+                </View>
+
+                <View style={styles.mobileStatusRow}>
+                  <Text style={styles.mobileStatusLabel}>Account Active</Text>
+                  <Switch
+                    value={item.is_active}
+                    onValueChange={() => toggleUserStatus(item.id, item.is_active)}
+                    trackColor={{ false: '#EF4444', true: '#10b981' }}
+                  />
                 </View>
                 
                 <View style={styles.mobileWalletCredit}>
@@ -1116,5 +1190,54 @@ const styles = StyleSheet.create({
   emptyText: {
     color: '#9CA3AF',
     fontSize: 14,
+  },
+  statusToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D1FAE5',
+    marginTop: 4,
+  },
+  statusLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#374151',
+  },
+  statusSubtext: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  statusBadgeSmall: {
+    backgroundColor: '#FEF2F2',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: '#FEE2E2',
+  },
+  statusBadgeTextSmall: {
+    fontSize: 8,
+    fontWeight: '900',
+    color: '#EF4444',
+  },
+  mobileStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F9FAFB',
+    padding: 12,
+    borderRadius: 10,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  mobileStatusLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#374151',
   },
 });

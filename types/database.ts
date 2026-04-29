@@ -29,6 +29,7 @@ export interface Database {
           created_at: string;
           updated_at: string;
           team_name: string | null;
+          is_active: boolean;
         };
         Insert: {
           id: string;
@@ -43,6 +44,8 @@ export interface Database {
           state?: string | null;
           created_at?: string;
           updated_at?: string;
+          team_name?: string | null;
+          is_active?: boolean;
         };
         Update: {
           id?: string;
@@ -57,6 +60,8 @@ export interface Database {
           state?: string | null;
           created_at?: string;
           updated_at?: string;
+          team_name?: string | null;
+          is_active?: boolean;
         };
       };
       grounds: {
