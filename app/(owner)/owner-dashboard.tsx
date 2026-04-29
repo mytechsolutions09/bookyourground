@@ -45,7 +45,9 @@ export default function OwnerDashboardScreen() {
   const { width } = useWindowDimensions();
   const isCompact = width < 900;
   const { user, profile, updateProfile } = useAuth();
-  const [activeTab, setActiveTab] = useState<'owner' | 'personal' | 'profile'>('owner');
+  const [activeTab, setActiveTab] = useState<'owner' | 'personal' | 'profile' | 'payout'>('owner');
+  const [hasBanking, setHasBanking] = useState<boolean | null>(null);
+  const [bankingLoading, setBankingLoading] = useState(true);
   const [editingField, setEditingField] = useState<null | 'full_name' | 'phone' | 'business_name'>(null);
   const [editValue, setEditValue] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -64,9 +66,46 @@ export default function OwnerDashboardScreen() {
   });
   const [loading, setLoading] = useState(true);
 
+  // Bank Form State
+  const [bankName, setBankName] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [ifsc, setIfsc] = useState('');
+  const [upiId, setUpiId] = useState('');
+  const [savingBank, setSavingBank] = useState(false);
+
   useEffect(() => {
-    if (user) loadStats();
+    if (user) {
+      loadStats();
+      checkBanking();
+    }
   }, [user]);
+
+  const checkBanking = async () => {
+    if (!user) return;
+    try {
+      setBankingLoading(true);
+      const { data, error } = await supabase
+        .from('owner_bank_details')
+        .select('*')
+        .eq('owner_id', user.id)
+        .maybeSingle();
+      
+      if (data) {
+        setHasBanking(true);
+        setBankName(data.bank_name || '');
+        setAccountNumber(data.account_number || '');
+        setIfsc(data.ifsc || '');
+        setUpiId(data.upi_id || '');
+      } else {
+        setHasBanking(false);
+        setActiveTab('payout');
+      }
+    } catch (err) {
+      console.error('Error checking banking:', err);
+    } finally {
+      setBankingLoading(false);
+    }
+  };
 
   const loadStats = async () => {
     if (!user) return;
@@ -222,17 +261,23 @@ export default function OwnerDashboardScreen() {
   const headerTranslateY = useSharedValue(0);
   const HEADER_HEIGHT = 100;
 
-  const onTabPress = (tab: 'owner' | 'personal' | 'profile') => {
+  const onTabPress = (tab: 'owner' | 'personal' | 'profile' | 'payout') => {
+    if (!hasBanking && tab !== 'payout') return; // Block tabs if no banking
     setActiveTab(tab);
-    const idx = tab === 'owner' ? 0 : tab === 'personal' ? 1 : 2;
+    const idx = tab === 'owner' ? 0 : tab === 'personal' ? 1 : tab === 'profile' ? 2 : 3;
     horizontalPagerRef.current?.scrollTo({ x: idx * width, animated: true });
   };
 
   const horizontalScrollHandler = useAnimatedScrollHandler({
     onMomentumEnd: (event) => {
       const idx = Math.round(event.contentOffset.x / width);
-      const tab = idx === 0 ? 'owner' : idx === 1 ? 'personal' : 'profile';
-      runOnJS(setActiveTab)(tab as any);
+      const tab = idx === 0 ? 'owner' : idx === 1 ? 'personal' : idx === 2 ? 'profile' : 'payout';
+      if (!hasBanking && tab !== 'payout') {
+        horizontalPagerRef.current?.scrollTo({ x: 3 * width, animated: true });
+        runOnJS(setActiveTab)('payout');
+      } else {
+        runOnJS(setActiveTab)(tab as any);
+      }
     },
   });
 
@@ -468,6 +513,111 @@ export default function OwnerDashboardScreen() {
     </View>
   );
 
+  const handleSaveBank = async () => {
+    if (!user) return;
+    if (!bankName.trim() || !accountNumber.trim() || !ifsc.trim() || !upiId.trim()) {
+      alert('All fields including UPI are required for payout setup.');
+      return;
+    }
+    try {
+      setSavingBank(true);
+      const { error } = await supabase
+        .from('owner_bank_details')
+        .upsert({
+          owner_id: user.id,
+          bank_name: bankName.trim(),
+          account_number: accountNumber.trim(),
+          ifsc: ifsc.trim().toUpperCase(),
+          upi_id: upiId.trim().toLowerCase(),
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'owner_id' });
+
+      if (error) throw error;
+      setHasBanking(true);
+      setActiveTab('owner');
+      alert('Banking details saved successfully! Your dashboard is now active.');
+    } catch (e: any) {
+      console.error('Error saving bank details:', e);
+      alert('Error: ' + e.message);
+    } finally {
+      setSavingBank(false);
+    }
+  };
+
+  const renderPayoutSetup = () => (
+    <View style={styles.payoutContainer}>
+      <Card style={styles.payoutCard}>
+        <View style={styles.payoutHeader}>
+          <IndianRupee size={32} color={THEME_ACCENT} />
+          <Text style={styles.payoutTitle}>Payout Information Required</Text>
+          <Text style={styles.payoutSubtitle}>Please provide your banking and UPI details to enable dashboard features and receive payouts.</Text>
+        </View>
+
+        <View style={styles.bankForm}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>BANK NAME</Text>
+            <TextInput
+              style={styles.formInput}
+              value={bankName}
+              onChangeText={setBankName}
+              placeholder="e.g. HDFC Bank"
+              placeholderTextColor={THEME_MUTED}
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>ACCOUNT NUMBER</Text>
+            <TextInput
+              style={styles.formInput}
+              value={accountNumber}
+              onChangeText={setAccountNumber}
+              placeholder="Enter your account number"
+              placeholderTextColor={THEME_MUTED}
+              keyboardType="number-pad"
+            />
+          </View>
+
+          <View style={styles.row}>
+            <View style={[styles.inputGroup, { flex: 1, marginRight: 10 }]}>
+              <Text style={styles.inputLabel}>IFSC CODE</Text>
+              <TextInput
+                style={styles.formInput}
+                value={ifsc}
+                onChangeText={setIfsc}
+                placeholder="HDFC0001234"
+                placeholderTextColor={THEME_MUTED}
+                autoCapitalize="characters"
+              />
+            </View>
+            <View style={[styles.inputGroup, { flex: 1 }]}>
+              <Text style={styles.inputLabel}>UPI ID</Text>
+              <TextInput
+                style={styles.formInput}
+                value={upiId}
+                onChangeText={setUpiId}
+                placeholder="name@upi"
+                placeholderTextColor={THEME_MUTED}
+                autoCapitalize="none"
+              />
+            </View>
+          </View>
+
+          <TouchableOpacity 
+            style={[styles.saveButton, savingBank && { opacity: 0.7 }]} 
+            onPress={handleSaveBank}
+            disabled={savingBank}
+          >
+            {savingBank ? (
+              <ActivityIndicator color="#FFF" size="small" />
+            ) : (
+              <Text style={styles.saveButtonText}>SAVE & ACTIVATE DASHBOARD</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </Card>
+    </View>
+  );
+
   const renderProfileTab = () => (
     <View style={styles.grid}>
       <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]}>
@@ -616,26 +766,34 @@ export default function OwnerDashboardScreen() {
           <View style={styles.mainWrapper}>
             <View style={styles.tabContainer}>
               <TouchableOpacity 
-                style={[styles.tabButton, activeTab === 'owner' && styles.activeTabButton]} 
-                onPress={() => setActiveTab('owner')}
+                style={[styles.tabButton, activeTab === 'owner' && styles.activeTabButton, !hasBanking && styles.disabledTab]} 
+                onPress={() => hasBanking && setActiveTab('owner')}
               >
                 <Text style={[styles.tabText, activeTab === 'owner' && styles.activeTabText]}>Owner Hub</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.tabButton, activeTab === 'personal' && styles.activeTabButton]} 
-                onPress={() => setActiveTab('personal')}
+                style={[styles.tabButton, activeTab === 'personal' && styles.activeTabButton, !hasBanking && styles.disabledTab]} 
+                onPress={() => hasBanking && setActiveTab('personal')}
               >
                 <Text style={[styles.tabText, activeTab === 'personal' && styles.activeTabText]}>Personal Activity</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.tabButton, activeTab === 'profile' && styles.activeTabButton]} 
-                onPress={() => setActiveTab('profile')}
+                style={[styles.tabButton, activeTab === 'profile' && styles.activeTabButton, !hasBanking && styles.disabledTab]} 
+                onPress={() => hasBanking && setActiveTab('profile')}
               >
                 <Text style={[styles.tabText, activeTab === 'profile' && styles.activeTabText]}>Profile</Text>
               </TouchableOpacity>
+              {!hasBanking && (
+                <TouchableOpacity 
+                  style={[styles.tabButton, activeTab === 'payout' && styles.activeTabButton]} 
+                  onPress={() => setActiveTab('payout')}
+                >
+                  <Text style={[styles.tabText, activeTab === 'payout' && styles.activeTabText]}>Payout Setup</Text>
+                </TouchableOpacity>
+              )}
             </View>
 
-            {activeTab === 'owner' ? renderOwnerHub() : activeTab === 'personal' ? renderPersonalActivity() : renderProfileTab()}
+            {activeTab === 'payout' ? renderPayoutSetup() : activeTab === 'owner' ? renderOwnerHub() : activeTab === 'personal' ? renderPersonalActivity() : renderProfileTab()}
           </View>
         </ScrollView>
       </WebLayout>
@@ -648,23 +806,31 @@ export default function OwnerDashboardScreen() {
         <MobileAppNavbar title="Owner Dashboard" titleColor={THEME_ACCENT} />
         <View style={styles.tabContainer}>
           <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'owner' && styles.activeTabButton]} 
+            style={[styles.tabButton, activeTab === 'owner' && styles.activeTabButton, !hasBanking && styles.disabledTab]} 
             onPress={() => onTabPress('owner')}
           >
             <Text style={[styles.tabText, activeTab === 'owner' && styles.activeTabText]}>Owner Hub</Text>
           </TouchableOpacity>
           <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'personal' && styles.activeTabButton]} 
+            style={[styles.tabButton, activeTab === 'personal' && styles.activeTabButton, !hasBanking && styles.disabledTab]} 
             onPress={() => onTabPress('personal')}
           >
             <Text style={[styles.tabText, activeTab === 'personal' && styles.activeTabText]}>Activity</Text>
           </TouchableOpacity>
           <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'profile' && styles.activeTabButton]} 
+            style={[styles.tabButton, activeTab === 'profile' && styles.activeTabButton, !hasBanking && styles.disabledTab]} 
             onPress={() => onTabPress('profile')}
           >
             <Text style={[styles.tabText, activeTab === 'profile' && styles.activeTabText]}>Profile</Text>
           </TouchableOpacity>
+          {!hasBanking && (
+            <TouchableOpacity 
+              style={[styles.tabButton, activeTab === 'payout' && styles.activeTabButton]} 
+              onPress={() => onTabPress('payout')}
+            >
+              <Text style={[styles.tabText, activeTab === 'payout' && styles.activeTabText]}>Setup</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </Animated.View>
 
@@ -716,6 +882,21 @@ export default function OwnerDashboardScreen() {
             {renderProfileTab()}
           </Animated.ScrollView>
         </View>
+
+        {/* Slide 4: Payout Setup */}
+        {!hasBanking && (
+          <View style={{ width }}>
+            <Animated.ScrollView
+              onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
+              scrollEventThrottle={16}
+              style={styles.container}
+              contentContainerStyle={[styles.scrollContent, { paddingTop: HEADER_HEIGHT + insets.top + 16, paddingHorizontal: 16 }]}
+              showsVerticalScrollIndicator={false}
+            >
+              {renderPayoutSetup()}
+            </Animated.ScrollView>
+          </View>
+        )}
       </Animated.ScrollView>
     </View>
   );
@@ -786,6 +967,9 @@ const styles = StyleSheet.create({
   activeTabText: {
     color: '#01b854',
     fontWeight: '700',
+  },
+  disabledTab: {
+    opacity: 0.4,
   },
   grid: {
     flexDirection: 'row',
@@ -890,5 +1074,74 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     marginLeft: 8,
+  },
+  payoutContainer: {
+    width: '100%',
+    maxWidth: 600,
+    alignSelf: 'center',
+    marginTop: 20,
+  },
+  payoutCard: {
+    padding: 32,
+    borderRadius: 24,
+    backgroundColor: '#FFF',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  payoutHeader: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  payoutTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginTop: 16,
+    textAlign: 'center',
+  },
+  payoutSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: 8,
+    lineHeight: 20,
+  },
+  bankForm: {
+    width: '100%',
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748B',
+    marginBottom: 8,
+    letterSpacing: 0.5,
+  },
+  formInput: {
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: '#0F172A',
+    fontWeight: '600',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  saveButton: {
+    backgroundColor: '#01b854',
+    borderRadius: 16,
+    height: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+  },
+  saveButtonText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 1,
   },
 });

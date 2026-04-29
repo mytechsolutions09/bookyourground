@@ -13,7 +13,9 @@ import {
   TextInput,
   ActivityIndicator,
   Modal,
+  ImageBackground,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { router } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { Mail, Lock, User, Phone, MapPin, Building2, ChevronDown, Eye, EyeOff } from 'lucide-react-native';
@@ -107,11 +109,17 @@ export default function OwnerSignupScreen() {
   // ── Web layout ────────────────────────────────────────────────────────────
   if (Platform.OS === 'web') {
     return (
-      <KeyboardAvoidingView behavior="height" style={webStyles.container}>
-        <View style={webStyles.scrollContent}>
-          <View style={webStyles.heroColumn}>
+      <View style={webStyles.container}>
+        <ImageBackground 
+          source={require('../../assets/signup-stadium.png')}
+          style={StyleSheet.absoluteFillObject}
+          resizeMode="cover"
+        >
+          <View style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(4,53,41,0.4)' }]} />
+          
+          <ScrollView contentContainerStyle={webStyles.scrollContent}>
             <View style={webStyles.formContainer}>
-              <View style={webStyles.formCard}>
+              <BlurView intensity={25} tint="light" style={webStyles.glassCard}>
                 <View style={webStyles.header}>
                   <TouchableOpacity onPress={() => router.replace('/')}>
                     <Image
@@ -121,7 +129,7 @@ export default function OwnerSignupScreen() {
                     />
                   </TouchableOpacity>
                   <Text style={webStyles.formTitle}>Partner with Us</Text>
-                  <Text style={webStyles.formSubtitle}>List your ground and reach thousands of players</Text>
+                  <Text style={webStyles.formSubtitle}>List your ground and reach players</Text>
                 </View>
 
                 <View style={webStyles.form}>
@@ -131,7 +139,7 @@ export default function OwnerSignupScreen() {
                         label="Ground Name"
                         value={businessName}
                         onChangeText={setBusinessName}
-                        placeholder="e.g. Arena Sports Park"
+                        placeholder="e.g. Dream Arena"
                       />
                     </View>
                     <View style={webStyles.col}>
@@ -147,7 +155,7 @@ export default function OwnerSignupScreen() {
                   <View style={webStyles.row}>
                     <View style={webStyles.col}>
                       <WebInput
-                        label="Email Address"
+                        label="Email"
                         value={email}
                         onChangeText={setEmail}
                         placeholder="business@example.com"
@@ -157,7 +165,7 @@ export default function OwnerSignupScreen() {
                     </View>
                     <View style={webStyles.col}>
                       <WebInput
-                        label="Phone Number"
+                        label="Phone"
                         value={phone}
                         onChangeText={setPhone}
                         placeholder="+91..."
@@ -166,57 +174,47 @@ export default function OwnerSignupScreen() {
                     </View>
                   </View>
 
-                   <WebInput
-                    label="Password"
-                    value={password}
-                    onChangeText={setPassword}
-                    placeholder="Create a strong password"
-                    secureTextEntry={!showPassword}
-                    showToggle={true}
-                    onToggle={() => setShowPassword(!showPassword)}
-                    isToggled={showPassword}
-                  />
-
-                  <WebInput
-                    label="Confirm Password"
-                    value={confirmPassword}
-                    onChangeText={setConfirmPassword}
-                    placeholder="Repeat password"
-                    secureTextEntry={!showConfirmPassword}
-                    showToggle={true}
-                    onToggle={() => setShowConfirmPassword(!showConfirmPassword)}
-                    isToggled={showConfirmPassword}
-                  />
-
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 16 }}>
-                    <PasswordRequirement label="At least 1 lowercase (a-z)" met={/[a-z]/.test(password)} theme="light" />
-                    <PasswordRequirement label="At least 1 uppercase (A-Z)" met={/[A-Z]/.test(password)} theme="light" />
-                    <PasswordRequirement label="At least 1 number (0-9)" met={/[0-9]/.test(password)} theme="light" />
-                    <PasswordRequirement label="At least 6 characters" met={password.length >= 6} theme="light" />
-                  </View>
-
-                  {Platform.OS === 'web' && TurnstileComponent && (
-                    <View style={{ marginBottom: 16, alignItems: 'center', minHeight: 65 }}>
-                      <TurnstileComponent
-                        siteKey={process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY || '0x4AAAAAAA4N2_8m7n6b5v4c'} 
-                        onSuccess={(token: string) => setTurnstileToken(token)}
-                        onExpire={() => setTurnstileToken(null)}
-                        onError={() => setTurnstileToken(null)}
-                        options={{
-                          theme: 'dark',
-                          size: 'normal',
-                        }}
+                  <View style={webStyles.row}>
+                    <View style={webStyles.col}>
+                      <WebInput
+                        label="Password"
+                        value={password}
+                        onChangeText={setPassword}
+                        placeholder="Min 6 chars"
+                        secureTextEntry={!showPassword}
+                        showToggle={true}
+                        onToggle={() => setShowPassword(!showPassword)}
+                        isToggled={showPassword}
                       />
                     </View>
-                  )}
+                    <View style={webStyles.col}>
+                      <WebInput
+                        label="Confirm"
+                        value={confirmPassword}
+                        onChangeText={setConfirmPassword}
+                        placeholder="Repeat password"
+                        secureTextEntry={!showConfirmPassword}
+                        showToggle={true}
+                        onToggle={() => setShowConfirmPassword(!showConfirmPassword)}
+                        isToggled={showConfirmPassword}
+                      />
+                    </View>
+                  </View>
+
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 12, gap: 4 }}>
+                    {password.length > 0 && !/[a-z]/.test(password) && <PasswordRequirement label="1 lower" met={false} theme="light" />}
+                    {password.length > 0 && !/[A-Z]/.test(password) && <PasswordRequirement label="1 upper" met={false} theme="light" />}
+                    {password.length > 0 && !/[0-9]/.test(password) && <PasswordRequirement label="1 num" met={false} theme="light" />}
+                    {password.length > 0 && password.length < 6 && <PasswordRequirement label="6+ chars" met={false} theme="light" />}
+                  </View>
 
                   <View style={webStyles.row}>
                     <View style={webStyles.col}>
                       <WebInput
-                        label="Business Address"
+                        label="Address"
                         value={address}
                         onChangeText={setAddress}
-                        placeholder="Ground street address"
+                        placeholder="Street address"
                       />
                     </View>
                     <View style={webStyles.col}>
@@ -228,6 +226,18 @@ export default function OwnerSignupScreen() {
                     </View>
                   </View>
 
+                  {Platform.OS === 'web' && TurnstileComponent && (
+                    <View style={{ marginBottom: 12, alignItems: 'center', minHeight: 65 }}>
+                      <TurnstileComponent
+                        siteKey={process.env.EXPO_PUBLIC_TURNSTILE_SITE_KEY || '0x4AAAAAAA4N2_8m7n6b5v4c'} 
+                        onSuccess={(token: string) => setTurnstileToken(token)}
+                        onExpire={() => setTurnstileToken(null)}
+                        onError={() => setTurnstileToken(null)}
+                        options={{ theme: 'light', size: 'normal' }}
+                      />
+                    </View>
+                  )}
+
                   <View style={webStyles.buttonRow}>
                     <TouchableOpacity
                       style={[webStyles.button, loading && { opacity: 0.7 }]}
@@ -235,9 +245,9 @@ export default function OwnerSignupScreen() {
                       disabled={loading}
                     >
                       {loading ? (
-                        <ActivityIndicator color="#043529" size="small" />
+                        <ActivityIndicator color="#FFFFFF" size="small" />
                       ) : (
-                        <Text style={webStyles.buttonText}>REGISTER GROUND</Text>
+                        <Text style={webStyles.buttonText}>REGISTER</Text>
                       )}
                     </TouchableOpacity>
 
@@ -245,213 +255,202 @@ export default function OwnerSignupScreen() {
                       style={webStyles.outlineButton}
                       onPress={() => router.replace('/(auth)/login')}
                     >
-                      <Text style={webStyles.outlineButtonText}>OWNER LOGIN</Text>
+                      <Text style={webStyles.outlineButtonText}>LOGIN</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
-              </View>
+              </BlurView>
             </View>
-          </View>
-
-          {showHeroImage && (
-            <View style={webStyles.heroImage}>
-              <Image
-                source={require('../../assets/signup-stadium.png')}
-                style={{ width: '100%', height: '100%' }}
-                resizeMode="cover"
-              />
-              <View style={StyleSheet.absoluteFillObject}>
-                <View style={{ flex: 1, backgroundColor: 'rgba(4,53,41,0.5)' }} />
-              </View>
-              <View style={webStyles.heroOverlayContent}>
-                <Text style={webStyles.heroOverTitle}>Join the Booking Revolution</Text>
-                <Text style={webStyles.heroOverSub}>Monetize your turf with the most advanced sports booking platform.</Text>
-              </View>
-            </View>
-          )}
-        </View>
-      </KeyboardAvoidingView>
+          </ScrollView>
+        </ImageBackground>
+      </View>
     );
   }
 
   // ── Mobile layout ─────────────────────────────────────────────────────────
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.screen}
-    >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+    <View style={{ flex: 1 }}>
+      <ImageBackground 
+        source={require('../../assets/background.jpg')} 
+        style={styles.background}
+        resizeMode="cover"
       >
-        <View style={styles.logoWrap}>
-          <Image
-            source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
-            style={styles.logo}
-            resizeMode="contain"
-          />
-        </View>
-
-        <View style={styles.headingWrap}>
-          <Text style={styles.title}>Partner Signup</Text>
-          <Text style={styles.subtitle}>List your ground and start accepting bookings</Text>
-        </View>
-
-        <View style={styles.card}>
-          <View style={styles.fieldWrap}>
-            <Text style={styles.fieldLabel}>Ground Name</Text>
-            <View style={styles.inputRow}>
-              <Building2 size={17} color="#6b7280" />
-              <TextInput
-                style={styles.textInput}
-                value={businessName}
-                onChangeText={setBusinessName}
-                placeholder="e.g. Dream Arena"
-                placeholderTextColor="#4b5563"
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.screen}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.logoWrap}>
+              <Image
+                source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
+                style={styles.logo}
+                resizeMode="contain"
               />
             </View>
-          </View>
 
-          <View style={styles.fieldWrap}>
-            <Text style={styles.fieldLabel}>Owner Name</Text>
-            <View style={styles.inputRow}>
-              <User size={17} color="#6b7280" />
-              <TextInput
-                style={styles.textInput}
-                value={fullName}
-                onChangeText={setFullName}
-                placeholder="Your full name"
-                placeholderTextColor="#4b5563"
-              />
-            </View>
-          </View>
-
-          <View style={styles.fieldWrap}>
-            <Text style={styles.fieldLabel}>Email Address</Text>
-            <View style={styles.inputRow}>
-              <Mail size={17} color="#6b7280" />
-              <TextInput
-                style={styles.textInput}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="email@example.com"
-                placeholderTextColor="#4b5563"
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
-          </View>
-
-          <View style={styles.fieldWrap}>
-            <Text style={styles.fieldLabel}>Mobile Number</Text>
-            <View style={styles.inputRow}>
-              <Phone size={17} color="#6b7280" />
-              <TextInput
-                style={styles.textInput}
-                value={phone}
-                onChangeText={setPhone}
-                placeholder="+91..."
-                placeholderTextColor="#4b5563"
-                keyboardType="phone-pad"
-              />
-            </View>
-          </View>
-
-          <View style={styles.fieldWrap}>
-            <Text style={styles.fieldLabel}>Business Address</Text>
-            <View style={styles.inputRow}>
-              <MapPin size={17} color="#6b7280" />
-              <TextInput
-                style={styles.textInput}
-                value={address}
-                onChangeText={setAddress}
-                placeholder="Ground street address"
-                placeholderTextColor="#4b5563"
-              />
-            </View>
-          </View>
-
-          <View style={styles.fieldWrap}>
-            <Text style={styles.fieldLabel}>State</Text>
-            <TouchableOpacity 
-              onPress={() => setShowStatePicker(true)}
-              style={styles.inputRow}
-            >
-              <MapPin size={17} color="#6b7280" />
-              <Text style={[styles.textInput, !state && { color: '#4b5563' }]}>
-                {state || "Select State"}
-              </Text>
-              <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                <ChevronDown size={15} color="#6b7280" />
+            <BlurView intensity={90} tint="light" style={styles.card}>
+              <View style={styles.headingWrap}>
+                <Text style={styles.title}>Partner Signup</Text>
+                <Text style={styles.subtitle}>List your ground and start accepting bookings</Text>
               </View>
+
+              <View style={styles.fieldWrap}>
+                <Text style={styles.fieldLabel}>Ground Name</Text>
+                <View style={styles.inputRow}>
+                  <Building2 size={17} color="#475569" />
+                  <TextInput
+                    style={styles.textInput}
+                    value={businessName}
+                    onChangeText={setBusinessName}
+                    placeholder="e.g. Dream Arena"
+                    placeholderTextColor="#94a3b8"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.fieldWrap}>
+                <Text style={styles.fieldLabel}>Owner Name</Text>
+                <View style={styles.inputRow}>
+                  <User size={17} color="#475569" />
+                  <TextInput
+                    style={styles.textInput}
+                    value={fullName}
+                    onChangeText={setFullName}
+                    placeholder="Your full name"
+                    placeholderTextColor="#94a3b8"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.fieldWrap}>
+                <Text style={styles.fieldLabel}>Email Address</Text>
+                <View style={styles.inputRow}>
+                  <Mail size={17} color="#475569" />
+                  <TextInput
+                    style={styles.textInput}
+                    value={email}
+                    onChangeText={setEmail}
+                    placeholder="email@example.com"
+                    placeholderTextColor="#94a3b8"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.fieldWrap}>
+                <Text style={styles.fieldLabel}>Mobile Number</Text>
+                <View style={styles.inputRow}>
+                  <Phone size={17} color="#475569" />
+                  <TextInput
+                    style={styles.textInput}
+                    value={phone}
+                    onChangeText={setPhone}
+                    placeholder="+91..."
+                    placeholderTextColor="#94a3b8"
+                    keyboardType="phone-pad"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.fieldWrap}>
+                <Text style={styles.fieldLabel}>Business Address</Text>
+                <View style={styles.inputRow}>
+                  <MapPin size={17} color="#475569" />
+                  <TextInput
+                    style={styles.textInput}
+                    value={address}
+                    onChangeText={setAddress}
+                    placeholder="Ground street address"
+                    placeholderTextColor="#94a3b8"
+                  />
+                </View>
+              </View>
+
+              <View style={styles.fieldWrap}>
+                <Text style={styles.fieldLabel}>State</Text>
+                <TouchableOpacity 
+                  onPress={() => setShowStatePicker(true)}
+                  style={styles.inputRow}
+                >
+                  <MapPin size={17} color="#475569" />
+                  <Text style={[styles.textInput, !state && { color: '#94a3b8' }]}>
+                    {state || "Select State"}
+                  </Text>
+                  <ChevronDown size={15} color="#475569" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.fieldWrap}>
+                <Text style={styles.fieldLabel}>Password</Text>
+                <View style={styles.inputRow}>
+                  <Lock size={17} color="#475569" />
+                  <TextInput
+                    style={styles.textInput}
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="Min 6 characters"
+                    placeholderTextColor="#94a3b8"
+                    secureTextEntry={!showPassword}
+                  />
+                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                    {showPassword ? <EyeOff size={17} color="#475569" /> : <Eye size={17} color="#475569" />}
+                  </TouchableOpacity>
+                </View>
+                <View style={{ marginTop: 8, flexDirection: 'row', flexWrap: 'wrap', gap: 4 }}>
+                  {password.length > 0 && !/[a-z]/.test(password) && <PasswordRequirement label="1 lower" met={false} theme="light" />}
+                  {password.length > 0 && !/[A-Z]/.test(password) && <PasswordRequirement label="1 upper" met={false} theme="light" />}
+                  {password.length > 0 && !/[0-9]/.test(password) && <PasswordRequirement label="1 num" met={false} theme="light" />}
+                  {password.length > 0 && password.length < 6 && <PasswordRequirement label="6+ chars" met={false} theme="light" />}
+                </View>
+              </View>
+
+              <View style={styles.fieldWrap}>
+                <Text style={styles.fieldLabel}>Confirm Password</Text>
+                <View style={styles.inputRow}>
+                  <Lock size={17} color="#475569" />
+                  <TextInput
+                    style={styles.textInput}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    placeholder="Repeat password"
+                    placeholderTextColor="#94a3b8"
+                    secureTextEntry={!showConfirmPassword}
+                  />
+                  <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                    {showConfirmPassword ? <EyeOff size={17} color="#475569" /> : <Eye size={17} color="#475569" />}
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.buttonRow}>
+                <TouchableOpacity
+                  style={[styles.signupBtn, loading && { opacity: 0.7 }]}
+                  onPress={handleSignup}
+                  disabled={loading}
+                >
+                  {loading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.signupBtnText}>SIGN UP</Text>}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.outlineBtn}
+                  onPress={() => router.replace('/(auth)/login')}
+                >
+                  <Text style={styles.outlineBtnText}>LOGIN</Text>
+                </TouchableOpacity>
+              </View>
+            </BlurView>
+
+            <TouchableOpacity onPress={() => router.replace('/')} style={styles.homeLink}>
+              <Text style={styles.homeLinkText}>Back to Home</Text>
             </TouchableOpacity>
-          </View>
-
-           <View style={styles.fieldWrap}>
-            <Text style={styles.fieldLabel}>Password</Text>
-            <View style={styles.inputRow}>
-              <Lock size={17} color="#6b7280" />
-              <TextInput
-                style={styles.textInput}
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Min 6 characters"
-                placeholderTextColor="#4b5563"
-                secureTextEntry={!showPassword}
-              />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                {showPassword ? <EyeOff size={17} color="#6b7280" /> : <Eye size={17} color="#6b7280" />}
-              </TouchableOpacity>
-            </View>
-            <View style={{ marginTop: 8, flexDirection: 'row', flexWrap: 'wrap' }}>
-              <PasswordRequirement label="At least 1 lowercase (a-z)" met={/[a-z]/.test(password)} />
-              <PasswordRequirement label="At least 1 uppercase (A-Z)" met={/[A-Z]/.test(password)} />
-              <PasswordRequirement label="At least 1 number (0-9)" met={/[0-9]/.test(password)} />
-              <PasswordRequirement label="At least 6 characters" met={password.length >= 6} />
-            </View>
-          </View>
-
-          <View style={styles.fieldWrap}>
-            <Text style={styles.fieldLabel}>Confirm Password</Text>
-            <View style={styles.inputRow}>
-              <Lock size={17} color="#6b7280" />
-              <TextInput
-                style={styles.textInput}
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                placeholder="Repeat password"
-                placeholderTextColor="#4b5563"
-                secureTextEntry={!showConfirmPassword}
-              />
-              <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
-                {showConfirmPassword ? <EyeOff size={17} color="#6b7280" /> : <Eye size={17} color="#6b7280" />}
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.buttonRow}>
-            <TouchableOpacity
-              style={[styles.signupBtn, loading && { opacity: 0.7 }]}
-              onPress={handleSignup}
-              disabled={loading}
-            >
-              {loading ? <ActivityIndicator color="#043529" /> : <Text style={styles.signupBtnText}>SIGN UP</Text>}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.outlineBtn}
-              onPress={() => router.replace('/(auth)/login')}
-            >
-              <Text style={styles.outlineBtnText}>LOGIN</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <TouchableOpacity onPress={() => router.replace('/')} style={styles.homeLink}>
-          <Text style={styles.homeLinkText}>Back to Home</Text>
-        </TouchableOpacity>
-      </ScrollView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </ImageBackground>
 
       {/* State Picker Modal for Mobile */}
       <Modal visible={showStatePicker} transparent animationType="slide">
@@ -486,7 +485,7 @@ export default function OwnerSignupScreen() {
           </View>
         </View>
       </Modal>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -494,8 +493,8 @@ export default function OwnerSignupScreen() {
 function WebStatePicker(props: any) {
   const { label, value, onValueChange } = props;
   return (
-    <View style={{ marginBottom: 12 }}>
-      {label && <Text style={{ fontSize: 12, fontWeight: '600', color: '#E5E7EB', marginBottom: 4 }}>{label}</Text>}
+    <View style={{ marginBottom: 10 }}>
+      {label && <Text style={{ fontSize: 12, fontWeight: '700', color: '#F1F5F9', marginBottom: 4 }}>{label}</Text>}
       <View style={{ position: 'relative', width: '100%' }}>
         <select
           value={value}
@@ -503,25 +502,26 @@ function WebStatePicker(props: any) {
           style={{
             width: '100%',
             appearance: 'none',
-            border: '1px solid rgba(0, 234, 107, 0.12)',
+            border: '1.5px solid rgba(15, 23, 42, 0.2)',
             borderRadius: '8px',
-            padding: '10px 12px',
+            padding: '8px 10px',
             fontSize: '14px',
-            backgroundColor: '#06392e',
-            color: '#f9fafb',
+            backgroundColor: 'rgba(255, 255, 255, 0.7)',
+            color: '#0F172A',
+            fontWeight: '600',
             outline: 'none',
             cursor: 'pointer',
           }}
         >
           <option value="" disabled hidden>Select state</option>
           {INDIAN_STATES.map(state => (
-            <option key={state} value={state} style={{ backgroundColor: '#06392e', color: '#f9fafb' }}>
+            <option key={state} value={state} style={{ backgroundColor: '#FFF', color: '#0F172A' }}>
               {state}
             </option>
           ))}
         </select>
-        <View style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
-          <ChevronDown size={14} color="#6b7280" />
+        <View style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+          <ChevronDown size={14} color="#475569" />
         </View>
       </View>
     </View>
@@ -583,35 +583,36 @@ const mobilePickerStyles = StyleSheet.create({
 function WebInput(props: any) {
   const { label, showToggle, onToggle, isToggled, ...rest } = props;
   return (
-    <View style={{ marginBottom: 12 }}>
+    <View style={{ marginBottom: 10 }}>
       {label && (
-        <Text style={{ fontSize: 12, fontWeight: '600', color: '#E5E7EB', marginBottom: 4 }}>
+        <Text style={{ fontSize: 12, fontWeight: '700', color: '#F1F5F9', marginBottom: 4 }}>
           {label}
         </Text>
       )}
       <View style={{ position: 'relative', width: '100%' }}>
         <TextInput
           style={{
-            borderWidth: 1,
-            borderColor: 'rgba(0, 234, 107, 0.12)',
+            borderWidth: 1.5,
+            borderColor: 'rgba(15, 23, 42, 0.2)',
             borderRadius: 8,
-            paddingHorizontal: 12,
-            paddingVertical: 10,
-            paddingRight: showToggle ? 40 : 12,
+            paddingHorizontal: 10,
+            paddingVertical: 8,
+            paddingRight: showToggle ? 40 : 10,
             fontSize: 14,
-            backgroundColor: '#06392e',
-            color: '#f9fafb',
+            backgroundColor: 'rgba(255, 255, 255, 0.7)',
+            color: '#0F172A',
+            fontWeight: '600',
             outlineStyle: 'none',
           } as any}
-          placeholderTextColor="#6b7280"
+          placeholderTextColor="#64748B"
           {...rest}
         />
         {showToggle && (
           <TouchableOpacity 
             onPress={onToggle}
-            style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)' }}
+            style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)' }}
           >
-            {isToggled ? <EyeOff size={16} color="#6b7280" /> : <Eye size={16} color="#6b7280" />}
+            {isToggled ? <EyeOff size={16} color="#475569" /> : <Eye size={16} color="#475569" />}
           </TouchableOpacity>
         )}
       </View>
@@ -620,47 +621,135 @@ function WebInput(props: any) {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#043529' },
-  scrollContent: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 40, paddingBottom: 40 },
+  screen: { flex: 1 },
+  background: { flex: 1, width: '100%', height: '100%' },
+  scrollContent: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 60, paddingBottom: 40 },
   logoWrap: { alignItems: 'center', marginBottom: 20 },
   logo: { width: 180, height: 48 },
-  headingWrap: { alignItems: 'center', marginBottom: 24 },
-  title: { fontSize: 24, fontWeight: '800', color: '#f9fafb', marginBottom: 8 },
-  subtitle: { fontSize: 13, color: '#9ca3af', textAlign: 'center' },
-  card: { backgroundColor: '#06392e', borderRadius: 20, padding: 24 },
-  fieldWrap: { marginBottom: 16 },
-  fieldLabel: { fontSize: 13, fontWeight: '600', color: '#e5e7eb', marginBottom: 8 },
-  inputRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#043529', borderRadius: 12, borderWidth: 1.5, borderColor: 'rgba(0,234,107,0.18)', paddingHorizontal: 14, paddingVertical: 12, gap: 10 },
-  textInput: { flex: 1, fontSize: 15, color: '#f9fafb' },
-  buttonRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  signupBtn: { flex: 1, backgroundColor: '#01b854', borderRadius: 12, height: 48, alignItems: 'center', justifyContent: 'center' },
-  signupBtnText: { fontSize: 15, fontWeight: '700', color: '#043529' },
-  outlineBtn: { flex: 1, borderRadius: 12, height: 48, borderWidth: 1.5, borderColor: '#01b854', alignItems: 'center', justifyContent: 'center' },
-  outlineBtnText: { fontSize: 15, fontWeight: '700', color: '#01b854' },
-  homeLink: { marginTop: 24, alignItems: 'center' },
-  homeLinkText: { fontSize: 14, fontWeight: '700', color: '#01b854' },
+  headingWrap: { alignItems: 'center', marginBottom: 16 },
+  title: { fontSize: 24, fontWeight: '800', color: '#FFFFFF', marginBottom: 4 },
+  subtitle: { fontSize: 13, color: '#E2E8F0', textAlign: 'center' },
+  card: { backgroundColor: 'rgba(255, 255, 255, 0.15)', borderRadius: 24, padding: 24, overflow: 'hidden' },
+  fieldWrap: { marginBottom: 12 },
+  fieldLabel: { fontSize: 12, fontWeight: '700', color: '#F1F5F9', marginBottom: 6, letterSpacing: 0.3 },
+  inputRow: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: 'rgba(255, 255, 255, 0.5)', 
+    borderRadius: 12, 
+    borderWidth: 1.5, 
+    borderColor: 'rgba(255, 255, 255, 0.3)', 
+    paddingHorizontal: 14, 
+    paddingVertical: 10, 
+    gap: 10 
+  },
+  textInput: { flex: 1, fontSize: 14, color: '#0F172A', fontWeight: '500' },
+  buttonRow: { flexDirection: 'row', gap: 12, marginTop: 16 },
+  signupBtn: { 
+    flex: 1, 
+    backgroundColor: '#0F172A', 
+    borderRadius: 12, 
+    height: 42, 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    shadowColor: '#1e293b',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  signupBtnText: { fontSize: 14, fontWeight: '700', color: '#FFFFFF' },
+  outlineBtn: { 
+    flex: 1, 
+    borderRadius: 12, 
+    height: 42, 
+    borderWidth: 1.5, 
+    borderColor: '#475569', 
+    alignItems: 'center', 
+    justifyContent: 'center' 
+  },
+  outlineBtnText: { fontSize: 13, fontWeight: '700', color: '#475569' },
 });
 
 const webStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#043529' },
-  scrollContent: { flexGrow: 1, justifyContent: 'center', flexDirection: 'row' as any, alignItems: 'stretch' },
-  header: { marginBottom: 24, alignItems: 'center' },
-  logoImage: { width: 220, height: 44, marginBottom: 16 },
+  scrollContent: { flexGrow: 1 },
+  formContainer: { 
+    flex: 1, 
+    width: '100%', 
+    minHeight: '100vh' as any,
+    paddingHorizontal: 24, 
+    paddingVertical: 40, 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  glassCard: { 
+    width: '100%', 
+    maxWidth: 520, 
+    backgroundColor: 'rgba(255, 255, 255, 0.8)', 
+    borderRadius: 32, 
+    paddingHorizontal: 32, 
+    paddingVertical: 32, 
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.2,
+    shadowRadius: 30,
+    overflow: 'hidden',
+  },
+  header: { marginBottom: 20, alignItems: 'center' },
+  logoImage: { width: 160, height: 40, marginBottom: 8 },
+  formTitle: { 
+    fontSize: 26, 
+    fontWeight: '900', 
+    color: '#FFFFFF', 
+    marginTop: 4, 
+    marginBottom: 0,
+    fontFamily: 'Inter',
+  },
+  formSubtitle: { 
+    fontSize: 14, 
+    color: '#E2E8F0', 
+    marginTop: 4, 
+    fontFamily: 'Inter' 
+  },
   form: { },
-  heroColumn: { flex: 1.2, width: '55%' as any },
-  formContainer: { flex: 1, width: '100%', backgroundColor: '#043529', paddingHorizontal: 40, paddingVertical: 40, justifyContent: 'center', alignItems: 'center' },
-  formCard: { width: '100%', maxWidth: 540, backgroundColor: '#06392e', borderRadius: 24, padding: 40, shadowColor: '#000', shadowOffset: { width: 0, height: 15 }, shadowOpacity: 0.3, shadowRadius: 30 },
-  formTitle: { fontSize: 28, fontWeight: '800', color: '#f9fafb', marginTop: 4, marginBottom: 8 },
-  formSubtitle: { fontSize: 15, color: '#9ca3af', marginBottom: 0, textAlign: 'center' },
-  heroImage: { flex: 1, width: '45%' as any, overflow: 'hidden', position: 'relative' },
-  heroOverlayContent: { position: 'absolute', bottom: 60, left: 40, right: 40 },
-  heroOverTitle: { fontSize: 32, fontWeight: '800', color: '#fff', marginBottom: 12 },
-  heroOverSub: { fontSize: 18, color: 'rgba(255,255,255,0.9)', lineHeight: 26 },
-  row: { flexDirection: 'row', gap: 16 },
+  row: { flexDirection: 'row', gap: 12 },
   col: { flex: 1 },
-  buttonRow: { flexDirection: 'row', gap: 16, marginTop: 12 },
-  button: { flex: 1, backgroundColor: '#01b854', borderRadius: 10, height: 48, alignItems: 'center', justifyContent: 'center' },
-  buttonText: { fontSize: 15, fontWeight: '700', color: '#043529', letterSpacing: 0.5 },
-  outlineButton: { flex: 1, borderRadius: 10, height: 48, borderWidth: 1.5, borderColor: '#01b854', alignItems: 'center', justifyContent: 'center' },
-  outlineButtonText: { fontSize: 15, fontWeight: '700', color: '#01b854', textTransform: 'uppercase' as any },
+  buttonRow: { flexDirection: 'row', gap: 12, marginTop: 12 },
+  button: { 
+    flex: 1, 
+    backgroundColor: '#0F172A', 
+    borderRadius: 12, 
+    height: 48, 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    shadowColor: '#1E293B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+  },
+  buttonText: { 
+    fontSize: 14, 
+    fontWeight: '700', 
+    color: '#FFFFFF', 
+    letterSpacing: 0.5,
+    fontFamily: 'Inter',
+  },
+  outlineButton: { 
+    flex: 1, 
+    borderRadius: 12, 
+    height: 48, 
+    borderWidth: 1.5, 
+    borderColor: '#FFFFFF', 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  outlineButtonText: { 
+    fontSize: 14, 
+    fontWeight: '700', 
+    color: '#FFFFFF', 
+    textTransform: 'uppercase' as any,
+    fontFamily: 'Inter',
+  },
 });

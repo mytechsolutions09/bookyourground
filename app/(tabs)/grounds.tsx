@@ -208,11 +208,15 @@ export default function GroundsTabScreen() {
 
   if (Platform.OS === 'web') {
     return (
-      <WebLayout hideHeader={isSmall} isPublicNoSidebar={isSmall}>
+      <WebLayout hideHeader={false} isPublicNoSidebar={isSmall}>
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator
+          scrollEventThrottle={16}
+          onScroll={(e) => {
+            DeviceEventEmitter.emit('mainScroll', { y: e.nativeEvent.contentOffset.y });
+          }}
         >
           {isSmall && renderTabs(styles.webTabContainerNative)}
           {!isSmall && renderTabs(styles.webTabContainer)}

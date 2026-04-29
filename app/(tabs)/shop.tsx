@@ -371,12 +371,17 @@ export default function ShopScreen() {
     const ScrollComponent = Platform.OS === 'web' ? ScrollView : Animated.ScrollView;
     return (
       <ScrollComponent 
-        onScroll={onScroll}
+        onScroll={(e) => {
+          if (Platform.OS === 'web') {
+            DeviceEventEmitter.emit('mainScroll', { y: e.nativeEvent.contentOffset.y });
+          }
+          if (onScroll) onScroll(e);
+        }}
         scrollEventThrottle={16}
-      showsVerticalScrollIndicator={false}
-      style={styles.container} 
-      contentContainerStyle={[styles.scrollContent]}
-    >
+        showsVerticalScrollIndicator={false}
+        style={styles.container} 
+        contentContainerStyle={[styles.scrollContent]}
+      >
       {/* Hero Banner */}
       {loading ? (
         <HeroSkeleton />

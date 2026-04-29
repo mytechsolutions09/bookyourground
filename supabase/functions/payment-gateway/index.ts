@@ -30,12 +30,16 @@ function isBoxCricket(pitchType: string | null | undefined): boolean {
   return String(pitchType ?? '').toLowerCase().includes('box');
 }
 
-const PLATFORM_FEE_RATE = 0.05;
-const GST_RATE = 0.18;
+// Constants moved to database platform_settings table
 
 // --- AUTHORITATIVE Pricing Calculation Helper ---
-const calculateFinalAmounts = (details: any, groundType: string | null) => {
-  console.log(`[Pricing] Input details: ${JSON.stringify(details)}`);
+// --- AUTHORITATIVE Pricing Calculation Helper ---
+const calculateFinalAmounts = (details: any, groundType: string | null, settings: any, skipOwnerFee: boolean = false) => {
+  const PLATFORM_FEE_RATE = Number(settings?.user_platform_fee_rate ?? 0.05);
+  const GST_RATE = Number(settings?.gst_rate ?? 0.18);
+  const CRICKET_FIXED_FEE = Number(settings?.cricket_owner_fee_fixed ?? 100);
+
+  console.log(`[Pricing] Input details: ${JSON.stringify(details)}, settings: ${JSON.stringify(settings)}`);
   
   let discount = Number(details.discount_amount ?? details.discountAmount ?? 0);
   const priceUnit = Number(details.price_per_hour ?? details.pricePerHour ?? 0);
@@ -66,13 +70,28 @@ const calculateFinalAmounts = (details: any, groundType: string | null) => {
   const gstUser = Math.round(platformFeeUser * GST_RATE * 100) / 100;
   const totalCharged = Math.round(groundPrice + platformFeeUser + gstUser); // Round to nearest zero decimals
   
-  const platformFeeOwner = Math.round(groundPrice * PLATFORM_FEE_RATE * 100) / 100;
+  // Logic: "for cricket ground 100 +gst per booking per team"
+  const isCricket = String(groundType ?? '').toLowerCase().includes('cricket');
+  let platformFeeOwner = 0;
+  
+  if (skipOwnerFee) {
+    platformFeeOwner = 0;
+    console.log(`[Pricing] Owner platform fee skipped (charge_platform_fee: false)`);
+  } else if (isCricket) {
+    const teamType = details.team_type ?? details.teamType ?? 'both';
+    const teamCount = teamType === 'one' ? 1 : 2;
+    platformFeeOwner = CRICKET_FIXED_FEE * teamCount;
+    console.log(`[Pricing] Cricket detected, using fixed owner fee: ${platformFeeOwner} (${teamCount} teams)`);
+  } else {
+    platformFeeOwner = Math.round(groundPrice * PLATFORM_FEE_RATE * 100) / 100;
+  }
+
   const gstOwner = Math.round(platformFeeOwner * GST_RATE * 100) / 100;
   const ownerSettlement = Math.round((groundPrice - platformFeeOwner - gstOwner) * 100) / 100;
   
   const bygNetRevenue = Math.round((platformFeeUser + platformFeeOwner) * 100) / 100;
 
-  console.log(`[Pricing] Result -> Unit: ${priceUnit}, Gross: ${grossAmount}, Net: ${net}, TotalCharged: ${totalCharged}`);
+  console.log(`[Pricing] Result -> Unit: ${priceUnit}, Gross: ${grossAmount}, Net: ${net}, TotalCharged: ${totalCharged}, OwnerSettlement: ${ownerSettlement}`);
   
   return {
     pricePerHour: priceUnit,
@@ -105,6 +124,13 @@ serve(async (req) => {
     }
 
     const supabaseClient = createClient(supabaseUrl, supabaseServiceRoleKey);
+
+    // Fetch platform settings once
+    const { data: settingsData } = await supabaseClient.from('platform_settings').select('key, value');
+    const settings: any = {};
+    settingsData?.forEach((s: any) => {
+      settings[s.key] = s.value;
+    });
 
     // Debug: Log headers (sanitized)
     const headers: any = {};
@@ -264,7 +290,7 @@ serve(async (req) => {
             throw new Error('This slot is no longer available. Please contact support for a refund if payment was successful.');
         }
 
-        const { data: ground } = await supabaseClient.from('grounds').select('pitch_type').eq('id', ground_id).single();
+        const { data: ground } = await supabaseClient.from('grounds').select('pitch_type, owner:profiles!owner_id(charge_platform_fee)').eq('id', ground_id).single();
         
         const { 
           pricePerHour, 
@@ -278,7 +304,7 @@ serve(async (req) => {
           gstOwner,
           ownerSettlement,
           bygNetRevenue
-        } = calculateFinalAmounts(bookingDetails, ground?.pitch_type);
+        } = calculateFinalAmounts(bookingDetails, ground?.pitch_type, settings, ground?.owner?.charge_platform_fee === false);
 
         const { data: newBooking, error: insertError } = await supabaseClient
           .from('bookings')
@@ -404,7 +430,7 @@ serve(async (req) => {
           throw new Error('Missing mandatory booking details (ground_id, date, or time).');
         }
 
-        const { data: ground, error: groundError } = await supabaseClient.from('grounds').select('pitch_type').eq('id', ground_id).single();
+        const { data: ground, error: groundError } = await supabaseClient.from('grounds').select('pitch_type, owner:profiles!owner_id(charge_platform_fee)').eq('id', ground_id).single();
         if (groundError || !ground) throw new Error(`Ground not found: ${groundError?.message}`);
 
         console.log(`[Cash] Checking availability for ground ${ground_id} on ${booking_date} at ${start_time}`);
@@ -438,7 +464,7 @@ serve(async (req) => {
           gstOwner,
           ownerSettlement,
           bygNetRevenue
-        } = calculateFinalAmounts(bookingDetails, ground?.pitch_type);
+        } = calculateFinalAmounts(bookingDetails, ground?.pitch_type, settings, ground?.owner?.charge_platform_fee === false);
 
         const { data: newBooking, error: insertError } = await supabaseClient
           .from('bookings')
@@ -557,7 +583,7 @@ serve(async (req) => {
       if (finalGroundId) {
         const { data: ground } = await supabaseClient
           .from('grounds')
-          .select('owner_id, pitch_type')
+          .select('owner_id, pitch_type, owner:profiles!owner_id(charge_platform_fee)')
           .eq('id', finalGroundId)
           .single();
           
@@ -571,7 +597,7 @@ serve(async (req) => {
           if (bankDetails?.razorpay_account_id) {
             // Calculate breakdown to get owner_settlement
             // Use provided bookingDetails or fallback to amount
-            const breakdown = calculateFinalAmounts(bookingDetails || { total_amount: amount }, ground.pitch_type);
+            const breakdown = calculateFinalAmounts(bookingDetails || { total_amount: amount }, ground.pitch_type, settings, ground?.owner?.charge_platform_fee === false);
             
             transfers = [{
               account: bankDetails.razorpay_account_id,
@@ -654,7 +680,7 @@ serve(async (req) => {
         const isAvailable = Array.isArray(availableIds) && availableIds.some((r: any) => r.ground_id === ground_id);
         if (!isAvailable) throw new Error('Slot no longer available.');
 
-        const { data: ground } = await supabaseClient.from('grounds').select('pitch_type').eq('id', ground_id).single();
+        const { data: ground } = await supabaseClient.from('grounds').select('pitch_type, owner:profiles!owner_id(charge_platform_fee)').eq('id', ground_id).single();
         
         const { 
           pricePerHour, 
@@ -668,7 +694,7 @@ serve(async (req) => {
           gstOwner,
           ownerSettlement,
           bygNetRevenue
-        } = calculateFinalAmounts(bookingDetails, ground?.pitch_type);
+        } = calculateFinalAmounts(bookingDetails, ground?.pitch_type, settings, ground?.owner?.charge_platform_fee === false);
 
         const { data: newBooking, error: insertError } = await supabaseClient
           .from('bookings')

@@ -27,8 +27,7 @@ import { CreditCard, ShieldCheck, Clock, Calendar, MapPin, ChevronLeft, Wallet, 
 import { hoursBetweenBooked, normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
 import { useUI } from '@/contexts/UIContext';
 
-const PLATFORM_FEE_RATE = 0.05;
-const GST_RATE = 0.18;
+// Platform settings fetched from database
 
 export default function CheckoutScreen() {
   const { id } = useLocalSearchParams();
@@ -49,6 +48,7 @@ export default function CheckoutScreen() {
   const [applyingCoupon, setApplyingCoupon] = useState(false);
   const [customCashAmount, setCustomCashAmount] = useState<string>('');
   const [bookedForName, setBookedForName] = useState<string>('');
+  const [platformSettings, setPlatformSettings] = useState<any>(null);
   
   // Pricing Calculations
   const { baseGroundPrice, platformFeeIncGst, totalPayable } = React.useMemo(() => {
@@ -56,8 +56,12 @@ export default function CheckoutScreen() {
       ? parseFloat(customCashAmount)
       : (booking?.total_amount || 0);
     
-    const pf = bgp * PLATFORM_FEE_RATE;
-    const gst = pf * GST_RATE;
+    // Fallback to defaults if settings not yet loaded
+    const rate = platformSettings?.user_platform_fee_rate ?? 0.05;
+    const gstRate = platformSettings?.gst_rate ?? 0.18;
+    
+    const pf = bgp * rate;
+    const gst = pf * gstRate;
     const pfGst = pf + gst;
     const tp = Math.round(bgp + pfGst); // Round to nearest whole number
     
@@ -66,7 +70,7 @@ export default function CheckoutScreen() {
       platformFeeIncGst: pfGst,
       totalPayable: tp
     };
-  }, [selectedGateway, customCashAmount, booking?.total_amount]);
+  }, [selectedGateway, customCashAmount, booking?.total_amount, platformSettings]);
 
   const [showRazorpayWebView, setShowRazorpayWebView] = useState(false);
   const [razorpayOrderData, setRazorpayOrderData] = useState<any>(null);
@@ -75,6 +79,7 @@ export default function CheckoutScreen() {
 
   useEffect(() => {
     fetchActiveGateways();
+    fetchPlatformSettings();
     // Hide bottom tab bar on checkout for better focus
     setTabBarVisible(false);
     return () => {
@@ -97,6 +102,24 @@ export default function CheckoutScreen() {
       else if (data?.length) setSelectedGateway(data[0].name);
     } catch (e) {
       console.error('Error fetching gateways:', e);
+    }
+  };
+
+  const fetchPlatformSettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('platform_settings')
+        .select('key, value');
+      
+      if (error) throw error;
+      
+      const settings: any = {};
+      data?.forEach(s => {
+        settings[s.key] = s.value;
+      });
+      setPlatformSettings(settings);
+    } catch (e) {
+      console.error('Error fetching platform settings:', e);
     }
   };
 

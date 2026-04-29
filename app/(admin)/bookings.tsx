@@ -22,18 +22,29 @@ export default function AdminBookingsScreen() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'upcoming' | 'past'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const PAGE_SIZE = 20;
 
   useEffect(() => {
     if (user) {
-      loadBookings();
+      setPage(0);
+      setHasMore(true);
+      loadBookings(0, false);
     }
   }, [user]);
 
-  const loadBookings = async () => {
+  const loadBookings = async (targetPage: number, isLoadMore: boolean) => {
     if (!user) return;
 
     try {
-      setLoading(true);
+      if (isLoadMore) setLoadingMore(true);
+      else setLoading(true);
+
+      const from = targetPage * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
       const { data, error } = await supabase
         .from('bookings')
         .select(`
@@ -45,14 +56,26 @@ export default function AdminBookingsScreen() {
           user:profiles(full_name, phone)
         `)
         .neq('status', 'pending')
-        .order('booking_date', { ascending: false });
+        .order('booking_date', { ascending: false })
+        .range(from, to);
 
       if (error) throw error;
-      setBookings((data || []) as BookingWithDetails[]);
+      
+      const newBookings = (data || []) as BookingWithDetails[];
+      
+      if (isLoadMore) {
+        setBookings(prev => [...prev, ...newBookings]);
+      } else {
+        setBookings(newBookings);
+      }
+
+      setHasMore(newBookings.length === PAGE_SIZE);
+      setPage(targetPage);
     } catch (error) {
       console.error('Error loading admin bookings:', error);
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -451,8 +474,25 @@ export default function AdminBookingsScreen() {
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={loadBookings} />
+          <RefreshControl refreshing={loading} onRefresh={() => loadBookings(0, false)} />
         }
+        ListFooterComponent={() => (
+          hasMore ? (
+            <TouchableOpacity 
+              style={styles.loadMoreBtn} 
+              onPress={() => loadBookings(page + 1, true)}
+              disabled={loadingMore}
+            >
+              {loadingMore ? (
+                <Text style={styles.loadMoreText}>LOADING...</Text>
+              ) : (
+                <Text style={styles.loadMoreText}>LOAD MORE BOOKINGS</Text>
+              )}
+            </TouchableOpacity>
+          ) : bookings.length > 0 ? (
+            <Text style={styles.noMoreText}>END OF LIST</Text>
+          ) : null
+        )}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>No bookings found</Text>
@@ -777,8 +817,34 @@ const styles = StyleSheet.create({
   },
   fullMatchBadgeText: {
     fontSize: 10,
-    fontWeight: '700',
     color: '#166534',
+    fontWeight: '700',
+  },
+  loadMoreBtn: {
+    backgroundColor: IS_WEB ? '#FFFFFF' : 'rgba(0,234,107,0.1)',
+    borderWidth: 1,
+    borderColor: IS_WEB ? '#E5E7EB' : '#00ea6b',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+    marginBottom: 40,
+  },
+  loadMoreText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: IS_WEB ? '#111827' : '#00ea6b',
+    letterSpacing: 1,
+  },
+  noMoreText: {
+    textAlign: 'center',
+    color: '#9CA3AF',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 20,
+    marginBottom: 40,
+    letterSpacing: 1,
   },
 });
 

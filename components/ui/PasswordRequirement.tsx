@@ -8,24 +8,22 @@ interface PasswordRequirementProps {
 }
 
 export default function PasswordRequirement({ label, met, theme = 'dark' }: PasswordRequirementProps) {
-  const isWeb = Platform.OS === 'web';
-  
   // Colors based on theme
-  const unmetColor = theme === 'light' ? '#1e293b' : '#94a3b8';
-  const metColor = theme === 'light' ? '#064e3b' : '#01b854';
+  const unmetBg = theme === 'light' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.15)';
+  const unmetText = theme === 'light' ? '#b91c1c' : '#fca5a5';
+  
+  // If met, we usually hide it in the current flow, but if we don't:
+  const metBg = theme === 'light' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(16, 185, 129, 0.15)';
+  const metText = theme === 'light' ? '#065f46' : '#6ee7b7';
   
   return (
-    <View style={styles.container}>
-      <View style={[
-        styles.dot, 
-        { backgroundColor: met ? metColor : unmetColor }
-      ]} />
+    <View style={[
+      styles.chip, 
+      { backgroundColor: met ? metBg : unmetBg }
+    ]}>
       <Text style={[
         styles.text, 
-        { 
-          color: met ? metColor : unmetColor,
-          fontWeight: met ? '700' : '500',
-        }
+        { color: met ? metText : unmetText }
       ]}>
         {label}
       </Text>
@@ -34,21 +32,20 @@ export default function PasswordRequirement({ label, met, theme = 'dark' }: Pass
 }
 
 const styles = StyleSheet.create({
-  container: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: 6, 
-    marginRight: 12,
-    marginTop: 4 
-  },
-  dot: { 
-    width: 6, 
-    height: 6, 
-    borderRadius: 3 
+  chip: { 
+    paddingHorizontal: 10, 
+    paddingVertical: 4, 
+    borderRadius: 20, 
+    marginRight: 6,
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   text: { 
-    fontSize: 11, 
+    fontSize: 10, 
     fontFamily: 'Inter',
-    fontWeight: '500',
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });

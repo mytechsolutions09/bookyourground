@@ -86,6 +86,27 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const { isTabBarVisible } = useUI();
   const [isBottomBarVisible, setIsBottomBarVisible] = useState(true);
+  const [isNavbarVisible, setIsNavbarVisible] = useState(true);
+  const isCompact = useMemo(() => width < 900, [width]);
+  const isInTabs = useMemo(() => segments.includes('(tabs)'), [segments]);
+  const groundsHref = isCompact ? '/(tabs)/grounds' : '/book-my-ground';
+  const cleanPath = (pathname || '').split('?')[0];
+  const isLanding = cleanPath === '/' || cleanPath === '';
+  const isMarketing = cleanPath === '/book-my-ground' || cleanPath === '/find-an-opponent' || cleanPath === '/grounds' || cleanPath === '/(tabs)/grounds';
+  const isShop = cleanPath === '/shop' || cleanPath.startsWith('/shop/');
+  // Treat only ground detail routes as "ground details" (hide sidebar, use hero header).
+  // Plain /grounds (lists, dashboards) should use the normal app navbar.
+  const isGroundDetails =
+    cleanPath.startsWith('/grounds/') || cleanPath.startsWith('/ground/');
+  const isBookingDetails = cleanPath.startsWith('/bookings/');
+  const isCheckoutPage = cleanPath.startsWith('/checkout/');
+  const isLegalOrInfoPage =
+    cleanPath === '/terms' ||
+    cleanPath === '/privacy' ||
+    cleanPath === '/refund-policy' ||
+    cleanPath === '/contact' ||
+    cleanPath === '/cricket/player-profile';
+  
   const lastScrollPosRef = useRef(0);
   const searchInputRef = React.useRef<TextInput>(null);
 
@@ -279,24 +300,32 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
       const y = window.scrollY;
       setScrolled(y > 50);
 
-      if (Math.abs(y - lastScrollPosRef.current) > 5) {
-        if (y > lastScrollPosRef.current && y > 50) {
-          setIsBottomBarVisible(false);
-        } else if (y < lastScrollPosRef.current || y < 20) {
-          setIsBottomBarVisible(true);
+      // Only update bottom bar visibility from window scroll if we're NOT on a landing/marketing page
+      // (because those pages handle their own scroll events via mainScroll listener)
+      if (!isLanding && !isMarketing && !isShop) {
+        if (Math.abs(y - lastScrollPosRef.current) > 5) {
+          if (y > lastScrollPosRef.current && y > 50) {
+            setIsBottomBarVisible(false);
+            setIsNavbarVisible(false);
+          } else if (y < lastScrollPosRef.current - 5 || y < 20) {
+            setIsBottomBarVisible(true);
+            setIsNavbarVisible(true);
+          }
+          lastScrollPosRef.current = y;
         }
-        lastScrollPosRef.current = y;
       }
     };
 
     const sub = DeviceEventEmitter.addListener('mainScroll', (data) => {
       setScrolled(data.y > 50);
       const y = data.y;
-      if (Math.abs(y - lastScrollPosRef.current) > 5) {
-        if (y > lastScrollPosRef.current && y > 50) {
+      if (Math.abs(y - lastScrollPosRef.current) > 10) {
+        if (y > lastScrollPosRef.current && y > 100) {
           setIsBottomBarVisible(false);
-        } else if (y < lastScrollPosRef.current || y < 20) {
+          setIsNavbarVisible(false);
+        } else if (y < lastScrollPosRef.current || y < 50) {
           setIsBottomBarVisible(true);
+          setIsNavbarVisible(true);
         }
         lastScrollPosRef.current = y;
       }
@@ -308,29 +337,11 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
       window.removeEventListener('scroll', handleScroll);
       sub.remove();
     };
-  }, []);
+  }, [isLanding, isMarketing, isShop]);
 
   // Navbar search: fetch ground suggestions as user types on landing pages.
 
-  const isCompact = useMemo(() => width < 900, [width]);
-  const isInTabs = useMemo(() => segments.includes('(tabs)'), [segments]);
-  const groundsHref = isCompact ? '/(tabs)/grounds' : '/book-my-ground';
-  const cleanPath = (pathname || '').split('?')[0];
-  const isLanding = cleanPath === '/' || cleanPath === '';
-  const isMarketing = cleanPath === '/book-my-ground' || cleanPath === '/find-an-opponent';
-  const isShop = cleanPath === '/shop' || cleanPath.startsWith('/shop/');
-  // Treat only ground detail routes as "ground details" (hide sidebar, use hero header).
-  // Plain /grounds (lists, dashboards) should use the normal app navbar.
-  const isGroundDetails =
-    cleanPath.startsWith('/grounds/') || cleanPath.startsWith('/ground/');
-  const isBookingDetails = cleanPath.startsWith('/bookings/');
-  const isCheckoutPage = cleanPath.startsWith('/checkout/');
-  const isLegalOrInfoPage =
-    cleanPath === '/terms' ||
-    cleanPath === '/privacy' ||
-    cleanPath === '/refund-policy' ||
-    cleanPath === '/contact' ||
-    cleanPath === '/cricket/player-profile';
+  // Navbar search: fetch ground suggestions as user types on landing pages.
   const adminPathnames = [
     '/dashboard',
     '/bookings',
@@ -509,18 +520,18 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
             styles.heroHeader,
             isGroundDetails && styles.heroHeaderGround,
             isMarketing && styles.heroHeaderMarketing,
+            isCompact && !isNavbarVisible && { transform: [{ translateY: -100 }] },
           ]}
         >
           <View
             style={[
               StyleSheet.absoluteFillObject,
               Platform.OS === 'web' && {
-                backgroundColor: scrolled ? '#FFFFFF' : 'transparent',
-                backdropFilter: scrolled ? 'blur(25px)' : 'none',
-                WebkitBackdropFilter: scrolled ? 'blur(25px)' : 'none',
+                backgroundColor: scrolled ? 'rgba(255, 255, 255, 0.12)' : 'transparent',
+                backdropFilter: scrolled ? 'blur(40px) saturate(180%)' : 'none',
+                WebkitBackdropFilter: scrolled ? 'blur(40px) saturate(180%)' : 'none',
                 transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                borderBottomWidth: scrolled ? 1 : 0,
-                borderBottomColor: 'rgba(0,0,0,0.05)',
+                borderBottomWidth: 0,
                 shadowColor: '#000',
                 shadowOffset: { width: 0, height: 12 },
                 shadowOpacity: scrolled ? 0.08 : 0,
@@ -560,19 +571,19 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
                           }}
                           style={[styles.searchIconButton, scrolled && styles.searchIconButtonScrolled]}
                         >
-                          <Search size={18} color={scrolled ? "#475569" : "#FFFFFF"} />
+                          <Search size={18} color="#dcc093" />
                         </TouchableOpacity>
                       ) : (
                         <View style={[
                           styles.headerSearch,
                           { width: 300 },
-                          scrolled && { backgroundColor: 'rgba(255,255,255,0.5)', borderColor: 'rgba(0,0,0,0.08)' } as any
+                          scrolled && { backgroundColor: 'rgba(255, 255, 255, 0.15)', borderColor: 'rgba(255, 255, 255, 0.2)' } as any
                         ]}>
-                          <Search size={16} color={scrolled ? "#64748B" : "#9CA3AF"} style={styles.headerSearchIcon} />
+                          <Search size={16} color="#dcc093" style={styles.headerSearchIcon} />
                           <TextInput
                             ref={searchInputRef}
                             placeholder="Search city or venue..."
-                            placeholderTextColor={scrolled ? "#475569" : "#D1D5DB"}
+                            placeholderTextColor="rgba(220, 192, 147, 0.6)"
                             value={searchQuery}
                             onChangeText={setSearchQuery}
                             onFocus={() => setSearchFocused(true)}
@@ -594,7 +605,7 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
                             returnKeyType="search"
                             style={[
                               styles.headerSearchInput,
-                              scrolled && { color: '#0F172A' } as any,
+                              scrolled && { color: '#dcc093' } as any,
                               searchFocused && { borderColor: 'rgba(0,234,107,0.3)' } as any,
                             ]}
                           />
@@ -671,7 +682,7 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
                       style={[
                         styles.headerPrimaryButtonText,
                         scrolled && styles.headerPrimaryButtonTextScrolled,
-                        { color: '#e6ffb7' }
+                        { color: '#dcc093' }
                       ]}
                       onPress={() => router.push('/shop' as any)}
                     >
@@ -687,7 +698,7 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
 
                     {!isAuthenticated ? (
                       <Text
-                        style={styles.headerSecondaryButtonText}
+                        style={[styles.headerSecondaryButtonText, scrolled && styles.headerSecondaryButtonTextScrolled]}
                         onPress={() => router.push('/(auth)/login' as any)}
                       >
                         SIGN IN
@@ -746,6 +757,7 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
             isShop && { backgroundColor: '#1a1f2e', borderBottomWidth: 0 },
             isGroundOwner && !isPublicNoSidebar && styles.ownerHeader,
             isUserRoute && !isPublicNoSidebar && styles.userHeader,
+            isCompact && !isNavbarVisible && { transform: [{ translateY: -100 }] },
           ]}
         >
           <View style={[styles.headerContent, isCompact && styles.headerContentCompact]}>
@@ -852,7 +864,7 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
       )}
 
 
-      <View style={[bodyStyle, isCompact && isPublicNoSidebar && { paddingBottom: 72 }]}>
+      <View style={bodyStyle}>
         {showMenuPanel ? (
           <View
             style={isAdminLayout ? styles.sidebarContainerAdmin : styles.sidebarContainer}
@@ -1076,7 +1088,12 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
 
         <View style={[
           styles.main,
-          (isLanding || isMarketing || isPublicNoSidebar) && { padding: 0 },
+          (isLanding || isMarketing || isPublicNoSidebar) && { 
+            padding: 0,
+            maxHeight: 'none',
+            overflow: 'visible',
+            flex: 1
+          },
           !isPublicNoSidebar && !isCompact && !noCard && styles.mainAppCard
         ]}>
           {children}
@@ -1087,9 +1104,8 @@ export default function WebLayout({ children, noCard, hideHeader }: WebLayoutPro
         <View style={[
           styles.bottomBar,
           (!isBottomBarVisible || !isTabBarVisible) && { 
-            transform: Platform.OS === 'web' ? [] : [{ translateY: 150 }],
-            bottom: Platform.OS === 'web' ? -100 : 0,
-            opacity: Platform.OS === 'web' ? 0 : 1
+            transform: [{ translateY: 100 }],
+            opacity: 0
           }
         ]}>
           {[
@@ -1160,6 +1176,7 @@ const styles = StyleSheet.create({
       web: {
         position: 'sticky' as any,
         top: 0,
+        transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
       },
     }),
   },
@@ -1186,19 +1203,16 @@ const styles = StyleSheet.create({
   heroHeaderGround: {
     position: 'fixed' as any,
     backgroundColor: '#043529',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.12)',
+    borderBottomWidth: 0,
   },
   heroHeaderMarketing: {
     position: 'fixed' as any,
     backgroundColor: '#043529',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.12)',
+    borderBottomWidth: 0,
   },
   heroHeaderScrolled: {
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderBottomWidth: 0,
   },
   headerContent: {
     flexDirection: 'row',
@@ -1382,7 +1396,7 @@ const styles = StyleSheet.create({
     width: '100%',
     position: 'relative',
     paddingTop: 0,
-    backgroundColor: '#F5F5F7',
+    backgroundColor: '#FFFFFF',
     ...Platform.select({
       web: {
         overflow: 'hidden' as any,
@@ -1402,7 +1416,7 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
     position: 'relative',
-    backgroundColor: '#F5F5F7',
+    backgroundColor: '#FFFFFF',
     ...Platform.select({
       web: {
         overflow: 'hidden' as any,
@@ -1497,7 +1511,7 @@ const styles = StyleSheet.create({
   main: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
     ...Platform.select({
       web: {
         maxHeight: 'calc(100vh - 72px)' as any,
@@ -1594,7 +1608,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   headerPrimaryButtonTextScrolled: {
-    color: '#0F172A',
+    color: '#dcc093',
   },
   headerSecondaryButtonText: {
     fontSize: 14,
@@ -1604,7 +1618,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   headerSecondaryButtonTextScrolled: {
-    color: '#0F172A',
+    color: '#dcc093',
   },
   searchIconButton: {
     width: 40,
@@ -1616,7 +1630,7 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   searchIconButtonScrolled: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
   },
   profileChip: {
     flexDirection: 'row',
@@ -1646,7 +1660,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   profileNameScrolled: {
-    color: '#0F172A',
+    color: '#dcc093',
   },
   mobilePrimaryButton: {
     marginTop: 8,

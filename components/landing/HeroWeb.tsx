@@ -172,7 +172,7 @@ export default function HeroWeb() {
     >
       <View style={styles.overlay} />
       
-      <View style={styles.container}>
+      <View style={[styles.container, !isMobile && { marginTop: -80 }]}>
         <View style={styles.content}>
           <Text style={[
             styles.title,

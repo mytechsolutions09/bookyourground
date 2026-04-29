@@ -15,6 +15,7 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
   const isSupport = pathname.includes('/settings/support');
   const isCoupons = pathname.includes('/settings/coupons');
   const isPayment = pathname.includes('/settings/payment');
+  const isPlatformFees = pathname.includes('/settings/platform-fees');
 
   return (
     <View style={styles.shell}>
@@ -69,6 +70,16 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
             <CreditCard size={16} color={isPayment ? '#FFFFFF' : '#666'} />
             <Text style={[styles.subLinkText, isPayment && styles.subLinkTextActive]}>
               Payment
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.push((BASE + '/platform-fees') as any)}
+            style={[styles.subLink, isPlatformFees && styles.subLinkActive]}
+          >
+            <SettingsIcon size={16} color={isPlatformFees ? '#FFFFFF' : '#666'} />
+            <Text style={[styles.subLinkText, isPlatformFees && styles.subLinkTextActive]}>
+              Platform Fees
             </Text>
           </Pressable>
 

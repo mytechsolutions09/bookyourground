@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Platform, TextInput } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Platform, TextInput, Switch, Alert } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { Profile } from '@/types';
 import Card from '@/components/ui/Card';
@@ -11,13 +11,20 @@ import MobileAppNavbar from '@/components/MobileAppNavbar';
 type OwnerRow = Profile & {
   totalGroundsCount: number;
   pendingGroundsCount: number;
+  charge_platform_fee?: boolean;
+  bankDetails?: {
+    bank_name: string;
+    account_number: string;
+    ifsc: string;
+    upi_id: string;
+  };
 };
 
 export default function ManageGroundOwnersScreen() {
   const [owners, setOwners] = useState<OwnerRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedOwnerId, setExpandedOwnerId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     loadOwners();
@@ -40,7 +47,11 @@ export default function ManageGroundOwnersScreen() {
         .eq('role', 'ground_owner')
         .order('created_at', { ascending: false });
 
-      if (ownersError) throw ownersError;
+      const { data: bankRes } = await supabase.from('owner_bank_details').select('*');
+      const bankMap = (bankRes || []).reduce((acc: any, b: any) => {
+        acc[b.owner_id] = b;
+        return acc;
+      }, {});
 
       const merged = (res || []).map((o: any) => {
         const grounds = o.grounds || [];
@@ -48,6 +59,7 @@ export default function ManageGroundOwnersScreen() {
           ...o,
           totalGroundsCount: grounds.length,
           pendingGroundsCount: grounds.filter((g: any) => !g.approved).length,
+          bankDetails: bankMap[o.id] || null,
         };
       });
 
@@ -56,6 +68,23 @@ export default function ManageGroundOwnersScreen() {
       console.error('Error loading ground owners:', e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const togglePlatformFee = async (owner: OwnerRow) => {
+    try {
+      const newVal = !owner.charge_platform_fee;
+      const { error } = await supabase
+        .from('profiles')
+        .update({ charge_platform_fee: newVal })
+        .eq('id', owner.id);
+      
+      if (error) throw error;
+      
+      setOwners(prev => prev.map(o => o.id === owner.id ? { ...o, charge_platform_fee: newVal } : o));
+    } catch (e: any) {
+      console.error('Error toggling platform fee:', e);
+      Alert.alert('Error', 'Could not update platform fee setting: ' + e.message);
     }
   };
 
@@ -71,85 +100,114 @@ export default function ManageGroundOwnersScreen() {
   }, [owners, searchQuery]);
 
   const renderOwnerItem = ({ item }: { item: OwnerRow }) => {
-    const isExpanded = expandedOwnerId === item.id;
 
     if (Platform.OS === 'web') {
+      const feeEnabled = item.charge_platform_fee !== false;
       return (
-        <View key={item.id}>
+        <>
           <TouchableOpacity 
-            activeOpacity={0.8} 
-            onPress={() => setExpandedOwnerId(isExpanded ? null : item.id)}
-            style={[styles.webRow, isExpanded && styles.rowExpanded]}
+            activeOpacity={0.7} 
+            style={[styles.tableRow, expandedId === item.id && styles.rowExpanded]}
+            onPress={() => setExpandedId(expandedId === item.id ? null : item.id)}
           >
-            <View style={[styles.cell, styles.colOwner]}>
+            <View style={[styles.tableCell, styles.colOwner]}>
               <View style={styles.ownerPrimaryInfo}>
-                <Text style={styles.ownerNameText}>{item.business_name || item.full_name}</Text>
-                {item.business_name && <Text style={styles.ownerSubText}>{item.full_name}</Text>}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                   <ChevronRight size={14} color="#64748b" style={{ transform: [{ rotate: expandedId === item.id ? '90deg' : '0deg' }] }} />
+                   <Text style={styles.ownerNameText}>{item.business_name || item.full_name}</Text>
+                </View>
+                {item.business_name && <Text style={[styles.ownerSubText, { marginLeft: 22 }]}>{item.full_name}</Text>}
               </View>
             </View>
 
-            <View style={[styles.cell, styles.colContact]}>
+            <View style={[styles.tableCell, styles.colContact]}>
               <Text style={styles.contactEmail}>{item.email}</Text>
               <Text style={styles.contactPhone}>{item.phone || 'No phone'}</Text>
             </View>
 
-            <View style={[styles.cell, styles.colGrounds]}>
+            <View style={[styles.tableCell, styles.colGrounds]}>
               <View style={styles.groundsBadgeRow}>
                 <View style={styles.countBadge}>
                   <Text style={styles.countNum}>{item.totalGroundsCount}</Text>
                   <Text style={styles.countLabel}>Total</Text>
                 </View>
-                {item.pendingGroundsCount > 0 && (
-                  <View style={[styles.countBadge, styles.pendingCountBadge]}>
-                    <Text style={[styles.countNum, styles.pendingCountNum]}>{item.pendingGroundsCount}</Text>
-                    <Text style={[styles.countLabel, styles.pendingCountLabel]}>Pending</Text>
-                  </View>
-                )}
               </View>
             </View>
 
-            <View style={[styles.cell, styles.colActions]}>
+            <View style={[styles.tableCell, styles.colFee]}>
+              <Switch
+                value={feeEnabled}
+                onValueChange={() => togglePlatformFee(item)}
+                trackColor={{ false: '#CBD5E1', true: '#10b981' }}
+                thumbColor={Platform.OS === 'ios' ? undefined : '#FFFFFF'}
+                onStartShouldSetResponder={() => true}
+                onTouchEnd={(e) => e.stopPropagation()}
+              />
+            </View>
+
+            <View style={[styles.tableCell, styles.colJoined]}>
+               <Text style={styles.joinedDateText}>
+                  {item.created_at ? new Date(item.created_at).toLocaleDateString() : '—'}
+               </Text>
+            </View>
+
+            <View style={[styles.tableCell, styles.colActions]}>
               <TouchableOpacity
                 style={styles.webIconButton}
-                onPress={() => router.push(`/(admin)/grounds?ownerId=${item.id}`)}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  router.push(`/(admin)/grounds?ownerId=${item.id}`);
+                }}
               >
-                <ExternalLink size={16} color="#10b981" />
-                <Text style={styles.webIconButtonText}>View Grounds</Text>
+                <ExternalLink size={14} color="#10b981" />
+                <Text style={styles.webIconButtonText}>Grounds</Text>
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
 
-          {isExpanded && (
+          {expandedId === item.id && (
             <View style={styles.expandedContent}>
               <View style={styles.expandedGrid}>
                 <View style={styles.expandedCol}>
-                  <Text style={styles.expandedLabel}>Owner Details</Text>
-                  <View style={styles.infoRow}>
-                    <Mail size={14} color="#6B7280" />
-                    <Text style={styles.infoValue}>{item.email}</Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <Phone size={14} color="#6B7280" />
-                    <Text style={styles.infoValue}>{item.phone || 'Not provided'}</Text>
-                  </View>
+                  <Text style={styles.expandedLabel}>Banking Information</Text>
+                  {item.bankDetails ? (
+                    <View style={styles.bankInfoGrid}>
+                      <View style={styles.infoBlock}>
+                        <Text style={styles.infoLabel}>Bank Name</Text>
+                        <Text style={styles.infoValue}>{item.bankDetails.bank_name}</Text>
+                      </View>
+                      <View style={styles.infoBlock}>
+                        <Text style={styles.infoLabel}>Account Number</Text>
+                        <Text style={styles.infoValue}>{item.bankDetails.account_number}</Text>
+                      </View>
+                      <View style={styles.infoBlock}>
+                        <Text style={styles.infoLabel}>IFSC Code</Text>
+                        <Text style={styles.infoValue}>{item.bankDetails.ifsc}</Text>
+                      </View>
+                      <View style={styles.infoBlock}>
+                        <Text style={styles.infoLabel}>UPI ID</Text>
+                        <Text style={[styles.infoValue, { color: '#10b981' }]}>{item.bankDetails.upi_id}</Text>
+                      </View>
+                    </View>
+                  ) : (
+                    <Text style={styles.noInfoText}>No banking details provided yet.</Text>
+                  )}
                 </View>
-                <View style={styles.expandedCol}>
-                  <Text style={styles.expandedLabel}>Registration</Text>
-                  <Text style={styles.infoValue}>Joined: {item.created_at ? new Date(item.created_at).toLocaleDateString() : 'Unknown'}</Text>
-                </View>
+
                 <View style={styles.expandedActions}>
-                    <TouchableOpacity 
-                      style={styles.primaryActionButton}
-                      onPress={() => router.push(`/(admin)/grounds?ownerId=${item.id}`)}
-                    >
-                        <Text style={styles.primaryActionButtonText}>Manage Business Grounds</Text>
-                        <ChevronRight size={16} color="#FFF" />
-                    </TouchableOpacity>
+                  <Text style={styles.expandedLabel}>Quick Actions</Text>
+                  <TouchableOpacity 
+                    style={styles.primaryActionButton}
+                    onPress={() => router.push(`/(admin)/grounds?ownerId=${item.id}`)}
+                  >
+                    <Building2 size={16} color="#FFF" />
+                    <Text style={styles.primaryActionButtonText}>Review Grounds</Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             </View>
           )}
-        </View>
+        </>
       );
     }
 
@@ -213,10 +271,12 @@ export default function ManageGroundOwnersScreen() {
       )}
 
       {Platform.OS === 'web' && (
-        <View style={styles.tableHeader}>
+        <View style={styles.tableHeaderContainer}>
            <Text style={[styles.headerLabel, styles.colOwner]}>Business / Owner</Text>
            <Text style={[styles.headerLabel, styles.colContact]}>Contact Details</Text>
-           <Text style={[styles.headerLabel, styles.colGrounds]}>Grounds Portfolio</Text>
+           <Text style={[styles.headerLabel, styles.colGrounds]}>Grounds</Text>
+           <Text style={[styles.headerLabel, styles.colFee]}>Fee Setting</Text>
+           <Text style={[styles.headerLabel, styles.colJoined]}>Joined</Text>
            <Text style={[styles.headerLabel, styles.colActions, { textAlign: 'right' }]}>Actions</Text>
         </View>
       )}
@@ -300,14 +360,16 @@ const styles = StyleSheet.create({
     color: '#111827',
     fontWeight: '500',
   },
-  tableHeader: {
+  tableHeaderContainer: {
     flexDirection: 'row',
     marginHorizontal: 16,
     marginTop: 16,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F9FAFB',
     borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   headerLabel: {
     fontSize: 11,
@@ -316,15 +378,17 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  colOwner: { flex: 2 },
+  colOwner: { flex: 1.8 },
   colContact: { flex: 1.5 },
-  colGrounds: { flex: 1.5 },
-  colActions: { flex: 1 },
+  colGrounds: { width: 120 },
+  colFee: { width: 110 },
+  colJoined: { width: 110 },
+  colActions: { width: 140 },
   
   list: {
     padding: 16,
   },
-  webRow: {
+  tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
@@ -343,7 +407,8 @@ const styles = StyleSheet.create({
     marginBottom: 0,
     borderBottomWidth: 0,
   },
-  cell: {
+  tableCell: {
+    paddingRight: 12,
     justifyContent: 'center',
   },
   ownerPrimaryInfo: {
@@ -427,6 +492,11 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 12,
     marginBottom: 10,
     marginTop: -1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
   },
   expandedGrid: {
     flexDirection: 'row',
@@ -472,6 +542,26 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 13,
     fontWeight: '800',
+  },
+  bankInfoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 20,
+  },
+  infoBlock: {
+    minWidth: 140,
+  },
+  infoLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#94a3b8',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  noInfoText: {
+    fontSize: 13,
+    color: '#94a3b8',
+    fontStyle: 'italic',
   },
   emptyContainer: {
     alignItems: 'center',
@@ -560,5 +650,56 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 15,
     fontWeight: '800',
+  },
+  settingsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  settingTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  settingDesc: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  joinedDateText: {
+    fontSize: 13,
+    color: '#475569',
+    fontWeight: '500',
+  },
+  feeStatusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  feeEnabledBadge: {
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  feeDisabledBadge: {
+    backgroundColor: '#FFF7ED',
+    borderWidth: 1,
+    borderColor: '#FED7AA',
+  },
+  feeStatusText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  feeEnabledText: {
+    color: '#047857',
+  },
+  feeDisabledText: {
+    color: '#C2410C',
   },
 });

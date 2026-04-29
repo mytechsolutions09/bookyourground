@@ -182,6 +182,7 @@ function OwnerEarningsScreenInner() {
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [wallet, setWallet] = useState<WalletData | null>(null);
+  const [viewMode, setViewMode] = useState<'preview' | 'summary' | 'analytics'>('preview');
 
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [showStatementModal, setShowStatementModal] = useState(false);
@@ -560,6 +561,169 @@ function OwnerEarningsScreenInner() {
     }
   };
 
+  const renderSummaryTable = () => (
+    <View style={styles.summaryTableWrapper}>
+      <View style={styles.sectionCard}>
+        <View style={styles.tableHeaderRow}>
+          <Text style={styles.sectionTitle}>Detailed Earnings Summary</Text>
+          <TouchableOpacity 
+            style={styles.downloadReportBtn} 
+            onPress={handleDownloadReport}
+            disabled={loading}
+          >
+            <Download size={16} color="#043529" />
+            <Text style={styles.downloadReportBtnText}>Download CSV</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.table}>
+          <View style={[styles.tableHeader, { backgroundColor: '#F8FAFC', borderTopLeftRadius: 12, borderTopRightRadius: 12 }]}>
+            <Text style={[styles.headerText, { width: 100 }]}>Date</Text>
+            <Text style={[styles.headerText, { flex: 1.5 }]}>Venue & Customer</Text>
+            <Text style={[styles.headerText, { width: 100 }]}>Method</Text>
+            <Text style={[styles.headerText, { width: 100, textAlign: 'right' }]}>Amount</Text>
+          </View>
+          
+          {transactions.length === 0 ? (
+            <View style={styles.emptyTable}>
+              <Text style={styles.emptyTableText}>No confirmed earnings found.</Text>
+            </View>
+          ) : (
+            transactions.map((tx) => (
+              <View key={tx.id} style={styles.tableRow}>
+                <View style={{ width: 100 }}>
+                  <Text style={styles.cellTextMain}>
+                    {new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
+                  </Text>
+                  <Text style={styles.cellTextSub}>
+                    {new Date(tx.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                  </Text>
+                </View>
+                
+                <View style={{ flex: 1.5 }}>
+                  <Text style={[styles.cellTextMain, { color: '#01b854' }]} numberOfLines={1}>
+                    {tx.ground?.name || 'Venue'}
+                  </Text>
+                  <Text style={styles.cellTextSub} numberOfLines={1}>
+                    {tx.user?.full_name || tx.booked_for_name || 'Anonymous Player'}
+                  </Text>
+                </View>
+
+                <View style={{ width: 100 }}>
+                  <View style={[
+                    styles.methodBadge, 
+                    { backgroundColor: tx.payment_method === 'cash' ? '#FEF3C7' : '#DCFCE7' }
+                  ]}>
+                    <Text style={[
+                      styles.methodBadgeText,
+                      { color: tx.payment_method === 'cash' ? '#92400E' : '#15803D' }
+                    ]}>
+                      {tx.payment_method === 'cash' ? 'CASH' : 'ONLINE'}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={{ width: 100, alignItems: 'flex-end' }}>
+                  <Text style={[styles.cellTextMain, { fontSize: 15 }]}>
+                    {formatCurrency(tx.total_amount)}
+                  </Text>
+                  <Text style={[styles.cellTextSub, { fontSize: 10, color: '#059669' }]}>
+                    Confirmed
+                  </Text>
+                </View>
+              </View>
+            ))
+          )}
+          
+          {hasMore && (
+            <TouchableOpacity 
+              style={[styles.statementBtn, { marginTop: 12, borderStyle: 'dashed' }]}
+              onPress={loadMore}
+              disabled={loading}
+            >
+              <Text style={styles.statementBtnText}>{loading ? 'Loading...' : 'Load More Transactions'}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    </View>
+  );
+
+  const renderAnalyticsView = () => (
+    <View style={styles.analyticsWrapper}>
+      <View style={[styles.layoutRow, isCompact && { flexDirection: 'column', gap: 16 }]}>
+        <View style={[styles.leftCol, isCompact && { paddingRight: 0 }]}>
+          <View style={styles.sectionCard}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <View>
+                <Text style={styles.sectionTitle}>Earnings Analytics</Text>
+                <Text style={styles.sectionSubtitle}>Daily revenue trends for this month</Text>
+              </View>
+              <TrendingUp size={20} color="#01b854" />
+            </View>
+            <LineChart data={chartData} height={250} totalDays={new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()} />
+          </View>
+
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Breakdown by Venue</Text>
+            <View style={[styles.venueList, { marginTop: 12 }]}>
+              {venueBreakdown.map((v, i) => (
+                <View key={i} style={styles.venueItem}>
+                   <View style={styles.venueInfo}>
+                     <Text style={styles.venueName} numberOfLines={1}>
+                       {typeof v.name === 'string' ? v.name : 'Venue'}
+                     </Text>
+                     <Text style={styles.venueAmount}>{formatCurrency(Number(v.amount))} ({Math.round(Number(v.percent))}%)</Text>
+                   </View>
+                   <View style={styles.progressBg}>
+                     <View style={[styles.progressFill, { width: `${v.percent}%`, backgroundColor: i === 0 ? '#01b854' : (i === 1 ? '#3B82F6' : '#64748B') }]} />
+                   </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.rightCol}>
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionTitle}>Earnings Bifurcation</Text>
+            <View style={styles.bifurcationRow}>
+               <View style={styles.bifurcationItem}>
+                  <Text style={styles.bifurcationLabel}>Online</Text>
+                  <Text style={[styles.bifurcationValue, { color: '#01b854' }]}>{formatCurrency(onlineEarnings)}</Text>
+                  <Text style={styles.bifurcationSubtext}>Razorpay / Wallet</Text>
+               </View>
+               <View style={styles.bifurcationDivider} />
+               <View style={styles.bifurcationItem}>
+                  <Text style={styles.bifurcationLabel}>Offline</Text>
+                  <Text style={[styles.bifurcationValue, { color: '#F59E0B' }]}>{formatCurrency(offlineEarnings)}</Text>
+                  <Text style={styles.bifurcationSubtext}>Cash / Venue</Text>
+               </View>
+            </View>
+          </View>
+
+          <View style={styles.sectionCard}>
+             <Text style={styles.sectionTitle}>Monthly Stats</Text>
+             <View style={{ marginTop: 16, gap: 12 }}>
+                <View style={styles.statLine}>
+                   <Text style={styles.statLabel}>Total Bookings</Text>
+                   <Text style={styles.statValue}>{stats.totalConfirmedBookings}</Text>
+                </View>
+                <View style={styles.statLine}>
+                   <Text style={styles.statLabel}>Avg. Order Value</Text>
+                   <Text style={styles.statValue}>{formatCurrency(stats.totalEarnings / (stats.totalConfirmedBookings || 1))}</Text>
+                </View>
+                <View style={styles.statLine}>
+                   <Text style={styles.statLabel}>Highest Day</Text>
+                   <Text style={styles.statValue}>{formatCurrency(Math.max(...chartData.map(d => d.value), 0))}</Text>
+                </View>
+             </View>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+
   const renderLeftColumn = () => (
     <View style={styles.leftCol}>
       <View style={styles.totalEarningsCard}>
@@ -802,27 +966,54 @@ function OwnerEarningsScreenInner() {
 
   return (
     <>
-      <ScrollView 
-        style={styles.root}
-        showsVerticalScrollIndicator={false}
-        // @ts-ignore - web-only style to hide scrollbar
-        contentContainerStyle={[
-          styles.scrollContent,
-          { flexGrow: 1 },
-          Platform.OS === 'web' && { scrollbarWidth: 'none', msOverflowStyle: 'none' } as any
-        ]}
-      >
-        <View style={[
-          styles.layoutRow, 
-          isCompact && { flexDirection: 'column', gap: 16 }
-        ]}>
-          <View style={[styles.leftCol, isCompact && { paddingRight: 0, paddingTop: 16 }]}>
-            {renderLeftColumn()}
+    <ScrollView 
+      style={styles.root}
+      showsVerticalScrollIndicator={false}
+      // @ts-ignore - web-only style to hide scrollbar
+      contentContainerStyle={[
+        styles.scrollContent,
+        { flexGrow: 1, paddingVertical: 24 },
+        Platform.OS === 'web' && { scrollbarWidth: 'none', msOverflowStyle: 'none' } as any
+      ]}
+    >
+      <View style={[styles.viewToggleContainer, isCompact && { alignSelf: 'stretch', minWidth: 0 }, { marginHorizontal: 24, marginBottom: 32 }]}>
+        <TouchableOpacity 
+          style={[styles.viewToggleBtn, viewMode === 'preview' && styles.viewToggleBtnActive]}
+          onPress={() => setViewMode('preview')}
+        >
+          <Text style={[styles.viewToggleBtnText, viewMode === 'preview' && styles.viewToggleBtnTextActive]}>Preview</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.viewToggleBtn, viewMode === 'summary' && styles.viewToggleBtnActive]}
+          onPress={() => setViewMode('summary')}
+        >
+          <Text style={[styles.viewToggleBtnText, viewMode === 'summary' && styles.viewToggleBtnTextActive]}>Summary</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.viewToggleBtn, viewMode === 'analytics' && styles.viewToggleBtnActive]}
+          onPress={() => setViewMode('analytics')}
+        >
+          <Text style={[styles.viewToggleBtnText, viewMode === 'analytics' && styles.viewToggleBtnTextActive]}>Analytics</Text>
+        </TouchableOpacity>
+      </View>
+
+        {viewMode === 'preview' ? (
+          <View style={[
+            styles.layoutRow, 
+            isCompact && { flexDirection: 'column', gap: 16 }
+          ]}>
+            <View style={[styles.leftCol, isCompact && { paddingRight: 0, paddingTop: 16 }]}>
+              {renderLeftColumn()}
+            </View>
+            <View style={[styles.rightCol, isCompact && { paddingTop: 0 }]}>
+              {renderRightColumn()}
+            </View>
           </View>
-          <View style={[styles.rightCol, isCompact && { paddingTop: 0 }]}>
-            {renderRightColumn()}
-          </View>
-        </View>
+        ) : viewMode === 'summary' ? (
+          renderSummaryTable()
+        ) : (
+          renderAnalyticsView()
+        )}
       </ScrollView>
 
       {/* Withdrawal Modal */}
@@ -1047,7 +1238,7 @@ function OwnerEarningsScreenInner() {
 export default function OwnerEarningsScreen() {
   if (Platform.OS === 'web') {
     return (
-      <WebLayout noCard>
+      <WebLayout>
         <OwnerEarningsScreenInner />
       </WebLayout>
     );
@@ -1064,11 +1255,11 @@ export default function OwnerEarningsScreen() {
 const styles = StyleSheet.create({
   nativeContainer: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
   },
   root: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
   },
   scrollContent: {
     // Moved padding to individual columns
@@ -1507,6 +1698,119 @@ const styles = StyleSheet.create({
     width: 1,
     height: 40,
     backgroundColor: '#E2E8F0',
+  },
+  viewToggleContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 20,
+    padding: 6,
+    marginHorizontal: 24,
+    marginTop: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignSelf: 'flex-start',
+    minWidth: 400,
+  },
+  viewToggleBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 16,
+  },
+  viewToggleBtnActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  viewToggleBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+    fontFamily: 'Inter',
+  },
+  viewToggleBtnTextActive: {
+    color: '#01b854',
+    fontWeight: '700',
+  },
+  summaryTableWrapper: {
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 40,
+  },
+  tableHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  downloadReportBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#d9f99d',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  downloadReportBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#043529',
+  },
+  methodBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  methodBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  emptyTable: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyTableText: {
+    fontSize: 14,
+    color: '#64748B',
+    fontFamily: 'Inter',
+  },
+  analyticsWrapper: {
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 40,
+  },
+  sectionSubtitle: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  statLine: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  statLabel: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  statValue: {
+    fontSize: 13,
+    color: '#0F172A',
+    fontWeight: '700',
   },
 });
 
