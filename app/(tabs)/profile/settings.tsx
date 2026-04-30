@@ -14,6 +14,8 @@ import { useUI } from '@/contexts/UIContext';
 const IS_WEB = Platform.OS === 'web';
 
 function UserSettingsInner() {
+  const { width } = useWindowDimensions();
+  const isUltraNarrow = width < 350;
   const { user, profile, updateProfile, signOut } = useAuth();
   const [fullName, setFullName] = useState(profile?.full_name || '');
   const [phone, setPhone] = useState(profile?.phone || '');
@@ -107,7 +109,7 @@ function UserSettingsInner() {
       onScroll={onScroll}
       scrollEventThrottle={16}
     >
-      <View style={styles.inner}>
+      <View style={[styles.inner, isUltraNarrow && { paddingHorizontal: 12, paddingTop: 10 }]}>
         {IS_WEB && (
           <ProfileHeaderTabs
             themeAccent="#01b854"
@@ -116,7 +118,7 @@ function UserSettingsInner() {
           />
         )}
 
-        <Card style={styles.panel}>
+        <Card style={[styles.panel, isUltraNarrow && { padding: 16 }]}>
           <Text style={styles.sectionTitle}>Personal Information</Text>
           <Text style={styles.sectionSubtitle}>
             These details will be used for your bookings and contact information.
@@ -229,7 +231,7 @@ function UserSettingsInner() {
         animationType="fade"
       >
         <View style={modalStyles.overlay}>
-          <View style={modalStyles.card}>
+          <View style={[modalStyles.card, isUltraNarrow && { padding: 20, maxWidth: '95%' }]}>
             <View style={modalStyles.iconBg}>
               <CheckCircle size={40} color="#01b854" strokeWidth={2.5} />
             </View>

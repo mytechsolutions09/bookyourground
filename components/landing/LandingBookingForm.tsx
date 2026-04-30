@@ -205,7 +205,8 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
   const isCompact = windowWidth < 900;
   
   const isEffectiveLight = true;
-  const styles = React.useMemo(() => getStyles(isWeb, isEffectiveLight, noCard), [isWeb, isEffectiveLight, noCard]);
+  const isUltraNarrow = !isWeb || windowWidth < 350;
+  const styles = React.useMemo(() => getStyles(isWeb, isEffectiveLight, noCard, windowWidth), [isWeb, isEffectiveLight, noCard, windowWidth]);
 
   /** Landing: Search → pick ground → Book Now. Skip when booking a known ground. */
   const useLandingSearchFlow = hideGroundPicker && !initialGroundId;
@@ -2192,6 +2193,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
             <TextInput
               style={[
                 styles.input,
+                { flex: 1 },
                 nativeTanChrome && styles.inputBookGroundNative,
                 appliedCoupon && styles.couponInputApplied,
               ]}
@@ -2426,7 +2428,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
   );
 }
 
-const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false) => StyleSheet.create({
+const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, windowWidth: number) => StyleSheet.create({
   wrapper: {
     paddingHorizontal: noCard ? 0 : 16,
     paddingBottom: noCard ? 0 : 28,
@@ -2580,8 +2582,8 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false) =>
     alignSelf: 'stretch',
   },
   row: {
-    flexDirection: 'row',
-    gap: 12,
+    flexDirection: windowWidth < 350 ? 'column' : 'row',
+    gap: windowWidth < 350 ? 8 : 12,
   },
   flex1: {
     flex: 1,

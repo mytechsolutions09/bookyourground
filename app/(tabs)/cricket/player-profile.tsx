@@ -12,7 +12,8 @@ import {
   Modal,
   FlatList,
   Alert,
-  useWindowDimensions
+  useWindowDimensions,
+  Dimensions
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { 
@@ -56,9 +57,15 @@ const INDIAN_STATES = [
   "Ladakh", "Lakshadweep", "Puducherry"
 ];
 
+const { width } = Dimensions.get('window');
+
+
 const PlayerProfileView = () => {
   const { profile, loading: authLoading, user } = useAuth();
   const { width } = useWindowDimensions();
+  const isUltraNarrow = width < 350;
+  const isTablet = width >= 600 && width < 900;
+  const isSmall = width < 900;
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editedData, setEditedData] = useState<any>({});
@@ -66,8 +73,6 @@ const PlayerProfileView = () => {
   const [recentMatches, setRecentMatches] = useState<any[]>([]);
   const [globalStats, setGlobalStats] = useState<any>(null);
   const [fetchingData, setFetchingData] = useState(true);
-
-  const isSmall = width < 900;
 
   useEffect(() => {
     if (profile) {
@@ -247,8 +252,9 @@ const PlayerProfileView = () => {
   };
 
   const content = (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={styles.section}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+      <View style={[styles.responsiveContent, isTablet && { maxWidth: '90%' }]}>
+      <View style={[styles.section, isUltraNarrow && { paddingHorizontal: 12 }]}>
         <View style={styles.statsGrid}>
           <View style={styles.statBox}>
              <RNText style={styles.statValue}>{globalStats?.total_runs || 0}</RNText>
@@ -409,13 +415,13 @@ const PlayerProfileView = () => {
             recentMatches.map((m, idx) => (
               <React.Fragment key={m.id}>
                 <View style={styles.formRow}>
-                  <View style={styles.matchInfo}>
-                    <RNText style={styles.matchOpponent}>vs {m.opponent}</RNText>
-                    <RNText style={styles.matchDate}>{m.date} • {m.status}</RNText>
+                  <View style={[styles.matchInfo, { flex: 1 }]}>
+                    <RNText style={[styles.matchOpponent, isUltraNarrow && { fontSize: 13 }]} numberOfLines={1}>vs {m.opponent}</RNText>
+                    <RNText style={[styles.matchDate, isUltraNarrow && { fontSize: 10 }]}>{m.date} • {m.status}</RNText>
                   </View>
-                  <View style={styles.matchScore}>
-                    <RNText style={styles.scoreText}>{m.score}</RNText>
-                    <RNText style={styles.perfLabel}>{m.type}</RNText>
+                  <View style={[styles.matchScore, isUltraNarrow && { alignItems: 'flex-end' }]}>
+                    <RNText style={[styles.scoreText, isUltraNarrow && { fontSize: 13 }]}>{m.score}</RNText>
+                    <RNText style={[styles.perfLabel, isUltraNarrow && { fontSize: 10 }]}>{m.type}</RNText>
                   </View>
                 </View>
                 {idx < recentMatches.length - 1 && <View style={styles.formDivider} />}
@@ -429,18 +435,25 @@ const PlayerProfileView = () => {
         </View>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.badgesScroll}>
-        <View style={[styles.badgeCard, { backgroundColor: '#FFF7ED' }]}>
-          <Award size={32} color="#F97316" />
-          <RNText style={styles.badgeTitle}>Century Maker</RNText>
-          <RNText style={styles.badgeDesc}>Scored 100+ in a match</RNText>
+
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false} 
+        style={styles.badgesScroll} 
+        contentContainerStyle={[styles.badgesScrollContent, isUltraNarrow && { paddingHorizontal: 12 }]}
+      >
+        <View style={[styles.badgeCard, { backgroundColor: '#FFF7ED' }, isUltraNarrow && { width: 160, padding: 16 }]}>
+          <Award size={isUltraNarrow ? 24 : 32} color="#F97316" />
+          <RNText style={[styles.badgeTitle, isUltraNarrow && { fontSize: 13 }]}>Century Maker</RNText>
+          <RNText style={[styles.badgeDesc, isUltraNarrow && { fontSize: 11 }]}>Scored 100+ in a match</RNText>
         </View>
-        <View style={[styles.badgeCard, { backgroundColor: 'rgba(216, 247, 157, 0.1)' }]}>
-          <Zap size={32} color="#01b854" />
-          <RNText style={styles.badgeTitle}>Quick Fire</RNText>
-          <RNText style={styles.badgeDesc}>200+ Strike rate match</RNText>
+        <View style={[styles.badgeCard, { backgroundColor: 'rgba(216, 247, 157, 0.1)' }, isUltraNarrow && { width: 160, padding: 16 }]}>
+          <Zap size={isUltraNarrow ? 24 : 32} color="#01b854" />
+          <RNText style={[styles.badgeTitle, isUltraNarrow && { fontSize: 13 }]}>Quick Fire</RNText>
+          <RNText style={[styles.badgeDesc, isUltraNarrow && { fontSize: 11 }]}>200+ Strike rate match</RNText>
         </View>
       </ScrollView>
+      </View>
     </ScrollView>
   );
 
@@ -455,6 +468,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  responsiveContent: {
+    width: '100%',
+    maxWidth: 650,
+    alignSelf: 'center',
   },
   section: {
     paddingHorizontal: 20,
@@ -528,28 +549,36 @@ const styles = StyleSheet.create({
   },
   statsGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     marginTop: 12,
-    gap: 8,
+    gap: 10,
   },
   statBox: {
     flex: 1,
+    minWidth: width < 350 ? '100%' : (width >= 600 ? '22%' : '46%'), // Stacks on narrow, 4-col on tablet, 2-col on fold/mobile
     backgroundColor: '#FFFFFF',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 16,
+    paddingVertical: width < 350 ? 12 : 16,
+    paddingHorizontal: 12,
+    borderRadius: 20,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   statValue: {
-    fontSize: 16,
+    fontSize: width < 350 ? 18 : 20,
     fontWeight: '800',
     color: '#0F172A',
   },
   statLabel: {
-    fontSize: 10,
+    fontSize: 12,
     color: '#64748B',
-    marginTop: 2,
+    marginTop: 4,
+    fontWeight: '600',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -718,6 +747,8 @@ const styles = StyleSheet.create({
   },
   badgesScroll: {
     marginTop: 24,
+  },
+  badgesScrollContent: {
     paddingHorizontal: 20,
     paddingBottom: 40,
   },

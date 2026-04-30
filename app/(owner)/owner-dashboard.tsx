@@ -45,6 +45,8 @@ interface DashboardStats {
 export default function OwnerDashboardScreen() {
   const { width } = useWindowDimensions();
   const isCompact = width < 900;
+  const isTablet = width >= 600 && width < 900;
+  const isUltraNarrow = width < 350;
   const { user, profile, updateProfile } = useAuth();
   const [activeTab, setActiveTab] = useState<'owner' | 'personal' | 'profile' | 'payout'>('owner');
   const [hasBanking, setHasBanking] = useState<boolean | null>(null);
@@ -308,8 +310,8 @@ export default function OwnerDashboardScreen() {
 
   const renderOwnerHub = () => (
     <View style={styles.grid}>
-      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]}>
-        <View style={styles.statBox}>
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]}>
+        <View style={[styles.statBox, isUltraNarrow && { paddingVertical: 16, paddingHorizontal: 12, borderRadius: 20 }]}>
           <View style={styles.iconCircle}>
             <Building2 size={20} color="#01b854" />
           </View>
@@ -320,10 +322,10 @@ export default function OwnerDashboardScreen() {
       </View>
 
       <TouchableOpacity 
-        style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]} 
+        style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]} 
         onPress={() => router.push('/(owner)/ground-bookings' as any)}
       >
-        <View style={styles.statBox}>
+        <View style={[styles.statBox, isUltraNarrow && { paddingVertical: 16, paddingHorizontal: 12, borderRadius: 20 }]}>
           <View style={styles.iconCircle}>
             <Calendar size={20} color="#01b854" />
           </View>
@@ -333,8 +335,8 @@ export default function OwnerDashboardScreen() {
         </View>
       </TouchableOpacity>
 
-      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]}>
-        <View style={styles.statBox}>
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]}>
+        <View style={[styles.statBox, isUltraNarrow && { paddingVertical: 16, paddingHorizontal: 12, borderRadius: 20 }]}>
           <View style={styles.iconCircle}>
             <Swords size={22} color="#01b854" />
           </View>
@@ -344,8 +346,8 @@ export default function OwnerDashboardScreen() {
         </View>
       </View>
 
-      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]}>
-        <View style={styles.statBox}>
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]}>
+        <View style={[styles.statBox, isUltraNarrow && { paddingVertical: 16, paddingHorizontal: 12, borderRadius: 20 }]}>
           <View style={styles.iconCircle}>
             <IndianRupee size={20} color="#01b854" />
           </View>
@@ -355,8 +357,8 @@ export default function OwnerDashboardScreen() {
         </View>
       </View>
 
-      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]}>
-        <View style={styles.statBox}>
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]}>
+        <View style={[styles.statBox, isUltraNarrow && { paddingVertical: 16, paddingHorizontal: 12, borderRadius: 20 }]}>
           <View style={styles.iconCircle}>
             <PieChart size={20} color="#01b854" />
           </View>
@@ -366,8 +368,8 @@ export default function OwnerDashboardScreen() {
         </View>
       </View>
 
-      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]}>
-        <View style={styles.statBox}>
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]}>
+        <View style={[styles.statBox, isUltraNarrow && { paddingVertical: 16, paddingHorizontal: 12, borderRadius: 20 }]}>
           <View style={styles.iconCircle}>
             <IndianRupee size={20} color="#01b854" />
           </View>
@@ -377,8 +379,8 @@ export default function OwnerDashboardScreen() {
         </View>
       </View>
 
-      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]}>
-        <View style={styles.statBox}>
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]}>
+        <View style={[styles.statBox, isUltraNarrow && { paddingVertical: 16, paddingHorizontal: 12, borderRadius: 20 }]}>
           <View style={styles.iconCircle}>
             <IndianRupee size={22} color="#01b854" />
           </View>
@@ -389,10 +391,10 @@ export default function OwnerDashboardScreen() {
       </View>
 
       <TouchableOpacity 
-        style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]} 
+        style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]} 
         onPress={() => router.push('/(tabs)/bookings' as any)}
       >
-        <View style={styles.statBox}>
+        <View style={[styles.statBox, isUltraNarrow && { paddingVertical: 16, paddingHorizontal: 12, borderRadius: 20 }]}>
           <View style={styles.iconCircle}>
             <Calendar size={22} color="#01b854" />
           </View>
@@ -403,10 +405,10 @@ export default function OwnerDashboardScreen() {
       </TouchableOpacity>
 
       <TouchableOpacity 
-        style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]} 
+        style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]} 
         onPress={() => router.push('/(owner)/add-ground' as any)}
       >
-        <View style={styles.statBox}>
+        <View style={[styles.statBox, isUltraNarrow && { paddingVertical: 16, paddingHorizontal: 12, borderRadius: 20 }]}>
           <View style={styles.iconCircle}>
             <PlusCircle size={22} color="#01b854" />
           </View>
@@ -417,10 +419,10 @@ export default function OwnerDashboardScreen() {
       </TouchableOpacity>
 
       <TouchableOpacity 
-        style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]} 
+        style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]} 
         onPress={() => router.push('/(owner)/settings' as any)}
       >
-        <View style={styles.statBox}>
+        <View style={[styles.statBox, isUltraNarrow && { paddingVertical: 16, paddingHorizontal: 12, borderRadius: 20 }]}>
           <View style={styles.iconCircle}>
             <Settings size={22} color="#01b854" />
           </View>
@@ -431,10 +433,10 @@ export default function OwnerDashboardScreen() {
       </TouchableOpacity>
 
       <TouchableOpacity 
-        style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]} 
+        style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]} 
         onPress={() => router.push('/(tabs)/support' as any)}
       >
-        <View style={styles.statBox}>
+        <View style={[styles.statBox, isUltraNarrow && { paddingVertical: 16, paddingHorizontal: 12, borderRadius: 20 }]}>
           <View style={styles.iconCircle}>
             <LifeBuoy size={22} color="#01b854" />
           </View>
@@ -448,8 +450,8 @@ export default function OwnerDashboardScreen() {
 
   const renderPersonalActivity = () => (
     <View style={styles.grid}>
-      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]}>
-        <View style={styles.statBox}>
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]}>
+        <View style={[styles.statBox, isUltraNarrow && { paddingVertical: 16, paddingHorizontal: 12, borderRadius: 20 }]}>
           <View style={styles.iconCircle}>
             <Users size={20} color="#01b854" />
           </View>
@@ -459,8 +461,8 @@ export default function OwnerDashboardScreen() {
         </View>
       </View>
 
-      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]}>
-        <View style={styles.statBox}>
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]}>
+        <View style={[styles.statBox, isUltraNarrow && { paddingVertical: 16, paddingHorizontal: 12, borderRadius: 20 }]}>
           <View style={styles.iconCircle}>
             <Calendar size={20} color="#01b854" />
           </View>
@@ -477,8 +479,8 @@ export default function OwnerDashboardScreen() {
         </View>
       </View>
 
-      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]}>
-        <View style={styles.statBox}>
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]}>
+        <View style={[styles.statBox, isUltraNarrow && { paddingVertical: 16, paddingHorizontal: 12, borderRadius: 20 }]}>
           <View style={styles.iconCircle}>
             <Calendar size={20} color="#01b854" />
           </View>
@@ -495,8 +497,8 @@ export default function OwnerDashboardScreen() {
         </View>
       </View>
 
-      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]}>
-        <View style={styles.statBox}>
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]}>
+        <View style={[styles.statBox, isUltraNarrow && { paddingVertical: 16, paddingHorizontal: 12, borderRadius: 20 }]}>
           <View style={styles.iconCircle}>
             <Star size={20} color="#FFA000" />
           </View>
@@ -621,8 +623,8 @@ export default function OwnerDashboardScreen() {
 
   const renderProfileTab = () => (
     <View style={styles.grid}>
-      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]}>
-        <View style={styles.statBox}>
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]}>
+        <View style={[styles.statBox, isUltraNarrow && { paddingVertical: 16, paddingHorizontal: 12, borderRadius: 20 }]}>
           {editingField !== 'full_name' && (
             <TouchableOpacity 
               style={styles.editBtn} 
@@ -661,8 +663,8 @@ export default function OwnerDashboardScreen() {
         </View>
       </View>
 
-      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]}>
-        <View style={styles.statBox}>
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]}>
+        <View style={[styles.statBox, isUltraNarrow && { paddingVertical: 16, paddingHorizontal: 12, borderRadius: 20 }]}>
           <View style={styles.iconCircle}>
             <Mail size={20} color="#01b854" />
           </View>
@@ -672,8 +674,8 @@ export default function OwnerDashboardScreen() {
         </View>
       </View>
 
-      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]}>
-        <View style={styles.statBox}>
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]}>
+        <View style={[styles.statBox, isUltraNarrow && { paddingVertical: 16, paddingHorizontal: 12, borderRadius: 20 }]}>
           {editingField !== 'phone' && (
             <TouchableOpacity 
               style={styles.editBtn} 
@@ -713,8 +715,8 @@ export default function OwnerDashboardScreen() {
         </View>
       </View>
 
-      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : '48.5%' }]}>
-        <View style={styles.statBox}>
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]}>
+        <View style={[styles.statBox, isUltraNarrow && { paddingVertical: 16, paddingHorizontal: 12, borderRadius: 20 }]}>
           {editingField !== 'business_name' && (
             <TouchableOpacity 
               style={styles.editBtn} 

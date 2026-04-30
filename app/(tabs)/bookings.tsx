@@ -93,6 +93,9 @@ export default function BookingsScreen() {
   const isWideWeb = Platform.OS === 'web' && width >= 1100;
   const isExtraWideWeb = Platform.OS === 'web' && width >= 1350;
   const isMediumWeb = Platform.OS === 'web' && width >= 768 && width < 1100;
+  const isUltraNarrow = width < 350;
+  const isTablet = width >= 600 && width < 900;
+  const isStacking = width < 768; // Stack panels below this width
 
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [bookingToCancel, setBookingToCancel] = useState<BookingWithDetails | null>(null);
@@ -417,12 +420,12 @@ export default function BookingsScreen() {
           contentContainerStyle={styles.webScrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.webTwoCol}>
+          <View style={[styles.webTwoCol, isStacking && { flexDirection: 'column' }]}>
           {/* LEFT: bookings list */}
           <View style={styles.webLeft}>
             <View style={styles.webPageHeader}>
-              <Text style={styles.webPageTitle}>My Bookings</Text>
-              <Text style={styles.webPageSub}>Manage your upcoming games and view history</Text>
+              <Text style={[styles.webPageTitle, isUltraNarrow && { fontSize: 20 }]}>My Bookings</Text>
+              <Text style={[styles.webPageSub, isUltraNarrow && { fontSize: 11 }]}>Manage your upcoming games and view history</Text>
             </View>
 
             {/* Tabs */}
@@ -583,7 +586,7 @@ export default function BookingsScreen() {
           </View>
 
           {/* RIGHT: summary panels */}
-          <View style={styles.webRight}>
+          <View style={[styles.webRight, isStacking && { width: '100%', paddingLeft: 0, marginTop: 24 }]}>
             <ScrollView 
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{ gap: 16 }}

@@ -24,6 +24,8 @@ const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
 function OwnerSettingsInner() {
   const { user } = useAuth();
   const { width } = useWindowDimensions();
+  const isUltraNarrow = width < 350;
+  const isTablet = width >= 600 && width < 900;
   const insets = useSafeAreaInsets();
   const { tab } = useLocalSearchParams<{ tab: string }>();
   const [activeTab, setActiveTab] = useState<'payout' | 'bank' | 'coupons' | 'help'>((tab as any) || 'payout');
@@ -221,7 +223,7 @@ function OwnerSettingsInner() {
         Save your payout account details so we can use them for future withdrawals.
       </Text>
 
-    <View style={styles.formRowHorizontal}>
+    <View style={[styles.formRowHorizontal, (IS_WEB && width >= 768) && { flexDirection: 'row' }]}>
       <View style={styles.formCol}>
         <Text style={styles.label}>Bank name</Text>
         <TextInput
@@ -243,7 +245,7 @@ function OwnerSettingsInner() {
       </View>
     </View>
 
-    <View style={styles.formRowHorizontal}>
+    <View style={[styles.formRowHorizontal, (IS_WEB && width >= 768) && { flexDirection: 'row' }]}>
       <View style={styles.formCol}>
         <Text style={styles.label}>IFSC code</Text>
         <TextInput
@@ -328,7 +330,7 @@ function OwnerSettingsInner() {
           <Tag size={24} color="#01b854" />
         </View>
 
-        <View style={styles.formRowHorizontal}>
+        <View style={[styles.formRowHorizontal, (IS_WEB && width >= 768) && { flexDirection: 'row' }]}>
           <View style={styles.formCol}>
             <Text style={styles.label}>Coupon Code</Text>
             <TextInput
@@ -351,7 +353,7 @@ function OwnerSettingsInner() {
           </View>
         </View>
 
-        <View style={styles.formRowHorizontal}>
+        <View style={[styles.formRowHorizontal, (IS_WEB && width >= 768) && { flexDirection: 'row' }]}>
           <View style={styles.formCol}>
             <Text style={styles.label}>Discount Type</Text>
             <View style={styles.toggleRow}>
@@ -544,30 +546,30 @@ function OwnerSettingsInner() {
     <View style={{ flex: 1 }}>
       <Animated.View style={headerAnimatedStyle}>
         <MobileAppNavbar title="Settings" titleColor="#01b854" />
-        <View style={[styles.tabContainer, { marginBottom: 12 }]}>
+        <View style={[styles.tabContainer, { marginBottom: 12 }, isUltraNarrow && { padding: 4 }]}>
           <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'payout' && styles.activeTabButton]} 
+            style={[styles.tabButton, activeTab === 'payout' && styles.activeTabButton, isUltraNarrow && { paddingVertical: 6 }]} 
             onPress={() => onTabPress('payout')}
           >
-            <Text style={[styles.tabText, activeTab === 'payout' && styles.activeTabText]}>Payouts</Text>
+            <Text style={[styles.tabText, activeTab === 'payout' && styles.activeTabText, isUltraNarrow && { fontSize: 10 }]}>Payouts</Text>
           </TouchableOpacity>
           <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'bank' && styles.activeTabButton]} 
+            style={[styles.tabButton, activeTab === 'bank' && styles.activeTabButton, isUltraNarrow && { paddingVertical: 6 }]} 
             onPress={() => onTabPress('bank')}
           >
-            <Text style={[styles.tabText, activeTab === 'bank' && styles.activeTabText]}>Bank</Text>
+            <Text style={[styles.tabText, activeTab === 'bank' && styles.activeTabText, isUltraNarrow && { fontSize: 10 }]}>Bank</Text>
           </TouchableOpacity>
           <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'coupons' && styles.activeTabButton]} 
+            style={[styles.tabButton, activeTab === 'coupons' && styles.activeTabButton, isUltraNarrow && { paddingVertical: 6 }]} 
             onPress={() => onTabPress('coupons')}
           >
-            <Text style={[styles.tabText, activeTab === 'coupons' && styles.activeTabText]}>Coupons</Text>
+            <Text style={[styles.tabText, activeTab === 'coupons' && styles.activeTabText, isUltraNarrow && { fontSize: 10 }]}>Coupons</Text>
           </TouchableOpacity>
           <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'help' && styles.activeTabButton]} 
+            style={[styles.tabButton, activeTab === 'help' && styles.activeTabButton, isUltraNarrow && { paddingVertical: 6 }]} 
             onPress={() => onTabPress('help')}
           >
-            <Text style={[styles.tabText, activeTab === 'help' && styles.activeTabText]}>Help</Text>
+            <Text style={[styles.tabText, activeTab === 'help' && styles.activeTabText, isUltraNarrow && { fontSize: 10 }]}>Help</Text>
           </TouchableOpacity>
         </View>
       </Animated.View>
@@ -716,7 +718,6 @@ const styles = StyleSheet.create({
   },
   formRowHorizontal: {
     marginBottom: 12,
-    flexDirection: IS_WEB ? 'row' : 'column',
     gap: 12,
   },
   formCol: {

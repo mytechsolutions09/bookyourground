@@ -59,6 +59,8 @@ export default function ProfileScreen() {
   const { user, profile, signOut } = useAuth();
   const { width } = useWindowDimensions();
   const isCompact = width < 900;
+  const isUltraNarrow = width < 350;
+  const isTablet = width >= 600 && width < 900;
   const isWeb = Platform.OS === 'web';
 
   const [uploading, setUploading] = useState(false);
@@ -206,7 +208,7 @@ export default function ProfileScreen() {
   };
 
   const profileBody = (
-    <View style={[styles.content]}>
+    <View style={[styles.content, isUltraNarrow && { paddingHorizontal: 12, paddingTop: 10 }]}>
       {(!isCompact && isWeb) && (
         <ProfileHeaderTabs
           themeAccent={themeAccent}
@@ -216,7 +218,7 @@ export default function ProfileScreen() {
       )}
 
       {/* 1. PROFILE CARD */}
-      <View style={styles.profileCardNew}>
+      <View style={[styles.profileCardNew, isUltraNarrow && { padding: 16, marginBottom: 20 }]}>
         <View style={styles.profileCardContent}>
           <TouchableOpacity 
             activeOpacity={0.8} 
@@ -226,21 +228,21 @@ export default function ProfileScreen() {
           >
             <Image
               source={{ uri: profile?.avatar_url || 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg' }}
-              style={styles.avatarNew}
+              style={[styles.avatarNew, isUltraNarrow && { width: 64, height: 64, borderRadius: 32 }]}
             />
             {uploading ? (
               <View style={styles.avatarOverlayNew}>
                 <ActivityIndicator color="#FFFFFF" size="small" />
               </View>
             ) : (
-              <View style={styles.avatarOverlayNew}>
-                <Camera size={16} color="#FFFFFF" />
+              <View style={[styles.avatarOverlayNew, isUltraNarrow && { width: 22, height: 22, borderRadius: 11 }]}>
+                <Camera size={isUltraNarrow ? 12 : 16} color="#FFFFFF" />
               </View>
             )}
           </TouchableOpacity>
           <View style={styles.profileTextContainer}>
-            <RNText style={styles.nameNew}>{getFormattedName(profile?.full_name)}</RNText>
-            <RNText style={styles.roleNew}>
+            <RNText style={[styles.nameNew, isUltraNarrow && { fontSize: 16 }]}>{getFormattedName(profile?.full_name)}</RNText>
+            <RNText style={[styles.roleNew, isUltraNarrow && { fontSize: 12 }]}>
               {profile?.role === 'ground_owner' ? 'Ground Owner & Player' : 'Player'}
             </RNText>
             
@@ -255,7 +257,7 @@ export default function ProfileScreen() {
           <RNText style={styles.sectionTitle}>SUPER ADMIN HUB</RNText>
           <View style={styles.hubGrid}>
             <TouchableOpacity 
-              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
               onPress={() => router.push('/(admin)/dashboard' as any)}
             >
               <View style={styles.hubIconCircle}>
@@ -265,7 +267,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
               onPress={() => router.push('/(admin)/manage-users' as any)}
             >
               <View style={styles.hubIconCircle}>
@@ -275,7 +277,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
               onPress={() => router.push('/(admin)/grounds' as any)}
             >
               <View style={styles.hubIconCircle}>
@@ -285,7 +287,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
               onPress={() => router.push('/(admin)/bookings' as any)}
             >
               <View style={styles.hubIconCircle}>
@@ -295,7 +297,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
               onPress={() => router.push('/(admin)/earnings' as any)}
             >
               <View style={styles.hubIconCircle}>
@@ -305,7 +307,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
               onPress={() => router.push('/(admin)/orders' as any)}
             >
               <View style={styles.hubIconCircle}>
@@ -315,7 +317,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
               onPress={() => router.push('/(admin)/products' as any)}
             >
               <View style={styles.hubIconCircle}>
@@ -325,7 +327,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
               onPress={() => router.push('/(admin)/payouts' as any)}
             >
               <View style={styles.hubIconCircle}>
@@ -335,7 +337,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
               onPress={() => router.push('/(admin)/inventory' as any)}
             >
               <View style={styles.hubIconCircle}>
@@ -345,7 +347,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
               onPress={() => router.push('/(admin)/messages' as any)}
             >
               <View style={styles.hubIconCircle}>
@@ -355,7 +357,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
               onPress={() => router.push('/(admin)/approve-grounds' as any)}
             >
               <View style={styles.hubIconCircle}>
@@ -365,7 +367,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
               onPress={() => router.push('/(admin)/manage-ground-owners' as any)}
             >
               <View style={styles.hubIconCircle}>
@@ -383,7 +385,7 @@ export default function ProfileScreen() {
           <RNText style={styles.sectionTitle}>GROUND OWNER HUB</RNText>
           <View style={styles.hubGrid}>
             <TouchableOpacity 
-              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
               onPress={() => router.push('/(owner)/owner-dashboard' as any)}
             >
               <View style={styles.hubIconCircle}>
@@ -393,7 +395,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
               onPress={() => router.push('/(owner)/manage-grounds' as any)}
             >
               <View style={styles.hubIconCircle}>
@@ -403,7 +405,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
               onPress={() => router.push('/(owner)/ground-bookings' as any)}
             >
               <View style={styles.hubIconCircle}>
@@ -413,7 +415,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
               onPress={() => router.push('/(owner)/earnings' as any)}
             >
               <View style={styles.hubIconCircle}>
@@ -422,7 +424,7 @@ export default function ProfileScreen() {
               <RNText style={styles.hubCardText}>Earnings</RNText>
             </TouchableOpacity>
             <TouchableOpacity 
-              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
               onPress={() => router.push('/(owner)/inventory' as any)}
             >
               <View style={styles.hubIconCircle}>
@@ -433,7 +435,7 @@ export default function ProfileScreen() {
 
 
             <TouchableOpacity 
-              style={[styles.hubCard, { width: width > 900 ? '31.5%' : '47.5%' }]}
+              style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
               onPress={() => router.push('/(owner)/settings' as any)}
             >
               <View style={styles.hubIconCircle}>
@@ -798,7 +800,7 @@ const styles = StyleSheet.create({
   profileCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 20,
+    gap: 16,
   },
   avatarNew: {
     width: 80,
@@ -808,8 +810,8 @@ const styles = StyleSheet.create({
   },
   avatarWrapperNew: {
     position: 'relative',
-    width: 80,
-    height: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   avatarOverlayNew: {
     position: 'absolute',
@@ -926,6 +928,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
     paddingHorizontal: 8,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.04,

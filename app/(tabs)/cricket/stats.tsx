@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Platform, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, Platform, ScrollView, ActivityIndicator, useWindowDimensions } from 'react-native';
 import { Users2, Award, Zap, Swords, Target, Activity, ChevronDown } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -7,6 +7,8 @@ import { supabase } from '@/lib/supabase';
 type SubTab = 'batting' | 'bowling' | 'fielding' | 'captain' | 'leaders';
 
 export default function CricketStats({ activeSubTab }: { activeSubTab: string }) {
+  const { width } = useWindowDimensions();
+  const isUltraNarrow = width < 350;
   const router = useRouter();
   const subTab = (activeSubTab || 'batting') as SubTab;
   const [loading, setLoading] = useState(true);
@@ -210,7 +212,7 @@ export default function CricketStats({ activeSubTab }: { activeSubTab: string })
 
         <View style={styles.statsGrid}>
           {stats.map((stat, idx) => (
-            <View key={idx} style={styles.statTile}>
+            <View key={idx} style={[styles.statTile, isUltraNarrow && { width: '48%' }]}>
               <Text style={styles.statValue}>{stat.value}</Text>
               <Text style={styles.statLabel}>{stat.label}</Text>
             </View>

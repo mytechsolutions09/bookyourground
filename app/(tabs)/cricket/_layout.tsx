@@ -110,6 +110,8 @@ export default function CricketLayout() {
   
   const animatedScrollY = useSharedValue(0);
   const lastScrollY = useSharedValue(0);
+  const tabScrollPositions = useSharedValue(TABS.map(() => 0));
+  const activeTabIndex = useSharedValue(initialIndex);
 
   const HEADER_MAX_HEIGHT = 280;
   const HEADER_MIN_HEIGHT = 105;
@@ -389,14 +391,39 @@ export default function CricketLayout() {
   // Handle manual tab press
   const onTabPress = (tabId: string, idx: number) => {
     setActiveTabId(tabId);
+    activeTabIndex.value = idx;
+    animatedScrollY.value = tabScrollPositions.value[idx] || 0;
     horizontalPagerRef.current?.scrollTo({ x: idx * windowWidth, animated: true });
   };
 
+  // Re-align pager when window width changes (e.g. unfolding Samsung Fold)
+  React.useEffect(() => {
+    const idx = TABS.find(t => t.id === activeTabId)?.index || 0;
+    // Use a small delay to ensure layout has finished
+    const timer = setTimeout(() => {
+      horizontalPagerRef.current?.scrollTo({ x: idx * windowWidth, animated: false });
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [windowWidth]);
+
   const horizontalScrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
-      const idx = Math.round(event.contentOffset.x / windowWidth);
-      const tab = TABS[idx];
+      const x = event.contentOffset.x;
+      const index = x / windowWidth;
+      const leftIdx = Math.floor(index);
+      const rightIdx = Math.ceil(index);
+      const progress = index - leftIdx;
+
+      if (leftIdx >= 0 && rightIdx < TABS.length) {
+        const leftScroll = tabScrollPositions.value[leftIdx] || 0;
+        const rightScroll = tabScrollPositions.value[rightIdx] || 0;
+        animatedScrollY.value = leftScroll * (1 - progress) + rightScroll * progress;
+      }
+
+      const activeIdx = Math.round(index);
+      const tab = TABS[activeIdx];
       if (tab && tab.id !== activeTabId) {
+        activeTabIndex.value = activeIdx;
         runOnJS(setActiveTabId)(tab.id);
       }
     },
@@ -410,6 +437,12 @@ export default function CricketLayout() {
     onScroll: (event) => {
       const currentY = event.contentOffset.y;
       animatedScrollY.value = currentY;
+
+      // Update the current tab's stored scroll position
+      const idx = activeTabIndex.value;
+      const newPositions = [...tabScrollPositions.value];
+      newPositions[idx] = currentY;
+      tabScrollPositions.value = newPositions;
 
       // Immersive scroll: hide/show bottom tab bar based on direction
       if (currentY > lastScrollY.value + 10 && currentY > 100) {
@@ -824,7 +857,7 @@ export default function CricketLayout() {
         style={{ flex: 1 }}
       >
         {TABS.map((tab) => (
-          <View key={tab.id} style={{ width: windowWidth, flex: 1 }}>
+          <View key={`${tab.id}-${windowWidth}`} style={{ width: windowWidth, flex: 1 }}>
             <Animated.ScrollView 
               onScroll={verticalScrollHandler}
               scrollEventThrottle={16}
@@ -912,6 +945,9 @@ const styles = StyleSheet.create({
   profileHeaderContent: {
     paddingHorizontal: 20,
     zIndex: 2,
+    maxWidth: 650,
+    alignSelf: 'center',
+    width: '100%',
   },
   headerTopRow: {
     flexDirection: 'row',
@@ -1095,6 +1131,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     zIndex: 10,
+    maxWidth: 650,
+    alignSelf: 'center',
   },
   miniNavBtn: {
     width: 38,
@@ -1185,10 +1223,10 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   contentContainer: {
-    maxWidth: 1200,
+    maxWidth: 650, // Matches the profile content for a cohesive look
     alignSelf: 'center',
     width: '100%',
-    paddingHorizontal: 16,
+    paddingHorizontal: 0, // Padding is handled by children
     paddingTop: 0,
   },
   modalOverlay: {

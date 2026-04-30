@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, Share, ActivityIndicator, Animated, Easing, useWindowDimensions } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { 
   ChevronLeft, 
@@ -25,10 +26,12 @@ export default function ProductDetailScreen() {
   const { width: windowWidth } = useWindowDimensions();
   const isCompact = windowWidth < 1024;
   const isSmall = windowWidth < 768;
+  const isUltraNarrow = windowWidth < 350;
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { user } = useAuth();
   const { setTabBarVisible } = useUI();
+  const insets = useSafeAreaInsets();
   const [product, setProduct] = useState<any>(null);
   const [isFavorited, setIsFavorited] = useState(false);
   const [selectedColor, setSelectedColor] = useState<any>(null);
@@ -245,10 +248,10 @@ export default function ProductDetailScreen() {
   const content = (
     <View style={{ flex: 1 }}>
       {/* Fixed Background Image */}
-      <View style={styles.fixedImageContainer}>
+      <View style={[styles.fixedImageContainer, isUltraNarrow && styles.fixedImageContainerUltra]}>
         <Image 
           source={{ uri: product.images?.[activeImageIndex] || product.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80' }} 
-          style={styles.mainImage} 
+          style={[styles.mainImage, isUltraNarrow && { height: 320 }]} 
         />
         {product.images && product.images.length > 1 && (
           <View style={styles.mobileThumbnailsOverlay}>
@@ -400,7 +403,7 @@ export default function ProductDetailScreen() {
       </ScrollView>
 
       {/* Header Overlay - Absolute and rendered last to sit on top of everything */}
-      <View style={styles.imageOverlay}>
+      <View style={[styles.imageOverlay, { top: Math.max(insets.top, 20) }]}>
         <TouchableOpacity 
           style={styles.backBtn} 
           onPress={() => router.back()}
@@ -410,6 +413,12 @@ export default function ProductDetailScreen() {
         <View style={styles.rightActions}>
           <TouchableOpacity style={styles.actionCircle} onPress={handleShare}>
             <Share2 size={20} color="#2b2f4b" />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.actionCircle} 
+            onPress={() => router.push('/shop/cart')}
+          >
+            <ShoppingCart size={20} color="#2b2f4b" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionCircle} onPress={toggleFavorite}>
             <Heart 
@@ -424,24 +433,18 @@ export default function ProductDetailScreen() {
   );
 
   const bottomActions = (
-    <View style={styles.bottomBar}>
+    <View style={[styles.bottomBar, isUltraNarrow && { paddingHorizontal: 8, gap: 6 }]}>
       <TouchableOpacity 
-        style={styles.cartIconBtn}
-        onPress={() => router.push('/shop/cart')}
-      >
-        <ShoppingCart size={24} color="#2b2f4b" />
-      </TouchableOpacity>
-      <TouchableOpacity 
-        style={styles.addToCartSecondary}
+        style={[styles.addToCartSecondary, isUltraNarrow && { height: 40 }]}
         onPress={addToCart}
       >
-        <Text style={styles.addToCartSecondaryText}>Add to Cart</Text>
+        <Text style={[styles.addToCartSecondaryText, isUltraNarrow && { fontSize: 12 }]}>Add to Cart</Text>
       </TouchableOpacity>
       <TouchableOpacity 
-        style={styles.buyNowBtn}
+        style={[styles.buyNowBtn, isUltraNarrow && { height: 40 }]}
         onPress={addToCart}
       >
-        <Text style={styles.buyNowText}>Buy Now</Text>
+        <Text style={[styles.buyNowText, isUltraNarrow && { fontSize: 12 }]}>Buy Now</Text>
       </TouchableOpacity>
     </View>
   );
@@ -670,6 +673,9 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 0,
   },
+  fixedImageContainerUltra: {
+    height: 320,
+  },
   scroll: {
     flex: 1,
   },
@@ -684,7 +690,6 @@ const styles = StyleSheet.create({
   },
   imageOverlay: {
     position: 'absolute',
-    top: 60,
     left: 20,
     right: 20,
     flexDirection: 'row',

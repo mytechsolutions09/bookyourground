@@ -59,6 +59,8 @@ export default function OwnerGroundsScreen() {
   const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
   const [loading, setLoading] = useState(true);
   const { width } = useWindowDimensions();
+  const isUltraNarrow = width < 350;
+  const isTablet = width >= 600 && width < 900;
   const numColumns = Platform.OS === 'web' ? (width > 1200 ? 3 : (width > 768 ? 2 : 1)) : 1;
   const [selectedGroundId, setSelectedGroundId] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
@@ -676,8 +678,8 @@ export default function OwnerGroundsScreen() {
       >
         <Pressable style={styles.modalOverlay} onPress={closeEditModal} />
         <View style={styles.modalWrap}>
-          <Card style={[styles.modalCard, IS_WEB && { width: 1200, maxWidth: '98vw' }]}>
-            <View style={styles.modalHeader}>
+          <Card style={[styles.modalCard, IS_WEB && { width: 1200, maxWidth: '98vw' }, isUltraNarrow && { padding: 12 }]}>
+            <View style={[styles.modalHeader, isUltraNarrow && { marginBottom: 6 }]}>
               <View>
                 <Text style={styles.modalTitle}>Edit Venue</Text>
                 <Text style={{ fontSize: 11, color: '#64748B' }}>Managing {editForm?.name}</Text>
@@ -686,9 +688,9 @@ export default function OwnerGroundsScreen() {
             </View>
 
             <ScrollView style={styles.modalScroll} keyboardShouldPersistTaps="handled">
-              <View style={[styles.compactFormGrid, IS_WEB && { flexDirection: 'row', gap: 24 }]}>
+              <View style={[styles.compactFormGrid, (IS_WEB || isTablet) && { flexDirection: 'row', gap: 24 }, isUltraNarrow && { padding: 8 }]}>
                 {/* Left Column: Basic Info & Media */}
-                <View style={[styles.compactFormCol, IS_WEB && { flex: 1 }]}>
+                <View style={[styles.compactFormCol, (IS_WEB || isTablet) && { flex: 1 }]}>
                   <Text style={styles.compactSectionTitle}>Basic Details</Text>
                   <TextInput
                     style={styles.compactInput}
@@ -766,7 +768,7 @@ export default function OwnerGroundsScreen() {
                   <Text style={[styles.compactSectionTitle, { marginTop: 12 }]}>Gallery (8 Images, 2 Videos)</Text>
                   <View style={styles.compactMediaGrid}>
                     {(editForm?.mediaUrls ?? []).map((url: string, idx: number) => (
-                      <View key={idx} style={styles.compactMediaItem}>
+                      <View key={idx} style={[styles.compactMediaItem, isUltraNarrow && { width: 44, height: 44 }]}>
                         <Image source={{ uri: url }} style={styles.compactMediaImg} />
                         <TouchableOpacity 
                           style={styles.compactMediaRemove} 
@@ -777,16 +779,16 @@ export default function OwnerGroundsScreen() {
                       </View>
                     ))}
                     {(editForm?.mediaUrls ?? []).length < 10 && (
-                      <TouchableOpacity style={styles.compactMediaAdd} onPress={handlePickMediaForEdit}>
-                        {uploadingMedia ? <ActivityIndicator size="small" color="#64748B" /> : <Plus size={20} color="#64748B" />}
-                        <Text style={styles.compactMediaAddText}>{uploadingMedia ? '...' : 'Add'}</Text>
+                      <TouchableOpacity style={[styles.compactMediaAdd, isUltraNarrow && { width: 44, height: 44 }]} onPress={handlePickMediaForEdit}>
+                        {uploadingMedia ? <ActivityIndicator size="small" color="#64748B" /> : <Plus size={isUltraNarrow ? 16 : 20} color="#64748B" />}
+                        <Text style={[styles.compactMediaAddText, isUltraNarrow && { fontSize: 8 }]}>{uploadingMedia ? '...' : 'Add'}</Text>
                       </TouchableOpacity>
                     )}
                   </View>
                 </View>
 
                 {/* Right Column: Location & Map */}
-                <View style={[styles.compactFormCol, IS_WEB && { flex: 1 }]}>
+                <View style={[styles.compactFormCol, (IS_WEB || isTablet) && { flex: 1 }]}>
                   <Text style={styles.compactSectionTitle}>Location</Text>
                   <TextInput
                     style={styles.compactInput}
@@ -879,7 +881,7 @@ export default function OwnerGroundsScreen() {
                   { key: 'has_washrooms', label: 'Washrooms' },
                   { key: 'active', label: 'Visible' },
                 ].map((item) => (
-                  <View key={item.key} style={styles.amenityItemCompact}>
+                  <View key={item.key} style={[styles.amenityItemCompact, !IS_WEB && { width: width < 350 ? '100%' : '48%' }]}>
                     <Text style={styles.switchLabelCompact}>{item.label}</Text>
                     <Switch
                       value={!!editForm?.[item.key]}
@@ -1316,7 +1318,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   amenityItemCompact: {
-    width: IS_WEB ? '15%' : '45%',
+    width: IS_WEB ? '15%' : '48%',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',

@@ -120,6 +120,8 @@ export default function OwnerBookingsScreen() {
   const [loading, setLoading] = useState(true);
   const isWeb = Platform.OS === 'web';
   const isSmallScreen = width < 900;
+  const isUltraNarrow = width < 350;
+  const isTablet = width >= 600 && width < 900;
   const isLight = true; // Uniform light theme across platforms
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'all' | 'upcoming' | 'past' | 'cancelled'>('all');
@@ -564,8 +566,8 @@ export default function OwnerBookingsScreen() {
           <View style={styles.controlsRow}>
             <View style={styles.searchBoxMobileWrapper}>
               <TextInput
-                style={styles.searchBarMobile}
-                placeholder="Search..."
+                style={[styles.searchBarMobile, isUltraNarrow && { fontSize: 11, paddingHorizontal: 8 }]}
+                placeholder={isUltraNarrow ? "Search" : "Search..."}
                 placeholderTextColor="#94A3B8"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -1714,8 +1716,8 @@ const styles = StyleSheet.create({
   compactRow: {
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    padding: 16,
-    marginBottom: 16,
+    padding: 12,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: '#f1f5f9',
     shadowColor: '#000',
@@ -1732,9 +1734,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   compactGroundImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 12,
+    width: 50,
+    height: 50,
+    borderRadius: 10,
     backgroundColor: '#F1F5F9',
   },
   compactDateTextSub: {
@@ -1770,7 +1772,7 @@ const styles = StyleSheet.create({
   },
   compactGroundName: {
     fontFamily: 'Inter',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
     color: '#0F172A',
     letterSpacing: -0.2,
@@ -1786,7 +1788,7 @@ const styles = StyleSheet.create({
   },
   compactSlotTime: {
     fontFamily: 'Inter',
-    fontSize: 15,
+    fontSize: 13,
     color: '#059669',
     fontWeight: '600',
   },
@@ -1805,8 +1807,8 @@ const styles = StyleSheet.create({
   },
   compactAmount: {
     fontFamily: 'Inter',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
     color: '#0F172A',
   },
   compactAmountNative: {
@@ -1857,7 +1859,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
     zIndex: 1001,
   },
   searchBoxMobileWrapper: {
@@ -1880,7 +1882,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    paddingHorizontal: 10,
+    paddingHorizontal: 6,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -1893,7 +1895,7 @@ const styles = StyleSheet.create({
     borderColor: '#01b854',
   },
   dropdownTriggerText: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#64748B',
     fontWeight: '600',
     fontFamily: 'Inter',

@@ -72,6 +72,8 @@ export default function OwnerInventoryScreen() {
   const isWeb = Platform.OS === 'web';
   const { width } = useWindowDimensions();
   const isSmall = width < 900;
+  const isUltraNarrow = width < 350;
+  const isTablet = width >= 600 && width < 900;
   const { setTabBarVisible } = useUI();
   const insets = useSafeAreaInsets();
   
@@ -291,7 +293,7 @@ export default function OwnerInventoryScreen() {
           return (
             <TouchableOpacity 
               key={s.id} 
-              style={[styles.slotChip, { backgroundColor: statusColor }]}
+              style={[styles.slotChip, isUltraNarrow && { minWidth: 75, paddingHorizontal: 6 }, { backgroundColor: statusColor }]}
               disabled={!isClickable}
               onPress={() => {
                 const startHHMM = normalizeDbTimeToHHMM(s.start_time);
@@ -388,11 +390,11 @@ export default function OwnerInventoryScreen() {
               >
                 {/* Ground Selector Dropdown */}
                 <TouchableOpacity 
-                  style={styles.mobileDropdown}
+                  style={[styles.mobileDropdown, isUltraNarrow && { paddingHorizontal: 8, minWidth: 80 }]}
                   onPress={() => setActivePicker('ground')}
                 >
                   <Building2 size={14} color="#00ea6b" />
-                  <Text style={styles.mobileDropdownText} numberOfLines={1}>
+                  <Text style={[styles.mobileDropdownText, isUltraNarrow && { fontSize: 10 }]} numberOfLines={1}>
                     {currentGround?.name || 'Select Ground'}
                   </Text>
                   <ChevronDown size={14} color="#6B7280" />
@@ -400,21 +402,21 @@ export default function OwnerInventoryScreen() {
 
                 {/* Status Selector Dropdown */}
                 <TouchableOpacity 
-                  style={styles.mobileDropdown}
+                  style={[styles.mobileDropdown, isUltraNarrow && { paddingHorizontal: 8, minWidth: 60 }]}
                   onPress={() => setActivePicker('status')}
                 >
                   <Filter size={14} color="#00ea6b" />
-                  <Text style={styles.mobileDropdownText}>{statusFilter}</Text>
+                  <Text style={[styles.mobileDropdownText, isUltraNarrow && { fontSize: 10 }]}>{statusFilter}</Text>
                   <ChevronDown size={14} color="#6B7280" />
                 </TouchableOpacity>
 
                 {/* Range Selector */}
                 <TouchableOpacity 
-                  style={styles.mobileDropdown}
+                  style={[styles.mobileDropdown, isUltraNarrow && { paddingHorizontal: 8, minWidth: 50 }]}
                   onPress={() => setActivePicker('range')}
                 >
                   <Clock size={14} color="#00ea6b" />
-                  <Text style={styles.mobileDropdownText}>{daysToShow}D</Text>
+                  <Text style={[styles.mobileDropdownText, isUltraNarrow && { fontSize: 10 }]}>{daysToShow}D</Text>
                   <ChevronDown size={14} color="#6B7280" />
                 </TouchableOpacity>
               </ScrollView>
@@ -550,8 +552,8 @@ export default function OwnerInventoryScreen() {
                   const displayDate = d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
 
                   return (
-                    <View key={dateStr} style={styles.compactDateRow}>
-                      <View style={styles.compactDateLabel}>
+                    <View key={dateStr} style={[styles.compactDateRow, isUltraNarrow && { gap: 8 }]}>
+                      <View style={[styles.compactDateLabel, isUltraNarrow && { width: 50 }]}>
                         <Text style={styles.dateDay}>{displayDate.split(' ')[0]}</Text>
                         <Text style={styles.dateNum}>{displayDate.split(' ')[1]} {displayDate.split(' ')[2]}</Text>
                       </View>
@@ -1037,7 +1039,7 @@ const styles = StyleSheet.create({
   slotStatus: {
     fontSize: 8,
     fontWeight: '700',
-    marginTop: 2,
+    marginTop: 1,
     textTransform: 'uppercase',
   },
   noGroundSelected: {

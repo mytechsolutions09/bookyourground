@@ -171,6 +171,9 @@ function OwnerEarningsScreenInner() {
   const { user } = useAuth();
   const { width } = useWindowDimensions();
   const isCompact = width < 900;
+  const isStacking = width < 768; // Stack columns below this width
+  const isUltraNarrow = width < 350;
+  const isTablet = width >= 600 && width < 900;
   const [stats, setStats] = useState<EarningsStats>({
     totalEarnings: 0,
     thisMonthEarnings: 0,
@@ -662,8 +665,8 @@ function OwnerEarningsScreenInner() {
 
   const renderAnalyticsView = () => (
     <View style={styles.analyticsWrapper}>
-      <View style={[styles.layoutRow, isCompact && { flexDirection: 'column', gap: 16 }]}>
-        <View style={[styles.leftCol, isCompact && { paddingRight: 0 }]}>
+      <View style={[styles.layoutRow, isStacking && { flexDirection: 'column', gap: 16 }]}>
+        <View style={[styles.leftCol, isStacking && { paddingRight: 0 }]}>
           <View style={styles.sectionCard}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <View>
@@ -817,15 +820,15 @@ function OwnerEarningsScreenInner() {
 
   const renderLeftColumn = () => (
     <View style={styles.leftCol}>
-      <View style={styles.totalEarningsCard}>
+      <View style={[styles.totalEarningsCard, isUltraNarrow && { padding: 20 }]}>
         <View style={{ flex: 1 }}>
           <Text style={styles.totalEarningsLabel}>Transferable Balance (Automated Daily Settlement)</Text>
-          <Text style={styles.totalEarningsValue}>{formatCurrency(Number(wallet?.balance || 0))}</Text>
+          <Text style={[styles.totalEarningsValue, isUltraNarrow && { fontSize: 28 }]}>{formatCurrency(Number(wallet?.balance || 0))}</Text>
           <Text style={styles.monthlySubtext}>
             Settlements happen daily at <Text style={{ fontWeight: '700' }}>9:00 AM IST</Text>
           </Text>
         </View>
-        <Wallet size={64} color="#043529" strokeWidth={1} style={{ opacity: 0.2 }} />
+        {!isUltraNarrow && <Wallet size={64} color="#043529" strokeWidth={1} style={{ opacity: 0.2 }} />}
       </View>
 
       <View style={[styles.sectionCard, { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' }]}>
@@ -1070,7 +1073,7 @@ function OwnerEarningsScreenInner() {
         Platform.OS === 'web' && { scrollbarWidth: 'none', msOverflowStyle: 'none' } as any
       ]}
     >
-      <View style={styles.viewToggleContainer}>
+      <View style={[styles.viewToggleContainer, isUltraNarrow && { marginHorizontal: 12, padding: 4 }]}>
         <TouchableOpacity 
           style={[styles.viewToggleBtn, viewMode === 'preview' && styles.viewToggleBtnActive]}
           onPress={() => router.push('/(owner)/earnings?tab=preview')}
@@ -1100,12 +1103,12 @@ function OwnerEarningsScreenInner() {
         {viewMode === 'preview' ? (
           <View style={[
             styles.layoutRow, 
-            isCompact && { flexDirection: 'column', gap: 16 }
+            isStacking && { flexDirection: 'column', gap: 16 }
           ]}>
-            <View style={[styles.leftCol, isCompact && { paddingRight: 0, paddingTop: 16 }]}>
+            <View style={[styles.leftCol, isStacking && { paddingRight: 0, paddingTop: 16 }]}>
               {renderLeftColumn()}
             </View>
-            <View style={[styles.rightCol, isCompact && { paddingTop: 0 }]}>
+            <View style={[styles.rightCol, isStacking && { paddingTop: 0 }]}>
               {renderRightColumn()}
             </View>
           </View>
@@ -1817,7 +1820,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F5F9',
     borderRadius: 20,
     padding: 6,
-    marginHorizontal: 24,
+    marginHorizontal: 16,
     marginTop: 0,
     marginBottom: 32,
     borderWidth: 1,

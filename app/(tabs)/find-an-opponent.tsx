@@ -53,6 +53,9 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
   const isExtraWideWeb = Platform.OS === 'web' && width >= 1350;
   const isMediumWeb = Platform.OS === 'web' && width >= 768 && width < 1100;
   const isSmall = width < 900;
+  const isUltraNarrow = width < 350;
+  const isTablet = width >= 600;
+  const numColumns = isWeb ? (isWideWeb || isExtraWideWeb ? 3 : isMediumWeb ? 2 : 1) : (isTablet ? 2 : 1);
   const FlatListComponent = isWeb ? FlatList : Animated.FlatList;
 
   // Filters
@@ -513,6 +516,12 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
     </View>
   );
 
+  const containerStyle = [
+    styles.container,
+    isWeb && !IS_DARK && styles.webContainerRoot,
+    !isWeb && isTablet && { alignSelf: 'center', width: '100%', maxWidth: 800 }
+  ];
+
   if (Platform.OS === 'web') {
     return (
       <WebLayout hideHeader={isSmall} isPublicNoSidebar={isSmall}>
@@ -526,7 +535,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
             <View style={styles.nativeFiltersDrawer}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.nativeFilterScroll}>
                 <TouchableOpacity 
-                  style={styles.dropdownButton} 
+                  style={[styles.dropdownButton, isUltraNarrow && { paddingHorizontal: 8 }]} 
                   onPress={() => setActivePicker('city')}
                 >
                   <Text style={styles.dropdownLabel}>City: </Text>
@@ -535,7 +544,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
                 </TouchableOpacity>
 
                 <TouchableOpacity 
-                  style={styles.dropdownButton} 
+                  style={[styles.dropdownButton, isUltraNarrow && { paddingHorizontal: 8 }]} 
                   onPress={() => setActivePicker('date')}
                 >
                   <Text style={styles.dropdownLabel}>Date: </Text>
@@ -544,7 +553,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
                 </TouchableOpacity>
 
                 <TouchableOpacity 
-                  style={styles.dropdownButton} 
+                  style={[styles.dropdownButton, isUltraNarrow && { paddingHorizontal: 8 }]} 
                   onPress={() => setActivePicker('pitch')}
                 >
                   <Text style={styles.dropdownLabel}>Type: </Text>
@@ -555,7 +564,9 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
             </View>
           </Animated.View>
         )}
-        {content}
+        <View style={containerStyle}>
+          {content}
+        </View>
       </WebLayout>
     );
   }
@@ -570,6 +581,9 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
             <MatchmakingSkeleton isWeb={false} IS_DARK={false} />
           ) : (
             <FlatListComponent
+              key={`native-flatlist-${numColumns}`}
+              numColumns={numColumns}
+              columnWrapperStyle={numColumns > 1 ? { gap: 16, paddingHorizontal: 16 } : undefined}
               onScroll={isWeb ? onScrollWeb : (externalScrollHandler || verticalScrollHandler)}
               scrollEventThrottle={16}
               data={filteredMatches}
@@ -591,7 +605,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
                   <View style={styles.nativeFiltersDrawer}>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.nativeFilterScroll}>
                       <TouchableOpacity 
-                        style={styles.dropdownButton} 
+                        style={[styles.dropdownButton, isUltraNarrow && { paddingHorizontal: 8 }]} 
                         onPress={() => setActivePicker('city')}
                       >
                         <Text style={styles.dropdownLabel}>City: </Text>
@@ -600,7 +614,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
                       </TouchableOpacity>
 
                       <TouchableOpacity 
-                        style={styles.dropdownButton} 
+                        style={[styles.dropdownButton, isUltraNarrow && { paddingHorizontal: 8 }]} 
                         onPress={() => setActivePicker('date')}
                       >
                         <Text style={styles.dropdownLabel}>Date: </Text>
@@ -609,7 +623,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
                       </TouchableOpacity>
 
                       <TouchableOpacity 
-                        style={styles.dropdownButton} 
+                        style={[styles.dropdownButton, isUltraNarrow && { paddingHorizontal: 8 }]} 
                         onPress={() => setActivePicker('pitch')}
                       >
                         <Text style={styles.dropdownLabel}>Type: </Text>
@@ -621,7 +635,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
                 </View>
               }
               renderItem={({ item }) => (
-                <View style={styles.nativeItem}>
+                <View style={[styles.nativeItem, numColumns > 1 && { flex: 1, marginBottom: 16 }]}>
                   <MatchCard
                     match={item}
                     onJoin={() => handleJoinMatch(item)}
@@ -632,7 +646,11 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
                 </View>
               )}
               keyExtractor={item => item.id}
-              contentContainerStyle={[styles.listNative, { paddingTop: 105 + insets.top, paddingBottom: isWeb ? 64 : 100 }]}
+              contentContainerStyle={[
+                styles.listNative, 
+                { paddingTop: 105 + insets.top, paddingBottom: isWeb ? 64 : 100 },
+                numColumns > 1 && { paddingHorizontal: 8 }
+              ]}
               refreshControl={
                 <RefreshControl
                   refreshing={loading}
@@ -668,7 +686,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
         <View style={styles.nativeFiltersDrawer}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.nativeFilterScroll}>
             <TouchableOpacity 
-              style={styles.dropdownButton} 
+              style={[styles.dropdownButton, isUltraNarrow && { paddingHorizontal: 8 }]} 
               onPress={() => setActivePicker('city')}
             >
               <Text style={styles.dropdownLabel}>City: </Text>
@@ -677,7 +695,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={styles.dropdownButton} 
+              style={[styles.dropdownButton, isUltraNarrow && { paddingHorizontal: 8 }]} 
               onPress={() => setActivePicker('date')}
             >
               <Text style={styles.dropdownLabel}>Date: </Text>
@@ -686,7 +704,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
             </TouchableOpacity>
 
             <TouchableOpacity 
-              style={styles.dropdownButton} 
+              style={[styles.dropdownButton, isUltraNarrow && { paddingHorizontal: 8, marginRight: 0 }]} 
               onPress={() => setActivePicker('pitch')}
             >
               <Text style={styles.dropdownLabel}>Type: </Text>
@@ -730,6 +748,9 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
 
       <View style={styles.nativeBody}>
         <FlatListComponent
+          key={`native-flatlist-main-${numColumns}`}
+          numColumns={numColumns}
+          columnWrapperStyle={numColumns > 1 ? { gap: 16, paddingHorizontal: 16 } : undefined}
           onScroll={isWeb ? onScrollWeb : verticalScrollHandler}
           scrollEventThrottle={16}
           showsVerticalScrollIndicator={false}
@@ -749,7 +770,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
             </View>
           }
           renderItem={({ item }) => (
-            <View style={styles.nativeItem}>
+            <View style={[styles.nativeItem, numColumns > 1 && { flex: 1, marginBottom: 16 }]}>
               <MatchCard
                 match={item}
                 onJoin={() => handleJoinMatch(item)}
@@ -760,7 +781,11 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
             </View>
           )}
           keyExtractor={item => item.id}
-          contentContainerStyle={[styles.listNative, { paddingTop: 105 + insets.top, paddingBottom: isWeb ? 64 : 100 }]}
+          contentContainerStyle={[
+            styles.listNative, 
+            { paddingTop: 105 + insets.top, paddingBottom: isWeb ? 64 : 100 },
+            numColumns > 1 && { paddingHorizontal: 8 }
+          ]}
           refreshControl={
             <RefreshControl
               refreshing={loading}

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Platform, View, StyleSheet, ScrollView, TouchableOpacity, Text, useWindowDimensions, LayoutAnimation, UIManager } from 'react-native';
+import { Platform, View, StyleSheet, ScrollView, TouchableOpacity, Text, useWindowDimensions, LayoutAnimation, UIManager, Dimensions } from 'react-native';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -28,6 +28,8 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
+
+const { width } = Dimensions.get('window');
 
 export default function GroundsTabScreen() {
   const { width } = useWindowDimensions();
@@ -313,8 +315,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#F8FAFC',
     borderRadius: 20,
-    padding: 6,
-    width: '90%',
+    padding: 4,
+    width: width < 350 ? '98%' : '90%',
     alignSelf: 'center',
     borderWidth: 1,
     borderColor: '#F1F5F9',
@@ -355,13 +357,13 @@ const styles = StyleSheet.create({
   },
   tabText: {
     color: '#64748B',
-    fontSize: 12,
+    fontSize: width < 350 ? 10 : 12,
     fontWeight: '600',
     fontFamily: 'Inter',
   },
   activeTabText: {
     color: '#01b854',
-    fontSize: 12,
+    fontSize: width < 350 ? 10 : 12,
     fontWeight: '700',
     fontFamily: 'Inter',
   },

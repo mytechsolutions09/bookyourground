@@ -89,6 +89,7 @@ export default function ShopScreen() {
     if (width > 1600) return 5;
     if (width > 1200) return 4;
     if (width > 800) return 3;
+    if (width < 600) return 1;
     return 2;
   }, [width]);
 
@@ -96,7 +97,7 @@ export default function ShopScreen() {
 
   const ProductSkeleton = () => (
     <View style={[styles.productCard, { width: cardWidth }]}>
-      <View style={styles.imageWrapper}>
+      <View style={[styles.imageWrapper, width < 600 && { height: 280 }]}>
         <Skeleton width="100%" height="100%" style={{ borderRadius: 20 }} />
       </View>
       <View style={styles.productInfo}>
@@ -327,7 +328,7 @@ export default function ShopScreen() {
         ]}
         onPress={() => router.push({ pathname: '/shop/[id]', params: { id: product.id } })}
       >
-        <View style={styles.imageWrapper}>
+        <View style={[styles.imageWrapper, width < 600 && { height: 280 }]}>
           <Image 
             source={{ uri: product.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80' }} 
             style={styles.productImage} 
@@ -403,11 +404,17 @@ export default function ShopScreen() {
                 {activeCategory === 'Shoes' ? 'PERFORMANCE FOOTWEAR' : 'NEW ARRIVAL'}
               </RNText>
             </View>
-            <RNText style={styles.heroTitle}>
+            <RNText style={[
+              styles.heroTitle,
+              width < 600 && { fontSize: 28, lineHeight: 32 }
+            ]}>
               {activeCategory === 'Shoes' ? 'Step Up Your Game' : (featuredProduct?.name || 'Pro Cricket Gear')}
             </RNText>
             {activeCategory === 'Shoes' && (
-              <RNText style={styles.heroSubtitle}>
+              <RNText style={[
+                styles.heroSubtitle,
+                width < 600 && { fontSize: 13, lineHeight: 18, maxWidth: '100%' }
+              ]}>
                 Experience ultimate comfort and grip with our professional range of cricket spikes and training shoes.
               </RNText>
             )}
@@ -433,25 +440,25 @@ export default function ShopScreen() {
           }
         ]}>
         {/* Search Bar Floating */}
-        <View style={styles.searchSection}>
-          <View style={styles.searchBar}>
-            <Search size={20} color="#94A3B8" />
+        <View style={[styles.searchSection, width < 350 && { marginTop: -20 }]}>
+          <View style={[styles.searchBar, width < 350 && { height: 44, borderRadius: 12 }]}>
+            <Search size={width < 350 ? 18 : 20} color="#94A3B8" />
             <RNTextInput 
-              style={styles.searchInput}
-              placeholder="Search gear, brands, accessories..."
+              style={[styles.searchInput, width < 350 && { fontSize: 12 }]}
+              placeholder={width < 350 ? "Search..." : "Search gear, brands, accessories..."}
               placeholderTextColor="#94A3B8"
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
             <TouchableOpacity 
-              style={styles.filterBtn}
+              style={[styles.filterBtn, width < 350 && { width: 36, height: 36 }]}
               onPress={() => {
                 setTempSortBy(sortBy);
                 setTempPriceRange(priceRange);
                 setIsFilterVisible(true);
               }}
             >
-              <Filter size={20} color="#0F172A" />
+              <Filter size={width < 350 ? 18 : 20} color="#0F172A" />
               {(sortBy !== 'newest' || priceRange) && (
                 <View style={styles.filterBadge} />
               )}

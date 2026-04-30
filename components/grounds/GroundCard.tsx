@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Platform, Linking } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Platform, Linking, useWindowDimensions } from 'react-native';
 import { MapPin, Star, Calendar, Clock, Heart } from 'lucide-react-native';
 import { GroundWithImages } from '@/types';
 import { formatCurrency } from '@/utils/helpers';
@@ -42,6 +42,8 @@ export default function GroundCard({
   occupancyRate = null,
   showBookButton = false,
 }: GroundCardProps) {
+  const { width } = useWindowDimensions();
+  const isUltraNarrow = width < 350;
   const isWeb = Platform.OS === 'web';
   const isLight = lightMode;
   const schedule = useMemo(
@@ -118,11 +120,11 @@ export default function GroundCard({
           )}
         </View>
         <View style={styles.content}>
-          <View style={styles.titleRow}>
+          <View style={[styles.titleRow, isUltraNarrow && { flexDirection: 'column', alignItems: 'flex-start', gap: 4 }]}>
             <Text style={nameStyle} numberOfLines={2}>
               {ground.name}
             </Text>
-            <View style={styles.priceBlock}>
+            <View style={[styles.priceBlock, isUltraNarrow && { alignItems: 'flex-start' }]}>
               {displayPricePerUnit != null ? (
                 <>
                   <Text style={priceStyle}>
@@ -147,7 +149,7 @@ export default function GroundCard({
             </View>
           </View>
 
-          <View style={styles.subTitleRow}>
+          <View style={[styles.subTitleRow, isUltraNarrow && { flexDirection: 'column', alignItems: 'flex-start', gap: 6 }]}>
             <View style={styles.ratingBlockRow}>
               <View style={styles.starRow}>
                 {[1, 2, 3, 4, 5].map((i) => {
@@ -303,8 +305,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 10,
-    marginBottom: 4,
+    gap: 8,
+    marginBottom: 6,
   },
   name: {
     flex: 1,

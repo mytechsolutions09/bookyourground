@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, Platform, ScrollView, Image, Animated, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, Platform, ScrollView, Image, Animated, ActivityIndicator, Alert, useWindowDimensions } from 'react-native';
 import { Stack, useLocalSearchParams, router } from 'expo-router';
 import { CheckCircle2, Calendar, Clock, MapPin, Ticket, CreditCard, ChevronRight, Share2, Download } from 'lucide-react-native';
 import WebLayout from '@/components/web/WebLayout';
@@ -12,7 +12,10 @@ import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
 
 export default function BookingConfirmedPage() {
   const { id } = useLocalSearchParams();
-  const bookingId = Array.isArray(id) ? id[0] : id;
+  const { width } = useWindowDimensions();
+  const isUltraNarrow = width < 350;
+  const isTablet = width >= 600 && width < 900;
+
   const [booking, setBooking] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [fadeAnim] = useState(new Animated.Value(0));
@@ -92,8 +95,8 @@ export default function BookingConfirmedPage() {
           <View style={styles.iconPulse} />
           <CheckCircle2 size={64} color="#10b981" />
         </View>
-        <Text style={styles.successTitle}>Booking Confirmed!</Text>
-        <Text style={styles.successSubtitle}>
+        <Text style={[styles.successTitle, isUltraNarrow && { fontSize: 22 }]}>Booking Confirmed!</Text>
+        <Text style={[styles.successSubtitle, isUltraNarrow && { fontSize: 14 }]}>
           Your ground has been reserved successfully. We've sent a confirmation to your email.
         </Text>
       </View>
@@ -118,7 +121,7 @@ export default function BookingConfirmedPage() {
 
         {/* Booking Details Grid */}
         <View style={styles.detailsGrid}>
-          <View style={styles.detailItem}>
+          <View style={[styles.detailItem, (isUltraNarrow || (width < 400)) && { flexBasis: '100%' }]}>
             <View style={styles.detailIconWrapper}>
               <Calendar size={18} color="#0f172a" />
             </View>
@@ -128,7 +131,7 @@ export default function BookingConfirmedPage() {
             </View>
           </View>
           
-          <View style={styles.detailItem}>
+          <View style={[styles.detailItem, (isUltraNarrow || (width < 400)) && { flexBasis: '100%' }]}>
             <View style={styles.detailIconWrapper}>
               <Clock size={18} color="#0f172a" />
             </View>
@@ -176,8 +179,8 @@ export default function BookingConfirmedPage() {
           )}
           
           <View style={[styles.priceRow, styles.totalRow]}>
-            <Text style={styles.totalLabel}>Total Paid</Text>
-            <Text style={styles.totalValue}>{formatCurrency(finalAmount)}</Text>
+            <Text style={[styles.totalLabel, isUltraNarrow && { fontSize: 16 }]}>Total Paid</Text>
+            <Text style={[styles.totalValue, isUltraNarrow && { fontSize: 18 }]}>{formatCurrency(finalAmount)}</Text>
           </View>
 
           <View style={styles.paymentMethod}>
@@ -224,7 +227,11 @@ export default function BookingConfirmedPage() {
   const content = (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={styles.scrollContent}
+      contentContainerStyle={[
+        styles.scrollContent,
+        isTablet && { maxWidth: 800 },
+        isUltraNarrow && { paddingHorizontal: 12, paddingVertical: 20 }
+      ]}
       showsVerticalScrollIndicator={false}
     >
       {body}
@@ -321,6 +328,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
     borderWidth: 1,
     borderColor: '#f1f5f9',
+    maxWidth: '100%',
   },
   groundInfoSection: {
     flexDirection: 'row',

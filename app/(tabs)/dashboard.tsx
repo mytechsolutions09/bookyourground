@@ -59,6 +59,8 @@ const THEME_BORDER = '#F1F5F9';
 function DashboardContent() {
   const { width } = useWindowDimensions();
   const isCompact = width < 900;
+  const isUltraNarrow = width < 350;
+  const isTablet = width >= 600 && width < 900;
   const { profile, user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [bookings, setBookings] = useState<any[]>([]);
@@ -326,7 +328,7 @@ function DashboardContent() {
   const IS_DARK = false; // Forced light theme for modern mobile UI
 
   const renderRightPanel = () => (
-    <View style={[styles.rightPanel, isCompact && { width: '100%', paddingLeft: 24 }]}>
+    <View style={[styles.rightPanel, isCompact && { width: '100%', paddingLeft: 24 }, isUltraNarrow && { paddingLeft: 12, paddingRight: 12 }]}>
       <View style={styles.panelCard}>
         <View style={styles.panelHeader}>
           <Text style={styles.panelTitle}>Quick Book</Text>
@@ -602,9 +604,9 @@ function DashboardContent() {
             showsVerticalScrollIndicator={false}
             refreshControl={<RefreshControl refreshing={loading} onRefresh={loadBookings} tintColor="#01b854" />}
           >
-            <View style={[styles.centerContentNative, width > 768 && styles.centerContentWide]}>
+            <View style={[styles.centerContentNative, width > 768 && styles.centerContentWide, isUltraNarrow && { padding: 12 }]}>
                {/* Compact Greeting & Weather */}
-               <View style={styles.greetingRowCompact}>
+               <View style={[styles.greetingRowCompact, isUltraNarrow && { paddingHorizontal: 12, paddingVertical: 10 }]}>
                 <View style={styles.greetingTextGroup}>
                   <Text style={styles.greetingTextSmall}>
                     Hi, {profile?.full_name?.split(' ')[0] || 'Player'} 👋
@@ -615,7 +617,7 @@ function DashboardContent() {
                 </View>
                 <View style={styles.weatherBadgeSmall}>
                   <WeatherIcon size={14} color={weather?.condition.toLowerCase().includes('clear') ? "#F59E0B" : "#64748B"} />
-                  <Text style={styles.weatherTextSmall}>
+                  <Text style={[styles.weatherTextSmall, isUltraNarrow && { fontSize: 10 }]}>
                     {weather ? `${weather.temp}°C` : '22°C'}
                   </Text>
                 </View>

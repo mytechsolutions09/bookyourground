@@ -16,6 +16,8 @@ import { useUI } from '@/contexts/UIContext';
 
 export default function BookMyGroundPage() {
   const { width } = useWindowDimensions();
+  const isUltraNarrow = width < 350;
+  const isTablet = width >= 600;
   const insets = useSafeAreaInsets();
   const { setTabBarVisible } = useUI();
   const headerTranslateY = useSharedValue(0);
@@ -126,9 +128,9 @@ export default function BookMyGroundPage() {
   const renderFavorites = () => (
     <View style={styles.favoritesContainer}>
       {favorites.length > 0 ? (
-        <View style={styles.favGrid}>
+        <View style={[styles.favGrid, isTablet && { gap: 16 }]}>
           {favorites.map((item) => (
-            <View key={item.id} style={styles.favItem}>
+            <View key={item.id} style={[styles.favItem, isTablet && { width: 'calc(50% - 8px)', minWidth: 250 }]}>
               <GroundCard
                 ground={item}
                 onPress={() => {
@@ -218,7 +220,7 @@ export default function BookMyGroundPage() {
       <Animated.View style={[{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000, backgroundColor: 'transparent' }, headerAnimatedStyle]}>
         <MobileAppNavbar title="Book a ground" titleColor="#0F172A" lightBg />
       </Animated.View>
-      <View style={[styles.page, { paddingTop: 0 }]}>
+      <View style={[styles.page, { paddingTop: 0 }, isUltraNarrow && { paddingHorizontal: 12 }]}>
         <LandingBookingForm
           fullWidth
           noCard
