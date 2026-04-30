@@ -238,6 +238,12 @@ export default function WalletScreen() {
                <Text style={styles.noMoreText}>End of history</Text>
              )}
           </View>
+
+          {isCompact && (
+            <View style={styles.compactExtraInfo}>
+              {renderRightPanel()}
+            </View>
+          )}
         </View>
 
         {!isCompact && renderRightPanel()}
@@ -286,7 +292,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   rightPanel: {
-    width: 340,
+    width: Platform.OS === 'web' ? 340 : '100%',
     flexShrink: 0,
     gap: 24,
   },
@@ -317,7 +323,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   balanceAmount: {
-    fontSize: 42,
+    fontSize: Platform.OS === 'web' ? 42 : 32,
     fontWeight: '800',
     color: '#043529',
     marginBottom: 4,
@@ -512,5 +518,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#94A3B8',
     fontWeight: '600',
+  },
+  compactExtraInfo: {
+    marginTop: 32,
+    gap: 24,
   }
 });

@@ -1098,6 +1098,14 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                           href="/profile/orders"
                           icon={ShoppingBag}
                           label="Shop Orders"
+                          isActiveOverride={cleanPath === '/profile/orders'}
+                        />
+
+                        <NavLink
+                          href="/(tabs)/profile"
+                          icon={CircleUser}
+                          label="My Profile"
+                          isActiveOverride={cleanPath === '/(tabs)/profile' || cleanPath === '/profile'}
                         />
 
                         <NavLink
@@ -1105,17 +1113,20 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                           icon={Heart}
                           label="Favorites"
                           badge={loading ? undefined : favoritesCount}
+                          isActiveOverride={cleanPath === '/favorites'}
                         />
                         <NavLink
                           href="/wallet"
                           icon={Wallet}
                           label="Wallet"
                           meta={walletBalance !== null ? formatCurrency(walletBalance) : undefined}
+                          isActiveOverride={cleanPath === '/wallet'}
                         />
                         <NavLink
                           href="/cricket/player-profile"
                           icon={Trophy}
                           label="Cricket Hub"
+                          isActiveOverride={cleanPath === '/cricket/player-profile'}
                         />
                         <NavLink
                           href="/(tabs)/support"
