@@ -26,6 +26,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUI } from '@/contexts/UIContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -57,6 +58,8 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
   const isTablet = width >= 600;
   const numColumns = isWeb ? (isWideWeb || isExtraWideWeb ? 3 : isMediumWeb ? 2 : 1) : (isTablet ? 2 : 1);
   const FlatListComponent = isWeb ? FlatList : Animated.FlatList;
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<'all' | 'my'>('all');
 
   // Filters
   const params = useLocalSearchParams();
@@ -70,7 +73,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
 
   const headerTranslateY = useSharedValue(0);
   const lastScrollY = useSharedValue(0);
-  const HEADER_HEIGHT = 100;
+  const HEADER_HEIGHT = 160;
   const summaryTranslateY = useSharedValue(-50);
   const summaryOpacity = useSharedValue(0);
   const webTabsOpacity = useSharedValue(1);
@@ -289,9 +292,11 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
         matchesDate = match.booking_date === tomStr;
       }
 
-      return matchesSearch && matchesCity && matchesPitch && matchesDate;
+      const matchesTab = activeTab === 'all' || match.user_id === user?.id;
+
+      return matchesSearch && matchesCity && matchesPitch && matchesDate && matchesTab;
     });
-  }, [matches, searchQuery, selectedCity, selectedPitch, selectedDateFilter]);
+  }, [matches, searchQuery, selectedCity, selectedPitch, selectedDateFilter, activeTab, user]);
 
   const cities = useMemo(() => {
     const set = new Set(matches.map(m => m.ground.city).filter(Boolean));
@@ -477,7 +482,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
               )}
               keyExtractor={item => item.id}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={[styles.listNative, { paddingTop: 115 + insets.top, paddingBottom: isWeb ? 64 : 100 }]}
+              contentContainerStyle={[styles.listNative, { paddingTop: 160 + insets.top, paddingBottom: isWeb ? 64 : 100 }]}
               refreshControl={
                 <RefreshControl
                   refreshing={loading}
@@ -517,6 +522,19 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
               titleColor="#0F172A"
               lightBg
             />
+            <View style={styles.tabContainer}>
+              <TouchableOpacity
+                style={styles.tab}
+                onPress={() => router.push('/book-my-ground')}
+              >
+                <Text style={styles.tabText}>Book a Ground</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tab, styles.activeTab]}
+              >
+                <Text style={styles.activeTabText}>Find an Opposition</Text>
+              </TouchableOpacity>
+            </View>
             <View style={styles.nativeFiltersDrawer}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.nativeFilterScroll}>
                 <TouchableOpacity 
@@ -633,7 +651,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
               keyExtractor={item => item.id}
               contentContainerStyle={[
                 styles.listNative, 
-                { paddingTop: 115 + insets.top, paddingBottom: isWeb ? 64 : 100 },
+                { paddingTop: 160 + insets.top, paddingBottom: isWeb ? 64 : 100 },
                 numColumns > 1 && { paddingHorizontal: 8 }
               ]}
               refreshControl={
@@ -668,6 +686,19 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
           titleColor="#0F172A"
           lightBg
         />
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={styles.tab}
+            onPress={() => router.push('/book-my-ground')}
+          >
+            <Text style={styles.tabText}>Book a Ground</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, styles.activeTab]}
+          >
+            <Text style={styles.activeTabText}>Find an Opposition</Text>
+          </TouchableOpacity>
+        </View>
         <View style={styles.nativeFiltersDrawer}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.nativeFilterScroll}>
             <TouchableOpacity 
@@ -768,7 +799,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
           keyExtractor={item => item.id}
           contentContainerStyle={[
             styles.listNative, 
-            { paddingTop: 105 + insets.top, paddingBottom: isWeb ? 64 : 100 },
+            { paddingTop: 160 + insets.top, paddingBottom: isWeb ? 64 : 100 },
             numColumns > 1 && { paddingHorizontal: 8 }
           ]}
           refreshControl={
@@ -904,7 +935,7 @@ const styles = StyleSheet.create({
     borderColor: '#01b854',
   },
   nativeFiltersDrawer: {
-    paddingVertical: 8,
+    paddingVertical: 4,
     backgroundColor: '#FFFFFF',
     gap: 8,
     borderBottomWidth: 1,
@@ -1149,11 +1180,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#F1F5F9',
     borderRadius: 20,
-    padding: 6,
+    padding: 4,
     marginHorizontal: 16,
-    marginTop: 8,
-    marginBottom: 12,
+    marginTop: 0,
+    marginBottom: 0,
     width: '90%',
+    maxWidth: 400,
     alignSelf: 'center',
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -1162,8 +1194,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#F1F5F9',
     borderRadius: 20,
-    padding: 6,
-    marginBottom: 12,
+    padding: 4,
+    marginBottom: 0,
     width: '100%',
     maxWidth: 400,
     alignSelf: 'center',
@@ -1174,8 +1206,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#F1F5F9',
     borderRadius: 20,
-    padding: 6,
-    marginBottom: 12,
+    padding: 4,
+    marginBottom: 0,
     width: '100%',
     maxWidth: 400,
     alignSelf: 'center',
@@ -1184,7 +1216,7 @@ const styles = StyleSheet.create({
   },
   tab: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1199,13 +1231,13 @@ const styles = StyleSheet.create({
   },
   tabText: {
     color: '#64748B',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
     fontFamily: 'Inter',
   },
   activeTabText: {
     color: '#01b854',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '700',
     fontFamily: 'Inter',
   },

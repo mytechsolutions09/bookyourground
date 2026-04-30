@@ -508,6 +508,17 @@ export default function ProfileScreen() {
 
           <TouchableOpacity 
             style={styles.rowItem}
+            onPress={() => router.push('/wallet' as any)}
+          >
+            <View style={styles.rowLeft}>
+              <IndianRupee size={20} color="#10b981" />
+              <RNText style={styles.rowText}>My Wallet</RNText>
+            </View>
+            <ChevronRight size={20} color="#94a3b8" />
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.rowItem}
             onPress={() => router.push('/(tabs)/support' as any)}
           >
             <View style={styles.rowLeft}>

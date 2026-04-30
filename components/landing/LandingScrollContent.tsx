@@ -12,7 +12,7 @@ import {
 import LandingPageSections from '@/components/landing/LandingPageSections';
 import { landingScrollStyles } from '@/components/landing/landingScrollStyles';
 import HeroWeb from '@/components/landing/HeroWeb';
-import ScoringStatsSection from '@/components/landing/ScoringStatsSection';
+import HowItWorks from '@/components/landing/HowItWorks';
 import CalendarTabs from '@/components/landing/CalendarTabs';
 import PopularGrounds from '@/components/landing/PopularGrounds';
 import LandingBookingForm from '@/components/landing/LandingBookingForm';
@@ -129,7 +129,7 @@ export default function LandingScrollContent({
               </View>
 
               <FindOpposition />
-              <ScoringStatsSection />
+              <HowItWorks />
               <CalendarTabs />
               <PopularGrounds />
               <GroundsNearYou />
@@ -164,7 +164,7 @@ export default function LandingScrollContent({
                   backgroundColor: '#FFFFFF', // Solid background to cover hero
                 }}
               >
-                <ScoringStatsSection />
+                <HowItWorks />
               </View>
 
               {/* 

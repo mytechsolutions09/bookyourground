@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Platform, TouchableOpacity, useWindowDimensions, ScrollView, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Platform, TouchableOpacity, useWindowDimensions, ScrollView, ActivityIndicator } from 'react-native';
 import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
-import { ArrowUp, ArrowDown, ChevronDown } from 'lucide-react-native';
+import { ArrowUp, ArrowDown, CreditCard } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency } from '@/utils/helpers';
 
 const THEME_BG = '#043529';
 const ACCENT = '#c8f35c'; 
-
-const MOCK_TRANSACTIONS: any[] = [];
 
 export default function WalletScreen() {
   const { user, profile } = useAuth();
@@ -20,16 +18,14 @@ export default function WalletScreen() {
   const [balance, setBalance] = useState(0);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [quickAdd, setQuickAdd] = useState('1600');
   const [summary, setSummary] = useState({ 
     added: 0, 
     spent: 0, 
     refunded: 0,
-    bookingRevenue: 0,
-    adminTopups: 0
+    referrals: 0,
+    promos: 0
   });
-  const [stats, setStats] = useState({ bookingPercent: 0, shopPercent: 0, otherPercent: 0, avgMonthly: 0 });
-  const [limit, setLimit] = useState(10);
+  const [limit, setLimit] = useState(15);
   const [hasMore, setHasMore] = useState(true);
 
   const isOwner = profile?.role === 'ground_owner';
@@ -56,57 +52,62 @@ export default function WalletScreen() {
       if (walletData) {
         setBalance(walletData.balance);
         
-        // 2. Fetch Wallet Transactions (Admin top-ups, etc.)
+        // 2. Fetch Wallet Transactions
         const { data: wtxData } = await supabase
           .from('wallet_transactions')
-          .select('*')
-          .eq('wallet_id', walletData.id)
+          .select('*, booking:bookings(id, ground:grounds(name))')
+          .eq('user_id', user.id)
           .order('created_at', { ascending: false })
           .limit(newLimit + 1);
 
-        const walletTx = (wtxData || []).map(tx => ({
-          id: tx.id,
-          type: tx.type,
-          title: tx.type === 'topup' ? 'Top-up Added' : (tx.description || 'Balance Adjustment'),
-          sub: tx.type === 'topup' ? 'Added by Admin' : 'System Transaction',
-          amount: tx.amount,
-          date: new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) + ', ' + new Date(tx.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
-          isPositive: Number(tx.amount) >= 0,
-          rawDate: new Date(tx.created_at)
-        }));
+        const processedTx = (wtxData || []).map(tx => {
+          let title = tx.description || 'Wallet Transaction';
+          let sub = 'System Credit';
+          
+          if (tx.type === 'refund') {
+            title = 'Refund Credited';
+            sub = tx.booking?.ground?.name ? `Booking at ${tx.booking.ground.name}` : 'Booking Refund';
+          } else if (tx.type === 'referral') {
+            title = 'Referral Bonus';
+            sub = 'Friend joined via your link';
+          } else if (tx.type === 'promo') {
+            title = 'Promotional Credit';
+            sub = 'Special Offer / Rewards';
+          } else if (tx.type === 'used' || tx.type === 'debit') {
+            title = 'Payment via Wallet';
+            sub = tx.booking?.ground?.name ? `Booking at ${tx.booking.ground.name}` : 'Order Payment';
+          }
 
-        let combined: any[] = [];
-        if (isOwner) {
-          const bookingTx = await loadOwnerTransactions(newLimit);
-          combined = [...walletTx, ...bookingTx];
-        } else {
-          const bookingTx = await loadUserTransactions(newLimit);
-          combined = [...walletTx, ...bookingTx];
-        }
+          return {
+            id: tx.id,
+            type: tx.type,
+            title,
+            sub,
+            amount: Math.abs(tx.amount),
+            date: new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) + ', ' + new Date(tx.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+            isPositive: tx.amount > 0,
+            rawDate: new Date(tx.created_at)
+          };
+        });
 
-        combined.sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime());
-        
-        setHasMore(combined.length > newLimit);
-        setTransactions(combined.slice(0, newLimit));
+        setHasMore(processedTx.length > newLimit);
+        setTransactions(processedTx.slice(0, newLimit));
 
-        // Global Summary calculation from combined
-        let bookingRevenue = 0;
-        let adminTopups = 0;
+        // Calculate Summary
         let earned = 0;
         let spent = 0;
         let refunded = 0;
+        let referrals = 0;
+        let promos = 0;
 
-        combined.forEach(tx => {
+        processedTx.forEach(tx => {
           if (tx.isPositive) {
-             if (tx.type === 'refund') refunded += tx.amount;
-             else {
-               earned += tx.amount;
-               if (tx.type === 'revenue') bookingRevenue += tx.amount;
-               else if (tx.type === 'topup' || tx.type === 'added') adminTopups += tx.amount;
-               else adminTopups += tx.amount; // fallback
-             }
+            earned += tx.amount;
+            if (tx.type === 'refund') refunded += tx.amount;
+            if (tx.type === 'referral') referrals += tx.amount;
+            if (tx.type === 'promo') promos += tx.amount;
           } else {
-             spent += tx.amount;
+            spent += Math.abs(tx.amount);
           }
         });
 
@@ -114,36 +115,9 @@ export default function WalletScreen() {
           added: earned,
           spent: spent,
           refunded: refunded,
-          bookingRevenue,
-          adminTopups
+          referrals,
+          promos
         });
-
-        // Calculate Spending Stats
-        if (spent > 0) {
-          let spentOnBookings = 0;
-          let spentOnShop = 0;
-          combined.forEach(tx => {
-            if (!tx.isPositive) {
-              if (tx.type === 'payment') spentOnBookings += tx.amount;
-              else if (tx.type === 'shop_payment') spentOnShop += tx.amount;
-            }
-          });
-          
-          const bookingPct = Math.round((spentOnBookings / spent) * 100);
-          const shopPct = Math.round((spentOnShop / spent) * 100);
-          const otherPct = 100 - bookingPct - shopPct;
-          
-          // Estimate avg monthly (very basic)
-          const distinctMonths = new Set(combined.map(tx => tx.rawDate.getMonth() + '-' + tx.rawDate.getFullYear())).size || 1;
-          const avg = Math.round(spent / distinctMonths);
-          
-          setStats({
-            bookingPercent: bookingPct,
-            shopPercent: shopPct,
-            otherPercent: otherPct,
-            avgMonthly: avg
-          });
-        }
       }
     } catch (err) {
       console.error('Wallet load error:', err);
@@ -152,178 +126,54 @@ export default function WalletScreen() {
     }
   };
 
-  const loadUserTransactions = async (currentLimit: number) => {
-    const [bookingsRes, ordersRes] = await Promise.all([
-      supabase
-        .from('bookings')
-        .select(`
-          id,
-          total_amount,
-          status,
-          created_at,
-          ground:grounds(name)
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(currentLimit),
-      supabase
-        .from('shop_orders')
-        .select(`
-          id,
-          total_amount,
-          status,
-          created_at
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(currentLimit)
-    ]);
-
-    const bookingsTx = (bookingsRes.data || []).map(b => ({
-      id: b.id,
-      type: 'payment',
-      title: `Payment for Booking`,
-      sub: b.ground?.name || 'Booking',
-      amount: b.total_amount,
-      date: new Date(b.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) + ', ' + new Date(b.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
-      isPositive: false,
-      rawDate: new Date(b.created_at)
-    }));
-
-    const ordersTx = (ordersRes.data || []).map(o => ({
-       id: o.id,
-       type: 'shop_payment',
-       title: `Shop Order`,
-       sub: `Order #${o.id.slice(0, 8).toUpperCase()}`,
-       amount: o.total_amount,
-       date: new Date(o.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) + ', ' + new Date(o.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
-       isPositive: false,
-       rawDate: new Date(o.created_at)
-    }));
-
-    return [...bookingsTx, ...ordersTx];
-  };
-
-  const loadOwnerTransactions = async (currentLimit: number) => {
-    try {
-      const { data, error } = await supabase
-        .from('bookings')
-        .select(`
-          id,
-          total_amount,
-          status,
-          created_at,
-          payment_method,
-          ground:grounds!inner(name, city, owner_id)
-        `)
-        .eq('ground.owner_id', user.id)
-        .in('status', ['confirmed', 'completed'])
-        .order('created_at', { ascending: false })
-        .limit(currentLimit);
-
-      if (error) throw error;
-
-      return (data || []).map(tx => ({
-        id: tx.id,
-        type: 'revenue',
-        title: `Earning from ${tx.ground?.name}`,
-        sub: `Booking #${tx.id.slice(0, 8).toUpperCase()}`,
-        amount: tx.total_amount,
-        date: new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) + ', ' + new Date(tx.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
-        isPositive: true,
-        rawDate: new Date(tx.created_at)
-      }));
-    } catch (err) {
-      console.error('Wallet transactions error:', err);
-      return [];
-    }
-  };
-
   const loadMore = () => {
-    const newLimit = limit + 10;
+    const newLimit = limit + 15;
     setLimit(newLimit);
     loadWalletData(newLimit);
-  };
-
-  const handleAddMoney = () => {
-    const amount = parseInt(quickAdd) || 0;
-    if (amount <= 0) return;
-    
-    setBalance(prev => prev + amount);
-    setTransactions(prev => [
-      {
-        id: Date.now(),
-        type: 'added',
-        title: 'Money Added to Wallet',
-        sub: 'Via Payment Gateway',
-        amount: amount,
-        date: 'Just now'
-      },
-      ...prev
-    ]);
   };
 
   const renderRightPanel = () => (
     <View style={styles.rightPanel}>
       <View style={styles.panelCard}>
         <Text style={styles.panelTitle}>Wallet Summary</Text>
-        <View style={[styles.summaryRow, isOwner && { borderBottomWidth: 0, paddingBottom: 4 }]}>
-          <Text style={styles.summaryLabel}>Total Earnings</Text>
-          <Text style={styles.summaryValue}>{formatCurrency(summary.added)}</Text>
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>Total Refunded</Text>
+          <Text style={styles.summaryValue}>{formatCurrency(summary.refunded)}</Text>
         </View>
-
-        {isOwner && (
-          <View style={styles.bifurcationContainer}>
-            <View style={styles.bifurcationRow}>
-              <Text style={styles.bifurcationLabel}>Booking Revenue</Text>
-              <Text style={styles.bifurcationValue}>{formatCurrency(summary.bookingRevenue)}</Text>
-            </View>
-            <View style={[styles.bifurcationRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
-              <Text style={styles.bifurcationLabel}>Admin Top-ups</Text>
-              <Text style={styles.bifurcationValue}>{formatCurrency(summary.adminTopups)}</Text>
-            </View>
-          </View>
-        )}
-
-        {!isOwner && (
-          <>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Total Spent</Text>
-              <Text style={styles.summaryValue}>{formatCurrency(summary.spent)}</Text>
-            </View>
-            <View style={[styles.summaryRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
-              <Text style={styles.summaryLabel}>Total Refunded</Text>
-              <Text style={styles.summaryValue}>{formatCurrency(summary.refunded)}</Text>
-            </View>
-          </>
-        )}
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>Referral Earnings</Text>
+          <Text style={styles.summaryValue}>{formatCurrency(summary.referrals)}</Text>
+        </View>
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>Promotional Credits</Text>
+          <Text style={styles.summaryValue}>{formatCurrency(summary.promos)}</Text>
+        </View>
+        <View style={[styles.summaryRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
+          <Text style={styles.summaryLabel}>Total Spent</Text>
+          <Text style={[styles.summaryValue, { color: '#dc2626' }]}>{formatCurrency(summary.spent)}</Text>
+        </View>
       </View>
 
-
-
-          {!isOwner && (
-            <View style={styles.panelCard}>
-              <Text style={styles.panelTitle}>Spending Stats</Text>
-              <View style={styles.statsContainer}>
-                 <View style={styles.donutWrapper}>
-                  <View style={[styles.donutMock, { borderTopColor: '#043529', borderRightColor: stats.bookingPercent > 50 ? '#84cc16' : '#043529' }]} />
-                  <View style={styles.donutInner}>
-                     <Text style={styles.donutMainText}>Bookings</Text>
-                     <Text style={styles.donutPercentText}>{stats.bookingPercent}%</Text>
-                  </View>
-                </View>
-                <View style={styles.statsLegend}>
-                  <View style={styles.legendRow}>
-                     <View style={styles.legendItem}><View style={[styles.legendDot, {backgroundColor: '#84cc16'}]}/><Text style={styles.legendText}>Bookings</Text></View>
-                     <Text style={styles.legendValue}>{stats.bookingPercent}%</Text>
-                     <View style={styles.legendItem}><View style={[styles.legendDot, {backgroundColor: '#ef4444'}]}/><Text style={styles.legendText}>Shop</Text></View>
-                     <Text style={styles.legendValue}>{stats.shopPercent}%</Text>
-                  </View>
-                </View>
-                <Text style={styles.avgSpendText}>Avg. monthly spend: {formatCurrency(stats.avgMonthly)}</Text>
-              </View>
-            </View>
-          )}
+      <View style={styles.panelCard}>
+        <Text style={styles.panelTitle}>How it works</Text>
+        <Text style={styles.infoText}>
+          BookYourGround Wallet is a credit-only wallet. Money enters through refunds, referrals, and rewards.
+        </Text>
+        <View style={styles.infoList}>
+          <View style={styles.infoItem}>
+            <View style={styles.infoDot} />
+            <Text style={styles.infoItemText}>Instant refunds on cancellations</Text>
+          </View>
+          <View style={styles.infoItem}>
+            <View style={styles.infoDot} />
+            <Text style={styles.infoItemText}>₹50 bonus for each referral</Text>
+          </View>
+          <View style={styles.infoItem}>
+            <View style={styles.infoDot} />
+            <Text style={styles.infoItemText}>Use for any booking or order</Text>
+          </View>
+        </View>
+      </View>
     </View>
   );
 
@@ -335,22 +185,23 @@ export default function WalletScreen() {
     >
       <View style={styles.mainLayout}>
         <View style={styles.centerContent}>
-
-          
           <View style={styles.balanceCard}>
             <View style={styles.balanceInfo}>
-              <Text style={styles.balanceLabel}>Current Balance</Text>
+              <Text style={styles.balanceLabel}>Wallet Balance</Text>
               <Text style={styles.balanceAmount}>{formatCurrency(balance)}</Text>
-              <Text style={styles.balanceSub}>Available for {isOwner ? 'withdrawal' : 'bookings'}</Text>
+              <Text style={styles.balanceSub}>100% Secure Platform Credits</Text>
+            </View>
+            <View style={styles.walletIconBox}>
+               <CreditCard size={32} color="#043529" />
             </View>
           </View>
 
-          <Text style={styles.sectionTitle}>Recent Transactions</Text>
+          <Text style={styles.sectionTitle}>Transaction History</Text>
           <View style={styles.transactionsList}>
-            {loading ? (
+            {loading && transactions.length === 0 ? (
               <ActivityIndicator color={THEME_BG} size="large" style={{ marginTop: 20 }} />
             ) : transactions.map(tx => {
-               const isPos = tx.type === 'refund' || tx.type === 'reward' || tx.type === 'added' || tx.type === 'revenue' || tx.isPositive;
+               const isPos = tx.isPositive;
                return (
                  <View key={tx.id} style={styles.txCard}>
                     <View style={[styles.txIconBox, isPos ? styles.txIconBoxPos : styles.txIconBoxNeg]}>
@@ -369,15 +220,22 @@ export default function WalletScreen() {
                  </View>
                );
             })}
+            
+            {transactions.length === 0 && !loading && (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyStateText}>No transactions yet</Text>
+                <Text style={styles.emptyStateSub}>Refunds and rewards will appear here</Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.viewAllWrapper}>
              {hasMore ? (
                <TouchableOpacity style={styles.viewAllBtn} onPress={loadMore} disabled={loading}>
-                 <Text style={styles.viewAllTxt}>{loading ? 'Loading...' : 'Load More Transactions'}</Text>
+                 <Text style={styles.viewAllTxt}>{loading ? 'Loading...' : 'Load More'}</Text>
                </TouchableOpacity>
              ) : transactions.length > 0 && (
-               <Text style={styles.noMoreText}>No more transactions to show</Text>
+               <Text style={styles.noMoreText}>End of history</Text>
              )}
           </View>
         </View>
@@ -402,11 +260,11 @@ export default function WalletScreen() {
 const styles = StyleSheet.create({
   nativeWrapper: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8FAFC',
   },
   root: {
     flex: 1,
-    backgroundColor: '#FFFFFF', 
+    backgroundColor: '#F8FAFC', 
   },
   scrollContent: {
     flexGrow: 1,
@@ -414,14 +272,15 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   scrollContentWeb: {
-    padding: 0,
+    padding: 24,
   },
   mainLayout: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 32,
-    maxWidth: 1400,
+    maxWidth: 1200,
     width: '100%',
+    alignSelf: 'center',
   },
   centerContent: {
     flex: 1,
@@ -431,60 +290,57 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     gap: 24,
   },
-  pageTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#0F172A',
-    fontFamily: 'Inter',
-    marginBottom: 24,
-  },
   balanceCard: {
     backgroundColor: ACCENT,
-    borderRadius: 20,
+    borderRadius: 24,
     padding: 24,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 32,
+    shadowColor: ACCENT,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 5,
   },
   balanceInfo: {
     flex: 1,
   },
   balanceLabel: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '700',
     color: '#043529',
     marginBottom: 4,
     fontFamily: 'Inter',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   balanceAmount: {
-    fontSize: 48,
+    fontSize: 42,
     fontWeight: '800',
     color: '#043529',
     marginBottom: 4,
     fontFamily: 'Inter',
+    letterSpacing: -1,
   },
   balanceSub: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#043529',
-    opacity: 0.8,
-    fontFamily: 'Inter',
-  },
-  addMoneyBtn: {
-    backgroundColor: '#043529',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 16,
-  },
-  addMoneyBtnText: {
-    color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '600',
+    color: '#043529',
+    opacity: 0.7,
     fontFamily: 'Inter',
+  },
+  walletIconBox: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(4, 53, 41, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
     color: '#0F172A',
     marginBottom: 16,
@@ -495,11 +351,16 @@ const styles = StyleSheet.create({
   },
   txCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    elevation: 2,
   },
   txIconBox: {
     width: 48,
@@ -509,32 +370,33 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   txIconBoxPos: {
-    backgroundColor: '#bbf7d0', // Light green tailwind
+    backgroundColor: '#DCFCE7',
   },
   txIconBoxNeg: {
-    backgroundColor: '#fecaca', // Light red tailwind
+    backgroundColor: '#FEE2E2',
   },
   txInfo: {
     flex: 1,
   },
   txTitle: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#0F172A',
     fontFamily: 'Inter',
     marginBottom: 2,
   },
   txSub: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#64748B',
     fontFamily: 'Inter',
+    fontWeight: '500',
   },
   txValues: {
     alignItems: 'flex-end',
   },
   txAmount: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 15,
+    fontWeight: '800',
     fontFamily: 'Inter',
     marginBottom: 2,
   },
@@ -545,30 +407,38 @@ const styles = StyleSheet.create({
     color: '#dc2626',
   },
   txDate: {
-    fontSize: 12,
-    color: '#64748B',
+    fontSize: 11,
+    color: '#94A3B8',
     fontFamily: 'Inter',
+    fontWeight: '600',
   },
   viewAllWrapper: {
     alignItems: 'center',
     marginTop: 24,
   },
   viewAllBtn: {
-    backgroundColor: ACCENT,
+    backgroundColor: '#F1F5F9',
     paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 99,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   viewAllTxt: {
-    color: '#043529',
-    fontSize: 14,
-    fontWeight: '600',
+    color: '#475569',
+    fontSize: 13,
+    fontWeight: '700',
     fontFamily: 'Inter',
   },
   panelCard: {
-    backgroundColor: '#E2E8F0', // Or a very light gray to match
-    borderRadius: 20,
-    padding: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 3,
   },
   panelTitle: {
     fontSize: 16,
@@ -582,12 +452,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#CBD5E1',
+    borderBottomColor: '#F1F5F9',
   },
   summaryLabel: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#0F172A',
+    fontWeight: '600',
+    color: '#64748B',
     fontFamily: 'Inter',
   },
   summaryValue: {
@@ -596,163 +466,51 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     fontFamily: 'Inter',
   },
-  quickAddChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+  infoText: {
+    fontSize: 13,
+    color: '#64748B',
+    lineHeight: 20,
     marginBottom: 16,
-  },
-  quickAddChip: {
-    backgroundColor: '#CBD5E1',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 99,
-  },
-  quickAddChipActive: {
-    backgroundColor: '#043529',
-  },
-  quickAddChipText: {
-    color: '#0F172A',
-    fontSize: 14,
-    fontWeight: '600',
     fontFamily: 'Inter',
   },
-  quickAddChipTextActive: {
-    color: '#FFFFFF',
+  infoList: {
+    gap: 12,
   },
-  quickAddInputBox: {
+  infoItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingRight: 12,
+    gap: 10,
   },
-  quickAddInput: {
-    flex: 1,
-    height: 48,
-    paddingHorizontal: 16,
+  infoDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: ACCENT,
+  },
+  infoItemText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1E293B',
+    fontFamily: 'Inter',
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyStateText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#0F172A',
-    fontFamily: 'Inter',
-    outlineStyle: 'none' as any,
-  },
-  quickAddIconBox: {
-    backgroundColor: '#E2E8F0',
-    borderRadius: 8,
-    padding: 4,
-  },
-  statsContainer: {
-    alignItems: 'center',
-  },
-  donutWrapper: {
-    width: 140,
-    height: 140,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginVertical: 16,
-    position: 'relative',
-  },
-  donutMock: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-    borderRadius: 70,
-    borderWidth: 15,
-    borderColor: '#043529',
-    borderTopColor: '#ef4444',
-    borderRightColor: '#84cc16',
-    borderBottomColor: '#043529',
-    borderLeftColor: '#043529',
-    transform: [{ rotate: '45deg' }],
-  },
-  donutInner: {
-    position: 'absolute',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  donutMainText: {
-    fontSize: 12,
-    color: '#0F172A',
-    fontFamily: 'Inter',
-    fontWeight: '500',
-  },
-  donutPercentText: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0F172A',
-    fontFamily: 'Inter',
-  },
-  statsLegend: {
-    width: '100%',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    marginTop: 8,
-  },
-  legendRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  legendDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  legendText: {
-    fontSize: 12,
-    color: '#0F172A',
-    fontWeight: '500',
-    fontFamily: 'Inter',
-  },
-  legendValue: {
-    fontSize: 12,
-    color: '#0F172A',
     fontWeight: '700',
-    fontFamily: 'Inter',
-    marginRight: 8,
+    color: '#64748B',
+    marginBottom: 4,
   },
-  avgSpendText: {
-    fontSize: 12,
-    color: '#475569',
-    marginTop: 16,
-    fontWeight: '500',
-    fontFamily: 'Inter',
+  emptyStateSub: {
+    fontSize: 13,
+    color: '#94A3B8',
   },
   noMoreText: {
-    fontSize: 14,
-    color: '#94a3b8',
+    fontSize: 13,
+    color: '#94A3B8',
     fontWeight: '600',
-    fontFamily: 'Inter',
-  },
-  bifurcationContainer: {
-    paddingLeft: 12,
-    marginBottom: 12,
-  },
-  bifurcationRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: '#CBD5E1',
-    opacity: 0.8,
-  },
-  bifurcationLabel: {
-    fontSize: 12,
-    color: '#475569',
-    fontFamily: 'Inter',
-    fontWeight: '500',
-  },
-  bifurcationValue: {
-    fontSize: 12,
-    color: '#0F172A',
-    fontFamily: 'Inter',
-    fontWeight: '600',
-  },
+  }
 });

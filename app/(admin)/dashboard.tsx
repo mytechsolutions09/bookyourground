@@ -18,6 +18,8 @@ import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 
+import { useAuth } from '@/contexts/AuthContext';
+
 interface Stats {
   totalUsers: number;
   totalGrounds: number;
@@ -26,6 +28,7 @@ interface Stats {
 }
 
 export default function AdminDashboardScreen() {
+  const { user, loading: authLoading } = useAuth();
   const [stats, setStats] = useState<Stats>({
     totalUsers: 0,
     totalGrounds: 0,
@@ -35,8 +38,10 @@ export default function AdminDashboardScreen() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadStats();
-  }, []);
+    if (!authLoading && user) {
+      loadStats();
+    }
+  }, [user, authLoading]);
 
   const loadStats = async () => {
     try {
@@ -133,6 +138,17 @@ export default function AdminDashboardScreen() {
             <View style={styles.actionContent}>
               <Calendar size={18} color="#FF9800" />
               <Text style={styles.actionText}>Bookings</Text>
+            </View>
+            <ChevronRight size={18} color="#666" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionItem}
+            onPress={() => router.push('/(admin)/earnings')}
+          >
+            <View style={styles.actionContent}>
+              <TrendingUp size={18} color="#10b981" />
+              <Text style={styles.actionText}>Platform Earnings</Text>
             </View>
             <ChevronRight size={18} color="#666" />
           </TouchableOpacity>

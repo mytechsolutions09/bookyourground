@@ -168,9 +168,15 @@ function LineChart({ data, height = 150, totalDays = 30 }: { data: ChartPoint[],
 }
 
 function OwnerEarningsScreenInner() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const { width } = useWindowDimensions();
   const isCompact = width < 900;
+  
+  useEffect(() => {
+    if (profile?.role === 'super_admin') {
+      router.replace('/(admin)/earnings');
+    }
+  }, [profile]);
   const isStacking = width < 768; // Stack columns below this width
   const isUltraNarrow = width < 350;
   const isTablet = width >= 600 && width < 900;
@@ -209,6 +215,29 @@ function OwnerEarningsScreenInner() {
   const [activityFeed, setActivityFeed] = useState<any[]>([]);
   const [limit, setLimit] = useState(10);
   const [hasMore, setHasMore] = useState(true);
+  const [filterVenueId, setFilterVenueId] = useState<string | null>(null);
+  const [filterPaymentMethod, setFilterPaymentMethod] = useState<'all' | 'online' | 'cash'>('all');
+  const [filterDateRange, setFilterDateRange] = useState<'all' | '7days' | '30days' | 'month'>('all');
+  const [ownerGrounds, setOwnerGrounds] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (user) {
+      const fetchGrounds = async () => {
+        const { data } = await supabase
+          .from('grounds')
+          .select('id, name')
+          .eq('owner_id', user.id);
+        if (data) setOwnerGrounds(data);
+      };
+      fetchGrounds();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      loadEarnings(limit, filterVenueId, filterPaymentMethod, filterDateRange);
+    }
+  }, [filterVenueId, filterPaymentMethod, filterDateRange]);
 
   const handleDownloadReport = async () => {
     if (!user) return;
@@ -277,12 +306,15 @@ function OwnerEarningsScreenInner() {
   };
 
   useEffect(() => {
-    if (user) {
-      loadEarnings();
-    }
+    // Initial fetch is now handled by the filter-dependent useEffect below
   }, [user]);
 
-  const loadEarnings = async (newLimit = limit) => {
+  const loadEarnings = async (
+    newLimit = limit, 
+    venueId = filterVenueId, 
+    method = filterPaymentMethod, 
+    dateRange = filterDateRange
+  ) => {
     if (!user) return;
 
     try {
@@ -298,7 +330,7 @@ function OwnerEarningsScreenInner() {
         setWallet(walletData);
       }
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('bookings')
         .select(`
           id,
@@ -309,10 +341,37 @@ function OwnerEarningsScreenInner() {
           end_time,
           created_at,
           payment_method,
+          platform_fee_owner,
+          gst_owner,
           ground:grounds!inner(name, city, owner_id)
         `)
         .eq('ground.owner_id', user.id)
-        .in('status', ['confirmed', 'completed'])
+        .in('status', ['confirmed', 'completed']);
+
+      if (venueId) {
+        query = query.eq('ground_id', venueId);
+      }
+      if (method === 'online') {
+        query = query.neq('payment_method', 'cash');
+      } else if (method === 'cash') {
+        query = query.eq('payment_method', 'cash');
+      }
+
+      if (dateRange === '7days') {
+        const d = new Date();
+        d.setDate(d.getDate() - 7);
+        query = query.gte('created_at', d.toISOString());
+      } else if (dateRange === '30days') {
+        const d = new Date();
+        d.setDate(d.getDate() - 30);
+        query = query.gte('created_at', d.toISOString());
+      } else if (dateRange === 'month') {
+        const now = new Date();
+        const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        query = query.gte('created_at', firstDay);
+      }
+
+      const { data, error } = await query
         .order('created_at', { ascending: false })
         .limit(newLimit + 1);
 
@@ -574,11 +633,126 @@ function OwnerEarningsScreenInner() {
 
   const renderSummaryTable = () => (
     <View style={styles.summaryTableWrapper}>
-      <View style={styles.sectionCard}>
-        <View style={styles.tableHeaderRow}>
-          <Text style={styles.sectionTitle}>Detailed Earnings Summary</Text>
+      <View style={styles.filterRow}>
+        <View style={styles.filterGroup}>
+          <Text style={styles.filterLabel}>Venue</Text>
+          <View style={styles.pickerContainer}>
+            {Platform.OS === 'web' ? (
+              <select
+                value={filterVenueId || ''}
+                onChange={(e) => setFilterVenueId(e.target.value || null)}
+                style={{
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  fontSize: 14,
+                  color: '#0F172A',
+                  padding: '8px 4px',
+                  width: '100%',
+                  outline: 'none'
+                }}
+              >
+                <option value="">All Venues</option>
+                {ownerGrounds.map(g => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+              </select>
+            ) : (
+              <TouchableOpacity 
+                style={styles.mobilePicker}
+                onPress={() => {
+                  const nextIdx = ownerGrounds.findIndex(g => g.id === filterVenueId) + 1;
+                  if (nextIdx >= ownerGrounds.length) setFilterVenueId(null);
+                  else setFilterVenueId(ownerGrounds[nextIdx].id);
+                }}
+              >
+                <Text style={styles.pickerText}>
+                  {ownerGrounds.find(g => g.id === filterVenueId)?.name || 'All Venues'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.filterGroup}>
+          <Text style={styles.filterLabel}>Method</Text>
+          <View style={styles.pickerContainer}>
+            {Platform.OS === 'web' ? (
+              <select
+                value={filterPaymentMethod}
+                onChange={(e) => setFilterPaymentMethod(e.target.value as any)}
+                style={{
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  fontSize: 14,
+                  color: '#0F172A',
+                  padding: '8px 4px',
+                  width: '100%',
+                  outline: 'none'
+                }}
+              >
+                <option value="all">All Methods</option>
+                <option value="online">Online</option>
+                <option value="cash">Cash</option>
+              </select>
+            ) : (
+              <TouchableOpacity 
+                style={styles.mobilePicker}
+                onPress={() => {
+                  const methods: any[] = ['all', 'online', 'cash'];
+                  const nextIdx = (methods.indexOf(filterPaymentMethod) + 1) % methods.length;
+                  setFilterPaymentMethod(methods[nextIdx]);
+                }}
+              >
+                <Text style={styles.pickerText}>
+                  {filterPaymentMethod.toUpperCase()}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.filterGroup}>
+          <Text style={styles.filterLabel}>Period</Text>
+          <View style={styles.pickerContainer}>
+            {Platform.OS === 'web' ? (
+              <select
+                value={filterDateRange}
+                onChange={(e) => setFilterDateRange(e.target.value as any)}
+                style={{
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  fontSize: 14,
+                  color: '#0F172A',
+                  padding: '8px 4px',
+                  width: '100%',
+                  outline: 'none'
+                }}
+              >
+                <option value="all">All Time</option>
+                <option value="7days">Last 7 Days</option>
+                <option value="30days">Last 30 Days</option>
+                <option value="month">This Month</option>
+              </select>
+            ) : (
+              <TouchableOpacity 
+                style={styles.mobilePicker}
+                onPress={() => {
+                  const periods: any[] = ['all', '7days', '30days', 'month'];
+                  const nextIdx = (periods.indexOf(filterDateRange) + 1) % periods.length;
+                  setFilterDateRange(periods[nextIdx]);
+                }}
+              >
+                <Text style={styles.pickerText}>
+                  {filterDateRange === 'all' ? 'ALL TIME' : filterDateRange.toUpperCase()}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        <View style={[styles.filterGroup, { flex: 0.6, minWidth: 140, justifyContent: 'flex-end' }]}>
           <TouchableOpacity 
-            style={styles.downloadReportBtn} 
+            style={[styles.downloadReportBtn, { height: 42, justifyContent: 'center' }]} 
             onPress={handleDownloadReport}
             disabled={loading}
           >
@@ -586,79 +760,87 @@ function OwnerEarningsScreenInner() {
             <Text style={styles.downloadReportBtnText}>Download CSV</Text>
           </TouchableOpacity>
         </View>
+      </View>
 
-        <View style={styles.table}>
-          <View style={[styles.tableHeader, { backgroundColor: '#F8FAFC', borderTopLeftRadius: 12, borderTopRightRadius: 12, paddingHorizontal: 16 }]}>
-            <Text style={[styles.headerText, { width: 110 }]}>Date & Time</Text>
-            <Text style={[styles.headerText, { flex: 1.5 }]}>Venue & Customer</Text>
-            <Text style={[styles.headerText, { width: 100 }]}>Payment</Text>
-            <Text style={[styles.headerText, { width: 120, textAlign: 'right' }]}>Amount</Text>
+      <View style={styles.table}>
+        <View style={[styles.tableHeader, { borderTopLeftRadius: 12, borderTopRightRadius: 12, paddingHorizontal: 16 }]}>
+          <Text style={[styles.headerText, { width: 100 }]}>Date & Time</Text>
+          <Text style={[styles.headerText, { flex: 1 }]}>Venue & Customer</Text>
+          <Text style={[styles.headerText, { width: 80 }]}>Payment</Text>
+          <Text style={[styles.headerText, { width: 80, textAlign: 'right' }]}>Gross</Text>
+          <Text style={[styles.headerText, { width: 80, textAlign: 'right' }]}>Fee</Text>
+          <Text style={[styles.headerText, { width: 100, textAlign: 'right' }]}>Net</Text>
+        </View>
+        
+        {transactions.length === 0 ? (
+          <View style={styles.emptyTable}>
+            <Text style={styles.emptyTableText}>No confirmed earnings found.</Text>
           </View>
-          
-          {transactions.length === 0 ? (
-            <View style={styles.emptyTable}>
-              <Text style={styles.emptyTableText}>No confirmed earnings found.</Text>
-            </View>
-          ) : (
-            transactions.map((tx) => (
-              <View key={tx.id} style={[styles.tableRow, { paddingHorizontal: 16 }]}>
-                <View style={{ width: 110 }}>
-                  <Text style={styles.cellTextMain}>
-                    {new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
-                  </Text>
-                  <Text style={styles.cellTextSub}>
-                    {new Date(tx.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                  </Text>
-                </View>
-                
-                <View style={{ flex: 1.5 }}>
-                  <Text style={[styles.cellTextMain, { color: '#01b854' }]} numberOfLines={1}>
-                    {tx.ground?.name || 'Venue'}
-                  </Text>
-                  <Text style={styles.cellTextSub} numberOfLines={1}>
-                    {tx.user?.full_name || tx.booked_for_name || 'Anonymous Player'}
-                  </Text>
-                </View>
+        ) : (
+          transactions.map((tx) => (
+            <View key={tx.id} style={[styles.tableRow, { paddingHorizontal: 16 }]}>
+              <View style={{ width: 100 }}>
+                <Text style={styles.cellTextMain}>
+                  {new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
+                </Text>
+                <Text style={styles.cellTextSub}>
+                  {new Date(tx.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                </Text>
+              </View>
+              
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.cellTextMain, { color: '#01b854' }]} numberOfLines={1}>
+                  {tx.ground?.name || 'Venue'}
+                </Text>
+                <Text style={[styles.cellTextSub, { fontSize: 10, color: '#94A3B8' }]} numberOfLines={1}>
+                  ID: #{tx.id.split('-')[0].toUpperCase()}
+                </Text>
+              </View>
 
-                <View style={{ width: 100 }}>
-                  <View style={[
-                    styles.methodBadge, 
-                    { backgroundColor: tx.payment_method === 'cash' ? '#FEF3C7' : '#DCFCE7' }
+              <View style={{ width: 80 }}>
+                <View style={[
+                  styles.methodBadge, 
+                  { backgroundColor: tx.payment_method === 'cash' ? '#FEF3C7' : '#DCFCE7' }
+                ]}>
+                  <Text style={[
+                    styles.methodBadgeText,
+                    { color: tx.payment_method === 'cash' ? '#92400E' : '#15803D' }
                   ]}>
-                    <Text style={[
-                      styles.methodBadgeText,
-                      { color: tx.payment_method === 'cash' ? '#92400E' : '#15803D' }
-                    ]}>
-                      {tx.payment_method === 'cash' ? 'CASH' : 'ONLINE'}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={{ width: 120, alignItems: 'flex-end' }}>
-                  <Text style={[styles.cellTextMain, { fontSize: 16, fontWeight: '700' }]}>
-                    {formatCurrency(tx.total_amount)}
+                    {tx.payment_method === 'cash' ? 'CASH' : 'ONLINE'}
                   </Text>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <CheckCircle2 size={10} color="#059669" />
-                    <Text style={[styles.cellTextSub, { fontSize: 10, color: '#059669', fontWeight: '600' }]}>
-                      Confirmed
-                    </Text>
-                  </View>
                 </View>
               </View>
-            ))
-          )}
-          
-          {hasMore && (
-            <TouchableOpacity 
-              style={[styles.statementBtn, { marginTop: 12, borderStyle: 'dashed' }]}
-              onPress={loadMore}
-              disabled={loading}
-            >
-              <Text style={styles.statementBtnText}>{loading ? 'Loading...' : 'Load More Transactions'}</Text>
-            </TouchableOpacity>
-          )}
-        </View>
+
+              <View style={{ width: 80, alignItems: 'flex-end' }}>
+                <Text style={[styles.cellTextMain, { fontSize: 13, color: '#64748B' }]}>
+                  {formatCurrency(tx.total_amount)}
+                </Text>
+              </View>
+
+              <View style={{ width: 80, alignItems: 'flex-end' }}>
+                <Text style={[styles.cellTextMain, { fontSize: 13, color: '#EF4444' }]}>
+                  -{formatCurrency((Number(tx.platform_fee_owner || 0) + Number(tx.gst_owner || 0)))}
+                </Text>
+              </View>
+
+              <View style={{ width: 100, alignItems: 'flex-end' }}>
+                <Text style={[styles.cellTextMain, { fontSize: 15, fontWeight: '800', color: '#01b854' }]}>
+                  {formatCurrency(tx.total_amount - (Number(tx.platform_fee_owner || 0) + Number(tx.gst_owner || 0)))}
+                </Text>
+              </View>
+            </View>
+          ))
+        )}
+        
+        {hasMore && (
+          <TouchableOpacity 
+            style={[styles.statementBtn, { marginTop: 12, borderStyle: 'dashed' }]}
+            onPress={loadMore}
+            disabled={loading}
+          >
+            <Text style={styles.statementBtnText}>{loading ? 'Loading...' : 'Load More Transactions'}</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -1459,7 +1641,7 @@ const styles = StyleSheet.create({
   },
   headerText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#64748B',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -1717,7 +1899,7 @@ const styles = StyleSheet.create({
   },
   cellTextMain: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#1E293B',
     fontFamily: 'Inter',
   },
@@ -1857,6 +2039,48 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 40,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    marginBottom: 24,
+    backgroundColor: '#F8FAFC',
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  filterGroup: {
+    flex: 1,
+    minWidth: Platform.OS === 'web' ? 180 : 140,
+    gap: 6,
+  },
+  filterLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748B',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  pickerContainer: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  mobilePicker: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pickerText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
   },
   tableHeaderRow: {
     flexDirection: 'row',

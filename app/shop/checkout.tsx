@@ -40,6 +40,7 @@ export default function CheckoutScreen() {
 
   const [isStateModalVisible, setIsStateModalVisible] = useState(false);
   const [pickingFor, setPickingFor] = useState<'delivery' | 'billing'>('delivery');
+  const [walletBalance, setWalletBalance] = useState(0);
 
   const INDIAN_STATES = [
     'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 
@@ -54,6 +55,7 @@ export default function CheckoutScreen() {
     if (user?.id) {
       loadCart();
       loadSavedInfo();
+      fetchWalletBalance();
     }
     return () => setTabBarVisible(true);
   }, [user?.id]);
@@ -95,6 +97,68 @@ export default function CheckoutScreen() {
       setTotalAmount(total);
     } catch (err) {
       console.error('Error loading cart:', err);
+    }
+  };
+  const fetchWalletBalance = async () => {
+    if (!user?.id) return;
+    try {
+      const { data, error } = await supabase
+        .from('wallets')
+        .select('balance')
+        .eq('user_id', user.id)
+        .single();
+      if (data) setWalletBalance(data.balance);
+    } catch (err) {
+      console.error('Error fetching wallet balance:', err);
+    }
+  };
+
+  const handleWalletOrder = async () => {
+    if (!fullName || !phoneNumber || !address || !city || !pinCode) {
+      Alert.alert('Missing Info', 'Please fill in all contact and delivery details');
+      return;
+    }
+
+    if (walletBalance < totalAmount) {
+      Alert.alert('Insufficient Balance', 'You do not have enough wallet balance for this order.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase.functions.invoke('payment-gateway', {
+        body: {
+          action: 'confirm-wallet-shop',
+          orderDetails: {
+            total_amount: totalAmount,
+            shipping_address: `${address}, ${city}, ${state}, ${pinCode}`,
+            billing_address: sameAsDelivery ? `${address}, ${city}, ${state}, ${pinCode}` : `${billingAddress}, ${billingCity}, ${billingState}, ${billingPinCode}`,
+            customer_name: fullName,
+            customer_phone: phoneNumber
+          },
+          cartItems: cartItems
+        }
+      });
+
+      if (error) throw error;
+      if (data && data.success) {
+        // Save info if requested
+        if (saveInfo) {
+          const infoToSave = { fullName, phoneNumber, address, city, state, pinCode };
+          await AsyncStorage.setItem('checkout_saved_info', JSON.stringify(infoToSave));
+        }
+        
+        Alert.alert('Success', 'Order placed successfully using wallet balance!');
+        router.push('/(tabs)/shop');
+      } else {
+        throw new Error(data?.error || 'Failed to process wallet payment');
+      }
+    } catch (err: any) {
+      console.error('Wallet order error:', err);
+      Alert.alert('Error', err.message || 'Could not place order');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -329,14 +393,26 @@ export default function CheckoutScreen() {
                   onPress={() => setPaymentMethod('razorpay')}
                 >
                   <CreditCard size={20} color={paymentMethod === 'razorpay' ? '#f8688a' : '#9CA3AF'} />
-                  <Text style={[styles.paymentText, paymentMethod === 'razorpay' && styles.paymentTextActive]}>Razorpay</Text>
+                  <Text style={[styles.paymentText, paymentMethod === 'razorpay' && styles.paymentTextActive]}>Online</Text>
                 </TouchableOpacity>
+                {walletBalance > 0 && (
+                  <TouchableOpacity 
+                    style={[styles.paymentCard, paymentMethod === 'wallet' && styles.paymentCardActive]}
+                    onPress={() => setPaymentMethod('wallet')}
+                  >
+                    <ShoppingBag size={20} color={paymentMethod === 'wallet' ? '#f8688a' : '#9CA3AF'} />
+                    <View style={{ alignItems: 'center' }}>
+                      <Text style={[styles.paymentText, paymentMethod === 'wallet' && styles.paymentTextActive]}>Wallet</Text>
+                      <Text style={{ fontSize: 9, color: '#64748B' }}>₹{walletBalance}</Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity 
                   style={[styles.paymentCard, paymentMethod === 'upi' && styles.paymentCardActive]}
                   onPress={() => setPaymentMethod('upi')}
                 >
                   <Text style={[styles.upiIcon, paymentMethod === 'upi' && styles.upiIconActive]}>UPI</Text>
-                  <Text style={[styles.paymentText, paymentMethod === 'upi' && styles.paymentTextActive]}>UPI / GPay</Text>
+                  <Text style={[styles.paymentText, paymentMethod === 'upi' && styles.paymentTextActive]}>UPI/GPay</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -367,13 +443,15 @@ export default function CheckoutScreen() {
                   <View>
                     <TouchableOpacity 
                       style={[styles.placeOrderBtn, { marginTop: 24 }, loading && { opacity: 0.7 }]}
-                      onPress={handlePlaceOrder}
-                      disabled={loading}
+                      onPress={paymentMethod === 'wallet' ? handleWalletOrder : handlePlaceOrder}
+                      disabled={loading || (paymentMethod === 'wallet' && walletBalance < totalAmount)}
                     >
                       {loading ? (
                         <ActivityIndicator color="#FFFFFF" />
                       ) : (
-                        <Text style={styles.placeOrderText}>Place Order</Text>
+                        <Text style={styles.placeOrderText}>
+                          {paymentMethod === 'wallet' ? 'Pay via Wallet' : 'Place Order'}
+                        </Text>
                       )}
                     </TouchableOpacity>
                     <View style={styles.webTermsContainer}>
@@ -413,14 +491,16 @@ export default function CheckoutScreen() {
       {Platform.OS !== 'web' && (
         <View style={styles.bottomBar}>
           <TouchableOpacity 
-            style={[styles.placeOrderBtn, loading && { opacity: 0.7 }]}
-            onPress={handlePlaceOrder}
-            disabled={loading}
+            style={[styles.placeOrderBtn, (loading || (paymentMethod === 'wallet' && walletBalance < totalAmount)) && { opacity: 0.7 }]}
+            onPress={paymentMethod === 'wallet' ? handleWalletOrder : handlePlaceOrder}
+            disabled={loading || (paymentMethod === 'wallet' && walletBalance < totalAmount)}
           >
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={styles.placeOrderText}>Place Order • ₹{totalAmount.toLocaleString('en-IN')}</Text>
+              <Text style={styles.placeOrderText}>
+                {paymentMethod === 'wallet' ? 'Pay via Wallet' : 'Place Order'} • ₹{totalAmount.toLocaleString('en-IN')}
+              </Text>
             )}
           </TouchableOpacity>
         </View>

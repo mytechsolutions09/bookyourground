@@ -165,6 +165,19 @@ export default function BookMyGroundPage() {
               titleColor="#0F172A"
               lightBg
             />
+            <View style={styles.tabContainer}>
+              <TouchableOpacity
+                style={[styles.tab, styles.activeTab]}
+              >
+                <Text style={styles.activeTabText}>Book a Ground</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.tab}
+                onPress={() => router.push('/find-an-opponent')}
+              >
+                <Text style={styles.tabText}>Find an Opposition</Text>
+              </TouchableOpacity>
+            </View>
           </Animated.View>
         )}
         <ScrollView
@@ -176,7 +189,7 @@ export default function BookMyGroundPage() {
         >
           <View style={[
             styles.page,
-            width < 900 && { paddingTop: 100 + insets.top, paddingHorizontal: 0 }
+            width < 900 && { paddingTop: 150 + insets.top, paddingHorizontal: 0 }
           ]}>
 
             {activeTab === 'book' ? (
@@ -199,8 +212,21 @@ export default function BookMyGroundPage() {
   // Native (iOS / Android): full-screen booking form with simple navbar.
   return (
     <View style={styles.nativeRoot}>
-      <Animated.View style={[{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000, backgroundColor: 'transparent' }, headerAnimatedStyle]}>
+      <Animated.View style={[{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000, backgroundColor: '#FFFFFF' }, headerAnimatedStyle]}>
         <MobileAppNavbar title="Book a ground" titleColor="#0F172A" lightBg />
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tab, styles.activeTab]}
+          >
+            <Text style={styles.activeTabText}>Book a Ground</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.tab}
+            onPress={() => router.push('/find-an-opponent')}
+          >
+            <Text style={styles.tabText}>Find an Opposition</Text>
+          </TouchableOpacity>
+        </View>
       </Animated.View>
       <View style={[styles.page, { paddingTop: 0 }, isUltraNarrow && { paddingHorizontal: 12 }]}>
         <LandingBookingForm
@@ -210,7 +236,7 @@ export default function BookMyGroundPage() {
           hideTitle
           onScroll={scrollHandler}
           scrollEventThrottle={16}
-          contentPaddingTop={80}
+          contentPaddingTop={160}
           {...initialProps}
         />
       </View>
@@ -240,20 +266,23 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.04)',
-    borderRadius: 999,
-    padding: 6,
-    marginBottom: 32,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 20,
+    padding: 4,
+    marginHorizontal: 16,
+    marginBottom: 0,
     alignSelf: 'center',
+    width: '90%',
+    maxWidth: 400,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.02)',
+    borderColor: '#E2E8F0',
   },
   tab: {
-    paddingHorizontal: 28,
-    paddingVertical: 12,
-    borderRadius: 999,
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   activeTab: {
     backgroundColor: '#FFFFFF',
@@ -265,13 +294,13 @@ const styles = StyleSheet.create({
   },
   tabText: {
     color: '#334155',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '500',
     fontFamily: 'Inter',
   },
   activeTabText: {
     color: '#01b854',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     fontFamily: 'Inter',
   },

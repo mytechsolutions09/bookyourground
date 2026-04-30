@@ -736,7 +736,7 @@ const styles = StyleSheet.create({
   },
   heroTagText: {
     color: '#f8688a',
-    fontWeight: '800',
+    fontWeight: '300',
     fontSize: 12,
     fontFamily: 'Inter',
   },
@@ -754,7 +754,7 @@ const styles = StyleSheet.create({
   categoryText: {
     fontSize: 12,
     color: '#f8688a',
-    fontWeight: '700',
+    fontWeight: '300',
     letterSpacing: 1.5,
     textTransform: 'uppercase',
     marginBottom: 8,
@@ -762,7 +762,7 @@ const styles = StyleSheet.create({
   },
   productName: {
     fontSize: 26,
-    fontWeight: '500',
+    fontWeight: '300',
     color: '#2b2f4b',
     marginBottom: 12,
     lineHeight: 32,
@@ -772,12 +772,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginBottom: 16,
+    marginBottom: 8,
   },
   reviewsText: {
     fontSize: 14,
     color: '#6B7280',
-    fontWeight: '500',
+    fontWeight: '300',
     marginLeft: 8,
     fontFamily: 'Inter',
   },
@@ -788,7 +788,7 @@ const styles = StyleSheet.create({
   },
   currentPrice: {
     fontSize: 28,
-    fontWeight: '500',
+    fontWeight: '300',
     color: '#2b2f4b',
     fontFamily: 'Inter',
   },
@@ -807,7 +807,7 @@ const styles = StyleSheet.create({
   discountText: {
     color: '#f8688a',
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '300',
     fontFamily: 'Inter',
   },
   trustRow: {
@@ -834,7 +834,7 @@ const styles = StyleSheet.create({
   },
   trustText: {
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: '300',
     color: '#64748B',
     fontFamily: 'Inter',
     textTransform: 'uppercase',
@@ -846,7 +846,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '300',
     color: '#0F172A',
     marginBottom: 16,
     fontFamily: 'Inter',
@@ -870,7 +870,7 @@ const styles = StyleSheet.create({
   featureText: {
     fontSize: 15,
     color: '#4B5563',
-    fontWeight: '500',
+    fontWeight: '300',
     fontFamily: 'Inter',
   },
   specTable: {
@@ -890,14 +890,14 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     color: '#6B7280',
-    fontWeight: '500',
+    fontWeight: '300',
     fontFamily: 'Inter',
   },
   specValue: {
     flex: 1.5,
     fontSize: 14,
     color: '#2b2f4b',
-    fontWeight: '500',
+    fontWeight: '300',
     fontFamily: 'Inter',
   },
   footerGap: {
@@ -953,7 +953,7 @@ const styles = StyleSheet.create({
   },
   addToCartSecondaryText: {
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontWeight: '300',
     fontSize: 14,
     fontFamily: 'Inter',
   },
@@ -967,7 +967,7 @@ const styles = StyleSheet.create({
   },
   buyNowText: {
     color: '#FFFFFF',
-    fontWeight: '600',
+    fontWeight: '300',
     fontSize: 14,
     fontFamily: 'Inter',
   },
@@ -1019,8 +1019,9 @@ const styles = StyleSheet.create({
   webHeroTagText: {
     color: '#FFFFFF',
     fontSize: 12,
-    fontWeight: '900',
+    fontWeight: '300',
     letterSpacing: 1,
+    fontFamily: 'Inter',
   },
   webThumbnails: {
     flexDirection: 'row',
@@ -1049,17 +1050,19 @@ const styles = StyleSheet.create({
   webCategory: {
     color: '#f8688a',
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '300',
     letterSpacing: 2,
     textTransform: 'uppercase',
     marginBottom: 12,
+    fontFamily: 'Inter',
   },
   webProductName: {
     fontSize: 48,
-    fontWeight: '500',
+    fontWeight: '300',
     color: '#2b2f4b',
     lineHeight: 56,
     marginBottom: 20,
+    fontFamily: 'Inter',
   },
   webRatingRow: {
     flexDirection: 'row',
@@ -1074,7 +1077,8 @@ const styles = StyleSheet.create({
   webReviewsText: {
     fontSize: 16,
     color: '#6B7280',
-    fontWeight: '500',
+    fontWeight: '300',
+    fontFamily: 'Inter',
   },
   webPriceContainer: {
     flexDirection: 'row',
@@ -1084,8 +1088,9 @@ const styles = StyleSheet.create({
   },
   webCurrentPrice: {
     fontSize: 36,
-    fontWeight: '500',
+    fontWeight: '300',
     color: '#2b2f4b',
+    fontFamily: 'Inter',
   },
   webOriginalPrice: {
     fontSize: 24,
@@ -1101,7 +1106,8 @@ const styles = StyleSheet.create({
   webDiscountText: {
     color: '#f8688a',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '300',
+    fontFamily: 'Inter',
   },
   webDescription: {
     fontSize: 18,
@@ -1176,10 +1182,11 @@ const styles = StyleSheet.create({
   },
   webTrustTitle: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '300',
     color: '#2b2f4b',
     marginTop: 12,
     marginBottom: 4,
+    fontFamily: 'Inter',
   },
   webTrustSub: {
     fontSize: 14,
@@ -1190,9 +1197,10 @@ const styles = StyleSheet.create({
   },
   webSectionTitle: {
     fontSize: 24,
-    fontWeight: '600',
+    fontWeight: '300',
     color: '#2b2f4b',
     marginBottom: 24,
+    fontFamily: 'Inter',
   },
   webSpecTable: {
     borderWidth: 1,
@@ -1211,13 +1219,15 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: '#6B7280',
-    fontWeight: '500',
+    fontWeight: '300',
+    fontFamily: 'Inter',
   },
   webSpecValue: {
     flex: 2,
     fontSize: 16,
     color: '#2b2f4b',
-    fontWeight: '600',
+    fontWeight: '300',
+    fontFamily: 'Inter',
   },
   // Shoes Special Design
   shoesWebContainer: {
@@ -1275,31 +1285,32 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
   },
   shoesTitle: {
-    fontSize: 48,
-    fontWeight: '800',
+    fontSize: 42,
+    fontWeight: '300',
     color: '#1e293b',
-    lineHeight: 52,
-    marginBottom: 4,
+    lineHeight: 48,
+    marginBottom: 2,
     letterSpacing: -1,
     fontFamily: 'Inter',
   },
   shoesSubtitle: {
     fontSize: 18,
     color: '#f8688a',
-    fontWeight: '500',
-    marginBottom: 12,
+    fontWeight: '300',
+    marginBottom: 8,
     fontFamily: 'Inter',
   },
   shoesPriceRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
     gap: 12,
-    marginBottom: 16,
+    marginBottom: 8,
   },
   shoesPrice: {
     fontSize: 36,
-    fontWeight: '900',
+    fontWeight: '300',
     color: '#1e293b',
+    fontFamily: 'Inter',
   },
   shoesOriginalPrice: {
     fontSize: 24,
@@ -1318,11 +1329,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   shoesSection: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   shoesSectionTitle: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '300',
     color: '#64748B',
     marginBottom: 12,
     textTransform: 'uppercase',
@@ -1372,32 +1383,34 @@ const styles = StyleSheet.create({
   },
   sizeBoxText: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '300',
     color: '#1e293b',
+    fontFamily: 'Inter',
   },
   sizeBoxTextActive: {
     color: '#FFFFFF',
   },
   shoesActionRow: {
-    marginTop: 12,
-    marginBottom: 24,
+    marginTop: 8,
+    marginBottom: 16,
   },
   shoesAddToCartBtn: {
     backgroundColor: '#f8688a',
-    height: 64,
-    borderRadius: 16,
+    height: 52,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#f8688a',
     shadowOpacity: 0.3,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 10 },
+    shadowRadius: 15,
+    shadowOffset: { width: 0, height: 8 },
   },
   shoesAddToCartText: {
     color: '#FFFFFF',
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '300',
     letterSpacing: 1,
+    fontFamily: 'Inter',
   },
   socialProof: {
     flexDirection: 'row',
@@ -1422,7 +1435,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   webTabsContainer: {
-    marginTop: 40,
+    marginTop: 24,
     borderTopWidth: 1,
     borderTopColor: '#e2e8f0',
   },
@@ -1440,15 +1453,17 @@ const styles = StyleSheet.create({
   },
   webTabText: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '300',
     color: '#94a3b8',
     letterSpacing: 1,
+    fontFamily: 'Inter',
   },
   webTabTextActive: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '300',
     color: '#1e293b',
     letterSpacing: 1,
+    fontFamily: 'Inter',
   },
   webTabContent: {
     paddingVertical: 24,

@@ -310,17 +310,24 @@ export default function BookingsScreen() {
 
     try {
       setCancelling(true);
-      const { error } = await supabase
-        .from('bookings')
-        .update({ status: 'cancelled' })
-        .eq('id', bookingToCancel.id);
+      
+      // Invoke the refund-to-wallet edge function
+      const { data, error } = await supabase.functions.invoke('payment-gateway', {
+        body: {
+          action: 'refund-to-wallet',
+          bookingId: bookingToCancel.id
+        }
+      });
 
       if (error) throw error;
-      
-      setBookings(prev => prev.map(b => 
-        b.id === bookingToCancel.id ? { ...b, status: 'cancelled' as any } : b
-      ));
-      setCancelSuccess(true);
+      if (data && data.success) {
+        setBookings(prev => prev.map(b => 
+          b.id === bookingToCancel.id ? { ...b, status: 'cancelled' as any } : b
+        ));
+        setCancelSuccess(true);
+      } else {
+        throw new Error(data?.error || 'Failed to process refund');
+      }
     } catch (err: any) {
       if (Platform.OS === 'web') alert(err.message || 'Failed to cancel');
       else Alert.alert('Error', err.message || 'Failed to cancel');

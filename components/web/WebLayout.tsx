@@ -566,56 +566,58 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
               <>
                 {!isCompact ? (
                   <>
-                    <View style={styles.headerSearchContainer}>
-                      {!isSearchExpanded ? (
-                        <TouchableOpacity
-                          onPress={() => {
-                            setIsSearchExpanded(true);
-                            setTimeout(() => searchInputRef.current?.focus(), 50);
-                          }}
-                          style={[styles.searchIconButton, scrolled && styles.searchIconButtonScrolled]}
-                        >
-                          <Search size={18} color="#dcc093" />
-                        </TouchableOpacity>
-                      ) : (
-                        <View style={[
-                          styles.headerSearch,
-                          { width: 300 },
-                          scrolled && { backgroundColor: 'rgba(255, 255, 255, 0.15)', borderColor: 'rgba(255, 255, 255, 0.2)' } as any
-                        ]}>
-                          <Search size={16} color="#dcc093" style={styles.headerSearchIcon} />
-                          <TextInput
-                            ref={searchInputRef}
-                            placeholder="Search city or venue..."
-                            placeholderTextColor="rgba(220, 192, 147, 0.6)"
-                            value={searchQuery}
-                            onChangeText={setSearchQuery}
-                            onFocus={() => setSearchFocused(true)}
-                            onBlur={() => {
-                              setTimeout(() => {
-                                setSearchFocused(false);
-                                if (!searchQuery) setIsSearchExpanded(false);
-                              }, 200);
+                    {!((cleanPath === '/book-my-ground' || cleanPath === '/find-an-opponent')) && (
+                      <View style={styles.headerSearchContainer}>
+                        {!isSearchExpanded ? (
+                          <TouchableOpacity
+                            onPress={() => {
+                              setIsSearchExpanded(true);
+                              setTimeout(() => searchInputRef.current?.focus(), 50);
                             }}
-                            onSubmitEditing={() => {
-                              if (searchQuery.trim().length >= 2) {
-                                setSearchFocused(false);
-                                router.push({
-                                  pathname: '/search',
-                                  params: { q: searchQuery.trim() }
-                                } as any);
-                              }
-                            }}
-                            returnKeyType="search"
-                            style={[
-                              styles.headerSearchInput,
-                              scrolled && { color: '#dcc093' } as any,
-                              searchFocused && { borderColor: 'rgba(0,234,107,0.3)' } as any,
-                            ]}
-                          />
-                        </View>
-                      )}
-                    </View>
+                            style={[styles.searchIconButton, scrolled && styles.searchIconButtonScrolled]}
+                          >
+                            <Search size={18} color="#dcc093" />
+                          </TouchableOpacity>
+                        ) : (
+                          <View style={[
+                            styles.headerSearch,
+                            { width: 300 },
+                            scrolled && { backgroundColor: 'rgba(255, 255, 255, 0.15)', borderColor: 'rgba(255, 255, 255, 0.2)' } as any
+                          ]}>
+                            <Search size={16} color="#dcc093" style={styles.headerSearchIcon} />
+                            <TextInput
+                              ref={searchInputRef}
+                              placeholder="Search city or venue..."
+                              placeholderTextColor="rgba(220, 192, 147, 0.6)"
+                              value={searchQuery}
+                              onChangeText={setSearchQuery}
+                              onFocus={() => setSearchFocused(true)}
+                              onBlur={() => {
+                                setTimeout(() => {
+                                  setSearchFocused(false);
+                                  if (!searchQuery) setIsSearchExpanded(false);
+                                }, 200);
+                              }}
+                              onSubmitEditing={() => {
+                                if (searchQuery.trim().length >= 2) {
+                                  setSearchFocused(false);
+                                  router.push({
+                                    pathname: '/search',
+                                    params: { q: searchQuery.trim() }
+                                  } as any);
+                                }
+                              }}
+                              returnKeyType="search"
+                              style={[
+                                styles.headerSearchInput,
+                                scrolled && { color: '#dcc093' } as any,
+                                searchFocused && { borderColor: 'rgba(0,234,107,0.3)' } as any,
+                              ]}
+                            />
+                          </View>
+                        )}
+                      </View>
+                    )}
 
                     {searchFocused && (searchQuery.length >= 2) && (
                       <View style={styles.searchDropdown}>
@@ -675,30 +677,54 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                       </View>
                     )}
 
-                    <Text
-                      style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}
-                      onPress={() => router.push('/cricket/player-profile' as any)}
-                    >
-                      CRICKET
-                    </Text>
+                    {!((cleanPath === '/book-my-ground' || cleanPath === '/find-an-opponent')) && (
+                      <>
+                        <Text
+                          style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}
+                          onPress={() => router.push('/cricket/player-profile' as any)}
+                        >
+                          CRICKET
+                        </Text>
 
-                    <Text
-                      style={[
-                        styles.headerPrimaryButtonText,
-                        scrolled && styles.headerPrimaryButtonTextScrolled,
-                        { color: '#dcc093' }
-                      ]}
-                      onPress={() => router.push('/shop' as any)}
-                    >
-                      SHOP
-                    </Text>
+                        <Text
+                          style={[
+                            styles.headerPrimaryButtonText,
+                            scrolled && styles.headerPrimaryButtonTextScrolled,
+                            { color: '#dcc093' }
+                          ]}
+                          onPress={() => router.push('/shop' as any)}
+                        >
+                          SHOP
+                        </Text>
+                      </>
+                    )}
 
-                    <Text
-                      style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}
-                      onPress={() => router.push(groundsHref as any)}
-                    >
-                      GROUNDS
-                    </Text>
+                    {cleanPath === '/book-my-ground' && (
+                      <Text
+                        style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}
+                        onPress={() => router.push('/find-an-opponent')}
+                      >
+                        FIND AN OPPOSITION
+                      </Text>
+                    )}
+
+                    {cleanPath === '/find-an-opponent' && (
+                      <Text
+                        style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}
+                        onPress={() => router.push('/book-my-ground')}
+                      >
+                        BOOK A GROUND
+                      </Text>
+                    )}
+
+                    {!((cleanPath === '/book-my-ground' || cleanPath === '/find-an-opponent')) && (
+                      <Text
+                        style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}
+                        onPress={() => router.push(groundsHref as any)}
+                      >
+                        GROUNDS
+                      </Text>
+                    )}
 
                     {!isAuthenticated ? (
                       <Text
@@ -719,9 +745,11 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                             source={{ uri: profile?.avatar_url || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' }}
                             style={styles.profileAvatar}
                           />
-                          <Text style={[styles.profileName, scrolled && styles.profileNameScrolled]}>
-                            {profile?.full_name?.split(' ')[0] || 'User'}
-                          </Text>
+                          {!((cleanPath === '/book-my-ground' || cleanPath === '/find-an-opponent')) && (
+                            <Text style={[styles.profileName, scrolled && styles.profileNameScrolled]}>
+                              {profile?.full_name?.split(' ')[0] || 'User'}
+                            </Text>
+                          )}
                         </TouchableOpacity>
                       </View>
                     )}
@@ -842,12 +870,6 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
               {!isCompact && !isAdminLayout && (
                 <View style={{ flexDirection: 'row', gap: 20, alignItems: 'center' }}>
 
-                  <Text
-                    style={[styles.headerNavLink, cleanPath === '/(tabs)/bookings' && styles.headerNavLinkActive]}
-                    onPress={() => router.push('/(tabs)/bookings' as any)}
-                  >
-                    BOOKINGS
-                  </Text>
                   <Text
                     style={[
                       styles.headerNavLink,
@@ -1042,7 +1064,6 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
 
                         <NavLink href="/(owner)/ground-bookings" icon={ClipboardList} label="Bookings" />
                         <NavLink href="/profile/orders" icon={ShoppingBag} label="My Orders" />
-                        <NavLink href="/(tabs)/bookings" icon={Ticket} label="My Bookings" />
                         <NavLink href="/(owner)/earnings" icon={IndianRupee} label="Earnings" />
                         
                         <NavLink href="/(owner)/add-ground" icon={PlusCircle} label="Add ground" />
@@ -1066,6 +1087,12 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                           label="Dashboard"
                           isActiveOverride={cleanPath === '/(tabs)/dashboard' || cleanPath === '/dashboard'}
                         />
+                        <NavLink
+                          href="/(tabs)/bookings"
+                          icon={Calendar}
+                          label="My Bookings"
+                          isActiveOverride={cleanPath === '/(tabs)/bookings' || cleanPath === '/bookings'}
+                        />
 
                         <NavLink
                           href="/profile/orders"
@@ -1073,12 +1100,6 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                           label="Shop Orders"
                         />
 
-                        <NavLink
-                          href="/(tabs)/bookings"
-                          icon={ClipboardList}
-                          label="My Bookings"
-                          badge={loading ? undefined : bookings.length}
-                        />
                         <NavLink
                           href="/favorites"
                           icon={Heart}
@@ -1415,9 +1436,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   signOutText: {
-    fontSize: 14,
+    fontSize: 13,
     color: 'rgba(255,255,255,0.7)',
-    fontWeight: '700',
+    fontWeight: '500',
     fontFamily: 'Inter',
   },
   signOutTextMobile: {
@@ -1519,7 +1540,7 @@ const styles = StyleSheet.create({
   },
   navLinkText: {
     fontFamily: 'Inter',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '400',
     color: 'rgba(255,255,255,0.7)',
     marginLeft: 12,
@@ -1527,7 +1548,7 @@ const styles = StyleSheet.create({
   },
   navLinkTextActive: {
     color: '#00ea6b',
-    fontWeight: '600',
+    fontWeight: '500',
   },
 
   sidebarTitle: {
@@ -1544,7 +1565,10 @@ const styles = StyleSheet.create({
   },
   main: {
     flex: 1,
-    padding: 20,
+    paddingTop: 20,
+    paddingRight: 20,
+    paddingBottom: 20,
+    paddingLeft: 20,
     backgroundColor: '#FFFFFF',
     ...Platform.select({
       web: {
@@ -1575,11 +1599,11 @@ const styles = StyleSheet.create({
     zIndex: 2500,
   },
   sidebarSectionTitle: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 10,
+    fontWeight: '500',
     color: 'rgba(255,255,255,0.5)',
     textTransform: 'uppercase',
-    letterSpacing: 0.6,
+    letterSpacing: 1,
     marginBottom: 10,
     textAlign: 'center',
     width: '100%',

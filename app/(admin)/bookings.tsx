@@ -61,15 +61,53 @@ export default function AdminBookingsScreen() {
 
       if (error) throw error;
       
-      const newBookings = (data || []) as BookingWithDetails[];
+      let newBatch = (data || []) as BookingWithDetails[];
+
+      // Fetch partner bookings for occupancy accuracy
+      if (newBatch.length > 0) {
+        try {
+          const slotFilters = newBatch.map(b => 
+            `and(ground_id.eq.${b.ground_id},booking_date.eq.${b.booking_date},start_time.eq.${b.start_time})`
+          );
+          
+          const chunkSize = 20;
+          const partners: any[] = [];
+          for (let i = 0; i < slotFilters.length; i += chunkSize) {
+            const chunk = slotFilters.slice(i, i + chunkSize);
+            const { data: partnerData } = await supabase
+              .from('bookings')
+              .select(`
+                *,
+                ground:grounds(id, pitch_type, owner_id, name, ground_images(*)),
+                user:profiles(full_name, phone)
+              `)
+              .or(chunk.join(','))
+              .neq('status', 'pending')
+              .neq('status', 'cancelled')
+              .neq('status', 'rejected');
+            
+            if (partnerData) partners.push(...partnerData);
+          }
+          
+          if (partners.length > 0) {
+            newBatch = [...newBatch, ...partners].filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+          }
+        } catch (partnerErr) {
+          console.error('Error fetching partner bookings:', partnerErr);
+        }
+      }
       
       if (isLoadMore) {
-        setBookings(prev => [...prev, ...newBookings]);
+        setBookings(prev => {
+          const combined = [...prev, ...newBatch];
+          return combined.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i)
+            .sort((a, b) => new Date(b.booking_date).getTime() - new Date(a.booking_date).getTime());
+        });
       } else {
-        setBookings(newBookings);
+        setBookings(newBatch.sort((a, b) => new Date(b.booking_date).getTime() - new Date(a.booking_date).getTime()));
       }
 
-      setHasMore(newBookings.length === PAGE_SIZE);
+      setHasMore(data?.length === PAGE_SIZE);
       setPage(targetPage);
     } catch (error) {
       console.error('Error loading admin bookings:', error);
@@ -80,53 +118,49 @@ export default function AdminBookingsScreen() {
   };
 
   const handleCancelBooking = async (booking: BookingWithDetails) => {
-    if (Platform.OS === 'web') {
-      const confirmed = window.confirm('Are you sure you want to cancel this booking from the platform?');
-      if (confirmed) {
-        try {
-          const { error } = await supabase
-            .from('bookings')
-            .update({ status: 'cancelled' })
-            .eq('id', booking.id);
-          if (error) throw error;
+    const confirmMsg = 'Are you sure you want to cancel this booking and REFUND the amount to the user\'s wallet?';
+    
+    const proceed = async () => {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase.functions.invoke('payment-gateway', {
+          body: {
+            action: 'refund-to-wallet',
+            bookingId: booking.id
+          }
+        });
+
+        if (error) throw error;
+        if (data && data.success) {
           setBookings(prev => 
             prev.map(b => b.id === booking.id ? { ...b, status: 'cancelled' } : b)
           );
-          alert('Booking cancelled successfully.');
-        } catch (err: any) {
-          alert(err.message || 'Failed to cancel');
+          if (Platform.OS === 'web') alert('Booking cancelled and refunded to wallet.');
+          else Alert.alert('Success', 'Booking cancelled and refunded to wallet.');
+        } else {
+          throw new Error(data?.error || 'Failed to process refund');
         }
+      } catch (err: any) {
+        if (Platform.OS === 'web') alert(err.message || 'Failed to cancel');
+        else Alert.alert('Error', err.message || 'Failed to cancel');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(confirmMsg)) {
+        await proceed();
       }
       return;
     }
 
     Alert.alert(
-      'Cancel Booking',
-      'Are you sure you want to cancel this booking from the platform?',
+      'Cancel & Refund',
+      confirmMsg,
       [
         { text: 'No', style: 'cancel' },
-        {
-          text: 'Yes, Cancel',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const { error } = await supabase
-                .from('bookings')
-                .update({ status: 'cancelled' })
-                .eq('id', booking.id);
-
-              if (error) throw error;
-              
-              // Update local state
-              setBookings(prev => 
-                prev.map(b => b.id === booking.id ? { ...b, status: 'cancelled' } : b)
-              );
-              Alert.alert('Success', 'Booking cancelled successfully.');
-            } catch (err: any) {
-              Alert.alert('Error', err.message || 'Failed to cancel');
-            }
-          }
-        }
+        { text: 'Yes, Cancel & Refund', style: 'destructive', onPress: proceed }
       ]
     );
   };
@@ -408,14 +442,18 @@ export default function AdminBookingsScreen() {
                 </View>
 
                 {(() => {
-                  const currentSlotKey = `${item.ground_id}_${item.booking_date}_${item.start_time}`;
+                  const normStart = normalizeDbTimeToHHMM(item.start_time);
+                  const currentSlotKey = `${item.ground_id}_${item.booking_date}_${normStart}`;
                   const slotOccupancy = bookings.filter(b => 
-                    b.status === 'confirmed' && 
-                    `${b.ground_id}_${b.booking_date}_${b.start_time}` === currentSlotKey
+                    (b.status === 'confirmed' || b.status === 'active' || b.status === 'completed') && 
+                    `${b.ground_id}_${b.booking_date}_${normalizeDbTimeToHHMM(b.start_time)}` === currentSlotKey
                   ).reduce((sum, b) => {
+                    if (b.team_type === 'one') return sum + 1;
+                    if (b.team_type === 'both') return sum + 2;
+                    
                     const label = cricketTeamsLabelFromBooking(b.ground?.pitch_type, b.notes);
                     if (label === '1 team') return sum + 1;
-                    if (label === 'Both teams') return sum + 2;
+                    if (label === 'Both teams' || label === 'Full Match') return sum + 2;
                     return sum + 2;
                   }, 0);
 
@@ -427,15 +465,15 @@ export default function AdminBookingsScreen() {
                         <TouchableOpacity 
                           onPress={(e) => {
                             e.stopPropagation();
-                            router.push(`/grounds/${item.ground.id}?date=${item.booking_date}&time=${item.start_time}&teams=one`);
+                            router.push(`/grounds/${item.ground.id}?date=${item.booking_date}&time=${normalizeDbTimeToHHMM(item.start_time)}&teams=one`);
                           }}
                           style={styles.partialBadge}
                         >
-                          <Text style={styles.partialBadgeText}>PARTIAL (NEED 1 MORE)</Text>
+                          <Text style={styles.partialBadgeText}>ADD TEAM 2</Text>
                         </TouchableOpacity>
                       ) : (
                         <View style={styles.fullMatchBadge}>
-                          <Text style={styles.fullMatchBadgeText}>FULL (MATCH READY)</Text>
+                          <Text style={styles.fullMatchBadgeText}>FULL</Text>
                         </View>
                       )}
                     </View>
@@ -503,11 +541,30 @@ export default function AdminBookingsScreen() {
             );
           }
 
+          const normStart = normalizeDbTimeToHHMM(item.start_time);
+          const currentSlotKey = `${item.ground_id}_${item.booking_date}_${normStart}`;
+          const slotOccupancy = bookings.filter(b => 
+            (b.status === 'confirmed' || b.status === 'active' || b.status === 'completed') && 
+            `${b.ground_id}_${b.booking_date}_${normalizeDbTimeToHHMM(b.start_time)}` === currentSlotKey
+          ).reduce((sum, b) => {
+            if (b.team_type === 'one') return sum + 1;
+            if (b.team_type === 'both') return sum + 2;
+            
+            const label = cricketTeamsLabelFromBooking(b.ground?.pitch_type, b.notes);
+            if (label === '1 team') return sum + 1;
+            if (label === 'Both teams' || label === 'Full Match') return sum + 2;
+            return sum + 2;
+          }, 0);
+
+          const isTrulyFull = slotOccupancy >= 2;
+          const occupancyText = isTrulyFull ? 'FULL (MATCH READY)' : 'PARTIAL (ADD TEAM 2)';
+
           return (
             <BookingCard
               booking={item}
               onPress={() => router.push(`/bookings/${item.id}`)}
               showGroundDetails={true}
+              metaText={occupancyText}
             />
           );
         }}

@@ -49,9 +49,10 @@ export default function CheckoutScreen() {
   const [customCashAmount, setCustomCashAmount] = useState<string>('');
   const [bookedForName, setBookedForName] = useState<string>('');
   const [platformSettings, setPlatformSettings] = useState<any>(null);
+  const [walletBalance, setWalletBalance] = useState(0);
   
   // Pricing Calculations
-  const { baseGroundPrice, platformFeeIncGst, totalPayable } = React.useMemo(() => {
+  const { baseGroundPrice, platformFeeIncGst, totalPayable, totalReceivable } = React.useMemo(() => {
     const bgp = (selectedGateway === 'cash' && customCashAmount && !isNaN(parseFloat(customCashAmount)))
       ? parseFloat(customCashAmount)
       : (booking?.total_amount || 0);
@@ -59,18 +60,38 @@ export default function CheckoutScreen() {
     // Fallback to defaults if settings not yet loaded
     const rate = platformSettings?.user_platform_fee_rate ?? 0.05;
     const gstRate = platformSettings?.gst_rate ?? 0.18;
+    const fixedFee = platformSettings?.cricket_owner_fee_fixed ?? 100;
     
-    const pf = bgp * rate;
-    const gst = pf * gstRate;
-    const pfGst = pf + gst;
-    const tp = Math.round(bgp + pfGst); // Round to nearest whole number
+    const isCricket = (booking?.grounds?.pitch_type ?? '').toLowerCase() === 'cricket ground';
+    const isCash = selectedGateway === 'cash';
+    
+    // 1. Calculate User's Platform Fee (Always percentage for online bookings)
+    const userPfRate = platformSettings?.user_platform_fee_rate ?? 0.05;
+    const userPf = bgp * userPfRate;
+    const userGst = userPf * gstRate;
+    const userTotalPfGst = userPf + userGst;
+
+    // 2. Calculate Owner's Platform Fee (Fixed for Cricket/Cash, Percentage otherwise)
+    let ownerPf = 0;
+    if (isCricket || isCash) {
+      const teamCount = booking?.team_type === 'one' ? 1 : 2;
+      ownerPf = fixedFee * teamCount;
+    } else {
+      ownerPf = bgp * rate;
+    }
+    const ownerGst = ownerPf * gstRate;
+    const ownerTotalPfGst = ownerPf + ownerGst;
+
+    const tp = Math.round(bgp + (isCash ? 0 : userTotalPfGst)); 
+    const tr = Math.round(bgp - ownerTotalPfGst); 
     
     return {
       baseGroundPrice: bgp,
-      platformFeeIncGst: pfGst,
-      totalPayable: tp
+      platformFeeIncGst: isCash ? ownerTotalPfGst : userTotalPfGst,
+      totalPayable: tp,
+      totalReceivable: tr
     };
-  }, [selectedGateway, customCashAmount, booking?.total_amount, platformSettings]);
+  }, [selectedGateway, customCashAmount, booking?.total_amount, booking?.team_type, booking?.grounds?.pitch_type, platformSettings]);
 
   const [showRazorpayWebView, setShowRazorpayWebView] = useState(false);
   const [razorpayOrderData, setRazorpayOrderData] = useState<any>(null);
@@ -80,12 +101,29 @@ export default function CheckoutScreen() {
   useEffect(() => {
     fetchActiveGateways();
     fetchPlatformSettings();
+    fetchWalletBalance();
     // Hide bottom tab bar on checkout for better focus
     setTabBarVisible(false);
     return () => {
       setTabBarVisible(true);
     };
   }, []);
+
+  useEffect(() => {
+    if (!profile || activeGateways.length === 0) return;
+    
+    const isOwner = profile?.role === 'super_admin' || profile?.role === 'ground_owner';
+    const cash = activeGateways.find(g => g.name === 'cash');
+    const razorpay = activeGateways.find(g => g.name === 'razorpay');
+
+    if (isOwner && cash) {
+      setSelectedGateway('cash');
+    } else if (razorpay) {
+      setSelectedGateway('razorpay');
+    } else if (activeGateways.length > 0 && !selectedGateway) {
+      setSelectedGateway(activeGateways[0].name);
+    }
+  }, [profile, activeGateways]);
 
   const fetchActiveGateways = async () => {
     try {
@@ -96,10 +134,6 @@ export default function CheckoutScreen() {
       
       if (error) throw error;
       setActiveGateways(data || []);
-      
-      const razorpay = data?.find(g => g.name === 'razorpay');
-      if (razorpay) setSelectedGateway('razorpay');
-      else if (data?.length) setSelectedGateway(data[0].name);
     } catch (e) {
       console.error('Error fetching gateways:', e);
     }
@@ -120,6 +154,20 @@ export default function CheckoutScreen() {
       setPlatformSettings(settings);
     } catch (e) {
       console.error('Error fetching platform settings:', e);
+    }
+  };
+
+  const fetchWalletBalance = async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('wallets')
+        .select('balance')
+        .eq('user_id', user.id)
+        .single();
+      if (data) setWalletBalance(data.balance);
+    } catch (e) {
+      console.error('Error fetching wallet balance:', e);
     }
   };
 
@@ -157,9 +205,11 @@ export default function CheckoutScreen() {
             team_type: booking.team_type,
             coupon_id: booking.coupon_id,
             booked_for_name: bookedForName,
+            payment_method: 'cash',
           } : {
             total_amount: parseFloat(customCashAmount) || booking.total_amount,
             booked_for_name: bookedForName,
+            payment_method: 'cash',
           },
         },
       });
@@ -681,7 +731,59 @@ export default function CheckoutScreen() {
     </html>
   ` : '';
 
+  const handleWalletPayment = async () => {
+    if (!booking) return;
+    if (walletBalance < totalPayable) {
+      Alert.alert('Insufficient Balance', 'Your wallet balance is less than the total amount.');
+      return;
+    }
+
+    try {
+      setProcessing(true);
+      
+      const { data, error } = await supabase.functions.invoke('payment-gateway', {
+        body: {
+          action: 'confirm-wallet',
+          bookingId: booking.isNew ? null : booking.id,
+          bookingDetails: booking.isNew ? {
+            ground_id: booking.ground_id,
+            booking_date: booking.booking_date,
+            start_time: booking.start_time,
+            end_time: booking.end_time,
+            team_type: booking.team_type,
+            coupon_id: booking.coupon_id,
+            total_hours: booking.total_hours,
+            price_per_hour: booking.price_per_hour,
+            total_amount: totalPayable,
+            discount_amount: booking.discount_amount || 0,
+            payment_method: 'wallet',
+          } : {
+            total_amount: totalPayable,
+            payment_method: 'wallet'
+          },
+        },
+      });
+
+      if (error) throw error;
+
+      if (data && data.success) {
+        Alert.alert('Success', 'Payment successful using Wallet balance!');
+        router.replace(`/bookings/${data.bookingId}` as any);
+      } else {
+        throw new Error(data?.error || 'Wallet payment failed.');
+      }
+    } catch (error: any) {
+      console.error('Wallet payment error:', error);
+      Alert.alert('Error', error.message || 'Something went wrong.');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const handlePayment = async () => {
+    if (selectedGateway === 'wallet') {
+      return handleWalletPayment();
+    }
     if (selectedGateway === 'razorpay') {
       return handleRazorpay();
     }
@@ -887,7 +989,7 @@ export default function CheckoutScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <RNText style={styles.breakdownLabel}>Platform Fee</RNText>
                   <View style={styles.gstTag}>
-                    <RNText style={styles.gstTagText}>inc. 18% GST</RNText>
+                    <RNText style={styles.gstTagText}>inc. GST</RNText>
                   </View>
                 </View>
                 <RNText style={styles.breakdownValue}>{formatCurrency(platformFeeIncGst)}</RNText>
@@ -902,19 +1004,42 @@ export default function CheckoutScreen() {
             </View>
 
             <View style={styles.subtotalRow}>
-              <RNText style={styles.subtotalLabel}>Total Payable :</RNText>
+              <RNText style={styles.subtotalLabel}>
+                {selectedGateway === 'cash' ? 'Total Receivable :' : 'Total Payable :'}
+              </RNText>
               <RNText style={styles.subtotalValue}>
-                {formatCurrency(totalPayable)}
+                {formatCurrency(selectedGateway === 'cash' ? totalReceivable : totalPayable)}
               </RNText>
             </View>
 
-            {isGroundOwnerOrAdmin && (
+            {(isGroundOwnerOrAdmin || walletBalance > 0) && (
               <View style={styles.paymentMethodSection}>
                 <RNText style={styles.paymentMethodTitle}>Payment Method</RNText>
                 <View style={styles.methodSelector}>
+                  {walletBalance > 0 && (
+                    <TouchableOpacity 
+                      onPress={() => setSelectedGateway('wallet')}
+                      style={[
+                        styles.methodOption,
+                        selectedGateway === 'wallet' && styles.methodOptionActive
+                      ]}
+                    >
+                      <View style={[styles.methodCircle, selectedGateway === 'wallet' && styles.methodCircleActive]}>
+                        <Wallet size={14} color={selectedGateway === 'wallet' ? '#FFF' : '#9CA3AF'} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <RNText style={[styles.methodLabel, selectedGateway === 'wallet' && styles.methodLabelActive]}>
+                          Wallet Balance
+                        </RNText>
+                        <RNText style={{ fontSize: 11, color: '#64748B' }}>
+                          Available: {formatCurrency(walletBalance)}
+                        </RNText>
+                      </View>
+                    </TouchableOpacity>
+                  )}
                   {activeGateways.filter(g => {
-                    if (g.name === 'cash') return isGroundOwnerOrAdmin;
-                    return true;
+                    if (isGroundOwnerOrAdmin) return g.name === 'cash';
+                    return g.name !== 'cash'; 
                   }).map(g => (
                     <TouchableOpacity 
                       key={g.name}
@@ -940,7 +1065,18 @@ export default function CheckoutScreen() {
               </View>
             )}
 
-            {(selectedGateway === 'razorpay' || selectedGateway === 'payu' || !isGroundOwnerOrAdmin) ? (
+            {selectedGateway === 'wallet' ? (
+              <Button
+                title={processing ? 'Processing...' : `Pay via Wallet`}
+                onPress={handleWalletPayment}
+                disabled={processing || walletBalance < totalPayable}
+                loading={processing}
+                fullWidth
+                size="large"
+                variant="secondary"
+                style={[styles.payButton, { backgroundColor: '#00ea6b' }]}
+              />
+            ) : (selectedGateway === 'razorpay' || selectedGateway === 'payu' || !isGroundOwnerOrAdmin) ? (
               <Button
                 title={processing ? 'Processing...' : `Check Out`}
                 onPress={handlePayment}

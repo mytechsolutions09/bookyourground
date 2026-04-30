@@ -15,7 +15,7 @@ import Button from '@/components/ui/Button';
 export default function BookingDetailsScreen() {
   const { id } = useLocalSearchParams();
   const bookingId = Array.isArray(id) ? id[0] : id;
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   
   const [booking, setBooking] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
@@ -27,6 +27,11 @@ export default function BookingDetailsScreen() {
 
   const isWeb = Platform.OS === 'web';
   const isDesktop = width > 900;
+
+  const isOwnerView = useMemo(() => {
+    if (!booking || !user) return false;
+    return booking.ground?.owner_id === user.id || profile?.role === 'super_admin';
+  }, [booking, user, profile]);
 
   useEffect(() => {
     if (bookingId) {
@@ -223,39 +228,73 @@ export default function BookingDetailsScreen() {
           <View style={styles.card}>
             <View style={styles.cardInner}>
               <Text style={styles.sectionTitle}>Payment summary</Text>
-
-              <View style={styles.summaryRow}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Text style={styles.summaryLabel}>Ground price</Text>
-                  <View style={[styles.teamTag, { marginLeft: 6 }]}>
-                    <Text style={styles.teamTagText}>{cricketTeamsLabel || '1 team'}</Text>
-                  </View>
-                </View>
-                <Text style={styles.summaryValue}>{formatCurrency(Number(booking.ground_price || displayTotalAmount))}</Text>
-              </View>
-
-              {(booking.platform_fee_user > 0 || booking.gst_user > 0) ? (
-                <View style={styles.summaryRow}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={styles.summaryLabel}>Platform fee</Text>
-                    <View style={styles.gstTagSmall}>
-                      <Text style={styles.gstTagTextSmall}>inc. GST</Text>
+              
+              {isOwnerView ? (
+                <>
+                  <View style={styles.summaryRow}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Text style={styles.summaryLabel}>Ground price</Text>
+                      <View style={[styles.teamTag, { marginLeft: 6 }]}>
+                        <Text style={styles.teamTagText}>{cricketTeamsLabel || '1 team'}</Text>
+                      </View>
                     </View>
+                    <Text style={styles.summaryValue}>{formatCurrency(Number(booking.ground_price || displayTotalAmount))}</Text>
                   </View>
-                  <Text style={styles.summaryValue}>{formatCurrency(Number(booking.platform_fee_user || 0) + Number(booking.gst_user || 0))}</Text>
-                </View>
-              ) : (
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Taxes & fees</Text>
-                  <Text style={styles.summaryValueMuted}>₹0.00</Text>
-                </View>
-              )}
 
-              <View style={styles.divider} />
-              <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>Grand total</Text>
-                <Text style={styles.totalValue}>{formatCurrency(Math.round(Number(booking.total_charged || displayTotalAmount)))}</Text>
-              </View>
+                  <View style={styles.summaryRow}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Text style={styles.summaryLabel}>Platform fee</Text>
+                      <View style={styles.gstTagSmall}>
+                        <Text style={styles.gstTagTextSmall}>inc. GST</Text>
+                      </View>
+                    </View>
+                    <Text style={[styles.summaryValue, { color: '#EF4444' }]}>
+                      -{formatCurrency(Number(booking.platform_fee_owner || 0) + Number(booking.gst_owner || 0))}
+                    </Text>
+                  </View>
+
+                  <View style={styles.divider} />
+                  <View style={styles.totalRow}>
+                    <Text style={styles.totalLabel}>Total Receivable</Text>
+                    <Text style={styles.totalValue}>{formatCurrency(Number(booking.owner_settlement || displayTotalAmount))}</Text>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={styles.summaryRow}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Text style={styles.summaryLabel}>Ground price</Text>
+                      <View style={[styles.teamTag, { marginLeft: 6 }]}>
+                        <Text style={styles.teamTagText}>{cricketTeamsLabel || '1 team'}</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.summaryValue}>{formatCurrency(Number(booking.ground_price || displayTotalAmount))}</Text>
+                  </View>
+
+                  {(booking.platform_fee_user > 0 || booking.gst_user > 0) ? (
+                    <View style={styles.summaryRow}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Text style={styles.summaryLabel}>Platform fee</Text>
+                        <View style={styles.gstTagSmall}>
+                          <Text style={styles.gstTagTextSmall}>inc. GST</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.summaryValue}>{formatCurrency(Number(booking.platform_fee_user || 0) + Number(booking.gst_user || 0))}</Text>
+                    </View>
+                  ) : (
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.summaryLabel}>Taxes & fees</Text>
+                      <Text style={styles.summaryValueMuted}>₹0.00</Text>
+                    </View>
+                  )}
+
+                  <View style={styles.divider} />
+                  <View style={styles.totalRow}>
+                    <Text style={styles.totalLabel}>Grand total</Text>
+                    <Text style={styles.totalValue}>{formatCurrency(Math.round(Number(booking.total_charged || displayTotalAmount)))}</Text>
+                  </View>
+                </>
+              )}
 
               <View style={styles.paymentMethodCard}>
                 <View style={styles.pmIcon}>

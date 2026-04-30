@@ -53,19 +53,15 @@ function pad2(n: number): string {
   return `${n}`.padStart(2, '0');
 }
 
-/** Same rules as the landing booking form: Box Cricket hourly 6–23; Cricket Ground fixed four. */
 export function getSlotTemplatesForPitch(pitch: string | null | undefined): { value: string; label: string }[] {
-  const p = (pitch ?? '').toLowerCase();
-  const isBox = p.includes('box');
-  if (isBox) {
-    const slots: { value: string; label: string }[] = [];
-    for (let h = 6; h <= 23; h += 1) {
-      slots.push({ value: `${pad2(h)}:00`, label: formatSlotLabelHour(h) });
-    }
-    return slots;
+  // We provide a standard 6 AM - 11 PM range as a fallback/template.
+  // If the database contains specific slots for a ground, those will 
+  // automatically override these defaults in the UI.
+  const slots: { value: string; label: string }[] = [];
+  for (let h = 6; h <= 23; h += 1) {
+    slots.push({ value: `${pad2(h)}:00`, label: formatSlotLabelHour(h) });
   }
-  const hours = [8, 12, 16, 20];
-  return hours.map((h) => ({ value: `${pad2(h)}:00`, label: formatSlotLabelHour(h) }));
+  return slots;
 }
 
 /**

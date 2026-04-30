@@ -39,7 +39,9 @@ const calculateFinalAmounts = (details: any, groundType: string | null, settings
   const GST_RATE = Number(settings?.gst_rate ?? 0.18);
   const CRICKET_FIXED_FEE = Number(settings?.cricket_owner_fee_fixed ?? 100);
 
-  console.log(`[Pricing] Input details: ${JSON.stringify(details)}, settings: ${JSON.stringify(settings)}`);
+  const isCash = details.payment_method === 'cash' || details.paymentMethod === 'cash';
+
+  console.log(`[Pricing] Input details: ${JSON.stringify(details)}, settings: ${JSON.stringify(settings)}, isCash: ${isCash}`);
   
   let discount = Number(details.discount_amount ?? details.discountAmount ?? 0);
   const priceUnit = Number(details.price_per_hour ?? details.pricePerHour ?? 0);
@@ -70,20 +72,23 @@ const calculateFinalAmounts = (details: any, groundType: string | null, settings
   const gstUser = Math.round(platformFeeUser * GST_RATE * 100) / 100;
   const totalCharged = Math.round(groundPrice + platformFeeUser + gstUser); // Round to nearest zero decimals
   
-  // Logic: "for cricket ground 100 +gst per booking per team"
-  const isCricket = String(groundType ?? '').toLowerCase().includes('cricket');
+  // Fee Logic:
+  // - "Cricket Ground" (Full Ground) OR Cash Payment = Fixed Fee (CRICKET_FIXED_FEE per team)
+  // - "Box Cricket" & Others = Percentage Fee (PLATFORM_FEE_RATE)
+  const isFullCricket = String(groundType ?? '').toLowerCase() === 'cricket ground';
   let platformFeeOwner = 0;
   
   if (skipOwnerFee) {
     platformFeeOwner = 0;
     console.log(`[Pricing] Owner platform fee skipped (charge_platform_fee: false)`);
-  } else if (isCricket) {
+  } else if (isFullCricket || isCash) {
     const teamType = details.team_type ?? details.teamType ?? 'both';
     const teamCount = teamType === 'one' ? 1 : 2;
     platformFeeOwner = CRICKET_FIXED_FEE * teamCount;
-    console.log(`[Pricing] Cricket detected, using fixed owner fee: ${platformFeeOwner} (${teamCount} teams)`);
+    console.log(`[Pricing] ${isCash ? 'Cash Payment' : 'Full Cricket'} detected, using fixed owner fee: ${platformFeeOwner} (${teamCount} teams)`);
   } else {
     platformFeeOwner = Math.round(groundPrice * PLATFORM_FEE_RATE * 100) / 100;
+    console.log(`[Pricing] ${groundType || 'Standard'} ground detected, using percentage fee: ${platformFeeOwner}`);
   }
 
   const gstOwner = Math.round(platformFeeOwner * GST_RATE * 100) / 100;
@@ -190,6 +195,85 @@ serve(async (req) => {
     console.log(`Action: ${action}, User: ${user.id}`);
     console.log('Request body:', JSON.stringify(body));
 
+
+    if (action === 'confirm-wallet-shop') {
+      const { orderDetails, cartItems } = body;
+      const userId = user.id;
+
+      console.log(`[ShopWallet] Processing shop order for user: ${userId}, items: ${cartItems?.length}`);
+
+      // Fetch user's wallet balance
+      const { data: wallet, error: walletError } = await supabaseClient
+        .from('wallets')
+        .select('balance')
+        .eq('user_id', userId)
+        .single();
+
+      if (walletError || !wallet) {
+        throw new Error('Wallet not found for user');
+      }
+
+      const totalAmount = Number(orderDetails.total_amount);
+      if (wallet.balance < totalAmount) {
+        throw new Error(`Insufficient wallet balance. Available: ₹${wallet.balance}, Required: ₹${totalAmount}`);
+      }
+
+      // 1. Create Order
+      const { data: order, error: orderError } = await supabaseClient
+        .from('shop_orders')
+        .insert({
+          user_id: userId,
+          total_amount: totalAmount,
+          status: 'processing',
+          payment_status: 'paid',
+          payment_method: 'wallet',
+          shipping_address: orderDetails.shipping_address,
+          billing_address: orderDetails.billing_address,
+          customer_name: orderDetails.customer_name,
+          customer_phone: orderDetails.customer_phone
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // 2. Create Order Items
+      const itemsToInsert = cartItems.map((item: any) => ({
+        order_id: order.id,
+        product_id: item.product.id,
+        quantity: item.quantity,
+        price_at_purchase: item.product.price,
+        selected_attributes: item.selected_attributes
+      }));
+
+      const { error: itemsError } = await supabaseClient
+        .from('shop_order_items')
+        .insert(itemsToInsert);
+
+      if (itemsError) throw itemsError;
+
+      // 3. Deduct from Wallet
+      const { data: walletResult, error: processError } = await supabaseClient.rpc('process_wallet_transaction', {
+        p_user_id: userId,
+        p_amount: -totalAmount, 
+        p_type: 'used',
+        p_description: `Shop Order #${order.id.substring(0, 8).toUpperCase()}`,
+        p_booking_id: null 
+      });
+
+      if (processError) throw processError;
+
+      // 4. Clear Cart
+      await supabaseClient.from('shop_cart').delete().eq('user_id', userId);
+
+      return new Response(JSON.stringify({ 
+        success: true, 
+        orderId: order.id,
+        message: 'Shop order placed successfully via wallet.' 
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     if (action === 'create-payu-hash') {
       const { txnid, amount, firstname, email } = body;
@@ -500,8 +584,11 @@ serve(async (req) => {
            throw new Error(`Booking creation failed: ${insertError.message}`);
         }
         finalBookingId = newBooking.id;
+        console.log(`[Cash] New booking created: ${finalBookingId}`);
+      } else if (finalBookingId) {
+        console.log(`[Cash] Updating existing booking: ${finalBookingId}`);
         // For existing bookings being confirmed via cash, we should also calculate fees
-        const { data: bData, error: bFetchError } = await supabaseClient.from('bookings').select('*, ground:grounds(pitch_type, owner:profiles!owner_id(charge_platform_fee))').eq('id', bookingId).single();
+        const { data: bData, error: bFetchError } = await supabaseClient.from('bookings').select('*, ground:grounds(pitch_type, owner:profiles!owner_id(charge_platform_fee))').eq('id', finalBookingId).single();
         if (bFetchError) throw new Error(`Booking not found: ${bFetchError.message}`);
 
         const { 
@@ -539,7 +626,7 @@ serve(async (req) => {
            updatePayload.notes = `(Player: ${bookingDetails.booked_for_name || bookingDetails.bookedForName}) Cash Payment confirmed by Owner`;
         }
         
-        const { error: updateError } = await supabaseClient.from('bookings').update(updatePayload).eq('id', bookingId);
+        const { error: updateError } = await supabaseClient.from('bookings').update(updatePayload).eq('id', finalBookingId);
         if (updateError) throw new Error(`Booking update failed: ${updateError.message}`);
       }
 
@@ -809,6 +896,155 @@ serve(async (req) => {
       }
 
       return new Response(JSON.stringify({ success: true, bookingId: finalBookingId }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'confirm-wallet') {
+      const { bookingId, bookingDetails } = body;
+      const finalBookingId = bookingId === 'pending' ? null : bookingId;
+
+      // 1. Fetch details for atomic creation if needed
+      const details = bookingDetails || {};
+      const ground_id = details.ground_id;
+      const amountToDeduct = Number(details.total_amount ?? 0);
+
+      if (amountToDeduct <= 0) throw new Error('Invalid payment amount.');
+
+      // 2. Atomic Wallet Deduction
+      const { data: walletRes, error: walletErr } = await supabaseClient.rpc('process_wallet_transaction', {
+        p_user_id: user.id,
+        p_amount: -amountToDeduct, // negative for 'used'
+        p_type: 'used',
+        p_description: `Payment for booking at ground ID: ${ground_id}`,
+        p_booking_id: finalBookingId
+      });
+
+      if (walletErr || !walletRes?.success) {
+        throw new Error(walletRes?.error || walletErr?.message || 'Wallet deduction failed.');
+      }
+
+      let actualBookingId = finalBookingId;
+
+      // 3. Create/Update Booking
+      if (!actualBookingId) {
+        const { data: ground } = await supabaseClient.from('grounds').select('pitch_type, owner:profiles!owner_id(charge_platform_fee)').eq('id', ground_id).single();
+        
+        const breakdown = calculateFinalAmounts(details, ground?.pitch_type, settings, ground?.owner?.charge_platform_fee === false);
+
+        const { data: newBooking, error: insertError } = await supabaseClient
+          .from('bookings')
+          .insert({
+            user_id: user.id,
+            ground_id: details.ground_id,
+            booking_date: details.booking_date,
+            start_time: details.start_time,
+            end_time: details.end_time,
+            total_hours: Number(details.total_hours ?? 1),
+            price_per_hour: breakdown.pricePerHour,
+            total_amount: breakdown.netAmount,
+            ground_price: breakdown.groundPrice,
+            platform_fee_user: breakdown.platformFeeUser,
+            platform_fee_owner: breakdown.platformFeeOwner,
+            gst_user: breakdown.gstUser,
+            gst_owner: breakdown.gstOwner,
+            total_charged: breakdown.totalCharged,
+            owner_settlement: breakdown.ownerSettlement,
+            byg_net_revenue: breakdown.bygNetRevenue,
+            coupon_id: details.coupon_id,
+            discount_amount: breakdown.discountAmount,
+            status: 'confirmed',
+            payment_method: 'wallet',
+            payment_received: true,
+            notes: (details.team_type === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ' (Paid via Wallet)',
+          })
+          .select('id')
+          .single();
+
+        if (insertError) throw insertError;
+        actualBookingId = newBooking.id;
+      } else {
+        await supabaseClient.from('bookings').update({
+          status: 'confirmed',
+          payment_method: 'wallet',
+          payment_received: true,
+          notes: 'Paid via Wallet'
+        }).eq('id', actualBookingId);
+      }
+
+      // Record transaction
+      await supabaseClient.from('transactions').insert({
+        booking_id: actualBookingId,
+        user_id: user.id,
+        amount: amountToDeduct,
+        status: 'completed',
+        payment_method: 'wallet',
+        transaction_reference: 'WALLET_' + Date.now(),
+      });
+
+      return new Response(JSON.stringify({ success: true, bookingId: actualBookingId }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'refund-to-wallet') {
+      const { bookingId } = body;
+      if (!bookingId) throw new Error('Booking ID required for refund.');
+
+      // 1. Verify User Role (Admin or Owner)
+      const { data: adminProfile } = await supabaseClient.from('profiles').select('role').eq('id', user.id).single();
+      if (adminProfile?.role !== 'super_admin' && adminProfile?.role !== 'ground_owner') {
+        throw new Error('Unauthorized: Only admins or owners can process refunds.');
+      }
+
+      // 2. Fetch Booking
+      const { data: booking, error: bError } = await supabaseClient
+        .from('bookings')
+        .select('*, ground:grounds(name, owner_id)')
+        .eq('id', bookingId)
+        .single();
+
+      if (bError || !booking) throw new Error('Booking not found.');
+      if (booking.status === 'cancelled') throw new Error('Booking is already cancelled.');
+
+      // 3. Process Refund to Wallet
+      const refundAmount = Number(booking.total_amount);
+
+      const { data: refundRes, error: refundErr } = await supabaseClient.rpc('process_wallet_transaction', {
+        p_user_id: booking.user_id, // Refund to the customer
+        p_amount: refundAmount,
+        p_type: 'refund',
+        p_description: `Refund for cancelled booking at ${booking.ground?.name}`,
+        p_booking_id: bookingId
+      });
+
+      if (refundErr || !refundRes?.success) {
+        throw new Error(refundRes?.error || refundErr?.message || 'Refund processing failed.');
+      }
+
+      // 4. Update Booking Status
+      const { error: updateError } = await supabaseClient
+        .from('bookings')
+        .update({ 
+          status: 'cancelled', 
+          notes: (booking.notes || '') + ` (Refunded ${refundAmount} to wallet by ${adminProfile.role})` 
+        })
+        .eq('id', bookingId);
+
+      if (updateError) throw updateError;
+
+      // 5. Reverse Owner Settlement if applicable
+      if (booking.payment_received && booking.ground?.owner_id && booking.payment_method !== 'cash') {
+         await supabaseClient.rpc('process_wallet_transaction', {
+            p_user_id: booking.ground.owner_id,
+            p_amount: -Number(booking.owner_settlement || booking.total_amount),
+            p_type: 'used',
+            p_description: `Revenue reversal for cancelled booking ${bookingId}`,
+            p_booking_id: bookingId
+         });
+      }
+
+      return new Response(JSON.stringify({ success: true, message: 'Refund processed to wallet.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
