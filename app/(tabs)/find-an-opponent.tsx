@@ -326,21 +326,6 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
             showsVerticalScrollIndicator={false}
             ListHeaderComponent={
               <>
-                <View style={width >= 900 ? styles.desktopTabContainer : styles.webTabContainer}>
-                  <TouchableOpacity
-                    style={styles.tab}
-                    onPress={() => router.push('/book-my-ground' as any)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.tabText}>Book a Ground</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.tab, styles.activeTab]}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.activeTabText}>Find an Opponent</Text>
-                  </TouchableOpacity>
-                </View>
 
                 <View style={[styles.header, styles.webHeader]}>
                   <View style={{ flex: 1 }}>
@@ -492,7 +477,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
               )}
               keyExtractor={item => item.id}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={[styles.listNative, { paddingTop: 110 + insets.top, paddingBottom: isWeb ? 64 : 100 }]}
+              contentContainerStyle={[styles.listNative, { paddingTop: 115 + insets.top, paddingBottom: isWeb ? 64 : 100 }]}
               refreshControl={
                 <RefreshControl
                   refreshing={loading}
@@ -648,7 +633,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
               keyExtractor={item => item.id}
               contentContainerStyle={[
                 styles.listNative, 
-                { paddingTop: 105 + insets.top, paddingBottom: isWeb ? 64 : 100 },
+                { paddingTop: 115 + insets.top, paddingBottom: isWeb ? 64 : 100 },
                 numColumns > 1 && { paddingHorizontal: 8 }
               ]}
               refreshControl={

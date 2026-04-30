@@ -176,26 +176,8 @@ export default function BookMyGroundPage() {
         >
           <View style={[
             styles.page,
-            width < 900 && { paddingTop: 64 + insets.top, paddingHorizontal: 0 }
+            width < 900 && { paddingTop: 100 + insets.top, paddingHorizontal: 0 }
           ]}>
-            {width >= 900 && (
-              <View style={styles.tabContainer}>
-                <TouchableOpacity
-                  style={[styles.tab, activeTab === 'book' && styles.activeTab]}
-                  activeOpacity={0.8}
-                  onPress={() => setActiveTab('book')}
-                >
-                  <Text style={[styles.tabText, activeTab === 'book' && styles.activeTabText]}>Book a Ground</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.tab}
-                  activeOpacity={0.8}
-                  onPress={() => router.push('/find-an-opponent' as any)}
-                >
-                  <Text style={styles.tabText}>Find an Opponent</Text>
-                </TouchableOpacity>
-              </View>
-            )}
 
             {activeTab === 'book' ? (
               <LandingBookingForm

@@ -25,7 +25,8 @@ import { normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
 import Modal from '@/components/ui/Modal';
 import { slugifyGroundSegment } from '@/utils/groundSlug';
 import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
-import { Calendar, X, Swords, Save, CheckCircle2, Circle } from 'lucide-react-native';
+import { Calendar, X, Swords, Save, CheckCircle2, Circle, Clock, TrendingUp } from 'lucide-react-native';
+import { Svg, Circle as SvgCircle } from 'react-native-svg';
 import { useUI } from '@/contexts/UIContext';
 
 function NameInputCell({ booking, onSave }: { booking: BookingWithDetails, onSave: (id: string, name: string) => Promise<void> }) {
@@ -86,6 +87,13 @@ export default function BookingsScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const PAGE_SIZE = 10;
   const [totalCount, setTotalCount] = useState(0);
+  const [userStats, setUserStats] = useState({
+    totalHours: 0,
+    uniqueGrounds: 0,
+    cancelledCount: 0,
+    percent: 0,
+    level: 'Rookie'
+  });
   
   const { width } = useWindowDimensions();
   const isWeb = Platform.OS === 'web';
@@ -121,6 +129,7 @@ export default function BookingsScreen() {
   useEffect(() => {
     if (user) {
       loadBookings(0);
+      loadUserStats();
     }
   }, [user, profile, activeTab, ownerScope, selectedDate, searchQuery]);
 
@@ -212,6 +221,67 @@ export default function BookingsScreen() {
     } finally {
       setLoading(false);
       setLoadingMore(false);
+    }
+  };
+
+  const loadUserStats = async () => {
+    if (!user) return;
+    try {
+      // Fetch all confirmed and cancelled bookings for the user to calculate stats
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('id, start_time, end_time, ground_id, status')
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      if (!data) return;
+
+      const confirmed = data.filter(b => b.status === 'confirmed');
+      const cancelled = data.filter(b => b.status === 'cancelled');
+      
+      // Calculate total hours
+      let totalMinutes = 0;
+      confirmed.forEach(b => {
+        if (b.start_time && b.end_time) {
+          const startArr = b.start_time.split(':').map(Number);
+          const endArr = b.end_time.split(':').map(Number);
+          const startMins = startArr[0] * 60 + startArr[1];
+          let endMins = endArr[0] * 60 + endArr[1];
+          if (endMins < startMins) endMins += 24 * 60; // handle overnight
+          totalMinutes += (endMins - startMins);
+        }
+      });
+
+      const totalHours = Math.floor(totalMinutes / 60);
+      const uniqueGrounds = new Set(confirmed.map(b => b.ground_id)).size;
+      const cancelledCount = cancelled.length;
+
+      // Determine level and progress percentage
+      let level = 'Rookie';
+      let percent = 0;
+      if (totalHours >= 100) {
+        level = 'Legend';
+        percent = 100;
+      } else if (totalHours >= 50) {
+        level = 'Pro';
+        percent = ((totalHours - 50) / 50) * 100;
+      } else if (totalHours >= 10) {
+        level = 'Regular';
+        percent = ((totalHours - 10) / 40) * 100;
+      } else {
+        level = 'Rookie';
+        percent = (totalHours / 10) * 100;
+      }
+
+      setUserStats({
+        totalHours,
+        uniqueGrounds,
+        cancelledCount,
+        percent: Math.round(percent),
+        level
+      });
+    } catch (err) {
+      console.error('Error loading user stats:', err);
     }
   };
 
@@ -616,23 +686,41 @@ export default function BookingsScreen() {
                 </View>
               </View>
 
-              {/* Balance & Stats */}
+              {/* Activity & Stats */}
               <View style={styles.panelCard}>
                 <Text style={styles.panelTitle}>Activity & Stats</Text>
                 <View style={styles.statsRow}>
                   <View style={styles.donutWrap}>
-                    <View style={styles.donut} />
+                    <Svg width={70} height={70} style={{ transform: [{ rotate: '-90deg' }] }}>
+                      <SvgCircle
+                        cx={35}
+                        cy={35}
+                        r={32}
+                        stroke="#F1F5F9"
+                        strokeWidth={6}
+                        fill="none"
+                      />
+                      <SvgCircle
+                        cx={35}
+                        cy={35}
+                        r={32}
+                        stroke="#00ea6b"
+                        strokeWidth={6}
+                        strokeDasharray={2 * Math.PI * 32}
+                        strokeDashoffset={2 * Math.PI * 32 * (1 - userStats.percent / 100)}
+                        strokeLinecap="round"
+                        fill="none"
+                      />
+                    </Svg>
                     <View style={styles.donutCenter}>
-                      <Text style={styles.donutPct}>
-                        {Math.min(100, Math.round((bookings.filter(b => isDateInPast(b.booking_date) && b.status === 'confirmed').length / 20) * 100))}%
-                      </Text>
+                      <Text style={styles.donutPct}>{userStats.percent}%</Text>
                     </View>
                   </View>
                   <View style={styles.statsText}>
                     <Text style={styles.statsSmall}>Match Activity</Text>
-                    <Text style={styles.statsBold}>Level: Regular</Text>
+                    <Text style={styles.statsBold}>Level: {userStats.level}</Text>
                     <Text style={[styles.statsBold, { color: '#00ea6b', marginTop: 4 }]}>
-                      {bookings.filter(b => isDateInPast(b.booking_date) && b.status === 'confirmed').length * 2} hrs
+                      {userStats.totalHours} hrs
                     </Text>
                     <Text style={styles.statsSmall}>played total</Text>
                   </View>
@@ -642,11 +730,11 @@ export default function BookingsScreen() {
 
                 <View style={styles.statsGrid}>
                   <View style={styles.statsGridItem}>
-                    <Text style={styles.gridValue}>{new Set(bookings.map(b => b.ground_id)).size}</Text>
+                    <Text style={styles.gridValue}>{userStats.uniqueGrounds}</Text>
                     <Text style={styles.gridLabel}>Grounds</Text>
                   </View>
                   <View style={styles.statsGridItem}>
-                    <Text style={styles.gridValue}>{bookings.filter(b => b.status === 'cancelled').length}</Text>
+                    <Text style={styles.gridValue}>{userStats.cancelledCount}</Text>
                     <Text style={styles.gridLabel}>Cancelled</Text>
                   </View>
                 </View>

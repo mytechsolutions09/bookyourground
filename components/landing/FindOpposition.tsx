@@ -1,25 +1,86 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, useWindowDimensions } from 'react-native';
-import { Users, Sword, Trophy, ArrowRight } from 'lucide-react-native';
+import { Users, Sword, Trophy, ArrowRight, Star } from 'lucide-react-native';
 import { router } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  withTiming, 
+  withRepeat, 
+  withSequence,
+  withDelay,
+  Easing,
+  interpolate
+} from 'react-native-reanimated';
+import { Svg } from 'react-native-svg';
 
 export default function FindOpposition() {
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
 
+  // Animation values
+  const opacity = useSharedValue(0);
+  const translateY = useSharedValue(20);
+  const card1X = useSharedValue(-50);
+  const card2X = useSharedValue(50);
+  const pulse = useSharedValue(1);
+
+  React.useEffect(() => {
+    opacity.value = withTiming(1, { duration: 800 });
+    translateY.value = withTiming(0, { duration: 800 });
+    card1X.value = withDelay(400, withTiming(0, { duration: 1000, easing: Easing.out(Easing.exp) }));
+    card2X.value = withDelay(600, withTiming(0, { duration: 1000, easing: Easing.out(Easing.exp) }));
+    
+    pulse.value = withRepeat(
+      withSequence(
+        withTiming(1.1, { duration: 1000 }),
+        withTiming(1, { duration: 1000 })
+      ),
+      -1,
+      true
+    );
+  }, []);
+
+  const animatedTextStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: translateY.value }]
+  }));
+
+  const card1Style = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateX: card1X.value }]
+  }));
+
+  const card2Style = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateX: card2X.value }]
+  }));
+
+  const pulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulse.value }],
+    opacity: interpolate(pulse.value, [1, 1.1], [0.1, 0.2])
+  }));
+
+
   return (
-    <View style={[styles.root, isMobile && { paddingVertical: 40 }]}>
+    <View style={[styles.root, isMobile && { paddingVertical: 60 }]}>
       <View style={styles.container}>
         <View style={[styles.content, isMobile && styles.contentMobile]}>
-          <View style={styles.textContainer}>
-            <View style={styles.badge}>
+          <Animated.View style={[styles.textContainer, animatedTextStyle]}>
+            <LinearGradient
+              colors={['#F0FDF4', '#DCFCE7']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.badge}
+            >
               <Users size={14} color="#01b854" strokeWidth={3} />
               <Text style={styles.badgeText}>MATCHMAKING</Text>
-            </View>
+            </LinearGradient>
             
-            <Text style={styles.title}>Find an Opposition</Text>
+            <Text style={styles.title}>Find an{"\n"}<Text style={{ color: '#01b854' }}>Opposition</Text></Text>
             <Text style={styles.subtitle}>
-              Ready for a challenge? Connect with teams in your area for friendly or competitive matches. 
+              Connect with elite teams in your area for competitive matches. 
               Find the perfect opponents that match your skill level and play style.
             </Text>
 
@@ -41,40 +102,73 @@ export default function FindOpposition() {
             <Pressable 
               style={({ pressed }) => [
                 styles.ctaButton,
-                pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }
+                pressed && { transform: [{ scale: 0.98 }] }
               ]}
               onPress={() => router.push('/(tabs)/find-an-opponent' as any)}
             >
+              <LinearGradient
+                colors={['#01b854', '#009d47']}
+                style={StyleSheet.absoluteFill}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              />
               <Text style={styles.ctaText}>Find a Match</Text>
               <ArrowRight size={18} color="#FFFFFF" strokeWidth={2.5} />
             </Pressable>
-          </View>
+          </Animated.View>
 
           <View style={[styles.imagePlaceholder, isMobile && styles.imagePlaceholderMobile]}>
-            {/* Using a stylized visual representation of teams */}
-            <View style={styles.teamCard1}>
-              <View style={styles.teamAvatarPlaceholder} />
+            <Animated.View style={[styles.pulseCircle, pulseStyle]} />
+            
+            <Animated.View style={[styles.teamCard1, card1Style]}>
+              <View style={styles.cardGlow} />
+              <LinearGradient
+                colors={['#F8FAFC', '#FFFFFF']}
+                style={styles.teamAvatarPlaceholder}
+              >
+                <Users size={24} color="#94A3B8" />
+              </LinearGradient>
               <View style={{ flex: 1 }}>
                 <Text style={styles.teamName}>Strikers FC</Text>
-                <Text style={styles.teamRank}>Rank #4 • Pro Level</Text>
+                <View style={styles.ratingRow}>
+                  <Star size={10} color="#F59E0B" fill="#F59E0B" />
+                  <Text style={styles.teamRank}>Rank #4 • Pro Level</Text>
+                </View>
               </View>
-              <View style={styles.vsBadge}>
+              <LinearGradient
+                colors={['#1E293B', '#0F172A']}
+                style={styles.vsBadge}
+              >
                 <Text style={styles.vsText}>VS</Text>
-              </View>
-            </View>
+              </LinearGradient>
+            </Animated.View>
             
-            <View style={styles.teamCard2}>
-              <View style={[styles.teamAvatarPlaceholder, { backgroundColor: '#F0FDF4' }]} />
+            <Animated.View style={[styles.teamCard2, card2Style]}>
+              <View style={styles.cardGlow} />
+              <LinearGradient
+                colors={['#F0FDF4', '#FFFFFF']}
+                style={styles.teamAvatarPlaceholder}
+              >
+                <Users size={24} color="#01b854" />
+              </LinearGradient>
               <View style={{ flex: 1 }}>
                 <Text style={styles.teamName}>United Kings</Text>
-                <Text style={styles.teamRank}>Rank #12 • Semi-Pro</Text>
+                <View style={styles.ratingRow}>
+                  <Star size={10} color="#F59E0B" fill="#F59E0B" />
+                  <Text style={styles.teamRank}>Rank #12 • Semi-Pro</Text>
+                </View>
               </View>
               <View style={styles.matchStatus}>
+                <View style={styles.liveIndicator} />
                 <Text style={styles.matchStatusText}>Live</Text>
               </View>
-            </View>
+            </Animated.View>
 
-            <View style={styles.glowEffect} />
+            {/* Decorative Connection Line */}
+            <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
+               {/* Just a subtle dash line using a view as fallback if Svg not easy */}
+            </Svg>
+            <View style={styles.connectionLine} />
           </View>
         </View>
       </View>
@@ -171,7 +265,6 @@ const styles = StyleSheet.create({
   ctaButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#01b854',
     paddingHorizontal: 32,
     paddingVertical: 18,
     borderRadius: 16,
@@ -179,9 +272,10 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     shadowColor: '#01b854',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 8,
+    overflow: 'hidden',
   },
   ctaText: {
     fontSize: 16,
@@ -191,102 +285,132 @@ const styles = StyleSheet.create({
   },
   imagePlaceholder: {
     flex: 1,
-    height: 400,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 32,
+    height: 440,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 40,
     position: 'relative',
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
-    overflow: 'hidden',
+    overflow: 'visible',
   },
   imagePlaceholderMobile: {
     width: '100%',
+    height: 340,
+  },
+  pulseCircle: {
+    position: 'absolute',
+    width: 300,
     height: 300,
+    borderRadius: 150,
+    backgroundColor: '#01b854',
+    zIndex: 0,
   },
   teamCard1: {
-    width: '80%',
+    width: '85%',
     backgroundColor: '#FFFFFF',
     padding: 16,
-    borderRadius: 20,
+    borderRadius: 24,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
     shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 15,
+    shadowOpacity: 0.1,
+    shadowRadius: 25,
+    elevation: 10,
     position: 'absolute',
-    top: '20%',
-    left: '10%',
+    top: '15%',
+    left: '5%',
     zIndex: 2,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
   },
   teamCard2: {
-    width: '80%',
+    width: '85%',
     backgroundColor: '#FFFFFF',
     padding: 16,
-    borderRadius: 20,
+    borderRadius: 24,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
     shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 15,
+    shadowOpacity: 0.1,
+    shadowRadius: 25,
+    elevation: 10,
     position: 'absolute',
-    bottom: '20%',
-    right: '10%',
+    bottom: '15%',
+    right: '5%',
     zIndex: 1,
+  },
+  cardGlow: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: 'rgba(1, 184, 84, 0.1)',
   },
   teamAvatarPlaceholder: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: '#F1F5F9',
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   teamName: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '800',
     color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
   },
   teamRank: {
-    fontSize: 12,
-    color: '#94A3B8',
+    fontSize: 13,
+    color: '#64748B',
     fontWeight: '600',
+    fontFamily: 'Inter',
   },
   vsBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    backgroundColor: '#0F172A',
-    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
   },
   vsText: {
     color: '#FFFFFF',
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '900',
+    fontFamily: 'Inter',
   },
   matchStatus: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     backgroundColor: '#F0FDF4',
-    borderRadius: 6,
+    borderRadius: 10,
+    gap: 6,
+  },
+  liveIndicator: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#01b854',
   },
   matchStatusText: {
     color: '#01b854',
-    fontSize: 10,
-    fontWeight: '900',
+    fontSize: 11,
+    fontWeight: '800',
+    fontFamily: 'Inter',
   },
-  glowEffect: {
+  connectionLine: {
     position: 'absolute',
-    top: '50%',
-    left: '50%',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: 'rgba(1, 184, 84, 0.05)',
-    transform: [{ translateX: -100 }, { translateY: -100 }],
+    width: 2,
+    height: '40%',
+    backgroundColor: '#F1F5F9',
+    zIndex: 0,
+    opacity: 0.5,
   }
 });
