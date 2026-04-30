@@ -71,9 +71,9 @@ export default function MobileAppNavbar({
 
 const styles = StyleSheet.create({
   navbar: {
-    minHeight: Platform.OS === 'web' ? 60 : 80,
+    minHeight: Platform.OS === 'web' ? 70 : 90,
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'web' ? 10 : 28,
+    paddingTop: Platform.OS === 'web' ? 10 : 32,
     paddingBottom: 8,
     justifyContent: 'flex-end',
     alignItems: 'center',
@@ -90,8 +90,8 @@ const styles = StyleSheet.create({
   logo: {
     marginTop: 8,
     marginBottom: 2,
-    height: 40,
-    width: 200,
+    height: 50,
+    width: 250,
     maxWidth: '100%',
   },
   titleText: {

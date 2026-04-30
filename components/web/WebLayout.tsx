@@ -876,7 +876,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                           source={
                             profile?.avatar_url
                               ? { uri: profile.avatar_url }
-                              : require('@/assets/images/default-avatar.png')
+                              : require('@/assets/images/default-avatar.jpg')
                           }
                           style={styles.userAvatar}
                         />
@@ -1199,7 +1199,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
   },
   header: {
-    height: 72,
+    height: 84,
     backgroundColor: '#043529',
     justifyContent: 'center',
     zIndex: 100,
@@ -1226,7 +1226,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 72,
+    height: 84,
     zIndex: 2000,
     backgroundColor: 'transparent',
     borderBottomWidth: 0,
@@ -1268,12 +1268,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoImage: {
-    height: 40,
-    width: 140,
+    height: 52,
+    width: 180,
   },
   logoImageCompact: {
-    height: 32,
-    width: 110,
+    height: 40,
+    width: 140,
   },
   headerRight: {
     flexDirection: 'row',

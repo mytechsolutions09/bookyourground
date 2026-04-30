@@ -14,7 +14,10 @@ export default function PrivacyScreen() {
           <Text style={styles.sectionTitle}>1. What we collect</Text>
           <Text style={styles.paragraph}>
             We collect information you provide directly to us, such as your name, email
-            address, phone number, and booking details. We also collect technical
+            address, phone number, and booking details. When you use certain features
+            of the App, we may also request access to your device's **Camera** and
+            **Photo Library** to allow you to take and upload photos of sports grounds
+            or update your profile picture. We also collect technical
             information like device type and basic usage analytics to improve the product.
           </Text>
 

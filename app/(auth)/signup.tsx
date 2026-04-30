@@ -750,7 +750,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 10,
   },
-  logo: { width: 200, height: 50 },
+  logo: { width: 240, height: 60 },
   headingWrap: { alignItems: 'center', marginTop: 0, marginBottom: 16 },
   card: { 
     backgroundColor: 'rgba(255, 255, 255, 0.2)', 

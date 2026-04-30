@@ -39,7 +39,7 @@ export default function AdminInventoryScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [selectedDateFilter, setSelectedDateFilter] = useState<string | null>(new Date().toISOString().split('T')[0]);
-  const [daysToShow, setDaysToShow] = useState<number>(7);
+  const [daysToShow, setDaysToShow] = useState<number | 'L30'>(7);
 
   const isWeb = Platform.OS === 'web';
 
@@ -64,9 +64,20 @@ export default function AdminInventoryScreen() {
       if (ownersError) throw ownersError;
 
       // 2. Fetch bookings for selected days range starting from selected date
-      const pivotDate = selectedDateFilter ? new Date(selectedDateFilter) : new Date();
-      const startDate = pivotDate.toISOString().split('T')[0];
-      const endDate = new Date(pivotDate.getTime() + daysToShow * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      let startDate: string;
+      let endDate: string;
+
+      if (daysToShow === 'L30') {
+        const today = new Date();
+        const thirtyDaysAgo = new Date(today.getTime() - 29 * 24 * 60 * 60 * 1000);
+        startDate = thirtyDaysAgo.toISOString().split('T')[0];
+        endDate = today.toISOString().split('T')[0];
+      } else {
+        const pivotDate = selectedDateFilter ? new Date(selectedDateFilter) : new Date();
+        startDate = pivotDate.toISOString().split('T')[0];
+        const days = typeof daysToShow === 'number' ? daysToShow : 7;
+        endDate = new Date(pivotDate.getTime() + days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      }
 
       const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
@@ -171,13 +182,27 @@ export default function AdminInventoryScreen() {
     return (
       <View style={styles.slotsGrid}>
         {filteredSlots.map((s: any) => {
+          const now = new Date();
+          const todayStr = now.toLocaleDateString('en-CA'); // YYYY-MM-DD
+          const currentTimeStr = now.toLocaleTimeString('en-GB', { hour12: false, hour: '2-digit', minute: '2-digit' });
+          const slotStartTime = normalizeDbTimeToHHMM(s.start_time) || '00:00';
+
+          const isPastDate = dateStr < todayStr;
+          const isPastTime = dateStr === todayStr && slotStartTime < currentTimeStr;
+          const isSlotInPast = isPastDate || isPastTime;
+
           const occupancy = getOccupancy(ground.id, dateStr, s.start_time, ground.pitch_type);
           const statusText = getSlotStatus(occupancy);
           
           let statusColor = '#F3F4F6'; // Empty
           let textColor = '#6B7280';
+          let displayStatus = statusText;
 
-          if (statusText === 'FULL') {
+          if (isSlotInPast) {
+            statusColor = '#F9FAFB';
+            textColor = '#9CA3AF';
+            displayStatus = 'PAST';
+          } else if (statusText === 'FULL') {
             statusColor = '#DEF7EC';
             textColor = '#03543F';
           } else if (statusText === 'PARTIAL') {
@@ -190,7 +215,7 @@ export default function AdminInventoryScreen() {
               <Text style={[styles.slotTime, { color: textColor }]}>
                 {normalizeDbTimeToHHMM(s.start_time)}
               </Text>
-              <Text style={[styles.slotStatus, { color: textColor }]}>{statusText}</Text>
+              <Text style={[styles.slotStatus, { color: textColor }]}>{displayStatus}</Text>
             </View>
           );
         })}
@@ -336,13 +361,15 @@ export default function AdminInventoryScreen() {
                </View>
   
                <View style={styles.rangeSelector}>
-                  {[7, 14, 30, 90].map(days => (
+                  {[7, 14, 30, 90, 'L30'].map(days => (
                     <TouchableOpacity
-                      key={days}
-                      onPress={() => setDaysToShow(days)}
+                      key={days.toString()}
+                      onPress={() => setDaysToShow(days as any)}
                       style={[styles.rangeBtn, daysToShow === days && styles.rangeBtnActive]}
                     >
-                      <Text style={[styles.rangeBtnText, daysToShow === days && styles.rangeBtnTextActive]}>{days}D</Text>
+                      <Text style={[styles.rangeBtnText, daysToShow === days && styles.rangeBtnTextActive]}>
+                        {days === 'L30' ? 'Past' : `${days}D`}
+                      </Text>
                     </TouchableOpacity>
                   ))}
                </View>
@@ -438,13 +465,15 @@ export default function AdminInventoryScreen() {
 
             {currentGround ? (
               <View style={styles.inventoryStaticList}>
-                {Array.from({ length: daysToShow }).map((_, i) => {
+                {Array.from({ length: daysToShow === 'L30' ? 30 : daysToShow }).map((_, i) => {
                   const d = new Date();
-                  if (selectedDateFilter) {
+                  if (daysToShow === 'L30') {
+                    d.setDate(d.getDate() - 29 + i);
+                  } else if (selectedDateFilter) {
                     const [y, m, day] = selectedDateFilter.split('-').map(Number);
                     d.setFullYear(y, m - 1, day);
+                    d.setDate(d.getDate() + i);
                   }
-                  d.setDate(d.getDate() + i);
                   const dateStr = d.toISOString().split('T')[0];
                   const displayDate = d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
 

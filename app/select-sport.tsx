@@ -47,12 +47,12 @@ const TEAMS_OPTIONS = [
   { id: 'both', label: 'Both Teams', icon: Trophy },
 ];
 const SPORT_ICON_MAP: Record<string, any> = {
-  'Box Cricket': { icon: Swords, bg: '#043529', image: require('@/assets/images/box_cricket_bg.png') },
-  'Cricket Ground': { icon: Trophy, bg: '#064e3b', image: require('@/assets/images/cricket_bg.png') },
-  'Football': { icon: Trophy, bg: '#024421', image: require('@/assets/images/football_bg.png') },
+  'Box Cricket': { icon: Swords, bg: '#043529', image: require('@/assets/images/box_cricket_bg.jpg') },
+  'Cricket Ground': { icon: Trophy, bg: '#064e3b', image: require('@/assets/images/cricket_bg.jpg') },
+  'Football': { icon: Trophy, bg: '#024421', image: require('@/assets/images/football_bg.jpg') },
 };
 
-const DEFAULT_SPORT_ASSETS = { icon: Trophy, bg: '#043529', image: require('@/assets/images/hero-bg.png') };
+const DEFAULT_SPORT_ASSETS = { icon: Trophy, bg: '#043529', image: require('@/assets/images/hero-bg.jpg') };
 
 
 // Native date formatting helpers

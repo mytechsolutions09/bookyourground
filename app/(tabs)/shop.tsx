@@ -389,7 +389,7 @@ export default function ShopScreen() {
       ) : (
         <Animated.View style={[styles.heroWrapper, bannerAnimatedStyle]}>
           <Image 
-            source={activeCategory === 'Shoes' ? require('@/assets/shoes-hero.png') : require('@/assets/shop-hero.png')} 
+            source={activeCategory === 'Shoes' ? require('@/assets/shoes-hero.jpg') : require('@/assets/shop-hero.jpg')} 
             style={styles.heroImageBg} 
           />
           <LinearGradient

@@ -219,6 +219,8 @@ export function useTeamChat(teamId: string) {
     } finally {
       setSending(false);
     }
+  };
+
   const setTyping = (isTyping: boolean) => {
     if (!activeChannel || !user) return;
     activeChannel.send({

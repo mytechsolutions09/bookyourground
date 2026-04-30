@@ -625,7 +625,7 @@ const styles = StyleSheet.create({
   background: { flex: 1, width: '100%', height: '100%' },
   scrollContent: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 60, paddingBottom: 40 },
   logoWrap: { alignItems: 'center', marginBottom: 20 },
-  logo: { width: 180, height: 48 },
+  logo: { width: 240, height: 60 },
   headingWrap: { alignItems: 'center', marginBottom: 16 },
   title: { fontSize: 24, fontWeight: '800', color: '#FFFFFF', marginBottom: 4 },
   subtitle: { fontSize: 13, color: '#E2E8F0', textAlign: 'center' },
@@ -697,7 +697,7 @@ const webStyles = StyleSheet.create({
     overflow: 'hidden',
   },
   header: { marginBottom: 20, alignItems: 'center' },
-  logoImage: { width: 160, height: 40, marginBottom: 8 },
+  logoImage: { width: 220, height: 55, marginBottom: 8 },
   formTitle: { 
     fontSize: 26, 
     fontWeight: '900', 
