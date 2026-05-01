@@ -2447,6 +2447,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
           {searchResultsBody}
         </ContainerComponent>
       ) : null}
+      </View>
     )
   );
 }
