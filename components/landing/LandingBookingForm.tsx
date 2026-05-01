@@ -964,6 +964,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
   const webColumnCount =
     !isWeb ? 1 : windowWidth >= 960 ? 3 : windowWidth >= 640 ? 2 : 1;
   const isSearchTwoColumn = isWeb && windowWidth >= 900;
+  const isSearchThreeColumn = isWeb && windowWidth >= 1300;
 
   const webGridSectionStyle = useMemo(() => {
     if (!isWeb || webColumnCount <= 1) return undefined;
@@ -1644,6 +1645,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
             style={[
               styles.searchResultsGrid,
               isSearchTwoColumn && styles.searchResultsGridTwoCol,
+              isSearchThreeColumn && styles.searchResultsGridThreeCol,
             ]}
           >
             {searchResults.map((g) => {
@@ -1675,6 +1677,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                   style={[
                     styles.searchResultTile,
                     isSearchTwoColumn && styles.searchResultTileHalf,
+                    isSearchThreeColumn && styles.searchResultTileThird,
                   ]}
                 >
                    <GroundCard
@@ -2993,15 +2996,24 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
   searchResultsGridTwoCol: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    gap: 16,
+    justifyContent: 'flex-start',
+  },
+  searchResultsGridThreeCol: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 20,
+    justifyContent: 'flex-start',
   },
   searchResultTile: {
     width: '100%',
     alignSelf: 'stretch',
   },
   searchResultTileHalf: {
-    width: '48%',
-    maxWidth: '48%',
+    width: 'calc(50% - 10px)' as any,
+  },
+  searchResultTileThird: {
+    width: 'calc(33.33% - 14px)' as any,
   },
   smallMuted: {
     fontSize: 13,
