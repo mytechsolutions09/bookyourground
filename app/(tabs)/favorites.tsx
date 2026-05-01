@@ -133,7 +133,7 @@ export default function FavoritesScreen() {
   const renderItem = (item: any) => {
     if (activeTab === 'grounds') {
       return (
-        <View key={item.id}>
+        <View key={item.id} style={{ marginBottom: 12 }}>
           <GroundCard
             ground={item}
             isFavorite={true}
@@ -240,35 +240,21 @@ export default function FavoritesScreen() {
       >
         <View style={styles.mainLayout}>
           <View style={styles.centerContent}>
-              <View style={[
-                styles.favoritesList,
-                !isCompact && styles.favoritesGridWeb,
-                !isCompact && width >= 1200 && styles.favoritesGridThreeCol
-              ]}>
-                {loading ? (
-                  <ActivityIndicator size="large" color="#01b854" style={{ marginTop: 40 }} />
-                ) : (activeTab === 'grounds' ? favorites : shopFavorites).length === 0 ? (
-                  <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 80, width: '100%' }}>
-                    <Heart size={48} color="#D1D5DB" strokeWidth={1.5} style={{ marginBottom: 16 }} />
-                    <Text style={{ fontSize: 20, fontWeight: '700', color: '#111827', fontFamily: 'Inter' }}>No Favorites Yet</Text>
-                    <Text style={{ fontSize: 15, color: '#6B7280', fontFamily: 'Inter', marginTop: 8 }}>
-                      Items you heart in {activeTab === 'grounds' ? 'Grounds' : 'Merchandise'} will appear here.
-                    </Text>
-                  </View>
-                ) : (
-                  (activeTab === 'grounds' ? favorites : shopFavorites).map(item => (
-                    <View 
-                      key={item.id} 
-                      style={[
-                        !isCompact && styles.favGridItem,
-                        !isCompact && width >= 1200 && styles.favGridItemThird
-                      ]}
-                    >
-                      {renderItem(item)}
-                    </View>
-                  ))
-                )}
-              </View>
+            <View style={styles.favoritesList}>
+              {loading ? (
+                <ActivityIndicator size="large" color="#01b854" style={{ marginTop: 40 }} />
+              ) : (activeTab === 'grounds' ? favorites : shopFavorites).length === 0 ? (
+                <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 80 }}>
+                  <Heart size={48} color="#D1D5DB" strokeWidth={1.5} style={{ marginBottom: 16 }} />
+                  <Text style={{ fontSize: 20, fontWeight: '700', color: '#111827', fontFamily: 'Inter' }}>No Favorites Yet</Text>
+                  <Text style={{ fontSize: 15, color: '#6B7280', fontFamily: 'Inter', marginTop: 8 }}>
+                    Items you heart in {activeTab === 'grounds' ? 'Grounds' : 'Merchandise'} will appear here.
+                  </Text>
+                </View>
+              ) : (
+                (activeTab === 'grounds' ? favorites : shopFavorites).map(item => renderItem(item))
+              )}
+            </View>
           </View>
           {!isCompact && renderRightPanel()}
         </View>
@@ -276,9 +262,11 @@ export default function FavoritesScreen() {
     </View>
   );
 
-  return Platform.OS === 'web' ? (
-    <WebLayout>{content}</WebLayout>
-  ) : (
+  if (Platform.OS === 'web') {
+    return <WebLayout>{content}</WebLayout>;
+  }
+
+  return (
     <View style={styles.nativeWrapper}>
       <MobileAppNavbar title="Favorites" titleColor="#043529" lightBg />
       {content}
@@ -398,20 +386,6 @@ const styles = StyleSheet.create({
   },
   favoritesList: {
     gap: 16,
-  },
-  favoritesGridWeb: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-  },
-  favoritesGridThreeCol: {
-    gap: 20,
-  },
-  favGridItem: {
-    width: 'calc(50% - 8px)' as any,
-  },
-  favGridItemThird: {
-    width: 'calc(33.33% - 14px)' as any,
   },
   favCard: {
     backgroundColor: '#FFFFFF',

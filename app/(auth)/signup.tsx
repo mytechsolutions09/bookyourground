@@ -803,24 +803,16 @@ const styles = StyleSheet.create({
   buttonRow: { flexDirection: 'row', gap: 12, marginTop: 16 },
   signUpBtn: { 
     flex: 1, 
-    backgroundColor: 'rgba(1, 184, 84, 0.4)', 
-    borderRadius: 14, 
-    height: 48, 
+    backgroundColor: '#1e293b', 
+    borderRadius: 12, 
+    height: 42, 
     alignItems: 'center', 
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
-    ...Platform.select({
-      web: {
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-      }
-    }) as any,
-    shadowColor: '#01b854',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowColor: '#1e293b',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
   },
   signUpBtnText: { 
     fontSize: 14, 
@@ -892,23 +884,15 @@ const webStyles = StyleSheet.create({
   buttonRow: { flexDirection: 'row', gap: 12, marginTop: 16 },
   button: { 
     flex: 1, 
-    backgroundColor: 'rgba(1, 184, 84, 0.4)', 
-    borderRadius: 14, 
-    height: 52, 
+    backgroundColor: '#1E293B', 
+    borderRadius: 12, 
+    height: 48, 
     alignItems: 'center', 
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
-    ...Platform.select({
-      web: {
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-      }
-    }) as any,
-    shadowColor: '#01b854',
-    shadowOffset: { width: 0, height: 10 },
+    shadowColor: '#1E293B',
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
-    shadowRadius: 20,
+    shadowRadius: 8,
   },
   buttonText: { 
     fontSize: 14, 

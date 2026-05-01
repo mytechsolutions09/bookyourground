@@ -27,9 +27,9 @@ serve(async (req) => {
       supabaseServiceRoleKey ?? ''
     )
 
-    console.log(`Processing booking confirmation for user: ${record.user_id}, ground: ${record.ground_id}`);
+    console.log(`Processing ${record.status} notification for booking: ${record.id}`);
 
-    // 2. Fetch User Profile, Auth User, and Ground Details (including Owner ID)
+    // 2. Fetch User Profile, Auth User, and Ground Details
     const [profileRes, userRes, groundRes] = await Promise.all([
       supabase.from('profiles').select('full_name').eq('id', record.user_id).single(),
       supabase.auth.admin.getUserById(record.user_id),
@@ -66,6 +66,9 @@ serve(async (req) => {
     const ownerName = ownerProfileRes.data?.full_name || 'Ground Owner';
 
     const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${ground.name} ${ground.address} ${ground.city}`)}`
+    
+    const isCancelled = record.status === 'cancelled';
+    const isRefunded = record.payment_method !== 'cash' && isCancelled;
 
     // 3. Prepare Email Contents
     const playerHtml = `
@@ -74,7 +77,7 @@ serve(async (req) => {
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Booking Confirmed</title>
+        <title>${isCancelled ? 'Booking Cancelled' : 'Booking Confirmed'}</title>
       </head>
       <body style="margin: 0; padding: 0; background-color: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
         <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f9fafb;">
@@ -83,10 +86,10 @@ serve(async (req) => {
               <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);">
                 <!-- Header -->
                 <tr>
-                  <td align="center" style="background-color: #043529; padding: 48px 24px;">
+                  <td align="center" style="background-color: ${isCancelled ? '#7f1d1d' : '#043529'}; padding: 48px 24px;">
                     <img src="https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/assets/logo.png" alt="BookYourGround" style="width: 180px; height: auto; display: block; margin: 0 auto;">
-                    <div style="margin-top: 24px; display: inline-block; background-color: rgba(2, 194, 89, 0.1); border: 1px solid #02c259; border-radius: 99px; padding: 6px 16px;">
-                      <p style="color: #02c259; margin: 0; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;">Booking Confirmed</p>
+                    <div style="margin-top: 24px; display: inline-block; background-color: ${isCancelled ? 'rgba(239, 68, 68, 0.1)' : 'rgba(2, 194, 89, 0.1)'}; border: 1px solid ${isCancelled ? '#ef4444' : '#02c259'}; border-radius: 99px; padding: 6px 16px;">
+                      <p style="color: ${isCancelled ? '#ef4444' : '#02c259'}; margin: 0; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;">${isCancelled ? 'Booking Cancelled' : 'Booking Confirmed'}</p>
                     </div>
                   </td>
                 </tr>
@@ -96,8 +99,26 @@ serve(async (req) => {
                   <td style="padding: 48px 40px;">
                     <h2 style="color: #111827; margin: 0 0 16px 0; font-size: 24px; font-weight: 800; letter-spacing: -0.025em;">Hi ${userFullName},</h2>
                     <p style="color: #4b5563; margin: 0 0 32px 0; font-size: 16px; line-height: 1.6;">
-                      Great news! Your booking at <span style="color: #043529; font-weight: 700;">${ground.name}</span> has been successfully confirmed. Get your gear ready and we'll see you on the field!
+                      ${isCancelled 
+                        ? `We're sorry to inform you that your booking at <span style="color: #7f1d1d; font-weight: 700;">${ground.name}</span> has been cancelled.`
+                        : `Great news! Your booking at <span style="color: #043529; font-weight: 700;">${ground.name}</span> has been successfully confirmed. Get your gear ready and we'll see you on the field!`
+                      }
                     </p>
+
+                    ${isCancelled ? `
+                    <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 12px; padding: 20px; margin-bottom: 32px;">
+                      <p style="color: #991b1b; margin: 0 0 8px 0; font-size: 14px; font-weight: 700; text-transform: uppercase;">Cancellation Reason</p>
+                      <p style="color: #b91c1c; margin: 0 0 16px 0; font-size: 15px;">${record.cancellation_reason || 'No reason provided'}</p>
+                      
+                      ${isRefunded ? `
+                      <div style="border-top: 1px solid #fee2e2; padding-top: 12px; margin-top: 12px;">
+                        <p style="color: #991b1b; margin: 0; font-size: 14px; font-weight: 600;">
+                          Refund Initiated: A full refund of ₹${record.total_charged} has been credited to your Book Your Ground Wallet. You can use this for your next booking!
+                        </p>
+                      </div>
+                      ` : ''}
+                    </div>
+                    ` : ''}
                     
                     <!-- Booking Summary Card -->
                     <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 20px; padding: 32px; margin-bottom: 40px;">
@@ -122,17 +143,25 @@ serve(async (req) => {
                       </table>
                     </div>
 
+                    ${!isCancelled ? `
                     <!-- CTA Button -->
                     <div align="center" style="margin-bottom: 40px;">
                       <a href="${mapUrl}" style="background-color: #02c259; color: #ffffff; padding: 18px 40px; border-radius: 16px; text-decoration: none; font-weight: 800; font-size: 16px; display: inline-block; box-shadow: 0 4px 12px rgba(2, 194, 89, 0.3);">Get Directions</a>
                     </div>
+                    ` : `
+                    <div align="center" style="margin-bottom: 40px;">
+                      <a href="https://bookyourground.com/search" style="background-color: #111827; color: #ffffff; padding: 18px 40px; border-radius: 16px; text-decoration: none; font-weight: 800; font-size: 16px; display: inline-block;">Find Another Ground</a>
+                    </div>
+                    `}
 
                     <!-- Total & Support -->
                     <div style="border-top: 1px solid #e5e7eb; padding-top: 32px;">
                       <table width="100%" border="0" cellspacing="0" cellpadding="0">
                         <tr>
                           <td>
-                            <p style="color: #111827; margin: 0; font-size: 15px; font-weight: 700;">Total Paid: ₹${record.total_amount}</p>
+                            <p style="color: #111827; margin: 0; font-size: 15px; font-weight: 700;">
+                              ${isCancelled ? 'Refund Amount' : 'Total Paid'}: ₹${record.total_charged || record.total_amount}
+                            </p>
                           </td>
                         </tr>
                       </table>
@@ -165,7 +194,7 @@ serve(async (req) => {
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>New Booking Notification</title>
+        <title>${isCancelled ? 'Booking Cancelled' : 'New Booking Notification'}</title>
       </head>
       <body style="margin: 0; padding: 0; background-color: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
         <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #f9fafb;">
@@ -174,10 +203,10 @@ serve(async (req) => {
               <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);">
                 <!-- Header -->
                 <tr>
-                  <td align="center" style="background-color: #043529; padding: 48px 24px;">
+                  <td align="center" style="background-color: ${isCancelled ? '#7f1d1d' : '#043529'}; padding: 48px 24px;">
                     <img src="https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/assets/logo.png" alt="BookYourGround" style="width: 180px; height: auto; display: block; margin: 0 auto;">
-                    <div style="margin-top: 24px; display: inline-block; background-color: rgba(2, 194, 89, 0.1); border: 1px solid #02c259; border-radius: 99px; padding: 6px 16px;">
-                      <p style="color: #02c259; margin: 0; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;">New Booking Alert</p>
+                    <div style="margin-top: 24px; display: inline-block; background-color: ${isCancelled ? 'rgba(239, 68, 68, 0.1)' : 'rgba(2, 194, 89, 0.1)'}; border: 1px solid ${isCancelled ? '#ef4444' : '#02c259'}; border-radius: 99px; padding: 6px 16px;">
+                      <p style="color: ${isCancelled ? '#ef4444' : '#02c259'}; margin: 0; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;">${isCancelled ? 'Booking Cancelled' : 'New Booking Alert'}</p>
                     </div>
                   </td>
                 </tr>
@@ -187,7 +216,10 @@ serve(async (req) => {
                   <td style="padding: 48px 40px;">
                     <h2 style="color: #111827; margin: 0 0 16px 0; font-size: 24px; font-weight: 800; letter-spacing: -0.025em;">Hi ${ownerName},</h2>
                     <p style="color: #4b5563; margin: 0 0 32px 0; font-size: 16px; line-height: 1.6;">
-                      You have received a new booking for <span style="color: #043529; font-weight: 700;">${ground.name}</span>. Here are the details of the session:
+                      ${isCancelled 
+                        ? `The booking for <span style="color: #7f1d1d; font-weight: 700;">${ground.name}</span> by ${userFullName} has been cancelled.<br><br><strong>Reason:</strong> ${record.cancellation_reason || 'Not specified'}`
+                        : `You have received a new booking for <span style="color: #043529; font-weight: 700;">${ground.name}</span>. Here are the details of the session:`
+                      }
                     </p>
                     
                     <!-- Booking Summary Card -->
@@ -199,8 +231,8 @@ serve(async (req) => {
                             <p style="color: #111827; margin: 0; font-size: 17px; font-weight: 700;">${userFullName}</p>
                           </td>
                           <td style="padding-bottom: 24px;">
-                            <p style="color: #64748b; margin: 0 0 6px 0; font-size: 12px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Payment</p>
-                            <p style="color: #111827; margin: 0; font-size: 17px; font-weight: 700;">₹${record.total_amount} (${record.payment_method || 'Confirmed'})</p>
+                            <p style="color: #64748b; margin: 0 0 6px 0; font-size: 12px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">${isCancelled ? 'Status' : 'Payment'}</p>
+                            <p style="color: #111827; margin: 0; font-size: 17px; font-weight: 700;">${isCancelled ? 'CANCELLED' : `₹${record.total_charged || record.total_amount} (${record.payment_method || 'Confirmed'})`}</p>
                           </td>
                         </tr>
                         <tr>
@@ -218,7 +250,7 @@ serve(async (req) => {
 
                     <!-- CTA Button -->
                     <div align="center" style="margin-bottom: 40px;">
-                      <a href="https://bookyourground.com/owner/dashboard" style="background-color: #043529; color: #ffffff; padding: 18px 40px; border-radius: 16px; text-decoration: none; font-weight: 800; font-size: 16px; display: inline-block;">Manage Bookings</a>
+                      <a href="https://bookyourground.com/owner/dashboard" style="background-color: ${isCancelled ? '#7f1d1d' : '#043529'}; color: #ffffff; padding: 18px 40px; border-radius: 16px; text-decoration: none; font-weight: 800; font-size: 16px; display: inline-block;">Manage Bookings</a>
                     </div>
                   </td>
                 </tr>
@@ -252,7 +284,9 @@ serve(async (req) => {
         body: JSON.stringify({
           from: 'Book Your Ground <booking@bookyourground.com>',
           to: userEmail,
-          subject: `Confirmed: Your session at ${ground.name}`,
+          subject: isCancelled 
+            ? `Cancelled: Your booking at ${ground.name}`
+            : `Confirmed: Your session at ${ground.name}`,
           html: playerHtml,
         }),
       })
@@ -270,7 +304,9 @@ serve(async (req) => {
           body: JSON.stringify({
             from: 'Book Your Ground <booking@bookyourground.com>',
             to: ownerEmail,
-            subject: `New Booking Alert: ${userFullName} at ${ground.name}`,
+            subject: isCancelled
+              ? `Booking Cancelled: ${userFullName} at ${ground.name}`
+              : `New Booking Alert: ${userFullName} at ${ground.name}`,
             html: ownerHtml,
           }),
         })
@@ -283,6 +319,7 @@ serve(async (req) => {
     console.log('Resend API Responses:', JSON.stringify(results, null, 2))
     
     return new Response(JSON.stringify({ success: true, results }), { headers: { 'Content-Type': 'application/json' } })
+
 
 
   } catch (error) {

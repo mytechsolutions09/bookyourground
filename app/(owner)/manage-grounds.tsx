@@ -61,9 +61,7 @@ export default function OwnerGroundsScreen() {
   const { width } = useWindowDimensions();
   const isUltraNarrow = width < 350;
   const isTablet = width >= 600 && width < 900;
-  const numColumns = Platform.OS === 'web' 
-    ? (width > 1400 ? 4 : (width > 1000 ? 3 : (width > 700 ? 2 : 1))) 
-    : 1;
+  const numColumns = Platform.OS === 'web' ? (width > 1200 ? 3 : (width > 768 ? 2 : 1)) : 1;
   const [selectedGroundId, setSelectedGroundId] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
@@ -541,10 +539,7 @@ export default function OwnerGroundsScreen() {
       <FlatList
         data={grounds}
         renderItem={({ item }) => (
-          <View style={[
-            { flex: 1, padding: 8 }, 
-            Platform.OS === 'web' && { maxWidth: numColumns > 1 ? `${100/numColumns}%` : '100%' }
-          ]}>
+          <View>
             <GroundCard
               ground={item}
               onPress={() =>
@@ -996,12 +991,10 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: 16,
+    paddingBottom: 100,
   },
   listRowWeb: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 24,
-    justifyContent: 'flex-start',
+    gap: 12,
   },
   editorCard: {
     marginBottom: 16,

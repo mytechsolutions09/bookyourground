@@ -272,22 +272,19 @@ const styles = StyleSheet.create({
   },
   joinButtonGlass: {
     width: '100%',
-    height: 56,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    height: 48,
+    backgroundColor: '#01b854',
     borderRadius: 100,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.8)',
-    ...Platform.select({
-      web: {
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-      }
-    }) as any,
+    shadowColor: '#01b854',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 5,
   },
   joinButtonTextGlass: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '800',
     color: '#FFFFFF',
     fontFamily: 'Inter',

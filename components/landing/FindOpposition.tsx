@@ -102,10 +102,16 @@ export default function FindOpposition() {
             <Pressable 
               style={({ pressed }) => [
                 styles.ctaButton,
-                pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }
+                pressed && { transform: [{ scale: 0.98 }] }
               ]}
               onPress={() => router.push('/(tabs)/find-an-opponent' as any)}
             >
+              <LinearGradient
+                colors={['#01b854', '#009d47']}
+                style={StyleSheet.absoluteFill}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              />
               <Text style={styles.ctaText}>Find a Match</Text>
               <ArrowRight size={18} color="#FFFFFF" strokeWidth={2.5} />
             </Pressable>
@@ -265,23 +271,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 32,
     paddingVertical: 18,
-    borderRadius: 20,
+    borderRadius: 16,
     gap: 12,
     alignSelf: Platform.OS === 'web' && useWindowDimensions().width < 768 ? 'center' : 'flex-start',
-    backgroundColor: 'rgba(1, 184, 84, 0.4)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
-    ...Platform.select({
-      web: {
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-      }
-    }) as any,
     shadowColor: '#01b854',
     shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.3,
-    shadowRadius: 24,
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
     elevation: 8,
+    overflow: 'hidden',
     minWidth: 200,
     justifyContent: 'center',
   },

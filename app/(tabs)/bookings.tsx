@@ -315,7 +315,8 @@ export default function BookingsScreen() {
       const { data, error } = await supabase.functions.invoke('payment-gateway', {
         body: {
           action: 'refund-to-wallet',
-          bookingId: bookingToCancel.id
+          bookingId: bookingToCancel.id,
+          cancellationReason: 'Cancelled by player'
         }
       });
 

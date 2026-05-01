@@ -964,7 +964,6 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
   const webColumnCount =
     !isWeb ? 1 : windowWidth >= 960 ? 3 : windowWidth >= 640 ? 2 : 1;
   const isSearchTwoColumn = isWeb && windowWidth >= 900;
-  const isSearchThreeColumn = isWeb && windowWidth >= 1300;
 
   const webGridSectionStyle = useMemo(() => {
     if (!isWeb || webColumnCount <= 1) return undefined;
@@ -1645,7 +1644,6 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
             style={[
               styles.searchResultsGrid,
               isSearchTwoColumn && styles.searchResultsGridTwoCol,
-              isSearchThreeColumn && styles.searchResultsGridThreeCol,
             ]}
           >
             {searchResults.map((g) => {
@@ -1677,7 +1675,6 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                   style={[
                     styles.searchResultTile,
                     isSearchTwoColumn && styles.searchResultTileHalf,
-                    isSearchThreeColumn && styles.searchResultTileThird,
                   ]}
                 >
                    <GroundCard
@@ -2297,13 +2294,16 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
     fullWidth && !isWeb && groundPageAccent && !noCard && styles.cardGroundPageNative,
   ];
 
-  return (
-    loadingGrounds ? (
+  if (loadingGrounds) {
+    return (
       <View style={[styles.wrapper, fullWidth && styles.wrapperFull]}>
         <BookingFormSkeleton />
       </View>
-    ) : (
-      <View
+    );
+  }
+
+  return (
+    <View
       style={[
         styles.wrapper,
         fullWidth && isWeb && styles.wrapperFull,
@@ -2447,8 +2447,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
           {searchResultsBody}
         </ContainerComponent>
       ) : null}
-      </View>
-    )
+    </View>
   );
 }
 
@@ -2994,24 +2993,15 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
   searchResultsGridTwoCol: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 16,
-    justifyContent: 'flex-start',
-  },
-  searchResultsGridThreeCol: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 20,
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
   },
   searchResultTile: {
     width: '100%',
     alignSelf: 'stretch',
   },
   searchResultTileHalf: {
-    width: 'calc(50% - 10px)' as any,
-  },
-  searchResultTileThird: {
-    width: 'calc(33.33% - 14px)' as any,
+    width: '48%',
+    maxWidth: '48%',
   },
   smallMuted: {
     fontSize: 13,

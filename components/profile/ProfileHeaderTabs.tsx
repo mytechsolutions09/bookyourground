@@ -13,7 +13,7 @@ interface ProfileHeaderTabsProps {
 export default function ProfileHeaderTabs({ themeAccent, themeText, isCompact, style }: ProfileHeaderTabsProps) {
   const pathname = usePathname();
   const isWeb = Platform.OS === 'web';
-
+  
   if (!isWeb || isCompact) return null;
 
   const isActive = (path: string) => pathname === path;
@@ -21,26 +21,26 @@ export default function ProfileHeaderTabs({ themeAccent, themeText, isCompact, s
   return (
     <View style={[styles.tabContainer, style]}>
       <View style={styles.tabBackground}>
-        <TouchableOpacity
-          style={[styles.tab, isActive('/profile') && styles.activeTab]}
+        <TouchableOpacity 
+          style={[styles.tab, isActive('/profile') && styles.activeTab]} 
           onPress={() => router.push('/(tabs)/profile' as any)}
         >
           <Text style={[styles.tabText, isActive('/profile') && { color: themeAccent, fontWeight: '700' }]}>
             Overview
           </Text>
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tab, isActive('/profile/notifications') && styles.activeTab]}
+        
+        <TouchableOpacity 
+          style={[styles.tab, isActive('/profile/notifications') && styles.activeTab]} 
           onPress={() => router.push('/(tabs)/profile/notifications' as any)}
         >
           <Text style={[styles.tabText, isActive('/profile/notifications') && { color: themeAccent, fontWeight: '700' }]}>
             Notifications
           </Text>
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tab, isActive('/profile/settings') && styles.activeTab]}
+        
+        <TouchableOpacity 
+          style={[styles.tab, isActive('/profile/settings') && styles.activeTab]} 
           onPress={() => router.push('/(tabs)/profile/settings' as any)}
         >
           <Text style={[styles.tabText, isActive('/profile/settings') && { color: themeAccent, fontWeight: '700' }]}>
