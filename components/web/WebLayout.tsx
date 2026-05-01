@@ -196,6 +196,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
   
   const isGroundDetails =
     cleanPath.startsWith('/grounds/') || cleanPath.startsWith('/ground/');
+  const isGroundInfoPage = isGroundDetails;
   const isBookingDetails = cleanPath.startsWith('/bookings/');
   const isCheckoutPage = cleanPath.startsWith('/checkout/');
   const isLegalOrInfoPage =
