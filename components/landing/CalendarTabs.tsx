@@ -280,7 +280,6 @@ export default function CalendarTabs() {
                 <Text style={[styles.monthName, isSelected && styles.monthNameActive]}>
                   {monthName}
                 </Text>
-                {isSelected && <View style={styles.activeDot} />}
               </TouchableOpacity>
             );
           })}
@@ -418,82 +417,91 @@ const styles = StyleSheet.create({
     overflow: 'visible',
   },
   dateCard: {
-    width: 88,
-    height: 112,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    marginRight: 14,
+    width: 70,
+    height: 90,
+    backgroundColor: 'rgba(15, 23, 42, 0.04)',
+    borderRadius: 18,
+    marginRight: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: 'rgba(15, 23, 42, 0.05)',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.06,
-        shadowRadius: 12,
+        shadowOpacity: 0.04,
+        shadowRadius: 8,
       },
       android: {
-        elevation: 3,
+        elevation: 2,
       },
       web: {
-        shadowColor: 'rgba(15, 23, 42, 0.08)',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 1,
-        shadowRadius: 20,
+        backdropFilter: 'blur(8px)',
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         cursor: 'pointer',
       },
     }) as any,
   },
   dateCardActive: {
-    backgroundColor: '#043529',
-    borderColor: '#043529',
-    transform: [{ scale: 1.12 }, { translateY: -6 }],
+    backgroundColor: '#01b854',
+    borderColor: 'rgba(0, 234, 107, 0.5)',
+    transform: [{ scale: 1.05 }, { translateY: -4 }],
     ...Platform.select({
+      ios: {
+        shadowColor: '#01b854',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.5,
+        shadowRadius: 15,
+      },
+      android: {
+        elevation: 8,
+      },
       web: {
-        shadowColor: 'rgba(4, 53, 41, 0.25)',
+        shadowColor: 'rgba(1, 184, 84, 0.4)',
         shadowRadius: 25,
         shadowOffset: { width: 0, height: 12 },
+        boxShadow: '0 12px 30px rgba(1, 184, 84, 0.5)',
       }
     }) as any,
   },
   dayName: {
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: '700',
     color: '#94A3B8',
     textTransform: 'uppercase',
     letterSpacing: 1,
-    marginBottom: 6,
+    marginBottom: 4,
     fontFamily: 'Inter',
   },
   dayNameActive: {
-    color: 'rgba(255, 255, 255, 0.6)',
+    color: '#FFFFFF',
+    opacity: 0.9,
   },
   dayNumber: {
-    fontSize: 32,
+    fontSize: 24,
     fontWeight: '800',
     color: '#0F172A',
     fontFamily: 'Inter',
-    letterSpacing: -1,
+    letterSpacing: -0.5,
   },
   dayNumberActive: {
     color: '#FFFFFF',
   },
   monthName: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: '600',
     color: '#64748B',
-    marginTop: 4,
+    marginTop: 2,
     fontFamily: 'Inter',
   },
   monthNameActive: {
-    color: 'rgba(255, 255, 255, 0.5)',
+    color: '#FFFFFF',
+    opacity: 0.8,
   },
   activeDot: {
     position: 'absolute',
-    bottom: 10,
+    bottom: 6,
     width: 6,
     height: 6,
     borderRadius: 3,

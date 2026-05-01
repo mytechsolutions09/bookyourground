@@ -92,6 +92,8 @@ export default function PlayerProfile() {
   const [showQR, setShowQR] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
+  const [matchFilter, setMatchFilter] = useState('all');
+  const [playedMatchIds, setPlayedMatchIds] = useState<string[]>([]);
   const qrRef = useRef<any>(null);
   const mainPagerRef = useRef<ScrollView>(null);
   const tabBarRef = useRef<ScrollView>(null);
@@ -222,6 +224,16 @@ export default function PlayerProfile() {
           .order('created_at', { ascending: false });
         
         setMatches(matchData || []);
+
+        // Fetch matches where user was part of Playing XI
+        const { data: playedMatchData } = await supabase
+          .from('match_playing_xi')
+          .select('match_id')
+          .in('player_id', memberIds);
+        
+        if (playedMatchData) {
+          setPlayedMatchIds(playedMatchData.map(pm => pm.match_id));
+        }
 
         // 3. Fetch all ball stats
         const { data: statsData } = await supabase
@@ -950,6 +962,33 @@ export default function PlayerProfile() {
           </View>
           
           {/* Intelligent Sub-bar Injection */}
+          {activeTab === 'matches' && (
+            <View style={styles.stickySubBar}>
+              <View style={styles.toggleContainer}>
+                {[
+                  { id: 'all', label: 'All' },
+                  { id: 'played', label: 'Played' },
+                ].map((chip) => (
+                  <TouchableOpacity
+                    key={chip.id}
+                    onPress={() => setMatchFilter(chip.id)}
+                    style={[
+                      styles.toggleTab,
+                      matchFilter === chip.id && styles.toggleTabActive
+                    ]}
+                  >
+                    <Text style={[
+                      styles.toggleLabel,
+                      matchFilter === chip.id && styles.toggleLabelActive
+                    ]}>
+                      {chip.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+
           {activeTab === 'stats' && (
             <View style={styles.stickySubBar}>
               <View style={styles.toggleContainer}>
@@ -1107,14 +1146,21 @@ export default function PlayerProfile() {
             {/* Slide 1: Matches */}
             <View style={{ width: windowWidth }}>
               <View style={styles.tabSlideContent}>
-                {(matches && matches.length > 0) ? (
-                  matches.map(renderMatchCard)
-                ) : (
-                  <View style={styles.emptyState}>
-                    <Clock size={48} color="#E2E8F0" />
-                    <Text style={styles.emptyText}>No matches played yet</Text>
-                  </View>
-                )}
+                {(() => {
+                  const filteredMatches = matches.filter(m => 
+                    matchFilter === 'all' || playedMatchIds.includes(m.id)
+                  );
+                  return (filteredMatches && filteredMatches.length > 0) ? (
+                    filteredMatches.map(renderMatchCard)
+                  ) : (
+                    <View style={styles.emptyState}>
+                      <Clock size={48} color="#E2E8F0" />
+                      <Text style={styles.emptyText}>
+                        {matchFilter === 'all' ? 'No matches played yet' : 'No matches played by user yet'}
+                      </Text>
+                    </View>
+                  );
+                })()}
               </View>
             </View>
 

@@ -30,7 +30,8 @@ import { useUI } from '@/contexts/UIContext';
 // Platform settings fetched from database
 
 export default function CheckoutScreen() {
-  const { id } = useLocalSearchParams();
+  const params = useLocalSearchParams();
+  const { id } = params;
   const { user, profile } = useAuth();
   const { width } = useWindowDimensions();
   const isDesktop = width > 768;
@@ -179,7 +180,7 @@ export default function CheckoutScreen() {
     }
   }, [id]);
 
-  const params = useLocalSearchParams();
+
 
   const handleCashPayment = async () => {
     if (!booking) return;
@@ -1578,15 +1579,27 @@ const styles = StyleSheet.create({
   },
   payButton: {
     height: 56,
-    borderRadius: 20,
-    backgroundColor: '#10B981',
+    borderRadius: 100,
+    backgroundColor: '#01b854',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    borderWidth: 1.5,
+    borderColor: '#00ea6b',
+    ...Platform.select({
+      web: {
+        boxShadow: '0 8px 32px rgba(1, 184, 84, 0.4)',
+        transition: 'all 0.3s ease',
+      },
+      ios: {
+        shadowColor: '#01b854',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.4,
+        shadowRadius: 16,
+      },
+      android: {
+        elevation: 8,
+      },
+    }) as any,
   },
   trustFooter: {
     marginTop: 24,

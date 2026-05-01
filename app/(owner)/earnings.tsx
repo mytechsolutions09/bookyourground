@@ -343,6 +343,9 @@ function OwnerEarningsScreenInner() {
           payment_method,
           platform_fee_owner,
           gst_owner,
+          payout_status,
+          payout_processed_at,
+          ground_price,
           ground:grounds!inner(name, city, owner_id)
         `)
         .eq('ground.owner_id', user.id)
@@ -923,18 +926,19 @@ function OwnerEarningsScreenInner() {
   const renderPayoutsHistory = () => {
     // Group transactions by payout date
     const payouts = transactions
-      .filter(tx => tx.payout_status === 'completed')
+      .filter(tx => tx.payout_status === 'completed' || tx.payout_status === 'processing')
       .reduce((acc: any[], tx) => {
-        const date = tx.payout_processed_at ? new Date(tx.payout_processed_at).toISOString().split('T')[0] : 'Pending';
+        const date = tx.payout_processed_at ? new Date(tx.payout_processed_at).toISOString().split('T')[0] : 'Processing';
         const existing = acc.find(p => p.date === date);
         
-        const isOnline = tx.payment_method === 'razorpay';
+        const isOnline = tx.payment_method && tx.payment_method !== 'cash';
         const fee = (Number(tx.platform_fee_owner || 0) + Number(tx.gst_owner || 0));
         
         // Net amount logic: 
         // If Online: revenue - fee
         // If Offline: -fee (deducted from online pool)
-        const netContribution = isOnline ? (Number(tx.ground_price || 0) - fee) : -fee;
+        const revenue = Number(tx.ground_price || tx.total_amount || 0);
+        const netContribution = isOnline ? (revenue - fee) : -fee;
 
         if (existing) {
           existing.net += netContribution;
@@ -955,10 +959,10 @@ function OwnerEarningsScreenInner() {
 
           <View style={[styles.table, { marginTop: 12 }]}>
             <View style={[styles.tableHeader, { backgroundColor: '#F8FAFC', borderTopLeftRadius: 12, borderTopRightRadius: 12 }]}>
-              <Text style={[styles.headerText, { width: 120 }]}>Settled Date</Text>
+              <Text style={[styles.headerText, { width: 100 }]}>Settled Date</Text>
               <Text style={[styles.headerText, { flex: 1 }]}>Matches</Text>
-              <Text style={[styles.headerText, { width: 100, textAlign: 'right' }]}>Total Fees</Text>
-              <Text style={[styles.headerText, { width: 100, textAlign: 'right' }]}>Net Payout</Text>
+              <Text style={[styles.headerText, { width: 85, textAlign: 'right' }]}>Total Fees</Text>
+              <Text style={[styles.headerText, { width: 85, textAlign: 'right' }]}>Net Payout</Text>
             </View>
 
             {payouts.length === 0 ? (
@@ -968,25 +972,25 @@ function OwnerEarningsScreenInner() {
             ) : (
               payouts.map((p, i) => (
                 <View key={i} style={styles.tableRow}>
-                  <View style={{ width: 120 }}>
+                  <View style={{ width: 100 }}>
                     <Text style={styles.cellTextMain}>
-                      {p.date === 'Pending' ? 'Pending' : new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
+                      {p.date === 'Processing' ? 'Processing' : new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
                     </Text>
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.cellTextMain, { color: '#64748B' }]}>{p.matches} {p.matches === 1 ? 'Match' : 'Matches'}</Text>
                   </View>
-                  <View style={{ width: 100, alignItems: 'flex-end' }}>
+                  <View style={{ width: 85, alignItems: 'flex-end' }}>
                     <Text style={[styles.cellTextMain, { color: '#64748B' }]}>-₹{Math.round(p.fees)}</Text>
                   </View>
-                  <View style={{ width: 100, alignItems: 'flex-end' }}>
+                  <View style={{ width: 85, alignItems: 'flex-end' }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                       <Text style={[styles.cellTextMain, { color: p.net <= 0 ? '#94A3B8' : '#059669', fontWeight: '800' }]}>
                         {formatCurrency(Math.max(0, p.net))}
                       </Text>
                       {p.net < 0 && (
                          <View style={styles.debtBadge}>
-                           <Text style={styles.debtText}>ADJUSTMENT</Text>
+                           <Text style={styles.debtText}>ADJ</Text>
                          </View>
                       )}
                     </View>
@@ -1561,7 +1565,7 @@ const styles = StyleSheet.create({
   layoutRow: {
     flexDirection: 'row',
     gap: 24,
-    paddingHorizontal: 16,
+    paddingHorizontal: 8,
   },
   leftCol: {
     flex: 1.5,
@@ -1577,7 +1581,7 @@ const styles = StyleSheet.create({
   totalEarningsCard: {
     backgroundColor: '#d9f99d', // Light lime green
     borderRadius: 24,
-    padding: 32,
+    padding: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -1605,7 +1609,7 @@ const styles = StyleSheet.create({
   sectionCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
-    padding: 24,
+    padding: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
@@ -2002,7 +2006,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F5F9',
     borderRadius: 20,
     padding: 6,
-    marginHorizontal: 16,
+    marginHorizontal: 8,
     marginTop: 0,
     marginBottom: 32,
     borderWidth: 1,
@@ -2036,7 +2040,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   summaryTableWrapper: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 8,
     paddingTop: 16,
     paddingBottom: 40,
   },
@@ -2123,7 +2127,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   analyticsWrapper: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 8,
     paddingTop: 16,
     paddingBottom: 40,
   },

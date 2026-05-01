@@ -1,6 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image, Platform, ScrollView, Modal } from 'react-native';
-import { MapPin, Plus, QrCode } from 'lucide-react-native';
+import { MapPin, Plus, QrCode, Star } from 'lucide-react-native';
+
+const getSkillColor = (level: string) => {
+  switch(level?.toLowerCase()) {
+    case 'pro': return '#1E293B';
+    case 'competitive': return '#01b854';
+    case 'semi-pro': return '#10B981';
+    default: return '#94A3B8';
+  }
+};
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import QRCode from 'react-native-qrcode-svg';
@@ -14,6 +23,9 @@ const INITIAL_TEAMS_DATA = [
     captain: 'Anshul',
     image: 'https://images.pexels.com/photos/1595385/pexels-photo-1595385.jpeg',
     isUserTeam: true,
+    rating: 4.5,
+    skillLevel: 'Competitive',
+    winRate: '72%'
   },
   {
     id: 'f47ac10b-58cc-4372-a567-0e02b2c3d47c',
@@ -22,6 +34,9 @@ const INITIAL_TEAMS_DATA = [
     captain: 'Anshul',
     image: 'https://images.pexels.com/photos/47701/tiger-animal-predator-wild-47701.jpeg',
     isUserTeam: false,
+    rating: 4.2,
+    skillLevel: 'Semi-Pro',
+    winRate: '68%'
   },
   {
     id: 'f47ac10b-58cc-4372-a567-0e02b2c3d47d',
@@ -31,6 +46,9 @@ const INITIAL_TEAMS_DATA = [
     initials: 'CX',
     bgColor: '#F1F5F9',
     isUserTeam: false,
+    rating: 4.8,
+    skillLevel: 'Pro',
+    winRate: '85%'
   }
 ];
 
@@ -82,16 +100,29 @@ export default function CricketTeams({ activeSubTab }: { activeSubTab?: string }
        <View style={styles.teamContent}>
           <View style={{ flex: 1 }}>
              <Text style={styles.teamTitle}>{team.name}</Text>
-             <View style={styles.teamMetaRow}>
-                <View style={[styles.metaItem, { marginRight: 16 }]}>
-                   <MapPin size={12} color="#94A3B8" />
-                   <Text style={styles.metaLabel}>{team.location}</Text>
+              <View style={styles.teamMetaRow}>
+                 <View style={[styles.metaItem, { marginRight: 16 }]}>
+                    <MapPin size={12} color="#94A3B8" />
+                    <Text style={styles.metaLabel}>{team.location}</Text>
+                 </View>
+                 <View style={styles.metaItem}>
+                    <View style={styles.captainIcon}><Text style={styles.captainIconText}>C</Text></View>
+                    <Text style={styles.metaLabel}>{team.captain}</Text>
+                 </View>
+              </View>
+              
+              <View style={styles.ratingRow}>
+                <View style={styles.starBadge}>
+                  <Star size={10} color="#F59E0B" fill="#F59E0B" />
+                  <Text style={styles.ratingText}>{team.rating || 'N/A'}</Text>
                 </View>
-                <View style={styles.metaItem}>
-                   <View style={styles.captainIcon}><Text style={styles.captainIconText}>C</Text></View>
-                   <Text style={styles.metaLabel}>{team.captain}</Text>
+                <View style={[styles.skillBadge, { backgroundColor: getSkillColor(team.skillLevel) }]}>
+                  <Text style={styles.skillText}>{team.skillLevel || 'New'}</Text>
                 </View>
-             </View>
+                {team.winRate && (
+                  <Text style={styles.winRateText}>{team.winRate} Win Rate</Text>
+                )}
+              </View>
           </View>
           <View style={styles.teamActions}>
              <TouchableOpacity 
@@ -252,6 +283,44 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '900',
     color: '#475569',
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 8,
+  },
+  starBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FFFBEB',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#FEF3C7',
+  },
+  ratingText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#D97706',
+  },
+  skillBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  skillText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    textTransform: 'uppercase',
+  },
+  winRateText: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '600',
   },
   teamActions: {
     flexDirection: 'row',

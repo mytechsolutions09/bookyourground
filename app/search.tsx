@@ -41,13 +41,15 @@ export default function SearchScreen() {
   const [results, setResults] = useState<{ grounds: any[], matches: any[] }>({ grounds: [], matches: [] });
   const [loading, setLoading] = useState(false);
 
-   const [locationKey, setLocationKey] = useState<string>((params.location as string) || '');
+  const [locationKey, setLocationKey] = useState<string>((params.location as string) || '');
   const [typeKey, setTypeKey] = useState<string>((params.type as string) || '');
-  const [dateKey, setDateKey] = useState<string>('All');
+  const [dateKey, setDateKey] = useState<string>((params.date as string) || 'All');
+  const [timeKey, setTimeKey] = useState<string>((params.time as string) || '');
   const [locations, setLocations] = useState<Location[]>([]);
   const [types, setTypes] = useState<GroundType[]>([]);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showTypeModal, setShowTypeModal] = useState(false);
+  const [showTimeModal, setShowTimeModal] = useState(false);
 
   useEffect(() => {
     const loadFilters = async () => {
@@ -62,10 +64,10 @@ export default function SearchScreen() {
   }, []);
 
   useEffect(() => {
-    performSearch(query, locationKey, typeKey);
-  }, [params.q, locationKey, typeKey]);
+    performSearch(query, locationKey, typeKey, dateKey, timeKey);
+  }, [params.q, locationKey, typeKey, dateKey, timeKey]);
 
-  const performSearch = async (s: string, locKey?: string, typKey?: string) => {
+  const performSearch = async (s: string, locKey?: string, typKey?: string, date?: string, time?: string) => {
     setLoading(true);
     try {
       const ts = `%${(s || '').trim()}%`;
@@ -73,7 +75,7 @@ export default function SearchScreen() {
       // 1. Search Grounds
       let gQuery = supabase
         .from('grounds')
-        .select('*, ground_images(*), reviews(rating), time_slots(custom_price, is_available)')
+        .select('*, ground_images(*), reviews(rating), time_slots(custom_price, is_available, day_of_week, start_time)')
         .eq('active', true)
         .eq('approved', true);
 
@@ -90,7 +92,25 @@ export default function SearchScreen() {
         gQuery = gQuery.eq('pitch_type', typKey);
       }
 
-      const { data: gs } = await gQuery.limit(30);
+      let { data: gs } = await gQuery.limit(30);
+
+      // 1.5 Filter grounds by slot if date and time are provided
+      if (date && date !== 'All' && time && gs && gs.length > 0) {
+        try {
+          const { data: allowedData } = await supabase.rpc('available_ground_ids_for_slot', {
+            p_ground_ids: gs.map(g => g.id),
+            p_booking_date: date,
+            p_start_time: `${time}:00`,
+          });
+
+          if (allowedData) {
+            const allowedSet = new Set((allowedData as any[]).map(r => r.ground_id));
+            gs = gs.filter((g: any) => allowedSet.has(g.id));
+          }
+        } catch (e) {
+          console.error('Error filtering grounds by slot:', e);
+        }
+      }
 
       // 2. Search Matches using the same logic as "Find an Opponent"
       const todayISO = new Date().toISOString().split('T')[0];
@@ -142,9 +162,39 @@ export default function SearchScreen() {
         .flatMap(p => (p.bookings || []).map(b => ({ ...b, user: { team_name: p.team_name, full_name: p.full_name } })))
         .filter(b => b.ground);
 
+      // 3. Enhance matches with precise pricing logic
+      const enhancedMatches = await Promise.all((ms || []).map(async (m: any) => {
+        try {
+          const parts = m.booking_date.split('-');
+          const dateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+          const dow = dateObj.getDay(); // Simple fallback for DOW
+
+          const { data: slotData } = await supabase
+            .from('time_slots')
+            .select('custom_price')
+            .eq('ground_id', m.ground_id)
+            .eq('day_of_week', ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dow])
+            .eq('start_time', m.start_time)
+            .maybeSingle();
+
+          const currentSlotPrice = slotData?.custom_price ?? m.ground?.base_price_per_hour ?? 0;
+          const isBox = String(m.ground?.pitch_type ?? '').toLowerCase().includes('box');
+          
+          let totalMatchPrice = currentSlotPrice;
+          if (isBox) {
+            const hours = m.total_hours || 1;
+            totalMatchPrice = currentSlotPrice * hours;
+          }
+
+          return { ...m, total_amount: Math.round((totalMatchPrice / 2) * 100) / 100 };
+        } catch (e) {
+          return m;
+        }
+      }));
+
       setResults({
         grounds: gs || [],
-        matches: [...(filteredMs || []), ...additionalMs].filter((v, i, a) => a.findIndex(t => t.id === v.id) === i)
+        matches: [...enhancedMatches, ...additionalMs].filter((v, i, a) => a.findIndex(t => t.id === v.id) === i)
       });
     } finally {
       setLoading(false);
@@ -166,70 +216,49 @@ export default function SearchScreen() {
   };
 
   const renderGround = ({ item }: { item: any }) => {
-    const img = item.ground_images?.[0]?.image_url || 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
-    const reviews = (item.reviews || []) as { rating: number }[];
-    const avg = reviews.length > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length : 0;
+    const displayPrice = (() => {
+      if (dateKey !== 'All' && timeKey && item.time_slots) {
+        const dateObj = new Date(dateKey);
+        const dow = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dateObj.getDay()];
+        const slot = item.time_slots.find((s: any) => 
+          s.day_of_week === dow && 
+          s.start_time?.slice(0, 5) === timeKey.slice(0, 5)
+        );
+        if (slot && slot.custom_price != null) {
+          return Number(slot.custom_price);
+        }
+      }
+      
+      const availablePrices = item.time_slots
+        ?.filter((s: any) => s.is_available && s.custom_price != null)
+        .map((s: any) => Number(s.custom_price));
 
-    const amenities = [
-      { key: 'has_floodlights', label: 'Lights', icon: <Swords size={12} color="#fff" /> },
-      { key: 'has_parking', label: 'Parking', icon: <Building2 size={12} color="#fff" /> },
-      { key: 'has_changing_rooms', label: 'Changing rooms', icon: <Building2 size={12} color="#fff" /> },
-      { key: 'has_pavilion', label: 'Pavilion', icon: <Building2 size={12} color="#fff" /> },
-    ].filter(a => item[a.key]);
+      if (availablePrices && availablePrices.length > 0) {
+        return Math.min(...availablePrices);
+      }
+      
+      return Number(item.base_price_per_hour) || 0;
+    })();
+
+    const isBox = String(item.pitch_type || '').toLowerCase().includes('box');
+    const unitLabel = isBox ? '/hr' : ' / match';
 
     return (
-      <Pressable 
-        style={styles.premiumCard}
-        onPress={() => router.push(makeGroundPath(item) as any)}
-      >
-        <Image source={{ uri: img }} style={styles.premiumCardImage} />
-        <View style={styles.premiumOverlay}>
-          <Text style={styles.premiumTitle}>{item.name}</Text>
-          
-          <View style={styles.premiumInfoCard}>
-            <View style={styles.premiumLocationRow}>
-              <MapPin size={14} color="#fff" />
-              <Text style={styles.premiumLocationText}>{item.city}, {item.state}</Text>
-            </View>
-            
-            <View style={styles.premiumPriceRow}>
-              <Text style={styles.premiumPriceText}>
-                {item.time_slots?.filter((s: any) => s.is_available && s.custom_price != null).length > 0
-                  ? `₹${Math.min(...item.time_slots.filter((s: any) => s.is_available && s.custom_price != null).map((s: any) => Number(s.custom_price)))}`
-                  : 'See Slots'}
-              </Text>
-              <Text style={styles.premiumPriceUnit}> / match</Text>
-            </View>
-
-            <View style={styles.premiumAmenities}>
-              {amenities.map(a => (
-                <View key={a.key} style={styles.premiumAmenityBadge}>
-                  {a.icon}
-                  <Text style={styles.premiumAmenityText}>{a.label}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.premiumBottomRow}>
-            <View style={styles.premiumLocationLink}>
-              <MapPin size={10} color="#FFFFFF" />
-              <Text style={styles.premiumLocationLinkText}>{item.city}</Text>
-            </View>
-            
-            <View style={styles.premiumRatingContainer}>
-              <View style={styles.premiumStars}>
-                {[1,2,3,4,5].map(s => (
-                  <Star key={s} size={10} color={s <= avg ? "#FFA000" : "#fff"} fill={s <= avg ? "#FFA000" : "transparent"} />
-                ))}
-              </View>
-              <Text style={styles.premiumReviewText}>
-                {reviews.length > 0 ? `${reviews.length} reviews` : 'No reviews yet'}
-              </Text>
-            </View>
-          </View>
-        </View>
-      </Pressable>
+      <View style={{ marginBottom: 16 }}>
+        <GroundCard
+          ground={item}
+          glass={true}
+          displayPricePerUnit={displayPrice}
+          unitLabelOverride={unitLabel}
+          onPress={() => {
+            const path = makeGroundPath(item);
+            const params: any = {};
+            if (dateKey !== 'All') params.date = dateKey;
+            if (timeKey) params.time = timeKey;
+            router.push({ pathname: path as any, params });
+          }}
+        />
+      </View>
     );
   };
 
@@ -295,6 +324,9 @@ export default function SearchScreen() {
         tomorrow.setDate(tomorrow.getDate() + 1);
         const tomorrowStr = tomorrow.toISOString().split('T')[0];
         filteredMatches = filteredMatches.filter(m => m.booking_date === tomorrowStr);
+      } else {
+        // Specific date string (YYYY-MM-DD)
+        filteredMatches = filteredMatches.filter(m => m.booking_date === dateKey);
       }
     }
 
@@ -392,24 +424,26 @@ export default function SearchScreen() {
                 )}
               </View>
 
-               <View style={styles.sidebarSection}>
-                <Text style={styles.sidebarSectionTitle}>Ground Type</Text>
-                <Pressable style={styles.filterButton} onPress={() => setShowTypeModal(!showTypeModal)}>
-                  <Building2 size={14} color="#01b854" />
+
+
+              <View style={styles.sidebarSection}>
+                <Text style={styles.sidebarSectionTitle}>Time</Text>
+                <Pressable style={styles.filterButton} onPress={() => setShowTimeModal(!showTimeModal)}>
+                  <Clock size={14} color="#01b854" />
                   <Text style={styles.filterButtonText} numberOfLines={1}>
-                    {typeKey || 'All Types'}
+                    {timeKey || 'All Times'}
                   </Text>
                   <ChevronDown size={12} color="#9CA3AF" />
                 </Pressable>
-                {showTypeModal && (
+                {showTimeModal && (
                   <View style={styles.dropdownInline}>
                     <ScrollView style={{ maxHeight: 200 }}>
-                      <Pressable style={styles.dropdownOption} onPress={() => { setTypeKey(''); setShowTypeModal(false); }}>
-                        <Text style={styles.dropdownOptionText}>All Types</Text>
+                      <Pressable style={styles.dropdownOption} onPress={() => { setTimeKey(''); setShowTimeModal(false); }}>
+                        <Text style={styles.dropdownOptionText}>All Times</Text>
                       </Pressable>
-                      {types.map(t => (
-                        <Pressable key={t.id} style={styles.dropdownOption} onPress={() => { setTypeKey(t.name); setShowTypeModal(false); }}>
-                          <Text style={styles.dropdownOptionText}>{t.label || t.name}</Text>
+                      {['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'].map(t => (
+                        <Pressable key={t} style={styles.dropdownOption} onPress={() => { setTimeKey(t); setShowTimeModal(false); }}>
+                          <Text style={styles.dropdownOptionText}>{t}</Text>
                         </Pressable>
                       ))}
                     </ScrollView>
@@ -471,7 +505,7 @@ export default function SearchScreen() {
                   }}>
                     <Calendar size={12} color={dateKey !== 'All' ? '#01b854' : '#6B7280'} />
                     <Text style={[styles.mobileFilterPillText, dateKey !== 'All' && styles.mobileFilterPillTextActive]}>
-                      {dateKey}
+                      {dateKey === 'All' || dateKey === 'Today' || dateKey === 'Tomorrow' ? dateKey : new Date(dateKey).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
                     </Text>
                   </Pressable>
                 )}
@@ -928,6 +962,26 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '800',
     textAlign: 'center',
+  },
+  premiumDateTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(1, 184, 84, 0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    marginTop: 4,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(1, 184, 84, 0.3)',
+  },
+  premiumDateTimeText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   premiumBottomRow: {
     position: 'absolute' as any,

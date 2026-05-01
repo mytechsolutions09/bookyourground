@@ -901,12 +901,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 44,
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.8)',
+    ...Platform.select({
+      web: { backdropFilter: 'blur(10px)' }
+    }) as any,
   },
   dropdownButtonOpen: {
     borderColor: '#10B981',
@@ -954,12 +957,15 @@ const styles = StyleSheet.create({
   searchBAR: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 44,
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.8)',
+    ...Platform.select({
+      web: { backdropFilter: 'blur(10px)' }
+    }) as any,
   },
   searchINPUT: {
     flex: 1,

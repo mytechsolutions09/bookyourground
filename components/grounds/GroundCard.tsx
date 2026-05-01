@@ -27,6 +27,8 @@ interface GroundCardProps {
   lightMode?: boolean;
   occupancyRate?: number | null;
   showBookButton?: boolean;
+  /** Enable premium glass effect with full image background. */
+  glass?: boolean;
 }
 
 export default function GroundCard({
@@ -41,11 +43,12 @@ export default function GroundCard({
   lightMode = Platform.OS === 'web',
   occupancyRate = null,
   showBookButton = false,
+  glass = false,
 }: GroundCardProps) {
   const { width } = useWindowDimensions();
   const isUltraNarrow = width < 350;
   const isWeb = Platform.OS === 'web';
-  const isLight = lightMode;
+  const isLight = glass ? false : lightMode;
   const schedule = useMemo(
     () => getGroundBookingScheduleLines(ground.pitch_type),
     [ground.pitch_type],
@@ -69,23 +72,91 @@ export default function GroundCard({
     return `https://www.google.com/maps/search/?api=1&query=${query}`;
   }, [ground.address, ground.city, ground.state]);
 
-  const pinColor = isLight ? '#6B7280' : NATIVE_TEXT;
+  const pinColor = isLight ? '#6B7280' : (glass ? 'rgba(255,255,255,0.7)' : NATIVE_TEXT);
+  
   const scheduleIconColor = isLight ? '#10b981' : NATIVE_BORDER;
   
-  const nameStyle = [styles.name, compact && styles.nameCompact, !isLight && styles.nameNative];
-  const ratingStyle = [styles.rating, compact && styles.ratingCompact, !isLight && styles.ratingNative];
-  const locationStyle = [styles.location, !isLight && styles.locationNative];
-  const scheduleTextStyle = [styles.scheduleText, !isLight && styles.scheduleTextNative];
-  const priceStyle = [styles.price, compact && styles.priceCompact, !isLight && styles.priceNative];
-  const mapsLinkStyle = [styles.mapsLink, !isLight && styles.mapsLinkNative];
-  const amenityStyle = [styles.amenity, !isLight && styles.amenityNative];
+  const nameStyle = [styles.name, compact && styles.nameCompact, !isLight && styles.nameNative, glass && styles.nameGlass];
+  const ratingStyle = [styles.rating, compact && styles.ratingCompact, !isLight && styles.ratingNative, glass && styles.ratingGlass];
+  const locationStyle = [styles.location, !isLight && styles.locationNative, glass && styles.locationGlass];
+  const priceStyle = [styles.price, compact && styles.priceCompact, !isLight && styles.priceNative, glass && styles.priceGlass];
+  const mapsLinkStyle = [styles.mapsLink, !isLight && styles.mapsLinkNative, glass && styles.mapsLinkGlass];
 
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.8}
-      style={[styles.touchable, compact && styles.touchableCompact]}
-    >
+  // Combined render logic to avoid hook violations with early returns
+  const renderCardContent = () => {
+    if (glass) {
+      return (
+        <Card style={[styles.card, styles.cardGlass]}>
+          <Image source={{ uri: primaryImage }} style={styles.imageFull} />
+          <View style={styles.glassOverlayGradient} />
+          
+          {/* Top Floating Badges */}
+          <View style={styles.topBadgesRow}>
+             <View style={styles.glassRatingBadge}>
+                <View style={styles.starRow}>
+                  {[1, 2, 3, 4, 5].map((i) => {
+                    const filled = reviewCount > 0 && i <= Math.round(averageRating);
+                    return (
+                      <Star
+                        key={i}
+                        size={10}
+                        color={filled ? '#01b854' : 'rgba(0,0,0,0.2)'}
+                        fill={filled ? '#01b854' : 'none'}
+                      />
+                    );
+                  })}
+                </View>
+                <Text style={styles.ratingTextGlassBadge}>
+                  {reviewCount > 0 ? averageRating.toFixed(1) : 'NEW'}
+                </Text>
+             </View>
+
+             {onToggleFavorite && (
+                <TouchableOpacity
+                  style={styles.favBtnGlass}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    onToggleFavorite();
+                  }}
+                  disabled={favoriteLoading}
+                >
+                  <Heart
+                    size={18}
+                    color={isFavorite ? '#01b854' : '#0F172A'}
+                    fill={isFavorite ? '#01b854' : 'transparent'}
+                    strokeWidth={2.5}
+                  />
+                </TouchableOpacity>
+              )}
+          </View>
+          
+          <View style={styles.glassContent}>
+            <View style={styles.glassHeaderRow}>
+              <View style={{ flex: 1, marginRight: 12 }}>
+                <Text style={nameStyle}>
+                  {ground.name}
+                </Text>
+              </View>
+              <View style={styles.glassPriceBlock}>
+                <Text style={priceStyle}>
+                  {formatCurrency(displayPricePerUnit ?? ground.base_price_per_hour ?? 0)}
+                  <Text style={styles.priceUnitGlass}>
+                    {unitLabelOverride ?? (String(ground.pitch_type ?? '').toLowerCase().includes('box') ? '/hr' : ' / match')}
+                  </Text>
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.locationRowShort}>
+              <MapPin size={12} color={pinColor} />
+              <Text style={locationStyle} numberOfLines={1}>{ground.city}</Text>
+            </View>
+          </View>
+        </Card>
+      );
+    }
+
+    return (
       <Card
         style={[
           styles.card,
@@ -125,11 +196,11 @@ export default function GroundCard({
               {ground.name}
             </Text>
             <View style={[styles.priceBlock, isUltraNarrow && { alignItems: 'flex-start' }]}>
-              {displayPricePerUnit != null ? (
+              {(displayPricePerUnit != null || ground.base_price_per_hour != null) ? (
                 <>
                   <Text style={priceStyle}>
                     <Text style={{ fontSize: 10, fontWeight: '600', color: isLight ? '#64748B' : '#94A3B8' }}>From </Text>
-                    {formatCurrency(displayPricePerUnit)}
+                    {formatCurrency(displayPricePerUnit ?? ground.base_price_per_hour ?? 0)}
                     <Text style={styles.priceUnit}>
                       {unitLabelOverride ??
                         (String(ground.pitch_type ?? '').toLowerCase().includes('box')
@@ -139,7 +210,7 @@ export default function GroundCard({
                   </Text>
                   {!(String(ground.pitch_type ?? '').toLowerCase().includes('box')) && (
                     <Text style={[styles.perTeamLabel, !isLight && styles.perTeamLabelNative]}>
-                      ₹{Math.round(displayPricePerUnit / 2)} per team
+                      ₹{Math.round((displayPricePerUnit ?? ground.base_price_per_hour ?? 0) / 2)} per team
                     </Text>
                   )}
                 </>
@@ -216,6 +287,16 @@ export default function GroundCard({
           )}
         </View>
       </Card>
+    );
+  };
+
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={glass ? 0.9 : 0.8}
+      style={[styles.touchable, compact && styles.touchableCompact, glass && styles.touchableGlass]}
+    >
+      {renderCardContent()}
     </TouchableOpacity>
   );
 }
@@ -312,7 +393,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '600', // Reduced weight
     color: '#0F172A',
     fontFamily: 'Inter',
   },
@@ -546,6 +627,146 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#FFFFFF',
+    fontFamily: 'Inter',
+  },
+  // Glass variant styles
+  touchableGlass: {
+    marginBottom: 20,
+  },
+  cardGlass: {
+    height: 320,
+    backgroundColor: '#000',
+    borderRadius: 24,
+    borderWidth: 0,
+    borderColor: 'transparent', // Remove border color
+  },
+  imageFull: {
+    ...StyleSheet.absoluteFillObject,
+    width: '100%',
+    height: '100%',
+    opacity: 1, // Full clarity
+  },
+  glassOverlayGradient: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.2)', // Very subtle overlay
+  },
+  glassContent: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
+    borderTopWidth: 0,
+    ...Platform.select({
+      web: {
+        backdropFilter: 'blur(24px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+      },
+    }) as any,
+  },
+  topBadgesRow: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    zIndex: 20,
+  },
+  glassRatingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 100,
+    ...Platform.select({
+      web: {
+        backdropFilter: 'blur(10px)',
+      },
+    }) as any,
+  },
+  ratingTextGlassBadge: {
+    color: '#0F172A',
+    fontSize: 11,
+    fontWeight: '900',
+    fontFamily: 'Inter',
+  },
+  glassHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  glassTitleCol: {
+    flex: 1,
+    gap: 2,
+  },
+  nameGlass: {
+    color: '#0F172A', // Deep dark
+    fontSize: 16, // Reduced size
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontWeight: '600', // Reduced weight
+    fontFamily: 'Inter',
+  },
+  locationGlass: {
+    color: '#334155', // Darker slate for better contrast
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: 'Inter',
+  },
+  favBtnGlass: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+  },
+  glassDivider: {
+    height: 1,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    marginBottom: 12,
+  },
+  glassFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  glassMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  ratingGlass: {
+    color: '#0F172A',
+    fontSize: 12,
+    fontWeight: '900',
+    fontFamily: 'Inter',
+  },
+  glassPriceBlock: {
+    alignItems: 'flex-end',
+  },
+  priceGlass: {
+    color: '#06392e', // Deep dark green for price
+    fontSize: 18,
+    fontWeight: '900',
+    fontFamily: 'Inter',
+  },
+  priceUnitGlass: {
+    fontSize: 11,
+    color: '#475569', // Darker slate for contrast
+    fontWeight: '700',
+    fontFamily: 'Inter',
+  },
+  mapsLinkGlass: {
+    color: '#0F172A',
     fontFamily: 'Inter',
   },
 });

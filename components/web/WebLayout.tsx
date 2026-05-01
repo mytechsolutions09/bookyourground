@@ -67,6 +67,103 @@ interface WebLayoutProps {
   isPublicNoSidebar?: boolean;
 }
 
+const NavLink = ({
+  href,
+  icon: Icon,
+  label,
+  hideLabel = false,
+  badge,
+  meta,
+  isActiveOverride,
+}: {
+  href: string;
+  icon: any;
+  label: string;
+  hideLabel?: boolean;
+  badge?: number | string;
+  meta?: string;
+  isActiveOverride?: boolean;
+}) => {
+  const pathname = usePathname();
+  const segments = useSegments();
+  const { width } = useWindowDimensions();
+  const isCompact = width < 900;
+  
+  const [hovered, setHovered] = useState(false);
+  const normalize = (value: string) => {
+    if (value.length > 1 && value.endsWith('/')) {
+      return value.slice(0, -1);
+    }
+    return value;
+  };
+
+  const clean = (p: string) => p.replace(/\/\([^)]+\)/g, '');
+  const currentPath = clean(normalize(pathname || ''));
+  const targetHref = clean(normalize(href));
+
+  const hrefSegments = href.split('/').filter(Boolean);
+  const isActive = isActiveOverride ?? (
+    hrefSegments.length > 0
+      ? hrefSegments.length === segments.length &&
+      hrefSegments.every((seg, i) => segments[i] === seg)
+      : currentPath === targetHref
+  );
+  const iconColor = isActive ? '#00ea6b' : 'rgba(255,255,255,0.7)';
+  const activeStyle = styles.navLinkActive;
+
+  return (
+    <TouchableOpacity
+      style={[
+        styles.navLink,
+        isActive && activeStyle,
+        hideLabel && styles.navLinkCollapsed,
+        hideLabel && { gap: 0 },
+      ]}
+      onPress={() => {
+        if (href === '/' || href === '') {
+          router.replace('/' as any);
+        } else {
+          router.push(href as any);
+        }
+
+      }}
+      {...(Platform.OS === 'web' ? {
+        onMouseEnter: () => setHovered(true),
+        onMouseLeave: () => setHovered(false),
+        title: hideLabel ? label : undefined,
+      } : {})}
+    >
+      <Icon size={18} color={iconColor} />
+      {!isCompact && hideLabel && Platform.OS === 'web' && (
+        <View style={[styles.tooltip, { opacity: hovered ? 1 : 0 }]}>
+          <Text style={styles.tooltipText}>{label}</Text>
+        </View>
+      )}
+      {(!hideLabel || isCompact) && (
+        <Text
+          numberOfLines={1}
+          style={[
+            styles.navLinkText,
+            isCompact && styles.navLinkTextMobile,
+            isActive && styles.navLinkTextActive,
+            !isCompact && { transition: 'all 0.3s ease-in-out' } as any,
+          ]}
+        >
+          {label}
+        </Text>
+      )}
+      {badge !== undefined && !hideLabel && (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{badge}</Text>
+        </View>
+      )}
+      {meta !== undefined && !hideLabel && (
+        <Text style={styles.navLinkMeta}>{meta}</Text>
+      )}
+    </TouchableOpacity>
+  );
+};
+
 export default function WebLayout({ children, noCard, hideHeader, viewMode, showAddForm, isPublicNoSidebar: propIsPublicNoSidebar }: WebLayoutProps) {
   const { profile, signOut, user } = useAuth();
   const pathname = usePathname();
@@ -292,12 +389,6 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     }
   };
 
-  if (Platform.OS !== 'web') {
-    return <>{children}</>;
-  }
-
-
-
   useEffect(() => {
     const handleScroll = () => {
       const y = window.scrollY;
@@ -334,13 +425,21 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
       }
     });
 
-    handleScroll();
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    if (Platform.OS === 'web') {
+      handleScroll();
+      window.addEventListener('scroll', handleScroll, { passive: true });
+    }
     return () => {
-      window.removeEventListener('scroll', handleScroll);
+      if (Platform.OS === 'web') {
+        window.removeEventListener('scroll', handleScroll);
+      }
       sub.remove();
     };
   }, [isLanding, isMarketing, isShop]);
+
+  if (Platform.OS !== 'web') {
+    return <>{children}</>;
+  }
 
   // Navbar search: fetch ground suggestions as user types on landing pages.
 
@@ -408,98 +507,6 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
   const handleSignOut = async () => {
     await signOut();
     router.replace('/');
-  };
-
-  const NavLink = ({
-    href,
-    icon: Icon,
-    label,
-    hideLabel = false,
-    badge,
-    meta,
-    isActiveOverride,
-  }: {
-    href: string;
-    icon: any;
-    label: string;
-    hideLabel?: boolean;
-    badge?: number | string;
-    meta?: string;
-    isActiveOverride?: boolean;
-  }) => {
-    const [hovered, setHovered] = useState(false);
-    const normalize = (value: string) => {
-      if (value.length > 1 && value.endsWith('/')) {
-        return value.slice(0, -1);
-      }
-      return value;
-    };
-
-    const clean = (p: string) => p.replace(/\/\([^)]+\)/g, '');
-    const currentPath = clean(normalize(pathname || ''));
-    const targetHref = clean(normalize(href));
-
-    const hrefSegments = href.split('/').filter(Boolean);
-    const isActive = isActiveOverride ?? (
-      hrefSegments.length > 0
-        ? hrefSegments.length === segments.length &&
-        hrefSegments.every((seg, i) => segments[i] === seg)
-        : currentPath === targetHref
-    );
-    const iconColor = isActive ? '#00ea6b' : 'rgba(255,255,255,0.7)';
-    const activeStyle = styles.navLinkActive;
-
-    return (
-      <TouchableOpacity
-        style={[
-          styles.navLink,
-          isActive && activeStyle,
-          hideLabel && styles.navLinkCollapsed,
-          hideLabel && { gap: 0 },
-        ]}
-        onPress={() => {
-          if (href === '/' || href === '') {
-            router.replace('/' as any);
-          } else {
-            router.push(href as any);
-          }
-
-        }}
-        {...(Platform.OS === 'web' ? {
-          onMouseEnter: () => setHovered(true),
-          onMouseLeave: () => setHovered(false),
-          title: hideLabel ? label : undefined,
-        } : {})}
-      >
-        <Icon size={18} color={iconColor} />
-        {!isCompact && hideLabel && Platform.OS === 'web' && (
-          <View style={[styles.tooltip, { opacity: hovered ? 1 : 0 }]}>
-            <Text style={styles.tooltipText}>{label}</Text>
-          </View>
-        )}
-        {(!hideLabel || isCompact) && (
-          <Text
-            numberOfLines={1}
-            style={[
-              styles.navLinkText,
-              isCompact && styles.navLinkTextMobile,
-              isActive && styles.navLinkTextActive,
-              !isCompact && { transition: 'all 0.3s ease-in-out' } as any,
-            ]}
-          >
-            {label}
-          </Text>
-        )}
-        {badge !== undefined && !hideLabel && (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{badge}</Text>
-          </View>
-        )}
-        {meta !== undefined && !hideLabel && (
-          <Text style={styles.navLinkMeta}>{meta}</Text>
-        )}
-      </TouchableOpacity>
-    );
   };
 
   const isAdminLayout = isSuperAdmin && isAdminRoute;

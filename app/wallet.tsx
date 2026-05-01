@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Platform, TouchableOpacity, useWindowDimensions, ScrollView, ActivityIndicator } from 'react-native';
 import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
-import { ArrowUp, ArrowDown, CreditCard } from 'lucide-react-native';
+import { ArrowUp, ArrowDown, CreditCard, Calendar, Filter, X } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency } from '@/utils/helpers';
@@ -27,6 +27,8 @@ export default function WalletScreen() {
   });
   const [limit, setLimit] = useState(15);
   const [hasMore, setHasMore] = useState(true);
+  const [fromDate, setFromDate] = useState<string | null>(null);
+  const [toDate, setToDate] = useState<string | null>(null);
 
   const isOwner = profile?.role === 'ground_owner';
 
@@ -34,7 +36,7 @@ export default function WalletScreen() {
     if (user) {
       loadWalletData();
     }
-  }, [user, profile?.role]);
+  }, [user, profile?.role, fromDate, toDate]);
 
   const loadWalletData = async (newLimit = limit) => {
     if (!user) return;
@@ -53,10 +55,21 @@ export default function WalletScreen() {
         setBalance(walletData.balance);
         
         // 2. Fetch Wallet Transactions
-        const { data: wtxData } = await supabase
+        let query = supabase
           .from('wallet_transactions')
           .select('*, booking:bookings(id, ground:grounds(name))')
-          .eq('user_id', user.id)
+          .eq('user_id', user.id);
+
+        if (fromDate) {
+          query = query.gte('created_at', fromDate);
+        }
+        if (toDate) {
+          const endOfDay = new Date(toDate);
+          endOfDay.setHours(23, 59, 59, 999);
+          query = query.lte('created_at', endOfDay.toISOString());
+        }
+
+        const { data: wtxData } = await query
           .order('created_at', { ascending: false })
           .limit(newLimit + 1);
 
@@ -196,7 +209,54 @@ export default function WalletScreen() {
             </View>
           </View>
 
-          <Text style={styles.sectionTitle}>Transaction History</Text>
+          <View style={styles.historyHeader}>
+            <Text style={styles.sectionTitle}>Transaction History</Text>
+            
+            <View style={styles.filterContainer}>
+              <View style={styles.dateFilterGroup}>
+                <View style={styles.datePickerInput}>
+                   <Calendar size={14} color="#64748B" />
+                   <Text style={[styles.dateTextLabel, fromDate && styles.dateTextActive]}>
+                     {fromDate ? new Date(fromDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'From Date'}
+                   </Text>
+                   {Platform.OS === 'web' && (
+                     <input
+                       type="date"
+                       value={fromDate || ''}
+                       onChange={(e) => setFromDate(e.target.value || null)}
+                       style={styles.webDatePicker}
+                     />
+                   )}
+                </View>
+
+                <Text style={styles.dateSeparator}>to</Text>
+
+                <View style={styles.datePickerInput}>
+                   <Calendar size={14} color="#64748B" />
+                   <Text style={[styles.dateTextLabel, toDate && styles.dateTextActive]}>
+                     {toDate ? new Date(toDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'To Date'}
+                   </Text>
+                   {Platform.OS === 'web' && (
+                     <input
+                       type="date"
+                       value={toDate || ''}
+                       onChange={(e) => setToDate(e.target.value || null)}
+                       style={styles.webDatePicker}
+                     />
+                   )}
+                </View>
+
+                {(fromDate || toDate) && (
+                  <TouchableOpacity 
+                    onPress={() => { setFromDate(null); setToDate(null); }} 
+                    style={styles.clearBtn}
+                  >
+                    <X size={14} color="#dc2626" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+          </View>
           <View style={styles.transactionsList}>
             {loading && transactions.length === 0 ? (
               <ActivityIndicator color={THEME_BG} size="large" style={{ marginTop: 20 }} />
@@ -522,5 +582,71 @@ const styles = StyleSheet.create({
   compactExtraInfo: {
     marginTop: 32,
     gap: 24,
+  },
+  historyHeader: {
+    flexDirection: Platform.OS === 'web' ? 'row' : 'column',
+    alignItems: Platform.OS === 'web' ? 'center' : 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+    gap: 16,
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  dateFilterGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    padding: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 8,
+  },
+  datePickerInput: {
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: '#F8FAFC',
+  },
+  dateTextLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+    fontFamily: 'Inter',
+  },
+  dateTextActive: {
+    color: '#0F172A',
+  },
+  dateSeparator: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#94A3B8',
+    textTransform: 'uppercase',
+  },
+  webDatePicker: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    opacity: 0,
+    cursor: 'pointer',
+    width: '100%',
+    zIndex: 1,
+  },
+  clearBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 4,
   }
 });

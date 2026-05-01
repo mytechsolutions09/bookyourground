@@ -56,91 +56,67 @@ export default function MatchCard({
 
   return (
     <TouchableOpacity onPress={onJoin} activeOpacity={0.9} style={styles.touchable}>
-      <Card style={cardStyle}>
-        {/* Top Image Section with Overlay */}
-        <View style={styles.imageWrapper}>
-          <Image source={{ uri: primaryImage }} style={styles.image} />
-          <View style={styles.imageGradientOverlay} />
-          <View style={styles.imageContentOverlay}>
-            <View style={styles.statusBadge}>
-              <Users size={12} color="#FFFFFF" />
-              <Text style={styles.statusText}>{teamsCount}</Text>
-            </View>
-            <View style={styles.imageBottomText}>
-              <Text style={styles.overlayName}>{match.ground.name.toUpperCase()}</Text>
-              <View style={styles.overlayLocationRow}>
-                <MapPin size={14} color="#FFFFFF" />
-                <Text style={styles.overlayLocationText}>{match.ground.city}</Text>
-              </View>
-            </View>
+      <Card style={[styles.card, styles.cardGlass]}>
+        {/* Full Bleed Image */}
+        <Image source={{ uri: primaryImage }} style={styles.imageFull} />
+        <View style={styles.glassOverlayGradient} />
+        
+        {/* Top Badges */}
+        <View style={styles.topBadgesRow}>
+          <View style={styles.statusBadgeGlass}>
+            <Users size={12} color="#FFFFFF" />
+            <Text style={styles.statusTextGlass}>{teamsCount}</Text>
           </View>
         </View>
 
-        {/* Schedule & Price Info Bar */}
-        <View style={styles.infoBar}>
-          <View style={{ flex: 1, marginRight: 8 }}>
-            <Text style={styles.infoBarText}>
-              {formatDate(match.booking_date)} | {formatBookingSlotSummary(match.start_time, match.end_time, match.ground.pitch_type)}
-            </Text>
-          </View>
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text style={styles.infoBarPrice}>
-              {formatCurrency(Number(match.total_amount))}
-            </Text>
-            <Text style={styles.infoBarPriceUnit}>/match</Text>
-          </View>
-        </View>
-
-        <View style={styles.content}>
-          <Text style={styles.sectionLabel}>MATCH DETAILS</Text>
-          
-          {/* Details Box */}
-          <View style={styles.detailsBox}>
-            <View style={styles.detailsHeader}>
-              <Text style={styles.reviewsLabel}>
-                {reviewCount > 0 ? `${avgRating.toFixed(1)} RATING` : 'NO REVIEWS YET'}
+        {/* The "Film" (Glass Panel) */}
+        <View style={styles.glassContent}>
+          <View style={styles.glassHeaderRow}>
+            <View style={{ flex: 1, marginRight: 12 }}>
+              <Text style={styles.opponentTeamGlass}>
+                OPPOSITION TEAM | {match.user?.team_name?.toUpperCase() || 'ANONYMOUS TEAM'}
               </Text>
-              <View style={styles.starRow}>
-                {[1, 2, 3, 4, 5].map((i) => {
-                  const filled = reviewCount > 0 && i <= Math.round(avgRating);
-                  return (
-                    <Star
-                      key={i}
-                      size={16}
-                      color={filled ? '#94A3B8' : '#94A3B8'}
-                      fill={filled ? '#94A3B8' : 'none'}
-                    />
-                  );
-                })}
+              <Text style={styles.nameGlass}>
+                {match.ground.name}
+              </Text>
+              <View style={styles.locationRowShort}>
+                <MapPin size={12} color="rgba(15, 23, 42, 0.7)" />
+                <Text style={styles.locationGlass} numberOfLines={1}>{match.ground.city}</Text>
               </View>
             </View>
-            
-            <View style={styles.opponentRow}>
-              <Text style={styles.matchTypeLabel}>EXHIBITION MATCHES</Text>
-              <Text style={styles.opponentNames}>
-                {(match.user?.full_name || 'Anonymous Player').toUpperCase()} | {match.user?.team_name?.toUpperCase() || 'NO TEAM'}
+            <View style={styles.glassPriceBlock}>
+              <Text style={styles.priceGlass}>
+                {formatCurrency(Number(match.total_amount))}
+                <Text style={styles.priceUnitGlass}>/match</Text>
               </Text>
+              
+              {/* Date & Slot moved under price */}
+              <View style={styles.matchMetaRowRight}>
+                <View style={styles.scheduleBadge}>
+                  <Calendar size={10} color="#0F172A" />
+                  <Text style={styles.scheduleTextGlass}>
+                    {formatDate(match.booking_date)}
+                  </Text>
+                </View>
+                <View style={styles.scheduleBadge}>
+                  <Clock size={10} color="#0F172A" />
+                  <Text style={styles.scheduleTextGlass}>
+                    {formatBookingSlotSummary(match.start_time, match.end_time, match.ground.pitch_type)}
+                  </Text>
+                </View>
+              </View>
             </View>
           </View>
 
-          {/* Progress Section */}
-          <View style={styles.progressSection}>
-            <Text style={styles.progressLabel}>SPOTS FILLING FAST!</Text>
-            <View style={styles.progressBarBg}>
-              <View style={[styles.progressBarFill, { width: '50%' }]} />
-            </View>
-          </View>
+          <View style={styles.glassDivider} />
 
-          {/* Action Row */}
-          <View style={styles.actionRow}>
+          <View style={styles.actionRowGlass}>
             <TouchableOpacity 
-              style={styles.joinButtonLarge}
+              style={styles.joinButtonGlass}
               onPress={onJoin}
             >
-              <Text style={styles.joinButtonLargeText}>JOIN MATCH</Text>
+              <Text style={styles.joinButtonTextGlass}>JOIN MATCH</Text>
             </TouchableOpacity>
-            
-
           </View>
         </View>
       </Card>
@@ -161,234 +137,157 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'stretch',
   },
-  cardNative: {
-    backgroundColor: NATIVE_CARD_BG,
-    borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.2)',
-  },
-  cardWeb: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  imageWrapper: {
-    position: 'relative',
-    width: '100%',
-    height: 200,
-    borderRadius: 16,
+  // Glass variant styles
+  cardGlass: {
+    height: 380,
+    backgroundColor: '#000',
+    borderRadius: 24,
+    borderWidth: 0,
+    borderColor: 'transparent', // Ensure no border color is visible
     overflow: 'hidden',
+    position: 'relative',
+    marginBottom: 20,
   },
-  image: {
+  imageFull: {
+    ...StyleSheet.absoluteFillObject,
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
+    opacity: 1,
   },
-  imageGradientOverlay: {
+  glassOverlayGradient: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+  },
+  topBadgesRow: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: '60%',
-    backgroundColor: 'rgba(0,0,0,0.4)', // Simplified overlay, would be a LinearGradient in production
+    top: 16,
+    left: 16,
+    zIndex: 20,
   },
-  imageContentOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    padding: 16,
-    justifyContent: 'space-between',
-  },
-  imageBottomText: {
-    gap: 2,
-  },
-  overlayName: {
-    color: '#FFFFFF',
-    fontSize: 22,
-    fontWeight: '800',
-    fontFamily: 'Inter',
-    letterSpacing: -0.5,
-  },
-  overlayLocationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  overlayLocationText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: 'Inter',
-  },
-  statusBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+  statusBadgeGlass: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 100,
   },
-  statusText: {
+  statusTextGlass: {
     fontFamily: 'Inter',
     color: '#fff',
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
   },
-  infoBar: {
+  glassContent: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.45)',
+    ...Platform.select({
+      web: {
+        backdropFilter: 'blur(24px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+      },
+    }) as any,
+  },
+  glassHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    marginTop: 8,
-    marginHorizontal: 12,
+    marginBottom: 6,
   },
-  infoBarText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#0F172A',
-    fontFamily: 'Inter',
-  },
-  infoBarPrice: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#10b981',
-    fontFamily: 'Inter',
-  },
-  infoBarPriceUnit: {
-    fontSize: 11,
-    fontWeight: '400',
-    color: '#64748B',
-  },
-  content: {
-    padding: 16,
-  },
-  sectionLabel: {
-    fontSize: 11,
+  opponentTeamGlass: {
+    fontSize: 10,
     fontWeight: '800',
-    color: '#64748B',
-    marginBottom: 8,
+    color: '#065F46', // Dark emerald
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 4,
     fontFamily: 'Inter',
+  },
+  nameGlass: {
+    color: '#0F172A',
+    fontSize: 16, // Reduced size
+    textTransform: 'uppercase',
     letterSpacing: 0.5,
-  },
-  detailsBox: {
-    borderWidth: 1,
-    borderColor: 'rgba(0,234,107,0.3)',
-    borderRadius: 16,
-    padding: 14,
-    backgroundColor: 'rgba(0,234,107,0.02)',
-    marginBottom: 16,
-  },
-  detailsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  reviewsLabel: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#0F172A',
+    fontWeight: '600',
     fontFamily: 'Inter',
   },
-  starRow: {
+  locationRowShort: {
     flexDirection: 'row',
-    gap: 2,
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
   },
-  opponentRow: {
+  locationGlass: {
+    color: '#334155',
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: 'Inter',
+  },
+  priceGlass: {
+    color: '#06392e',
+    fontSize: 18,
+    fontWeight: '900',
+    fontFamily: 'Inter',
+  },
+  priceUnitGlass: {
+    fontSize: 11,
+    color: '#475569',
+    fontWeight: '700',
+    fontFamily: 'Inter',
+  },
+  glassPriceBlock: {
+    alignItems: 'flex-end',
     gap: 4,
   },
-  matchTypeLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#64748B',
-    fontFamily: 'Inter',
+  matchMetaRowRight: {
+    flexDirection: 'column', // Stack on small screens/generally
+    alignItems: 'flex-end',
+    gap: 4,
+    marginTop: 6,
   },
-  opponentNames: {
-    fontSize: 13,
+  scheduleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(15, 23, 42, 0.08)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  scheduleTextGlass: {
+    fontSize: 10,
     fontWeight: '700',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
-  progressSection: {
-    marginBottom: 20,
-    alignItems: 'center',
-  },
-  progressLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#64748B',
-    marginBottom: 6,
-    fontFamily: 'Inter',
-    letterSpacing: 0.5,
-  },
-  progressBarBg: {
-    height: 6,
+  actionRowGlass: {
     width: '100%',
-    backgroundColor: '#E2E8F0',
-    borderRadius: 3,
-    overflow: 'hidden',
+    marginTop: 16,
   },
-  progressBarFill: {
-    height: '100%',
-    backgroundColor: '#00ea6b', // Would be gradient in production
-    borderRadius: 3,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'center',
-  },
-  joinButtonLarge: {
-    flex: 1,
+  joinButtonGlass: {
+    width: '100%',
     height: 48,
-    backgroundColor: '#00ea6b', // Would be gradient in production
-    borderRadius: 12,
+    backgroundColor: '#01b854',
+    borderRadius: 100,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#00ea6b',
+    shadowColor: '#01b854',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowRadius: 10,
+    elevation: 5,
   },
-  joinButtonLargeText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#0F172A',
-    fontFamily: 'Inter',
-  },
-  pricePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    paddingHorizontal: 12,
-    height: 48,
-    borderRadius: 12,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  walletIconBox: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  pricePillText: {
+  joinButtonTextGlass: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#0F172A',
+    color: '#FFFFFF',
     fontFamily: 'Inter',
+    letterSpacing: 0.5,
   },
 });

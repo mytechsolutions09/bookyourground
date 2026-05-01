@@ -314,15 +314,114 @@ export default function GroundDetailsPrettyUrlScreen() {
         <View style={styles.content}>
           {/* ── Hero Gallery ── */}
           {IS_WEB ? (
-            <WebHeroGallery 
-              ground={ground} 
-              heroIdx={heroIdx} 
-              imageUrls={imageUrls} 
-              setHeroImageIndex={setHeroImageIndex}
-              isFavorite={isFavorite}
-              toggleFavorite={toggleFavorite}
-              favoriteLoading={favoriteLoading}
-            />
+            isLargeWeb ? (
+              <View style={styles.webHeroRow}>
+                <View style={styles.webHeroColumn}>
+                  <WebHeroGallery 
+                    ground={ground} 
+                    heroIdx={heroIdx} 
+                    imageUrls={imageUrls} 
+                    setHeroImageIndex={setHeroImageIndex}
+                    isFavorite={isFavorite}
+                    toggleFavorite={toggleFavorite}
+                    favoriteLoading={favoriteLoading}
+                    fullWidth={false}
+                  />
+                  
+                  {/* Ground Info Card moved under image */}
+                  <Card style={[styles.section, { marginTop: 12, padding: 24 }]}>
+                    <View style={styles.infoCardHeader}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.name}>{ground.name}</Text>
+                        <View style={styles.locationRow}>
+                          <Text style={styles.location}>
+                            {ground.address}, {ground.city}, {ground.state} - {ground.pincode}
+                          </Text>
+                        </View>
+                      </View>
+                      
+                      {/* Reviews moved to the right side */}
+                      <View style={styles.starsSummaryRowCompact}>
+                        <View style={{ flexDirection: 'row', gap: 2 }}>
+                          {[1, 2, 3, 4, 5].map((i) => {
+                            const filled = reviews.length > 0 && i <= Math.round(averageRating);
+                            return (
+                              <Star
+                                key={i}
+                                size={16}
+                                color={filled ? '#dcc093' : '#E5E7EB'}
+                                fill={filled ? '#dcc093' : 'none'}
+                              />
+                            );
+                          })}
+                        </View>
+                        <Text style={styles.ratingCompact}>
+                          {reviews.length > 0
+                            ? `${averageRating.toFixed(1)} (${reviews.length} reviews)`
+                            : 'No reviews yet'}
+                        </Text>
+                      </View>
+                    </View>
+                  </Card>
+                </View>
+                <View style={styles.webMapColumn}>
+                  <Card style={[styles.section, styles.mapSection, { marginTop: 0, flex: 1, borderRadius: 24 }]}>
+                    <View style={[styles.webMapContainer, { height: 520 }]}>
+                      <WebMap ground={ground} mapsUrl={mapsUrl} />
+                    </View>
+                    <View style={styles.mapActionsContainer}>
+                      <Button
+                        title={isFavorite ? "Favourited" : "Favourite"}
+                        variant="outline"
+                        icon={Heart}
+                        iconSize={16}
+                        iconColor="#01b854"
+                        fill={isFavorite ? '#01b854' : 'none'}
+                        onPress={toggleFavorite}
+                        loading={favoriteLoading}
+                        style={styles.mapActionBtn}
+                        textStyle={{ color: '#01b854', fontSize: 12 }}
+                      />
+                      <Button
+                        title="Directions"
+                        variant="outline"
+                        icon={Navigation2}
+                        iconSize={16}
+                        onPress={() => mapsUrl && Linking.openURL(mapsUrl)}
+                        style={styles.mapActionBtn}
+                        textStyle={{ color: '#01b854', fontSize: 12 }}
+                      />
+                      <Button
+                        title="Share"
+                        variant="outline"
+                        icon={Share2}
+                        iconSize={16}
+                        onPress={() => {
+                          const url = typeof window !== 'undefined' ? window.location.href : '';
+                          Share.share({
+                            message: `Check out ${ground.name} on BookYourGround!`,
+                            url: url,
+                            title: ground.name
+                          });
+                        }}
+                        style={styles.mapActionBtn}
+                        textStyle={{ color: '#01b854', fontSize: 12 }}
+                      />
+                    </View>
+                  </Card>
+                </View>
+              </View>
+            ) : (
+              <WebHeroGallery 
+                ground={ground} 
+                heroIdx={heroIdx} 
+                imageUrls={imageUrls} 
+                setHeroImageIndex={setHeroImageIndex}
+                isFavorite={isFavorite}
+                toggleFavorite={toggleFavorite}
+                favoriteLoading={favoriteLoading}
+              />
+            )
           ) : (
             <View style={[styles.section, styles.imageCard]}>
               <Image
@@ -359,79 +458,6 @@ export default function GroundDetailsPrettyUrlScreen() {
           {isLargeWeb ? (
             <View style={styles.webTwoColumnLayout}>
               <View style={styles.webLeftColumn}>
-                <Card style={styles.section}>
-                  <View style={styles.infoCardHeader}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.name}>{ground.name}</Text>
-                      <View style={styles.locationRow}>
-                        <Text style={styles.location}>
-                          {ground.address}, {ground.city}, {ground.state} - {ground.pincode}
-                        </Text>
-                      </View>
-                      <View style={styles.starsSummaryRow}>
-                        {[1, 2, 3, 4, 5].map((i) => {
-                          const filled = reviews.length > 0 && i <= Math.round(averageRating);
-                          return (
-                            <Star
-                              key={i}
-                              size={16}
-                              color={filled ? '#dcc093' : '#374151'}
-                              fill={filled ? '#dcc093' : 'none'}
-                            />
-                          );
-                        })}
-                        <Text style={styles.rating}>
-                          {reviews.length > 0
-                            ? `${averageRating.toFixed(1)} (${reviews.length} reviews)`
-                            : 'No reviews yet'}
-                        </Text>
-                      </View>
-                    </View>
-                    {isLargeWeb && (
-                      <Button
-                        title={isFavorite ? "Saved" : "Save"}
-                        variant={isFavorite ? "primary" : "outline"}
-                        icon={Heart}
-                        onPress={toggleFavorite}
-                        loading={favoriteLoading}
-                        style={styles.inlineSaveBtn}
-                      />
-                    )}
-                  </View>
-                </Card>
-
-                {/* Map Section - Expanded edge-to-edge */}
-                <Card style={[styles.section, styles.mapSection]}>
-                  <View style={styles.webMapContainer}>
-                    <WebMap ground={ground} mapsUrl={mapsUrl} />
-                  </View>
-                  <View style={styles.mapActionsContainer}>
-                    <Button
-                      title="Directions"
-                      variant="outline"
-                      icon={Navigation2}
-                      onPress={() => mapsUrl && Linking.openURL(mapsUrl)}
-                      style={styles.mapActionBtn}
-                      textStyle={{ color: '#01b854' }}
-                    />
-                    <Button
-                      title="Share"
-                      variant="outline"
-                      icon={Share2}
-                      onPress={() => {
-                        const url = typeof window !== 'undefined' ? window.location.href : '';
-                        Share.share({
-                          message: `Check out ${ground.name} on BookYourGround!`,
-                          url: url,
-                          title: ground.name
-                        });
-                      }}
-                      style={styles.mapActionBtn}
-                      textStyle={{ color: '#01b854' }}
-                    />
-                  </View>
-                </Card>
-
                 {ground.description && (
                   <Card style={styles.section}>
                     <Text style={styles.sectionTitle}>About</Text>
@@ -468,12 +494,88 @@ export default function GroundDetailsPrettyUrlScreen() {
                   <AmenitiesList ground={ground} />
                 </Card>
 
-                <ReviewsSection 
-                  reviews={reviews} 
-                  averageRating={averageRating} 
-                  reviewSortOrder={reviewSortOrder} 
-                  setReviewSortOrder={setReviewSortOrder}
-                />
+                {/* ── Customer Reviews ── */}
+                <Section style={[styles.section, styles.reviewsSectionCard]}>
+                  <View style={styles.reviewHeaderMain}>
+                    <Text style={styles.sectionTitle}>Customer Reviews</Text>
+                    
+                    <View style={styles.reviewStatsSummary}>
+                      <View style={styles.avgRatingBadge}>
+                        <Text style={styles.avgRatingValue}>{averageRating.toFixed(1)}</Text>
+                        <Text style={styles.avgRatingText}> out of 5</Text>
+                      </View>
+                      <Text style={styles.reviewCountText}>({reviews.length} reviews)</Text>
+                    </View>
+
+                    <Pressable 
+                      style={styles.writeReviewBtn}
+                      onPress={() => router.push('/(tabs)/bookings' as any)}
+                    >
+                      <Star size={14} color="#6B7280" />
+                      <Text style={styles.writeReviewText}>Write a Review</Text>
+                    </Pressable>
+                  </View>
+
+                  <View style={styles.sortContainer}>
+                    <Text style={styles.sortByLabel}>Sort by:</Text>
+                    <View style={styles.sortChipsRow}>
+                      {[
+                        { id: 'newest', label: 'Most Recent' },
+                        { id: 'oldest', label: 'Oldest' },
+                        { id: 'highest', label: 'Highest Rated' },
+                        { id: 'lowest', label: 'Lowest Rated' },
+                      ].map((opt) => (
+                        <Pressable 
+                          key={opt.id}
+                          onPress={() => setReviewSortOrder(opt.id as any)}
+                          style={[styles.sortChip, reviewSortOrder === opt.id && styles.sortChipActive]}
+                        >
+                          <Text style={[styles.sortChipText, reviewSortOrder === opt.id && styles.sortChipTextActive]}>
+                            {opt.label}
+                          </Text>
+                        </Pressable>
+                      ))}
+                    </View>
+                  </View>
+
+                  {reviews.length === 0 ? (
+                    <Text style={styles.noReviewsText}>
+                      No reviews yet. Go to your past bookings to leave a review.
+                    </Text>
+                  ) : (
+                    <View style={styles.reviewsList}>
+                      {reviews.map((r, idx) => (
+                        <View key={r.id ?? idx} style={styles.reviewItem}>
+                          <View style={styles.reviewHeader}>
+                            <View style={styles.reviewRatingRow}>
+                              {[1,2,3,4,5].map((s) => (
+                                <Star
+                                  key={s}
+                                  size={13}
+                                  color={s <= r.rating ? '#dcc093' : '#374151'}
+                                  fill={s <= r.rating ? '#dcc093' : 'none'}
+                                />
+                              ))}
+                              <Text style={styles.reviewRatingText}>{r.rating}/5</Text>
+                            </View>
+
+                            <View style={styles.reviewAuthorDateColumn}>
+                              {r.user?.full_name && (
+                                <Text style={styles.reviewAuthorText}>{r.user.full_name.toUpperCase()}</Text>
+                              )}
+                              {r.created_at && (
+                                <Text style={styles.reviewDateText}>{formatDate(r.created_at)}</Text>
+                              )}
+                            </View>
+                          </View>
+                          {r.comment ? (
+                            <Text style={styles.reviewCommentText}>{r.comment}</Text>
+                          ) : null}
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </Section>
               </View>
 
               <View style={styles.webRightColumn}>
@@ -628,88 +730,7 @@ export default function GroundDetailsPrettyUrlScreen() {
             </>
           )}
 
-          {/* ── Reviews ── */}
-          <Section style={styles.section}>
-            <View style={styles.reviewHeaderMain}>
-              <Text style={styles.sectionTitle}>Customer Reviews</Text>
-              
-              <View style={styles.reviewStatsSummary}>
-                <View style={styles.avgRatingBadge}>
-                  <Text style={styles.avgRatingValue}>{averageRating.toFixed(1)}</Text>
-                  <Text style={styles.avgRatingText}> out of 5</Text>
-                </View>
-                <Text style={styles.reviewCountText}>({reviews.length} reviews)</Text>
-              </View>
-
-              <Pressable 
-                style={styles.writeReviewBtn}
-                onPress={() => router.push('/(tabs)/bookings' as any)}
-              >
-                <Star size={14} color="#6B7280" />
-                <Text style={styles.writeReviewText}>Write a Review</Text>
-              </Pressable>
-            </View>
-
-            <View style={styles.sortContainer}>
-              <Text style={styles.sortByLabel}>Sort by:</Text>
-              <View style={styles.sortChipsRow}>
-                {[
-                  { id: 'newest', label: 'Most Recent' },
-                  { id: 'oldest', label: 'Oldest' },
-                  { id: 'highest', label: 'Highest Rated' },
-                  { id: 'lowest', label: 'Lowest Rated' },
-                ].map((opt) => (
-                  <Pressable 
-                    key={opt.id}
-                    onPress={() => setReviewSortOrder(opt.id as any)}
-                    style={[styles.sortChip, reviewSortOrder === opt.id && styles.sortChipActive]}
-                  >
-                    <Text style={[styles.sortChipText, reviewSortOrder === opt.id && styles.sortChipTextActive]}>
-                      {opt.label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            {reviews.length === 0 ? (
-              <Text style={styles.noReviewsText}>
-                No reviews yet. Go to your past bookings to leave a review.
-              </Text>
-            ) : (
-              <View style={styles.reviewsList}>
-                {reviews.map((r, idx) => (
-                  <View key={r.id ?? idx} style={styles.reviewItem}>
-                    <View style={styles.reviewHeader}>
-                      <View style={styles.reviewRatingRow}>
-                        {[1,2,3,4,5].map((s) => (
-                          <Star
-                            key={s}
-                            size={13}
-                            color={s <= r.rating ? '#dcc093' : '#374151'}
-                            fill={s <= r.rating ? '#dcc093' : 'none'}
-                          />
-                        ))}
-                        <Text style={styles.reviewRatingText}>{r.rating}/5</Text>
-                      </View>
-
-                      <View style={styles.reviewAuthorDateColumn}>
-                        {r.user?.full_name && (
-                          <Text style={styles.reviewAuthorText}>{r.user.full_name.toUpperCase()}</Text>
-                        )}
-                        {r.created_at && (
-                          <Text style={styles.reviewDateText}>{formatDate(r.created_at)}</Text>
-                        )}
-                      </View>
-                    </View>
-                    {r.comment ? (
-                      <Text style={styles.reviewCommentText}>{r.comment}</Text>
-                    ) : null}
-                  </View>
-                ))}
-              </View>
-            )}
-          </Section>
+          {/* Reviews section moved to top of left column */}
         </View>
       </ScrollView>
     </>
@@ -1056,10 +1077,21 @@ function ReviewsSection({ reviews, averageRating, reviewSortOrder, setReviewSort
 
 const styles = StyleSheet.create({
   // ── Web Shell ──────────────────────────────────────────────
+  webHeroRow: {
+    flexDirection: 'row',
+    gap: 20,
+    width: '100%',
+    marginBottom: 24,
+  },
+  webHeroColumn: {
+    flex: 1.8,
+  },
+  webMapColumn: {
+    flex: 1,
+  },
   webGalleryWrapper: {
     width: '100%',
     height: 520,
-    marginBottom: 24,
     borderRadius: 24,
     overflow: 'hidden',
     backgroundColor: '#E2E8F0',
@@ -1085,6 +1117,9 @@ const styles = StyleSheet.create({
     top: 100,
     gap: 20,
   },
+  reviewsSectionCard: {
+    minHeight: 480,
+  },
   sidebarBookingCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
@@ -1096,6 +1131,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 20,
     elevation: 5,
+  },
+  starsSummaryRowCompact: {
+    flexDirection: 'column',
+    alignItems: 'flex-end',
+    gap: 4,
+    marginTop: 4,
+  },
+  ratingCompact: {
+    fontFamily: 'Inter',
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
   },
   sidebarPriceTitle: {
     fontFamily: 'Inter',
@@ -1156,13 +1203,18 @@ const styles = StyleSheet.create({
   },
   mapActionsContainer: {
     flexDirection: 'row',
-    gap: 12,
-    padding: 16,
+    gap: 8,
+    padding: 12,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
   },
   mapActionBtn: {
     flex: 1,
+    height: 36,
+    paddingVertical: 0,
+    paddingHorizontal: 8,
+    borderRadius: 8,
     borderColor: '#01b854',
   },
   webHeroImage: {
@@ -1347,7 +1399,7 @@ const styles = StyleSheet.create({
     ...Platform.select({
       web: {
         padding: 16,
-        paddingTop: 80,
+        paddingTop: 112, // Increased from 80 to clear navbar with extra space
         maxWidth: 1120,
         marginHorizontal: 'auto',
         width: '100%',

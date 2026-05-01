@@ -89,12 +89,9 @@ export default function TeamDetailsPage() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const { setTabBarVisible } = useUI();
-  const { width } = useWindowDimensions();
-  const isFold = width < 330 || width > 600;
-  const isWide = width > 500;
-  const isTablet = width > 768;
-
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
+  
   const [team, setTeam] = useState<Team | null>(null);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -116,14 +113,8 @@ export default function TeamDetailsPage() {
   const [partnerships, setPartnerships] = useState<any[]>([]);
   const [partnershipsLoading, setPartnershipsLoading] = useState(false);
   
-  const { width: windowWidth } = useWindowDimensions();
   const horizontalPagerRef = React.useRef<Animated.ScrollView>(null);
   const tabScrollRef = React.useRef<ScrollView>(null);
-
-  const onTabPress = (tabKey: string, idx: number) => {
-    setActiveTab(tabKey);
-    horizontalPagerRef.current?.scrollTo({ x: idx * windowWidth, animated: true });
-  };
 
   const horizontalScrollHandler = useAnimatedScrollHandler({
     onMomentumEnd: (event) => {
@@ -135,18 +126,20 @@ export default function TeamDetailsPage() {
     },
   });
 
+  const onTabPress = (tabKey: string, idx: number) => {
+    setActiveTab(tabKey);
+    horizontalPagerRef.current?.scrollTo({ x: idx * windowWidth, animated: true });
+  };
+
   const lastScrollY = React.useRef(0);
 
   const handleScroll = (event: any) => {
     const currentY = event.nativeEvent.contentOffset.y;
-    // Removed scroll-based tab bar visibility toggling
     lastScrollY.current = currentY;
   };
 
   useEffect(() => {
-    // Hide tab bar on mount
     setTabBarVisible(false);
-    // Restore on unmount
     return () => setTabBarVisible(true);
   }, []);
 
@@ -161,12 +154,22 @@ export default function TeamDetailsPage() {
     }
   }, [id]);
 
-  // Fetch partnerships when leaderboard tab is active
   useEffect(() => {
     if (activeTab === 'leaderboard' && activeSubTab === 'partnership' && teamMatches.length > 0) {
       loadPartnerships();
     }
   }, [activeSubTab, activeTab, teamMatches.length]);
+
+  useEffect(() => {
+    const visibleTabs = TABS.filter(t => !t.hidden);
+    const idx = visibleTabs.findIndex(t => t.key === activeTab);
+    if (idx !== -1) {
+      tabScrollRef.current?.scrollTo({ 
+        x: idx * 100 - (windowWidth / 2) + 50, 
+        animated: true 
+      });
+    }
+  }, [activeTab, windowWidth]);
 
   const loadPartnerships = async () => {
     try {
@@ -190,7 +193,6 @@ export default function TeamDetailsPage() {
   const loadLeaderboard = async () => {
     try {
       setLeaderboardLoading(true);
-      // Fetch stats for all members of this team
       const { data, error } = await supabase
         .from('player_ball_stats')
         .select(`
@@ -217,8 +219,6 @@ export default function TeamDetailsPage() {
   const loadMatches = async () => {
     try {
       setMatchesLoading(true);
-      
-      // 1. Get Summary Stats via RPC (High Performance)
       const { data: statsData, error: statsError } = await supabase
         .rpc('get_team_stats', { target_team_id: id });
       
@@ -226,7 +226,6 @@ export default function TeamDetailsPage() {
         setRpcStats(statsData);
       }
 
-      // 2. Fetch last 10 matches for the history list
       const { data, error } = await supabase
         .from('matches')
         .select(`*, match_live_state (*)`)
@@ -244,7 +243,6 @@ export default function TeamDetailsPage() {
   };
 
   const calculateStats = () => {
-    // Priority 1: Use Server-side RPC results
     if (rpcStats) {
       const winRate = rpcStats.matches > 0 ? ((rpcStats.won / rpcStats.matches) * 100).toFixed(1) : '0';
       return {
@@ -266,7 +264,6 @@ export default function TeamDetailsPage() {
       };
     }
 
-    // Priority 2: Fallback to client-side calc from the fetched teamMatches array
     let stats = {
       matches: 0, upcoming: 0, won: 0, lost: 0, tie: 0, draw: 0, noResult: 0,
       tossWon: 0, batFirst: 0, fieldFirst: 0,
@@ -276,41 +273,23 @@ export default function TeamDetailsPage() {
     teamMatches.forEach(m => {
       const isTeamA = m.team_a_id === id;
       const live = m.match_live_state;
-      
-      // Basic counts
       if (m.status === 'scheduled') stats.upcoming++;
       else stats.matches++;
 
-      if (live?.winner_id === id) {
-        stats.won++;
-        stats.points += 2; // Assuming 2 points for win
-      } else if (live?.winner_id && live?.winner_id !== id) {
-        stats.lost++;
-      } else if (live?.match_status === 'tie') {
-        stats.tie++;
-        stats.points += 1;
-      } else if (live?.match_status === 'draw') {
-        stats.draw++;
-        stats.points += 1;
-      } else if (m.status === 'abandoned' || live?.match_status === 'abandoned') {
-        stats.noResult++;
-        stats.points += 1;
-      }
+      if (live?.winner_id === id) stats.won++;
+      else if (live?.winner_id && live?.winner_id !== id) stats.lost++;
+      else if (live?.match_status === 'tie') stats.tie++;
+      else if (live?.match_status === 'draw') stats.draw++;
+      else if (m.status === 'abandoned' || live?.match_status === 'abandoned') stats.noResult++;
 
-      // Toss & Decisions
       if (m.toss_winner_id === id) stats.tossWon++;
-      
       const batFirstTeamId = m.toss_decision === 'bat' ? m.toss_winner_id : (m.team_a_id === m.toss_winner_id ? m.team_b_id : m.team_a_id);
       if (batFirstTeamId === id) stats.batFirst++;
       else if (m.status !== 'scheduled') stats.fieldFirst++;
 
-      // Runs Parsing
-      const myScoreRaw = isTeamA ? live?.team_a_score : live?.team_b_score;
-      const oppScoreRaw = isTeamA ? live?.team_b_score : live?.team_a_score;
-      
       const parseRuns = (s: string) => parseInt(s?.split('/')[0] || '0');
-      const myRuns = parseRuns(myScoreRaw);
-      const oppRuns = parseRuns(oppScoreRaw);
+      const myRuns = parseRuns(isTeamA ? live?.team_a_score : live?.team_b_score);
+      const oppRuns = parseRuns(isTeamA ? live?.team_b_score : live?.team_a_score);
 
       if (myRuns > 0) {
         stats.runsFor += myRuns;
@@ -321,13 +300,8 @@ export default function TeamDetailsPage() {
     });
 
     if (stats.lowest === Infinity) stats.lowest = 0;
-    
     const winRate = stats.matches > 0 ? ((stats.won / stats.matches) * 100).toFixed(1) : '0';
-
-    return {
-      ...stats,
-      winRate: `${winRate}%`
-    };
+    return { ...stats, winRate: `${winRate}%` };
   };
 
   const dynamicStats = calculateStats();
@@ -361,8 +335,6 @@ export default function TeamDetailsPage() {
   const loadTeamData = async () => {
     try {
       setLoading(true);
-      
-      // 1. Fetch Team Details
       const { data: teamData, error: teamError } = await supabase
         .from('teams')
         .select('*, owner:profiles!owner_id(full_name)')
@@ -372,7 +344,6 @@ export default function TeamDetailsPage() {
       if (teamError) throw teamError;
       setTeam(teamData);
 
-      // 2. Fetch Members
       const { data: membersData, error: membersError } = await supabase
         .from('team_members')
         .select('*, profile:profiles(full_name, avatar_url)')
@@ -381,17 +352,15 @@ export default function TeamDetailsPage() {
       if (membersError) throw membersError;
       setMembers(membersData || []);
       
-      // Load leaderboard after members are available to get IDs
       if (membersData && membersData.length > 0) {
         loadLeaderboardWithIds(membersData.map(m => m.id));
       }
 
-      // 3. Check current user status
       const myMembership = membersData?.find(m => m.profile_id === user?.id);
       if (myMembership) {
         setMemberStatus(myMembership.status);
       } else if (teamData.owner_id === user?.id) {
-        setMemberStatus('accepted'); // Owner is always internally 'accepted'
+        setMemberStatus('accepted');
       }
 
     } catch (err) {
@@ -403,10 +372,7 @@ export default function TeamDetailsPage() {
 
   const onShare = async () => {
     try {
-      const shareUrl = Platform.OS === 'web' 
-        ? window.location.href 
-        : `https://bookyourground.com/teams/${id}`;
-        
+      const shareUrl = Platform.OS === 'web' ? window.location.href : `https://bookyourground.com/teams/${id}`;
       await Share.share({
         message: `Check out ${team?.name} on Book Your Ground! Join us and let's play! 🏏\n\n${shareUrl}`,
         url: shareUrl,
@@ -430,38 +396,23 @@ export default function TeamDetailsPage() {
         router.push('/cricket/teams' as any);
       }
     };
-
     if (Platform.OS === 'web') {
-      if (confirm("Are you sure you want to delete this team permanently?")) {
-        performDelete();
-      }
+      if (confirm("Are you sure you want to delete this team permanently?")) performDelete();
     } else {
-      Alert.alert(
-        "Delete Team",
-        "Are you sure you want to delete this team permanently?",
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Delete", style: "destructive", onPress: performDelete }
-        ]
-      );
+      Alert.alert("Delete Team", "Are you sure you want to delete this team permanently?", [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: performDelete }
+      ]);
     }
   };
 
   const handleUpdateMember = async (profileId: string, newStatus: string) => {
     try {
       if (newStatus === 'removed') {
-        const { error } = await supabase
-          .from('team_members')
-          .delete()
-          .eq('team_id', id)
-          .eq('profile_id', profileId);
+        const { error } = await supabase.from('team_members').delete().eq('team_id', id).eq('profile_id', profileId);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('team_members')
-          .update({ status: newStatus })
-          .eq('team_id', id)
-          .eq('profile_id', profileId);
+        const { error } = await supabase.from('team_members').update({ status: newStatus }).eq('team_id', id).eq('profile_id', profileId);
         if (error) throw error;
       }
       loadTeamData();
@@ -473,11 +424,7 @@ export default function TeamDetailsPage() {
 
   const handleSaveProfile = async () => {
     try {
-      const { error } = await supabase
-        .from('teams')
-        .update({ name: editName, location: editLocation, captain: editCaptain })
-        .eq('id', id);
-      
+      const { error } = await supabase.from('teams').update({ name: editName, location: editLocation, captain: editCaptain }).eq('id', id);
       if (error) throw error;
       setIsEditing(false);
       loadTeamData();
@@ -496,12 +443,7 @@ export default function TeamDetailsPage() {
 
   const handleLeaveTeam = async () => {
     const performLeave = async () => {
-      const { error } = await supabase
-        .from('team_members')
-        .delete()
-        .eq('team_id', id)
-        .eq('profile_id', user?.id);
-      
+      const { error } = await supabase.from('team_members').delete().eq('team_id', id).eq('profile_id', user?.id);
       if (error) {
         if (Platform.OS === 'web') alert(error.message);
         else Alert.alert('Error', error.message);
@@ -510,20 +452,13 @@ export default function TeamDetailsPage() {
         loadTeamData();
       }
     };
-
     if (Platform.OS === 'web') {
-      if (confirm("Are you sure you want to leave this team?")) {
-        performLeave();
-      }
+      if (confirm("Are you sure you want to leave this team?")) performLeave();
     } else {
-      Alert.alert(
-        "Leave Team",
-        "Are you sure you want to leave this team?",
-        [
-          { text: "Cancel", style: "cancel" },
-          { text: "Leave", style: "destructive", onPress: performLeave }
-        ]
-      );
+      Alert.alert("Leave Team", "Are you sure you want to leave this team?", [
+        { text: "Cancel", style: "cancel" },
+        { text: "Leave", style: "destructive", onPress: performLeave }
+      ]);
     }
   };
 
@@ -534,19 +469,14 @@ export default function TeamDetailsPage() {
         else Alert.alert('Login Required', 'Please login to join the team');
         return;
       }
-
       const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
-
-      const { error } = await supabase
-        .from('team_members')
-        .insert({
-          team_id: id,
-          profile_id: user.id,
-          player_name: profile?.full_name || 'Anonymous Player',
-          role: 'player',
-          status: 'accepted'
-        });
-
+      const { error } = await supabase.from('team_members').insert({
+        team_id: id,
+        profile_id: user.id,
+        player_name: profile?.full_name || 'Anonymous Player',
+        role: 'player',
+        status: 'accepted'
+      });
       if (error) throw error;
       setMemberStatus('accepted');
       loadTeamData();
@@ -559,28 +489,14 @@ export default function TeamDetailsPage() {
   const handleToggleRole = (roleId: string) => {
     if (!selectedMember) return;
     const currentRoles = selectedMember.role ? selectedMember.role.split(',') : [];
-    let newRoles: string[];
-    
-    if (currentRoles.includes(roleId)) {
-      newRoles = currentRoles.filter(r => r !== roleId);
-    } else {
-      newRoles = [...currentRoles, roleId];
-    }
-    
-    setSelectedMember({
-      ...selectedMember,
-      role: newRoles.join(',')
-    });
+    const newRoles = currentRoles.includes(roleId) ? currentRoles.filter(r => r !== roleId) : [...currentRoles, roleId];
+    setSelectedMember({ ...selectedMember, role: newRoles.join(',') });
   };
 
   const saveMemberRoles = async () => {
     if (!selectedMember) return;
     try {
-      const { error } = await supabase
-        .from('team_members')
-        .update({ role: selectedMember.role })
-        .eq('id', selectedMember.id);
-      
+      const { error } = await supabase.from('team_members').update({ role: selectedMember.role }).eq('id', selectedMember.id);
       if (error) throw error;
       setIsAssigningRole(false);
       loadTeamData();
@@ -588,593 +504,845 @@ export default function TeamDetailsPage() {
       if (Platform.OS === 'web') alert(err.message);
       else Alert.alert('Error', err.message);
     }
-  };
+  };  const isFold = windowWidth < 330 || windowWidth > 600;
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#00ea6b" />
+      <View style={styles.container}>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color="#00ea6b" />
+        </View>
       </View>
     );
   }
 
   if (!team) {
     return (
-      <View style={styles.center}>
-        <RNText>Team not found.</RNText>
+      <View style={styles.container}>
+        <View style={styles.center}>
+          <RNText style={{ color: '#FFFFFF' }}>Team not found.</RNText>
+        </View>
       </View>
     );
   }
 
-
-
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.navigate('/cricket/teams' as any)}>
-          <ArrowLeft size={24} color="#1E293B" strokeWidth={2.5} />
-        </TouchableOpacity>
-        <RNText style={styles.headerTitle} numberOfLines={1}>{team.name}</RNText>
-        <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.headerActionBtn} onPress={onShare}>
-            <Share2 size={20} color="#1E293B" />
+      <View style={{ flex: 1 }}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.navigate('/cricket/teams' as any)}>
+            <ArrowLeft size={24} color="#1E293B" strokeWidth={2.5} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.headerActionBtn} onPress={() => setIsQRModalOpen(true)}>
-            <QrCode size={20} color="#1E293B" />
-          </TouchableOpacity>
-          {team.owner_id === user?.id && (
-            <TouchableOpacity 
-              style={styles.headerActionBtn}
-              onPress={openEditModal}
-            >
-              <Settings size={20} color={isEditing ? '#01b854' : '#1E293B'} />
+          <RNText style={styles.headerTitle} numberOfLines={1}>{team.name}</RNText>
+          <View style={styles.headerActions}>
+            <TouchableOpacity style={styles.headerActionBtn} onPress={onShare}>
+              <Share2 size={20} color="#1E293B" />
             </TouchableOpacity>
+            <TouchableOpacity style={styles.headerActionBtn} onPress={() => setIsQRModalOpen(true)}>
+              <QrCode size={20} color="#1E293B" />
+            </TouchableOpacity>
+            {team.owner_id === user?.id && (
+              <TouchableOpacity 
+                style={styles.headerActionBtn}
+                onPress={openEditModal}
+              >
+                <Settings size={20} color={isEditing ? '#01b854' : '#1E293B'} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        <View style={styles.tabBarContainer}>
+          <ScrollView 
+            ref={tabScrollRef}
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            style={styles.tabBar}
+            contentContainerStyle={styles.tabBarContent}
+          >
+            {TABS.filter(t => !t.hidden).map((tab, idx) => {
+              const actualIdx = TABS.findIndex(t => t.key === tab.key);
+              return (
+                <TouchableOpacity 
+                  key={tab.key}
+                  style={[styles.tab, activeTab === tab.key && styles.activeTab]} 
+                  onPress={() => onTabPress(tab.key, actualIdx)}
+                >
+                  <RNText style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
+                    {tab.label}
+                  </RNText>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+
+        <View style={styles.content}>
+          {Platform.OS === 'web' ? (
+            <View style={{ flex: 1 }}>
+              {activeTab === 'info' && (
+                <ScrollView 
+                  style={styles.tabContent} 
+                  contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}
+                  showsVerticalScrollIndicator={false}
+                  onScroll={handleScroll}
+                  scrollEventThrottle={16}
+                >
+                  <View style={styles.infoProfileCard}>
+                    <View style={styles.profileMainInfo}>
+                      <View style={[styles.infoTeamLogoContainer, { backgroundColor: team.image_url ? 'transparent' : '#F1F5F9' }]}>
+                        {team.image_url ? (
+                          <Image source={{ uri: team.image_url }} style={styles.teamLogo} />
+                        ) : (
+                          <RNText style={[styles.teamInitials, { color: '#64748B' }]}>{team.name[0]}</RNText>
+                        )}
+                      </View>
+                      <View style={styles.infoProfileText}>
+                        <RNText style={styles.infoProfileName}>{team.name}</RNText>
+                        <View style={styles.officialBadge}>
+                          <RNText style={styles.officialBadgeText}>OFFICIAL TEAM</RNText>
+                        </View>
+                      </View>
+                    </View>
+                    <TouchableOpacity onPress={() => setIsQRModalOpen(true)} style={styles.miniQRContainer}>
+                      <QrCode size={32} color="#01b854" strokeWidth={2.5} />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.section}>
+                    <RNText style={styles.sectionTitle}>About Team</RNText>
+                    <View style={styles.infoCard}>
+                      <View style={styles.infoRow}>
+                        <MapPin size={18} color="#94A3B8" />
+                        <View style={[styles.infoTextGroup, { marginLeft: 12 }]}>
+                          <RNText style={styles.infoLabel}>Location</RNText>
+                          <RNText style={styles.infoValue}>{team.location}</RNText>
+                        </View>
+                      </View>
+                      <View style={styles.infoDivider} />
+                      <View style={styles.infoRow}>
+                        <Shield size={18} color="#94A3B8" />
+                        <View style={[styles.infoTextGroup, { marginLeft: 12 }]}>
+                          <RNText style={styles.infoLabel}>Admin / Owner</RNText>
+                          <RNText style={styles.infoValue}>{team?.owner?.full_name || 'Team Admin'}</RNText>
+                        </View>
+                      </View>
+                      <View style={styles.infoDivider} />
+                      <View style={styles.infoRow}>
+                        <User size={18} color="#94A3B8" />
+                        <View style={[styles.infoTextGroup, { marginLeft: 12 }]}>
+                          <RNText style={styles.infoLabel}>Captain</RNText>
+                          <RNText style={styles.infoValue}>{team.captain}</RNText>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                  {isAcceptedMember && !isOwner && (
+                    <TouchableOpacity style={styles.leaveTeamTextBtn} onPress={handleLeaveTeam}>
+                      <RNText style={styles.leaveTeamText}>Leave this team</RNText>
+                    </TouchableOpacity>
+                  )}
+                </ScrollView>
+              )}
+              {activeTab === 'matches' && (
+                <ScrollView 
+                  style={styles.tabContent} 
+                  contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}
+                  onScroll={handleScroll}
+                  scrollEventThrottle={16}
+                >
+                  <RNText style={styles.sectionTitle}>Match History</RNText>
+                  {matchesLoading ? (
+                    <ActivityIndicator size="small" color="#01b854" />
+                  ) : teamMatches.length === 0 ? (
+                    <View style={styles.emptyMatches}>
+                      <RNText style={styles.emptyMatchesText}>No matches found for this team.</RNText>
+                    </View>
+                  ) : (
+                    <View style={styles.matchesList}>
+                      {teamMatches.slice(0, 10).map((match) => {
+                        const isTeamA = match.team_a_id === id;
+                        const myScore = isTeamA ? match.match_live_state?.team_a_score : match.match_live_state?.team_b_score;
+                        const oppScore = isTeamA ? match.match_live_state?.team_b_score : match.match_live_state?.team_a_score;
+                        const oppName = isTeamA ? match.team_b : match.team_a;
+                        const isWon = match.match_live_state?.winner_id === id;
+                        return (
+                          <TouchableOpacity 
+                            key={match.id} 
+                            style={styles.matchHistoryCard}
+                            onPress={() => router.push(`/live/${match.id}`)}
+                          >
+                            <View style={styles.matchHistoryHeader}>
+                              <RNText style={styles.matchHistoryDate}>
+                                {new Date(match.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+                              </RNText>
+                              <View style={[styles.matchResultBadge, { backgroundColor: isWon ? '#F0FDF4' : '#FEF2F2' }]}>
+                                <RNText style={[styles.matchResultBadgeText, { color: isWon ? '#01b854' : '#EF4444' }]}>
+                                  {isWon ? 'WON' : 'LOST'}
+                                </RNText>
+                              </View>
+                            </View>
+                            <View style={styles.matchHistoryTeams}>
+                              <View style={styles.matchHistoryTeamRow}>
+                                <RNText style={styles.matchHistoryTeamName}>{team?.name}</RNText>
+                                <RNText style={styles.matchHistoryTeamScore}>{myScore || '0/0'}</RNText>
+                              </View>
+                              <View style={styles.matchHistoryVS}><RNText style={styles.vsText}>VS</RNText></View>
+                              <View style={styles.matchHistoryTeamRow}>
+                                <RNText style={styles.matchHistoryTeamName}>{oppName}</RNText>
+                                <RNText style={styles.matchHistoryTeamScore}>{oppScore || '0/0'}</RNText>
+                              </View>
+                            </View>
+                            {match.match_live_state?.result_text && (
+                              <RNText style={styles.matchHistoryResultText}>{match.match_live_state.result_text}</RNText>
+                            )}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  )}
+                </ScrollView>
+              )}
+              {activeTab === 'stats' && (
+                <ScrollView 
+                  style={styles.tabContent} 
+                  contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}
+                  showsVerticalScrollIndicator={false}
+                  onScroll={handleScroll}
+                  scrollEventThrottle={16}
+                >
+                  <RNText style={styles.sectionTitle}>Overview</RNText>
+                  <View style={styles.statsGrid}>
+                    {[
+                      { label: 'MATCHES', value: dynamicStats.matches.toString() },
+                      { label: 'UPCOMING', value: dynamicStats.upcoming.toString() },
+                      { label: 'WON', value: dynamicStats.won.toString(), color: '#01b854' },
+                      { label: 'LOST', value: dynamicStats.lost.toString(), color: '#EF4444' },
+                      { label: 'TOSS WON', value: dynamicStats.tossWon.toString() },
+                      { label: 'WIN %', value: dynamicStats.winRate },
+                      { label: 'RUNS (FOR)', value: dynamicStats.runsFor.toLocaleString() },
+                      { label: 'HIGHEST', value: dynamicStats.highest.toString() },
+                    ].map((stat, idx) => (
+                      <View key={idx} style={styles.statGridItem}>
+                        <RNText style={styles.statGridLabel}>{stat.label}</RNText>
+                        <RNText style={[styles.statGridValue, stat.color ? { color: stat.color } : null]}>{stat.value}</RNText>
+                      </View>
+                    ))}
+                  </View>
+                </ScrollView>
+              )}
+              {activeTab === 'leaderboard' && (
+                <View style={{ flex: 1 }}>
+                  <View style={{ backgroundColor: '#ffffff', paddingBottom: 8 }}>
+                    <ScrollView 
+                      horizontal 
+                      showsHorizontalScrollIndicator={false} 
+                      style={[styles.subTabBar, { marginHorizontal: 16 }]} 
+                      contentContainerStyle={styles.subTabBarContent}
+                    >
+                      {[{ key: 'bat', label: 'Bat' }, { key: 'bowl', label: 'Bowl' }, { key: 'field', label: 'Field' }, { key: 'partnership', label: 'Partnership' }].map((sub) => (
+                        <TouchableOpacity 
+                          key={sub.key} 
+                          style={[styles.subTab, activeSubTab === sub.key && styles.activeSubTab]} 
+                          onPress={() => setActiveSubTab(sub.key as any)}
+                        >
+                          <RNText style={[styles.subTabText, activeSubTab === sub.key && styles.activeSubTabText]}>
+                            {sub.label}
+                          </RNText>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                  <ScrollView 
+                    style={styles.tabContent} 
+                    contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}
+                    showsVerticalScrollIndicator={false}
+                    onScroll={handleScroll}
+                    scrollEventThrottle={16}
+                  >
+                    {leaderboardLoading ? (
+                      <ActivityIndicator size="small" color="#01b854" style={{ marginTop: 20 }} />
+                    ) : (
+                      <View style={{ marginTop: 8, flex: 1 }}>
+                        {activeSubTab === 'bat' && (
+                          <View style={{ flex: 1 }}>
+                            <RNText style={styles.sectionTitle}>Top Batters (Runs)</RNText>
+                            <View style={styles.leaderboardCard}>
+                              {leaderboardData.filter(stat => stat.total_runs > 0).length === 0 ? (
+                                <View style={{ padding: 40, alignItems: 'center' }}>
+                                  <RNText style={{ color: '#94A3B8' }}>No batting data yet</RNText>
+                                </View>
+                              ) : (
+                                [...leaderboardData]
+                                  .filter(stat => stat.total_runs > 0)
+                                  .sort((a,b) => b.total_runs - a.total_runs)
+                                  .slice(0, 10)
+                                  .map((stat, idx) => (
+                                  <TouchableOpacity 
+                                    key={stat.id} 
+                                    style={[styles.leaderboardRow, idx === 9 && { borderBottomWidth: 0 }]}
+                                    onPress={() => stat.member?.profile_id && router.push(`/players/${stat.member.profile_id}` as any)}
+                                  >
+                                    <View style={styles.leaderboardPlayerInfo}>
+                                      <RNText style={styles.leaderboardRank}>{idx + 1}</RNText>
+                                      <View style={styles.leaderboardAvatar}>
+                                        {stat.member?.profile?.avatar_url ? (
+                                          <Image source={{ uri: stat.member.profile.avatar_url }} style={styles.avatarImg} />
+                                        ) : (
+                                          <RNText style={styles.avatarInitial}>{(stat.member?.player_name || '?')[0]}</RNText>
+                                        )}
+                                      </View>
+                                      <RNText style={styles.leaderboardName} numberOfLines={1}>{stat.member?.player_name}</RNText>
+                                    </View>
+                                    <View style={styles.leaderboardValueContainer}><RNText style={styles.leaderboardValue}>{stat.total_runs}</RNText><RNText style={styles.leaderboardUnit}>Runs</RNText></View>
+                                  </TouchableOpacity>
+                                ))
+                              )}
+                            </View>
+                          </View>
+                        )}
+                        {activeSubTab === 'bowl' && (
+                          <View style={{ flex: 1 }}>
+                            <RNText style={styles.sectionTitle}>Top Bowlers (Wkts)</RNText>
+                            <View style={styles.leaderboardCard}>
+                              {leaderboardData.filter(stat => stat.total_wickets > 0).length === 0 ? (
+                                <View style={{ padding: 40, alignItems: 'center' }}>
+                                  <RNText style={{ color: '#94A3B8' }}>No bowling data yet</RNText>
+                                </View>
+                              ) : (
+                                [...leaderboardData]
+                                  .filter(stat => stat.total_wickets > 0)
+                                  .sort((a,b) => b.total_wickets - a.total_wickets)
+                                  .slice(0, 10)
+                                  .map((stat, idx) => (
+                                  <TouchableOpacity 
+                                    key={stat.id} 
+                                    style={[styles.leaderboardRow, idx === 9 && { borderBottomWidth: 0 }]}
+                                    onPress={() => stat.member?.profile_id && router.push(`/players/${stat.member.profile_id}` as any)}
+                                  >
+                                    <View style={styles.leaderboardPlayerInfo}>
+                                      <RNText style={styles.leaderboardRank}>{idx + 1}</RNText>
+                                      <View style={styles.leaderboardAvatar}>
+                                        {stat.member?.profile?.avatar_url ? (
+                                          <Image source={{ uri: stat.member.profile.avatar_url }} style={styles.avatarImg} />
+                                        ) : (
+                                          <RNText style={styles.avatarInitial}>{(stat.member?.player_name || '?')[0]}</RNText>
+                                        )}
+                                      </View>
+                                      <RNText style={styles.leaderboardName} numberOfLines={1}>{stat.member?.player_name}</RNText>
+                                    </View>
+                                    <View style={styles.leaderboardValueContainer}><RNText style={styles.leaderboardValue}>{stat.total_wickets}</RNText><RNText style={styles.leaderboardUnit}>Wkt</RNText></View>
+                                  </TouchableOpacity>
+                                ))
+                              )}
+                            </View>
+                          </View>
+                        )}
+                      </View>
+                    )}
+                  </ScrollView>
+                </View>
+              )}
+              {activeTab === 'members' && (
+                <ScrollView 
+                  style={styles.tabContent}
+                  contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}
+                  onScroll={handleScroll}
+                  scrollEventThrottle={16}
+                >
+                  {members.map((member) => (
+                    <TouchableOpacity 
+                      key={member.id} 
+                      style={styles.memberRow}
+                      onPress={() => member.profile_id && router.push(`/players/${member.profile_id}` as any)}
+                    >
+                      <View style={styles.memberAvatar}>
+                        {member.profile?.avatar_url ? (
+                          <Image source={{ uri: member.profile.avatar_url }} style={styles.avatarImg} />
+                        ) : (
+                          <RNText style={styles.avatarInitial}>{(member.player_name || '?')[0]}</RNText>
+                        )}
+                      </View>
+                      <View style={styles.memberInfo}>
+                        <View style={styles.memberNameRow}>
+                          <RNText style={styles.memberName}>{member.player_name}</RNText>
+                          {member.role?.split(',').map(r => (
+                            <View key={r} style={[styles.roleMiniTag, { backgroundColor: '#F1F5F9' }]}>
+                              <RNText style={styles.roleMiniTagText}>{r[0].toUpperCase()}</RNText>
+                            </View>
+                          ))}
+                        </View>
+                        <RNText style={styles.memberRole}>{member.role || 'Player'}</RNText>
+                      </View>
+                      {isOwner && member.profile_id !== user?.id && (
+                        <View style={{ flexDirection: 'row', gap: 8 }}>
+                          <TouchableOpacity 
+                            style={[styles.memberActionBtn, { backgroundColor: '#F0FDF4' }]}
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              setSelectedMember(member);
+                              setIsAssigningRole(true);
+                            }}
+                          >
+                            <Shield size={14} color="#01b854" />
+                          </TouchableOpacity>
+                          <TouchableOpacity 
+                            style={[styles.memberActionBtn, { backgroundColor: '#FEF2F2' }]}
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              handleUpdateMember(member.profile_id, 'removed');
+                            }}
+                          >
+                            <UserMinus size={14} color="#EF4444" />
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
+              {activeTab === 'chat' && (
+                <TeamChatTab teamId={team.id} isMember={isAcceptedMember} />
+              )}
+            </View>
+          ) : (
+            <Animated.ScrollView
+              ref={horizontalPagerRef}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onScroll={horizontalScrollHandler}
+              scrollEventThrottle={16}
+              contentOffset={{ x: TABS.findIndex(t => t.key === activeTab) * windowWidth, y: 0 }}
+              style={{ flex: 1, height: '100%' }}
+            >
+              {TABS.map((tab) => (
+                <View key={tab.key} style={{ width: windowWidth, flex: 1 }}>
+                  {tab.key === 'info' && (
+                    <ScrollView 
+                      style={styles.tabContent} 
+                      contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}
+                      showsVerticalScrollIndicator={false}
+                      onScroll={handleScroll}
+                      scrollEventThrottle={16}
+                      nestedScrollEnabled={true}
+                    >
+                      <View style={styles.infoProfileCard}>
+                        <View style={styles.profileMainInfo}>
+                          <View style={[styles.infoTeamLogoContainer, { backgroundColor: team.image_url ? 'transparent' : '#F1F5F9' }]}>
+                            {team.image_url ? (
+                              <Image source={{ uri: team.image_url }} style={styles.teamLogo} />
+                            ) : (
+                              <RNText style={[styles.teamInitials, { color: '#64748B' }]}>{team.name[0]}</RNText>
+                            )}
+                          </View>
+                          <View style={styles.infoProfileText}>
+                            <RNText style={styles.infoProfileName}>{team.name}</RNText>
+                            <View style={styles.officialBadge}>
+                              <RNText style={styles.officialBadgeText}>OFFICIAL TEAM</RNText>
+                            </View>
+                          </View>
+                        </View>
+                        <TouchableOpacity onPress={() => setIsQRModalOpen(true)} style={styles.miniQRContainer}>
+                          <QrCode size={32} color="#01b854" strokeWidth={2.5} />
+                        </TouchableOpacity>
+                      </View>
+                      <View style={styles.section}>
+                        <RNText style={styles.sectionTitle}>About Team</RNText>
+                        <View style={styles.infoCard}>
+                          <View style={styles.infoRow}>
+                            <MapPin size={18} color="#94A3B8" />
+                            <View style={[styles.infoTextGroup, { marginLeft: 12 }]}>
+                              <RNText style={styles.infoLabel}>Location</RNText>
+                              <RNText style={styles.infoValue}>{team.location}</RNText>
+                            </View>
+                          </View>
+                          <View style={styles.infoDivider} />
+                          <View style={styles.infoRow}>
+                            <Shield size={18} color="#94A3B8" />
+                            <View style={[styles.infoTextGroup, { marginLeft: 12 }]}>
+                              <RNText style={styles.infoLabel}>Admin / Owner</RNText>
+                              <RNText style={styles.infoValue}>{team?.owner?.full_name || 'Team Admin'}</RNText>
+                            </View>
+                          </View>
+                          <View style={styles.infoDivider} />
+                          <View style={styles.infoRow}>
+                            <User size={18} color="#94A3B8" />
+                            <View style={[styles.infoTextGroup, { marginLeft: 12 }]}>
+                              <RNText style={styles.infoLabel}>Captain</RNText>
+                              <RNText style={styles.infoValue}>{team.captain}</RNText>
+                            </View>
+                          </View>
+                        </View>
+                      </View>
+                      {isAcceptedMember && !isOwner && (
+                        <TouchableOpacity style={styles.leaveTeamTextBtn} onPress={handleLeaveTeam}>
+                          <RNText style={styles.leaveTeamText}>Leave this team</RNText>
+                        </TouchableOpacity>
+                      )}
+                    </ScrollView>
+                  )}
+                  {tab.key === 'matches' && (
+                    <ScrollView 
+                      style={styles.tabContent} 
+                      contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}
+                      onScroll={handleScroll}
+                      scrollEventThrottle={16}
+                      nestedScrollEnabled={true}
+                    >
+                      <RNText style={styles.sectionTitle}>Match History</RNText>
+                      {matchesLoading ? (
+                        <ActivityIndicator size="small" color="#01b854" />
+                      ) : teamMatches.length === 0 ? (
+                        <View style={styles.emptyMatches}>
+                          <RNText style={styles.emptyMatchesText}>No matches found for this team.</RNText>
+                        </View>
+                      ) : (
+                        <View style={styles.matchesList}>
+                          {teamMatches.slice(0, 10).map((match) => {
+                            const isTeamA = match.team_a_id === id;
+                            const myScore = isTeamA ? match.match_live_state?.team_a_score : match.match_live_state?.team_b_score;
+                            const oppScore = isTeamA ? match.match_live_state?.team_b_score : match.match_live_state?.team_a_score;
+                            const oppName = isTeamA ? match.team_b : match.team_a;
+                            const isWon = match.match_live_state?.winner_id === id;
+                            return (
+                              <TouchableOpacity 
+                                key={match.id} 
+                                style={styles.matchHistoryCard}
+                                onPress={() => router.push(`/live/${match.id}`)}
+                              >
+                                <View style={styles.matchHistoryHeader}>
+                                  <RNText style={styles.matchHistoryDate}>
+                                    {new Date(match.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+                                  </RNText>
+                                  <View style={[styles.matchResultBadge, { backgroundColor: isWon ? '#F0FDF4' : '#FEF2F2' }]}>
+                                    <RNText style={[styles.matchResultBadgeText, { color: isWon ? '#01b854' : '#EF4444' }]}>
+                                      {isWon ? 'WON' : 'LOST'}
+                                    </RNText>
+                                  </View>
+                                </View>
+                                <View style={styles.matchHistoryTeams}>
+                                  <View style={styles.matchHistoryTeamRow}>
+                                    <RNText style={styles.matchHistoryTeamName}>{team?.name}</RNText>
+                                    <RNText style={styles.matchHistoryTeamScore}>{myScore || '0/0'}</RNText>
+                                  </View>
+                                  <View style={styles.matchHistoryVS}><RNText style={styles.vsText}>VS</RNText></View>
+                                  <View style={styles.matchHistoryTeamRow}>
+                                    <RNText style={styles.matchHistoryTeamName}>{oppName}</RNText>
+                                    <RNText style={styles.matchHistoryTeamScore}>{oppScore || '0/0'}</RNText>
+                                  </View>
+                                </View>
+                                {match.match_live_state?.result_text && (
+                                  <RNText style={styles.matchHistoryResultText}>{match.match_live_state.result_text}</RNText>
+                                )}
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      )}
+                    </ScrollView>
+                  )}
+                  {tab.key === 'stats' && (
+                    <ScrollView 
+                      style={styles.tabContent} 
+                      contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}
+                      showsVerticalScrollIndicator={false}
+                      onScroll={handleScroll}
+                      scrollEventThrottle={16}
+                      nestedScrollEnabled={true}
+                    >
+                      <RNText style={styles.sectionTitle}>Overview</RNText>
+                      <View style={styles.statsGrid}>
+                        {[
+                          { label: 'MATCHES', value: dynamicStats.matches.toString() },
+                          { label: 'UPCOMING', value: dynamicStats.upcoming.toString() },
+                          { label: 'WON', value: dynamicStats.won.toString(), color: '#01b854' },
+                          { label: 'LOST', value: dynamicStats.lost.toString(), color: '#EF4444' },
+                          { label: 'TOSS WON', value: dynamicStats.tossWon.toString() },
+                          { label: 'WIN %', value: dynamicStats.winRate },
+                          { label: 'RUNS (FOR)', value: dynamicStats.runsFor.toLocaleString() },
+                          { label: 'HIGHEST', value: dynamicStats.highest.toString() },
+                        ].map((stat, idx) => (
+                          <View key={idx} style={styles.statGridItem}>
+                            <RNText style={styles.statGridLabel}>{stat.label}</RNText>
+                            <RNText style={[styles.statGridValue, stat.color ? { color: stat.color } : null]}>{stat.value}</RNText>
+                          </View>
+                        ))}
+                      </View>
+                    </ScrollView>
+                  )}
+                  {tab.key === 'leaderboard' && (
+                    <View style={{ flex: 1 }}>
+                      <View style={{ backgroundColor: '#ffffff', paddingBottom: 8 }}>
+                        <ScrollView 
+                          horizontal 
+                          showsHorizontalScrollIndicator={false} 
+                          style={[styles.subTabBar, { marginHorizontal: 16 }]} 
+                          contentContainerStyle={styles.subTabBarContent}
+                        >
+                          {[{ key: 'bat', label: 'Bat' }, { key: 'bowl', label: 'Bowl' }, { key: 'field', label: 'Field' }, { key: 'partnership', label: 'Partnership' }].map((sub) => (
+                            <TouchableOpacity 
+                              key={sub.key} 
+                              style={[styles.subTab, activeSubTab === sub.key && styles.activeSubTab]} 
+                              onPress={() => setActiveSubTab(sub.key as any)}
+                            >
+                              <RNText style={[styles.subTabText, activeSubTab === sub.key && styles.activeSubTabText]}>
+                                {sub.label}
+                              </RNText>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+                      </View>
+                      <ScrollView 
+                        style={styles.tabContent} 
+                        contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}
+                        showsVerticalScrollIndicator={false}
+                        onScroll={handleScroll}
+                        scrollEventThrottle={16}
+                        nestedScrollEnabled={true}
+                      >
+                        {leaderboardLoading ? (
+                          <ActivityIndicator size="small" color="#01b854" style={{ marginTop: 20 }} />
+                        ) : (
+                          <View style={{ marginTop: 8, flex: 1 }}>
+                            {activeSubTab === 'bat' && (
+                              <View style={{ flex: 1 }}>
+                                <RNText style={styles.sectionTitle}>Top Batters (Runs)</RNText>
+                                <View style={styles.leaderboardCard}>
+                                  {leaderboardData.filter(stat => stat.total_runs > 0).length === 0 ? (
+                                    <View style={{ padding: 40, alignItems: 'center' }}>
+                                      <RNText style={{ color: '#94A3B8' }}>No batting data yet</RNText>
+                                    </View>
+                                  ) : (
+                                    [...leaderboardData]
+                                      .filter(stat => stat.total_runs > 0)
+                                      .sort((a,b) => b.total_runs - a.total_runs)
+                                      .slice(0, 10)
+                                      .map((stat, idx) => (
+                                      <TouchableOpacity 
+                                        key={stat.id} 
+                                        style={[styles.leaderboardRow, idx === 9 && { borderBottomWidth: 0 }]}
+                                        onPress={() => stat.member?.profile_id && router.push(`/players/${stat.member.profile_id}` as any)}
+                                      >
+                                        <View style={styles.leaderboardPlayerInfo}>
+                                          <RNText style={styles.leaderboardRank}>{idx + 1}</RNText>
+                                          <View style={styles.leaderboardAvatar}>
+                                            {stat.member?.profile?.avatar_url ? (
+                                              <Image source={{ uri: stat.member.profile.avatar_url }} style={styles.avatarImg} />
+                                            ) : (
+                                              <RNText style={styles.avatarInitial}>{(stat.member?.player_name || '?')[0]}</RNText>
+                                            )}
+                                          </View>
+                                          <RNText style={styles.leaderboardName} numberOfLines={1}>{stat.member?.player_name}</RNText>
+                                        </View>
+                                        <View style={styles.leaderboardValueContainer}><RNText style={styles.leaderboardValue}>{stat.total_runs}</RNText><RNText style={styles.leaderboardUnit}>Runs</RNText></View>
+                                      </TouchableOpacity>
+                                    ))
+                                  )}
+                                </View>
+                              </View>
+                            )}
+                            {activeSubTab === 'bowl' && (
+                              <View style={{ flex: 1 }}>
+                                <RNText style={styles.sectionTitle}>Top Bowlers (Wkts)</RNText>
+                                <View style={styles.leaderboardCard}>
+                                  {leaderboardData.filter(stat => stat.total_wickets > 0).length === 0 ? (
+                                    <View style={{ padding: 40, alignItems: 'center' }}>
+                                      <RNText style={{ color: '#94A3B8' }}>No bowling data yet</RNText>
+                                    </View>
+                                  ) : (
+                                    [...leaderboardData]
+                                      .filter(stat => stat.total_wickets > 0)
+                                      .sort((a,b) => b.total_wickets - a.total_wickets)
+                                      .slice(0, 10)
+                                      .map((stat, idx) => (
+                                      <TouchableOpacity 
+                                        key={stat.id} 
+                                        style={[styles.leaderboardRow, idx === 9 && { borderBottomWidth: 0 }]}
+                                        onPress={() => stat.member?.profile_id && router.push(`/players/${stat.member.profile_id}` as any)}
+                                      >
+                                        <View style={styles.leaderboardPlayerInfo}>
+                                          <RNText style={styles.leaderboardRank}>{idx + 1}</RNText>
+                                          <View style={styles.leaderboardAvatar}>
+                                            {stat.member?.profile?.avatar_url ? (
+                                              <Image source={{ uri: stat.member.profile.avatar_url }} style={styles.avatarImg} />
+                                            ) : (
+                                              <RNText style={styles.avatarInitial}>{(stat.member?.player_name || '?')[0]}</RNText>
+                                            )}
+                                          </View>
+                                          <RNText style={styles.leaderboardName} numberOfLines={1}>{stat.member?.player_name}</RNText>
+                                        </View>
+                                        <View style={styles.leaderboardValueContainer}><RNText style={styles.leaderboardValue}>{stat.total_wickets}</RNText><RNText style={styles.leaderboardUnit}>Wkt</RNText></View>
+                                      </TouchableOpacity>
+                                    ))
+                                  )}
+                                </View>
+                              </View>
+                            )}
+                          </View>
+                        )}
+                      </ScrollView>
+                    </View>
+                  )}
+                  {tab.key === 'members' && (
+                    <ScrollView 
+                      style={styles.tabContent}
+                      contentContainerStyle={{ flexGrow: 1, paddingBottom: 100 }}
+                      onScroll={handleScroll}
+                      scrollEventThrottle={16}
+                      nestedScrollEnabled={true}
+                    >
+                      {members.map((member) => (
+                        <TouchableOpacity 
+                          key={member.id} 
+                          style={styles.memberRow}
+                          onPress={() => member.profile_id && router.push(`/players/${member.profile_id}` as any)}
+                        >
+                          <View style={styles.memberAvatar}>
+                            {member.profile?.avatar_url ? (
+                              <Image source={{ uri: member.profile.avatar_url }} style={styles.avatarImg} />
+                            ) : (
+                              <RNText style={styles.avatarInitial}>{(member.player_name || '?')[0]}</RNText>
+                            )}
+                          </View>
+                          <View style={styles.memberInfo}>
+                            <View style={styles.memberNameRow}>
+                              <RNText style={styles.memberName}>{member.player_name}</RNText>
+                              {member.role?.split(',').map(r => (
+                                <View key={r} style={[styles.roleMiniTag, { backgroundColor: '#F1F5F9' }]}>
+                                  <RNText style={styles.roleMiniTagText}>{r[0].toUpperCase()}</RNText>
+                                </View>
+                              ))}
+                            </View>
+                            <RNText style={styles.memberRole}>{member.role || 'Player'}</RNText>
+                          </View>
+                          {isOwner && member.profile_id !== user?.id && (
+                            <View style={{ flexDirection: 'row', gap: 8 }}>
+                              <TouchableOpacity 
+                                style={[styles.memberActionBtn, { backgroundColor: '#F0FDF4' }]}
+                                onPress={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedMember(member);
+                                  setIsAssigningRole(true);
+                                }}
+                              >
+                                <Shield size={14} color="#01b854" />
+                              </TouchableOpacity>
+                              <TouchableOpacity 
+                                style={[styles.memberActionBtn, { backgroundColor: '#FEF2F2' }]}
+                                onPress={(e) => {
+                                  e.stopPropagation();
+                                  handleUpdateMember(member.profile_id, 'removed');
+                                }}
+                              >
+                                <UserMinus size={14} color="#EF4444" />
+                              </TouchableOpacity>
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  )}
+                  {tab.key === 'chat' && (
+                    <TeamChatTab teamId={team.id} isMember={isAcceptedMember} />
+                  )}
+                </View>
+              ))}
+            </Animated.ScrollView>
           )}
         </View>
-      </View>
 
-      <View style={styles.tabBarContainer}>
-        <ScrollView 
-          ref={tabScrollRef}
-          horizontal 
-          showsHorizontalScrollIndicator={false} 
-          style={styles.tabBar}
-          contentContainerStyle={styles.tabBarContent}
-        >
-          {TABS.filter(t => !t.hidden).map((tab, idx) => {
-            const actualIdx = TABS.findIndex(t => t.key === tab.key);
-            return (
-              <TouchableOpacity 
-                key={tab.key}
-                style={[styles.tab, activeTab === tab.key && styles.activeTab]} 
-                onPress={() => onTabPress(tab.key, actualIdx)}
-              >
-                <RNText style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
-                  {tab.label}
-                </RNText>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
-
-      <View style={styles.content}>
-        <Animated.ScrollView
-          ref={horizontalPagerRef}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onScroll={Platform.OS === 'web' ? undefined : horizontalScrollHandler}
-          scrollEventThrottle={16}
-          contentOffset={{ x: TABS.findIndex(t => t.key === activeTab) * windowWidth, y: 0 }}
-        >
-          {TABS.map((tab) => (
-            <View key={tab.key} style={{ width: windowWidth }}>
-              {activeTab === tab.key || true ? ( // Keep all tabs mounted for smooth swipe, or optimize if needed
-                 (() => {
-                    switch (tab.key) {
-                      case 'info':
-                        return (
-                          <ScrollView 
-                            style={styles.tabContent} 
-                            showsVerticalScrollIndicator={false}
-                            onScroll={handleScroll}
-                            scrollEventThrottle={16}
-                          >
-                            <View style={styles.infoProfileCard}>
-                              <View style={styles.profileMainInfo}>
-                                <View style={[styles.infoTeamLogoContainer, { backgroundColor: team.image_url ? 'transparent' : '#F1F5F9' }]}>
-                                  {team.image_url ? (
-                                    <Image source={{ uri: team.image_url }} style={styles.teamLogo} />
-                                  ) : (
-                                    <RNText style={[styles.teamInitials, { color: '#64748B' }]}>{team.name[0]}</RNText>
-                                  )}
-                                </View>
-                                <View style={styles.infoProfileText}>
-                                  <RNText style={styles.infoProfileName}>{team.name}</RNText>
-                                  <View style={styles.officialBadge}>
-                                    <RNText style={styles.officialBadgeText}>OFFICIAL TEAM</RNText>
-                                  </View>
-                                </View>
-                              </View>
-                              <TouchableOpacity onPress={() => setIsQRModalOpen(true)} style={styles.miniQRContainer}>
-                                <QrCode size={32} color="#01b854" strokeWidth={2.5} />
-                              </TouchableOpacity>
-                            </View>
-                            <View style={styles.section}>
-                              <RNText style={styles.sectionTitle}>About Team</RNText>
-                              
-
-                              <View style={styles.infoCard}>
-                                <View style={styles.infoRow}>
-                                  <MapPin size={18} color="#94A3B8" />
-                                  <View style={[styles.infoTextGroup, { marginLeft: 12 }]}>
-                                    <RNText style={styles.infoLabel}>Location</RNText>
-                                    <RNText style={styles.infoValue}>{team.location}</RNText>
-                                  </View>
-                                </View>
-                                <View style={styles.infoDivider} />
-                                <View style={styles.infoRow}>
-                                  <Shield size={18} color="#94A3B8" />
-                                  <View style={[styles.infoTextGroup, { marginLeft: 12 }]}>
-                                    <RNText style={styles.infoLabel}>Admin / Owner</RNText>
-                                    <RNText style={styles.infoValue}>{team?.owner?.full_name || 'Team Admin'}</RNText>
-                                  </View>
-                                </View>
-                                <View style={styles.infoDivider} />
-                                <View style={styles.infoRow}>
-                                  <User size={18} color="#94A3B8" />
-                                  <View style={[styles.infoTextGroup, { marginLeft: 12 }]}>
-                                    <RNText style={styles.infoLabel}>Captain</RNText>
-                                    <RNText style={styles.infoValue}>{team.captain}</RNText>
-                                  </View>
-                                </View>
-                              </View>
-                            </View>
-
-                            {isAcceptedMember && !isOwner && (
-                              <TouchableOpacity style={styles.leaveTeamTextBtn} onPress={handleLeaveTeam}>
-                                <RNText style={styles.leaveTeamText}>Leave this team</RNText>
-                              </TouchableOpacity>
-                            )}
-                          </ScrollView>
-                        );
-                      case 'matches':
-                        return (
-                          <ScrollView 
-                            style={styles.tabContent} 
-                            contentContainerStyle={styles.tabContentInner}
-                            onScroll={handleScroll}
-                            scrollEventThrottle={16}
-                          >
-                            <RNText style={styles.sectionTitle}>Match History</RNText>
-                            {matchesLoading ? (
-                              <ActivityIndicator size="small" color="#01b854" />
-                            ) : teamMatches.length === 0 ? (
-                              <View style={styles.emptyMatches}>
-                                 <RNText style={styles.emptyMatchesText}>No matches found for this team.</RNText>
-                              </View>
-                            ) : (
-                              <View style={styles.matchesList}>
-                                {teamMatches.slice(0, 10).map((match) => {
-                                  const isTeamA = match.team_a_id === id;
-                                  const myScore = isTeamA ? match.match_live_state?.team_a_score : match.match_live_state?.team_b_score;
-                                  const oppScore = isTeamA ? match.match_live_state?.team_b_score : match.match_live_state?.team_a_score;
-                                  const oppName = isTeamA ? match.team_b : match.team_a;
-                                  const isWon = match.match_live_state?.winner_id === id;
-                                  return (
-                                    <TouchableOpacity 
-                                      key={match.id} 
-                                      style={styles.matchHistoryCard}
-                                      onPress={() => router.push(`/live/${match.id}`)}
-                                    >
-                                      <View style={styles.matchHistoryHeader}>
-                                        <RNText style={styles.matchHistoryDate}>
-                                          {new Date(match.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
-                                        </RNText>
-                                        <View style={[styles.matchResultBadge, { backgroundColor: isWon ? '#F0FDF4' : '#FEF2F2' }]}>
-                                          <RNText style={[styles.matchResultBadgeText, { color: isWon ? '#01b854' : '#EF4444' }]}>
-                                            {isWon ? 'WON' : 'LOST'}
-                                          </RNText>
-                                        </View>
-                                      </View>
-                                      <View style={styles.matchHistoryTeams}>
-                                         <View style={styles.matchHistoryTeamRow}>
-                                            <RNText style={styles.matchHistoryTeamName}>{team?.name}</RNText>
-                                            <RNText style={styles.matchHistoryTeamScore}>{myScore || '0/0'}</RNText>
-                                         </View>
-                                         <View style={styles.matchHistoryVS}><RNText style={styles.vsText}>VS</RNText></View>
-                                         <View style={styles.matchHistoryTeamRow}>
-                                            <RNText style={styles.matchHistoryTeamName}>{oppName}</RNText>
-                                            <RNText style={styles.matchHistoryTeamScore}>{oppScore || '0/0'}</RNText>
-                                         </View>
-                                      </View>
-                                      {match.match_live_state?.result_text && (
-                                        <RNText style={styles.matchHistoryResultText}>{match.match_live_state.result_text}</RNText>
-                                      )}
-                                    </TouchableOpacity>
-                                  );
-                                })}
-                              </View>
-                            )}
-                          </ScrollView>
-                        );
-                      case 'stats':
-                        return (
-                          <ScrollView 
-                            style={styles.tabContent} 
-                            showsVerticalScrollIndicator={false}
-                            onScroll={handleScroll}
-                            scrollEventThrottle={16}
-                          >
-                            <RNText style={styles.sectionTitle}>Overview</RNText>
-                            <View style={styles.statsGrid}>
-                              {[
-                                { label: 'MATCHES', value: dynamicStats.matches.toString() },
-                                { label: 'UPCOMING', value: dynamicStats.upcoming.toString() },
-                                { label: 'WON', value: dynamicStats.won.toString(), color: '#01b854' },
-                                { label: 'LOST', value: dynamicStats.lost.toString(), color: '#EF4444' },
-                                { label: 'TOSS WON', value: dynamicStats.tossWon.toString() },
-                                { label: 'WIN %', value: dynamicStats.winRate },
-                                { label: 'RUNS (FOR)', value: dynamicStats.runsFor.toLocaleString() },
-                                { label: 'HIGHEST', value: dynamicStats.highest.toString() },
-                              ].map((stat, idx) => (
-                                <View key={idx} style={styles.statGridItem}>
-                                  <RNText style={styles.statGridLabel}>{stat.label}</RNText>
-                                  <RNText style={[styles.statGridValue, stat.color ? { color: stat.color } : null]}>{stat.value}</RNText>
-                                </View>
-                              ))}
-                            </View>
-                          </ScrollView>
-                        );
-                      case 'leaderboard':
-                        return (
-                          <ScrollView 
-                            style={styles.tabContent} 
-                            showsVerticalScrollIndicator={false}
-                            onScroll={handleScroll}
-                            scrollEventThrottle={16}
-                          >
-                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.subTabBar} contentContainerStyle={styles.subTabBarContent}>
-                              {[{ key: 'bat', label: 'Bat' }, { key: 'bowl', label: 'Bowl' }, { key: 'field', label: 'Field' }, { key: 'partnership', label: 'Partnership' }].map((sub) => (
-                                <TouchableOpacity key={sub.key} style={[styles.subTab, activeSubTab === sub.key && styles.activeSubTab]} onPress={() => setActiveSubTab(sub.key as any)}>
-                                  <RNText style={[styles.subTabText, activeSubTab === sub.key && styles.activeSubTabText]}>{sub.label}</RNText>
-                                </TouchableOpacity>
-                              ))}
-                            </ScrollView>
-                            {leaderboardLoading ? (
-                              <ActivityIndicator size="small" color="#01b854" style={{ marginTop: 20 }} />
-                            ) : (
-                              <View style={{ marginTop: 16 }}>
-                                {activeSubTab === 'bat' && (
-                                  <View>
-                                    <RNText style={styles.sectionTitle}>Top Batters (Runs)</RNText>
-                                    <View style={styles.leaderboardCard}>
-                                      {[...leaderboardData].sort((a,b) => b.total_runs - a.total_runs).slice(0, 10).map((stat, idx) => (
-                                        <TouchableOpacity 
-                                          key={stat.id} 
-                                          style={[styles.leaderboardRow, idx === 9 && { borderBottomWidth: 0 }]}
-                                          onPress={() => stat.member?.profile_id && router.push(`/players/${stat.member.profile_id}` as any)}
-                                        >
-                                          <View style={styles.leaderboardPlayerInfo}>
-                                            <RNText style={styles.leaderboardRank}>{idx + 1}</RNText>
-                                            <View style={styles.leaderboardAvatar}>
-                                              {stat.member?.profile?.avatar_url ? (
-                                                <Image source={{ uri: stat.member.profile.avatar_url }} style={styles.avatarImg} />
-                                              ) : (
-                                                <RNText style={styles.avatarInitial}>{(stat.member?.player_name || '?')[0]}</RNText>
-                                              )}
-                                            </View>
-                                            <RNText style={styles.leaderboardName} numberOfLines={1}>{stat.member?.player_name}</RNText>
-                                          </View>
-                                          <View style={styles.leaderboardValueContainer}><RNText style={styles.leaderboardValue}>{stat.total_runs}</RNText><RNText style={styles.leaderboardUnit}>Runs</RNText></View>
-                                        </TouchableOpacity>
-                                      ))}
-                                    </View>
-                                  </View>
-                                )}
-                                {activeSubTab === 'bowl' && (
-                                  <View>
-                                    <RNText style={styles.sectionTitle}>Top Bowlers (Wkts)</RNText>
-                                    <View style={styles.leaderboardCard}>
-                                      {[...leaderboardData].sort((a,b) => b.total_wickets - a.total_wickets).slice(0, 10).map((stat, idx) => (
-                                        <TouchableOpacity 
-                                          key={stat.id} 
-                                          style={[styles.leaderboardRow, idx === 9 && { borderBottomWidth: 0 }]}
-                                          onPress={() => stat.member?.profile_id && router.push(`/players/${stat.member.profile_id}` as any)}
-                                        >
-                                          <View style={styles.leaderboardPlayerInfo}>
-                                            <RNText style={styles.leaderboardRank}>{idx + 1}</RNText>
-                                            <View style={styles.leaderboardAvatar}>
-                                              {stat.member?.profile?.avatar_url ? (
-                                                <Image source={{ uri: stat.member.profile.avatar_url }} style={styles.avatarImg} />
-                                              ) : (
-                                                <RNText style={styles.avatarInitial}>{(stat.member?.player_name || '?')[0]}</RNText>
-                                              )}
-                                            </View>
-                                            <RNText style={styles.leaderboardName} numberOfLines={1}>{stat.member?.player_name}</RNText>
-                                          </View>
-                                          <View style={styles.leaderboardValueContainer}><RNText style={styles.leaderboardValue}>{stat.total_wickets}</RNText><RNText style={styles.leaderboardUnit}>Wkt</RNText></View>
-                                        </TouchableOpacity>
-                                      ))}
-                                    </View>
-                                  </View>
-                                )}
-                              </View>
-                            )}
-                          </ScrollView>
-                        );
-                      case 'members':
-                        return (
-                          <ScrollView 
-                            style={styles.tabContent}
-                            onScroll={handleScroll}
-                            scrollEventThrottle={16}
-                          >
-                             {members.map((member) => (
-                               <TouchableOpacity 
-                                 key={member.id} 
-                                 style={styles.memberRow}
-                                 onPress={() => router.push(`/players/${member.profile_id}` as any)}
-                               >
-                                  <View style={styles.memberAvatar}>
-                                    {member.profile?.avatar_url ? (
-                                      <Image source={{ uri: member.profile.avatar_url }} style={styles.avatarImg} />
-                                    ) : (
-                                      <RNText style={styles.avatarInitial}>{member.player_name[0]}</RNText>
-                                    )}
-                                  </View>
-                                  <View style={styles.memberInfo}>
-                                    <View style={styles.memberNameRow}>
-                                      <RNText style={styles.memberName}>{member.player_name}</RNText>
-                                      {(member.role?.includes('captain') || member.player_name === team.captain) && (
-                                        <View style={[styles.roleMiniTag, { backgroundColor: '#F0FDF4' }]}>
-                                          <RNText style={[styles.roleMiniTagText, { color: '#01b854' }]}>C</RNText>
-                                        </View>
-                                      )}
-                                      {(member.role?.includes('admin') || member.role?.includes('owner') || member.profile_id === team.owner_id) && (
-                                        <View style={[styles.roleMiniTag, { backgroundColor: '#EFF6FF' }]}>
-                                          <RNText style={[styles.roleMiniTagText, { color: '#3B82F6' }]}>A</RNText>
-                                        </View>
-                                      )}
-                                    </View>
-                                    <RNText style={styles.memberRole}>{member.role?.split(',').map(r => r.replace('_', ' ').toUpperCase()).join(', ')}</RNText>
-                                  </View>
-                                  {isOwner && member.profile_id !== user?.id && (
-                                    <View style={styles.memberActions}>
-                                      <TouchableOpacity 
-                                        onPress={(e) => {
-                                          e.stopPropagation();
-                                          setSelectedMember(member);
-                                          setIsAssigningRole(true);
-                                        }}
-                                        style={styles.memberActionTextBtn}
-                                      >
-                                        <RNText style={styles.memberActionText}>Assign Role</RNText>
-                                      </TouchableOpacity>
-                                      <TouchableOpacity 
-                                        onPress={(e) => {
-                                          e.stopPropagation();
-                                          handleUpdateMember(member.profile_id, 'removed');
-                                        }}
-                                        style={styles.memberActionTextBtn}
-                                      >
-                                        <RNText style={[styles.memberActionText, { color: '#EF4444' }]}>Remove</RNText>
-                                      </TouchableOpacity>
-                                    </View>
-                                  )}
-                               </TouchableOpacity>
-                             ))}
-                          </ScrollView>
-                        );
-                      case 'chat':
-                        return <TeamChatTab teamId={team.id} isMember={isAcceptedMember} />;
-                      default:
-                        return null;
-                    }
-                 })()
-              ) : null}
+        <Modal visible={isEditing} animationType="slide" transparent={true} onRequestClose={() => setIsEditing(false)}>
+          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsEditing(false)}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHandle} />
+              <RNText style={styles.modalTitle}>Edit Team Profile</RNText>
+              <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+                <View style={styles.inputGroup}>
+                  <RNText style={styles.inputLabel}>Team Name</RNText>
+                  <RNTextInput style={styles.textInput} value={editName} onChangeText={setEditName} placeholder="Enter team name" />
+                </View>
+                <View style={styles.inputGroup}>
+                  <RNText style={styles.inputLabel}>Location</RNText>
+                  <RNTextInput style={styles.textInput} value={editLocation} onChangeText={setEditLocation} placeholder="Enter location" />
+                </View>
+                <View style={styles.inputGroup}>
+                  <RNText style={styles.inputLabel}>Captain</RNText>
+                  <RNTextInput style={styles.textInput} value={editCaptain} onChangeText={setEditCaptain} placeholder="Enter captain name" />
+                </View>
+                <View style={[styles.modalBtnRow, { marginTop: 20 }]}>
+                  <TouchableOpacity style={[styles.modalBtn, styles.cancelBtn, { flex: 1 }]} onPress={() => setIsEditing(false)}>
+                    <RNText style={styles.cancelBtnText}>Cancel</RNText>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.modalBtn, styles.saveBtn, { flex: 2 }]} onPress={handleSaveProfile}>
+                    <RNText style={styles.saveBtnText}>Save Changes</RNText>
+                  </TouchableOpacity>
+                </View>
+                <View style={[styles.modalBtnRow, { marginTop: 20 }]}>
+                  <TouchableOpacity style={styles.deleteCard} onPress={handleDeleteTeam}>
+                    <RNText style={styles.deleteText}>Delete Team Permanently</RNText>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
             </View>
-          ))}
-        </Animated.ScrollView>
-      </View>
+          </TouchableOpacity>
+        </Modal>
 
-      {/* Edit Team Modal */}
-      <Modal
-        visible={isEditing}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setIsEditing(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <RNText style={styles.modalTitle}>Edit Team Profile</RNText>
-            
-            <View style={styles.inputGroup}>
-              <RNText style={styles.inputLabel}>Team Name</RNText>
-              <RNTextInput
-                style={styles.textInput}
-                value={editName}
-                onChangeText={setEditName}
-                placeholder="Enter team name"
-              />
+        <Modal visible={isQRModalOpen} animationType="fade" transparent={true} onRequestClose={() => setIsQRModalOpen(false)}>
+          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsQRModalOpen(false)}>
+            <View style={styles.qrModalContent}>
+              <View style={styles.qrWrapper}>
+                <QRCode value={`https://bookyourground.com/teams/${id}`} size={250} color="#043529" backgroundColor="#FFFFFF" />
+              </View>
+              <RNText style={styles.qrHint}>Team QR Code</RNText>
+              <RNText style={styles.qrSubHint}>Scan to view team profile</RNText>
             </View>
+          </TouchableOpacity>
+        </Modal>
 
-            <View style={styles.inputGroup}>
-              <RNText style={styles.inputLabel}>Location</RNText>
-              <RNTextInput
-                style={styles.textInput}
-                value={editLocation}
-                onChangeText={setEditLocation}
-                placeholder="Enter location"
-              />
+        <Modal visible={isAssigningRole} animationType="slide" transparent={true} onRequestClose={() => setIsAssigningRole(false)}>
+          <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setIsAssigningRole(false)}>
+            <View style={styles.roleModalContent}>
+              <View style={styles.modalHandle} />
+              <RNText style={styles.roleModalTitle}>Assign Role to {selectedMember?.player_name}</RNText>
+              <View style={styles.roleOptionsGrid}>
+                {[{ id: 'admin', label: 'Admin', icon: Shield }, { id: 'captain', label: 'Team Captain', icon: Crown }, { id: 'wicket_keeper', label: 'Wicket Keeper', icon: ShieldCheck }, { id: 'batter', label: 'Batter', icon: Sword }, { id: 'bowler', label: 'Bowler', icon: Target }, { id: 'all_rounder', label: 'All Rounder', icon: Zap }].map((role) => {
+                  const IconComponent = role.icon;
+                  const isActive = selectedMember?.role?.split(',').includes(role.id);
+                  return (
+                    <TouchableOpacity key={role.id} style={[styles.roleOption, isActive && styles.activeRoleOption]} onPress={() => handleToggleRole(role.id)}>
+                      <View style={[styles.roleIconCircle, isActive && { backgroundColor: '#F0FDF4' }]}>
+                        <IconComponent size={24} color={isActive ? '#01b854' : '#64748B'} />
+                      </View>
+                      <RNText style={[styles.roleOptionText, isActive && styles.activeRoleOptionText]}>{role.label}</RNText>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              <View style={styles.modalBtnRow}>
+                <TouchableOpacity style={[styles.modalBtn, styles.cancelBtn, { flex: 1 }]} onPress={() => setIsAssigningRole(false)}>
+                  <RNText style={styles.cancelBtnText}>Cancel</RNText>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.modalBtn, styles.saveBtn, { flex: 2 }]} onPress={saveMemberRoles}>
+                  <RNText style={styles.saveBtnText}>Save Roles</RNText>
+                </TouchableOpacity>
+              </View>
             </View>
+          </TouchableOpacity>
+        </Modal>
 
-            <View style={styles.inputGroup}>
-              <RNText style={styles.inputLabel}>Captain Name</RNText>
-              <RNTextInput
-                style={styles.textInput}
-                value={editCaptain}
-                onChangeText={setEditCaptain}
-                placeholder="Enter captain name"
-              />
-            </View>
-
-            <View style={[styles.modalBtnRow, { marginTop: 20 }]}>
-              <TouchableOpacity 
-                style={styles.addMemberFullBtn}
-                onPress={() => {
-                  setIsEditing(false);
-                  setIsQRModalOpen(true);
-                }}
-              >
-                <UserPlus size={20} color="#FFFFFF" strokeWidth={2.5} />
-                <RNText style={styles.addMemberFullBtnText}>Invite New Member</RNText>
-              </TouchableOpacity>
-            </View>
-
-            <View style={[styles.modalBtnRow, { marginTop: 20 }]}>
-              <TouchableOpacity 
-                style={[styles.modalBtn, styles.cancelBtn]} 
-                onPress={() => setIsEditing(false)}
-              >
-                <RNText style={styles.cancelBtnText}>Cancel</RNText>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.modalBtn, styles.saveBtn]} 
-                onPress={handleSaveProfile}
-              >
-                <RNText style={styles.saveBtnText}>Save Changes</RNText>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Enlarged QR Modal */}
-      <Modal
-        visible={isQRModalOpen}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={() => setIsQRModalOpen(false)}
-      >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
-          onPress={() => setIsQRModalOpen(false)}
-        >
-          <View style={styles.qrModalContent}>
-            <RNText style={styles.qrModalTitle}>{team?.name} Profile</RNText>
-            <View style={styles.qrModalWrapper}>
-                    <QRCode
-                       value={`https://bookyourground.com/teams/${id}`}
-                       size={200}
-                       color="#043529"
-                       backgroundColor="white"
-                    />
-            </View>
-            <RNText style={styles.qrModalHint}>Scan to join the squad</RNText>
-            <TouchableOpacity 
-              style={styles.qrModalCloseBtn}
-              onPress={() => setIsQRModalOpen(false)}
-            >
-              <RNText style={styles.qrModalCloseText}>Close</RNText>
+        {!memberStatus && !isOwner && (activeTab === 'info' || activeTab === 'members') && (
+          <View style={[styles.bottomJoinContainer, { paddingBottom: Math.max(insets.bottom, 16) }, isFold && { paddingTop: 28 }]}>
+            <TouchableOpacity style={[styles.infoBottomBtn, isFold && { paddingVertical: 22 }]} onPress={() => onTabPress('info', 0)}>
+              <Info size={18} color="#64748B" />
+              <RNText style={styles.infoBottomBtnText}>TEAM INFO</RNText>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.fullJoinBtn, isFold && { paddingVertical: 22 }]} onPress={handleJoinTeam}>
+              <Users size={18} color="#FFFFFF" strokeWidth={2.5} />
+              <RNText style={styles.fullJoinBtnText}>JOIN TEAM</RNText>
             </TouchableOpacity>
           </View>
-        </TouchableOpacity>
-      </Modal>
-
-      {/* Assign Role Modal */}
-      <Modal
-        visible={isAssigningRole}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setIsAssigningRole(false)}
-      >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
-          onPress={() => setIsAssigningRole(false)}
-        >
-          <View style={styles.roleModalContent}>
-            <View style={styles.modalHandle} />
-            <RNText style={styles.roleModalTitle}>Assign Role to {selectedMember?.player_name}</RNText>
-            
-             <View style={styles.roleOptionsGrid}>
-              {[
-                { id: 'admin', label: 'Admin', icon: Shield },
-                { id: 'captain', label: 'Team Captain', icon: Crown },
-                { id: 'wicket_keeper', label: 'Wicket Keeper', icon: ShieldCheck },
-                { id: 'batter', label: 'Batter', icon: Sword },
-                { id: 'bowler', label: 'Bowler', icon: Target },
-                { id: 'all_rounder', label: 'All Rounder', icon: Zap },
-              ].map((role) => {
-                const IconComponent = role.icon;
-                const isActive = selectedMember?.role?.split(',').includes(role.id);
-                
-                return (
-                  <TouchableOpacity 
-                    key={role.id}
-                    style={[
-                      styles.roleOption,
-                      isActive && styles.activeRoleOption
-                    ]}
-                    onPress={() => handleToggleRole(role.id)}
-                  >
-                    <View style={[styles.roleIconCircle, isActive && { backgroundColor: '#F0FDF4' }]}>
-                      <IconComponent size={24} color={isActive ? '#01b854' : '#64748B'} />
-                    </View>
-                    <RNText style={[
-                      styles.roleOptionText,
-                      isActive && styles.activeRoleOptionText
-                    ]}>
-                      {role.label}
-                    </RNText>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            <View style={styles.modalBtnRow}>
-              <TouchableOpacity 
-                style={[styles.modalBtn, styles.cancelBtn, { flex: 1 }]}
-                onPress={() => setIsAssigningRole(false)}
-              >
-                <RNText style={styles.cancelBtnText}>Cancel</RNText>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.modalBtn, styles.saveBtn, { flex: 2 }]}
-                onPress={saveMemberRoles}
-              >
-                <RNText style={styles.saveBtnText}>Save Roles</RNText>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </TouchableOpacity>
-      </Modal>
-
-      {!memberStatus && !isOwner && (activeTab === 'info' || activeTab === 'members') && (
-        <View style={[
-          styles.bottomJoinContainer, 
-          { paddingBottom: Math.max(insets.bottom, 16) },
-          isFold && { paddingTop: 28 }
-        ]}>
-          <TouchableOpacity 
-            style={[styles.infoBottomBtn, isFold && { paddingVertical: 22 }]} 
-            onPress={() => onTabPress('info', 0)}
-          >
-            <Info size={18} color="#64748B" />
-            <RNText style={styles.infoBottomBtnText}>TEAM INFO</RNText>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.fullJoinBtn, isFold && { paddingVertical: 22 }]} 
-            onPress={handleJoinTeam}
-          >
-            <Users size={18} color="#FFFFFF" strokeWidth={2.5} />
-            <RNText style={styles.fullJoinBtnText}>JOIN TEAM</RNText>
-          </TouchableOpacity>
-        </View>
-      )}
+        )}
+      </View>
     </View>
   );
 }
@@ -1546,14 +1714,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     paddingRight: 16,
+    alignItems: 'center',
+    paddingVertical: 4,
   },
   subTab: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
+    minWidth: 80,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   activeSubTab: {
     backgroundColor: '#F0FDF4',
@@ -1573,13 +1746,12 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     backgroundColor: 'transparent',
-    marginHorizontal: 16,
     paddingVertical: 4,
   },
   tabBarContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    minWidth: '100%',
+    paddingHorizontal: 16,
   },
   tab: {
     paddingHorizontal: 16,
@@ -1588,6 +1760,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
+    minWidth: 100,
   },
   activeTab: {
     borderBottomColor: '#01b854',
@@ -1624,7 +1797,6 @@ const styles = StyleSheet.create({
   tabContent: {
     flex: 1,
     paddingHorizontal: 16,
-    paddingBottom: 100,
   },
   section: {
     marginBottom: 24,
@@ -1936,15 +2108,6 @@ const styles = StyleSheet.create({
     color: '#64748B',
     textAlign: 'center',
     marginTop: 4,
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1E293B',
-    textAlign: 'center',
-    marginHorizontal: 12,
-    fontFamily: 'Inter',
   },
   memberActionBtn: {
     paddingHorizontal: 10,

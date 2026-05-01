@@ -371,138 +371,136 @@ export default function ShopScreen() {
     );
   };
 
+  const renderHero = () => {
+    if (loading) return <HeroSkeleton />;
+    return (
+      <Animated.View style={[styles.heroWrapper, bannerAnimatedStyle, isSmall && { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 0 }]}>
+        <Image 
+          source={activeCategory === 'Shoes' ? require('@/assets/shoes-hero.jpg') : require('@/assets/shop-hero.jpg')} 
+          style={styles.heroImageBg} 
+        />
+        <LinearGradient
+          colors={['transparent', 'rgba(0,0,0,0.1)', 'rgba(0,0,0,0.6)']}
+          style={styles.heroOverlay}
+        />
+        <View style={[styles.heroContent, { paddingTop: insets.top + 60 }]}>
+          <View style={styles.trendingBadge}>
+            <TrendingUp size={14} color="#f8688a" />
+            <RNText style={styles.trendingText}>
+              {activeCategory === 'Shoes' ? 'PERFORMANCE FOOTWEAR' : 'NEW ARRIVAL'}
+            </RNText>
+          </View>
+          <RNText style={[
+            styles.heroTitle,
+            width < 600 && { fontSize: 28, lineHeight: 32 }
+          ]}>
+            {activeCategory === 'Shoes' ? 'Step Up Your Game' : (featuredProduct?.name || 'Pro Cricket Gear')}
+          </RNText>
+          {activeCategory === 'Shoes' && (
+            <RNText style={[
+              styles.heroSubtitle,
+              width < 600 && { fontSize: 13, lineHeight: 18, maxWidth: '100%' }
+            ]}>
+              Experience ultimate comfort and grip with our professional range of cricket spikes and training shoes.
+            </RNText>
+          )}
+        </View>
+      </Animated.View>
+    );
+  };
+
   const content = (onScroll?: any) => {
     const ScrollComponent = Platform.OS === 'web' ? ScrollView : AnimatedScrollView;
     return (
-      <ScrollComponent 
-        onScroll={Platform.OS === 'web' ? (e) => {
-          DeviceEventEmitter.emit('mainScroll', { y: e.nativeEvent.contentOffset.y });
-          if (onScroll) onScroll(e);
-        } : onScroll}
-        scrollEventThrottle={16}
-        showsVerticalScrollIndicator={false}
-        style={styles.container} 
-        contentContainerStyle={[styles.scrollContent]}
-      >
-      {/* Hero Banner */}
-      {loading ? (
-        <HeroSkeleton />
-      ) : (
-        <Animated.View style={[styles.heroWrapper, bannerAnimatedStyle]}>
-          <Image 
-            source={activeCategory === 'Shoes' ? require('@/assets/shoes-hero.jpg') : require('@/assets/shop-hero.jpg')} 
-            style={styles.heroImageBg} 
-          />
-          <LinearGradient
-            colors={['transparent', 'rgba(0,0,0,0.1)', 'rgba(0,0,0,0.6)']}
-            style={styles.heroOverlay}
-          />
-          <View style={[styles.heroContent, { paddingTop: insets.top + 60 }]}>
-            <View style={styles.trendingBadge}>
-              <TrendingUp size={14} color="#f8688a" />
-              <RNText style={styles.trendingText}>
-                {activeCategory === 'Shoes' ? 'PERFORMANCE FOOTWEAR' : 'NEW ARRIVAL'}
-              </RNText>
-            </View>
-            <RNText style={[
-              styles.heroTitle,
-              width < 600 && { fontSize: 28, lineHeight: 32 }
-            ]}>
-              {activeCategory === 'Shoes' ? 'Step Up Your Game' : (featuredProduct?.name || 'Pro Cricket Gear')}
-            </RNText>
-            {activeCategory === 'Shoes' && (
-              <RNText style={[
-                styles.heroSubtitle,
-                width < 600 && { fontSize: 13, lineHeight: 18, maxWidth: '100%' }
-              ]}>
-                Experience ultimate comfort and grip with our professional range of cricket spikes and training shoes.
-              </RNText>
-            )}
-          </View>
-        </Animated.View>
-      )}
+      <View style={{ flex: 1 }}>
+        {isSmall && renderHero()}
+        <ScrollComponent 
+          onScroll={Platform.OS === 'web' ? (e: any) => {
+            const currentY = e.nativeEvent.contentOffset.y;
+            const diff = currentY - lastScrollY.value;
+            
+            if (diff > 10 && currentY > 100) {
+              setTabBarVisible(false);
+            } else if (diff < -15 || currentY < 50) {
+              setTabBarVisible(true);
+            }
+            lastScrollY.value = currentY;
+            
+            DeviceEventEmitter.emit('mainScroll', { y: currentY });
+            if (onScroll) onScroll(e);
+          } : onScroll}
+          scrollEventThrottle={16}
+          showsVerticalScrollIndicator={false}
+          style={[styles.container, isSmall && { backgroundColor: 'transparent' }]} 
+          contentContainerStyle={[styles.scrollContent]}
+          stickyHeaderIndices={isSmall ? [1] : undefined}
+        >
+          {isSmall ? <View style={{ height: 420 }} /> : renderHero()}
 
-      {/* Main Content Area */}
-      <View style={Platform.OS === 'web' && width > 1200 ? { width: '100%', alignItems: 'center', backgroundColor: '#F8FAFC' } : null}>
-        <View style={[
-          styles.mainContent,
-          Platform.OS === 'web' && width > 1200 && { 
-            maxWidth: 1400, 
-            width: '100%',
-            borderLeftWidth: 1,
-            borderRightWidth: 1,
-            borderColor: '#F1F5F9',
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: 0.02,
-            shadowRadius: 20,
-            backgroundColor: '#FFFFFF',
-          }
-        ]}>
-        {/* Search Bar Floating */}
-        <View style={[styles.searchSection, width < 350 && { marginTop: -20 }]}>
-          <View style={[styles.searchBar, width < 350 && { height: 44, borderRadius: 12 }]}>
-            <Search size={width < 350 ? 18 : 20} color="#94A3B8" />
-            <RNTextInput 
-              style={[styles.searchInput, width < 350 && { fontSize: 12 }]}
-              placeholder={width < 350 ? "Search..." : "Search gear, brands, accessories..."}
-              placeholderTextColor="#94A3B8"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-            <TouchableOpacity 
-              style={[styles.filterBtn, width < 350 && { width: 36, height: 36 }]}
-              onPress={() => {
-                setTempSortBy(sortBy);
-                setTempPriceRange(priceRange);
-                setIsFilterVisible(true);
-              }}
-            >
-              <Filter size={width < 350 ? 18 : 20} color="#0F172A" />
-              {(sortBy !== 'newest' || priceRange) && (
-                <View style={styles.filterBadge} />
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Categories Pills */}
-        <View style={styles.categoriesSection}>
-          {loading ? (
-            <CategorySkeleton />
-          ) : (
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false} 
-              contentContainerStyle={styles.categoryList}
-            >
-              <TouchableOpacity 
-                style={[styles.categoryPill, activeCategory === 'all' && styles.categoryPillActive]}
-                onPress={() => setActiveCategory('all')}
-              >
-                <RNText style={[styles.categoryPillText, activeCategory === 'all' && styles.categoryPillTextActive]}>
-                  All Gear
-                </RNText>
-              </TouchableOpacity>
-              {categories.map(cat => (
+          <View style={[styles.stickyHeader, isSmall && { backgroundColor: '#F8FAFC', borderTopLeftRadius: 32, borderTopRightRadius: 32, marginTop: -30, paddingTop: 20 }]}>
+            {/* Search Bar Floating */}
+            <View style={[styles.searchSection, width < 350 && { marginTop: -20 }]}>
+              <View style={[styles.searchBar, width < 350 && { height: 44, borderRadius: 12 }]}>
+                <Search size={width < 350 ? 18 : 20} color="#94A3B8" />
+                <RNTextInput 
+                  style={[styles.searchInput, width < 350 && { fontSize: 12 }]}
+                  placeholder={width < 350 ? "Search..." : "Search gear, brands, accessories..."}
+                  placeholderTextColor="#94A3B8"
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
                 <TouchableOpacity 
-                  key={cat.id} 
-                  style={[styles.categoryPill, activeCategory === cat.name && styles.categoryPillActive]}
-                  onPress={() => setActiveCategory(cat.name)}
+                  style={[styles.filterBtn, width < 350 && { width: 36, height: 36 }]}
+                  onPress={() => {
+                    setTempSortBy(sortBy);
+                    setTempPriceRange(priceRange);
+                    setIsFilterVisible(true);
+                  }}
                 >
-                  <RNText style={[styles.categoryPillText, activeCategory === cat.name && styles.categoryPillTextActive]}>
-                    {cat.name}
-                  </RNText>
+                  <Filter size={width < 350 ? 18 : 20} color="#0F172A" />
+                  {(sortBy !== 'newest' || priceRange) && (
+                    <View style={styles.filterBadge} />
+                  )}
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
-          )}
-        </View>
+              </View>
+            </View>
 
+            {/* Categories Pills */}
+            <View style={styles.categoriesSection}>
+              {loading ? (
+                <CategorySkeleton />
+              ) : (
+                <ScrollView 
+                  horizontal 
+                  showsHorizontalScrollIndicator={false} 
+                  contentContainerStyle={styles.categoryList}
+                >
+                  <TouchableOpacity 
+                    style={[styles.categoryPill, activeCategory === 'all' && styles.categoryPillActive]}
+                    onPress={() => setActiveCategory('all')}
+                  >
+                    <RNText style={[styles.categoryPillText, activeCategory === 'all' && styles.categoryPillTextActive]}>
+                      All Gear
+                    </RNText>
+                  </TouchableOpacity>
+                  {categories.map(cat => (
+                    <TouchableOpacity 
+                      key={cat.id} 
+                      style={[styles.categoryPill, activeCategory === cat.name && styles.categoryPillActive]}
+                      onPress={() => setActiveCategory(cat.name)}
+                    >
+                      <RNText style={[styles.categoryPillText, activeCategory === cat.name && styles.categoryPillTextActive]}>
+                        {cat.name}
+                      </RNText>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
+            </View>
+          </View>
 
-
-        {/* Products Grid */}
-        <View style={styles.productsSection}>
+          {/* Products Grid */}
+          <View style={[styles.productsSection, isSmall && { backgroundColor: '#F8FAFC', minHeight: 1000 }]}>
           <View style={styles.sectionHeader}>
             <RNText style={styles.sectionTitle}>
               {activeCategory === 'all' ? 'Featured Items' : activeCategory}
@@ -539,9 +537,8 @@ export default function ShopScreen() {
             </View>
           )}
         </View>
-      </View>
-    </View>
       </ScrollComponent>
+    </View>
     );
   };
 

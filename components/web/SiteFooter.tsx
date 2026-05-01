@@ -8,18 +8,23 @@ export default function SiteFooter() {
   return (
     <View style={styles.footer}>
       <View style={styles.footerMain}>
-        <View style={styles.footerBrand}>
-          <Image
-            source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
-            style={styles.footerLogo}
-            resizeMode="contain"
-          />
-          <Text style={styles.footerBrandSubtitle}>
-            Simple online bookings for cricket grounds and box cricket turfs.
-          </Text>
-        </View>
-
         <View style={styles.footerColumns}>
+          <View style={styles.footerBrand}>
+            <Image
+              source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
+              style={styles.footerLogo}
+              resizeMode="contain"
+            />
+            <Text style={styles.footerBrandSubtitle}>
+              Your sport. Your ground. Booked in seconds.
+            </Text>
+            <Image
+              source={require('@/assets/payment_logo.png')}
+              style={styles.paymentLogos}
+              resizeMode="contain"
+            />
+          </View>
+
           <View style={styles.footerColumn}>
             <Text style={styles.footerHeading}>Product</Text>
             <Text
@@ -165,17 +170,28 @@ const styles = StyleSheet.create({
     paddingTop: 32,
     paddingHorizontal: 0,
   },
+  footerBrand: {
+    minWidth: 240,
+    maxWidth: 460,
+    marginBottom: 24,
+    alignItems: 'flex-start',
+  },
   footerLogo: {
-    height: 64,
-    width: 280,
-    marginLeft: -10,
-    marginBottom: 4,
+    height: 48,
+    width: 200,
+    marginLeft: -54,
+    marginBottom: 8,
   },
   footerBrandSubtitle: {
-    marginTop: 2,
     fontSize: 13,
     color: '#64748B',
-    maxWidth: 480,
+    lineHeight: 18,
+  },
+  paymentLogos: {
+    width: 320,
+    height: 50,
+    marginTop: 6,
+    marginLeft: -78,
   },
   footerColumns: {
     flexDirection: 'row',

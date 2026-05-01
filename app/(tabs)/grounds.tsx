@@ -229,7 +229,7 @@ export default function GroundsTabScreen() {
             {activeTab === 'book' ? (
               <View>
                 <GroundsSearchBar lightMode={true} />
-                <LandingBookingForm fullWidth initialType={type as string} />
+                <LandingBookingForm fullWidth initialType={type as string} premiumCards={true} />
               </View>
             ) : activeTab === 'opponent' ? (
               <FindAnOpponentScreen hideHeader />
@@ -274,7 +274,7 @@ export default function GroundsTabScreen() {
           >
             {Platform.OS === 'web' && renderTabs(styles.webTabContainer)}
             <GroundsSearchBar lightMode={true} />
-            <LandingBookingForm fullWidth noCard bookGroundScreenNative hideTitle lightAppTheme initialType={type as string} />
+            <LandingBookingForm fullWidth noCard bookGroundScreenNative hideTitle lightAppTheme initialType={type as string} premiumCards={true} />
           </AnimatedScrollView>
         </View>
 

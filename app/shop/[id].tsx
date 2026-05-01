@@ -253,34 +253,16 @@ export default function ProductDetailScreen() {
           source={{ uri: product.images?.[activeImageIndex] || product.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80' }} 
           style={[styles.mainImage, isUltraNarrow && { height: 320 }]} 
         />
-        {product.images && product.images.length > 1 && (
-          <View style={styles.mobileThumbnailsOverlay}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 20 }}>
-              {product.images.map((img: string, i: number) => (
-                <TouchableOpacity 
-                  key={i} 
-                  style={[styles.mobileThumb, activeImageIndex === i && styles.mobileThumbActive]}
-                  onPress={() => setActiveImageIndex(i)}
-                >
-                  <Image source={{ uri: img }} style={styles.mobileThumbImage} />
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
-        {product.tag && (
-          <View style={styles.heroTag}>
-            <Text style={styles.heroTagText}>{product.tag}</Text>
-          </View>
-        )}
+        {/* Hero tag and thumbnails moved to bottom of JSX for better touch handling */}
       </View>
 
       <ScrollView 
-        style={styles.scroll} 
+        style={[styles.scroll, { zIndex: 10 }]} 
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: isUltraNarrow ? 320 : 440 }]}
+        pointerEvents="box-none"
       >
-        <View style={styles.contentWrapper}>
+        <View style={styles.contentWrapper} pointerEvents="auto">
           {/* Basic Info */}
           <View style={styles.infoSection}>
             <Text style={styles.categoryText}>{product.category?.name || 'Equipment'}</Text>
@@ -386,14 +368,25 @@ export default function ProductDetailScreen() {
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Specifications</Text>
               <View style={styles.specTable}>
-                {Object.entries(product.specifications).map(([key, value]: [string, any], index, array) => (
-                  <View key={key} style={[styles.specRow, index === array.length - 1 && { borderBottomWidth: 0 }]}>
-                    <Text style={styles.specKey}>{key}</Text>
-                    <Text style={styles.specValue}>
-                      {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                    </Text>
-                  </View>
-                ))}
+                {Object.entries(product.specifications)
+                  .filter(([key]) => !['images', 'features'].includes(key))
+                  .map(([key, value]: [string, any], index, array) => {
+                    const isLast = index === array.length - 1;
+                    let displayValue = String(value);
+                    
+                    if (Array.isArray(value)) {
+                      displayValue = value.map(v => (typeof v === 'object' && v !== null) ? (v.name || v.label || JSON.stringify(v)) : String(v)).join(', ');
+                    } else if (typeof value === 'object' && value !== null) {
+                      displayValue = JSON.stringify(value);
+                    }
+
+                    return (
+                      <View key={key} style={[styles.specRow, isLast && { borderBottomWidth: 0 }]}>
+                        <Text style={styles.specKey}>{key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}</Text>
+                        <Text style={styles.specValue}>{displayValue}</Text>
+                      </View>
+                    );
+                  })}
               </View>
             </View>
           )}
@@ -402,33 +395,61 @@ export default function ProductDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* Header Overlay - Absolute and rendered last to sit on top of everything */}
-      <View style={[styles.imageOverlay, { top: Math.max(insets.top, 20) }]}>
-        <TouchableOpacity 
-          style={styles.backBtn} 
-          onPress={() => router.back()}
-        >
-          <ChevronLeft size={24} color="#2b2f4b" />
-        </TouchableOpacity>
-        <View style={styles.rightActions}>
-          <TouchableOpacity style={styles.actionCircle} onPress={handleShare}>
-            <Share2 size={20} color="#2b2f4b" />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.actionCircle} 
-            onPress={() => router.push('/shop/cart')}
-          >
-            <ShoppingCart size={20} color="#2b2f4b" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionCircle} onPress={toggleFavorite}>
-            <Heart 
-              size={20} 
-              color={isFavorited ? "#f8688a" : "#2b2f4b"} 
-              fill={isFavorited ? "#f8688a" : "none"} 
-            />
-          </TouchableOpacity>
+      {/* Header Overlay moved to interactive overlays block below */}
+
+      {/* Mobile-only interactive overlays */}
+      {!isSmall ? null : (
+        <View pointerEvents="box-none" style={[StyleSheet.absoluteFill, { zIndex: 5 }]}>
+          {/* Header Overlay */}
+          <View pointerEvents="box-none" style={[styles.imageOverlay, { top: Math.max(insets.top, 20), zIndex: 6 }]}>
+            <TouchableOpacity 
+              style={styles.backBtn} 
+              onPress={() => router.back()}
+            >
+              <ChevronLeft size={24} color="#2b2f4b" />
+            </TouchableOpacity>
+            <View style={styles.rightActions}>
+              <TouchableOpacity style={styles.actionCircle} onPress={handleShare}>
+                <Share2 size={20} color="#2b2f4b" />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.actionCircle} 
+                onPress={() => router.push('/shop/cart')}
+              >
+                <ShoppingCart size={20} color="#2b2f4b" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.actionCircle} onPress={toggleFavorite}>
+                <Heart 
+                  size={20} 
+                  color={isFavorited ? "#f8688a" : "#2b2f4b"} 
+                  fill={isFavorited ? "#f8688a" : "none"} 
+                />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {product.images && product.images.length > 1 && (
+            <View pointerEvents="box-none" style={[styles.mobileThumbnailsOverlay, { top: (isUltraNarrow ? 320 : 440) - 100, bottom: undefined, height: 100, zIndex: 6 }]}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 20 }}>
+                {product.images.map((img: string, i: number) => (
+                  <TouchableOpacity 
+                    key={i} 
+                    style={[styles.mobileThumb, activeImageIndex === i && styles.mobileThumbActive]}
+                    onPress={() => setActiveImageIndex(i)}
+                  >
+                    <Image source={{ uri: img }} style={styles.mobileThumbImage} />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+          {product.tag && (
+            <View style={[styles.heroTag, { top: (isUltraNarrow ? 320 : 440) - 40, bottom: undefined }]}>
+              <Text style={styles.heroTagText}>{product.tag}</Text>
+            </View>
+          )}
         </View>
-      </View>
+      )}
     </View>
   );
 
@@ -576,10 +597,10 @@ export default function ProductDetailScreen() {
                           <Text style={styles.webTabTextActive}>DETAILS</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.webTab}>
-                          <Text style={styles.webTabText}>DETAILS</Text>
+                          <Text style={styles.webTabText}>SPECIFICATIONS</Text>
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.webTab}>
-                          <Text style={styles.webTabText}>LATERS</Text>
+                          <Text style={styles.webTabText}>REVIEWS</Text>
                         </TouchableOpacity>
                       </View>
                       

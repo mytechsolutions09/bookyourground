@@ -137,6 +137,8 @@ export default function HeroWeb() {
     });
   };
 
+  const isSearchEnabled = !!selectedLocation && !!selectedDate && !!selectedTime;
+
   const formatDate = (date: Date | null) => {
     if (!date) return 'Select Date';
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -227,7 +229,7 @@ export default function HeroWeb() {
                 isLocationOpen && { zIndex: 1000 }
               ]}>
                 <View style={styles.fieldIcon}>
-                  <MapPin size={20} color="#043529" strokeWidth={2} />
+                  <MapPin size={20} color="#FFFFFF" strokeWidth={2} />
                 </View>
                 <Pressable 
                   style={styles.fieldContent}
@@ -273,7 +275,7 @@ export default function HeroWeb() {
                 isDateOpen && { zIndex: 1000 }
               ]}>
                 <View style={styles.fieldIcon}>
-                  <CalendarIcon size={20} color="#043529" strokeWidth={2} />
+                  <CalendarIcon size={20} color="#FFFFFF" strokeWidth={2} />
                 </View>
                 <Pressable 
                   style={styles.fieldContent}
@@ -356,7 +358,7 @@ export default function HeroWeb() {
                 isTimeOpen && { zIndex: 1000 }
               ]}>
                 <View style={styles.fieldIcon}>
-                  <Clock size={20} color="#043529" strokeWidth={2} />
+                  <Clock size={20} color="#FFFFFF" strokeWidth={2} />
                 </View>
                 <Pressable 
                   style={styles.fieldContent}
@@ -374,7 +376,7 @@ export default function HeroWeb() {
                     {selectedTime || 'Select Time'}
                   </Text>
                   {loadingTimes ? (
-                    <ActivityIndicator size="small" color="#043529" />
+                    <ActivityIndicator size="small" color="#FFFFFF" />
                   ) : (
                     <ChevronDown size={16} color="#64748B" />
                   )}
@@ -427,6 +429,7 @@ export default function HeroWeb() {
               <Pressable 
                 style={({ pressed }) => [
                   styles.searchButton,
+                  isSearchEnabled && styles.searchButtonActive,
                   isMobile && styles.searchButtonMobile,
                   pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }
                 ]}
@@ -523,20 +526,26 @@ const styles = StyleSheet.create({
   searchFormContainer: {
     width: '100%',
     maxWidth: 820,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
     borderRadius: 100,
     padding: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 24 },
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.15,
     shadowRadius: 40,
     elevation: 20,
     overflow: 'visible',
     zIndex: 50,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    ...Platform.select({
+      web: { backdropFilter: 'blur(24px)' }
+    }) as any,
   } as any,
   searchFormContainerMobile: {
     borderRadius: 24,
-    padding: 16,
+    padding: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
   },
   searchForm: {
     flexDirection: 'row',
@@ -560,11 +569,11 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRightWidth: 0,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
   },
   fieldDivider: {
     borderRightWidth: 1,
-    borderRightColor: '#F1F5F9',
+    borderRightColor: 'rgba(255, 255, 255, 0.1)',
   },
   fieldIcon: {
     marginRight: 14,
@@ -588,19 +597,19 @@ const styles = StyleSheet.create({
   },
   fieldText: {
     fontSize: 16,
-    color: '#0F172A',
+    color: '#FFFFFF',
     fontWeight: '600',
     fontFamily: 'Inter',
     letterSpacing: -0.3,
   },
   placeholderText: {
-    color: '#94A3B8',
+    color: 'rgba(255, 255, 255, 0.6)',
     fontWeight: '500',
     fontFamily: 'Inter',
     letterSpacing: -0.3,
   },
   searchButton: {
-    backgroundColor: '#01b854',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     paddingHorizontal: 28,
     paddingVertical: 12,
     borderRadius: 100,
@@ -609,9 +618,18 @@ const styles = StyleSheet.create({
     height: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#01b854',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    ...Platform.select({
+      web: { backdropFilter: 'blur(12px)' }
+    }) as any,
+  },
+  searchButtonActive: {
+    backgroundColor: 'rgba(1, 184, 84, 0.4)',
+    borderColor: 'rgba(0, 234, 107, 0.5)',
+    shadowColor: '#00ea6b',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.3,
     shadowRadius: 16,
   },
   searchButtonMobile: {

@@ -46,7 +46,9 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "./plugins/withVerificationAsset"
+      "./plugins/withVerificationAsset",
+      "expo-video",
+      "expo-audio"
     ],
     "experiments": {
       "typedRoutes": true

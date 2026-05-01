@@ -198,6 +198,7 @@ export default function BookMyGroundPage() {
                 separateSearchResults
                 noCard={width < 900}
                 hideTitle={width < 900}
+                premiumCards={true}
                 {...initialProps}
               />
             ) : (
@@ -234,6 +235,7 @@ export default function BookMyGroundPage() {
           noCard
           bookGroundScreenNative
           hideTitle
+          premiumCards={true}
           onScroll={scrollHandler}
           scrollEventThrottle={16}
           contentPaddingTop={160}

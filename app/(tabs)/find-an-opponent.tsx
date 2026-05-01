@@ -954,8 +954,8 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
   nativeFilterTagActive: {
-    backgroundColor: '#01b854',
-    borderColor: '#01b854',
+    backgroundColor: 'rgba(1, 184, 84, 0.12)',
+    borderColor: 'rgba(1, 184, 84, 0.4)',
   },
   dropdownButton: {
     flexDirection: 'row',
@@ -1001,7 +1001,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   nativeFilterTagTextActive: {
-    color: '#FFFFFF',
+    color: '#01b854',
+    fontWeight: '700',
   },
   webCard: {
     backgroundColor: '#FFFFFF',
@@ -1066,7 +1067,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F3F4F6',
   },
   filterTagActive: {
-    backgroundColor: '#01b854',
+    backgroundColor: 'rgba(1, 184, 84, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(1, 184, 84, 0.3)',
   },
   filterTagText: {
     fontSize: 12,
@@ -1075,7 +1078,8 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   filterTagTextActive: {
-    color: '#043529',
+    color: '#01b854',
+    fontWeight: '700',
   },
   header: {
     paddingHorizontal: 20,

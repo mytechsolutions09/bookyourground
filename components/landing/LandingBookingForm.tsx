@@ -175,6 +175,8 @@ interface LandingBookingFormProps {
   onScroll?: any;
   scrollEventThrottle?: number;
   contentPaddingTop?: number;
+  /** Use glass-styled premium cards for search results. */
+  premiumCards?: boolean;
 }
 
 export default function LandingBookingForm(props: LandingBookingFormProps) {
@@ -197,6 +199,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
     onScroll,
     scrollEventThrottle,
     contentPaddingTop = 0,
+    premiumCards = false,
   } = props;
   const { user } = useAuth();
   const { width: windowWidth } = useWindowDimensions();
@@ -240,6 +243,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
   const handleSearchRef = useRef<() => Promise<void>>(async () => { });
   const loadMoreSentinelRef = useRef<any>(null);
   const dateScrollRef = useRef<ScrollView>(null);
+  const timeScrollRef = useRef<ScrollView>(null);
 
   const [locationKey, setLocationKey] = useState<string>('New Gurugram__Haryana');
   const [typeKey, setTypeKey] = useState<string>(initialType || 'Cricket Ground');
@@ -891,9 +895,17 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       const baseFromDb = fromSelectedGround ?? fromSearchUnion;
       const base = baseFromDb ?? timeSlots;
       let list = base.filter((s) => {
-        // If join-match locking is ON, we must show the targeted slot even if technically 'booked'
         const isPreSelected = lockSlot && s.value === initialStartTime;
-        return isPreSelected || !bookedStartHHMM.has(s.value);
+        if (isPreSelected) return true;
+
+        const isBooked = bookedStartHHMM.has(s.value);
+        if (isBooked) return false;
+
+        const isAllowed = selectedGround?.id
+          ? allowedStartHHMM.has(s.value)
+          : searchAllowedStartHHMM.has(s.value);
+
+        return isAllowed;
       });
       if (
         useLandingSearchFlow &&
@@ -1059,6 +1071,26 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
 
     return () => clearTimeout(timer);
   }, [bookingDate, upcomingDates, datePageSize, isWeb, isCompact]);
+
+  useEffect(() => {
+    if (!startTime || availableTimeSlots.length === 0) return;
+
+    const timer = setTimeout(() => {
+      const idx = availableTimeSlots.findIndex(s => s.value === startTime);
+      if (idx === -1) return;
+
+      if (timeScrollRef.current) {
+        // Approximate chip width: 80 (minWidth) + 12 (gap) = 92
+        const chipWidth = isBoxCricket ? 70 : 92;
+        timeScrollRef.current.scrollTo({
+          x: Math.max(0, idx * chipWidth),
+          animated: true,
+        });
+      }
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [startTime, availableTimeSlots, isBoxCricket]);
 
   function InlineDropdown({
     value,
@@ -1666,6 +1698,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                     }}
                     showBookingSchedule={false}
                     showBookButton={wantsSlotFilter}
+                    glass={premiumCards}
                   />
                 </View>
               );
@@ -2123,6 +2156,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
             </View>
           ) : (
             <ScrollView
+              ref={timeScrollRef}
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.timeSlotsScrollContent}
@@ -2353,15 +2387,14 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
             groundSelectedFromSearch ? (
               <View style={styles.actionsColumn}>
                 <Button
-                  title={submitting ? 'Processing...' : 'Book Now'}
+                  title={submitting ? 'Processing...' : 'Checkout'}
                   onPress={handleBook}
                   disabled={submitting}
                   loading={submitting}
                   fullWidth
                   size="large"
-                  style={nativeTanChrome ? { backgroundColor: '#10b981' } : undefined}
-                  textStyle={nativeTanChrome ? styles.bookNowPrimaryButtonText : undefined}
-                  loadingIndicatorColor={nativeTanChrome ? '#043529' : undefined}
+                  style={styles.premiumGlassButton}
+                  textStyle={styles.premiumGlassButtonText}
                 />
                 <Pressable
                   onPress={() => setSelectedGroundId(null)}
@@ -2379,30 +2412,20 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                 loading={searching}
                 fullWidth
                 size="large"
-                style={styles.searchButtonAlignedHeight}
-                textStyle={nativeTanChrome ? styles.bookGroundNativeButtonText : undefined}
-                loadingIndicatorColor={nativeTanChrome ? '#043529' : undefined}
+                style={styles.premiumGlassButton}
+                textStyle={styles.premiumGlassButtonText}
               />
             ) : null
           ) : (
             <Button
-              title={submitting ? 'Processing...' : 'Book Now'}
+              title={submitting ? 'Processing...' : 'Checkout'}
               onPress={handleBook}
               disabled={submitting}
               loading={submitting}
               fullWidth
               size={groundPageAccent && !isWeb ? 'small' : 'large'}
-              style={
-                groundPageAccent || nativeTanChrome ? { backgroundColor: '#10b981' } : undefined
-              }
-              textStyle={
-                groundPageAccent || nativeTanChrome
-                  ? styles.bookNowPrimaryButtonText
-                  : undefined
-              }
-              loadingIndicatorColor={
-                groundPageAccent || nativeTanChrome ? '#043529' : undefined
-              }
+              style={styles.premiumGlassButton}
+              textStyle={styles.premiumGlassButtonText}
             />
           )}
         </View>
@@ -2465,6 +2488,35 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
   },
   wrapperMobileTight: {
     paddingHorizontal: 16,
+  },
+  premiumGlassButton: {
+    backgroundColor: 'rgba(1, 184, 84, 0.85)',
+    borderRadius: 100,
+    borderWidth: 1.5,
+    borderColor: '#00ea6b',
+    ...Platform.select({
+      web: {
+        backdropFilter: 'blur(8px)',
+        boxShadow: '0 4px 20px rgba(1, 184, 84, 0.4)',
+        transition: 'all 0.2s ease',
+      },
+      ios: {
+        shadowColor: '#01b854',
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.4,
+        shadowRadius: 12,
+      },
+      android: {
+        elevation: 8,
+      },
+    }) as any,
+  },
+  premiumGlassButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 16,
+    fontFamily: 'Inter',
+    letterSpacing: -0.2,
   },
   card: {
     backgroundColor: '#FFFFFF',
