@@ -435,11 +435,9 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
   const bodyStyle = (isPublicNoSidebar || isCompact) ? styles.bodyFull : isAdminLayout ? styles.bodyAdmin : styles.body;
   const showHeroHeader = isLanding || isMarketing || (isGroundDetails && !isOwnerGroundsDashboard);
 
-  if (Platform.OS !== 'web') {
-    return <>{children}</>;
-  }
-
-  return (
+  return Platform.OS !== 'web' ? (
+    <>{children}</>
+  ) : (
     <View style={[styles.container, (isLanding || isMarketing) && styles.containerLanding]}>
       {/* Hero Header Section */}
       {!hideHeader && showHeroHeader && (

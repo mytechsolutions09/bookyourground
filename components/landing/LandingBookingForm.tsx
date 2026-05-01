@@ -2297,16 +2297,13 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
     fullWidth && !isWeb && groundPageAccent && !noCard && styles.cardGroundPageNative,
   ];
 
-  if (loadingGrounds) {
-    return (
+  return (
+    loadingGrounds ? (
       <View style={[styles.wrapper, fullWidth && styles.wrapperFull]}>
         <BookingFormSkeleton />
       </View>
-    );
-  }
-
-  return (
-    <View
+    ) : (
+      <View
       style={[
         styles.wrapper,
         fullWidth && isWeb && styles.wrapperFull,
@@ -2450,7 +2447,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
           {searchResultsBody}
         </ContainerComponent>
       ) : null}
-    </View>
+    )
   );
 }
 

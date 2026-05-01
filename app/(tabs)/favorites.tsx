@@ -276,11 +276,9 @@ export default function FavoritesScreen() {
     </View>
   );
 
-  if (Platform.OS === 'web') {
-    return <WebLayout>{content}</WebLayout>;
-  }
-
-  return (
+  return Platform.OS === 'web' ? (
+    <WebLayout>{content}</WebLayout>
+  ) : (
     <View style={styles.nativeWrapper}>
       <MobileAppNavbar title="Favorites" titleColor="#043529" lightBg />
       {content}

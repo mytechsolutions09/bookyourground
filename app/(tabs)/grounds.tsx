@@ -210,38 +210,33 @@ export default function GroundsTabScreen() {
     </View>
   );
 
-  if (Platform.OS === 'web') {
-    return (
-      <WebLayout hideHeader={false} isPublicNoSidebar={isSmall}>
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator
-          scrollEventThrottle={16}
-          onScroll={(e) => {
-            DeviceEventEmitter.emit('mainScroll', { y: e.nativeEvent.contentOffset.y });
-          }}
-        >
-          {isSmall && renderTabs(styles.webTabContainerNative)}
-          {!isSmall && renderTabs(styles.webTabContainer)}
+  return Platform.OS === 'web' ? (
+    <WebLayout hideHeader={false} isPublicNoSidebar={isSmall}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator
+        scrollEventThrottle={16}
+        onScroll={(e) => {
+          DeviceEventEmitter.emit('mainScroll', { y: e.nativeEvent.contentOffset.y });
+        }}
+      >
+        {isSmall && renderTabs(styles.webTabContainerNative)}
+        {!isSmall && renderTabs(styles.webTabContainer)}
 
-          <View style={styles.page}>
-            {activeTab === 'book' ? (
-              <View>
-                <GroundsSearchBar lightMode={true} />
-                <LandingBookingForm fullWidth initialType={type as string} premiumCards={true} />
-              </View>
-            ) : activeTab === 'opponent' ? (
-              <FindAnOpponentScreen hideHeader />
-            ) : renderFavorites()}
-          </View>
-        </ScrollView>
-      </WebLayout>
-    );
-  }
-
-  // Native: full-screen booking with navbar + tabs.
-  return (
+        <View style={styles.page}>
+          {activeTab === 'book' ? (
+            <View>
+              <GroundsSearchBar lightMode={true} />
+              <LandingBookingForm fullWidth initialType={type as string} premiumCards={true} />
+            </View>
+          ) : activeTab === 'opponent' ? (
+            <FindAnOpponentScreen hideHeader />
+          ) : renderFavorites()}
+        </View>
+      </ScrollView>
+    </WebLayout>
+  ) : (
     <View style={styles.nativeRoot}>
       {Platform.OS !== 'web' && (
         <Animated.View style={headerAnimatedStyle}>
