@@ -437,9 +437,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     };
   }, [isLanding, isMarketing, isShop]);
 
-  if (Platform.OS !== 'web') {
-    return <>{children}</>;
-  }
+
 
   // Navbar search: fetch ground suggestions as user types on landing pages.
 
@@ -517,6 +515,11 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     isLanding ||
     isMarketing ||
     (isGroundDetails && !isOwnerGroundsDashboard);
+
+
+  if (Platform.OS !== 'web') {
+    return <>{children}</>;
+  }
 
   return (
     <View
@@ -752,11 +755,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                             source={{ uri: profile?.avatar_url || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' }}
                             style={styles.profileAvatar}
                           />
-                          {!((cleanPath === '/book-my-ground' || cleanPath === '/find-an-opponent')) && (
-                            <Text style={[styles.profileName, scrolled && styles.profileNameScrolled]}>
-                              {profile?.full_name?.split(' ')[0] || 'User'}
-                            </Text>
-                          )}
+
                         </TouchableOpacity>
                       </View>
                     )}

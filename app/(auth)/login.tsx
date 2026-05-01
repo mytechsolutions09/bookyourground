@@ -570,16 +570,24 @@ const styles = StyleSheet.create({
   },
   signInBtn: {
     flex: 1,
-    backgroundColor: '#1e293b',
-    borderRadius: 12,
-    height: 42,
+    backgroundColor: 'rgba(1, 184, 84, 0.4)',
+    borderRadius: 14,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#1e293b',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+    ...Platform.select({
+      web: {
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+      }
+    }) as any,
+    shadowColor: '#01b854',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   signInBtnText: {
     fontSize: 14,
@@ -663,15 +671,23 @@ const webStyles = StyleSheet.create({
   buttonRow: { flexDirection: 'row', gap: 12, marginTop: 16 },
   button: { 
     flex: 1, 
-    backgroundColor: '#0F172A', 
-    borderRadius: 12, 
-    height: 48, 
+    backgroundColor: 'rgba(1, 184, 84, 0.4)', 
+    borderRadius: 14, 
+    height: 52, 
     alignItems: 'center', 
     justifyContent: 'center',
-    shadowColor: '#1E293B',
-    shadowOffset: { width: 0, height: 4 },
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+    ...Platform.select({
+      web: {
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+      }
+    }) as any,
+    shadowColor: '#01b854',
+    shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.25,
-    shadowRadius: 8,
+    shadowRadius: 20,
   },
   buttonText: { 
     fontSize: 14, 

@@ -859,23 +859,21 @@ export default function CheckoutScreen() {
       style={[styles.container, { backgroundColor: themeBg }]} 
       contentContainerStyle={[styles.content, dynamicStyles.content]}
     >
-      <View style={styles.header}>
-        <TouchableOpacity 
-          onPress={() => {
-            if (router.canGoBack()) router.back();
-            else router.replace('/(tabs)');
-          }} 
-          style={[styles.backButton, { backgroundColor: themeBackBtnBg, borderColor: themeBackBtnBorder }]}
-        >
-          <ChevronLeft size={20} color={themeBackIconColor} />
-        </TouchableOpacity>
-        <RNText style={[styles.title, { color: themeTextColor }]}>Confirm Booking</RNText>
-      </View>
+
 
       <View style={[styles.layout, !isDesktop && styles.layoutMobile, dynamicStyles.layout]}>
         {/* Left Column: Items (Booking Details) */}
         <View style={[styles.mainColumn, !isDesktop && styles.mainColumnMobile, dynamicStyles.mainColumn]}>
           <Card style={styles.itemProductCard}>
+            <TouchableOpacity 
+              onPress={() => {
+                if (router.canGoBack()) router.back();
+                else router.replace('/(tabs)');
+              }} 
+              style={styles.backButtonOverImage}
+            >
+              <ChevronLeft size={20} color="#1E293B" />
+            </TouchableOpacity>
             {(booking.grounds || booking.ground)?.ground_images?.[0]?.image_url ? (
               <Image 
                 source={{ uri: (booking.grounds || booking.ground).ground_images[0].image_url }} 
@@ -1250,33 +1248,22 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 32,
-    gap: 16,
-    paddingHorizontal: 8,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FFFFFF',
+  backButtonOverImage: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    zIndex: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#0F172A',
-    fontFamily: 'Inter',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
   },
   layout: {
     flexDirection: 'row',
@@ -1304,6 +1291,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 12,
     elevation: 3,
+    padding: 0,
   },
   productImg: {
     width: '100%',
@@ -1580,20 +1568,20 @@ const styles = StyleSheet.create({
   payButton: {
     height: 56,
     borderRadius: 100,
-    backgroundColor: '#01b854',
+    backgroundColor: 'rgba(1, 184, 84, 0.7)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: '#00ea6b',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
     ...Platform.select({
       web: {
-        boxShadow: '0 8px 32px rgba(1, 184, 84, 0.4)',
-        transition: 'all 0.3s ease',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
       },
       ios: {
         shadowColor: '#01b854',
         shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.4,
+        shadowOpacity: 0.3,
         shadowRadius: 16,
       },
       android: {

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, useWindowDimensions } from 'react-native';
 import { router } from 'expo-router';
 import { ArrowRight } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '@/contexts/AuthContext';
 
 export default function CallToAction() {
@@ -15,6 +16,14 @@ export default function CallToAction() {
     <View style={styles.container}>
       <View style={styles.content}>
         <View style={[styles.card, isLight && styles.cardLight]}>
+          {!isLight && (
+            <LinearGradient
+              colors={['#06392e', '#01b854']}
+              style={StyleSheet.absoluteFill}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            />
+          )}
           <Text style={[styles.title, isLight && styles.titleLight]}>Ready to Get Started?</Text>
           <Text style={[styles.subtitle, isLight && styles.subtitleLight]}>
             Join thousands of sports enthusiasts who book their favorite grounds with ease
@@ -114,14 +123,22 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   primaryButton: {
-    backgroundColor: '#10B981',
+    backgroundColor: 'rgba(1, 184, 84, 0.35)',
     paddingHorizontal: 36,
     paddingVertical:Platform.OS === 'web' ? 20 : 18,
-    borderRadius: 16,
+    borderRadius: 100,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    shadowColor: '#10B981',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+    ...Platform.select({
+      web: {
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+      }
+    }) as any,
+    shadowColor: '#01e669',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
@@ -131,7 +148,8 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
     color: '#FFFFFF',
     fontSize: 17,
-    fontWeight: '700',
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   linkButton: {
     paddingVertical: 8,

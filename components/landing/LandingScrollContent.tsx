@@ -70,24 +70,35 @@ export default function LandingScrollContent({
           }}
         >
           {/* 
-            On web, we use sticky positioning for the hero. 
-            This keeps it at the top while the rest of the content scrolls over it.
+            Layer 1: Fixed/Sticky Hero Section (zIndex: 0)
           */}
           <View
             style={{
-              position: 'relative',
+              position: 'sticky' as any,
+              top: 0,
               zIndex: 0,
-              minHeight: isCompact ? 600 : undefined,
+              height: 850,
               width: '100%',
-              overflow: 'visible',
+              backgroundColor: '#000',
             }}
           >
             <HeroWeb />
           </View>
 
-          {isCompact ? (
-            <View style={{ backgroundColor: '#FFFFFF' }}>
-              {/* Quick Actions from Mobile */}
+          {/* 
+            Layer 2: Find Opposition (zIndex: 10)
+            This scrolls over Hero, then stays sticky at top: 0.
+          */}
+          <View
+            style={{
+              position: 'sticky' as any,
+              top: 0,
+              zIndex: 10,
+              backgroundColor: '#FFFFFF',
+              boxShadow: '0 -20px 40px rgba(0,0,0,0.1)',
+            }}
+          >
+            {isCompact && (
               <View style={styles.mobileQuickActions}>
                 <ScrollView
                   horizontal
@@ -127,71 +138,44 @@ export default function LandingScrollContent({
                   <ArrowRight size={18} color="#94A3B8" />
                 </TouchableOpacity>
               </View>
+            )}
+            <FindOpposition />
+          </View>
 
-              <FindOpposition />
-              <HowItWorks />
-              <CalendarTabs />
-              <PopularGrounds />
-              <GroundsNearYou />
-              <Features />
-              <CallToAction />
-              <SiteFooter />
-            </View>
-          ) : (
-            <>
-              {/* 
-                Subsequent Section 2: Find an Opposition
-              */}
-              <View
-                style={{
-                  zIndex: 5,
-                  backgroundColor: '#FFFFFF',
-                  position: 'relative',
-                }}
-              >
-                <FindOpposition />
-              </View>
+          {/* 
+            Layer 3: How It Works (zIndex: 20)
+            This scrolls over Layer 2, then stays sticky.
+          */}
+          <View
+            style={{
+              position: 'sticky' as any,
+              top: 0,
+              zIndex: 20,
+              backgroundColor: '#FFFFFF',
+              boxShadow: '0 -20px 40px rgba(0,0,0,0.1)',
+            }}
+          >
+            <HowItWorks />
+          </View>
 
-              {/* 
-                Subsequent Section 3: Scoring & Stats.
-                We make this sticky too, so it stays at top after scrolling over hero.
-              */}
-              <View
-                style={{
-                  position: 'sticky' as any,
-                  top: 0,
-                  zIndex: 10,
-                  backgroundColor: '#FFFFFF', // Solid background to cover hero
-                }}
-              >
-                <HowItWorks />
-              </View>
-
-              {/* 
-                Subsequent Section 3+: The rest of the page.
-                This section will scroll OVER section 2 because it has a higher z-index.
-              */}
-              <View
-                style={{
-                  backgroundColor: '#FFFFFF',
-                  zIndex: 20,
-                  position: 'relative',
-                  marginTop: 0,
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: -20 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 30,
-                }}
-              >
-                <CalendarTabs />
-                <PopularGrounds />
-                <GroundsNearYou />
-                <Features />
-                <CallToAction />
-                <SiteFooter />
-              </View>
-            </>
-          )}
+          {/* 
+            Layer 4: The rest of the content (zIndex: 30)
+          */}
+          <View
+            style={{
+              zIndex: 30,
+              backgroundColor: '#FFFFFF',
+              position: 'relative',
+              boxShadow: '0 -20px 40px rgba(0,0,0,0.1)',
+            }}
+          >
+            <CalendarTabs />
+            <PopularGrounds />
+            <GroundsNearYou />
+            <Features />
+            <CallToAction />
+            <SiteFooter />
+          </View>
         </ScrollView>
       </View>
     );
