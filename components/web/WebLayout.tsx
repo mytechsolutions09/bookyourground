@@ -689,60 +689,66 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
 
                     {!((cleanPath === '/book-my-ground' || cleanPath === '/find-an-opponent')) && (
                       <>
-                        <Text
-                          style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}
-                          onPress={() => router.push('/cricket/player-profile' as any)}
-                        >
-                          CRICKET
-                        </Text>
+                        <TouchableOpacity onPress={() => router.push('/cricket/player-profile' as any)}>
+                          <Text
+                            style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}
+                          >
+                            CRICKET
+                          </Text>
+                        </TouchableOpacity>
 
-                        <Text
-                          style={[
-                            styles.headerPrimaryButtonText,
-                            scrolled && styles.headerPrimaryButtonTextScrolled,
-                            { color: '#dcc093' }
-                          ]}
-                          onPress={() => router.push('/shop' as any)}
-                        >
-                          SHOP
-                        </Text>
+                        <TouchableOpacity onPress={() => router.push('/shop' as any)}>
+                          <Text
+                            style={[
+                              styles.headerPrimaryButtonText,
+                              scrolled && styles.headerPrimaryButtonTextScrolled,
+                              { color: '#dcc093' }
+                            ]}
+                          >
+                            SHOP
+                          </Text>
+                        </TouchableOpacity>
                       </>
                     )}
 
                     {cleanPath === '/book-my-ground' && (
-                      <Text
-                        style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}
-                        onPress={() => router.push('/find-an-opponent')}
-                      >
-                        FIND AN OPPOSITION
-                      </Text>
+                      <TouchableOpacity onPress={() => router.push('/find-an-opponent')}>
+                        <Text
+                          style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}
+                        >
+                          FIND AN OPPOSITION
+                        </Text>
+                      </TouchableOpacity>
                     )}
 
                     {cleanPath === '/find-an-opponent' && (
-                      <Text
-                        style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}
-                        onPress={() => router.push('/book-my-ground')}
-                      >
-                        BOOK A GROUND
-                      </Text>
+                      <TouchableOpacity onPress={() => router.push('/book-my-ground')}>
+                        <Text
+                          style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}
+                        >
+                          BOOK A GROUND
+                        </Text>
+                      </TouchableOpacity>
                     )}
 
                     {!((cleanPath === '/book-my-ground' || cleanPath === '/find-an-opponent')) && (
-                      <Text
-                        style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}
-                        onPress={() => router.push(groundsHref as any)}
-                      >
-                        GROUNDS
-                      </Text>
+                      <TouchableOpacity onPress={() => router.push(groundsHref as any)}>
+                        <Text
+                          style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}
+                        >
+                          GROUNDS
+                        </Text>
+                      </TouchableOpacity>
                     )}
 
                     {!isAuthenticated ? (
-                      <Text
-                        style={[styles.headerSecondaryButtonText, scrolled && styles.headerSecondaryButtonTextScrolled]}
-                        onPress={() => router.push('/(auth)/login' as any)}
-                      >
-                        SIGN IN
-                      </Text>
+                      <TouchableOpacity onPress={() => router.push('/(auth)/login' as any)}>
+                        <Text
+                          style={[styles.headerSecondaryButtonText, scrolled && styles.headerSecondaryButtonTextScrolled]}
+                        >
+                          SIGN IN
+                        </Text>
+                      </TouchableOpacity>
                     ) : (
                       <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
 
@@ -876,24 +882,26 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
               {!isCompact && !isAdminLayout && (
                 <View style={{ flexDirection: 'row', gap: 20, alignItems: 'center' }}>
 
-                  <Text
-                    style={[
-                      styles.headerNavLink,
-                      (cleanPath === '/shop' || isShop) ? { color: '#f8688a', borderBottomWidth: 2, borderBottomColor: '#f8688a', paddingBottom: 4, fontWeight: '700' } : { color: '#FFFFFF' }
-                    ]}
-                    onPress={() => router.push('/shop' as any)}
-                  >
-                    SHOP
-                  </Text>
+                  <TouchableOpacity onPress={() => router.push('/shop' as any)}>
+                    <Text
+                      style={[
+                        styles.headerNavLink,
+                        (cleanPath === '/shop' || isShop) ? { color: '#f8688a', borderBottomWidth: 2, borderBottomColor: '#f8688a', paddingBottom: 4, fontWeight: '700' } : { color: '#FFFFFF' }
+                      ]}
+                    >
+                      SHOP
+                    </Text>
+                  </TouchableOpacity>
 
 
                   {!isAuthenticated ? (
-                    <Text
-                      style={styles.headerSecondaryButtonText}
-                      onPress={() => router.push('/(auth)/login' as any)}
-                    >
-                      SIGN IN
-                    </Text>
+                    <TouchableOpacity onPress={() => router.push('/(auth)/login' as any)}>
+                      <Text
+                        style={styles.headerSecondaryButtonText}
+                      >
+                        SIGN IN
+                      </Text>
+                    </TouchableOpacity>
                   ) : (
                     <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
                       <TouchableOpacity
@@ -1542,6 +1550,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 2,
     transition: 'all 0.3s ease-in-out',
+    ...Platform.select({
+      web: { cursor: 'pointer' }
+    }) as any,
   },
   navLinkCollapsed: {
     justifyContent: 'center',
@@ -1683,6 +1694,9 @@ const styles = StyleSheet.create({
     color: '#dcc093',
     fontFamily: 'Inter',
     textTransform: 'uppercase',
+    ...Platform.select({
+      web: { cursor: 'pointer' }
+    }) as any,
   },
   headerPrimaryButtonTextScrolled: {
     color: '#dcc093',
@@ -1693,6 +1707,9 @@ const styles = StyleSheet.create({
     color: '#dcc093',
     fontFamily: 'Inter',
     textTransform: 'uppercase',
+    ...Platform.select({
+      web: { cursor: 'pointer' }
+    }) as any,
   },
   headerSecondaryButtonTextScrolled: {
     color: '#dcc093',
@@ -1753,6 +1770,9 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
     fontFamily: 'Inter',
     textTransform: 'uppercase',
+    ...Platform.select({
+      web: { cursor: 'pointer' }
+    }) as any,
   },
   headerNavLinkActive: {
     color: '#00ea6b',
