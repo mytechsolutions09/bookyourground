@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Platform, View, StyleSheet, ScrollView, TouchableOpacity, Text, useWindowDimensions, LayoutAnimation, UIManager, Dimensions } from 'react-native';
+import { Platform, View, StyleSheet, ScrollView, TouchableOpacity, Text, useWindowDimensions, LayoutAnimation, UIManager, Dimensions, DeviceEventEmitter } from 'react-native';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -210,82 +210,77 @@ export default function GroundsTabScreen() {
     </View>
   );
 
-  if (Platform.OS === 'web') {
-    return (
-      <WebLayout hideHeader={false} isPublicNoSidebar={isSmall}>
-        <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator
-          scrollEventThrottle={16}
-          onScroll={(e) => {
-            DeviceEventEmitter.emit('mainScroll', { y: e.nativeEvent.contentOffset.y });
-          }}
-        >
-          {isSmall && renderTabs(styles.webTabContainerNative)}
-          {!isSmall && renderTabs(styles.webTabContainer)}
-
-          <View style={styles.page}>
-            {activeTab === 'book' ? (
-              <View>
-                <GroundsSearchBar lightMode={true} />
-                <LandingBookingForm fullWidth initialType={type as string} premiumCards={true} />
-              </View>
-            ) : activeTab === 'opponent' ? (
-              <FindAnOpponentScreen hideHeader />
-            ) : renderFavorites()}
-          </View>
-        </ScrollView>
-      </WebLayout>
-    );
-  }
-
-  // Native: full-screen booking with navbar + tabs.
   return (
-    <View style={styles.nativeRoot}>
-      {Platform.OS !== 'web' && (
-        <Animated.View style={headerAnimatedStyle}>
-          {renderHeader()}
-        </Animated.View>
-      )}
-
-      <AnimatedScrollView
-        ref={horizontalPagerRef}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        contentOffset={{ x: TABS_LIST.find(t => t.id === activeTab)?.index! * width, y: 0 }}
-        onScroll={Platform.OS === 'web' ? undefined : horizontalScrollHandler}
-        scrollEventThrottle={16}
-        style={{ flex: 1 }}
-      >
-        {/* Slide 1: Book a Ground */}
-        <View style={{ width }}>
-          <AnimatedScrollView
-            onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
-            scrollEventThrottle={16}
-            style={styles.page}
-            contentContainerStyle={{
-              paddingTop: Platform.OS === 'web' ? 20 : (HEADER_HEIGHT + insets.top + 4),
-              paddingBottom: 100
-            }}
+    <View style={Platform.OS === 'web' ? { flex: 1, backgroundColor: '#FFFFFF' } : styles.nativeRoot}>
+      {Platform.OS === 'web' ? (
+        <WebLayout hideHeader={false} isPublicNoSidebar={isSmall}>
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="always"
+            onScroll={(e) => {
+              DeviceEventEmitter.emit('mainScroll', { y: e.nativeEvent.contentOffset.y });
+            }}
+            scrollEventThrottle={16}
           >
-            {Platform.OS === 'web' && renderTabs(styles.webTabContainer)}
-            <GroundsSearchBar lightMode={true} />
-            <LandingBookingForm fullWidth noCard bookGroundScreenNative hideTitle lightAppTheme initialType={type as string} premiumCards={true} />
-          </AnimatedScrollView>
-        </View>
+            {renderTabs(styles.webTabContainer)}
 
-        {/* Slide 2: Find an Opponent */}
-        <View style={{ width }}>
-          <FindAnOpponentScreen
-            hideHeader={true}
-            externalScrollHandler={verticalScrollHandler}
-          />
-        </View>
-      </AnimatedScrollView>
+            <View style={styles.page}>
+              {activeTab === 'book' ? (
+                <View>
+                  <GroundsSearchBar lightMode={true} />
+                  <LandingBookingForm fullWidth initialType={type as string} premiumCards={true} />
+                </View>
+              ) : activeTab === 'opponent' ? (
+                <FindAnOpponentScreen hideHeader />
+              ) : renderFavorites()}
+            </View>
+          </ScrollView>
+        </WebLayout>
+      ) : (
+        <>
+          <Animated.View style={headerAnimatedStyle}>
+            {renderHeader()}
+          </Animated.View>
+
+          <AnimatedScrollView
+            ref={horizontalPagerRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            contentOffset={{ x: TABS_LIST.find(t => t.id === activeTab)?.index! * width, y: 0 }}
+            onScroll={horizontalScrollHandler}
+            scrollEventThrottle={16}
+            style={{ flex: 1 }}
+          >
+            {/* Slide 1: Book a Ground */}
+            <View style={{ width }}>
+              <AnimatedScrollView
+                onScroll={verticalScrollHandler}
+                scrollEventThrottle={16}
+                style={styles.page}
+                contentContainerStyle={{
+                  paddingTop: (HEADER_HEIGHT + insets.top + 4),
+                  paddingBottom: 100
+                }}
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="always"
+              >
+                <GroundsSearchBar lightMode={true} />
+                <LandingBookingForm fullWidth noCard bookGroundScreenNative hideTitle lightAppTheme initialType={type as string} premiumCards={true} />
+              </AnimatedScrollView>
+            </View>
+
+            {/* Slide 2: Find an Opponent */}
+            <View style={{ width }}>
+              <FindAnOpponentScreen
+                hideHeader={true}
+                externalScrollHandler={verticalScrollHandler}
+              />
+            </View>
+          </AnimatedScrollView>
+        </>
+      )}
     </View>
   );
 }

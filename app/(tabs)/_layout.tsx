@@ -135,11 +135,11 @@ export default function TabLayout() {
       height: 60,
     };
 
-  const showLoading = loading && needsAuth;
+  const showLoading = needsAuth && (loading || !user);
 
-  const renderContent = () => {
-    if (Platform.OS !== 'web') {
-      return (
+  return (
+    <View style={{ flex: 1, backgroundColor: '#043529' }}>
+      {Platform.OS !== 'web' ? (
         <Stack
           screenOptions={{
             headerShown: false,
@@ -159,122 +159,113 @@ export default function TabLayout() {
           <Stack.Screen name="logout" />
           <Stack.Screen name="cricket" />
           <Stack.Screen name="find-an-opponent" />
-          <Stack.Screen name="dashboard" options={{ href: null } as any} />
+          <Stack.Screen name="dashboard" />
         </Stack>
-      );
-    }
-
-    return (
-      <Tabs
-        tabBar={(props) => (
-          <CustomTabBar 
-            {...props} 
-            router={router} 
-            insets={insets} 
-            isTabBarVisible={isTabBarVisible} 
-            hideTabBarOnBigScreens={hideTabBarOnBigScreens} 
-          />
-        )}
-        screenOptions={{
-          headerShown: false,
-          tabBarActiveTintColor: '#00ea6b',
-          tabBarInactiveTintColor: '#9ca3af',
-          tabBar: () => null,
-          tabBarStyle: { display: 'none', height: 0, overflow: 'hidden' },
-          tabBarItemStyle: { display: 'none', height: 0, overflow: 'hidden' },
-          ...(Platform.OS === 'web'
-            ? {
-              tabBarStyle: webTabBarStyle,
-              tabBarShowLabel: false,
-            }
-            : nativeTabBarOff),
-        }}
-      >
-        <Tabs.Screen
-          name="home_tab"
-          options={{
-            title: 'Home',
-            tabBarIcon: ({ color, size }) => <House size={size} color={color} />,
+      ) : (
+        <Tabs
+          tabBar={(props) => (
+            <CustomTabBar 
+              {...props} 
+              router={router} 
+              insets={insets} 
+              isTabBarVisible={isTabBarVisible} 
+              hideTabBarOnBigScreens={hideTabBarOnBigScreens} 
+            />
+          )}
+          screenOptions={{
+            headerShown: false,
+            tabBarActiveTintColor: '#00ea6b',
+            tabBarInactiveTintColor: '#9ca3af',
+            tabBarStyle: { display: 'none', height: 0, overflow: 'hidden' },
+            tabBarItemStyle: { display: 'none', height: 0, overflow: 'hidden' },
+            ...(Platform.OS === 'web'
+              ? {
+                tabBarStyle: webTabBarStyle,
+                tabBarShowLabel: false,
+              }
+              : nativeTabBarOff),
           }}
-        />
-        <Tabs.Screen
-          name="grounds"
-          options={{
-            title: 'Grounds',
-            tabBarIcon: ({ color, size }) => <LandPlot size={size} color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="find-an-opponent"
-          options={{
-            title: 'Opposition',
-            tabBarIcon: ({ color, size }) => <Swords size={size} color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="shop"
-          options={{
-            title: 'Shop',
-            tabBarIcon: ({ color, size }) => <ShoppingBag size={size} color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="cricket"
-          options={{
-            title: 'Cricket',
-            tabBarIcon: ({ color, size }) => <Trophy size={size} color={color} />,
-          }}
-        />
-
-        <Tabs.Screen
-          name="bookings"
-          options={{
-            href: null,
-            title: 'Bookings',
-            tabBarIcon: ({ color, size }) => <CalendarCheck2 size={size} color={color} />,
-          }}
-        />
-        <Tabs.Screen
-          name="favorites"
-          options={{
-            href: null,
-            title: 'Favorites',
-            tabBarIcon: ({ color, size }) => (
-              <Heart size={size} color={color} fill={color === '#00ea6b' ? '#00ea6b' : 'none'} />
-            ),
-          }}
-        />
-        <Tabs.Screen
-          name="profile"
-          options={{
-            href: null,
-            title: 'Profile',
-            tabBarIcon: ({ color, size }) => <CircleUser size={size} color={color} />,
-          }}
-        />
-        {!user && (
+        >
           <Tabs.Screen
-            name="logout"
+            name="home_tab"
             options={{
-              title: 'Login',
-              href: '/(auth)/login',
-              tabBarIcon: ({ color, size }) => <LogIn size={size} color={color} />,
+              title: 'Home',
+              tabBarIcon: ({ color, size }) => <House size={size} color={color} />,
             }}
           />
-        )}
-        <Tabs.Screen
-          name="dashboard"
-          options={{
-            href: null,
-          }}
-        />
-      </Tabs>
-    );
-  };
+          <Tabs.Screen
+            name="grounds"
+            options={{
+              title: 'Grounds',
+              tabBarIcon: ({ color, size }) => <LandPlot size={size} color={color} />,
+            }}
+          />
+          <Tabs.Screen
+            name="find-an-opponent"
+            options={{
+              title: 'Opposition',
+              tabBarIcon: ({ color, size }) => <Swords size={size} color={color} />,
+            }}
+          />
+          <Tabs.Screen
+            name="shop"
+            options={{
+              title: 'Shop',
+              tabBarIcon: ({ color, size }) => <ShoppingBag size={size} color={color} />,
+            }}
+          />
+          <Tabs.Screen
+            name="cricket"
+            options={{
+              title: 'Cricket',
+              tabBarIcon: ({ color, size }) => <Trophy size={size} color={color} />,
+            }}
+          />
 
-  return (
-    <View style={{ flex: 1, backgroundColor: '#043529' }}>
-      {renderContent()}
+          <Tabs.Screen
+            name="bookings"
+            options={{
+              href: null,
+              title: 'Bookings',
+              tabBarIcon: ({ color, size }) => <CalendarCheck2 size={size} color={color} />,
+            }}
+          />
+          <Tabs.Screen
+            name="favorites"
+            options={{
+              href: null,
+              title: 'Favorites',
+              tabBarIcon: ({ color, size }) => (
+                <Heart size={size} color={color} fill={color === '#00ea6b' ? '#00ea6b' : 'none'} />
+              ),
+            }}
+          />
+          <Tabs.Screen
+            name="profile"
+            options={{
+              href: null,
+              title: 'Profile',
+              tabBarIcon: ({ color, size }) => <CircleUser size={size} color={color} />,
+            }}
+          />
+          {!user && (
+            <Tabs.Screen
+              name="logout"
+              options={{
+                title: 'Login',
+                href: '/(auth)/login',
+                tabBarIcon: ({ color, size }) => <LogIn size={size} color={color} />,
+              }}
+            />
+          )}
+          <Tabs.Screen
+            name="dashboard"
+            options={{
+              href: null,
+            }}
+          />
+        </Tabs>
+      )}
       
       {showLoading && (
         <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#043529', zIndex: 9999 }]}>
