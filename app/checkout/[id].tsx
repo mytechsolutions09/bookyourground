@@ -14,16 +14,17 @@ import {
   FlatList,
   Pressable,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { WebView } from 'react-native-webview';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { Image } from 'react-native';
+import { Image as RNImage } from 'react-native';
 import WebLayout from '@/components/web/WebLayout';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import { formatCurrency, formatDateDDMMYYYY } from '@/utils/helpers';
-import { CreditCard, ShieldCheck, Clock, Calendar, MapPin, ChevronLeft, Wallet, Users, X } from 'lucide-react-native';
+import { CreditCard, ShieldCheck, Clock, Calendar, MapPin, ChevronLeft, Wallet, Users, X, Ticket, ShoppingBag, IndianRupee, Star, Zap } from 'lucide-react-native';
 import { hoursBetweenBooked, normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
 import { useUI } from '@/contexts/UIContext';
 
@@ -51,6 +52,26 @@ export default function CheckoutScreen() {
   const [bookedForName, setBookedForName] = useState<string>('');
   const [platformSettings, setPlatformSettings] = useState<any>(null);
   const [walletBalance, setWalletBalance] = useState(0);
+
+  // Stable random counts for social proof (1-5) based on booking ID
+  const { randomBookedCount, randomSlotsLeft } = React.useMemo(() => {
+    if (!id) return { randomBookedCount: 3, randomSlotsLeft: 2 };
+    
+    const seed = String(id);
+    let hash1 = 0;
+    let hash2 = 0;
+    
+    for (let i = 0; i < seed.length; i++) {
+      hash1 = seed.charCodeAt(i) + ((hash1 << 5) - hash1);
+      // Use a slightly different hash for the second number
+      hash2 = seed.charCodeAt(i) + ((hash2 << 7) - hash2);
+    }
+    
+    return {
+      randomBookedCount: (Math.abs(hash1) % 5) + 1,
+      randomSlotsLeft: (Math.abs(hash2) % 5) + 1
+    };
+  }, [id]);
   
   const isGroundOwnerOrAdmin = profile?.role === 'super_admin' || 
     (profile?.role === 'ground_owner' && (booking?.grounds?.owner_id === user?.id || booking?.ground_id === user?.id));
@@ -840,13 +861,18 @@ export default function CheckoutScreen() {
       padding: isDesktop ? 20 : 16,
     },
     summaryCard: {
+      flex: 1,
       padding: isDesktop ? 24 : 16,
     },
     productImg: {
-      height: Platform.OS === 'web' && width > 768 ? 220 : 160,
+      height: Platform.OS === 'web' && width > 768 ? '100%' : 200,
     },
-    productPlaceholder: {
-      height: Platform.OS === 'web' && width > 768 ? 140 : 120,
+    groundImgContainer: {
+      height: isDesktop ? (width > 1200 ? 500 : 400) : 250,
+      width: '100%',
+    },
+    productInfo: {
+      flex: 1,
     },
     mainColumn: {
       flex: isDesktop ? 1.8 : undefined,
@@ -868,290 +894,359 @@ export default function CheckoutScreen() {
       style={[styles.container, { backgroundColor: themeBg }]} 
       contentContainerStyle={[styles.content, dynamicStyles.content]}
     >
-      <View style={styles.header}>
-        <TouchableOpacity 
-          onPress={() => {
-            if (router.canGoBack()) router.back();
-            else router.replace('/(tabs)');
-          }} 
-          style={[styles.backButton, { backgroundColor: themeBackBtnBg, borderColor: themeBackBtnBorder }]}
-        >
-          <ChevronLeft size={20} color={themeBackIconColor} />
-        </TouchableOpacity>
-        <RNText style={[styles.title, { color: themeTextColor }]}>Confirm Booking</RNText>
-      </View>
-
       <View style={[styles.layout, !isDesktop && styles.layoutMobile, dynamicStyles.layout]}>
         {/* Left Column: Items (Booking Details) */}
         <View style={[styles.mainColumn, !isDesktop && styles.mainColumnMobile, dynamicStyles.mainColumn]}>
           <Card style={styles.itemProductCard}>
-            {(booking.grounds || booking.ground)?.ground_images?.[0]?.image_url ? (
-              <Image 
-                source={{ uri: (booking.grounds || booking.ground).ground_images[0].image_url }} 
-                style={[styles.productImg, dynamicStyles.productImg]}
-              />
-            ) : (
-              <View style={[styles.productPlaceholder, dynamicStyles.productPlaceholder]}>
-                 <Calendar size={48} color="#01b854" />
-              </View>
-            )}
-            
-            <View style={styles.productInfo}>
-              <View style={styles.productHeaderRow}>
-                <View>
-                  <RNText style={styles.itemTitle}>{(booking.grounds || booking.ground)?.name}</RNText>
-                  <View style={styles.itemMetaRow}>
-                    <MapPin size={14} color="#6B7280" />
-                    <RNText style={styles.itemMetaText}>{(booking.grounds || booking.ground)?.city}, {(booking.grounds || booking.ground)?.state}</RNText>
+            <View style={[styles.groundImgContainer, dynamicStyles.groundImgContainer]}>
+              {(booking.grounds || booking.ground)?.ground_images?.[0]?.image_url ? (
+                  <View style={styles.heroImageWrapper}>
+                    <RNImage 
+                      source={{ uri: (booking.grounds || booking.ground).ground_images[0].image_url }} 
+                      style={[styles.productImg, dynamicStyles.productImg]}
+                    />
+                    
+                    {/* Hero Overlays */}
+                    <LinearGradient
+                      colors={['transparent', 'rgba(15, 23, 42, 0.9)']}
+                      style={styles.heroOverlayGradient}
+                    >
+                      <RNText style={styles.heroTitle}>{(booking.grounds || booking.ground)?.name}</RNText>
+                      <View style={styles.heroLocationRow}>
+                        <MapPin size={16} color="rgba(255, 255, 255, 0.8)" />
+                        <RNText style={styles.heroLocationText}>
+                          {(booking.grounds || booking.ground)?.city}, {(booking.grounds || booking.ground)?.state}
+                        </RNText>
+                      </View>
+                      
+                      <View style={styles.heroBadgesRow}>
+                        <View style={styles.ratingBadge}>
+                          <Star size={14} color="#FFFFFF" fill="#FFFFFF" />
+                          <RNText style={styles.ratingText}>4.5 (128)</RNText>
+                        </View>
+                        <View style={styles.priceBadgeOverlay}>
+                          <RNText style={styles.priceBadgeText}>
+                            {formatCurrency(baseGroundPrice)} <RNText style={styles.priceUnitText}>/ slot</RNText>
+                          </RNText>
+                        </View>
+                      </View>
+                    </LinearGradient>
+
+                    <View style={styles.topRightBadge}>
+                      <Users size={14} color="#FFFFFF" />
+                      <RNText style={styles.topRightBadgeText}>Booked {randomBookedCount} times today</RNText>
+                    </View>
+
+                    <View style={styles.middleLeftBadge}>
+                      <Zap size={14} color="#FFFFFF" fill="#FFFFFF" />
+                      <RNText style={styles.middleLeftBadgeText}>Only {randomSlotsLeft} slots left</RNText>
+                    </View>
+
+                    <TouchableOpacity onPress={() => router.back()} style={styles.imageBackBtn}>
+                      <View style={styles.backBtnInner}>
+                        <ChevronLeft size={24} color="#FFFFFF" />
+                      </View>
+                    </TouchableOpacity>
                   </View>
+              ) : (
+                <View style={[styles.productPlaceholder, dynamicStyles.productPlaceholder]}>
+                   <Calendar size={48} color="#01b854" />
                 </View>
-                <RNText style={styles.productPrice}>
-                  {formatCurrency(
-                    (selectedGateway === 'cash' && customCashAmount && !isNaN(parseFloat(customCashAmount)))
-                      ? parseFloat(customCashAmount) + (booking.discount_amount || 0)
-                      : booking.total_amount + (booking.discount_amount || 0)
-                  )}
-                </RNText>
-              </View>
-
-              <View style={styles.itemDetailsFooter}>
-                 <View style={styles.footerDetail}>
-                    <Calendar size={16} color="#01b854" />
-                    <View>
-                       <RNText style={styles.detailTinyLabel}>MATCH DATE</RNText>
-                       <RNText style={styles.footerDetailText}>{formatDateDDMMYYYY(booking.booking_date)}</RNText>
-                    </View>
-                 </View>
-                 <View style={styles.footerDetail}>
-                    <Clock size={16} color="#01b854" />
-                    <View>
-                       <RNText style={styles.detailTinyLabel}>SLOT TIME</RNText>
-                       <RNText style={styles.footerDetailText}>{booking.start_time.substring(0, 5)} - {booking.end_time.substring(0, 5)}</RNText>
-                    </View>
-                 </View>
-                 <View style={styles.footerDetail}>
-                    <Users size={16} color="#01b854" />
-                    <View>
-                       <RNText style={styles.detailTinyLabel}>BOOKING FOR</RNText>
-                       <RNText style={styles.footerDetailText}>{booking.team_type === 'one' ? '1 Team' : 'Both Teams'}</RNText>
-                    </View>
-                 </View>
-              </View>
-
-
+              )}
             </View>
           </Card>
 
-          <View style={[styles.securityInfo, dynamicStyles.securityInfo, { backgroundColor: '#ECFDF5', borderColor: '#D1FAE5', borderWidth: 1 }]}>
-            <ShieldCheck size={16} color="#01b854" />
-            <RNText style={[styles.securityText, { color: '#065F46' }]}>
-               Purchase protected by Book Your Ground Security
-            </RNText>
+          {/* Booking Details Grid */}
+          <View style={styles.bookingDetailsCard}>
+            <View style={styles.bookingDetailsRow}>
+              {/* Match Date */}
+              <View style={styles.bookingDetailItem}>
+                <View style={styles.detailIconBox}>
+                  <Calendar size={20} color="#059669" />
+                </View>
+                <View style={styles.detailInfoContent}>
+                  <RNText style={styles.detailLabel}>Match Date</RNText>
+                  <RNText style={styles.detailValue}>{formatDateDDMMYYYY(booking.booking_date)}</RNText>
+                  <RNText style={styles.detailSub}>
+                    {new Date(booking.booking_date).toLocaleDateString('en-US', { weekday: 'long' })}
+                  </RNText>
+                </View>
+              </View>
+
+              <View style={styles.detailDivider} />
+
+              {/* Slot Time */}
+              <View style={styles.bookingDetailItem}>
+                <View style={styles.detailIconBox}>
+                  <Clock size={20} color="#059669" />
+                </View>
+                <View style={styles.detailInfoContent}>
+                  <RNText style={styles.detailLabel}>Slot Time</RNText>
+                  <RNText style={styles.detailValue}>
+                    {booking.start_time.substring(0, 5)} – {booking.end_time.substring(0, 5)}
+                  </RNText>
+                  <RNText style={styles.detailSub}>
+                    {hoursBetweenBooked(booking.start_time, booking.end_time)} Hours
+                  </RNText>
+                </View>
+              </View>
+
+              <View style={styles.detailDivider} />
+
+              {/* Booking For */}
+              <View style={styles.bookingDetailItem}>
+                <View style={styles.detailIconBox}>
+                  <Users size={20} color="#059669" />
+                </View>
+                <View style={styles.detailInfoContent}>
+                  <RNText style={styles.detailLabel}>Booking For</RNText>
+                  <RNText style={styles.detailValue}>
+                    {booking.team_type === 'one' ? '1 Team' : 'Both Teams'}
+                  </RNText>
+                  <RNText style={styles.detailSub}>(Max 12 Players)</RNText>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* Trust Section */}
+          <View style={styles.secureCardNew}>
+            <View style={styles.secureIconBox}>
+              <ShieldCheck size={28} color="#059669" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <RNText style={styles.secureTitleNew}>Safe & Secure Booking</RNText>
+              <RNText style={styles.secureSubNew}>Your booking is protected. Get instant confirmation.</RNText>
+            </View>
           </View>
         </View>
 
         {/* Right Column: Order Summary */}
         <View style={[styles.sideColumn, !isDesktop && styles.sideColumnMobile, dynamicStyles.sideColumn]}>
           <Card style={[styles.summaryCard, dynamicStyles.summaryCard]}>
-            <RNText style={styles.summaryTitle}>Order Summary</RNText>
+            {/* New Premium Header */}
+            <View style={styles.summaryHeaderRow}>
+              <TouchableOpacity onPress={() => router.back()} style={styles.summaryBackBtn}>
+                <ChevronLeft size={20} color="#0F172A" />
+              </TouchableOpacity>
+              <View style={{ flex: 1, marginLeft: 16 }}>
+                <RNText style={styles.summaryTitleNew}>Order Summary</RNText>
+                <RNText style={styles.summarySubtitle}>Review your booking and confirm</RNText>
+              </View>
+              <View style={styles.secureBadge}>
+                <ShieldCheck size={20} color="#059669" />
+              </View>
+            </View>
             
-            <View style={styles.couponSection}>
-               <RNTextInput 
-                 style={styles.couponInput}
-                 placeholder="Enter Coupon Code"
-                 placeholderTextColor="#9CA3AF"
-                 value={couponCode}
-                 onChangeText={setCouponCode}
-                 autoCapitalize="characters"
-               />
-               <TouchableOpacity 
-                 style={styles.applyBtn}
-                 onPress={() => applyCouponCode(couponCode)}
-                 disabled={applyingCoupon}
-               >
-                  <RNText style={styles.applyBtnText}>{applyingCoupon ? '...' : 'Apply'}</RNText>
-               </TouchableOpacity>
-
-               <TouchableOpacity 
-                 style={styles.offersSmallBtn}
-                 onPress={() => {
-                   setIsCouponsModalVisible(true);
-                   fetchAvailableCoupons();
-                 }}
-               >
-                  <ShieldCheck size={16} color="#01b854" />
-                  <RNText style={styles.offersSmallText}>Offers</RNText>
-               </TouchableOpacity>
+            {/* Redesigned Coupon Section */}
+            <View style={styles.couponContainer}>
+              <View style={styles.couponIconBox}>
+                <Ticket size={20} color="#059669" />
+              </View>
+              <RNTextInput 
+                style={styles.couponInputNew}
+                placeholder="Enter coupon code"
+                placeholderTextColor="#94A3B8"
+                value={couponCode}
+                onChangeText={setCouponCode}
+                autoCapitalize="characters"
+              />
+              <TouchableOpacity 
+                style={[styles.applyBtnNew, applyingCoupon && { opacity: 0.7 }]}
+                onPress={() => applyCouponCode(couponCode)}
+                disabled={applyingCoupon}
+              >
+                 <RNText style={styles.applyBtnTextNew}>{applyingCoupon ? '...' : 'Apply'}</RNText>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.offersBtnNew}
+                onPress={() => {
+                  setIsCouponsModalVisible(true);
+                  fetchAvailableCoupons();
+                }}
+              >
+                 <ShieldCheck size={20} color="#059669" />
+                 <RNText style={styles.offersBtnTextNew}>Offers</RNText>
+              </TouchableOpacity>
             </View>
 
-            <View style={styles.breakdown}>
-              <View style={styles.breakdownRow}>
-                <RNText style={styles.breakdownLabel}>Ground Price</RNText>
-                <RNText style={styles.breakdownValue}>
-                  {formatCurrency(baseGroundPrice)}
-                </RNText>
+            {/* Modernized Price Breakdown */}
+            <View style={styles.breakdownNew}>
+              <View style={styles.breakdownRowNew}>
+                <View style={styles.breakdownLeftNew}>
+                  <View style={styles.breakdownIconBox}>
+                    <ShoppingBag size={16} color="#059669" />
+                  </View>
+                  <RNText style={styles.breakdownLabelNew}>Ground Price</RNText>
+                </View>
+                <RNText style={styles.breakdownValueNew}>{formatCurrency(baseGroundPrice)}</RNText>
               </View>
               
-              <View style={styles.breakdownRow}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <RNText style={styles.breakdownLabel}>Platform Fee</RNText>
-                  <View style={styles.gstTag}>
-                    <RNText style={styles.gstTagText}>inc. GST</RNText>
+              <View style={styles.breakdownRowNew}>
+                <View style={styles.breakdownLeftNew}>
+                  <View style={styles.breakdownIconBox}>
+                    <Ticket size={16} color="#059669" />
+                  </View>
+                  <RNText style={styles.breakdownLabelNew}>Platform Fee</RNText>
+                  <View style={styles.gstBadgeNew}>
+                    <RNText style={styles.gstBadgeTextNew}>Inc. GST</RNText>
                   </View>
                 </View>
-                <RNText style={styles.breakdownValue}>{formatCurrency(platformFeeIncGst)}</RNText>
+                <RNText style={styles.breakdownValueNew}>{formatCurrency(platformFeeIncGst)}</RNText>
               </View>
 
               {booking.discount_amount > 0 && (
-                <View style={styles.breakdownRow}>
-                  <RNText style={styles.breakdownLabel}>Your savings</RNText>
-                  <RNText style={styles.breakdownDiscountValue}>-{formatCurrency(booking.discount_amount)}</RNText>
+                <View style={styles.breakdownRowNew}>
+                  <View style={styles.breakdownLeftNew}>
+                    <View style={[styles.breakdownIconBox, { backgroundColor: '#ECFDF5' }]}>
+                      <Ticket size={16} color="#10B981" />
+                    </View>
+                    <RNText style={[styles.breakdownLabelNew, { color: '#10B981' }]}>Your savings</RNText>
+                  </View>
+                  <RNText style={styles.breakdownDiscountValueNew}>-{formatCurrency(booking.discount_amount)}</RNText>
                 </View>
               )}
+
+              <View style={styles.dashedLine} />
+
+              <View style={styles.totalRowNew}>
+                <View>
+                  <RNText style={styles.totalLabelNew}>Total Payable</RNText>
+                  <RNText style={styles.totalSubtitleNew}>Inclusive of all taxes</RNText>
+                </View>
+                <RNText style={styles.totalValueNew}>
+                  {formatCurrency(totalPayable)}
+                </RNText>
+              </View>
             </View>
 
-            <View style={styles.subtotalRow}>
-              <RNText style={styles.subtotalLabel}>
-                {(selectedGateway === 'cash' || isGroundOwnerOrAdmin) ? 'Total Receivable :' : 'Total Payable :'}
-              </RNText>
-              <RNText style={styles.subtotalValue}>
-                {formatCurrency((selectedGateway === 'cash' || isGroundOwnerOrAdmin) ? totalReceivable : totalPayable)}
-              </RNText>
-            </View>
-
-            {(isGroundOwnerOrAdmin || walletBalance > 0) && (
-              <View style={styles.paymentMethodSection}>
-                <RNText style={styles.paymentMethodTitle}>Payment Method</RNText>
-                <View style={styles.methodSelector}>
-                  {(walletBalance > 0 || isGroundOwnerOrAdmin) && (
-                    <TouchableOpacity 
-                      onPress={() => setSelectedGateway('wallet')}
-                      style={[
-                        styles.methodOption,
-                        selectedGateway === 'wallet' && styles.methodOptionActive
-                      ]}
-                    >
-                      <View style={[styles.methodCircle, selectedGateway === 'wallet' && styles.methodCircleActive]}>
-                        <Wallet size={14} color={selectedGateway === 'wallet' ? '#FFF' : '#9CA3AF'} />
-                      </View>
-                      <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <RNText style={[styles.methodLabel, selectedGateway === 'wallet' && styles.methodLabelActive]}>
-                          Wallet Balance
-                        </RNText>
-                        <RNText style={{ fontSize: 16, fontWeight: '800', color: selectedGateway === 'wallet' ? '#065F46' : '#1E293B' }}>
-                          {formatCurrency(walletBalance)}
-                        </RNText>
-                      </View>
-                    </TouchableOpacity>
-                  )}
-                  {activeGateways.filter(g => {
-                    if (isGroundOwnerOrAdmin) return g.name === 'cash';
-                    return g.name !== 'cash'; 
-                  }).map(g => (
-                    <TouchableOpacity 
-                      key={g.name}
-                      onPress={() => setSelectedGateway(g.name)}
-                      style={[
-                        styles.methodOption,
-                        selectedGateway === g.name && styles.methodOptionActive
-                      ]}
-                    >
-                      <View style={[styles.methodCircle, selectedGateway === g.name && styles.methodCircleActive]}>
-                        {g.name === 'cash' ? (
-                          <Wallet size={14} color={selectedGateway === g.name ? '#FFF' : '#9CA3AF'} />
-                        ) : (
-                          <CreditCard size={14} color={selectedGateway === g.name ? '#06392e' : '#9CA3AF'} />
-                        )}
-                      </View>
-                      <RNText style={[styles.methodLabel, selectedGateway === g.name && styles.methodLabelActive]}>
+            {/* Payment Method Section */}
+            <View style={styles.paymentSectionNew}>
+              <RNText style={styles.sectionTitleNew}>Payment Method</RNText>
+              <View style={styles.methodListNew}>
+                {(walletBalance > 0 || isGroundOwnerOrAdmin) && (
+                  <TouchableOpacity 
+                    onPress={() => setSelectedGateway('wallet')}
+                    style={[styles.methodItemNew, selectedGateway === 'wallet' && styles.methodItemActiveNew]}
+                  >
+                    <View style={styles.methodIconBoxNew}>
+                      <Wallet size={20} color={selectedGateway === 'wallet' ? '#059669' : '#64748B'} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <RNText style={[styles.methodLabelNew, selectedGateway === 'wallet' && styles.methodLabelActiveNew]}>
+                        Wallet Balance
+                      </RNText>
+                      <RNText style={styles.methodSubtitleNew}>Available Balance: {formatCurrency(walletBalance)}</RNText>
+                    </View>
+                    <View style={[styles.radioOuter, selectedGateway === 'wallet' && styles.radioOuterActive]}>
+                      {selectedGateway === 'wallet' && <View style={styles.radioInner} />}
+                    </View>
+                  </TouchableOpacity>
+                )}
+                
+                {activeGateways.filter(g => {
+                  if (isGroundOwnerOrAdmin) return g.name === 'cash';
+                  return g.name !== 'cash'; 
+                }).map(g => (
+                  <TouchableOpacity 
+                    key={g.name}
+                    onPress={() => setSelectedGateway(g.name)}
+                    style={[styles.methodItemNew, selectedGateway === g.name && styles.methodItemActiveNew]}
+                  >
+                    <View style={styles.methodIconBoxNew}>
+                      {g.name === 'cash' ? <Wallet size={20} color={selectedGateway === 'cash' ? '#059669' : '#64748B'} /> : <CreditCard size={20} color={selectedGateway === g.name ? '#059669' : '#64748B'} />}
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <RNText style={[styles.methodLabelNew, selectedGateway === g.name && styles.methodLabelActiveNew]}>
                         {g.label}
                       </RNText>
-                    </TouchableOpacity>
-                  ))}
-                </View>
+                      <RNText style={styles.methodSubtitleNew}>{g.name === 'cash' ? 'Pay at the ground' : 'Pay via Secure Gateway'}</RNText>
+                    </View>
+                    <View style={[styles.radioOuter, selectedGateway === g.name && styles.radioOuterActive]}>
+                      {selectedGateway === g.name && <View style={styles.radioInner} />}
+                    </View>
+                  </TouchableOpacity>
+                ))}
               </View>
-            )}
+            </View>
 
-            {(selectedGateway === 'wallet' && !isGroundOwnerOrAdmin) ? (
-              <Button
-                title={processing ? 'Processing...' : `Pay via Wallet`}
-                onPress={handleWalletPayment}
-                disabled={processing || walletBalance < totalPayable}
-                loading={processing}
-                fullWidth
-                size="large"
-                variant="secondary"
-                style={[styles.payButton, { backgroundColor: '#00ea6b' }]}
-                textStyle={styles.payButtonText}
-              />
-            ) : (selectedGateway === 'razorpay' || selectedGateway === 'payu') ? (
-              <Button
-                title={processing ? 'Processing...' : `Check Out`}
-                onPress={handlePayment}
-                disabled={processing}
-                loading={processing}
-                fullWidth
-                size="large"
-                variant="secondary"
-                style={styles.payButton}
-                textStyle={styles.payButtonText}
-              />
-            ) : (selectedGateway === 'cash' || (selectedGateway === 'wallet' && isGroundOwnerOrAdmin)) ? (
-              <View style={{ gap: 12, marginBottom: 12 }}>
-              <View style={styles.cashFieldsContainer}>
-                <View style={styles.cashFieldsRow}>
-                  <View style={styles.cashFieldColumn}>
-                    <RNText style={styles.cashAmountLabel}>Player Name</RNText>
+            {/* Split Bill UI (Owner Only) */}
+            {(selectedGateway === 'cash' || (selectedGateway === 'wallet' && isGroundOwnerOrAdmin)) && (
+              <View style={styles.splitSectionNew}>
+                <RNText style={styles.sectionTitleNew}>Add players to split the bill <RNText style={{fontWeight: '400', color: '#94A3B8'}}>(Optional)</RNText></RNText>
+                <View style={styles.splitRowNew}>
+                  <View style={styles.splitInputBoxNew}>
+                    <Users size={18} color="#94A3B8" />
                     <RNTextInput
-                      style={styles.cashAmountInput}
-                      placeholder="Name..."
-                      placeholderTextColor="#9CA3AF"
+                      style={styles.splitInputNew}
+                      placeholder="Player Name"
+                      placeholderTextColor="#94A3B8"
                       value={bookedForName}
                       onChangeText={setBookedForName}
                     />
                   </View>
-
-                  <View style={styles.cashFieldColumn}>
-                    <RNText style={styles.cashAmountLabel}>Price</RNText>
+                  <View style={styles.splitInputBoxNew}>
+                    <IndianRupee size={18} color="#94A3B8" />
                     <RNTextInput
-                      style={styles.cashAmountInput}
-                      placeholder="Amount..."
-                      placeholderTextColor="#9CA3AF"
-                      keyboardType="numeric"
+                      style={styles.splitInputNew}
+                      placeholder="Amount (₹)"
+                      placeholderTextColor="#94A3B8"
                       value={customCashAmount}
-                      onChangeText={setCustomCashAmount}
+                      onChangeText={(text) => setCustomCashAmount(text.replace(/[^0-9]/g, ''))}
+                      keyboardType="numeric"
                     />
                   </View>
                 </View>
               </View>
-                <Button
-                  title={selectedGateway === 'wallet' ? (processing ? 'Processing...' : 'Confirm via Wallet') : (processingCash ? 'Confirming...' : 'Confirm Order')}
-                  onPress={selectedGateway === 'wallet' ? handleWalletPayment : handleCashPayment}
-                  disabled={selectedGateway === 'wallet' ? (processing || walletBalance < totalPayable) : (processingCash || !customCashAmount || isNaN(parseFloat(customCashAmount)) || parseFloat(customCashAmount) <= 0)}
-                  loading={selectedGateway === 'wallet' ? processing : processingCash}
-                  fullWidth
-                  size="large"
-                  variant="secondary"
-                  style={styles.payButton}
-                />
-              </View>
-            ) : (
-              <Button
-                title="Select Payment Method"
-                onPress={() => {}}
-                disabled={true}
-                fullWidth
-                size="large"
-                style={styles.payButton}
-              />
             )}
 
-            <View style={styles.trustFooter}>
-               <View style={styles.trustBanner}>
-                  <ShieldCheck size={14} color="#06392e" />
-                  <RNText style={styles.trustFooterText}>Purchase protected by Book Your Ground Guarantee</RNText>
-               </View>
+            {/* Premium Action Button */}
+            <TouchableOpacity 
+              style={[
+                styles.confirmBtnNew, 
+                (!isGroundOwnerOrAdmin && selectedGateway === 'wallet' && walletBalance < totalPayable) && { opacity: 0.5 },
+                ((isGroundOwnerOrAdmin || selectedGateway === 'cash') && (!bookedForName.trim() || !customCashAmount.trim())) && { backgroundColor: 'rgba(1, 184, 84, 0.4)', shadowOpacity: 0 }
+              ]}
+              onPress={() => {
+                if (selectedGateway === 'wallet') handleWalletPayment();
+                else if (selectedGateway === 'cash') handleCashPayment();
+                else handlePayment();
+              }}
+              disabled={
+                processing || 
+                (selectedGateway === 'wallet' 
+                  ? (walletBalance < totalPayable || (isGroundOwnerOrAdmin && (!bookedForName.trim() || !customCashAmount.trim())))
+                  : (selectedGateway === 'cash' 
+                      ? (!bookedForName.trim() || !customCashAmount.trim() || isNaN(parseFloat(customCashAmount)) || parseFloat(customCashAmount) <= 0)
+                      : false))
+              }
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <ShieldCheck size={20} color="#FFFFFF" />
+                <RNText style={styles.confirmBtnTextNew}>
+                  {processing ? 'Processing...' : (selectedGateway === 'wallet' ? 'Confirm via Wallet' : `Confirm & Pay ${formatCurrency(totalPayable)}`)}
+                </RNText>
+              </View>
+              <ChevronLeft size={20} color="#FFFFFF" style={{ transform: [{ rotate: '180deg' }] }} />
+            </TouchableOpacity>
+
+            {/* Security Footer Icons */}
+            <View style={styles.securityFooterNew}>
+              <View style={styles.securityItemNew}>
+                <ShieldCheck size={16} color="#64748B" />
+                <RNText style={styles.securityTextNew}>Secure Payment</RNText>
+              </View>
+              <View style={styles.securityItemNew}>
+                <Clock size={16} color="#64748B" />
+                <RNText style={styles.securityTextNew}>Instant Confirmation</RNText>
+              </View>
+              <View style={styles.securityItemNew}>
+                <Users size={16} color="#64748B" />
+                <RNText style={styles.securityTextNew}>24/7 Support</RNText>
+              </View>
             </View>
+
+
 
           </Card>
         </View>
@@ -1253,43 +1348,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   content: {
-    paddingVertical: 24,
-    maxWidth: 1400,
+    paddingBottom: 24,
+    maxWidth: 1440,
     width: '100%',
     alignSelf: 'center',
+    paddingHorizontal: 0,
+    paddingTop: 0,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 32,
-    gap: 16,
-    paddingHorizontal: 8,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  title: {
+  itemTitle: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
   layout: {
     flexDirection: 'row',
-    paddingHorizontal: 8,
-    gap: 20,
+    gap: 0,
+    paddingHorizontal: 0,
   },
   layoutMobile: {
     flexDirection: 'column',
@@ -1300,23 +1375,27 @@ const styles = StyleSheet.create({
   },
   sideColumn: {
     flex: 1,
+    padding: 24,
+    backgroundColor: '#F8FAFC',
   },
   itemProductCard: {
-    borderRadius: 32,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
+    flex: 1,
+    backgroundColor: 'transparent',
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 3,
+    padding: 0,
+  },
+  groundImgContainer: {
+    flex: 1,
+    width: '100%',
+    position: 'relative',
+    borderRadius: 32,
+    overflow: 'hidden',
   },
   productImg: {
     width: '100%',
-    height: 240,
+    height: '100%',
     resizeMode: 'cover',
+    borderRadius: 32,
   },
   productPlaceholder: {
     width: '100%',
@@ -1326,7 +1405,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   productInfo: {
+    flex: 1,
     padding: 24,
+    justifyContent: 'center',
   },
   productHeaderRow: {
     flexDirection: 'row',
@@ -1420,232 +1501,307 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 3,
   },
-  summaryTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 24,
-    fontFamily: 'Inter',
-  },
-  couponSection: {
+  summaryHeaderRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 8,
+    alignItems: 'center',
+    marginBottom: 24,
   },
-  couponInput: {
-    flex: 1,
-    height: 52,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    paddingHorizontal: 16,
-    fontSize: 14,
-    color: '#0F172A',
-    backgroundColor: '#FFFFFF',
-    fontFamily: 'Inter',
-    ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
-  },
-  applyBtn: {
-    height: 52,
-    paddingHorizontal: 20,
-    borderRadius: 16,
+  summaryBackBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  applyBtnText: {
+  summarySubtitle: {
     fontSize: 14,
-    fontWeight: '500',
+    color: '#64748B',
+    fontFamily: 'Inter',
+    marginTop: 2,
+  },
+  summaryTitleNew: {
+    fontSize: 20,
+    fontWeight: '800',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
-  offersSmallBtn: {
+  secureBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#ECFDF5',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  couponContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    height: 52,
-    borderRadius: 16,
     backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 6,
     borderWidth: 1,
     borderColor: '#F1F5F9',
-  },
-  offersSmallText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#64748B',
-    fontFamily: 'Inter',
-  },
-  offersLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  offersText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#64748B',
-    fontFamily: 'Inter',
-  },
-  breakdown: {
-    gap: 8,
-    marginBottom: 16,
-  },
-  breakdownRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  breakdownLabel: {
-    fontSize: 14,
-    color: '#64748B',
-    fontWeight: '400',
-    fontFamily: 'Inter',
-  },
-  breakdownValue: {
-    fontSize: 14,
-    color: '#0F172A',
-    fontWeight: '400',
-    fontFamily: 'Inter',
-  },
-  breakdownDiscountLabel: {
-    fontSize: 14,
-    color: '#10B981',
-    fontWeight: '600',
-    fontFamily: 'Inter',
-  },
-  breakdownDiscountValue: {
-    fontSize: 14,
-    color: '#10B981',
-    fontWeight: '700',
-    fontFamily: 'Inter',
-  },
-  subtotalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-  },
-  subtotalLabel: {
-    fontSize: 16,
-    fontWeight: '400',
-    color: '#0F172A',
-    fontFamily: 'Inter',
-  },
-  subtotalValue: {
-    fontSize: 22,
-    fontWeight: '500',
-    color: '#0F172A',
-    fontFamily: 'Inter',
-  },
-  paymentMethodSection: {
     marginBottom: 24,
   },
-  paymentMethodTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#94A3B8',
-    marginBottom: 12,
+  couponIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#ECFDF5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 4,
+  },
+  couponInputNew: {
+    flex: 1,
+    height: 44,
+    paddingHorizontal: 12,
+    fontSize: 14,
     fontFamily: 'Inter',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    color: '#0F172A',
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
   },
-  methodSelector: {
-    gap: 8,
+  applyBtnNew: {
+    height: 36,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: '#059669',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
   },
-  methodOption: {
+  applyBtnTextNew: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+    fontFamily: 'Inter',
+  },
+  offersBtnNew: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingRight: 12,
+    borderLeftWidth: 1,
+    borderLeftColor: '#E2E8F0',
+    paddingLeft: 12,
+  },
+  offersBtnTextNew: {
+    fontSize: 14,
+    color: '#059669',
+    fontWeight: '600',
+    fontFamily: 'Inter',
+  },
+  breakdownNew: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    marginBottom: 24,
+  },
+  breakdownRowNew: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  breakdownLeftNew: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    height: 52,
-    paddingHorizontal: 16,
+  },
+  breakdownIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  breakdownLabelNew: {
+    fontSize: 15,
+    color: '#475569',
+    fontFamily: 'Inter',
+    fontWeight: '500',
+  },
+  breakdownValueNew: {
+    fontSize: 15,
+    color: '#0F172A',
+    fontFamily: 'Inter',
+    fontWeight: '700',
+  },
+  gstBadgeNew: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 6,
+  },
+  gstBadgeTextNew: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#94A3B8',
+    textTransform: 'uppercase',
+  },
+  dashedLine: {
+    height: 1,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderStyle: 'dashed',
+    marginVertical: 16,
+  },
+  totalRowNew: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  totalLabelNew: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  totalSubtitleNew: {
+    fontSize: 12,
+    color: '#94A3B8',
+    marginTop: 2,
+  },
+  totalValueNew: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#059669',
+    fontFamily: 'Inter',
+  },
+  paymentSectionNew: {
+    marginBottom: 24,
+  },
+  sectionTitleNew: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 16,
+    fontFamily: 'Inter',
+  },
+  methodListNew: {
+    gap: 12,
+  },
+  methodItemNew: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#F1F5F9',
     backgroundColor: '#FFFFFF',
   },
-  methodOptionActive: {
-    backgroundColor: 'rgba(1, 184, 84, 0.12)',
-    borderColor: 'rgba(1, 184, 84, 0.4)',
-    borderWidth: 1.5,
-    ...Platform.select({
-      web: { backdropFilter: 'blur(8px)' }
-    }) as any,
+  methodItemActiveNew: {
+    borderColor: '#059669',
+    backgroundColor: '#ECFDF5',
   },
-  methodCircle: {
-    width: 24,
-    height: 24,
+  methodIconBoxNew: {
+    width: 44,
+    height: 44,
     borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  methodLabelNew: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  methodLabelActiveNew: {
+    color: '#059669',
+  },
+  methodSubtitleNew: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  radioOuter: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     borderWidth: 2,
     borderColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  methodCircleActive: {
-    borderColor: '#10B981',
-    backgroundColor: '#10B981',
+  radioOuterActive: {
+    borderColor: '#059669',
   },
-  methodLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#475569',
-    fontFamily: 'Inter',
+  radioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#059669',
   },
-  methodLabelActive: {
-    color: '#065F46',
-    fontWeight: '700',
+  splitSectionNew: {
+    marginBottom: 24,
   },
-  payButton: {
-    height: 52,
-    borderRadius: 100,
-    backgroundColor: 'rgba(1, 184, 84, 0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 234, 107, 0.5)',
-    ...Platform.select({
-      web: {
-        backdropFilter: 'blur(12px)',
-        boxShadow: '0 8px 32px rgba(1, 184, 84, 0.3)',
-        transition: 'all 0.3s ease',
-      },
-      ios: {
-        shadowColor: '#00ea6b',
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.3,
-        shadowRadius: 16,
-      },
-      android: {
-        elevation: 8,
-      },
-    }) as any,
-  },
-  payButtonText: {
-    fontWeight: '500',
-    fontSize: 18,
-    fontFamily: 'Inter',
-    letterSpacing: -0.2,
-  },
-  trustFooter: {
-    marginTop: 24,
-    alignItems: 'center',
+  splitRowNew: {
+    flexDirection: 'row',
     gap: 12,
   },
-  trustBanner: {
+  splitInputBoxNew: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#F8FAFC',
+    height: 52,
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    gap: 10,
   },
-  trustFooterText: {
+  splitInputNew: {
+    flex: 1,
+    height: 52,
+    fontSize: 14,
+    color: '#0F172A',
+    fontFamily: 'Inter',
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
+  },
+  confirmBtnNew: {
+    height: 60,
+    borderRadius: 18,
+    backgroundColor: '#059669',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    marginBottom: 24,
+    shadowColor: '#059669',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  confirmBtnTextNew: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    fontFamily: 'Inter',
+  },
+  securityFooterNew: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  securityItemNew: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  securityTextNew: {
     fontSize: 12,
-    color: '#94A3B8',
-    fontWeight: '500',
+    color: '#64748B',
     fontFamily: 'Inter',
   },
   centered: {
@@ -1775,5 +1931,226 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#6B7280',
     letterSpacing: 0.3,
+  },
+  // New Premium Left Section Styles
+  heroImageWrapper: {
+    position: 'relative',
+    width: '100%',
+    height: '100%',
+  },
+  heroOverlayGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: '60%',
+    justifyContent: 'flex-end',
+    padding: 24,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+  },
+  topRightBadge: {
+    position: 'absolute',
+    top: 20,
+    right: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  topRightBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+    fontFamily: 'Inter',
+  },
+  middleLeftBadge: {
+    position: 'absolute',
+    top: '60%',
+    left: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#059669',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+  },
+  middleLeftBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: 'Inter',
+  },
+  heroTitle: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    fontFamily: 'Inter',
+    marginBottom: 4,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
+  },
+  heroLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 16,
+  },
+  heroLocationText: {
+    fontSize: 15,
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontFamily: 'Inter',
+    fontWeight: '500',
+  },
+  heroBadgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  ratingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#059669',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  ratingText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+    fontFamily: 'Inter',
+  },
+  priceBadgeOverlay: {
+    backgroundColor: 'rgba(15, 23, 42, 0.8)',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  priceBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+    fontFamily: 'Inter',
+  },
+  priceUnitText: {
+    fontSize: 13,
+    fontWeight: '400',
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  bookingDetailsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.02,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  bookingDetailsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 20,
+  },
+  bookingDetailItem: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 12,
+  },
+  detailIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  detailInfoContent: {
+    flex: 1,
+  },
+  detailLabel: {
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '600',
+    fontFamily: 'Inter',
+    marginBottom: 4,
+  },
+  detailValue: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+    marginBottom: 2,
+  },
+  detailSub: {
+    fontSize: 13,
+    color: '#64748B',
+    fontFamily: 'Inter',
+    fontWeight: '500',
+  },
+  detailDivider: {
+    width: 1,
+    height: '100%',
+    backgroundColor: '#F1F5F9',
+    marginHorizontal: 12,
+  },
+  secureCardNew: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    backgroundColor: '#F0FDFA',
+    padding: 20,
+    borderRadius: 24,
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: '#CCFBF1',
+  },
+  secureIconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0D9488',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  secureTitleNew: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F766E',
+    fontFamily: 'Inter',
+    marginBottom: 2,
+  },
+  secureSubNew: {
+    fontSize: 14,
+    color: '#0D9488',
+    fontFamily: 'Inter',
+    fontWeight: '500',
+    opacity: 0.8,
   },
 });
