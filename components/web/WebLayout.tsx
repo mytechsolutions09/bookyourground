@@ -1564,6 +1564,10 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     flex: 1,
   },
+  navLinkTextMobile: {
+    fontSize: 12,
+    marginLeft: 8,
+  },
   navLinkTextActive: {
     color: '#00ea6b',
     fontWeight: '500',
@@ -1688,6 +1692,13 @@ const styles = StyleSheet.create({
   headerPrimaryButtonTextScrolled: {
     color: '#dcc093',
   },
+  headerSecondaryButton: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(220,192,147,0.4)',
+  },
   headerSecondaryButtonText: {
     fontSize: 14,
     fontWeight: '500',
@@ -1697,18 +1708,6 @@ const styles = StyleSheet.create({
   },
   headerSecondaryButtonTextScrolled: {
     color: '#dcc093',
-  },
-  searchIconButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-  },
-  searchIconButtonScrolled: {
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
   },
   profileChip: {
     flexDirection: 'row',
