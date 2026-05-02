@@ -65,11 +65,9 @@ export default function IndexScreen() {
 
 
   // On web, we keep landing visible for authenticated users.
-  if (os !== 'web') return null;
-
-  return (
+  return os === 'web' ? (
     <WebLayout>
       <LandingScrollContent variant="web" />
     </WebLayout>
-  );
+  ) : null;
 }

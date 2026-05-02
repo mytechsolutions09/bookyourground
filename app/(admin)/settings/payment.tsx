@@ -123,8 +123,9 @@ export default function AdminPaymentSettings() {
     </SettingsSubbar>
   );
 
-  if (Platform.OS === 'web') return <WebLayout noCard>{inner}</WebLayout>;
-  return inner;
+  return Platform.OS === 'web' ? (
+    <WebLayout noCard>{inner}</WebLayout>
+  ) : inner;
 }
 
 const styles = StyleSheet.create({

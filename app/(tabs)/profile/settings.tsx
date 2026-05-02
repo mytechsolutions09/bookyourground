@@ -254,15 +254,11 @@ export default function UserSettingsScreen() {
   const { width } = useWindowDimensions();
   const isCompact = width < 900;
 
-  if (IS_WEB && !isCompact) {
-    return (
-      <WebLayout noCard>
-        <UserSettingsInner />
-      </WebLayout>
-    );
-  }
-
-  return (
+  return (IS_WEB && !isCompact) ? (
+    <WebLayout noCard>
+      <UserSettingsInner />
+    </WebLayout>
+  ) : (
     <View style={styles.nativeRoot}>
       <MobileAppNavbar title="Settings" titleColor="#0F172A" />
       <UserSettingsInner />

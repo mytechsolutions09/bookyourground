@@ -6,6 +6,7 @@ import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import WebLayout from '@/components/web/WebLayout';
 import SettingsSubbar from '@/components/admin/SettingsSubbar';
+import MobileAppNavbar from '@/components/MobileAppNavbar';
 
 interface PlatformSetting {
   key: string;
@@ -168,8 +169,9 @@ export default function PlatformFeesSettings() {
     </SettingsSubbar>
   );
 
-  if (Platform.OS === 'web') return <WebLayout noCard>{inner}</WebLayout>;
-  return (
+  return Platform.OS === 'web' ? (
+    <WebLayout noCard>{inner}</WebLayout>
+  ) : (
     <View style={{ flex: 1, backgroundColor: '#F5F5F5' }}>
       <MobileAppNavbar title="PLATFORM FEES" titleColor="#10b981" />
       {inner}

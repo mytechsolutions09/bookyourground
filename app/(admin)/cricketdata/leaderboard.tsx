@@ -363,11 +363,9 @@ export default function AdminCricketLeaderboard() {
     </CricketSubbar>
   );
 
-  if (Platform.OS === 'web') {
-    return <WebLayout>{content}</WebLayout>;
-  }
-
-  return content;
+  return Platform.OS === 'web' ? (
+    <WebLayout>{content}</WebLayout>
+  ) : content;
 }
 
 const styles = StyleSheet.create({

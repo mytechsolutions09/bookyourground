@@ -1130,9 +1130,9 @@ export default function AddGroundScreen() {
     </KeyboardAvoidingView>
   );
 
-  if (Platform.OS === 'web') return <WebLayout>{content}</WebLayout>;
-
-  return (
+  return Platform.OS === 'web' ? (
+    <WebLayout>{content}</WebLayout>
+  ) : (
     <View style={styles.nativeRoot}>
       <MobileAppNavbar title="Add Ground" titleColor="#01b854" />
       {content}

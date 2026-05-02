@@ -107,8 +107,9 @@ export default function AdminSupportSettings() {
     </SettingsSubbar>
   );
 
-  if (Platform.OS === 'web') return <WebLayout>{inner}</WebLayout>;
-  return inner;
+  return Platform.OS === 'web' ? (
+    <WebLayout>{inner}</WebLayout>
+  ) : inner;
 }
 
 const styles = StyleSheet.create({

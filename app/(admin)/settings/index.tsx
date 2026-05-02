@@ -4,6 +4,7 @@ import { Bell, Database, Shield } from 'lucide-react-native';
 import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
 import SettingsSubbar from '@/components/admin/SettingsSubbar';
+import MobileAppNavbar from '@/components/MobileAppNavbar';
 
 export default function AdminSettingsIndex() {
   const inner = (
@@ -51,8 +52,9 @@ export default function AdminSettingsIndex() {
     </SettingsSubbar>
   );
 
-  if (Platform.OS === 'web') return <WebLayout noCard>{inner}</WebLayout>;
-  return (
+  return Platform.OS === 'web' ? (
+    <WebLayout noCard>{inner}</WebLayout>
+  ) : (
     <View style={{ flex: 1, backgroundColor: '#F5F5F5' }}>
       <MobileAppNavbar title="PLATFORM SETTINGS" titleColor="#10b981" />
       {inner}
