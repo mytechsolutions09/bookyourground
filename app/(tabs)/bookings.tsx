@@ -1146,13 +1146,6 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  webFlatList: {
-    ...Platform.select({
-      web: {
-        flex: 1,
-      },
-    }),
-  },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -1483,84 +1476,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
     textTransform: 'uppercase',
     fontFamily: 'Inter',
-  },
-  paymentBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    textAlign: 'center',
-    width: 'fit-content' as any,
-    fontFamily: 'Inter',
-  },
-  paymentCash: {
-    backgroundColor: '#FEF3C7',
-    color: '#92400E',
-  },
-  paymentOnline: {
-    backgroundColor: '#DBEAFE',
-    color: '#1E40AF',
-  },
-  groundName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#111827',
-    fontFamily: 'Inter',
-  },
-  groundLocation: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 2,
-    fontFamily: 'Inter',
-  },
-  bookedDateText: {
-    fontSize: 13,
-    color: '#111827',
-    fontWeight: '600',
-    fontFamily: 'Inter',
-  },
-  bookedTimeText: {
-    fontSize: 11,
-    color: '#6B7280',
-    marginTop: 1,
-    fontFamily: 'Inter',
-  },
-  dateText: {
-    fontSize: 13,
-    color: '#111827',
-    fontWeight: '600',
-    fontFamily: 'Inter',
-  },
-  timeText: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 2,
-    fontFamily: 'Inter',
-  },
-  teamsText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#111827',
-    fontFamily: 'Inter',
-  },
-  statusBadgeText: {
-    fontSize: 10,
-    fontWeight: '800',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    textAlign: 'center',
-    width: 'fit-content' as any,
-    fontFamily: 'Inter',
-  },
-  statusConfirmed: {
-    backgroundColor: '#DEF7EC',
-    color: '#03543F',
-  },
-  statusCancelled: {
-    backgroundColor: '#FDE8E8',
-    color: '#9B1C1C',
   },
   paymentBadgeText: {
     fontSize: 10,

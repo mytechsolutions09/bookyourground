@@ -1751,7 +1751,6 @@ const styles = StyleSheet.create({
   bowlerName: { fontSize: 15, fontWeight: 'bold', color: '#111827' },
   bowlerStats: { flexDirection: 'row', gap: 16 },
   bowlerStat: { fontSize: 13, color: '#6B7280' },
-  tabScroll: { backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#E8E6E0', flexGrow: 0 },
   tabContainerStyle: { paddingHorizontal: 16, paddingVertical: 12, gap: 10, flexDirection: 'row' },
   tabBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F6F4F0' },
   tabBtnActive: { backgroundColor: '#111827' },

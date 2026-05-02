@@ -2119,7 +2119,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     textTransform: 'uppercase',
   },
-  addPlayerMiniBtn: {
+  addPlayerMiniActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -2132,7 +2132,7 @@ const styles = StyleSheet.create({
     marginTop: 24,
     gap: 8,
   },
-  addPlayerMiniText: {
+  addPlayerMiniActionText: {
     fontSize: 14,
     fontWeight: '700',
     color: '#01b854',
@@ -2264,7 +2264,7 @@ const styles = StyleSheet.create({
   playerTileNameActive: {
     color: '#01b854',
   },
-  contactItem: {
+  contactItemFooter: {
     padding: 20,
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',

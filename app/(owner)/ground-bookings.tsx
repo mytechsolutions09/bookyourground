@@ -1513,20 +1513,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  nameInput: {
-    fontSize: 12,
-    color: '#111827',
-    padding: 6,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 6,
-    backgroundColor: '#F9FAFB',
-    width: '100%',
-  },
-  saveBtn: {
-    padding: 4,
-    marginLeft: 4,
-  },
   nameInputRow: {
     flexDirection: 'row',
     alignItems: 'center',

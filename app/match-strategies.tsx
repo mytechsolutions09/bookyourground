@@ -1210,13 +1210,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#111827',
   },
-  statLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    marginBottom: 4,
-  },
   statValue: {
     fontSize: 18,
     fontWeight: '700',

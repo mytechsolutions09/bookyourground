@@ -1075,13 +1075,6 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontFamily: 'Inter',
   },
-  rightPanel: {
-    width: 400,
-    padding: 24,
-    paddingLeft: 0,
-    paddingBottom: 120,
-    gap: 20,
-  },
   panelCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
