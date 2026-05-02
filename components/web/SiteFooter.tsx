@@ -35,13 +35,13 @@ export default function SiteFooter() {
             </Text>
             <Text
               style={styles.footerLink}
-              onPress={() => router.push('/(tabs)/bookings' as any)}
+              onPress={() => router.push('/bookings' as any)}
             >
               My bookings
             </Text>
             <Text
               style={styles.footerLink}
-              onPress={() => router.push('/(tabs)/profile' as any)}
+              onPress={() => router.push('/profile' as any)}
             >
               My profile
             </Text>
@@ -59,7 +59,7 @@ export default function SiteFooter() {
             </Text>
             <Text
               style={styles.footerLink}
-              onPress={() => router.push('/(tabs)/shop' as any)}
+              onPress={() => router.push('/shop' as any)}
             >
               Shop
             </Text>
@@ -69,13 +69,13 @@ export default function SiteFooter() {
             <Text style={styles.footerHeading}>For ground owners</Text>
             <Text
               style={styles.footerLink}
-              onPress={() => router.push('/(auth)/owner-signup' as any)}
+              onPress={() => router.push('/owner-signup' as any)}
             >
               Become a partner
             </Text>
             <Text
               style={styles.footerLink}
-              onPress={() => router.push('/(auth)/login' as any)}
+              onPress={() => router.push('/login' as any)}
             >
               Owner login
             </Text>

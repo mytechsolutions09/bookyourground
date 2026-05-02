@@ -212,25 +212,25 @@ export default function HomeScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    if (Platform.OS === 'web') return;
-    loadGrounds();
-  }, [loadGrounds]);
+  const stats = useMemo(() => {
+    const venueCount = grounds.length;
+    const cities = new Set(grounds.map(g => g.city).filter(Boolean));
+    const cityCount = cities.size;
+    
+    let totalScore = 0;
+    let totalReviews = 0;
+    grounds.forEach((g: any) => {
+      const reviews = (g.reviews || []) as { rating: number }[];
+      reviews.forEach(r => {
+        totalScore += (r.rating || 0);
+        totalReviews += 1;
+      });
+    });
+    const avgRating = totalReviews > 0 ? (totalScore / totalReviews).toFixed(1) : '0';
+    
+    return { venueCount, cityCount, avgRating };
+  }, [grounds]);
 
-  useEffect(() => {
-    if (Platform.OS !== 'web') return;
-    if (!isFocused) return;
-    if (isWebLandingPath(pathname)) return;
-    router.replace('/');
-  }, [isFocused, pathname]);
-
-  if (Platform.OS === 'web') {
-    // The web landing page is handled by the root app/index.tsx.
-    // We don't want to render a second LandingScrollContent here.
-    return null;
-  }
-
-  // ── Mobile Homepage ──────────────────────────────────────────────────────
   const popularGrounds = useMemo(() => {
     const scored = grounds.map((g: any) => {
       const reviews = (g.reviews || []) as { rating: number }[];
@@ -265,29 +265,35 @@ export default function HomeScreen() {
     });
   }, [grounds, searchQuery, sportFilter]);
 
-  const stats = useMemo(() => {
-    const venueCount = grounds.length;
-    const cities = new Set(grounds.map(g => g.city).filter(Boolean));
-    const cityCount = cities.size;
-    
-    let totalScore = 0;
-    let totalReviews = 0;
-    grounds.forEach((g: any) => {
-      const reviews = (g.reviews || []) as { rating: number }[];
-      reviews.forEach(r => {
-        totalScore += (r.rating || 0);
-        totalReviews += 1;
-      });
-    });
-    const avgRating = totalReviews > 0 ? (totalScore / totalReviews).toFixed(1) : '0';
-    
-    return { venueCount, cityCount, avgRating };
-  }, [grounds]);
-
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     loadGrounds();
   }, [loadGrounds]);
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    loadGrounds();
+  }, [loadGrounds]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (!isFocused) return;
+    if (isWebLandingPath(pathname)) return;
+    router.replace('/');
+  }, [isFocused, pathname]);
+
+  if (Platform.OS === 'web') {
+    // On web, the landing page is / (app/index.tsx). 
+    // If the user somehow ends up here, we should redirect them to the home page.
+    return (
+      <View style={{ flex: 1, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#00ea6b" />
+      </View>
+    );
+  }
+
+  // ── Mobile Homepage ──────────────────────────────────────────────────────
+
 
   const primaryCta = user ? '/(tabs)/bookings' : '/(auth)/signup';
 

@@ -189,7 +189,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
   const [isNavbarVisible, setIsNavbarVisible] = useState(true);
   const isCompact = useMemo(() => width < 900, [width]);
   const isInTabs = useMemo(() => segments.includes('(tabs)'), [segments]);
-  const groundsHref = isCompact ? '/(tabs)/grounds' : '/book-my-ground';
+  const groundsHref = isCompact ? '/grounds' : '/book-my-ground';
   const cleanPath = (pathname || '').split('?')[0];
   const isLanding = cleanPath === '/' || cleanPath === '';
   const isMarketing = (cleanPath === '/book-my-ground' || cleanPath === '/find-an-opponent' || cleanPath === '/grounds' || cleanPath === '/(tabs)/grounds') && !segments.includes('(admin)');
@@ -477,8 +477,8 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     cleanPath === '/(owner)/add-ground' ||
     cleanPath === '/matches' ||
     cleanPath === '/find-an-opponent' ||
-    cleanPath === '/(tabs)/matches' ||
-    cleanPath === '/(tabs)/find-an-opponent';
+    cleanPath === '/matches' ||
+    cleanPath === '/find-an-opponent';
   // On ground info (/grounds/[id]) and booking info (/bookings/[id]) pages,
   // hide the left sidebar for all roles so the content can take full width.
   const isGroundInfoPage = isGroundDetails;
@@ -746,7 +746,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
 
                         <TouchableOpacity
                           style={styles.profileChip}
-                          onPress={() => router.push('/(tabs)/profile')}
+                          onPress={() => router.push('/profile')}
                         >
                           <Image
                             source={{ uri: profile?.avatar_url || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' }}
@@ -773,7 +773,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                     ) : (
                       <TouchableOpacity
                         style={styles.profileChipCompact}
-                        onPress={() => router.push('/(tabs)/profile')}
+                        onPress={() => router.push('/profile')}
                       >
                         <Image
                           source={{ uri: profile?.avatar_url || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' }}
