@@ -65,6 +65,18 @@ export default function SearchScreen() {
     loadFilters();
   }, []);
 
+  // Sync state with URL params when they change (important for hero-to-search or internal navigation)
+  useEffect(() => {
+    if (params.q !== undefined) setQuery((params.q as string) || '');
+    if (params.location !== undefined) setLocationKey((params.location as string) || '');
+    if (params.type !== undefined) setTypeKey((params.type as string) || '');
+    if (params.date !== undefined) {
+      const d = params.date as string;
+      setDateKey(d || 'All');
+    }
+    if (params.time !== undefined) setTimeKey((params.time as string) || '');
+  }, [params.q, params.location, params.type, params.date, params.time]);
+
   useEffect(() => {
     performSearch(query, locationKey, typeKey, dateKey, timeKey);
   }, [query, locationKey, typeKey, dateKey, timeKey]);
@@ -313,7 +325,7 @@ export default function SearchScreen() {
     const unitLabel = isBox ? '/hr' : ' / match';
 
     return (
-      <View style={{ marginBottom: 16 }}>
+      <View style={{ flex: 1, marginBottom: 16 }}>
         <GroundCard
           ground={item}
           glass={true}

@@ -2490,20 +2490,20 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     paddingHorizontal: 16,
   },
   premiumGlassButton: {
-    backgroundColor: 'rgba(1, 184, 84, 0.85)',
+    backgroundColor: 'rgba(1, 184, 84, 0.4)',
     borderRadius: 100,
-    borderWidth: 1.5,
-    borderColor: '#00ea6b',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 234, 107, 0.5)',
     ...Platform.select({
       web: {
-        backdropFilter: 'blur(8px)',
-        boxShadow: '0 4px 20px rgba(1, 184, 84, 0.4)',
-        transition: 'all 0.2s ease',
+        backdropFilter: 'blur(12px)',
+        boxShadow: '0 8px 32px rgba(1, 184, 84, 0.3)',
+        transition: 'all 0.3s ease',
       },
       ios: {
-        shadowColor: '#01b854',
+        shadowColor: '#00ea6b',
         shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.4,
+        shadowOpacity: 0.3,
         shadowRadius: 12,
       },
       android: {
@@ -2775,14 +2775,12 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     lineHeight: 18,
   },
   teamToggleOptionActive: {
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(1, 184, 84, 0.12)',
+    borderColor: 'rgba(1, 184, 84, 0.4)',
     borderWidth: 1.5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    ...Platform.select({
+      web: { backdropFilter: 'blur(8px)' }
+    }) as any,
   },
   teamToggleText: {
     fontSize: 14,
@@ -3267,14 +3265,12 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     gap: 2,
   },
   dateChipActive: {
-    borderColor: '#01b854',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(1, 184, 84, 0.12)',
+    borderColor: 'rgba(1, 184, 84, 0.4)',
     borderWidth: 1.5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    ...Platform.select({
+      web: { backdropFilter: 'blur(8px)' }
+    }) as any,
   },
   dateChipDisabled: {
     opacity: 0.5,
@@ -3391,14 +3387,12 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     paddingHorizontal: 8,
   },
   timeSlotChipActive: {
+    backgroundColor: 'rgba(1, 184, 84, 0.12)',
+    borderColor: 'rgba(1, 184, 84, 0.4)',
     borderWidth: 1.5,
-    borderColor: '#01b854',
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    ...Platform.select({
+      web: { backdropFilter: 'blur(8px)' }
+    }) as any,
   },
   timeSlotChipDisabled: {
     opacity: 0.5,

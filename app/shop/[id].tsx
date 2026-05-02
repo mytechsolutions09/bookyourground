@@ -967,30 +967,47 @@ const styles = StyleSheet.create({
   addToCartSecondary: {
     flex: 1,
     height: 48,
-    borderRadius: 24,
-    backgroundColor: '#2b2f4b',
+    borderRadius: 100,
+    backgroundColor: 'rgba(43, 47, 75, 0.4)',
+    borderColor: 'rgba(43, 47, 75, 0.5)',
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    ...Platform.select({
+      web: { backdropFilter: 'blur(8px)' }
+    }) as any,
   },
   addToCartSecondaryText: {
     color: '#FFFFFF',
-    fontWeight: '300',
+    fontWeight: '800',
     fontSize: 14,
     fontFamily: 'Inter',
+    letterSpacing: -0.3,
   },
   buyNowBtn: {
     flex: 1.2,
     height: 48,
-    borderRadius: 24,
-    backgroundColor: '#f8688a',
+    borderRadius: 100,
+    backgroundColor: 'rgba(248, 104, 138, 0.4)',
+    borderColor: 'rgba(248, 104, 138, 0.5)',
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#f8688a',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 5,
+    ...Platform.select({
+      web: { backdropFilter: 'blur(12px)' }
+    }) as any,
   },
   buyNowText: {
     color: '#FFFFFF',
-    fontWeight: '300',
+    fontWeight: '800',
     fontSize: 14,
     fontFamily: 'Inter',
+    letterSpacing: -0.3,
   },
 
   // Web Styles
@@ -1165,17 +1182,27 @@ const styles = StyleSheet.create({
   webAddToCartBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8688a',
+    backgroundColor: 'rgba(248, 104, 138, 0.4)',
+    borderColor: 'rgba(248, 104, 138, 0.5)',
+    borderWidth: 1,
     paddingHorizontal: 32,
     height: 56,
-    borderRadius: 12,
+    borderRadius: 100,
     gap: 12,
+    shadowColor: '#f8688a',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    ...Platform.select({
+      web: { backdropFilter: 'blur(12px)' }
+    }) as any,
   },
   webAddToCartText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
     fontFamily: 'Inter',
+    letterSpacing: -0.3,
   },
   webWishlistBtn: {
     width: 56,
@@ -1416,20 +1443,25 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   shoesAddToCartBtn: {
-    backgroundColor: '#f8688a',
+    backgroundColor: 'rgba(248, 104, 138, 0.4)',
+    borderColor: 'rgba(248, 104, 138, 0.5)',
+    borderWidth: 1,
     height: 52,
-    borderRadius: 12,
+    borderRadius: 100,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#f8688a',
     shadowOpacity: 0.3,
     shadowRadius: 15,
     shadowOffset: { width: 0, height: 8 },
+    ...Platform.select({
+      web: { backdropFilter: 'blur(12px)' }
+    }) as any,
   },
   shoesAddToCartText: {
     color: '#FFFFFF',
     fontSize: 18,
-    fontWeight: '300',
+    fontWeight: '800',
     letterSpacing: 1,
     fontFamily: 'Inter',
   },

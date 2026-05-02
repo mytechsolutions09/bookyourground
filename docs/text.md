@@ -8,9 +8,8 @@
 #01b854
 #5bcd8e
 #dcc093
-#2d3450
+#232838 
 #f8688a pink
-
 
 npx expo start
 npx expo start --web

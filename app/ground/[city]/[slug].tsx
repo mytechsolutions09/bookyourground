@@ -1653,16 +1653,19 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 999,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderRadius: 100,
+    backgroundColor: 'rgba(1, 184, 84, 0.08)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(1, 184, 84, 0.25)',
+    ...Platform.select({
+      web: { backdropFilter: 'blur(8px)' }
+    }) as any,
   },
   amenityText: {
     fontFamily: 'Inter',
     fontSize: 13,
-    color: '#334155',
-    fontWeight: '500',
+    color: '#043529',
+    fontWeight: '700',
   },
 
   // ── Reviews ───────────────────────────────────────────
@@ -1849,23 +1852,27 @@ const styles = StyleSheet.create({
   sortChip: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderRadius: 100,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#F1F5F9',
   },
   sortChipActive: {
-    backgroundColor: '#01b854',
-    borderColor: '#01b854',
+    backgroundColor: 'rgba(1, 184, 84, 0.12)',
+    borderColor: 'rgba(1, 184, 84, 0.4)',
+    borderWidth: 1.5,
+    ...Platform.select({
+      web: { backdropFilter: 'blur(8px)' }
+    }) as any,
   },
   sortChipText: {
     fontFamily: 'Inter',
     fontSize: 11,
-    fontWeight: '500',
-    color: '#6B7280',
+    fontWeight: '700',
+    color: '#64748B',
   },
   sortChipTextActive: {
-    color: '#FFFFFF',
+    color: '#01b854',
   },
 
   bookButton: {

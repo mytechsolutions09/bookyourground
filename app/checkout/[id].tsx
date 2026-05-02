@@ -105,13 +105,18 @@ export default function CheckoutScreen() {
   useEffect(() => {
     fetchActiveGateways();
     fetchPlatformSettings();
-    fetchWalletBalance();
     // Hide bottom tab bar on checkout for better focus
     setTabBarVisible(false);
     return () => {
       setTabBarVisible(true);
     };
   }, []);
+
+  useEffect(() => {
+    if (user) {
+      fetchWalletBalance();
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!profile || activeGateways.length === 0) return;
@@ -966,21 +971,18 @@ export default function CheckoutScreen() {
                >
                   <RNText style={styles.applyBtnText}>{applyingCoupon ? '...' : 'Apply'}</RNText>
                </TouchableOpacity>
-            </View>
 
-            <TouchableOpacity 
-              style={styles.offersBtn}
-              onPress={() => {
-                setIsCouponsModalVisible(true);
-                fetchAvailableCoupons();
-              }}
-            >
-               <View style={styles.offersLeft}>
+               <TouchableOpacity 
+                 style={styles.offersSmallBtn}
+                 onPress={() => {
+                   setIsCouponsModalVisible(true);
+                   fetchAvailableCoupons();
+                 }}
+               >
                   <ShieldCheck size={16} color="#01b854" />
-                  <RNText style={styles.offersText}>View Available Offer</RNText>
-               </View>
-               <ChevronLeft size={16} color="#9CA3AF" style={{ transform: [{ rotate: '180deg' }] }} />
-            </TouchableOpacity>
+                  <RNText style={styles.offersSmallText}>Offers</RNText>
+               </TouchableOpacity>
+            </View>
 
             <View style={styles.breakdown}>
               <View style={styles.breakdownRow}>
@@ -1021,7 +1023,7 @@ export default function CheckoutScreen() {
               <View style={styles.paymentMethodSection}>
                 <RNText style={styles.paymentMethodTitle}>Payment Method</RNText>
                 <View style={styles.methodSelector}>
-                  {walletBalance > 0 && (
+                  {(walletBalance > 0 || isGroundOwnerOrAdmin) && (
                     <TouchableOpacity 
                       onPress={() => setSelectedGateway('wallet')}
                       style={[
@@ -1032,12 +1034,12 @@ export default function CheckoutScreen() {
                       <View style={[styles.methodCircle, selectedGateway === 'wallet' && styles.methodCircleActive]}>
                         <Wallet size={14} color={selectedGateway === 'wallet' ? '#FFF' : '#9CA3AF'} />
                       </View>
-                      <View style={{ flex: 1 }}>
+                      <View style={{ flex: 1, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                         <RNText style={[styles.methodLabel, selectedGateway === 'wallet' && styles.methodLabelActive]}>
                           Wallet Balance
                         </RNText>
-                        <RNText style={{ fontSize: 11, color: '#64748B' }}>
-                          Available: {formatCurrency(walletBalance)}
+                        <RNText style={{ fontSize: 16, fontWeight: '800', color: selectedGateway === 'wallet' ? '#065F46' : '#1E293B' }}>
+                          {formatCurrency(walletBalance)}
                         </RNText>
                       </View>
                     </TouchableOpacity>
@@ -1080,6 +1082,7 @@ export default function CheckoutScreen() {
                 size="large"
                 variant="secondary"
                 style={[styles.payButton, { backgroundColor: '#00ea6b' }]}
+                textStyle={styles.payButtonText}
               />
             ) : (selectedGateway === 'razorpay' || selectedGateway === 'payu') ? (
               <Button
@@ -1091,6 +1094,7 @@ export default function CheckoutScreen() {
                 size="large"
                 variant="secondary"
                 style={styles.payButton}
+                textStyle={styles.payButtonText}
               />
             ) : (selectedGateway === 'cash' || (selectedGateway === 'wallet' && isGroundOwnerOrAdmin)) ? (
               <View style={{ gap: 12, marginBottom: 12 }}>
@@ -1404,7 +1408,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   summaryCard: {
-    padding: 24,
+    flex: 1,
+    padding: 20,
     borderRadius: 32,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
@@ -1425,11 +1430,11 @@ const styles = StyleSheet.create({
   couponSection: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 12,
+    marginBottom: 8,
   },
   couponInput: {
     flex: 1,
-    height: 48,
+    height: 52,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -1441,7 +1446,7 @@ const styles = StyleSheet.create({
     ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
   },
   applyBtn: {
-    height: 48,
+    height: 52,
     paddingHorizontal: 20,
     borderRadius: 16,
     backgroundColor: '#F1F5F9',
@@ -1450,20 +1455,26 @@ const styles = StyleSheet.create({
   },
   applyBtnText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
-  offersBtn: {
+  offersSmallBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 12,
+    gap: 4,
+    paddingHorizontal: 12,
+    height: 52,
     borderRadius: 16,
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#F1F5F9',
-    marginBottom: 24,
+  },
+  offersSmallText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#64748B',
+    fontFamily: 'Inter',
   },
   offersLeft: {
     flexDirection: 'row',
@@ -1477,8 +1488,8 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   breakdown: {
-    gap: 12,
-    marginBottom: 24,
+    gap: 8,
+    marginBottom: 16,
   },
   breakdownRow: {
     flexDirection: 'row',
@@ -1487,13 +1498,13 @@ const styles = StyleSheet.create({
   breakdownLabel: {
     fontSize: 14,
     color: '#64748B',
-    fontWeight: '500',
+    fontWeight: '400',
     fontFamily: 'Inter',
   },
   breakdownValue: {
     fontSize: 14,
     color: '#0F172A',
-    fontWeight: '700',
+    fontWeight: '400',
     fontFamily: 'Inter',
   },
   breakdownDiscountLabel: {
@@ -1512,20 +1523,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
-    paddingTop: 20,
+    marginBottom: 16,
+    paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
   },
   subtotalLabel: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '400',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
   subtotalValue: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 22,
+    fontWeight: '500',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
@@ -1548,15 +1559,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    padding: 12,
+    height: 52,
+    paddingHorizontal: 16,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#F1F5F9',
     backgroundColor: '#FFFFFF',
   },
   methodOptionActive: {
-    borderColor: '#10B981',
-    backgroundColor: '#F0FDF4',
+    backgroundColor: 'rgba(1, 184, 84, 0.12)',
+    borderColor: 'rgba(1, 184, 84, 0.4)',
+    borderWidth: 1.5,
+    ...Platform.select({
+      web: { backdropFilter: 'blur(8px)' }
+    }) as any,
   },
   methodCircle: {
     width: 24,
@@ -1582,28 +1598,35 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   payButton: {
-    height: 56,
+    height: 52,
     borderRadius: 100,
-    backgroundColor: '#01b854',
+    backgroundColor: 'rgba(1, 184, 84, 0.4)',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: '#00ea6b',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 234, 107, 0.5)',
     ...Platform.select({
       web: {
-        boxShadow: '0 8px 32px rgba(1, 184, 84, 0.4)',
+        backdropFilter: 'blur(12px)',
+        boxShadow: '0 8px 32px rgba(1, 184, 84, 0.3)',
         transition: 'all 0.3s ease',
       },
       ios: {
-        shadowColor: '#01b854',
+        shadowColor: '#00ea6b',
         shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.4,
+        shadowOpacity: 0.3,
         shadowRadius: 16,
       },
       android: {
         elevation: 8,
       },
     }) as any,
+  },
+  payButtonText: {
+    fontWeight: '500',
+    fontSize: 18,
+    fontFamily: 'Inter',
+    letterSpacing: -0.2,
   },
   trustFooter: {
     marginTop: 24,
@@ -1709,9 +1732,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   cashFieldsContainer: {
-    backgroundColor: '#F0FDF4',
-    padding: 16,
-    borderRadius: 20,
+    padding: 0,
     marginTop: 12,
     gap: 12,
   },

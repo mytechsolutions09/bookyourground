@@ -67,55 +67,54 @@ export default function FindOpposition() {
     <View style={[styles.root, isMobile && { paddingVertical: 60 }]}>
       <View style={styles.container}>
         <View style={[styles.content, isMobile && styles.contentMobile]}>
-          <Animated.View style={[styles.textContainer, animatedTextStyle]}>
-            <LinearGradient
-              colors={['#F0FDF4', '#DCFCE7']}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.badge}
-            >
-              <Users size={14} color="#01b854" strokeWidth={3} />
-              <Text style={styles.badgeText}>MATCHMAKING</Text>
-            </LinearGradient>
-            
-            <Text style={styles.title}>Find an{"\n"}<Text style={{ color: '#01b854' }}>Opposition</Text></Text>
-            <Text style={styles.subtitle}>
-              Connect with elite teams in your area for competitive matches. 
-              Find the perfect opponents that match your skill level and play style.
-            </Text>
-
-            <View style={styles.featuresRow}>
-              <View style={styles.featureItem}>
-                <View style={styles.featureIconBox}>
-                  <Sword size={18} color="#01b854" />
-                </View>
-                <Text style={styles.featureText}>Skill Matching</Text>
-              </View>
-              <View style={styles.featureItem}>
-                <View style={styles.featureIconBox}>
-                  <Trophy size={18} color="#01b854" />
-                </View>
-                <Text style={styles.featureText}>Leaderboards</Text>
-              </View>
-            </View>
-
-            <Pressable 
-              style={({ pressed }) => [
-                styles.ctaButton,
-                pressed && { transform: [{ scale: 0.98 }] }
-              ]}
-              onPress={() => router.push('/(tabs)/find-an-opponent' as any)}
-            >
+            <Animated.View style={[
+              styles.textContainer, 
+              animatedTextStyle,
+              isMobile && { alignItems: 'center' }
+            ]}>
               <LinearGradient
-                colors={['#01b854', '#009d47']}
-                style={StyleSheet.absoluteFill}
+                colors={['#F0FDF4', '#DCFCE7']}
                 start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              />
-              <Text style={styles.ctaText}>Find a Match</Text>
-              <ArrowRight size={18} color="#FFFFFF" strokeWidth={2.5} />
-            </Pressable>
-          </Animated.View>
+                end={{ x: 1, y: 0 }}
+                style={[styles.badge, isMobile && { alignSelf: 'center' }]}
+              >
+                <Users size={14} color="#01b854" strokeWidth={3} />
+                <Text style={styles.badgeText}>MATCHMAKING</Text>
+              </LinearGradient>
+              
+              <Text style={[styles.title, isMobile && { textAlign: 'center' }]}>Find an{"\n"}<Text style={{ color: '#01b854' }}>Opposition</Text></Text>
+              <Text style={[styles.subtitle, isMobile && { textAlign: 'center' }]}>
+                Connect with elite teams in your area for competitive matches. 
+                Find the perfect opponents that match your skill level and play style.
+              </Text>
+
+              <View style={[styles.featuresRow, isMobile && { justifyContent: 'center' }]}>
+                <View style={styles.featureItem}>
+                  <View style={styles.featureIconBox}>
+                    <Sword size={18} color="#01b854" />
+                  </View>
+                  <Text style={styles.featureText}>Skill Matching</Text>
+                </View>
+                <View style={styles.featureItem}>
+                  <View style={styles.featureIconBox}>
+                    <Trophy size={18} color="#01b854" />
+                  </View>
+                  <Text style={styles.featureText}>Leaderboards</Text>
+                </View>
+              </View>
+
+              <Pressable 
+                style={({ pressed }) => [
+                  styles.ctaButton,
+                  isMobile && { alignSelf: 'center' },
+                  pressed && { transform: [{ scale: 0.98 }], opacity: 0.9 }
+                ]}
+                onPress={() => router.push('/(tabs)/find-an-opponent' as any)}
+              >
+                <Text style={styles.ctaText}>Find a Match</Text>
+                <ArrowRight size={18} color="#FFFFFF" strokeWidth={2.5} />
+              </Pressable>
+            </Animated.View>
 
           <View style={[styles.imagePlaceholder, isMobile && styles.imagePlaceholderMobile]}>
             <Animated.View style={[styles.pulseCircle, pulseStyle]} />
@@ -213,7 +212,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 99,
     gap: 8,
-    alignSelf: Platform.OS === 'web' && useWindowDimensions().width < 768 ? 'center' : 'flex-start',
+    alignSelf: 'flex-start',
     marginBottom: 20,
   },
   badgeText: {
@@ -229,7 +228,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
     marginBottom: 16,
     letterSpacing: -1.5,
-    textAlign: Platform.OS === 'web' && useWindowDimensions().width < 768 ? 'center' : 'left',
+    textAlign: 'left',
   },
   subtitle: {
     fontSize: 16,
@@ -237,13 +236,13 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontFamily: 'Inter',
     marginBottom: 32,
-    textAlign: Platform.OS === 'web' && useWindowDimensions().width < 768 ? 'center' : 'left',
+    textAlign: 'left',
   },
   featuresRow: {
     flexDirection: 'row',
     gap: 20,
     marginBottom: 40,
-    justifyContent: Platform.OS === 'web' && useWindowDimensions().width < 768 ? 'center' : 'flex-start',
+    justifyContent: 'flex-start',
   },
   featureItem: {
     flexDirection: 'row',
@@ -271,23 +270,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 32,
     paddingVertical: 18,
-    borderRadius: 16,
+    borderRadius: 100,
     gap: 12,
-    alignSelf: Platform.OS === 'web' && useWindowDimensions().width < 768 ? 'center' : 'flex-start',
-    shadowColor: '#01b854',
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(1, 184, 84, 0.4)',
+    borderColor: 'rgba(0, 234, 107, 0.5)',
+    borderWidth: 1,
+    shadowColor: '#00ea6b',
     shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.3,
     shadowRadius: 20,
     elevation: 8,
-    overflow: 'hidden',
+    overflow: 'visible',
     minWidth: 200,
     justifyContent: 'center',
+    ...Platform.select({
+      web: { backdropFilter: 'blur(12px)' }
+    }) as any,
   },
   ctaText: {
     fontSize: 16,
     fontWeight: '800',
     color: '#FFFFFF',
     fontFamily: 'Inter',
+    letterSpacing: -0.3,
   },
   imagePlaceholder: {
     flex: 1,

@@ -33,10 +33,10 @@ interface WalletData {
   balance: number;
 }
 
-function LineChart({ data, height = 150, totalDays = 30 }: { data: ChartPoint[], height?: number, totalDays?: number }) {
+function LineChart({ data, height = 150 }: { data: ChartPoint[], height?: number }) {
+  const [containerWidth, setContainerWidth] = useState(300);
   if (data.length === 0) return null;
 
-  const [containerWidth, setContainerWidth] = useState(300);
   const padding = { top: 24, bottom: 36, left: 0, right: 16 };
 
   const maxValue = Math.max(...data.map(d => d.value), 1000);

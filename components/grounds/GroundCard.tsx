@@ -613,21 +613,27 @@ const styles = StyleSheet.create({
   bookButton: {
     width: '100%',
     height: 44,
-    borderRadius: 12,
+    borderRadius: 100,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#10b981',
-    shadowColor: '#10b981',
+    backgroundColor: 'rgba(1, 184, 84, 0.4)',
+    borderColor: 'rgba(0, 234, 107, 0.5)',
+    borderWidth: 1,
+    shadowColor: '#00ea6b',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 3,
+    ...Platform.select({
+      web: { backdropFilter: 'blur(12px)' }
+    }) as any,
   },
   bookButtonText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#FFFFFF',
     fontFamily: 'Inter',
+    letterSpacing: -0.3,
   },
   // Glass variant styles
   touchableGlass: {

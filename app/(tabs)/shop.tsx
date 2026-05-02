@@ -850,15 +850,20 @@ const styles = StyleSheet.create({
   filterBtn: {
     width: 40,
     height: 40,
-    backgroundColor: '#f8688a',
+    backgroundColor: 'rgba(248, 104, 138, 0.4)',
+    borderColor: 'rgba(248, 104, 138, 0.5)',
+    borderWidth: 1,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
+    shadowColor: '#f8688a',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
+    ...Platform.select({
+      web: { backdropFilter: 'blur(8px)' }
+    }) as any,
   },
   categoriesSection: {
     marginBottom: 24,
@@ -870,22 +875,40 @@ const styles = StyleSheet.create({
   categoryPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 16,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
     paddingVertical: 10,
-    borderRadius: 12,
+    borderRadius: 100,
+    borderWidth: 1.5,
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
   categoryPillActive: {
-    backgroundColor: '#f8688a',
+    backgroundColor: 'rgba(248, 104, 138, 0.4)',
+    borderColor: 'rgba(248, 104, 138, 0.5)',
+    borderWidth: 1.5,
+    shadowColor: '#f8688a',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 4,
+    ...Platform.select({
+      web: { backdropFilter: 'blur(12px)' }
+    }) as any,
   },
   categoryPillText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
-    color: '#475569',
+    color: '#64748B',
     fontFamily: 'Inter',
+    letterSpacing: -0.2,
   },
   categoryPillTextActive: {
-    color: '#FFFFFF',
+    color: '#0F172A',
   },
   promoSection: {
     paddingHorizontal: 20,
@@ -1075,7 +1098,9 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   addToCartBtn: {
-    backgroundColor: '#f8688a',
+    backgroundColor: 'rgba(248, 104, 138, 0.4)',
+    borderColor: 'rgba(248, 104, 138, 0.5)',
+    borderWidth: 1,
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -1086,6 +1111,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
+    ...Platform.select({
+      web: { backdropFilter: 'blur(8px)' }
+    }) as any,
   },
   emptyState: {
     alignItems: 'center',
@@ -1220,15 +1248,25 @@ const styles = StyleSheet.create({
   applyBtn: {
     flex: 2,
     height: 56,
-    borderRadius: 16,
+    borderRadius: 100,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f8688a',
+    backgroundColor: 'rgba(248, 104, 138, 0.4)',
+    borderColor: 'rgba(248, 104, 138, 0.5)',
+    borderWidth: 1,
+    shadowColor: '#f8688a',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    ...Platform.select({
+      web: { backdropFilter: 'blur(12px)' }
+    }) as any,
   },
   applyBtnText: {
-    color: '#FFFFFF',
+    color: '#0F172A',
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
     fontFamily: 'Inter',
+    letterSpacing: -0.3,
   },
 });

@@ -1,11 +1,6 @@
 import React, { useMemo, useEffect } from 'react';
-import { Redirect, Tabs, Stack, usePathname, useSegments, useRouter } from 'expo-router';
+import { Tabs, Stack, usePathname, useSegments, useRouter } from 'expo-router';
 import {
-  Hop as Home,
-  Calendar,
-  User,
-  Building2,
-  LogOut,
   House,
   LandPlot,
   CalendarCheck2,
@@ -13,7 +8,6 @@ import {
   LogIn,
   Heart,
   Swords,
-  CalendarClock,
   Trophy,
   ShoppingBag,
 } from 'lucide-react-native';
@@ -24,12 +18,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const AUTH_REQUIRED_TAB = new Set(['dashboard', 'bookings', 'profile']);
 
-
 const CustomTabBar = ({ state, descriptors, navigation, router, insets, isTabBarVisible, hideTabBarOnBigScreens }: any) => {
   if (hideTabBarOnBigScreens) return null;
 
   const visibleTabNames = ['home_tab', 'grounds', 'find-an-opponent', 'shop', 'cricket'];
-  
+
   const visibleRoutes = state.routes.filter((route: any) => {
     const { options } = descriptors[route.key];
     return visibleTabNames.includes(route.name) && options.href !== null;
@@ -37,7 +30,7 @@ const CustomTabBar = ({ state, descriptors, navigation, router, insets, isTabBar
 
   return (
     <View style={[
-      styles.customTabBar, 
+      styles.customTabBar,
       { paddingBottom: Math.max(insets.bottom, 8) },
       !isTabBarVisible && { transform: [{ translateY: 100 }] }
     ]}>
@@ -45,7 +38,7 @@ const CustomTabBar = ({ state, descriptors, navigation, router, insets, isTabBar
         const stateIndex = state.routes.findIndex((r: any) => r.key === route.key);
         const { options } = descriptors[route.key];
         const isFocused = state.index === stateIndex;
-        
+
         const onPress = () => {
           const event = navigation.emit({
             type: 'tabPress',
@@ -64,18 +57,11 @@ const CustomTabBar = ({ state, descriptors, navigation, router, insets, isTabBar
         const Icon = options.tabBarIcon;
 
         return (
-          <Pressable
-            key={route.key}
-            onPress={onPress}
-            style={styles.tabItem}
-          >
+          <Pressable key={route.key} onPress={onPress} style={styles.tabItem}>
             {Icon && Icon({ color: isFocused ? (route.name === 'shop' ? '#f8688a' : '#00ea6b') : '#9ca3af', size: 22 })}
-            <RNText 
-              numberOfLines={1} 
-              style={[
-                styles.tabLabel, 
-                { color: isFocused ? (route.name === 'shop' ? '#f8688a' : '#00ea6b') : '#9ca3af' }
-              ]}
+            <RNText
+              numberOfLines={1}
+              style={[styles.tabLabel, { color: isFocused ? (route.name === 'shop' ? '#f8688a' : '#00ea6b') : '#9ca3af' }]}
             >
               {options.title}
             </RNText>
@@ -98,16 +84,9 @@ export default function TabLayout() {
   const needsAuth = useMemo(() => {
     const leaf = segments[segments.length - 1];
     if (typeof leaf === 'string' && AUTH_REQUIRED_TAB.has(leaf)) return true;
-
     const p = pathname.split('?')[0];
     if (p.includes('/(owner)/') || p.includes('/(admin)/')) return false;
-    if (
-      p.endsWith('/dashboard') ||
-      p.endsWith('/bookings') ||
-      p.endsWith('/profile')
-    ) {
-      return true;
-    }
+    if (p.endsWith('/dashboard') || p.endsWith('/bookings') || p.endsWith('/profile')) return true;
     return false;
   }, [segments, pathname]);
 
@@ -119,7 +98,6 @@ export default function TabLayout() {
     tabBarItemStyle: { height: 0, width: 0, overflow: 'hidden' as const },
   } as const;
 
-  // Use useEffect for redirection instead of early return component to keep hook sequence stable
   useEffect(() => {
     if (!loading && !user && needsAuth) {
       router.replace('/(auth)/login');
@@ -128,12 +106,7 @@ export default function TabLayout() {
 
   const webTabBarStyle = hideTabBarOnBigScreens
     ? ({ display: 'none' } as const)
-    : {
-      backgroundColor: '#043529',
-      borderTopWidth: 1,
-      borderTopColor: '#06392e',
-      height: 60,
-    };
+    : { backgroundColor: '#043529', borderTopWidth: 1, borderTopColor: '#06392e', height: 60 };
 
   const showLoading = needsAuth && (loading || !user);
 
@@ -248,16 +221,26 @@ export default function TabLayout() {
               tabBarIcon: ({ color, size }) => <CircleUser size={size} color={color} />,
             }}
           />
-          {!user && (
-            <Tabs.Screen
-              name="logout"
-              options={{
-                title: 'Login',
-                href: '/(auth)/login',
-                tabBarIcon: ({ color, size }) => <LogIn size={size} color={color} />,
-              }}
-            />
-          )}
+          <Tabs.Screen
+            name="logout"
+            options={{
+              title: user ? 'Profile' : 'Login',
+              href: user ? null : '/(auth)/login',
+              tabBarIcon: ({ color, size }) => user ? <CircleUser size={size} color={color} /> : <LogIn size={size} color={color} />,
+            }}
+          />
+          <Tabs.Screen
+            name="matches"
+            options={{
+              href: null,
+            }}
+          />
+          <Tabs.Screen
+            name="support"
+            options={{
+              href: null,
+            }}
+          />
           <Tabs.Screen
             name="dashboard"
             options={{
@@ -266,7 +249,6 @@ export default function TabLayout() {
           />
         </Tabs>
       )}
-      
       {showLoading && (
         <View style={[StyleSheet.absoluteFill, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#043529', zIndex: 9999 }]}>
           <ActivityIndicator size="large" color="#00ea6b" />
@@ -286,7 +268,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-around',
     width: '100%',
-    transition: 'transform 0.3s ease-in-out',
     position: 'absolute',
     bottom: 0,
     left: 0,

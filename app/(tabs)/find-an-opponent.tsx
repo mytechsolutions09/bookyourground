@@ -27,12 +27,9 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useUI } from '@/contexts/UIContext';
 import { useAuth } from '@/contexts/AuthContext';
-
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
 import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+
 import { BookingWithDetails } from '@/types';
 import MobileAppNavbar from '../../components/MobileAppNavbar';
 import WebLayout from '@/components/web/WebLayout';
@@ -43,6 +40,10 @@ import Modal from '@/components/ui/Modal';
 import { slugifyGroundSegment } from '@/utils/groundSlug';
 import MatchmakingSkeleton from '@/components/matches/MatchmakingSkeleton';
 import { getDayOfWeek } from '@/utils/helpers';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export default function FindAnOpponentScreen({ hideHeader = false, externalScrollHandler }: { hideHeader?: boolean, externalScrollHandler?: any }) {
   const [matches, setMatches] = useState<BookingWithDetails[]>([]);
@@ -57,7 +58,6 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
   const isUltraNarrow = width < 350;
   const isTablet = width >= 600;
   const numColumns = isWeb ? (isWideWeb || isExtraWideWeb ? 3 : isMediumWeb ? 2 : 1) : (isTablet ? 2 : 1);
-  const FlatListComponent = isWeb ? FlatList : Animated.FlatList;
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'all' | 'my'>('all');
 
@@ -200,7 +200,6 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
       const { data: { user } } = await supabase.auth.getUser();
       const currentUserId = user?.id;
 
-      // Fetch matchmaking candidates using our DB function (optimized for scale)
       const { data, error } = await supabase
         .rpc('get_open_matchmaking_bookings', { p_today: todayISO })
         .select(`
@@ -222,7 +221,6 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
         return;
       }
 
-      // Enhance matches with precise, current ground pricing from the database
       const matchesWithPricing = await Promise.all((data as any[]).map(async (m) => {
         try {
           const parts = m.booking_date.split('-');
@@ -243,12 +241,10 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
           let currentSlotPrice = slotData?.custom_price ?? m.ground.base_price_per_hour;
 
           if (isBox) {
-            // Box cricket is hourly
             const hours = m.total_hours || 1;
             const fullPrice = currentSlotPrice * hours;
             return { ...m, total_amount: Math.round((fullPrice / 2) * 100) / 100 };
           } else {
-            // Cricket ground is per match (custom_price is the full match price)
             const fullPrice = currentSlotPrice;
             return { ...m, total_amount: Math.round((fullPrice / 2) * 100) / 100 };
           }
@@ -323,200 +319,196 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
     } as any);
   };
 
-  const content = (
-    <View style={[styles.container, isWeb && !IS_DARK && styles.webContainerRoot]}>
-      {isWeb && !IS_DARK ? (
-        <View style={styles.webCard}>
-          <FlatListComponent
-            showsVerticalScrollIndicator={false}
-            ListHeaderComponent={
-              <>
-
-                <View style={[styles.header, styles.webHeader]}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.title}>Find an Opponent</Text>
-                    <Text style={styles.subtitle}>
-                      Slots with one team waiting for a match.
-                    </Text>
-                  </View>
-
-                  <View style={styles.webHeaderActions}>
-                    <View style={styles.searchWrapper}>
-                      <Search size={18} color="#9CA3AF" />
-                      <TextInput
-                        placeholder="Search grounds or cities..."
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                        style={styles.searchInput}
-                      />
-                    </View>
-
-                    <View style={styles.badgePill}>
-                      <Swords size={20} color="#01b854" />
-                      <Text style={styles.badgePillNumber}>{filteredMatches.length}</Text>
-                      <Text style={styles.badgePillLabel}>Available</Text>
-                    </View>
-                  </View>
-                </View>
-
-                {/* Web Filter Bar */}
-                <View style={styles.webFilterBar}>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
-                    <View style={styles.filterGroup}>
-                      <Text style={styles.filterLabel}>City:</Text>
-                      {cities.map(city => (
-                        <Pressable
-                          key={city}
-                          onPress={() => setSelectedCity(city)}
-                          style={[styles.filterTag, selectedCity === city && styles.filterTagActive]}
-                        >
-                          <Text style={[styles.filterTagText, selectedCity === city && styles.filterTagTextActive]}>{city}</Text>
-                        </Pressable>
-                      ))}
-                    </View>
-
-                    <View style={styles.filterDivider} />
-
-                    <View style={styles.filterGroup}>
-                      <Text style={styles.filterLabel}>Date:</Text>
-                      {['All', 'Today', 'Tomorrow'].map(date => (
-                        <Pressable
-                          key={date}
-                          onPress={() => setSelectedDateFilter(date)}
-                          style={[styles.filterTag, selectedDateFilter === date && styles.filterTagActive]}
-                        >
-                          <Text style={[styles.filterTagText, selectedDateFilter === date && styles.filterTagTextActive]}>{date}</Text>
-                        </Pressable>
-                      ))}
-                    </View>
-
-                    <View style={styles.filterDivider} />
-
-                    <View style={styles.filterGroup}>
-                      <Text style={styles.filterLabel}>Ground Type:</Text>
-                      {pitches.map(pitch => (
-                        <Pressable
-                          key={pitch}
-                          onPress={() => setSelectedPitch(pitch)}
-                          style={[styles.filterTag, selectedPitch === pitch && styles.filterTagActive]}
-                        >
-                          <Text style={[styles.filterTagText, selectedPitch === pitch && styles.filterTagTextActive]}>{pitch}</Text>
-                        </Pressable>
-                      ))}
-                    </View>
-                  </ScrollView>
-                </View>
-              </>
-            }
-            onScroll={onScrollWeb}
-            scrollEventThrottle={16}
-            data={filteredMatches}
-            renderItem={({ item }) => (
-              <View style={styles.webItem}>
-                <MatchCard
-                  match={item}
-                  onJoin={() => handleJoinMatch(item)}
-                  buttonTitle="Join Match"
-                  teamsCount="1/2 Teams"
-                  lightMode={true}
-                />
-              </View>
-            )}
-            keyExtractor={item => item.id}
-            numColumns={isWideWeb || isExtraWideWeb ? 3 : isMediumWeb ? 2 : 1}
-            columnWrapperStyle={
-              isWideWeb || isExtraWideWeb || isMediumWeb ? styles.webColumnWrapper : undefined
-            }
-            style={styles.webFlatList}
-            contentContainerStyle={styles.webList}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <RefreshControl refreshing={loading} onRefresh={loadOpenSlots} />
-            }
-            ListEmptyComponent={
-              loading ? (
-                <MatchmakingSkeleton isWeb={true} IS_DARK={IS_DARK} />
-              ) : (
-                <View style={styles.emptyContainer}>
-                  <Trophy size={48} color="#E5E7EB" style={{ marginBottom: 16 }} />
-                  <Text style={styles.emptyText}>No teams are looking for opponents right now</Text>
-                  <Text style={styles.emptySubtext}>Maybe create your own match by booking a ground for 1 Team!</Text>
-                </View>
-              )
-            }
-          />
-        </View>
-      ) : (
-        <>
-          {loading ? (
-            <MatchmakingSkeleton isWeb={false} IS_DARK={false} />
-          ) : (
-            <FlatListComponent
-              onScroll={isWeb ? onScrollWeb : (externalScrollHandler || verticalScrollHandler)}
-              scrollEventThrottle={16}
-              data={filteredMatches}
-              ListHeaderComponent={
-                <View style={styles.nativeSearchContainer}>
-                  <View style={styles.nativeSearchWrapper}>
-                    <Search size={18} color="#9CA3AF" />
-                    <TextInput
-                      placeholder="Search ground or city..."
-                      placeholderTextColor="#9CA3AF"
-                      value={searchQuery}
-                      onChangeText={setSearchQuery}
-                      style={styles.nativeSearchInput}
-                    />
-                  </View>
-                </View>
-              }
-              renderItem={({ item }) => (
-                <View style={styles.nativeItem}>
-                  <MatchCard
-                    match={item}
-                    onJoin={() => handleJoinMatch(item)}
-                    buttonTitle="Join Match"
-                    teamsCount="1/2 Teams"
-                    lightMode={true}
-                  />
-                </View>
-              )}
-              keyExtractor={item => item.id}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={[styles.listNative, { paddingTop: 160 + insets.top, paddingBottom: isWeb ? 64 : 100 }]}
-              refreshControl={
-                <RefreshControl
-                  refreshing={loading}
-                  onRefresh={loadOpenSlots}
-                  tintColor="#01b854"
-                  colors={['#01b854']}
-                  progressViewOffset={110 + insets.top}
-                />
-              }
-              ListEmptyComponent={
-                <View style={styles.emptyContainer}>
-                  <Trophy size={64} color="#06392e" style={{ marginBottom: 16 }} />
-                  <Text style={styles.emptyTextNative}>No slots found</Text>
-                  <Text style={styles.emptySubtextNative}>Try again later or book yourself!</Text>
-                </View>
-              }
-            />
-          )}
-        </>
-      )}
-    </View>
-  );
-
   const containerStyle = [
     styles.container,
     isWeb && !IS_DARK && styles.webContainerRoot,
     !isWeb && isTablet && { alignSelf: 'center', width: '100%', maxWidth: 800 }
   ];
 
-  if (Platform.OS === 'web') {
-    return (
-      <WebLayout hideHeader={isSmall} isPublicNoSidebar={isSmall}>
-        {isSmall && (
-          <Animated.View style={[styles.headerContainerFixed, { paddingTop: insets.top }, headerAnimatedStyle]}>
+  const mainContent = (
+    <View style={containerStyle}>
+      {loading ? (
+        <MatchmakingSkeleton isWeb={isWeb} IS_DARK={IS_DARK} />
+      ) : (
+        <Animated.FlatList
+          key={`find-opponent-list-${isSmall ? 'small' : 'large'}-${numColumns}`}
+          onScroll={isWeb ? onScrollWeb : (externalScrollHandler || verticalScrollHandler)}
+          scrollEventThrottle={16}
+          data={filteredMatches}
+          numColumns={numColumns}
+          columnWrapperStyle={numColumns > 1 ? styles.webColumnWrapper : undefined}
+          ListHeaderComponent={
+            isWeb && !isSmall ? (
+              <View style={styles.webFilterBar}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+                  <View style={styles.filterGroup}>
+                    <Text style={styles.filterLabel}>City:</Text>
+                    {cities.map(city => (
+                      <Pressable
+                        key={city}
+                        onPress={() => setSelectedCity(city)}
+                        style={[styles.filterTag, selectedCity === city && styles.filterTagActive]}
+                      >
+                        <Text style={[styles.filterTagText, selectedCity === city && styles.filterTagTextActive]}>{city}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                  <View style={styles.filterDivider} />
+                  <View style={styles.filterGroup}>
+                    <Text style={styles.filterLabel}>Date:</Text>
+                    {['All', 'Today', 'Tomorrow'].map(date => (
+                      <Pressable
+                        key={date}
+                        onPress={() => setSelectedDateFilter(date)}
+                        style={[styles.filterTag, selectedDateFilter === date && styles.filterTagActive]}
+                      >
+                        <Text style={[styles.filterTagText, selectedDateFilter === date && styles.filterTagTextActive]}>{date}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                  <View style={styles.filterDivider} />
+                  <View style={styles.filterGroup}>
+                    <Text style={styles.filterLabel}>Ground Type:</Text>
+                    {pitches.map(pitch => (
+                      <Pressable
+                        key={pitch}
+                        onPress={() => setSelectedPitch(pitch)}
+                        style={[styles.filterTag, selectedPitch === pitch && styles.filterTagActive]}
+                      >
+                        <Text style={[styles.filterTagText, selectedPitch === pitch && styles.filterTagTextActive]}>{pitch}</Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                </ScrollView>
+              </View>
+            ) : (
+              <View style={styles.nativeSearchContainer}>
+                <View style={styles.nativeSearchWrapper}>
+                  <Search size={18} color="#9CA3AF" />
+                  <TextInput
+                    placeholder="Search ground or city..."
+                    placeholderTextColor="#9CA3AF"
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    style={styles.nativeSearchInput}
+                  />
+                </View>
+              </View>
+            )
+          }
+          renderItem={({ item }) => (
+            <View style={isWeb && !isSmall ? styles.webItem : styles.nativeItem}>
+              <MatchCard
+                match={item}
+                onJoin={() => handleJoinMatch(item)}
+                buttonTitle="Join Match"
+                teamsCount="1/2 Teams"
+                lightMode={true}
+              />
+            </View>
+          )}
+          keyExtractor={item => item.id}
+          showsVerticalScrollIndicator={false}
+          style={isWeb && !isSmall ? styles.webFlatList : undefined}
+          contentContainerStyle={
+            isWeb && !isSmall 
+              ? styles.webList 
+              : [styles.listNative, { paddingTop: isWeb ? (isSmall ? 160 + insets.top : 0) : 160 + insets.top, paddingBottom: isWeb ? 64 : 100 }]
+          }
+          refreshControl={
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={loadOpenSlots}
+              tintColor="#01b854"
+              colors={['#01b854']}
+              progressViewOffset={isWeb ? 0 : 110 + insets.top}
+            />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Trophy size={64} color="#06392e" style={{ marginBottom: 16 }} />
+              <Text style={isWeb && !isSmall ? styles.emptyText : styles.emptyTextNative}>
+                {isWeb && !isSmall ? 'No teams are looking for opponents right now' : 'No slots found'}
+              </Text>
+              <Text style={isWeb && !isSmall ? styles.emptySubtext : styles.emptySubtextNative}>
+                {isWeb && !isSmall ? 'Maybe create your own match by booking a ground for 1 Team!' : 'Try again later or book yourself!'}
+              </Text>
+            </View>
+          }
+        />
+      )}
+    </View>
+  );
+
+  return (
+    <View style={styles.nativeScreen}>
+      {isWeb && !hideHeader ? (
+        <WebLayout hideHeader={isSmall} isPublicNoSidebar={isSmall}>
+          {isSmall && (
+            <Animated.View style={[styles.headerContainerFixed, { paddingTop: insets.top }, headerAnimatedStyle]}>
+              <MobileAppNavbar
+                title="Find an Opponent"
+                titleColor="#0F172A"
+                lightBg
+              />
+              <View style={styles.tabContainer}>
+                <TouchableOpacity
+                  style={styles.tab}
+                  onPress={() => router.push('/book-my-ground')}
+                >
+                  <Text style={styles.tabText}>Book a Ground</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.tab, styles.activeTab]}
+                >
+                  <Text style={styles.activeTabText}>Find an Opposition</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.nativeFiltersDrawer}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.nativeFilterScroll}>
+                  <TouchableOpacity
+                    style={[styles.dropdownButton, isUltraNarrow && { paddingHorizontal: 8 }]}
+                    onPress={() => setActivePicker('city')}
+                  >
+                    <Text style={styles.dropdownLabel}>City: </Text>
+                    <Text style={styles.dropdownValue}>{selectedCity}</Text>
+                    <ChevronDown size={14} color="#64748B" style={{ marginLeft: 4 }} />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.dropdownButton, isUltraNarrow && { paddingHorizontal: 8 }]}
+                    onPress={() => setActivePicker('date')}
+                  >
+                    <Text style={styles.dropdownLabel}>Date: </Text>
+                    <Text style={styles.dropdownValue}>{selectedDateFilter}</Text>
+                    <ChevronDown size={14} color="#64748B" style={{ marginLeft: 4 }} />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.dropdownButton, isUltraNarrow && { paddingHorizontal: 8 }]}
+                    onPress={() => setActivePicker('pitch')}
+                  >
+                    <Text style={styles.dropdownLabel}>Type: </Text>
+                    <Text style={styles.dropdownValue}>{selectedPitch}</Text>
+                    <ChevronDown size={14} color="#64748B" style={{ marginLeft: 4 }} />
+                  </TouchableOpacity>
+                </ScrollView>
+              </View>
+            </Animated.View>
+          )}
+          {mainContent}
+        </WebLayout>
+      ) : isWeb && hideHeader ? (
+        mainContent
+      ) : hideHeader ? (
+        <View style={{ flex: 1 }}>
+          <View style={styles.nativeBody}>
+            {mainContent}
+          </View>
+        </View>
+      ) : (
+        <View style={styles.nativeScreen}>
+          <Animated.View style={headerAnimatedStyle}>
             <MobileAppNavbar
               title="Find an Opponent"
               titleColor="#0F172A"
@@ -537,8 +529,8 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
             </View>
             <View style={styles.nativeFiltersDrawer}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.nativeFilterScroll}>
-                <TouchableOpacity 
-                  style={[styles.dropdownButton, isUltraNarrow && { paddingHorizontal: 8 }]} 
+                <TouchableOpacity
+                  style={[styles.dropdownButton, isUltraNarrow && { paddingHorizontal: 8 }]}
                   onPress={() => setActivePicker('city')}
                 >
                   <Text style={styles.dropdownLabel}>City: </Text>
@@ -546,8 +538,8 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
                   <ChevronDown size={14} color="#64748B" style={{ marginLeft: 4 }} />
                 </TouchableOpacity>
 
-                <TouchableOpacity 
-                  style={[styles.dropdownButton, isUltraNarrow && { paddingHorizontal: 8 }]} 
+                <TouchableOpacity
+                  style={[styles.dropdownButton, isUltraNarrow && { paddingHorizontal: 8 }]}
                   onPress={() => setActivePicker('date')}
                 >
                   <Text style={styles.dropdownLabel}>Date: </Text>
@@ -555,8 +547,8 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
                   <ChevronDown size={14} color="#64748B" style={{ marginLeft: 4 }} />
                 </TouchableOpacity>
 
-                <TouchableOpacity 
-                  style={[styles.dropdownButton, isUltraNarrow && { paddingHorizontal: 8 }]} 
+                <TouchableOpacity
+                  style={[styles.dropdownButton, isUltraNarrow && { paddingHorizontal: 8, marginRight: 0 }]}
                   onPress={() => setActivePicker('pitch')}
                 >
                   <Text style={styles.dropdownLabel}>Type: </Text>
@@ -566,264 +558,43 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
               </ScrollView>
             </View>
           </Animated.View>
-        )}
-        <View style={containerStyle}>
-          {content}
-        </View>
-      </WebLayout>
-    );
-  }
 
-
-
-  if (hideHeader) {
-    return (
-      <View style={{ flex: 1 }}>
-        <View style={styles.nativeBody}>
-          {loading ? (
-            <MatchmakingSkeleton isWeb={false} IS_DARK={false} />
-          ) : (
-            <FlatListComponent
-              key={`native-flatlist-${numColumns}`}
-              numColumns={numColumns}
-              columnWrapperStyle={numColumns > 1 ? { gap: 16, paddingHorizontal: 16 } : undefined}
-              onScroll={isWeb ? onScrollWeb : (externalScrollHandler || verticalScrollHandler)}
-              scrollEventThrottle={16}
-              data={filteredMatches}
-              showsVerticalScrollIndicator={false}
-              ListHeaderComponent={
-                <View style={{ backgroundColor: '#FFFFFF' }}>
-                  <View style={styles.nativeSearchContainer}>
-                    <View style={styles.nativeSearchWrapper}>
-                      <Search size={18} color="#9CA3AF" />
-                      <TextInput
-                        placeholder="Search ground or city..."
-                        placeholderTextColor="#9CA3AF"
-                        value={searchQuery}
-                        onChangeText={setSearchQuery}
-                        style={styles.nativeSearchInput}
-                      />
-                    </View>
-                  </View>
-                  <View style={styles.nativeFiltersDrawer}>
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.nativeFilterScroll}>
-                      <TouchableOpacity 
-                        style={[styles.dropdownButton, isUltraNarrow && { paddingHorizontal: 8 }]} 
-                        onPress={() => setActivePicker('city')}
-                      >
-                        <Text style={styles.dropdownLabel}>City: </Text>
-                        <Text style={styles.dropdownValue}>{selectedCity}</Text>
-                        <ChevronDown size={14} color="#64748B" style={{ marginLeft: 4 }} />
-                      </TouchableOpacity>
-
-                      <TouchableOpacity 
-                        style={[styles.dropdownButton, isUltraNarrow && { paddingHorizontal: 8 }]} 
-                        onPress={() => setActivePicker('date')}
-                      >
-                        <Text style={styles.dropdownLabel}>Date: </Text>
-                        <Text style={styles.dropdownValue}>{selectedDateFilter}</Text>
-                        <ChevronDown size={14} color="#64748B" style={{ marginLeft: 4 }} />
-                      </TouchableOpacity>
-
-                      <TouchableOpacity 
-                        style={[styles.dropdownButton, isUltraNarrow && { paddingHorizontal: 8 }]} 
-                        onPress={() => setActivePicker('pitch')}
-                      >
-                        <Text style={styles.dropdownLabel}>Type: </Text>
-                        <Text style={styles.dropdownValue}>{selectedPitch}</Text>
-                        <ChevronDown size={14} color="#64748B" style={{ marginLeft: 4 }} />
-                      </TouchableOpacity>
-                    </ScrollView>
-                  </View>
-                </View>
-              }
-              renderItem={({ item }) => (
-                <View style={[styles.nativeItem, numColumns > 1 && { flex: 1, marginBottom: 16 }]}>
-                  <MatchCard
-                    match={item}
-                    onJoin={() => handleJoinMatch(item)}
-                    buttonTitle="Join Match"
-                    teamsCount="1/2 Teams"
-                    lightMode={true}
-                  />
-                </View>
-              )}
-              keyExtractor={item => item.id}
-              contentContainerStyle={[
-                styles.listNative, 
-                { paddingTop: 160 + insets.top, paddingBottom: isWeb ? 64 : 100 },
-                numColumns > 1 && { paddingHorizontal: 8 }
-              ]}
-              refreshControl={
-                <RefreshControl
-                  refreshing={loading}
-                  onRefresh={loadOpenSlots}
-                  tintColor="#01b854"
-                  colors={['#01b854']}
-                  progressViewOffset={105 + insets.top}
-                />
-              }
-              ListEmptyComponent={
-                <View style={styles.emptyContainer}>
-                  <Trophy size={64} color="#06392e" style={{ marginBottom: 16 }} />
-                  <Text style={styles.emptyTextNative}>No slots found</Text>
-                  <Text style={styles.emptySubtextNative}>Try again later or book yourself!</Text>
-                </View>
-              }
-            />
-          )}
-        </View>
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.nativeScreen}>
-
-      <Animated.View style={headerAnimatedStyle}>
-        <MobileAppNavbar
-          title="Find an Opponent"
-          titleColor="#0F172A"
-          lightBg
-        />
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={styles.tab}
-            onPress={() => router.push('/book-my-ground')}
+          <Modal
+            visible={activePicker !== null}
+            onClose={() => setActivePicker(null)}
+            title={`Select ${activePicker === 'city' ? 'City' : activePicker === 'date' ? 'Date' : 'Pitch Type'}`}
           >
-            <Text style={styles.tabText}>Book a Ground</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, styles.activeTab]}
-          >
-            <Text style={styles.activeTabText}>Find an Opposition</Text>
-          </TouchableOpacity>
+            <ScrollView style={{ maxHeight: 400 }}>
+              {(activePicker === 'city' ? cities : activePicker === 'date' ? ['All', 'Today', 'Tomorrow'] : pitches).map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={styles.pickerOption}
+                  onPress={() => {
+                    if (activePicker === 'city') setSelectedCity(option);
+                    else if (activePicker === 'date') setSelectedDateFilter(option);
+                    else setSelectedPitch(option);
+                    setActivePicker(null);
+                  }}
+                >
+                  <Text style={[
+                    styles.pickerOptionText,
+                    (activePicker === 'city' ? selectedCity : activePicker === 'date' ? selectedDateFilter : selectedPitch) === option && styles.pickerOptionTextActive
+                  ]}>
+                    {option}
+                  </Text>
+                  {(activePicker === 'city' ? selectedCity : activePicker === 'date' ? selectedDateFilter : selectedPitch) === option && (
+                    <Check size={18} color="#01b854" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </Modal>
+
+          <View style={styles.nativeBody}>
+            {mainContent}
+          </View>
         </View>
-        <View style={styles.nativeFiltersDrawer}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.nativeFilterScroll}>
-            <TouchableOpacity 
-              style={[styles.dropdownButton, isUltraNarrow && { paddingHorizontal: 8 }]} 
-              onPress={() => setActivePicker('city')}
-            >
-              <Text style={styles.dropdownLabel}>City: </Text>
-              <Text style={styles.dropdownValue}>{selectedCity}</Text>
-              <ChevronDown size={14} color="#64748B" style={{ marginLeft: 4 }} />
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.dropdownButton, isUltraNarrow && { paddingHorizontal: 8 }]} 
-              onPress={() => setActivePicker('date')}
-            >
-              <Text style={styles.dropdownLabel}>Date: </Text>
-              <Text style={styles.dropdownValue}>{selectedDateFilter}</Text>
-              <ChevronDown size={14} color="#64748B" style={{ marginLeft: 4 }} />
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.dropdownButton, isUltraNarrow && { paddingHorizontal: 8, marginRight: 0 }]} 
-              onPress={() => setActivePicker('pitch')}
-            >
-              <Text style={styles.dropdownLabel}>Type: </Text>
-              <Text style={styles.dropdownValue}>{selectedPitch}</Text>
-              <ChevronDown size={14} color="#64748B" style={{ marginLeft: 4 }} />
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-      </Animated.View>
-
-      <Modal
-        visible={activePicker !== null}
-        onClose={() => setActivePicker(null)}
-        title={`Select ${activePicker === 'city' ? 'City' : activePicker === 'date' ? 'Date' : 'Pitch Type'}`}
-      >
-        <ScrollView style={{ maxHeight: 400 }}>
-          {(activePicker === 'city' ? cities : activePicker === 'date' ? ['All', 'Today', 'Tomorrow'] : pitches).map((option) => (
-            <TouchableOpacity
-              key={option}
-              style={styles.pickerOption}
-              onPress={() => {
-                if (activePicker === 'city') setSelectedCity(option);
-                else if (activePicker === 'date') setSelectedDateFilter(option);
-                else setSelectedPitch(option);
-                setActivePicker(null);
-              }}
-            >
-              <Text style={[
-                styles.pickerOptionText,
-                (activePicker === 'city' ? selectedCity : activePicker === 'date' ? selectedDateFilter : selectedPitch) === option && styles.pickerOptionTextActive
-              ]}>
-                {option}
-              </Text>
-              {(activePicker === 'city' ? selectedCity : activePicker === 'date' ? selectedDateFilter : selectedPitch) === option && (
-                <Check size={18} color="#01b854" />
-              )}
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </Modal>
-
-      <View style={styles.nativeBody}>
-        <FlatListComponent
-          key={`native-flatlist-main-${numColumns}`}
-          numColumns={numColumns}
-          columnWrapperStyle={numColumns > 1 ? { gap: 16, paddingHorizontal: 16 } : undefined}
-          onScroll={isWeb ? onScrollWeb : verticalScrollHandler}
-          scrollEventThrottle={16}
-          showsVerticalScrollIndicator={false}
-          data={filteredMatches}
-          ListHeaderComponent={
-            <View style={styles.nativeSearchContainer}>
-              <View style={styles.nativeSearchWrapper}>
-                <Search size={18} color="#9CA3AF" />
-                <TextInput
-                  placeholder="Search ground or city..."
-                  placeholderTextColor="#9CA3AF"
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  style={styles.nativeSearchInput}
-                />
-              </View>
-            </View>
-          }
-          renderItem={({ item }) => (
-            <View style={[styles.nativeItem, numColumns > 1 && { flex: 1, marginBottom: 16 }]}>
-              <MatchCard
-                match={item}
-                onJoin={() => handleJoinMatch(item)}
-                buttonTitle="Join Match"
-                teamsCount="1/2 Teams"
-                lightMode={true}
-              />
-            </View>
-          )}
-          keyExtractor={item => item.id}
-          contentContainerStyle={[
-            styles.listNative, 
-            { paddingTop: 160 + insets.top, paddingBottom: isWeb ? 64 : 100 },
-            numColumns > 1 && { paddingHorizontal: 8 }
-          ]}
-          refreshControl={
-            <RefreshControl
-              refreshing={loading}
-              onRefresh={loadOpenSlots}
-              tintColor="#01b854"
-              colors={['#01b854']}
-              progressViewOffset={105 + insets.top}
-            />
-          }
-          ListEmptyComponent={
-            loading ? (
-              <MatchmakingSkeleton isWeb={false} IS_DARK={false} />
-            ) : (
-              <View style={styles.emptyContainer}>
-                <Trophy size={64} color="#06392e" style={{ marginBottom: 16 }} />
-                <Text style={styles.emptyTextNative}>No slots found</Text>
-                <Text style={styles.emptySubtextNative}>Try again later or book yourself!</Text>
-              </View>
-            )
-          }
-        />
-      </View>
+      )}
     </View>
   );
 }
@@ -1062,24 +833,28 @@ const styles = StyleSheet.create({
   },
   filterTag: {
     paddingHorizontal: 16,
-    paddingVertical: 5,
-    borderRadius: 999,
-    backgroundColor: '#F3F4F6',
+    paddingVertical: 6,
+    borderRadius: 100,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#F1F5F9',
   },
   filterTagActive: {
     backgroundColor: 'rgba(1, 184, 84, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(1, 184, 84, 0.3)',
+    borderColor: 'rgba(1, 184, 84, 0.4)',
+    borderWidth: 1.5,
+    ...Platform.select({
+      web: { backdropFilter: 'blur(8px)' }
+    }) as any,
   },
   filterTagText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#4B5563',
-    paddingVertical: 2,
+    fontWeight: '700',
+    color: '#64748B',
+    fontFamily: 'Inter',
   },
   filterTagTextActive: {
     color: '#01b854',
-    fontWeight: '700',
   },
   header: {
     paddingHorizontal: 20,
@@ -1257,22 +1032,24 @@ const styles = StyleSheet.create({
   summaryFilterTag: {
     paddingHorizontal: 12,
     paddingVertical: 5,
-    borderRadius: 12,
-    backgroundColor: '#F3F4F6',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderRadius: 100,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#F1F5F9',
   },
   summaryFilterTagActive: {
-    backgroundColor: '#01b854',
-    borderColor: '#01b854',
+    backgroundColor: 'rgba(1, 184, 84, 0.12)',
+    borderColor: 'rgba(1, 184, 84, 0.4)',
+    borderWidth: 1.5,
   },
   summaryFilterTagText: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#6B7280',
+    fontWeight: '700',
+    color: '#64748B',
+    fontFamily: 'Inter',
   },
   summaryFilterTagTextActive: {
-    color: '#FFFFFF',
+    color: '#01b854',
   },
   summaryFilterLabel: {
     fontSize: 10,

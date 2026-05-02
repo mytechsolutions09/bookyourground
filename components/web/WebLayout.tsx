@@ -437,9 +437,8 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     };
   }, [isLanding, isMarketing, isShop]);
 
-  if (Platform.OS !== 'web') {
-    return <>{children}</>;
-  }
+  // We don't early return here to avoid hook sequence mismatch.
+  // Instead, we check the condition inside the return statement.
 
   // Navbar search: fetch ground suggestions as user types on landing pages.
 
@@ -517,6 +516,10 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     isLanding ||
     isMarketing ||
     (isGroundDetails && !isOwnerGroundsDashboard);
+
+  if (Platform.OS !== 'web') {
+    return <>{children}</>;
+  }
 
   return (
     <View

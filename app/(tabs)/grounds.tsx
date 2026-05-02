@@ -29,7 +29,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
 
-const { width } = Dimensions.get('window');
+
 
 export default function GroundsTabScreen() {
   const { width } = useWindowDimensions();
@@ -59,6 +59,11 @@ export default function GroundsTabScreen() {
       router.replace('/favorites' as any);
     }
   }, [tab]);
+
+  const activeTabIndex = useMemo(() => {
+    const found = TABS_LIST.find(t => t.id === activeTab);
+    return found ? found.index : 0;
+  }, [activeTab]);
 
   const onTabPress = (tabId: 'book' | 'opponent' | 'favorite', idx: number) => {
     setActiveTab(tabId);
@@ -188,16 +193,25 @@ export default function GroundsTabScreen() {
     </View>
   );
 
-  const renderTabs = (tabContainerStyle: any) => (
-    <View style={[styles.tabContainerBase, tabContainerStyle]}>
-      {TABS_LIST.map((tab) => (
+  const renderTabs = () => (
+    <View style={[
+      styles.tabContainerBase, 
+      isWeb ? styles.webTabContainer : styles.nativeTabContainer,
+      { width: width < 350 ? '98%' : '90%' }
+    ]}>
+      {TABS_LIST.map((t) => (
         <TouchableOpacity
-          key={tab.id}
-          style={[styles.tab, activeTab === tab.id && styles.activeTab]}
-          onPress={() => onTabPress(tab.id as any, tab.index)}
-          activeOpacity={0.7}
+          key={t.id}
+          style={[styles.tab, activeTab === t.id && styles.activeTab]}
+          onPress={() => handleTabPress(t.id as any)}
         >
-          <Text style={[styles.tabText, activeTab === tab.id && styles.activeTabText]}>{tab.label}</Text>
+          <Text style={[
+            styles.tabText, 
+            activeTab === t.id && styles.activeTabText,
+            { fontSize: width < 350 ? 10 : 12 }
+          ]}>
+            {t.label}
+          </Text>
         </TouchableOpacity>
       ))}
     </View>
@@ -205,8 +219,8 @@ export default function GroundsTabScreen() {
 
   const renderHeader = () => (
     <View style={styles.customHeader}>
-      {Platform.OS !== 'web' && <Text style={styles.headerTitle}>BOOK A GROUND</Text>}
-      {renderTabs(styles.nativeTabContainer)}
+      {!isWeb && <Text style={styles.headerTitle}>BOOK A GROUND</Text>}
+      {renderTabs()}
     </View>
   );
 
@@ -223,7 +237,7 @@ export default function GroundsTabScreen() {
             }}
             scrollEventThrottle={16}
           >
-            {renderTabs(styles.webTabContainer)}
+            {renderTabs()}
 
             <View style={styles.page}>
               {activeTab === 'book' ? (
@@ -248,10 +262,11 @@ export default function GroundsTabScreen() {
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
-            contentOffset={{ x: TABS_LIST.find(t => t.id === activeTab)?.index! * width, y: 0 }}
+            contentOffset={{ x: activeTabIndex * width, y: 0 }}
             onScroll={horizontalScrollHandler}
             scrollEventThrottle={16}
             style={{ flex: 1 }}
+            scrollEnabled={activeTab !== 'favorite'}
           >
             {/* Slide 1: Book a Ground */}
             <View style={{ width }}>
@@ -311,7 +326,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderRadius: 20,
     padding: 4,
-    width: width < 350 ? '98%' : '90%',
     alignSelf: 'center',
     borderWidth: 1,
     borderColor: '#F1F5F9',
@@ -352,13 +366,11 @@ const styles = StyleSheet.create({
   },
   tabText: {
     color: '#64748B',
-    fontSize: width < 350 ? 10 : 12,
     fontWeight: '600',
     fontFamily: 'Inter',
   },
   activeTabText: {
     color: '#01b854',
-    fontSize: width < 350 ? 10 : 12,
     fontWeight: '700',
     fontFamily: 'Inter',
   },
