@@ -540,15 +540,11 @@ export default function ProfileScreen() {
     </View>
   );
 
-  if (Platform.OS === 'web' && !isCompact) {
-    return (
-      <WebLayout noCard>
-        <ScrollView style={[styles.container, { backgroundColor: 'transparent' }]}>{profileBody}</ScrollView>
-      </WebLayout>
-    );
-  }
-
-  return (
+  return (Platform.OS === 'web' && !isCompact) ? (
+    <WebLayout noCard>
+      <ScrollView style={[styles.container, { backgroundColor: 'transparent' }]}>{profileBody}</ScrollView>
+    </WebLayout>
+  ) : (
     <View style={styles.nativeScreen}>
       <MobileAppNavbar 
         title="PROFILE" 

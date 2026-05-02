@@ -206,15 +206,11 @@ export default function NotificationsScreen() {
   const { width } = useWindowDimensions();
   const isCompact = width < 900;
 
-  if (IS_WEB && !isCompact) {
-    return (
-      <WebLayout noCard>
-        <NotificationsInner />
-      </WebLayout>
-    );
-  }
-
-  return (
+  return (IS_WEB && !isCompact) ? (
+    <WebLayout noCard>
+      <NotificationsInner />
+    </WebLayout>
+  ) : (
     <View style={styles.nativeRoot}>
       <MobileAppNavbar title="Notifications" titleColor="#0F172A" lightBg />
       <NotificationsInner />

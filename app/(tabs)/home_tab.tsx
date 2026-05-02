@@ -282,22 +282,13 @@ export default function HomeScreen() {
     router.replace('/');
   }, [isFocused, pathname]);
 
-  if (Platform.OS === 'web') {
-    // On web, the landing page is / (app/index.tsx). 
-    // If the user somehow ends up here, we should redirect them to the home page.
-    return (
-      <View style={{ flex: 1, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#00ea6b" />
-      </View>
-    );
-  }
-
-  // ── Mobile Homepage ──────────────────────────────────────────────────────
-
-
   const primaryCta = user ? '/(tabs)/bookings' : '/(auth)/signup';
 
-  return (
+  return Platform.OS === 'web' ? (
+    <View style={{ flex: 1, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center' }}>
+      <ActivityIndicator size="large" color="#00ea6b" />
+    </View>
+  ) : (
     <View style={styles.screen}>
       <Animated.ScrollView
         onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}

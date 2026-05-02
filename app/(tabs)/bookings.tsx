@@ -860,60 +860,55 @@ export default function BookingsScreen() {
 
   const isCompact = width < 900;
 
-  if (Platform.OS === 'web' && !isCompact) {
-    return (
-      <WebLayout>
-        {content}
-        <Modal
-          visible={cancelModalVisible}
-          onClose={() => !cancelling && setCancelModalVisible(false)}
-          title={cancelSuccess ? "Success" : "Cancel Booking"}
-          maxWidth={400}
-        >
-          <View style={styles.modalBody}>
-            {cancelSuccess ? (
-              <>
-                <Text style={styles.modalText}>
-                  Your booking has been cancelled successfully.
-                </Text>
+  return (Platform.OS === 'web' && !isCompact) ? (
+    <WebLayout>
+      {content}
+      <Modal
+        visible={cancelModalVisible}
+        onClose={() => !cancelling && setCancelModalVisible(false)}
+        title={cancelSuccess ? "Success" : "Cancel Booking"}
+        maxWidth={400}
+      >
+        <View style={styles.modalBody}>
+          {cancelSuccess ? (
+            <>
+              <Text style={styles.modalText}>
+                Your booking has been cancelled successfully.
+              </Text>
+              <Button
+                title="CLOSE"
+                onPress={() => setCancelModalVisible(false)}
+                variant="primary"
+                style={styles.modalButton}
+              />
+            </>
+          ) : (
+            <>
+              <Text style={styles.modalText}>
+                Are you sure you want to cancel this booking? This action cannot be undone.
+              </Text>
+              <View style={styles.modalActions}>
                 <Button
-                  title="CLOSE"
+                  title="NO, KEEP IT"
                   onPress={() => setCancelModalVisible(false)}
-                  variant="primary"
+                  variant="outline"
+                  disabled={cancelling}
                   style={styles.modalButton}
                 />
-              </>
-            ) : (
-              <>
-                <Text style={styles.modalText}>
-                  Are you sure you want to cancel this booking? This action cannot be undone.
-                </Text>
-                <View style={styles.modalActions}>
-                  <Button
-                    title="NO, KEEP IT"
-                    onPress={() => setCancelModalVisible(false)}
-                    variant="outline"
-                    disabled={cancelling}
-                    style={styles.modalButton}
-                  />
-                  <Button
-                    title={cancelling ? "CANCELLING..." : "YES, CANCEL"}
-                    onPress={confirmCancel}
-                    variant="primary"
-                    disabled={cancelling}
-                    style={[styles.modalButton, styles.cancelConfirmBtn]}
-                  />
-                </View>
-              </>
-            )}
-          </View>
-        </Modal>
-
-      </WebLayout>
-    );
-  }
-
-  return (
+                <Button
+                  title={cancelling ? "CANCELLING..." : "YES, CANCEL"}
+                  onPress={confirmCancel}
+                  variant="primary"
+                  disabled={cancelling}
+                  style={[styles.modalButton, styles.cancelConfirmBtn]}
+                />
+              </View>
+            </>
+          )}
+        </View>
+      </Modal>
+    </WebLayout>
+  ) : (
     <View style={styles.nativeScreen}>
       <MobileAppNavbar title="My Bookings" titleColor="#111827" lightBg />
       <View style={styles.nativeBody}>

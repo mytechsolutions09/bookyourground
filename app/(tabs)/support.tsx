@@ -265,15 +265,11 @@ export default function SupportScreen() {
     </ScrollView>
   );
 
-  if (Platform.OS === 'web') {
-    return (
-      <WebLayout>
-        {mainContent}
-      </WebLayout>
-    );
-  }
-
-  return (
+  return Platform.OS === 'web' ? (
+    <WebLayout>
+      {mainContent}
+    </WebLayout>
+  ) : (
     <View style={styles.nativeScreen}>
       <MobileAppNavbar title="Contact Us" titleColor="#0F172A" />
       <View style={styles.nativeBody}>{mainContent}</View>
