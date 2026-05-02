@@ -1,14 +1,18 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[context.dev]
+  command = "npm run dev"
+  publish = "dist"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
 
 [[headers]]
-for = "/overlay/*"
-[headers.values]
-X-Frame-Options = "ALLOWALL"
-Content-Security-Policy = "frame-ancestors *"
-
-[context.dev]
-  command = "npm run build"
-  publish = "dist"
+  for = "/overlay/*"
+  [headers.values]
+    X-Frame-Options = "ALLOWALL"
+    Content-Security-Policy = "frame-ancestors *"
