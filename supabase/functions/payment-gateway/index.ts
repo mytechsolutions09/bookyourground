@@ -988,16 +988,10 @@ serve(async (req) => {
     }
 
     if (action === 'refund-to-wallet') {
-      const { bookingId } = body;
-      if (!bookingId) throw new Error('Booking ID required for refund.');
+      const { bookingId, cancellationReason } = body;
+      if (!bookingId) throw new Error('Booking ID required for cancellation.');
 
-      // 1. Verify User Role (Admin or Owner)
-      const { data: adminProfile } = await supabaseClient.from('profiles').select('role').eq('id', user.id).single();
-      if (adminProfile?.role !== 'super_admin' && adminProfile?.role !== 'ground_owner') {
-        throw new Error('Unauthorized: Only admins or owners can process refunds.');
-      }
-
-      // 2. Fetch Booking
+      // 1. Fetch Booking and User Role
       const { data: booking, error: bError } = await supabaseClient
         .from('bookings')
         .select('*, ground:grounds(name, owner_id)')
@@ -1005,46 +999,47 @@ serve(async (req) => {
         .single();
 
       if (bError || !booking) throw new Error('Booking not found.');
-      if (booking.status === 'cancelled') throw new Error('Booking is already cancelled.');
+      if (booking.status === 'cancelled') return new Response(JSON.stringify({ success: true, message: 'Booking already cancelled.' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
-      // 3. Process Refund to Wallet
-      const refundAmount = Number(booking.total_amount);
+      const { data: userProfile } = await supabaseClient.from('profiles').select('role').eq('id', user.id).single();
+      const isOwner = booking.ground?.owner_id === user.id;
+      const isAdmin = userProfile?.role === 'super_admin';
+      const isPlayer = booking.user_id === user.id;
 
-      const { data: refundRes, error: refundErr } = await supabaseClient.rpc('process_wallet_transaction', {
-        p_user_id: booking.user_id, // Refund to the customer
-        p_amount: refundAmount,
-        p_type: 'refund',
-        p_description: `Refund for cancelled booking at ${booking.ground?.name}`,
-        p_booking_id: bookingId
-      });
-
-      if (refundErr || !refundRes?.success) {
-        throw new Error(refundRes?.error || refundErr?.message || 'Refund processing failed.');
+      if (!isOwner && !isAdmin && !isPlayer) {
+        throw new Error('Unauthorized: You cannot cancel this booking.');
       }
 
-      // 4. Update Booking Status
+      // 2. Policy Enforcement for Players
+      if (isPlayer && !isAdmin && !isOwner) {
+        const bDate = new Date(booking.booking_date);
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const bDay = new Date(bDate.getFullYear(), bDate.getMonth(), bDate.getDate());
+        const diffDays = Math.ceil((bDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (diffDays < 7) {
+          throw new Error('Bookings can only be cancelled at least 7 days before the slot. Please contact support for urgent requests.');
+        }
+      }
+
+      // 3. Update Booking Status
+      // The database trigger 'on_booking_cancelled' will handle:
+      // - User Wallet Refund
+      // - Owner Revenue Reversal
+      // - Email Notifications
       const { error: updateError } = await supabaseClient
         .from('bookings')
         .update({ 
           status: 'cancelled', 
-          notes: (booking.notes || '') + ` (Refunded ${refundAmount} to wallet by ${adminProfile.role})` 
+          cancellation_reason: cancellationReason || `Cancelled by ${userProfile?.role || 'user'}`,
+          cancelled_at: new Date().toISOString()
         })
         .eq('id', bookingId);
 
       if (updateError) throw updateError;
 
-      // 5. Reverse Owner Settlement if applicable
-      if (booking.payment_received && booking.ground?.owner_id && booking.payment_method !== 'cash') {
-         await supabaseClient.rpc('process_wallet_transaction', {
-            p_user_id: booking.ground.owner_id,
-            p_amount: -Number(booking.owner_settlement || booking.total_amount),
-            p_type: 'used',
-            p_description: `Revenue reversal for cancelled booking ${bookingId}`,
-            p_booking_id: bookingId
-         });
-      }
-
-      return new Response(JSON.stringify({ success: true, message: 'Refund processed to wallet.' }), {
+      return new Response(JSON.stringify({ success: true, message: 'Booking cancelled. Refund processed to wallet if applicable.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }

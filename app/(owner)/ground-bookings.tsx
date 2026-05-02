@@ -265,36 +265,51 @@ export default function OwnerBookingsScreen() {
   };
 
   const handleCancelBooking = async (booking: BookingWithDetails) => {
+    const isOwnGround = booking.ground.owner_id === user?.id;
     const bDate = new Date(booking.booking_date);
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const bDay = new Date(bDate.getFullYear(), bDate.getMonth(), bDate.getDate());
     const diffDays = Math.ceil((bDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    const isOwnGround = booking.ground.owner_id === user?.id;
 
-    if (diffDays < 7 && !isOwnGround) {
-      const msg = 'Bookings can only be cancelled at least 7 days before the slot time. For urgent queries, please contact support.';
+    if (diffDays < 7 && !isOwnGround && profile?.role !== 'super_admin') {
+      const msg = 'Bookings can only be cancelled at least 7 days before the slot time.';
       if (Platform.OS === 'web') alert(msg);
       else Alert.alert('Cancellation Policy', msg);
       return;
     }
 
-    if (Platform.OS === 'web') {
-      const confirmed = window.confirm('Are you sure you want to cancel this booking?');
-      if (confirmed) {
-        try {
-          const { error } = await supabase
-            .from('bookings')
-            .update({ status: 'cancelled' })
-            .eq('id', booking.id);
-          if (error) throw error;
-          setBookings(prev => 
-            prev.map(b => b.id === booking.id ? { ...b, status: 'cancelled' } : b)
-          );
-          alert('Booking cancelled.');
-        } catch (err: any) {
-          alert(err.message || 'Failed to cancel');
+    const processCancel = async (reason: string) => {
+      try {
+        setLoading(true);
+        const { data, error } = await supabase.functions.invoke('payment-gateway', {
+          body: {
+            action: 'refund-to-wallet',
+            bookingId: booking.id,
+            cancellationReason: reason
+          }
+        });
+
+        if (error) throw error;
+        if (data && data.success) {
+          setBookings(prev => prev.map(b => b.id === booking.id ? { ...b, status: 'cancelled' } : b));
+          if (Platform.OS === 'web') alert('Booking cancelled and refund processed.');
+          else Alert.alert('Success', 'Booking cancelled and refund processed.');
+        } else {
+          throw new Error(data?.error || 'Failed to cancel');
         }
+      } catch (err: any) {
+        if (Platform.OS === 'web') alert(err.message || 'Failed to cancel');
+        else Alert.alert('Error', err.message || 'Failed to cancel');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      const reason = window.prompt('Are you sure you want to cancel? Please enter a reason:', 'Owner requested cancellation');
+      if (reason !== null) {
+        await processCancel(reason);
       }
       return;
     }
@@ -307,23 +322,11 @@ export default function OwnerBookingsScreen() {
         {
           text: 'Yes, Cancel',
           style: 'destructive',
-          onPress: async () => {
-            try {
-              const { error } = await supabase
-                .from('bookings')
-                .update({ status: 'cancelled' })
-                .eq('id', booking.id);
-
-              if (error) throw error;
-              
-              // Update local state
-              setBookings(prev => 
-                prev.map(b => b.id === booking.id ? { ...b, status: 'cancelled' } : b)
-              );
-              Alert.alert('Success', 'Booking cancelled.');
-            } catch (err: any) {
-              Alert.alert('Error', err.message || 'Failed to cancel');
-            }
+          onPress: () => {
+            // On Native, we can't easily do a prompt with multiple buttons in a single call for Android
+            // So we just use a default reason or we could add another step.
+            // For now, let's just proceed with a default reason for Native simplicity.
+            processCancel('Cancelled by owner via App');
           },
         },
       ]
