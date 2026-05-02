@@ -52,9 +52,12 @@ export default function CheckoutScreen() {
   const [platformSettings, setPlatformSettings] = useState<any>(null);
   const [walletBalance, setWalletBalance] = useState(0);
   
+  const isGroundOwnerOrAdmin = profile?.role === 'super_admin' || 
+    (profile?.role === 'ground_owner' && (booking?.grounds?.owner_id === user?.id || booking?.ground_id === user?.id));
+  
   // Pricing Calculations
   const { baseGroundPrice, platformFeeIncGst, totalPayable, totalReceivable } = React.useMemo(() => {
-    const bgp = (selectedGateway === 'cash' && customCashAmount && !isNaN(parseFloat(customCashAmount)))
+    const bgp = ((selectedGateway === 'cash' || (selectedGateway === 'wallet' && isGroundOwnerOrAdmin)) && customCashAmount && !isNaN(parseFloat(customCashAmount)))
       ? parseFloat(customCashAmount)
       : (booking?.total_amount || 0);
     
@@ -72,9 +75,9 @@ export default function CheckoutScreen() {
     const userGst = userPf * gstRate;
     const userTotalPfGst = userPf + userGst;
 
-    // 2. Calculate Owner's Platform Fee (Fixed for Cricket/Cash, Percentage otherwise)
+    // 2. Calculate Owner's Platform Fee (Fixed for Cricket/Cash/Owner, Percentage otherwise)
     let ownerPf = 0;
-    if (isCricket || isCash) {
+    if (isCricket || isCash || isGroundOwnerOrAdmin) {
       const teamCount = booking?.team_type === 'one' ? 1 : 2;
       ownerPf = fixedFee * teamCount;
     } else {
@@ -88,11 +91,11 @@ export default function CheckoutScreen() {
     
     return {
       baseGroundPrice: bgp,
-      platformFeeIncGst: isCash ? ownerTotalPfGst : userTotalPfGst,
+      platformFeeIncGst: (isCash || isGroundOwnerOrAdmin) ? ownerTotalPfGst : userTotalPfGst,
       totalPayable: tp,
       totalReceivable: tr
     };
-  }, [selectedGateway, customCashAmount, booking?.total_amount, booking?.team_type, booking?.grounds?.pitch_type, platformSettings]);
+  }, [selectedGateway, customCashAmount, booking?.total_amount, booking?.team_type, booking?.grounds?.pitch_type, platformSettings, isGroundOwnerOrAdmin]);
 
   const [showRazorpayWebView, setShowRazorpayWebView] = useState(false);
   const [razorpayOrderData, setRazorpayOrderData] = useState<any>(null);
@@ -757,9 +760,11 @@ export default function CheckoutScreen() {
             price_per_hour: booking.price_per_hour,
             total_amount: totalPayable,
             discount_amount: booking.discount_amount || 0,
+            booked_for_name: bookedForName,
             payment_method: 'wallet',
           } : {
             total_amount: totalPayable,
+            booked_for_name: bookedForName,
             payment_method: 'wallet'
           },
         },
@@ -816,9 +821,8 @@ export default function CheckoutScreen() {
     );
   }
 
-  const isGroundOwnerOrAdmin = profile?.role === 'super_admin' || 
-    (profile?.role === 'ground_owner' && (booking?.grounds?.owner_id === user?.id || booking?.ground_id === user?.id));
-
+  // (Moved up to support pricing logic)
+  
   const dynamicStyles = {
     content: {
       padding: Platform.OS === 'web' ? (width > 768 ? 16 : 8) : 8,
@@ -1006,10 +1010,10 @@ export default function CheckoutScreen() {
 
             <View style={styles.subtotalRow}>
               <RNText style={styles.subtotalLabel}>
-                {selectedGateway === 'cash' ? 'Total Receivable :' : 'Total Payable :'}
+                {(selectedGateway === 'cash' || isGroundOwnerOrAdmin) ? 'Total Receivable :' : 'Total Payable :'}
               </RNText>
               <RNText style={styles.subtotalValue}>
-                {formatCurrency(selectedGateway === 'cash' ? totalReceivable : totalPayable)}
+                {formatCurrency((selectedGateway === 'cash' || isGroundOwnerOrAdmin) ? totalReceivable : totalPayable)}
               </RNText>
             </View>
 
@@ -1066,7 +1070,7 @@ export default function CheckoutScreen() {
               </View>
             )}
 
-            {selectedGateway === 'wallet' ? (
+            {(selectedGateway === 'wallet' && !isGroundOwnerOrAdmin) ? (
               <Button
                 title={processing ? 'Processing...' : `Pay via Wallet`}
                 onPress={handleWalletPayment}
@@ -1077,7 +1081,7 @@ export default function CheckoutScreen() {
                 variant="secondary"
                 style={[styles.payButton, { backgroundColor: '#00ea6b' }]}
               />
-            ) : (selectedGateway === 'razorpay' || selectedGateway === 'payu' || !isGroundOwnerOrAdmin) ? (
+            ) : (selectedGateway === 'razorpay' || selectedGateway === 'payu') ? (
               <Button
                 title={processing ? 'Processing...' : `Check Out`}
                 onPress={handlePayment}
@@ -1088,7 +1092,7 @@ export default function CheckoutScreen() {
                 variant="secondary"
                 style={styles.payButton}
               />
-            ) : selectedGateway === 'cash' ? (
+            ) : (selectedGateway === 'cash' || (selectedGateway === 'wallet' && isGroundOwnerOrAdmin)) ? (
               <View style={{ gap: 12, marginBottom: 12 }}>
               <View style={styles.cashFieldsContainer}>
                 <View style={styles.cashFieldsRow}>
@@ -1117,10 +1121,10 @@ export default function CheckoutScreen() {
                 </View>
               </View>
                 <Button
-                  title={processingCash ? 'Confirming...' : 'Confirm Order'}
-                  onPress={handleCashPayment}
-                  disabled={processingCash || !customCashAmount || isNaN(parseFloat(customCashAmount)) || parseFloat(customCashAmount) <= 0}
-                  loading={processingCash}
+                  title={selectedGateway === 'wallet' ? (processing ? 'Processing...' : 'Confirm via Wallet') : (processingCash ? 'Confirming...' : 'Confirm Order')}
+                  onPress={selectedGateway === 'wallet' ? handleWalletPayment : handleCashPayment}
+                  disabled={selectedGateway === 'wallet' ? (processing || walletBalance < totalPayable) : (processingCash || !customCashAmount || isNaN(parseFloat(customCashAmount)) || parseFloat(customCashAmount) <= 0)}
+                  loading={selectedGateway === 'wallet' ? processing : processingCash}
                   fullWidth
                   size="large"
                   variant="secondary"

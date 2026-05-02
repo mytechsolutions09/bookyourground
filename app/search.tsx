@@ -16,7 +16,8 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '../components/MobileAppNavbar';
-import { Search, MapPin, Building2, Swords, Trophy, Star, ArrowRight, ChevronDown, Calendar } from 'lucide-react-native';
+import { Search, MapPin, Building2, Swords, Trophy, Star, ArrowRight, ChevronDown, Calendar, Clock } from 'lucide-react-native';
+import GroundCard from '@/components/grounds/GroundCard';
 import { makeGroundPath } from '@/utils/groundSlug';
 import { formatCurrency } from '@/utils/helpers';
 import Button from '@/components/ui/Button';
@@ -50,6 +51,7 @@ export default function SearchScreen() {
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showTypeModal, setShowTypeModal] = useState(false);
   const [showTimeModal, setShowTimeModal] = useState(false);
+  const [availableTimes, setAvailableTimes] = useState<string[]>([]);
 
   useEffect(() => {
     const loadFilters = async () => {
@@ -65,7 +67,59 @@ export default function SearchScreen() {
 
   useEffect(() => {
     performSearch(query, locationKey, typeKey, dateKey, timeKey);
-  }, [params.q, locationKey, typeKey, dateKey, timeKey]);
+  }, [query, locationKey, typeKey, dateKey, timeKey]);
+
+  useEffect(() => {
+    const fetchAvailableTimes = async () => {
+      try {
+        let query = supabase
+          .from('time_slots')
+          .select('start_time, grounds!inner(city, state, pitch_type)')
+          .eq('is_available', true);
+
+        if (locationKey) {
+          const [city, state] = locationKey.split('__');
+          query = query.eq('grounds.city', city).eq('grounds.state', state);
+        }
+
+        if (typeKey) {
+          query = query.eq('grounds.pitch_type', typeKey);
+        }
+
+        if (dateKey && dateKey !== 'All') {
+          const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+          let dow = '';
+          if (dateKey === 'Today') {
+            dow = days[new Date().getDay()];
+          } else if (dateKey === 'Tomorrow') {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            dow = days[tomorrow.getDay()];
+          } else {
+            dow = days[new Date(dateKey).getDay()];
+          }
+          query = query.eq('day_of_week', dow);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        if (data) {
+          const uniqueTimes = Array.from(new Set(data.map(item => item.start_time.slice(0, 5)))).sort();
+          setAvailableTimes(uniqueTimes);
+          
+          // If current timeKey is not in available times, reset it (but keep "All" option logic)
+          if (timeKey && !uniqueTimes.includes(timeKey)) {
+            // setTimeKey(''); // Optional: auto-reset if slot vanishes
+          }
+        }
+      } catch (e) {
+        console.error('Error fetching available times:', e);
+      }
+    };
+
+    fetchAvailableTimes();
+  }, [locationKey, typeKey, dateKey]);
 
   const performSearch = async (s: string, locKey?: string, typKey?: string, date?: string, time?: string) => {
     setLoading(true);
@@ -75,7 +129,7 @@ export default function SearchScreen() {
       // 1. Search Grounds
       let gQuery = supabase
         .from('grounds')
-        .select('*, ground_images(*), reviews(rating), time_slots(custom_price, is_available, day_of_week, start_time)')
+        .select(`*, ground_images(*), reviews(rating), time_slots${(date !== 'All' || time) ? '!inner' : ''}(custom_price, is_available, day_of_week, start_time)`)
         .eq('active', true)
         .eq('approved', true);
 
@@ -90,6 +144,21 @@ export default function SearchScreen() {
 
       if (typKey) {
         gQuery = gQuery.eq('pitch_type', typKey);
+      }
+
+      if (date && date !== 'All') {
+        const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        let dow = '';
+        if (date === 'Today') {
+          dow = days[new Date().getDay()];
+        } else if (date === 'Tomorrow') {
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          dow = days[tomorrow.getDay()];
+        } else {
+          dow = days[new Date(date).getDay()];
+        }
+        gQuery = gQuery.eq('time_slots.day_of_week', dow).eq('time_slots.is_available', true);
       }
 
       let { data: gs } = await gQuery.limit(30);
@@ -173,7 +242,7 @@ export default function SearchScreen() {
             .from('time_slots')
             .select('custom_price')
             .eq('ground_id', m.ground_id)
-            .eq('day_of_week', ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dow])
+            .eq('day_of_week', ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][dow])
             .eq('start_time', m.start_time)
             .maybeSingle();
 
@@ -382,7 +451,6 @@ export default function SearchScreen() {
                 ))}
               </View>
 
-              {activeTab === 'matches' && (
                 <View style={styles.sidebarSection}>
                   <Text style={styles.sidebarSectionTitle}>Game Date</Text>
                   <View style={styles.pillRow}>
@@ -397,7 +465,6 @@ export default function SearchScreen() {
                     ))}
                   </View>
                 </View>
-              )}
 
               <View style={styles.sidebarSection}>
                 <Text style={styles.sidebarSectionTitle}>Location</Text>
@@ -441,11 +508,15 @@ export default function SearchScreen() {
                       <Pressable style={styles.dropdownOption} onPress={() => { setTimeKey(''); setShowTimeModal(false); }}>
                         <Text style={styles.dropdownOptionText}>All Times</Text>
                       </Pressable>
-                      {['06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00'].map(t => (
+                      {availableTimes.length > 0 ? availableTimes.map(t => (
                         <Pressable key={t} style={styles.dropdownOption} onPress={() => { setTimeKey(t); setShowTimeModal(false); }}>
                           <Text style={styles.dropdownOptionText}>{t}</Text>
                         </Pressable>
-                      ))}
+                      )) : (
+                        <View style={{ padding: 10 }}>
+                          <Text style={{ fontSize: 12, color: '#9CA3AF' }}>No available slots for selected filters</Text>
+                        </View>
+                      )}
                     </ScrollView>
                   </View>
                 )}
@@ -498,17 +569,15 @@ export default function SearchScreen() {
                   </Text>
                 </Pressable>
 
-                {activeTab === 'matches' && (
-                  <Pressable style={styles.mobileFilterPill} onPress={() => {
-                    const nextDate = dateKey === 'All' ? 'Today' : dateKey === 'Today' ? 'Tomorrow' : 'All';
-                    setDateKey(nextDate);
-                  }}>
-                    <Calendar size={12} color={dateKey !== 'All' ? '#01b854' : '#6B7280'} />
-                    <Text style={[styles.mobileFilterPillText, dateKey !== 'All' && styles.mobileFilterPillTextActive]}>
-                      {dateKey === 'All' || dateKey === 'Today' || dateKey === 'Tomorrow' ? dateKey : new Date(dateKey).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                    </Text>
-                  </Pressable>
-                )}
+                <Pressable style={styles.mobileFilterPill} onPress={() => {
+                  const nextDate = dateKey === 'All' ? 'Today' : dateKey === 'Today' ? 'Tomorrow' : 'All';
+                  setDateKey(nextDate);
+                }}>
+                  <Calendar size={12} color={dateKey !== 'All' ? '#01b854' : '#6B7280'} />
+                  <Text style={[styles.mobileFilterPillText, dateKey !== 'All' && styles.mobileFilterPillTextActive]}>
+                    {dateKey === 'All' || dateKey === 'Today' || dateKey === 'Tomorrow' ? dateKey : new Date(dateKey).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                  </Text>
+                </Pressable>
 
                 <Pressable style={styles.mobileFilterPill} onPress={() => setShowTypeModal(true)}>
                   <Building2 size={12} color={typeKey ? '#01b854' : '#6B7280'} />
@@ -516,17 +585,26 @@ export default function SearchScreen() {
                     {typeKey || 'Ground Type'}
                   </Text>
                 </Pressable>
+
+                <Pressable style={styles.mobileFilterPill} onPress={() => setShowTimeModal(true)}>
+                  <Clock size={12} color={timeKey ? '#01b854' : '#6B7280'} />
+                  <Text style={[styles.mobileFilterPillText, timeKey && styles.mobileFilterPillTextActive]}>
+                    {timeKey || 'Time'}
+                  </Text>
+                </Pressable>
               </ScrollView>
             </View>
           )}
 
           {/* Inline Modals for Mobile */}
-          {isCompact && (showLocationModal || showTypeModal) && (
+          {isCompact && (showLocationModal || showTypeModal || showTimeModal) && (
             <View style={styles.mobileFilterDropdownOverlay}>
               <View style={styles.mobileFilterDropdownContent}>
                 <View style={styles.mobileDropdownHeader}>
-                  <Text style={styles.mobileDropdownTitle}>{showLocationModal ? 'Select Location' : 'Select Ground Type'}</Text>
-                  <Pressable onPress={() => { setShowLocationModal(false); setShowTypeModal(false); }}>
+                  <Text style={styles.mobileDropdownTitle}>
+                    {showLocationModal ? 'Select Location' : showTypeModal ? 'Select Ground Type' : 'Select Time'}
+                  </Text>
+                  <Pressable onPress={() => { setShowLocationModal(false); setShowTypeModal(false); setShowTimeModal(false); }}>
                     <Text style={styles.closeText}>Done</Text>
                   </Pressable>
                 </View>
@@ -542,7 +620,7 @@ export default function SearchScreen() {
                         </Pressable>
                       ))}
                     </>
-                  ) : (
+                  ) : showTypeModal ? (
                     <>
                       <Pressable style={styles.dropdownOption} onPress={() => { setTypeKey(''); setShowTypeModal(false); }}>
                         <Text style={styles.dropdownOptionText}>All Types</Text>
@@ -552,6 +630,21 @@ export default function SearchScreen() {
                           <Text style={styles.dropdownOptionText}>{t.label || t.name}</Text>
                         </Pressable>
                       ))}
+                    </>
+                  ) : (
+                    <>
+                      <Pressable style={styles.dropdownOption} onPress={() => { setTimeKey(''); setShowTimeModal(false); }}>
+                        <Text style={styles.dropdownOptionText}>All Times</Text>
+                      </Pressable>
+                      {availableTimes.length > 0 ? availableTimes.map(t => (
+                        <Pressable key={t} style={styles.dropdownOption} onPress={() => { setTimeKey(t); setShowTimeModal(false); }}>
+                          <Text style={styles.dropdownOptionText}>{t}</Text>
+                        </Pressable>
+                      )) : (
+                        <View style={{ padding: 10 }}>
+                          <Text style={{ fontSize: 12, color: '#9CA3AF' }}>No available slots</Text>
+                        </View>
+                      )}
                     </>
                   )}
                 </ScrollView>
