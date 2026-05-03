@@ -113,7 +113,7 @@ export default function CricketLayout() {
   const tabScrollPositions = useSharedValue(TABS.map(() => 0));
   const activeTabIndex = useSharedValue(initialIndex);
 
-  const HEADER_MAX_HEIGHT = 280;
+  const HEADER_MAX_HEIGHT = 300;
   const HEADER_MIN_HEIGHT = 105;
 
   React.useEffect(() => {
@@ -491,9 +491,9 @@ export default function CricketLayout() {
   });
 
   const headerContainerStyle = useAnimatedStyle(() => {
-    const hasSubBar = activeTabId === 'stats' || activeTabId === 'trophies' || activeTabId === 'badges' || activeTabId === 'connections' || activeTabId === 'teams' || activeTabId === 'tournaments';
-    const currentMaxHeight = hasSubBar ? HEADER_MAX_HEIGHT + 48 : HEADER_MAX_HEIGHT;
-    const currentMinHeight = hasSubBar ? HEADER_MIN_HEIGHT + 48 : HEADER_MIN_HEIGHT;
+    // Keep header height consistent across all tabs for a stable UI
+    const currentMaxHeight = HEADER_MAX_HEIGHT + 48;
+    const currentMinHeight = HEADER_MIN_HEIGHT + 48;
     
     return {
       height: Math.max(currentMinHeight + insets.top, currentMaxHeight + insets.top - animatedScrollY.value),
@@ -852,7 +852,7 @@ export default function CricketLayout() {
                 </View>
               </View>
             ) : (
-              <View style={[styles.subBarInjection, { height: 0, paddingVertical: 0 }]} />
+              <View style={[styles.subBarInjection, { height: 48, paddingVertical: 0 }]} />
             )}
           </View>
         )}
@@ -877,10 +877,7 @@ export default function CricketLayout() {
               contentContainerStyle={[
                 styles.mainScrollContent, 
                 { 
-                  paddingTop: (tab.id === 'stats' || tab.id === 'trophies' || tab.id === 'badges' || tab.id === 'connections' || tab.id === 'teams' || tab.id === 'tournaments' 
-                    ? HEADER_MAX_HEIGHT + 48 + insets.top 
-                    : HEADER_MAX_HEIGHT + insets.top
-                  ),
+                  paddingTop: HEADER_MAX_HEIGHT + 48 + insets.top,
                   paddingBottom: 100 // Add some bottom padding for better scroll feel
                 }
               ]} 
@@ -1097,6 +1094,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     marginTop: 12,
+    marginBottom: 20,
   },
   rankBadge: {
     flexDirection: 'row',

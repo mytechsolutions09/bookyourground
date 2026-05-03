@@ -536,7 +536,7 @@ export default function OwnerGroundsScreen() {
     }
   };
 
-  const content = (
+  const content = Platform.OS === 'web' ? (
     <View style={styles.container}>
       <FlatList
         data={grounds}
@@ -578,6 +578,89 @@ export default function OwnerGroundsScreen() {
         }
       />
     </View>
+  ) : (
+    <FlatList
+      data={grounds}
+      keyExtractor={item => item.id}
+      refreshControl={<RefreshControl refreshing={loading} onRefresh={loadGrounds} />}
+      contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
+      ListHeaderComponent={
+        <TouchableOpacity
+          onPress={() => router.push('/(owner)/add-ground')}
+          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#01b854', borderRadius: 14, padding: 14, marginBottom: 16 }}
+        >
+          <Plus size={18} color="#fff" />
+          <Text style={{ fontSize: 14, fontWeight: '700', color: '#fff' }}>Add New Ground</Text>
+        </TouchableOpacity>
+      }
+      ListEmptyComponent={
+        <View style={{ padding: 40, alignItems: 'center' }}>
+          <Text style={{ color: '#6B7280', fontSize: 14, textAlign: 'center' }}>
+            {loading ? 'Loading...' : 'No grounds found'}
+          </Text>
+        </View>
+      }
+      renderItem={({ item }) => (
+        <TouchableOpacity
+          onPress={() => setSelectedGroundId(prev => prev === item.id ? null : item.id)}
+          style={{ backgroundColor: '#fff', borderRadius: 16, marginBottom: 12, borderWidth: 1, borderColor: '#E2E8F0', overflow: 'hidden' }}
+        >
+          {/* Ground image */}
+          {item.ground_images?.[0]?.image_url ? (
+            <Image source={{ uri: item.ground_images[0].image_url }} style={{ width: '100%', height: 140 }} resizeMode="cover" />
+          ) : (
+            <View style={{ width: '100%', height: 100, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ color: '#9CA3AF', fontSize: 12 }}>No image</Text>
+            </View>
+          )}
+          <View style={{ padding: 14 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827' }}>{item.name}</Text>
+                <Text style={{ fontSize: 13, color: '#6B7280', marginTop: 3 }}>{item.city}, {item.state}</Text>
+              </View>
+              <View style={{ backgroundColor: item.active ? '#ECFDF5' : '#FEF2F2', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: item.active ? '#059669' : '#DC2626' }}>
+                  {item.active ? 'ACTIVE' : 'INACTIVE'}
+                </Text>
+              </View>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 }}>
+              <View style={{ backgroundColor: '#F3F4F6', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                <Text style={{ fontSize: 11, fontWeight: '600', color: '#374151' }}>{item.pitch_type}</Text>
+              </View>
+              {occupancyRates[item.id] != null && (
+                <View style={{ backgroundColor: '#F0FDF4', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#059669' }}>
+                    {Math.round(occupancyRates[item.id])}% utilized
+                  </Text>
+                </View>
+              )}
+            </View>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+              <TouchableOpacity
+                onPress={() => startEditGround(item)}
+                style={{ flex: 1, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, padding: 10, alignItems: 'center' }}
+              >
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#374151' }}>Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push(makeGroundPath(item) as any)}
+                style={{ flex: 1, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, padding: 10, alignItems: 'center' }}
+              >
+                <Text style={{ fontSize: 13, fontWeight: '600', color: '#374151' }}>View</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => router.push('/(owner)/ground-bookings')}
+                style={{ flex: 1, backgroundColor: '#01b854', borderRadius: 10, padding: 10, alignItems: 'center' }}
+              >
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#fff' }}>Bookings</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </TouchableOpacity>
+      )}
+    />
   );
 
   const finalContent = (
@@ -1015,7 +1098,11 @@ export default function OwnerGroundsScreen() {
     return <WebLayout>{finalContent}</WebLayout>;
   }
 
-  return finalContent;
+  return (
+    <View style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
+      {finalContent}
+    </View>
+  );
 }
 
 const IS_WEB = Platform.OS === 'web';
