@@ -10,6 +10,7 @@ import {
   Swords,
   Trophy,
   ShoppingBag,
+  BarChart2,
 } from 'lucide-react-native';
 import { ActivityIndicator, Platform, useWindowDimensions, View, Pressable, StyleSheet, Text as RNText } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
@@ -21,7 +22,9 @@ const AUTH_REQUIRED_TAB = new Set(['dashboard', 'bookings', 'profile']);
 const CustomTabBar = ({ state, descriptors, navigation, router, insets, isTabBarVisible, hideTabBarOnBigScreens }: any) => {
   if (hideTabBarOnBigScreens) return null;
 
-  const visibleTabNames = ['home_tab', 'grounds', 'find-an-opponent', 'shop', 'cricket'];
+  const visibleTabNames = Platform.OS === 'web' 
+    ? ['home_tab', 'find-an-opponent', 'shop', 'cricket']
+    : ['home_tab', 'grounds', 'find-an-opponent', 'shop', 'cricket'];
 
   const visibleRoutes = state.routes.filter((route: any) => {
     const { options } = descriptors[route.key];
@@ -169,6 +172,7 @@ export default function TabLayout() {
           <Tabs.Screen
             name="grounds"
             options={{
+              href: Platform.OS === 'web' ? null : undefined,
               title: 'Grounds',
               tabBarIcon: ({ color, size }) => <LandPlot size={size} color={color} />,
             }}
@@ -190,8 +194,8 @@ export default function TabLayout() {
           <Tabs.Screen
             name="cricket"
             options={{
-              title: 'Cricket',
-              tabBarIcon: ({ color, size }) => <Trophy size={size} color={color} />,
+              title: 'Stats',
+              tabBarIcon: ({ color, size }) => <BarChart2 size={size} color={color} />,
             }}
           />
 

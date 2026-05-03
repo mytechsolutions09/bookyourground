@@ -36,6 +36,7 @@ import Button from '@/components/ui/Button';
 import WebLayout from '@/components/web/WebLayout';
 import LandingBookingForm from '@/components/landing/LandingBookingForm';
 import { Share } from 'react-native';
+import GroundDetailSkeleton from '@/components/landing/GroundDetailSkeleton';
 
 const MAP_ID = "DEMO_MAP_ID";
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
@@ -281,11 +282,15 @@ export default function GroundDetailsPrettyUrlScreen() {
   let content;
 
   if (isLoading || !ground) {
-    content = (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Loading ground...</Text>
-      </View>
-    );
+    if (Platform.OS !== 'web') {
+      content = <GroundDetailSkeleton />;
+    } else {
+      content = (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Loading ground...</Text>
+        </View>
+      );
+    }
   }
   else {
     const fallbackUri = 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';

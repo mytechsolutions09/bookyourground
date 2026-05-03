@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, Platform, Linking, useWindowDimensions } from 'react-native';
-import { MapPin, Star, Calendar, Clock, Heart } from 'lucide-react-native';
+import { MapPin, Star, Calendar, Clock, Heart, Users, BarChart2, ChevronRight, Map as MapIcon } from 'lucide-react-native';
 import { GroundWithImages } from '@/types';
 import { formatCurrency } from '@/utils/helpers';
 import { getGroundBookingScheduleLines } from '@/utils/bookingSlots';
@@ -29,6 +29,7 @@ interface GroundCardProps {
   showBookButton?: boolean;
   /** Enable premium glass effect with full image background. */
   glass?: boolean;
+  onUtilizationPress?: () => void;
 }
 
 export default function GroundCard({
@@ -44,9 +45,15 @@ export default function GroundCard({
   occupancyRate = null,
   showBookButton = false,
   glass = false,
+  onUtilizationPress,
 }: GroundCardProps) {
   const { width } = useWindowDimensions();
   const isUltraNarrow = width < 350;
+  
+  const basePrice = displayPricePerUnit ?? ground.base_price_per_hour ?? 0;
+  const teamPrice = Math.round(basePrice / 2);
+  const showTeamPrice = !(String(ground.pitch_type ?? '').toLowerCase().includes('box'));
+
   const isWeb = Platform.OS === 'web';
   const isLight = glass ? false : lightMode;
   const schedule = useMemo(
@@ -190,93 +197,119 @@ export default function GroundCard({
             </TouchableOpacity>
           )}
         </View>
-        <View style={styles.content}>
-          <View style={[styles.titleRow, isUltraNarrow && { flexDirection: 'column', alignItems: 'flex-start', gap: 4 }]}>
-            <Text style={nameStyle} numberOfLines={2}>
+
+        <View style={[styles.content, isUltraNarrow && { padding: 12 }]}>
+          <View style={[
+            styles.titlePriceRow, 
+            (isUltraNarrow || compact) && { flexDirection: 'column', alignItems: 'flex-start', gap: 4 }
+          ]}>
+            <Text 
+              style={[
+                styles.name, 
+                Platform.OS !== 'web' && styles.nameNative,
+                compact && styles.nameCompact,
+                isUltraNarrow && { fontSize: 18 }
+              ]} 
+              numberOfLines={2}
+            >
               {ground.name}
             </Text>
-            <View style={[styles.priceBlock, isUltraNarrow && { alignItems: 'flex-start' }]}>
-              {(displayPricePerUnit != null || ground.base_price_per_hour != null) ? (
-                <>
-                  <Text style={priceStyle}>
-                    <Text style={{ fontSize: 10, fontWeight: '600', color: isLight ? '#64748B' : '#94A3B8' }}>From </Text>
-                    {formatCurrency(displayPricePerUnit ?? ground.base_price_per_hour ?? 0)}
-                    <Text style={styles.priceUnit}>
-                      {unitLabelOverride ??
-                        (String(ground.pitch_type ?? '').toLowerCase().includes('box')
-                          ? '/hr'
-                          : ' / match')}
-                    </Text>
-                  </Text>
-                  {!(String(ground.pitch_type ?? '').toLowerCase().includes('box')) && (
-                    <Text style={[styles.perTeamLabel, !isLight && styles.perTeamLabelNative]}>
-                      ₹{Math.round((displayPricePerUnit ?? ground.base_price_per_hour ?? 0) / 2)} per team
-                    </Text>
-                  )}
-                </>
-              ) : (
-                <Text style={priceStyle}>See Slots</Text>
-              )}
+            <View style={styles.priceBlock}>
+              {!isUltraNarrow && <Text style={styles.priceFromLabel}>from</Text>}
+              <Text style={[styles.priceValueNew, compact && { fontSize: 16 }]}>₹{basePrice}</Text>
+              <Text style={styles.priceUnitNew}>/slot</Text>
             </View>
           </View>
 
-          <View style={[styles.subTitleRow, isUltraNarrow && { flexDirection: 'column', alignItems: 'flex-start', gap: 6 }]}>
-            <View style={styles.ratingBlockRow}>
-              <View style={styles.starRow}>
-                {[1, 2, 3, 4, 5].map((i) => {
-                  const filled = reviewCount > 0 && i <= Math.round(averageRating);
-                  return (
-                    <Star
-                      key={i}
-                      size={compact ? 12 : 14}
-                      color={filled ? '#FFA000' : '#D1D5DB'}
-                      fill={filled ? '#FFA000' : 'none'}
-                    />
-                  );
-                })}
-              </View>
-              <Text style={ratingStyle} numberOfLines={1}>
-                {reviewCount > 0
-                  ? `${averageRating.toFixed(1)} (${reviewCount})`
-                  : 'No reviews yet'}
+          <View style={[
+            styles.locationBadgeRow,
+            isUltraNarrow && { flexDirection: 'column', alignItems: 'flex-start', gap: 8 }
+          ]}>
+            <View style={styles.locationRowShort}>
+              <MapPin size={isUltraNarrow ? 14 : 16} color="#64748B" />
+              <Text style={[styles.locationTextNew, isUltraNarrow && { fontSize: 13 }]}>
+                {ground.city}, {ground.state}
               </Text>
             </View>
-            <View style={styles.locationRowShort}>
-              <MapPin size={12} color={pinColor} />
-              <Text style={locationStyle} numberOfLines={1}>{ground.city}</Text>
-            </View>
+            
+            {showTeamPrice && (
+              <View style={[styles.teamPriceBadge, isUltraNarrow && { paddingHorizontal: 6, paddingVertical: 4 }]}>
+                <Users size={isUltraNarrow ? 12 : 14} color="#059669" />
+                <Text style={[styles.teamPriceBadgeText, isUltraNarrow && { fontSize: 11 }]}>
+                  ₹{teamPrice}/team
+                </Text>
+              </View>
+            )}
           </View>
 
-          {occupancyRate !== null && (
-            <View style={styles.occupancyContainer}>
-              <View style={styles.occupancyHeader}>
-                <Text style={styles.occupancyLabel}>Utilization</Text>
-                <Text style={styles.occupancyValue}>{Math.round(occupancyRate)}%</Text>
-              </View>
-              <View style={styles.occupancyBarBg}>
-                <View 
-                  style={[
-                    styles.occupancyBarFill, 
-                    { width: `${Math.min(100, occupancyRate)}%` },
-                    occupancyRate > 80 ? { backgroundColor: '#10B981' } : 
-                    occupancyRate > 50 ? { backgroundColor: '#34D399' } : 
-                    { backgroundColor: '#6EE7B7' }
-                  ]} 
-                />
-              </View>
+          {/* Rating Row */}
+          <View style={styles.ratingRowNew}>
+            <View style={styles.ratingBadgeNew}>
+              <Star size={14} color="#FFFFFF" fill="#FFFFFF" />
+              <Text style={styles.ratingTextNew}>
+                {reviewCount > 0 ? averageRating.toFixed(1) : '4.5'}
+              </Text>
             </View>
+            <View style={styles.ratingDivider} />
+            <Text style={styles.reviewCountText}>
+              {reviewCount > 0 ? `${reviewCount} Reviews` : 'No reviews yet'}
+            </Text>
+          </View>
+
+          {/* Utilization Card */}
+          {occupancyRate !== null && (
+            <TouchableOpacity 
+              activeOpacity={onUtilizationPress ? 0.7 : 1}
+              onPress={(e) => {
+                if (onUtilizationPress) {
+                  e.stopPropagation();
+                  onUtilizationPress();
+                }
+              }}
+              style={[styles.utilizationCard, compact && { padding: 12, marginBottom: 12 }]}
+            >
+              <View style={[styles.utilizationHeader, compact && { marginBottom: 8 }]}>
+                <View style={[styles.utilizationIconBox, compact && { width: 28, height: 28, borderRadius: 6 }]}>
+                  <BarChart2 size={compact ? 14 : 16} color="#059669" />
+                </View>
+                <Text style={[styles.utilizationTitle, compact && { fontSize: 14 }]}>Utilization</Text>
+                <Text style={[styles.utilizationPercentage, compact && { fontSize: 16 }]}>{Math.round(occupancyRate)}%</Text>
+              </View>
+              
+              <View style={styles.progressContainer}>
+                <View style={styles.progressBarBg}>
+                  <View 
+                    style={[
+                      styles.progressBarFill, 
+                      { width: `${Math.min(100, occupancyRate)}%` }
+                    ]} 
+                  />
+                </View>
+              </View>
+              
+              <Text style={[styles.utilizationSub, compact && { fontSize: 11 }, isUltraNarrow && { fontSize: 10 }]}>
+                Usually busy on evenings and weekends
+              </Text>
+            </TouchableOpacity>
           )}
 
-            {mapsUrl && (
-              <TouchableOpacity
-                style={[styles.mapsBtn, !isLight && styles.mapsBtnNative]}
-                onPress={() => {
-                  void Linking.openURL(mapsUrl);
-                }}
-              >
-                <Text style={mapsLinkStyle}>View Maps</Text>
-              </TouchableOpacity>
-            )}
+          {/* Bottom Action: View Maps */}
+          {mapsUrl && (
+            <TouchableOpacity
+              style={styles.viewMapsAction}
+              onPress={() => {
+                void Linking.openURL(mapsUrl);
+              }}
+            >
+              <View style={styles.viewMapsLeft}>
+                <View style={styles.viewMapsIconBox}>
+                  <MapIcon size={18} color="#059669" />
+                </View>
+                <Text style={styles.viewMapsText}>View Maps</Text>
+              </View>
+              <ChevronRight size={18} color="#94A3B8" />
+            </TouchableOpacity>
+          )}
 
           {showBookButton && (
             <View style={styles.bookButtonWrapper}>
@@ -380,20 +413,18 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0,234,107,0.5)',
   },
   content: {
-    padding: 12,
+    padding: 16,
   },
-  titleRow: {
+  titlePriceRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 8,
-    marginBottom: 6,
+    alignItems: 'center',
+    marginBottom: 8,
   },
   name: {
     flex: 1,
-    minWidth: 0,
     fontSize: 18,
-    fontWeight: '600', // Reduced weight
+    fontWeight: '700',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
@@ -403,206 +434,178 @@ const styles = StyleSheet.create({
   nameNative: {
     color: NATIVE_TEXT,
   },
-  ratingBlock: {
-    alignItems: 'flex-end',
-    flexShrink: 0,
-    maxWidth: '46%',
-    gap: 2,
-  },
-  starRow: {
+  priceBlock: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
+    alignItems: 'baseline',
+    gap: 4,
   },
-  subTitleRow: {
+  priceFromLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
+    fontFamily: 'Inter',
+  },
+  priceValueNew: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#059669',
+    fontFamily: 'Inter',
+  },
+  priceUnitNew: {
+    fontSize: 12,
+    color: '#64748B',
+    fontFamily: 'Inter',
+    fontWeight: '500',
+  },
+  locationBadgeRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  ratingBlockRow: {
-    flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    marginBottom: 12,
   },
   locationRowShort: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: 6,
   },
-  locationRow: {
+  locationTextNew: {
+    fontSize: 14,
+    color: '#475569',
+    fontWeight: '600',
+    fontFamily: 'Inter',
+  },
+  teamPriceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D1FAE5',
+  },
+  teamPriceBadgeText: {
+    fontSize: 12,
+    color: '#059669',
+    fontWeight: '700',
+    fontFamily: 'Inter',
+  },
+  ratingRowNew: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  ratingBadgeNew: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginBottom: 4,
+    backgroundColor: '#059669',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
-  location: {
+  ratingTextNew: {
     fontSize: 14,
-    color: '#64748B',
-    fontFamily: 'Inter',
-  },
-  locationNative: {
-    color: NATIVE_TEXT,
-  },
-  rating: {
-    fontSize: 12,
-    color: '#64748B',
-    fontWeight: '700',
-    textAlign: 'right',
-    fontFamily: 'Inter',
-  },
-  ratingCompact: {
-    fontSize: 11,
-  },
-  ratingNative: {
-    color: NATIVE_TEXT,
-  },
-  scheduleBlock: {
-    marginBottom: 10,
-    gap: 6,
-  },
-  scheduleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 6,
-  },
-  scheduleText: {
-    flex: 1,
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#64748B',
-    lineHeight: 16,
-    fontFamily: 'Inter',
-  },
-  scheduleTextNative: {
-    color: '#475569',
-  },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    gap: 8,
-    marginTop: 12,
-    flexWrap: 'wrap',
-  },
-  footerLeft: {
-    flex: 1,
-    minWidth: 0,
-  },
-  price: {
-    fontSize: 16,
     fontWeight: '800',
+    color: '#FFFFFF',
+    fontFamily: 'Inter',
+  },
+  ratingDivider: {
+    width: 1,
+    height: 14,
+    backgroundColor: '#E2E8F0',
+  },
+  reviewCountText: {
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
+    fontFamily: 'Inter',
+  },
+  utilizationCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    marginBottom: 16,
+  },
+  utilizationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  utilizationIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#ECFDF5',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  utilizationTitle: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '700',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
-  priceUnit: {
-    fontSize: 11,
-    fontWeight: '500',
-    color: '#64748B',
-    fontFamily: 'Inter',
-  },
-  priceCompact: {
-    fontSize: 13,
-  },
-  priceNative: {
-    color: '#01b854',
-    fontSize: 16,
-  },
-  priceBlock: {
-    alignItems: 'flex-end',
-  },
-  perTeamLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#64748B',
-    marginTop: 1,
-    fontFamily: 'Inter',
-  },
-  perTeamLabelNative: {
-    color: '#64748B',
-  },
-  mapsBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 6,
-  },
-  mapsBtnNative: {
-    gap: 6,
-  },
-  mapsLink: {
-    fontSize: 12,
-    color: '#64748B',
+  utilizationPercentage: {
+    fontSize: 18,
     fontWeight: '800',
+    color: '#059669',
     fontFamily: 'Inter',
   },
-  mapsLinkNative: {
-    color: '#64748B',
-  },
-  amenities: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    justifyContent: 'flex-start',
-    flex: 1,
-    minWidth: 120,
-  },
-  amenity: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#475569',
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 8,
-    fontFamily: 'Inter',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  amenityNative: {
-    color: '#475569',
-    backgroundColor: '#F1F5F9',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  occupancyContainer: {
-    marginTop: 4,
+  progressContainer: {
     marginBottom: 8,
-    backgroundColor: 'rgba(16, 185, 129, 0.05)',
-    padding: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.1)',
   },
-  occupancyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  occupancyLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#065F46',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    fontFamily: 'Inter',
-  },
-  occupancyValue: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#047857',
-    fontFamily: 'Inter',
-  },
-  occupancyBarBg: {
-    height: 4,
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    borderRadius: 2,
+  progressBarBg: {
+    height: 6,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 3,
     overflow: 'hidden',
   },
-  occupancyBarFill: {
+  progressBarFill: {
     height: '100%',
-    borderRadius: 2,
+    backgroundColor: '#059669',
+    borderRadius: 3,
+  },
+  utilizationSub: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
+    fontFamily: 'Inter',
+  },
+  viewMapsAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  viewMapsLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  viewMapsIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewMapsText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#475569',
+    fontFamily: 'Inter',
   },
   bookButtonWrapper: {
     marginTop: 16,
@@ -624,9 +627,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 3,
-    ...Platform.select({
-      web: { backdropFilter: 'blur(12px)' }
-    }) as any,
   },
   bookButtonText: {
     fontSize: 14,
@@ -644,17 +644,17 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
     borderRadius: 24,
     borderWidth: 0,
-    borderColor: 'transparent', // Remove border color
+    borderColor: 'transparent',
   },
   imageFull: {
     ...StyleSheet.absoluteFillObject,
     width: '100%',
     height: '100%',
-    opacity: 1, // Full clarity
+    opacity: 1,
   },
   glassOverlayGradient: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.2)', // Very subtle overlay
+    backgroundColor: 'rgba(0,0,0,0.2)',
   },
   glassContent: {
     position: 'absolute',
@@ -664,7 +664,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     backgroundColor: 'rgba(255, 255, 255, 0.45)',
-    borderTopWidth: 0,
     ...Platform.select({
       web: {
         backdropFilter: 'blur(24px) saturate(180%)',
@@ -689,11 +688,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 100,
-    ...Platform.select({
-      web: {
-        backdropFilter: 'blur(10px)',
-      },
-    }) as any,
   },
   ratingTextGlassBadge: {
     color: '#0F172A',
@@ -707,20 +701,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 4,
   },
-  glassTitleCol: {
-    flex: 1,
-    gap: 2,
-  },
   nameGlass: {
-    color: '#0F172A', // Deep dark
-    fontSize: 16, // Reduced size
+    color: '#0F172A',
+    fontSize: 16,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    fontWeight: '600', // Reduced weight
+    fontWeight: '600',
     fontFamily: 'Inter',
   },
   locationGlass: {
-    color: '#334155', // Darker slate for better contrast
+    color: '#334155',
     fontSize: 13,
     fontWeight: '700',
     fontFamily: 'Inter',
@@ -735,44 +725,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.05)',
   },
-  glassDivider: {
-    height: 1,
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    marginBottom: 12,
-  },
-  glassFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  glassMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  ratingGlass: {
-    color: '#0F172A',
-    fontSize: 12,
-    fontWeight: '900',
-    fontFamily: 'Inter',
-  },
   glassPriceBlock: {
     alignItems: 'flex-end',
   },
   priceGlass: {
-    color: '#06392e', // Deep dark green for price
+    color: '#06392e',
     fontSize: 18,
     fontWeight: '900',
     fontFamily: 'Inter',
   },
   priceUnitGlass: {
     fontSize: 11,
-    color: '#475569', // Darker slate for contrast
+    color: '#475569',
     fontWeight: '700',
-    fontFamily: 'Inter',
-  },
-  mapsLinkGlass: {
-    color: '#0F172A',
     fontFamily: 'Inter',
   },
 });

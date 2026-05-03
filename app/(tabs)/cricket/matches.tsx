@@ -29,7 +29,7 @@ interface CricketMatchesProps {
   playerId?: string;
 }
 
-export default function CricketMatches({ playerId }: CricketMatchesProps) {
+const CricketMatches = React.memo(({ playerId }: CricketMatchesProps) => {
   const router = useRouter();
   const { session } = useAuth();
   const effectivePlayerId = playerId || session?.user?.id;
@@ -451,7 +451,9 @@ export default function CricketMatches({ playerId }: CricketMatchesProps) {
       </View>
     </View>
   );
-}
+});
+
+export default CricketMatches;
 
 const styles = StyleSheet.create({
   controlsRow: {

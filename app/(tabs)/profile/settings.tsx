@@ -136,6 +136,15 @@ function UserSettingsInner() {
           </View>
 
           <View style={styles.formRow}>
+            <Text style={styles.label}>Email Address</Text>
+            <TextInput
+              value={user?.email || ''}
+              editable={false}
+              style={[styles.input, { backgroundColor: '#F1F5F9', color: '#64748B' }]}
+            />
+          </View>
+
+          <View style={styles.formRow}>
             <Text style={styles.label}>Phone Number</Text>
             <TextInput
               value={phone}

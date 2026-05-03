@@ -3,20 +3,20 @@ import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Linking } 
 import { supabase } from '@/lib/supabase';
 import { GroundWithImages } from '@/types';
 import { MapPin } from 'lucide-react-native';
+import { useLocation } from '@/contexts/LocationContext';
 import { APIProvider, Map, AdvancedMarker, InfoWindow } from '@vis.gl/react-google-maps';
 
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 
 export default function DashboardMap() {
+  const { latitude, longitude } = useLocation();
   const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const [hoveredGroundId, setHoveredGroundId] = useState<string | null>(null);
   const [openInfoWindowId, setOpenInfoWindowId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchGrounds();
-    getUserLocation();
   }, []);
 
   const fetchGrounds = async () => {
@@ -37,19 +37,7 @@ export default function DashboardMap() {
     }
   };
 
-  const getUserLocation = async () => {
-    try {
-      // For web, use browser geolocation directly for better stability if needed,
-      // or expo-location which works on web too.
-      const { status } = await require('expo-location').requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        const loc = await require('expo-location').getCurrentPositionAsync({});
-        setUserLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
-      }
-    } catch (e) {
-      console.warn('Could not get user location for map:', e);
-    }
-  };
+
 
   const getDirectionsUrl = (g: GroundWithImages) => {
     const { latitude, longitude, address, city, state } = g;
@@ -72,7 +60,7 @@ export default function DashboardMap() {
     );
   }
 
-  const defaultCenter = userLocation || { lat: 28.6139, lng: 77.2090 }; // Delhi default
+  const defaultCenter = (latitude && longitude) ? { lat: latitude, lng: longitude } : { lat: 28.6139, lng: 77.2090 }; // Delhi default
 
   return (
     <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>

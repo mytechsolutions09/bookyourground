@@ -246,6 +246,11 @@ export default function ProfileScreen() {
               {profile?.role === 'ground_owner' ? 'Ground Owner & Player' : 'Player'}
             </RNText>
             
+            <View style={styles.emailContainerNew}>
+              <Mail size={12} color={themeAccent} />
+              <RNText style={styles.emailTextNew}>{user?.email}</RNText>
+            </View>
+            
 
           </View>
         </View>
@@ -621,6 +626,25 @@ const styles = StyleSheet.create({
   pageSubtitle: {
     fontSize: 12,
     color: '#6B7280',
+    fontWeight: '500',
+  },
+  roleNew: {
+    fontSize: 14,
+    color: '#64748B',
+    fontFamily: 'Inter',
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  emailContainerNew: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 2,
+  },
+  emailTextNew: {
+    fontSize: 13,
+    color: '#94A3B8',
+    fontFamily: 'Inter',
     fontWeight: '500',
   },
   content: {

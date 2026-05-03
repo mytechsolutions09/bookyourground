@@ -35,15 +35,17 @@ import {
   Clock,
   Zap,
   Users,
-  ArrowRight,
   CircleUser,
+  ArrowRight,
 } from 'lucide-react-native';
+import { useLocation } from '@/contexts/LocationContext';
 import { supabase } from '@/lib/supabase';
 import { GroundWithImages } from '@/types';
 import WebLayout from '@/components/web/WebLayout';
 import LandingScrollContent from '@/components/landing/LandingScrollContent';
 import LandingBookingForm from '@/components/landing/LandingBookingForm';
 import { useAuth } from '@/contexts/AuthContext';
+import HomeScreenSkeleton from '@/components/landing/HomeScreenSkeleton';
 
 function makeGroundPath(ground: GroundWithImages): string {
   const name = (ground.name ?? '').toString().toLowerCase().trim();
@@ -168,6 +170,7 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sportFilter, setSportFilter] = useState('cricket');
   const { setTabBarVisible } = useUI();
+  const { cityName, refreshLocation } = useLocation();
   
   const lastScrollY = useSharedValue(0);
 
@@ -284,6 +287,10 @@ export default function HomeScreen() {
 
   const primaryCta = user ? '/(tabs)/bookings' : '/(auth)/signup';
 
+  if (Platform.OS !== 'web' && loading && grounds.length === 0) {
+    return <HomeScreenSkeleton />;
+  }
+
   return Platform.OS === 'web' ? (
     <View style={{ flex: 1, backgroundColor: '#FFFFFF', justifyContent: 'center', alignItems: 'center' }}>
       <ActivityIndicator size="large" color="#00ea6b" />
@@ -312,7 +319,14 @@ export default function HomeScreen() {
           <View style={styles.heroGlowSecondary} />
           
           <View style={[styles.heroPadding, { paddingTop: insets.top + 20 }]}>
-            <View style={[styles.heroHeaderRow, { justifyContent: 'flex-end' }]}>
+            <View style={styles.heroHeaderRow}>
+              <Pressable 
+                style={styles.locationBadgeSmall}
+                onPress={refreshLocation}
+              >
+                <MapPin size={10} color="rgba(255,255,255,0.7)" fill="rgba(255,255,255,0.1)" />
+                <Text style={styles.locationTextSmall}>{cityName}</Text>
+              </Pressable>
               <TouchableOpacity 
                 onPress={() => router.push('/(tabs)/profile')}
                 style={styles.profileButton}
@@ -651,6 +665,24 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
+  },
+  locationBadgeSmall: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 99,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  locationTextSmall: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    fontFamily: 'Inter',
+    letterSpacing: 0.3,
   },
   profileButton: {
     width: 38,

@@ -24,9 +24,11 @@ import WebLayout from '@/components/web/WebLayout';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import { formatCurrency, formatDateDDMMYYYY } from '@/utils/helpers';
-import { CreditCard, ShieldCheck, Clock, Calendar, MapPin, ChevronLeft, Wallet, Users, X, Ticket, ShoppingBag, IndianRupee, Star, Zap } from 'lucide-react-native';
+import { CreditCard, ShieldCheck, Clock, Calendar, MapPin, ChevronLeft, Wallet, Users, X, Ticket, ShoppingBag, IndianRupee, Star, Zap, Smartphone, Globe } from 'lucide-react-native';
 import { hoursBetweenBooked, normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
 import { useUI } from '@/contexts/UIContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import CheckoutSkeleton from '@/components/landing/CheckoutSkeleton';
 
 // Platform settings fetched from database
 
@@ -35,6 +37,7 @@ export default function CheckoutScreen() {
   const { id } = params;
   const { user, profile } = useAuth();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const isDesktop = width > 768;
   
   const [booking, setBooking] = useState<any>(null);
@@ -52,6 +55,9 @@ export default function CheckoutScreen() {
   const [bookedForName, setBookedForName] = useState<string>('');
   const [platformSettings, setPlatformSettings] = useState<any>(null);
   const [walletBalance, setWalletBalance] = useState(0);
+  const [selectedSubMethod, setSelectedSubMethod] = useState<string | null>(null);
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
 
   // Stable random counts for social proof (1-5) based on booking ID
   const { randomBookedCount, randomSlotsLeft } = React.useMemo(() => {
@@ -136,8 +142,10 @@ export default function CheckoutScreen() {
   useEffect(() => {
     if (user) {
       fetchWalletBalance();
+      setContactEmail(user.email || '');
+      setContactPhone(profile?.phone || user.user_metadata?.phone || '');
     }
-  }, [user]);
+  }, [user, profile]);
 
   useEffect(() => {
     if (!profile || activeGateways.length === 0) return;
@@ -150,6 +158,7 @@ export default function CheckoutScreen() {
       setSelectedGateway('cash');
     } else if (razorpay) {
       setSelectedGateway('razorpay');
+      setSelectedSubMethod('upi');
     } else if (activeGateways.length > 0 && !selectedGateway) {
       setSelectedGateway(activeGateways[0].name);
     }
@@ -373,7 +382,8 @@ export default function CheckoutScreen() {
         .from('coupons')
         .select('*')
         .eq('is_active', true)
-        .or(`expiry_date.is.null,expiry_date.gt.${new Date().toISOString()}`);
+        .or(`expiry_date.is.null,expiry_date.gt.${new Date().toISOString()}`)
+        .or(`ground_id.is.null,ground_id.eq.${booking.ground_id}`);
       
       if (error) throw error;
       setAvailableCoupons(data || []);
@@ -383,16 +393,21 @@ export default function CheckoutScreen() {
       setFetchingCoupons(false);
     }
   };
-
   const applyCouponCode = async (codeToApply: string) => {
     if (!codeToApply || !booking) return;
-    
+
+    if (booking.coupon_id) {
+      Alert.alert('Coupon already applied', 'Please remove the current coupon before applying a new one.');
+      return;
+    }
+
     try {
       setApplyingCoupon(true);
       const { data, error } = await supabase.rpc('validate_coupon', {
         p_code: codeToApply,
         p_user_id: user?.id,
-        p_booking_amount: booking.total_amount + (booking.discount_amount || 0)
+        p_booking_amount: booking.total_amount + (booking.discount_amount || 0),
+        p_ground_id: booking.ground_id
       });
 
       if (error) throw error;
@@ -428,6 +443,20 @@ export default function CheckoutScreen() {
     } finally {
       setApplyingCoupon(false);
     }
+  };
+
+  const removeCoupon = () => {
+    if (!booking || !booking.coupon_id) return;
+    
+    const baseAmount = booking.total_amount + (booking.discount_amount || 0);
+    setBooking((prev: any) => ({
+      ...prev,
+      coupon_id: null,
+      discount_amount: 0,
+      total_amount: baseAmount
+    }));
+    setCouponCode('');
+    Alert.alert('Coupon Removed', 'The coupon has been removed from your booking.');
   };
 
   const handlePayU = async () => {
@@ -629,9 +658,10 @@ export default function CheckoutScreen() {
             }
           },
           prefill: {
-            name: user?.user_metadata?.full_name || '',
-            email: user?.email || '',
-            contact: user?.user_metadata?.phone || '',
+            name: user?.user_metadata?.full_name || profile?.full_name || '',
+            email: contactEmail || user?.email || '',
+            contact: contactPhone || profile?.phone || user?.user_metadata?.phone || '',
+            method: selectedSubMethod || undefined,
           },
           theme: {
             color: '#10b981',
@@ -729,9 +759,10 @@ export default function CheckoutScreen() {
             "description": "Booking for ${booking?.grounds?.name || 'your selected ground'}",
             "order_id": "${razorpayOrderData.id}",
             "prefill": {
-              "name": "${user?.user_metadata?.full_name || ''}",
-              "email": "${user?.email || ''}",
-              "contact": "${user?.user_metadata?.phone || ''}"
+              "name": "${user?.user_metadata?.full_name || profile?.full_name || ''}",
+              "email": "${contactEmail || user?.email || ''}",
+              "contact": "${contactPhone || profile?.phone || user?.user_metadata?.phone || ''}",
+              "method": "${selectedSubMethod || ''}"
             },
             "theme": { "color": "#10b981" },
             "handler": function (response) {
@@ -828,6 +859,9 @@ export default function CheckoutScreen() {
   };
 
   if (loading) {
+    if (Platform.OS !== 'web') {
+      return <CheckoutSkeleton />;
+    }
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color="#10b981" />
@@ -849,36 +883,51 @@ export default function CheckoutScreen() {
 
   // (Moved up to support pricing logic)
   
+  // isCompactCheckout: native mobile OR small web (<768px) → no hero image, single-column clean layout
+  // isLargeWebScreen: web only at ≥768px → dual column with hero image
+  const isCompactCheckout = Platform.OS !== 'web' || width < 768;
+  const isLargeWebScreen = Platform.OS === 'web' && width >= 768;
+
   const dynamicStyles = {
     content: {
-      padding: Platform.OS === 'web' ? (width > 768 ? 16 : 8) : 8,
+      padding: isCompactCheckout ? 0 : 16,
     },
     layout: {
-      gap: isDesktop ? (width > 1024 ? 24 : 16) : 12,
+      gap: isLargeWebScreen ? (width > 1024 ? 24 : 16) : 0,
+      flexDirection: isLargeWebScreen ? 'row' : 'column',
     },
     securityInfo: {
-      marginTop: isDesktop ? 20 : 12,
-      padding: isDesktop ? 20 : 16,
+      marginTop: 12,
+      padding: 16,
     },
     summaryCard: {
-      flex: 1,
-      padding: isDesktop ? 24 : 16,
+      padding: isLargeWebScreen ? 24 : 16,
     },
     productImg: {
-      height: Platform.OS === 'web' && width > 768 ? '100%' : 200,
+      height: '100%',
     },
     groundImgContainer: {
-      height: isDesktop ? (width > 1200 ? 500 : 400) : 250,
+      height: width > 1200 ? 500 : 400,
       width: '100%',
     },
     productInfo: {
       flex: 1,
     },
     mainColumn: {
-      flex: isDesktop ? 1.8 : undefined,
+      // Only shown on large web (dual-column) — hidden on mobile and small web
+      flex: isLargeWebScreen ? (width < 1000 ? 1.5 : 1.8) : 0,
+      display: isLargeWebScreen ? 'flex' : 'none',
     },
     sideColumn: {
-      flex: isDesktop ? 1 : undefined,
+      flex: isLargeWebScreen ? 1 : 0,
+      width: '100%',
+      padding: isCompactCheckout ? 0 : (width < 900 ? 12 : 24),
+    },
+    bookingDetailsCard: {
+      padding: 16,
+    },
+    heroTitle: {
+      fontSize: width < 900 ? 24 : 32,
     }
   };
 
@@ -894,10 +943,78 @@ export default function CheckoutScreen() {
       style={[styles.container, { backgroundColor: themeBg }]} 
       contentContainerStyle={[styles.content, dynamicStyles.content]}
     >
-      <View style={[styles.layout, !isDesktop && styles.layoutMobile, dynamicStyles.layout]}>
-        {/* Left Column: Items (Booking Details) */}
-        <View style={[styles.mainColumn, !isDesktop && styles.mainColumnMobile, dynamicStyles.mainColumn]}>
-          <Card style={styles.itemProductCard}>
+      {/* ── Compact layout: native mobile + small web (<768px) ── */}
+      {isCompactCheckout && (
+        <>
+          {/* Mini header: back + centered title */}
+          <View style={[
+            styles.checkoutMiniHeader,
+            Platform.OS !== 'web' && { paddingTop: insets.top + 12, height: insets.top + 56 }
+          ]}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.checkoutMiniBackBtn}>
+              <ChevronLeft size={20} color="#0F172A" />
+            </TouchableOpacity>
+            <RNText style={styles.checkoutMiniTitle}>Checkout</RNText>
+            {/* Invisible spacer to balance the back button and keep title centered */}
+            <View style={{ width: 36, height: 36 }} />
+          </View>
+
+          {/* Ground info banner: name + location + price */}
+          <View style={styles.compactGroundBanner}>
+            <View style={{ flex: 1 }}>
+              <RNText style={styles.compactGroundName} numberOfLines={1}>
+                {(booking.grounds || booking.ground)?.name}
+              </RNText>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                <MapPin size={12} color="#059669" />
+                <RNText style={styles.compactGroundLocation}>
+                  {(booking.grounds || booking.ground)?.city}, {(booking.grounds || booking.ground)?.state}
+                </RNText>
+              </View>
+            </View>
+            <View style={styles.compactPriceBadge}>
+              <RNText style={styles.compactPriceText}>{formatCurrency(baseGroundPrice)}</RNText>
+              <RNText style={styles.compactPriceUnit}>/slot</RNText>
+            </View>
+          </View>
+
+          {/* Inline booking details: date / time / teams */}
+          <View style={styles.compactDetailsRow}>
+            <View style={styles.compactDetailItem}>
+              <Calendar size={16} color="#059669" />
+              <View style={{ marginLeft: 8 }}>
+                <RNText style={styles.compactDetailLabel}>Date</RNText>
+                <RNText style={styles.compactDetailValue}>{formatDateDDMMYYYY(booking.booking_date)}</RNText>
+              </View>
+            </View>
+            <View style={styles.compactDetailDivider} />
+            <View style={styles.compactDetailItem}>
+              <Clock size={16} color="#059669" />
+              <View style={{ marginLeft: 8 }}>
+                <RNText style={styles.compactDetailLabel}>Time</RNText>
+                <RNText style={styles.compactDetailValue}>
+                  {booking.start_time.substring(0, 5)} – {booking.end_time.substring(0, 5)}
+                </RNText>
+              </View>
+            </View>
+            <View style={styles.compactDetailDivider} />
+            <View style={styles.compactDetailItem}>
+              <Users size={16} color="#059669" />
+              <View style={{ marginLeft: 8 }}>
+                <RNText style={styles.compactDetailLabel}>Teams</RNText>
+                <RNText style={styles.compactDetailValue}>
+                  {booking.team_type === 'one' ? '1 Team' : 'Both'}
+                </RNText>
+              </View>
+            </View>
+          </View>
+        </>
+      )}
+
+      <View style={[styles.layout, !isDesktop && Platform.OS !== 'web' && styles.layoutMobile, dynamicStyles.layout as any]}>
+        {/* Left Column: Items (Booking Details) — Hidden on small web */}
+        <View style={[styles.mainColumn, dynamicStyles.mainColumn as any]}>
+          <Card style={[styles.itemProductCard, !isDesktop && { borderRadius: 0 }]}>
             <View style={[styles.groundImgContainer, dynamicStyles.groundImgContainer]}>
               {(booking.grounds || booking.ground)?.ground_images?.[0]?.image_url ? (
                   <View style={styles.heroImageWrapper}>
@@ -911,7 +1028,7 @@ export default function CheckoutScreen() {
                       colors={['transparent', 'rgba(15, 23, 42, 0.9)']}
                       style={styles.heroOverlayGradient}
                     >
-                      <RNText style={styles.heroTitle}>{(booking.grounds || booking.ground)?.name}</RNText>
+                      <RNText style={[styles.heroTitle, dynamicStyles.heroTitle]}>{(booking.grounds || booking.ground)?.name}</RNText>
                       <View style={styles.heroLocationRow}>
                         <MapPin size={16} color="rgba(255, 255, 255, 0.8)" />
                         <RNText style={styles.heroLocationText}>
@@ -957,7 +1074,7 @@ export default function CheckoutScreen() {
           </Card>
 
           {/* Booking Details Grid */}
-          <View style={styles.bookingDetailsCard}>
+          <View style={[styles.bookingDetailsCard, dynamicStyles.bookingDetailsCard]}>
             <View style={styles.bookingDetailsRow}>
               {/* Match Date */}
               <View style={styles.bookingDetailItem}>
@@ -1020,31 +1137,37 @@ export default function CheckoutScreen() {
             </View>
           </View>
         </View>
-
         {/* Right Column: Order Summary */}
-        <View style={[styles.sideColumn, !isDesktop && styles.sideColumnMobile, dynamicStyles.sideColumn]}>
+        <View style={[styles.sideColumn, !isDesktop && Platform.OS !== 'web' && styles.sideColumnMobile, dynamicStyles.sideColumn as any]}>
           <Card style={[styles.summaryCard, dynamicStyles.summaryCard]}>
-            {/* New Premium Header */}
-            <View style={styles.summaryHeaderRow}>
-              <TouchableOpacity onPress={() => router.back()} style={styles.summaryBackBtn}>
-                <ChevronLeft size={20} color="#0F172A" />
-              </TouchableOpacity>
-              <View style={{ flex: 1, marginLeft: 16 }}>
-                <RNText style={styles.summaryTitleNew}>Order Summary</RNText>
-                <RNText style={styles.summarySubtitle}>Review your booking and confirm</RNText>
+            {/* Order Summary Header — hidden on compact (we already show ground info above) */}
+            {!isCompactCheckout && (
+              <View style={[styles.summaryHeaderRow, { marginBottom: 16 }]}>
+                {isDesktop && (
+                  <TouchableOpacity onPress={() => router.back()} style={styles.summaryBackBtn}>
+                    <ChevronLeft size={20} color="#0F172A" />
+                  </TouchableOpacity>
+                )}
+                <View style={{ flex: 1, marginLeft: isDesktop ? 16 : 0 }}>
+                  <RNText style={styles.summaryTitleNew}>Order Summary</RNText>
+                  <RNText style={styles.summarySubtitle}>Review your booking and confirm</RNText>
+                </View>
+                <View style={styles.secureBadge}>
+                  <ShieldCheck size={20} color="#059669" />
+                </View>
               </View>
-              <View style={styles.secureBadge}>
-                <ShieldCheck size={20} color="#059669" />
-              </View>
-            </View>
+            )}
+            {isCompactCheckout && (
+              <RNText style={[styles.sectionTitleNew, { marginBottom: 12, marginTop: 4 }]}>Order Summary</RNText>
+            )}
             
-            {/* Redesigned Coupon Section */}
-            <View style={styles.couponContainer}>
-              <View style={styles.couponIconBox}>
-                <Ticket size={20} color="#059669" />
+            {/* Coupon Section */}
+            <View style={[styles.couponContainer, isCompactCheckout && { marginBottom: 12, padding: 4 }]}>
+              <View style={[styles.couponIconBox, isCompactCheckout && { width: 30, height: 30 }]}>
+                <Ticket size={isCompactCheckout ? 16 : 20} color="#059669" />
               </View>
               <RNTextInput 
-                style={styles.couponInputNew}
+                style={[styles.couponInputNew, isCompactCheckout && { height: 36, fontSize: 13 }]}
                 placeholder="Enter coupon code"
                 placeholderTextColor="#94A3B8"
                 value={couponCode}
@@ -1052,47 +1175,46 @@ export default function CheckoutScreen() {
                 autoCapitalize="characters"
               />
               <TouchableOpacity 
-                style={[styles.applyBtnNew, applyingCoupon && { opacity: 0.7 }]}
-                onPress={() => applyCouponCode(couponCode)}
+                style={[styles.applyBtnNew, applyingCoupon && { opacity: 0.7 }, isCompactCheckout && { height: 30, paddingHorizontal: 12 }, booking.coupon_id && { backgroundColor: '#FEE2E2' }]}
+                onPress={() => booking.coupon_id ? removeCoupon() : applyCouponCode(couponCode)}
                 disabled={applyingCoupon}
               >
-                 <RNText style={styles.applyBtnTextNew}>{applyingCoupon ? '...' : 'Apply'}</RNText>
+                 <RNText style={[styles.applyBtnTextNew, isCompactCheckout && { fontSize: 12 }, booking.coupon_id && { color: '#EF4444' }]}>
+                   {applyingCoupon ? '...' : (booking.coupon_id ? 'Remove' : 'Apply')}
+                 </RNText>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.offersBtnNew}
-                onPress={() => {
-                  setIsCouponsModalVisible(true);
-                  fetchAvailableCoupons();
-                }}
+                onPress={() => { setIsCouponsModalVisible(true); fetchAvailableCoupons(); }}
               >
-                 <ShieldCheck size={20} color="#059669" />
-                 <RNText style={styles.offersBtnTextNew}>Offers</RNText>
+                 <Ticket size={isCompactCheckout ? 14 : 20} color="#059669" />
+                 <RNText style={[styles.offersBtnTextNew, isCompactCheckout && { fontSize: 12 }]}>Offers</RNText>
               </TouchableOpacity>
             </View>
 
-            {/* Modernized Price Breakdown */}
-            <View style={styles.breakdownNew}>
-              <View style={styles.breakdownRowNew}>
+            {/* Price Breakdown */}
+            <View style={[styles.breakdownNew, isCompactCheckout && { padding: 12, marginBottom: 12 }]}>
+              <View style={[styles.breakdownRowNew, isCompactCheckout && { marginBottom: 10 }]}>
                 <View style={styles.breakdownLeftNew}>
-                  <View style={styles.breakdownIconBox}>
-                    <ShoppingBag size={16} color="#059669" />
+                  <View style={[styles.breakdownIconBox, isCompactCheckout && { width: 26, height: 26, borderRadius: 6 }]}>
+                    <ShoppingBag size={isCompactCheckout ? 13 : 16} color="#059669" />
                   </View>
-                  <RNText style={styles.breakdownLabelNew}>Ground Price</RNText>
+                  <RNText style={[styles.breakdownLabelNew, isCompactCheckout && { fontSize: 13 }]}>Ground Price</RNText>
                 </View>
-                <RNText style={styles.breakdownValueNew}>{formatCurrency(baseGroundPrice)}</RNText>
+                <RNText style={[styles.breakdownValueNew, isCompactCheckout && { fontSize: 13 }]}>{formatCurrency(baseGroundPrice)}</RNText>
               </View>
               
-              <View style={styles.breakdownRowNew}>
+              <View style={[styles.breakdownRowNew, isCompactCheckout && { marginBottom: 10 }]}>
                 <View style={styles.breakdownLeftNew}>
-                  <View style={styles.breakdownIconBox}>
-                    <Ticket size={16} color="#059669" />
+                  <View style={[styles.breakdownIconBox, isCompactCheckout && { width: 26, height: 26, borderRadius: 6 }]}>
+                    <Ticket size={isCompactCheckout ? 13 : 16} color="#059669" />
                   </View>
-                  <RNText style={styles.breakdownLabelNew}>Platform Fee</RNText>
+                  <RNText style={[styles.breakdownLabelNew, isCompactCheckout && { fontSize: 13 }]}>Platform Fee</RNText>
                   <View style={styles.gstBadgeNew}>
                     <RNText style={styles.gstBadgeTextNew}>Inc. GST</RNText>
                   </View>
                 </View>
-                <RNText style={styles.breakdownValueNew}>{formatCurrency(platformFeeIncGst)}</RNText>
+                <RNText style={[styles.breakdownValueNew, isCompactCheckout && { fontSize: 13 }]}>{formatCurrency(platformFeeIncGst)}</RNText>
               </View>
 
               {booking.discount_amount > 0 && (
@@ -1111,32 +1233,61 @@ export default function CheckoutScreen() {
 
               <View style={styles.totalRowNew}>
                 <View>
-                  <RNText style={styles.totalLabelNew}>Total Payable</RNText>
-                  <RNText style={styles.totalSubtitleNew}>Inclusive of all taxes</RNText>
+                  <RNText style={[styles.totalLabelNew, isCompactCheckout && { fontSize: 14 }]}>Total Payable</RNText>
+                  <RNText style={styles.totalSubtitleNew}>Incl. all taxes</RNText>
                 </View>
-                <RNText style={styles.totalValueNew}>
+                <RNText style={[styles.totalValueNew, isCompactCheckout && { fontSize: 20 }]}>
                   {formatCurrency(totalPayable)}
                 </RNText>
               </View>
             </View>
 
+            {/* Contact Information Section */}
+            <View style={[styles.paymentSectionNew, isCompactCheckout && { marginBottom: 12 }]}>
+              <RNText style={[styles.sectionTitleNew, isCompactCheckout && { fontSize: 13, marginBottom: 10 }]}>Confirm Contact Details</RNText>
+              <View style={styles.contactInfoCard}>
+                <View style={styles.contactInputRow}>
+                  <Zap size={18} color="#64748B" />
+                  <RNTextInput
+                    style={styles.contactInput}
+                    placeholder="Email Address"
+                    value={contactEmail}
+                    onChangeText={setContactEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                </View>
+                <View style={[styles.contactInputRow, { marginTop: 8 }]}>
+                  <Smartphone size={18} color="#64748B" />
+                  <RNTextInput
+                    style={styles.contactInput}
+                    placeholder="Phone Number"
+                    value={contactPhone}
+                    onChangeText={setContactPhone}
+                    keyboardType="phone-pad"
+                  />
+                </View>
+                <RNText style={styles.contactHint}>Required for payment receipt and confirmation.</RNText>
+              </View>
+            </View>
+
             {/* Payment Method Section */}
-            <View style={styles.paymentSectionNew}>
-              <RNText style={styles.sectionTitleNew}>Payment Method</RNText>
-              <View style={styles.methodListNew}>
+            <View style={[styles.paymentSectionNew, isCompactCheckout && { marginBottom: 12 }]}>
+              <RNText style={[styles.sectionTitleNew, isCompactCheckout && { fontSize: 13, marginBottom: 10 }]}>Payment Method</RNText>
+              <View style={[styles.methodListNew, isCompactCheckout && { gap: 8 }]}>
                 {(walletBalance > 0 || isGroundOwnerOrAdmin) && (
                   <TouchableOpacity 
                     onPress={() => setSelectedGateway('wallet')}
-                    style={[styles.methodItemNew, selectedGateway === 'wallet' && styles.methodItemActiveNew]}
+                    style={[styles.methodItemNew, selectedGateway === 'wallet' && styles.methodItemActiveNew, isCompactCheckout && { padding: 10 }]}
                   >
-                    <View style={styles.methodIconBoxNew}>
-                      <Wallet size={20} color={selectedGateway === 'wallet' ? '#059669' : '#64748B'} />
+                    <View style={[styles.methodIconBoxNew, isCompactCheckout && { width: 36, height: 36, borderRadius: 10, marginRight: 10 }]}>
+                      <Wallet size={isCompactCheckout ? 16 : 20} color={selectedGateway === 'wallet' ? '#059669' : '#64748B'} />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <RNText style={[styles.methodLabelNew, selectedGateway === 'wallet' && styles.methodLabelActiveNew]}>
+                      <RNText style={[styles.methodLabelNew, selectedGateway === 'wallet' && styles.methodLabelActiveNew, isCompactCheckout && { fontSize: 13 }]}>
                         Wallet Balance
                       </RNText>
-                      <RNText style={styles.methodSubtitleNew}>Available Balance: {formatCurrency(walletBalance)}</RNText>
+                      <RNText style={[styles.methodSubtitleNew, isCompactCheckout && { fontSize: 11 }]}>Bal: {formatCurrency(walletBalance)}</RNText>
                     </View>
                     <View style={[styles.radioOuter, selectedGateway === 'wallet' && styles.radioOuterActive]}>
                       {selectedGateway === 'wallet' && <View style={styles.radioInner} />}
@@ -1146,27 +1297,98 @@ export default function CheckoutScreen() {
                 
                 {activeGateways.filter(g => {
                   if (isGroundOwnerOrAdmin) return g.name === 'cash';
-                  return g.name !== 'cash'; 
+                  return g.name !== 'cash' && g.name !== 'razorpay'; 
                 }).map(g => (
                   <TouchableOpacity 
                     key={g.name}
-                    onPress={() => setSelectedGateway(g.name)}
-                    style={[styles.methodItemNew, selectedGateway === g.name && styles.methodItemActiveNew]}
+                    onPress={() => {
+                      setSelectedGateway(g.name);
+                      setSelectedSubMethod(null);
+                    }}
+                    style={[styles.methodItemNew, selectedGateway === g.name && styles.methodItemActiveNew, isCompactCheckout && { padding: 10 }]}
                   >
-                    <View style={styles.methodIconBoxNew}>
-                      {g.name === 'cash' ? <Wallet size={20} color={selectedGateway === 'cash' ? '#059669' : '#64748B'} /> : <CreditCard size={20} color={selectedGateway === g.name ? '#059669' : '#64748B'} />}
+                    <View style={[styles.methodIconBoxNew, isCompactCheckout && { width: 36, height: 36, borderRadius: 10, marginRight: 10 }]}>
+                      {g.name === 'cash' ? <Wallet size={isCompactCheckout ? 16 : 20} color={selectedGateway === 'cash' ? '#059669' : '#64748B'} /> : <CreditCard size={isCompactCheckout ? 16 : 20} color={selectedGateway === g.name ? '#059669' : '#64748B'} />}
                     </View>
                     <View style={{ flex: 1 }}>
-                      <RNText style={[styles.methodLabelNew, selectedGateway === g.name && styles.methodLabelActiveNew]}>
+                      <RNText style={[styles.methodLabelNew, selectedGateway === g.name && styles.methodLabelActiveNew, isCompactCheckout && { fontSize: 13 }]}>
                         {g.label}
                       </RNText>
-                      <RNText style={styles.methodSubtitleNew}>{g.name === 'cash' ? 'Pay at the ground' : 'Pay via Secure Gateway'}</RNText>
+                      <RNText style={[styles.methodSubtitleNew, isCompactCheckout && { fontSize: 11 }]}>{g.name === 'cash' ? 'Pay at the ground' : 'Secure Gateway'}</RNText>
                     </View>
                     <View style={[styles.radioOuter, selectedGateway === g.name && styles.radioOuterActive]}>
                       {selectedGateway === g.name && <View style={styles.radioInner} />}
                     </View>
                   </TouchableOpacity>
                 ))}
+
+                {/* Online Methods (Razorpay replacement) */}
+                {activeGateways.some(g => g.name === 'razorpay') && !isGroundOwnerOrAdmin && (
+                  <>
+                    <TouchableOpacity 
+                      onPress={() => {
+                        setSelectedGateway('razorpay');
+                        setSelectedSubMethod('upi');
+                      }}
+                      style={[styles.methodItemNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'upi') && styles.methodItemActiveNew, isCompactCheckout && { padding: 10 }]}
+                    >
+                      <View style={[styles.methodIconBoxNew, isCompactCheckout && { width: 36, height: 36, borderRadius: 10, marginRight: 10 }]}>
+                        <Smartphone size={isCompactCheckout ? 16 : 20} color={(selectedGateway === 'razorpay' && selectedSubMethod === 'upi') ? '#059669' : '#64748B'} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <RNText style={[styles.methodLabelNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'upi') && styles.methodLabelActiveNew, isCompactCheckout && { fontSize: 13 }]}>
+                          UPI (PhonePe, GPay, etc)
+                        </RNText>
+                        <RNText style={[styles.methodSubtitleNew, isCompactCheckout && { fontSize: 11 }]}>Instant and Secure</RNText>
+                      </View>
+                      <View style={[styles.radioOuter, (selectedGateway === 'razorpay' && selectedSubMethod === 'upi') && styles.radioOuterActive]}>
+                        {(selectedGateway === 'razorpay' && selectedSubMethod === 'upi') && <View style={styles.radioInner} />}
+                      </View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity 
+                      onPress={() => {
+                        setSelectedGateway('razorpay');
+                        setSelectedSubMethod('card');
+                      }}
+                      style={[styles.methodItemNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'card') && styles.methodItemActiveNew, isCompactCheckout && { padding: 10 }]}
+                    >
+                      <View style={[styles.methodIconBoxNew, isCompactCheckout && { width: 36, height: 36, borderRadius: 10, marginRight: 10 }]}>
+                        <CreditCard size={isCompactCheckout ? 16 : 20} color={(selectedGateway === 'razorpay' && selectedSubMethod === 'card') ? '#059669' : '#64748B'} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <RNText style={[styles.methodLabelNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'card') && styles.methodLabelActiveNew, isCompactCheckout && { fontSize: 13 }]}>
+                          Cards (Credit/Debit)
+                        </RNText>
+                        <RNText style={[styles.methodSubtitleNew, isCompactCheckout && { fontSize: 11 }]}>Visa, Mastercard, RuPay</RNText>
+                      </View>
+                      <View style={[styles.radioOuter, (selectedGateway === 'razorpay' && selectedSubMethod === 'card') && styles.radioOuterActive]}>
+                        {(selectedGateway === 'razorpay' && selectedSubMethod === 'card') && <View style={styles.radioInner} />}
+                      </View>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity 
+                      onPress={() => {
+                        setSelectedGateway('razorpay');
+                        setSelectedSubMethod('netbanking');
+                      }}
+                      style={[styles.methodItemNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') && styles.methodItemActiveNew, isCompactCheckout && { padding: 10 }]}
+                    >
+                      <View style={[styles.methodIconBoxNew, isCompactCheckout && { width: 36, height: 36, borderRadius: 10, marginRight: 10 }]}>
+                        <Globe size={isCompactCheckout ? 16 : 20} color={(selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') ? '#059669' : '#64748B'} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <RNText style={[styles.methodLabelNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') && styles.methodLabelActiveNew, isCompactCheckout && { fontSize: 13 }]}>
+                          Net Banking
+                        </RNText>
+                        <RNText style={[styles.methodSubtitleNew, isCompactCheckout && { fontSize: 11 }]}>All Indian Banks</RNText>
+                      </View>
+                      <View style={[styles.radioOuter, (selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') && styles.radioOuterActive]}>
+                        {(selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') && <View style={styles.radioInner} />}
+                      </View>
+                    </TouchableOpacity>
+                  </>
+                )}
               </View>
             </View>
 
@@ -1373,10 +1595,19 @@ const styles = StyleSheet.create({
   mainColumn: {
     flex: 1.8,
   },
+  mainColumnMobile: {
+    flex: 0,
+    width: '100%',
+  },
   sideColumn: {
     flex: 1,
     padding: 24,
     backgroundColor: '#F8FAFC',
+  },
+  sideColumnMobile: {
+    padding: 16,
+    width: '100%',
+    flex: 0,
   },
   itemProductCard: {
     flex: 1,
@@ -1489,7 +1720,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   summaryCard: {
-    flex: 1,
     padding: 20,
     borderRadius: 32,
     backgroundColor: '#FFFFFF',
@@ -1800,9 +2030,39 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   securityTextNew: {
-    fontSize: 12,
-    color: '#64748B',
     fontFamily: 'Inter',
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  contactInfoCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  contactInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 48,
+    gap: 12,
+  },
+  contactInput: {
+    flex: 1,
+    fontFamily: 'Inter',
+    fontSize: 14,
+    color: '#0F172A',
+  },
+  contactHint: {
+    fontFamily: 'Inter',
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 8,
+    textAlign: 'center',
   },
   centered: {
     flex: 1,
@@ -2152,5 +2412,137 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
     fontWeight: '500',
     opacity: 0.8,
+  },
+  // Minimal checkout header for small web screens
+  checkoutMiniHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  checkoutMiniBackBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  checkoutMiniTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+    letterSpacing: -0.3,
+  },
+  checkoutMiniSecureBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  checkoutMiniSecureText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#059669',
+    fontFamily: 'Inter',
+  },
+  // Compact small-web banner (replaces hero image)
+  compactGroundBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  compactBackBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  compactGroundName: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  compactGroundLocation: {
+    fontSize: 12,
+    color: '#64748B',
+    fontFamily: 'Inter',
+  },
+  compactPriceBadge: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 2,
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  compactPriceText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#059669',
+    fontFamily: 'Inter',
+  },
+  compactPriceUnit: {
+    fontSize: 11,
+    color: '#059669',
+    fontFamily: 'Inter',
+  },
+  // Compact pill-style detail row
+  compactDetailsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    marginBottom: 2,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  compactDetailItem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  compactDetailDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: '#E2E8F0',
+    marginHorizontal: 8,
+  },
+  compactDetailLabel: {
+    fontSize: 10,
+    color: '#94A3B8',
+    fontWeight: '600',
+    fontFamily: 'Inter',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  compactDetailValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+    marginTop: 1,
   },
 });

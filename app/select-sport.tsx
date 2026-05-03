@@ -22,6 +22,8 @@ import {
   Calendar,
   Clock,
   MapPin,
+  User,
+  Users,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import Animated, { 
@@ -39,12 +41,14 @@ import {
   Gesture 
 } from 'react-native-gesture-handler';
 import { supabase } from '@/lib/supabase';
+import { makeGroundPath } from '@/utils/groundSlug';
+import FindGroundSkeleton from '@/components/landing/FindGroundSkeleton';
 
 const { width, height } = Dimensions.get('window');
 const HEADER_TABS = [70, 55, 50, 50, 45]; // Sport, Location, Date, Team, Time heights
 const TEAMS_OPTIONS = [
-  { id: 'one', label: '1 Team', icon: Swords },
-  { id: 'both', label: 'Both Teams', icon: Trophy },
+  { id: 'one', label: '1 Team', icon: User },
+  { id: 'both', label: 'Both Teams', icon: Users },
 ];
 const SPORT_ICON_MAP: Record<string, any> = {
   'Box Cricket': { icon: Swords, bg: '#043529', image: require('@/assets/images/box_cricket_bg.jpg') },
@@ -181,16 +185,14 @@ export default function SelectSportScreen() {
       const totalAmount = isBox ? finalPrice : (teamType === 'one' ? finalPrice / 2 : finalPrice);
       const pricePerHour = isBox ? (finalPrice / (duration || 1)) : finalPrice;
 
-      const params = new URLSearchParams();
-      params.set('groundId', ground.id);
-      params.set('date', date.db);
-      params.set('time', startTimeStr.slice(0, 5));
-      params.set('teamType', teamType);
-      params.set('amount', totalAmount.toString());
-      params.set('pricePerHour', pricePerHour.toString());
-      params.set('endTime', actualEndTime.slice(0, 5));
+      const finalParams = new URLSearchParams();
+      finalParams.set('date', date.db);
+      finalParams.set('time', startTimeStr.slice(0, 5));
+      finalParams.set('teams', teamType);
+      finalParams.set('lock', 'true');
 
-      router.push(`/checkout/new?${params.toString()}` as any);
+      const groundPath = makeGroundPath(ground);
+      router.push(`${groundPath}?${finalParams.toString()}` as any);
     } catch (err: any) {
       console.error('Booking error:', err);
       Alert.alert('Error', 'Could not initiate checkout. Please try again.');
@@ -452,7 +454,7 @@ export default function SelectSportScreen() {
   const bgPin5Style = useAnimatedStyle(() => {
     const ty = interpolate(verticalScrollY.value, [0, SNAP_4, SNAP_5], [height, SNAP_4, SNAP_5], Extrapolate.CLAMP);
     return {
-      backgroundColor: '#2a533a',
+      backgroundColor: '#a5ff8a',
       transform: [{ translateY: ty }],
       zIndex: 4,
     };
@@ -473,11 +475,7 @@ export default function SelectSportScreen() {
   const time = timeSlots[activeTimeIndex] || 'No slots';
 
   if (sports.length === 0 || locations.length === 0) {
-    return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color="#00ea6b" />
-      </View>
-    );
+    return <FindGroundSkeleton />;
   }
 
   return (
@@ -493,7 +491,7 @@ export default function SelectSportScreen() {
       <View style={styles.headerOverlay}>
         <Animated.View style={[styles.statusBarFill, { height: insets.top }, statusBarBgStyle]} />
         <Animated.View style={[styles.headerTab, sportTabStyle, { height: HEADER_TABS[0], backgroundColor: sport.bg }]}>
-          <View style={[styles.centerRow, { paddingTop: 10 }]}><sport.icon size={20} color="#00ea6b" /><Text style={styles.tabText}>{sport.name}</Text></View>
+          <View style={[styles.centerRow, { paddingTop: 10 }]}><Text style={styles.tabText}>{sport.name}</Text></View>
         </Animated.View>
         <Animated.View style={[styles.headerTab, locTabStyle, { height: HEADER_TABS[1], backgroundColor: '#00ea6b' }]}>
           <View style={styles.centerRow}><Text style={styles.tabTextSmall}>{loc.name}</Text></View>
@@ -504,8 +502,8 @@ export default function SelectSportScreen() {
         <Animated.View style={[styles.headerTab, teamTabStyle, { height: HEADER_TABS[3], backgroundColor: '#5bcd8e' }]}>
           <View style={styles.centerRow}><Text style={[styles.tabTextSmall, { color: '#043529' }]}>{teamOption.label}</Text></View>
         </Animated.View>
-        <Animated.View style={[styles.headerTab, timeTabStyle, { height: HEADER_TABS[4], backgroundColor: '#2a533a' }]}>
-          <View style={styles.centerRow}><Text style={[styles.tabTextSmall, { color: '#FFFFFF' }]}>{time}</Text></View>
+        <Animated.View style={[styles.headerTab, timeTabStyle, { height: HEADER_TABS[4], backgroundColor: '#a5ff8a' }]}>
+          <View style={styles.centerRow}><Text style={[styles.tabTextSmall, { color: '#043529' }]}>{time}</Text></View>
         </Animated.View>
       </View>
 
@@ -556,13 +554,13 @@ export default function SelectSportScreen() {
           <View style={[styles.pageCard, { backgroundColor: '#00ea6b' }]}>
             <ScrollView horizontal pagingEnabled onScroll={(e) => setActiveLocIndex(Math.round(e.nativeEvent.contentOffset.x / width))} scrollEventThrottle={16} showsHorizontalScrollIndicator={false}>
               {locations.map((l) => (
-                <View key={l.id} style={styles.slide}>
+                <View key={l.id} style={[styles.slide, { paddingBottom: 220 }]}>
                   <View style={styles.iconCircleSmall}><MapPin size={40} color="#043529" /></View>
                   <Text style={[styles.heroName, { color: '#043529', fontSize: 32 }]}>{l.name}</Text>
                 </View>
               ))}
             </ScrollView>
-            <Animated.View style={[styles.dotContainerAbsolute, dots2Opacity, { bottom: Platform.OS === 'ios' ? 80 : 60 }]}>
+            <Animated.View style={[styles.dotContainerAbsolute, dots2Opacity, { bottom: Platform.OS === 'ios' ? 140 : 120 }]}>
               {locations.map((_, i) => (
                 <View key={i} style={[styles.dotDark, activeLocIndex === i && styles.activeDotDark, { backgroundColor: 'rgba(4, 53, 41, 0.3)' }]} />
               ))}
@@ -610,17 +608,17 @@ export default function SelectSportScreen() {
         </View>
         
         <View style={{ height: height - (HEADER_TABS[0] + HEADER_TABS[1] + HEADER_TABS[2] + HEADER_TABS[3]) - insets.top }}>
-          <View style={[styles.pageCard, { backgroundColor: '#2a533a' }]}>
+          <View style={[styles.pageCard, { backgroundColor: '#a5ff8a' }]}>
             <ScrollView horizontal pagingEnabled onScroll={(e) => setActiveTimeIndex(Math.round(e.nativeEvent.contentOffset.x / width))} scrollEventThrottle={16} showsHorizontalScrollIndicator={false}>
               {timeSlots.length > 0 ? timeSlots.map((t) => (
                 <View key={t} style={styles.slide}>
-                  <View style={styles.iconCircleSmall}><Clock size={40} color="#FFFFFF" /></View>
-                  <Text style={[styles.heroName, { color: '#FFFFFF' }]}>{t}</Text>
+                  <View style={styles.iconCircleSmall}><Clock size={40} color="#043529" /></View>
+                  <Text style={[styles.heroName, { color: '#043529' }]}>{t}</Text>
                 </View>
               )) : (
                 <View style={styles.slide}>
-                  <View style={styles.iconCircleSmall}><Clock size={40} color="rgba(255,255,255,0.4)" /></View>
-                  <Text style={[styles.heroName, { color: 'rgba(255,255,255,0.4)', fontSize: 24 }]}>No Slots Available</Text>
+                  <View style={styles.iconCircleSmall}><Clock size={40} color="rgba(4, 53, 41, 0.4)" /></View>
+                  <Text style={[styles.heroName, { color: 'rgba(4, 53, 41, 0.4)', fontSize: 24 }]}>No Slots Available</Text>
                 </View>
               )}
             </ScrollView>
@@ -684,9 +682,9 @@ const styles = StyleSheet.create({
   statusBarFill: { position: 'absolute', top: 0, left: 0, right: 0 },
   headerTab: { position: 'absolute', left: 0, right: 0, justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
   centerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  tabText: { fontSize: 20, fontWeight: '900', color: '#FFFFFF' },
-  tabTextSmall: { fontSize: 16, fontWeight: '900', color: '#043529' },
-  slide: { width: width, alignItems: 'center', justifyContent: 'center', padding: 20, paddingBottom: 100 },
+  tabText: { fontSize: 16, fontWeight: '900', color: '#00ea6b', fontFamily: 'Inter' },
+  tabTextSmall: { fontSize: 16, fontWeight: '900', color: '#043529', fontFamily: 'Inter' },
+  slide: { width: width, alignItems: 'center', justifyContent: 'center', padding: 20, paddingBottom: 160 },
   iconCircle: { width: 140, height: 140, borderRadius: 70, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center', marginBottom: 30 },
   iconCircleSmall: { width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(0,0,0,0.05)', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
   heroName: { fontSize: 44, fontWeight: '900', color: '#FFFFFF', textAlign: 'center', letterSpacing: -1 },
@@ -703,7 +701,7 @@ const styles = StyleSheet.create({
   miniCardLoc: { fontSize: 10, color: '#64748B' },
   miniCardPrice: { fontSize: 13, fontWeight: '900', color: '#00ea6b', marginTop: 6 },
   noResults: { fontSize: 18, color: '#94A3B8', fontWeight: '700' },
-  dotContainerAbsolute: { position: 'absolute', bottom: Platform.OS === 'ios' ? 60 : 40, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 10 },
+  dotContainerAbsolute: { position: 'absolute', bottom: Platform.OS === 'ios' ? 100 : 80, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 10 },
   dotLight: { width: 10, height: 10, borderRadius: 5, backgroundColor: 'rgba(255,255,255,0.3)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
   activeDotLight: { backgroundColor: '#00ea6b', width: 32, borderColor: '#00ea6b' },
   dotDark: { width: 10, height: 10, borderRadius: 5, backgroundColor: 'rgba(4,53,41,0.15)' },

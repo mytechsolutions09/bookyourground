@@ -12,6 +12,8 @@ import {
   Trophy,
   ShoppingBag,
   CalendarClock,
+  Search,
+  BarChart2,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUI } from '@/contexts/UIContext';
@@ -22,14 +24,15 @@ const INACTIVE = '#9ca3af';
 
 function getActiveTab(
   segments: string[],
-): 'home' | 'grounds' | 'bookings' | 'favorites' | 'profile' | 'find-opponent' | 'cricket' | 'shop' | 'inventory' {
+): 'home' | 'grounds' | 'bookings' | 'favorites' | 'profile' | 'find-opponent' | 'stats' | 'shop' | 'inventory' | 'find' {
   const root = segments[0];
   if (root === 'inventory') return 'inventory';
+  if (root === 'select-sport') return 'find';
   if (root === 'find-an-opponent') return 'find-opponent';
   if (root === 'ground' || root === 'grounds' || root === 'book-my-ground') {
     return 'grounds';
   }
-  if (root === 'cricket') return 'cricket';
+  if (root === 'cricket') return 'stats';
   if (root === 'bookings') return 'bookings';
   if (root === 'favorites') return 'favorites';
   if (root === 'shop') return 'shop';
@@ -37,13 +40,14 @@ function getActiveTab(
   const tab = segments[1] ?? 'index';
   if (tab === 'index' || tab === 'home_tab') return 'home';
   if (tab === 'grounds') return 'grounds';
-  if (tab === 'cricket') return 'cricket';
+  if (tab === 'cricket') return 'stats';
   if (tab === 'bookings') return 'bookings';
   if (tab === 'favorites') return 'favorites';
   if (tab === 'find-an-opponent') return 'find-opponent';
   if (tab === 'profile') return 'profile';
   if (tab === 'shop') return 'shop';
   if (tab === 'inventory') return 'inventory';
+  if (tab === 'select-sport') return 'find';
   return 'home';
 }
 
@@ -110,10 +114,10 @@ export default function MobileTabBar() {
       
       <Pressable
         style={styles.item}
-        onPress={() => go('/(tabs)/find-an-opponent')}
+        onPress={() => go('/select-sport')}
       >
-        <Swords size={size} color={activeTab === 'find-opponent' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'find-opponent' ? 2.5 : 2} />
-        <Text style={[styles.label, { color: activeTab === 'find-opponent' ? ACTIVE : INACTIVE }]}>Opposition</Text>
+        <Search size={size} color={activeTab === 'find' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'find' ? 2.5 : 2} />
+        <Text style={[styles.label, { color: activeTab === 'find' ? ACTIVE : INACTIVE }]}>Find</Text>
       </Pressable>
 
       <Pressable
@@ -126,10 +130,10 @@ export default function MobileTabBar() {
 
       <Pressable
         style={styles.item}
-        onPress={() => go('/(tabs)/cricket')}
+        onPress={() => go('/(tabs)/cricket/stats')}
       >
-        <Trophy size={size} color={activeTab === 'cricket' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'cricket' ? 2.5 : 2} />
-        <Text style={[styles.label, { color: activeTab === 'cricket' ? ACTIVE : INACTIVE }]}>Cricket</Text>
+        <BarChart2 size={size} color={activeTab === 'stats' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'stats' ? 2.5 : 2} />
+        <Text style={[styles.label, { color: activeTab === 'stats' ? ACTIVE : INACTIVE }]}>Stats</Text>
       </Pressable>
     </Animated.View>
   );

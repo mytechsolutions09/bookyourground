@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { LocationProvider } from '@/contexts/LocationContext';
 import { UIProvider } from '@/contexts/UIContext';
 import { MobileTabBarHost } from '@/components/navigation/MobileTabBarHost';
 
@@ -55,30 +56,32 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider>
-        <UIProvider>
-          <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-            <View style={{ flex: 1 }}>
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  contentStyle: { backgroundColor: '#FFFFFF', flex: 1 },
-                }}
-              >
-                <Stack.Screen name="index" />
-                <Stack.Screen name="welcome" />
-                <Stack.Screen name="(auth)" />
-                <Stack.Screen name="(tabs)" />
-                <Stack.Screen name="(owner)" />
-                <Stack.Screen name="(admin)" />
-                <Stack.Screen name="+not-found" />
-              </Stack>
+      <LocationProvider>
+        <AuthProvider>
+          <UIProvider>
+            <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+              <View style={{ flex: 1 }}>
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor: '#FFFFFF', flex: 1 },
+                  }}
+                >
+                  <Stack.Screen name="index" />
+                  <Stack.Screen name="welcome" />
+                  <Stack.Screen name="(auth)" />
+                  <Stack.Screen name="(tabs)" />
+                  <Stack.Screen name="(owner)" />
+                  <Stack.Screen name="(admin)" />
+                  <Stack.Screen name="+not-found" />
+                </Stack>
+              </View>
+              <MobileTabBarHost />
             </View>
-            <MobileTabBarHost />
-          </View>
-          <StatusBar style="auto" />
-        </UIProvider>
-      </AuthProvider>
+            <StatusBar style="auto" />
+          </UIProvider>
+        </AuthProvider>
+      </LocationProvider>
     </GestureHandlerRootView>
   );
 }

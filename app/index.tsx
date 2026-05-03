@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router, Redirect } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
 import LandingScrollContent from '@/components/landing/LandingScrollContent';
+import HomeScreenSkeleton from '@/components/landing/HomeScreenSkeleton';
 import HomePageSkeleton from '@/components/landing/HomePageSkeleton';
 import WebLayout from '@/components/web/WebLayout';
 
@@ -60,7 +61,7 @@ export default function IndexScreen() {
   }, [user, profile, loading, welcomeChecked, os]);
 
   if (!welcomeChecked || (loading && os !== 'web')) {
-    return <HomePageSkeleton />;
+    return os === 'web' ? <HomePageSkeleton /> : <HomeScreenSkeleton />;
   }
 
 

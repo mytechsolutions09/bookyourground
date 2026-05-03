@@ -224,10 +224,9 @@ export default function GroundsTabScreen() {
     </View>
   );
 
-  return (
-    <View style={Platform.OS === 'web' ? { flex: 1, backgroundColor: '#FFFFFF' } : styles.nativeRoot}>
-      {Platform.OS === 'web' ? (
-        <WebLayout hideHeader={false} isPublicNoSidebar={isSmall}>
+    const webContent = (
+      <View style={{ flex: 1 }}>
+        {!isSmall ? (
           <ScrollView
             style={styles.scroll}
             contentContainerStyle={styles.scrollContent}
@@ -238,7 +237,6 @@ export default function GroundsTabScreen() {
             scrollEventThrottle={16}
           >
             {renderTabs()}
-
             <View style={styles.page}>
               {activeTab === 'book' ? (
                 <View>
@@ -250,8 +248,45 @@ export default function GroundsTabScreen() {
               ) : renderFavorites()}
             </View>
           </ScrollView>
-        </WebLayout>
-      ) : (
+        ) : (
+          /* Small Web screen: Use the same animated logic as mobile */
+          <>
+            <Animated.View style={headerAnimatedStyle}>
+              {renderHeader()}
+            </Animated.View>
+
+            <AnimatedScrollView
+              onScroll={verticalScrollHandler}
+              scrollEventThrottle={16}
+              style={styles.page}
+              contentContainerStyle={{
+                paddingTop: (HEADER_HEIGHT + insets.top + 4),
+                paddingBottom: 100
+              }}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="always"
+            >
+              {activeTab === 'book' ? (
+                <View>
+                  <GroundsSearchBar lightMode={true} />
+                  <LandingBookingForm fullWidth noCard bookGroundScreenNative hideTitle lightAppTheme initialType={type as string} premiumCards={true} />
+                </View>
+              ) : activeTab === 'opponent' ? (
+                <FindAnOpponentScreen hideHeader />
+              ) : renderFavorites()}
+            </AnimatedScrollView>
+          </>
+        )}
+      </View>
+    );
+
+    return (
+      <View style={isWeb ? { flex: 1, backgroundColor: '#FFFFFF' } : styles.nativeRoot}>
+        {isWeb ? (
+          <WebLayout hideHeader={false} isPublicNoSidebar={isSmall}>
+            {webContent}
+          </WebLayout>
+        ) : (
         <>
           <Animated.View style={headerAnimatedStyle}>
             {renderHeader()}

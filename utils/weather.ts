@@ -53,13 +53,30 @@ export async function fetchCityName(lat: number, lng: number) {
     if (data && data.results && data.results.length > 0) {
       // Find the city/locality in the address components
       const addressComponents = data.results[0].address_components;
-      const cityComponent = addressComponents.find((c: any) => 
-        c.types.includes('locality') || 
-        c.types.includes('administrative_area_level_2') ||
-        c.types.includes('administrative_area_level_1')
-      );
       
-      return cityComponent ? cityComponent.long_name : 'Unknown';
+      const sublocality1 = addressComponents.find((c: any) => c.types.includes('sublocality_level_1'));
+      const sublocality2 = addressComponents.find((c: any) => c.types.includes('sublocality_level_2'));
+      const neighborhood = addressComponents.find((c: any) => c.types.includes('neighborhood'));
+      const locality = addressComponents.find((c: any) => c.types.includes('locality'));
+      const adminArea = addressComponents.find((c: any) => c.types.includes('administrative_area_level_1'));
+
+      let mainArea = '';
+      if (neighborhood) {
+        mainArea = neighborhood.long_name;
+      } else if (sublocality1) {
+        mainArea = sublocality1.long_name;
+        // If it's just a Block/Sector, try to prefix with sublocality2 if available
+        if (sublocality2 && (mainArea.toLowerCase().includes('block') || mainArea.toLowerCase().includes('sector'))) {
+          mainArea = `${mainArea}, ${sublocality2.long_name}`;
+        }
+      }
+
+      const parts = [];
+      if (mainArea) parts.push(mainArea);
+      if (locality) parts.push(locality.long_name);
+      else if (adminArea) parts.push(adminArea.short_name);
+
+      return parts.length > 0 ? parts.join(', ') : 'Unknown';
     }
     return 'Unknown';
   } catch (error) {

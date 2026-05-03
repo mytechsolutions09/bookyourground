@@ -110,22 +110,7 @@ export default function LandingScrollContent({
                   ))}
                 </ScrollView>
 
-                <TouchableOpacity
-                  style={styles.mobileFindBtn}
-                  onPress={() => expoRouter.push('/select-sport' as any)}
-                  activeOpacity={0.9}
-                >
-                  <View style={styles.mobileFindIconBox}>
-                    <SearchIcon size={20} color="#00ea6b" strokeWidth={3} />
-                  </View>
-                  <View style={styles.mobileFindTextBox}>
-                    <Text style={styles.mobileFindTitle}>Find a ground</Text>
-                    <Text style={styles.mobileFindSub}>
-                      Pick your sport & play
-                    </Text>
-                  </View>
-                  <ArrowRight size={18} color="#94A3B8" />
-                </TouchableOpacity>
+
               </View>
 
               <FindOpposition />

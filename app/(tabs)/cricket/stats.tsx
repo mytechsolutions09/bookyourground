@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 
 type SubTab = 'batting' | 'bowling' | 'fielding' | 'captain' | 'leaders';
 
-export default function CricketStats({ activeSubTab }: { activeSubTab: string }) {
+const CricketStats = React.memo(({ activeSubTab }: { activeSubTab: string }) => {
   const { width } = useWindowDimensions();
   const isUltraNarrow = width < 350;
   const router = useRouter();
@@ -311,7 +311,9 @@ export default function CricketStats({ activeSubTab }: { activeSubTab: string })
       </View>
     </View>
   );
-}
+});
+
+export default CricketStats;
 
 const styles = StyleSheet.create({
   container: {
@@ -457,14 +459,15 @@ const styles = StyleSheet.create({
     borderRadius: 1,
   },
   loadingBox: {
-    padding: 60,
+    padding: 100,
     alignItems: 'center',
     gap: 12,
+    backgroundColor: 'transparent',
   },
   loadingText: {
     fontFamily: 'Inter',
-    fontSize: 14,
-    color: '#64748B',
+    fontSize: 13,
+    color: '#94A3B8',
     fontWeight: '500',
   },
   adBanner: {

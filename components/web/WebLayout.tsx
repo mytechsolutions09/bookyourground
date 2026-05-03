@@ -528,13 +528,14 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
         (isLanding || isMarketing) && styles.containerLanding,
       ]}
     >
-      {!hideHeader && showHeroHeader && (
+      {!hideHeader && showHeroHeader && !(isCheckoutPage && isCompact) && (
         <View
           style={[
             styles.heroHeader,
             isGroundDetails && styles.heroHeaderGround,
             isMarketing && styles.heroHeaderMarketing,
             isCompact && !isNavbarVisible && { transform: [{ translateY: -100 }] },
+            isCompact && { transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)' } as any,
           ]}
         >
           <View
@@ -718,23 +719,9 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                       </Text>
                     )}
 
-                    {cleanPath === '/find-an-opponent' && (
-                      <Text
-                        style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}
-                        onPress={() => router.push('/book-my-ground')}
-                      >
-                        BOOK A GROUND
-                      </Text>
-                    )}
 
-                    {!((cleanPath === '/book-my-ground' || cleanPath === '/find-an-opponent')) && (
-                      <Text
-                        style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}
-                        onPress={() => router.push(groundsHref as any)}
-                      >
-                        GROUNDS
-                      </Text>
-                    )}
+
+
 
                     {!isAuthenticated ? (
                       <Text
@@ -792,7 +779,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
         </View>
       )}
 
-      {!hideHeader && !isLanding && !isMarketing && (!isGroundDetails || isOwnerGroundsDashboard) && (
+      {!hideHeader && !isLanding && !isMarketing && (!isGroundDetails || isOwnerGroundsDashboard) && !(isCheckoutPage && isCompact) && (
         <View
           style={[
             styles.header,

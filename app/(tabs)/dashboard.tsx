@@ -47,6 +47,7 @@ import MobileAppNavbar from '@/components/MobileAppNavbar';
 import { makeGroundPath } from '@/utils/groundSlug';
 import BookingCard from '@/components/bookings/BookingCard';
 import { useUI } from '@/contexts/UIContext';
+import { useLocation } from '@/contexts/LocationContext';
 import DashboardMap from '@/components/maps/DashboardMap';
 
 const THEME_BG = '#F8FAFC';
@@ -66,6 +67,7 @@ function DashboardContent() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [popularSlots, setPopularSlots] = useState<any[]>([]);
+  const { cityName, weather: globalWeather, refreshLocation } = useLocation();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [weather, setWeather] = useState<{ temp: number; condition: string } | null>(null);
   const [locationName, setLocationName] = useState<string>('Gurgaon');
@@ -198,36 +200,18 @@ function DashboardContent() {
 
   useEffect(() => {
     loadBookings();
-    initLocationAndWeather();
   }, [user]);
 
-  const initLocationAndWeather = async () => {
-    try {
-      const { status } = await ExpoLocation.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        console.log('Permission to access location was denied');
-        return;
-      }
-
-      const location = await ExpoLocation.getCurrentPositionAsync({});
-      const { latitude, longitude } = location.coords;
-
-      // Parallel fetch for speed
-      const [weatherData, cityName] = await Promise.all([
-        fetchWeather(latitude, longitude),
-        fetchCityName(latitude, longitude)
-      ]);
-
-      if (weatherData) {
-        setWeather({ temp: weatherData.temp, condition: weatherData.conditionText });
-      }
-      if (cityName) {
-        setLocationName(cityName);
-      }
-    } catch (error) {
-      console.error('Error initializing location/weather:', error);
+  useEffect(() => {
+    if (globalWeather) {
+      setWeather({ temp: globalWeather.temp, condition: globalWeather.conditionText });
     }
-  };
+    if (cityName && cityName !== 'Checking...') {
+      setLocationName(cityName);
+    }
+  }, [globalWeather, cityName]);
+
+
 
   const WeatherIcon = useMemo(() => {
     if (!weather) return Sun;
@@ -605,7 +589,7 @@ function DashboardContent() {
             refreshControl={<RefreshControl refreshing={loading} onRefresh={loadBookings} tintColor="#01b854" />}
           >
             <View style={[styles.centerContentNative, width > 768 && styles.centerContentWide, isUltraNarrow && { padding: 12 }]}>
-               {/* Compact Greeting & Weather */}
+               {/* Compact Greeting */}
                <View style={[styles.greetingRowCompact, isUltraNarrow && { paddingHorizontal: 12, paddingVertical: 10 }]}>
                 <View style={styles.greetingTextGroup}>
                   <Text style={styles.greetingTextSmall}>
@@ -613,12 +597,6 @@ function DashboardContent() {
                   </Text>
                   <Text style={styles.dateTextSmall}>
                     {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-                  </Text>
-                </View>
-                <View style={styles.weatherBadgeSmall}>
-                  <WeatherIcon size={14} color={weather?.condition.toLowerCase().includes('clear') ? "#F59E0B" : "#64748B"} />
-                  <Text style={[styles.weatherTextSmall, isUltraNarrow && { fontSize: 10 }]}>
-                    {weather ? `${weather.temp}°C` : '22°C'}
                   </Text>
                 </View>
               </View>

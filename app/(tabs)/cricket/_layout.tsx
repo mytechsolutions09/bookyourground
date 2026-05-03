@@ -396,6 +396,18 @@ export default function CricketLayout() {
     horizontalPagerRef.current?.scrollTo({ x: idx * windowWidth, animated: true });
   };
 
+  // Sync pager when pathname changes (e.g. from bottom bar or deep link)
+  React.useEffect(() => {
+    const tabId = TABS.find(t => pathname.includes(t.id))?.id || 'player-profile';
+    if (tabId !== activeTabId) {
+      const idx = TABS.find(t => t.id === tabId)?.index || 0;
+      setActiveTabId(tabId);
+      activeTabIndex.value = idx;
+      // Use animated: false for immediate sync to avoid jump during navigation
+      horizontalPagerRef.current?.scrollTo({ x: idx * windowWidth, animated: false });
+    }
+  }, [pathname, windowWidth]);
+
   // Re-align pager when window width changes (e.g. unfolding Samsung Fold)
   React.useEffect(() => {
     const idx = TABS.find(t => t.id === activeTabId)?.index || 0;
@@ -865,7 +877,7 @@ export default function CricketLayout() {
               contentContainerStyle={[
                 styles.mainScrollContent, 
                 { 
-                  paddingTop: (activeTabId === 'stats' || activeTabId === 'trophies' || activeTabId === 'badges' || activeTabId === 'connections' || activeTabId === 'teams' || activeTabId === 'tournaments' 
+                  paddingTop: (tab.id === 'stats' || tab.id === 'trophies' || tab.id === 'badges' || tab.id === 'connections' || tab.id === 'teams' || tab.id === 'tournaments' 
                     ? HEADER_MAX_HEIGHT + 48 + insets.top 
                     : HEADER_MAX_HEIGHT + insets.top
                   ),

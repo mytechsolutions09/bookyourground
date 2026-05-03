@@ -3,17 +3,16 @@ import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { GroundWithImages } from '@/types';
 import MapView, { Marker } from 'react-native-maps';
-import * as ExpoLocation from 'expo-location';
+import { useLocation } from '@/contexts/LocationContext';
 import Svg, { Path, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 
 export default function DashboardMap() {
+  const { latitude, longitude } = useLocation();
   const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
 
   useEffect(() => {
     fetchGrounds();
-    getUserLocation();
   }, []);
 
   const fetchGrounds = async () => {
@@ -34,17 +33,7 @@ export default function DashboardMap() {
     }
   };
 
-  const getUserLocation = async () => {
-    try {
-      const { status } = await ExpoLocation.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        const loc = await ExpoLocation.getCurrentPositionAsync({});
-        setUserLocation({ lat: loc.coords.latitude, lng: loc.coords.longitude });
-      }
-    } catch (e) {
-      console.warn('Could not get user location for map:', e);
-    }
-  };
+
 
   if (loading) {
     return (
@@ -54,7 +43,7 @@ export default function DashboardMap() {
     );
   }
 
-  const defaultCenter = userLocation || { lat: 28.6139, lng: 77.2090 }; // Delhi default
+  const defaultCenter = (latitude && longitude) ? { lat: latitude, lng: longitude } : { lat: 28.6139, lng: 77.2090 }; // Delhi default
 
   return (
     <MapView
