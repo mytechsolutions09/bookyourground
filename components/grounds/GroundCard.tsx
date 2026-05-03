@@ -99,25 +99,6 @@ export default function GroundCard({
           
           {/* Top Floating Badges */}
           <View style={styles.topBadgesRow}>
-             <View style={styles.glassRatingBadge}>
-                <View style={styles.starRow}>
-                  {[1, 2, 3, 4, 5].map((i) => {
-                    const filled = reviewCount > 0 && i <= Math.round(averageRating);
-                    return (
-                      <Star
-                        key={i}
-                        size={10}
-                        color={filled ? '#01b854' : 'rgba(0,0,0,0.2)'}
-                        fill={filled ? '#01b854' : 'none'}
-                      />
-                    );
-                  })}
-                </View>
-                <Text style={styles.ratingTextGlassBadge}>
-                  {reviewCount > 0 ? averageRating.toFixed(1) : 'NEW'}
-                </Text>
-             </View>
-
              {onToggleFavorite && (
                 <TouchableOpacity
                   style={styles.favBtnGlass}
@@ -154,9 +135,21 @@ export default function GroundCard({
               </View>
             </View>
 
-            <View style={styles.locationRowShort}>
-              <MapPin size={12} color={pinColor} />
-              <Text style={locationStyle} numberOfLines={1}>{ground.city}</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+              <View style={styles.locationRowShort}>
+                <MapPin size={12} color="#1e293b" />
+                <Text style={[locationStyle, { color: '#334155' }]} numberOfLines={1}>{ground.city}</Text>
+              </View>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Star size={10} color={reviewCount > 0 ? "#059669" : "#64748B"} fill={reviewCount > 0 ? "#059669" : "none"} />
+                <Text style={{ fontSize: 11, fontWeight: '900', color: '#0F172A' }}>
+                  {reviewCount > 0 ? averageRating.toFixed(1) : '0.0'}
+                </Text>
+                <Text style={{ fontSize: 10, color: '#1e293b', fontWeight: '700' }}>
+                  ({reviewCount})
+                </Text>
+              </View>
             </View>
           </View>
         </Card>
@@ -244,10 +237,10 @@ export default function GroundCard({
 
           {/* Rating Row */}
           <View style={styles.ratingRowNew}>
-            <View style={styles.ratingBadgeNew}>
+            <View style={[styles.ratingBadgeNew, reviewCount === 0 && { backgroundColor: '#94A3B8' }]}>
               <Star size={14} color="#FFFFFF" fill="#FFFFFF" />
               <Text style={styles.ratingTextNew}>
-                {reviewCount > 0 ? averageRating.toFixed(1) : '4.5'}
+                {reviewCount > 0 ? averageRating.toFixed(1) : '0.0'}
               </Text>
             </View>
             <View style={styles.ratingDivider} />
@@ -663,7 +656,7 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.45)',
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
     ...Platform.select({
       web: {
         backdropFilter: 'blur(24px) saturate(180%)',

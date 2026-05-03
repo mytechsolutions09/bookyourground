@@ -5,6 +5,12 @@ export async function fetchWeather(lat: number, lng: number) {
   try {
     const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`;
     const response = await fetch(url);
+    
+    if (!response.ok) {
+      console.error(`Weather API error: ${response.status}`);
+      return null;
+    }
+    
     const data = await response.json();
     
     if (data && data.current_weather) {
@@ -48,6 +54,12 @@ export async function fetchCityName(lat: number, lng: number) {
 
     const url = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_API_KEY}`;
     const response = await fetch(url);
+
+    if (!response.ok) {
+      console.error(`Geocoding API error: ${response.status}`);
+      return 'Unknown';
+    }
+
     const data = await response.json();
     
     if (data && data.results && data.results.length > 0) {

@@ -15,7 +15,7 @@ export default function GroundsIdLayout() {
         },
         headerShadowVisible: false,
         contentStyle: { backgroundColor: '#F5F5F5' },
-        animation: 'slide_from_bottom',
+        animation: 'slide_from_right',
       }}
     />
   );

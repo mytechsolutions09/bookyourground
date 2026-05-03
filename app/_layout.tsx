@@ -2,22 +2,38 @@ import { useEffect } from 'react';
 import { Platform, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LocationProvider } from '@/contexts/LocationContext';
-import { UIProvider } from '@/contexts/UIContext';
+import { UIProvider, useUI } from '@/contexts/UIContext';
 import { MobileTabBarHost } from '@/components/navigation/MobileTabBarHost';
 
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+// Keep the splash screen visible while we fetch resources
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
 export default function RootLayout() {
+  const [fontsLoaded, fontError] = useFonts({
+    'Inter': require('../assets/fonts/Inter-Regular.ttf'),
+    'Inter-Regular': require('../assets/fonts/Inter-Regular.ttf'),
+    'Inter-Medium': require('../assets/fonts/Inter-Medium.ttf'),
+    'Inter-SemiBold': require('../assets/fonts/Inter-SemiBold.ttf'),
+    'Inter-Bold': require('../assets/fonts/Inter-Bold.ttf'),
+    'Inter-ExtraBold': require('../assets/fonts/Inter-ExtraBold.ttf'),
+    'Inter-Black': require('../assets/fonts/Inter-Black.ttf'),
+  });
+
   useFrameworkReady();
 
   useEffect(() => {
-    // Hide the splash screen as soon as the root layout is mounted and framework is ready
-    SplashScreen.hideAsync().catch(() => {});
-  }, []);
+    if (fontsLoaded || fontError) {
+      // Hide the splash screen as soon as fonts are loaded or there's an error
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [fontsLoaded, fontError]);
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -54,34 +70,49 @@ export default function RootLayout() {
     }
   }, []);
 
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <LocationProvider>
         <AuthProvider>
           <UIProvider>
-            <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
-              <View style={{ flex: 1 }}>
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                    contentStyle: { backgroundColor: '#FFFFFF', flex: 1 },
-                  }}
-                >
-                  <Stack.Screen name="index" />
-                  <Stack.Screen name="welcome" />
-                  <Stack.Screen name="(auth)" />
-                  <Stack.Screen name="(tabs)" />
-                  <Stack.Screen name="(owner)" />
-                  <Stack.Screen name="(admin)" />
-                  <Stack.Screen name="+not-found" />
-                </Stack>
-              </View>
-              <MobileTabBarHost />
-            </View>
+            <RootLayoutInner />
             <StatusBar style="auto" />
           </UIProvider>
         </AuthProvider>
       </LocationProvider>
     </GestureHandlerRootView>
+  );
+}
+
+function RootLayoutInner() {
+  const { tabAnimation } = useUI();
+  
+  return (
+    <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+      <View style={{ flex: 1 }}>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: '#FFFFFF', flex: 1 },
+            animation: tabAnimation,
+          }}
+        >
+          <Stack.Screen name="index" />
+          <Stack.Screen name="welcome" />
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="(owner)" />
+          <Stack.Screen name="(admin)" />
+          <Stack.Screen name="select-sport" />
+          <Stack.Screen name="shop/cart" />
+          <Stack.Screen name="+not-found" />
+        </Stack>
+      </View>
+      <MobileTabBarHost />
+    </View>
   );
 }

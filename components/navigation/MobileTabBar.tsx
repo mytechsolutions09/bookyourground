@@ -11,6 +11,7 @@ import {
   Swords,
   Trophy,
   ShoppingBag,
+  ShoppingCart,
   CalendarClock,
   Search,
   BarChart2,
@@ -18,6 +19,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useUI } from '@/contexts/UIContext';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
+import { supabase } from '@/lib/supabase';
 
 const ACTIVE = '#00ea6b';
 const INACTIVE = '#9ca3af';
@@ -39,7 +41,7 @@ function getActiveTab(
   if (root !== '(tabs)') return 'home';
   const tab = segments[1] ?? 'index';
   if (tab === 'index' || tab === 'home_tab') return 'home';
-  if (tab === 'grounds') return 'grounds';
+  if (tab === 'grounds' || tab === 'book-my-ground') return 'grounds';
   if (tab === 'cricket') return 'stats';
   if (tab === 'bookings') return 'bookings';
   if (tab === 'favorites') return 'favorites';
@@ -56,12 +58,60 @@ export default function MobileTabBar() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const segments = useSegments();
-  const { profile } = useAuth();
+  const { user, profile } = useAuth();
   const { isTabBarVisible } = useUI();
+  const [cartCount, setCartCount] = React.useState(0);
   
   const isOwner = profile?.role === 'ground_owner';
   
   const translateY = useSharedValue(0);
+
+  const loadCartCount = async () => {
+    if (!user) {
+      setCartCount(0);
+      return;
+    }
+    try {
+      const { data, error } = await supabase
+        .from('shop_cart')
+        .select('quantity')
+        .eq('user_id', user.id);
+      
+      if (!error && data) {
+        const total = data.reduce((sum, item) => sum + (item.quantity || 0), 0);
+        setCartCount(total);
+      }
+    } catch (err) {
+      console.error('Error loading cart count:', err);
+    }
+  };
+
+  React.useEffect(() => {
+    loadCartCount();
+
+    if (!user) return;
+
+    // Real-time listener for cart updates
+    const channel = supabase
+      .channel('cart_updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'shop_cart',
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          loadCartCount();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
 
   React.useEffect(() => {
     translateY.value = withTiming(isTabBarVisible ? 0 : 120, {
@@ -79,12 +129,30 @@ export default function MobileTabBar() {
     zIndex: 1000,
   }));
 
-  if (Platform.OS === 'web') return null;
+  const { width } = useWindowDimensions();
+  const isSmallWeb = Platform.OS === 'web' && width < 768;
+
+  if (Platform.OS === 'web' && !isSmallWeb) return null;
 
   const activeTab = getActiveTab(segments as string[]);
+  const { setTabAnimation } = useUI();
   const size = 24;
 
-  const go = (href: string) => {
+  const TAB_ORDER = ['home', 'grounds', 'find', 'shop', 'stats'];
+
+  const go = (href: string, tabName: string) => {
+    const currentIndex = TAB_ORDER.indexOf(activeTab);
+    const targetIndex = TAB_ORDER.indexOf(tabName);
+
+    if (tabName === 'cart') {
+      setTabAnimation('slide_from_bottom');
+    } else if (currentIndex !== -1 && targetIndex !== -1) {
+      if (targetIndex > currentIndex) {
+        setTabAnimation('slide_from_left');
+      } else if (targetIndex < currentIndex) {
+        setTabAnimation('slide_from_right');
+      }
+    }
     router.push(href as any);
   };
 
@@ -98,7 +166,7 @@ export default function MobileTabBar() {
     >
       <Pressable
         style={styles.item}
-        onPress={() => go('/(tabs)/home_tab')}
+        onPress={() => go('/(tabs)/home_tab', 'home')}
       >
         <House size={size} color={activeTab === 'home' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'home' ? 2.5 : 2} />
         <Text style={[styles.label, { color: activeTab === 'home' ? ACTIVE : INACTIVE }]}>Home</Text>
@@ -106,7 +174,7 @@ export default function MobileTabBar() {
 
       <Pressable
         style={styles.item}
-        onPress={() => go('/book-my-ground')}
+        onPress={() => go('/book-my-ground', 'grounds')}
       >
         <LandPlot size={size} color={activeTab === 'grounds' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'grounds' ? 2.5 : 2} />
         <Text style={[styles.label, { color: activeTab === 'grounds' ? ACTIVE : INACTIVE }]}>Grounds</Text>
@@ -114,15 +182,29 @@ export default function MobileTabBar() {
       
       <Pressable
         style={styles.item}
-        onPress={() => go('/select-sport')}
+        onPress={() => activeTab === 'shop' ? go('/shop/cart', 'cart') : go('/select-sport', 'find')}
       >
-        <Search size={size} color={activeTab === 'find' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'find' ? 2.5 : 2} />
-        <Text style={[styles.label, { color: activeTab === 'find' ? ACTIVE : INACTIVE }]}>Find</Text>
+        {activeTab === 'shop' ? (
+          <View style={{ position: 'relative' }}>
+            <ShoppingCart size={size} color={INACTIVE} strokeWidth={2} />
+            {cartCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{cartCount}</Text>
+              </View>
+            )}
+            <Text style={[styles.label, { color: INACTIVE, textAlign: 'center' }]}>Cart</Text>
+          </View>
+        ) : (
+          <>
+            <Search size={size} color={activeTab === 'find' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'find' ? 2.5 : 2} />
+            <Text style={[styles.label, { color: activeTab === 'find' ? ACTIVE : INACTIVE }]}>Find</Text>
+          </>
+        )}
       </Pressable>
 
       <Pressable
         style={styles.item}
-        onPress={() => go('/(tabs)/shop')}
+        onPress={() => go('/(tabs)/shop', 'shop')}
       >
         <ShoppingBag size={size} color={activeTab === 'shop' ? '#f8688a' : INACTIVE} strokeWidth={activeTab === 'shop' ? 2.5 : 2} />
         <Text style={[styles.label, { color: activeTab === 'shop' ? '#f8688a' : INACTIVE }]}>Shop</Text>
@@ -130,7 +212,7 @@ export default function MobileTabBar() {
 
       <Pressable
         style={styles.item}
-        onPress={() => go('/(tabs)/cricket/stats')}
+        onPress={() => go('/(tabs)/cricket/stats', 'stats')}
       >
         <BarChart2 size={size} color={activeTab === 'stats' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'stats' ? 2.5 : 2} />
         <Text style={[styles.label, { color: activeTab === 'stats' ? ACTIVE : INACTIVE }]}>Stats</Text>
@@ -164,6 +246,26 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     marginTop: 4,
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -8,
+    backgroundColor: '#f8688a',
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    zIndex: 10,
+  },
+  badgeText: {
+    fontSize: 8,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    fontFamily: 'Inter',
   },
 });
 

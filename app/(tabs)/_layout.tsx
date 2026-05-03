@@ -82,7 +82,7 @@ export default function TabLayout() {
   const segments = useSegments();
   const pathname = usePathname() ?? '';
   const insets = useSafeAreaInsets();
-  const { isTabBarVisible } = useUI();
+  const { isTabBarVisible, tabAnimation } = useUI();
 
   const needsAuth = useMemo(() => {
     const leaf = segments[segments.length - 1];
@@ -121,7 +121,7 @@ export default function TabLayout() {
             headerShown: false,
             gestureEnabled: true,
             contentStyle: { backgroundColor: '#043529' },
-            animation: 'slide_from_bottom',
+            animation: tabAnimation,
           }}
         >
           <Stack.Screen name="home_tab" />
@@ -134,6 +134,7 @@ export default function TabLayout() {
           <Stack.Screen name="support" />
           <Stack.Screen name="logout" />
           <Stack.Screen name="cricket" />
+          <Stack.Screen name="book-my-ground" />
           <Stack.Screen name="find-an-opponent" />
           <Stack.Screen name="dashboard" />
         </Stack>

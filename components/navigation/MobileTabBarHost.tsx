@@ -12,19 +12,20 @@ export function MobileTabBarHost() {
   const segments = useSegments();
   const { isTabBarVisible } = useUI();
   
-  if (Platform.OS === 'web') return null;
+  if (!isTabBarVisible) return null;
 
   const root = segments[0];
+  const sub = segments[1];
+  
   if (
     root === 'welcome' ||
     root === '(auth)' ||
     root === '(owner)' ||
     root === '(admin)' ||
     root === 'players' ||
-    root === 'shop' ||
-    root === 'select-sport' ||
     root === 'search' ||
-    root === 'ground'
+    root === 'ground' ||
+    (root === 'shop' && sub && sub !== 'cart') // Hide on shop detail pages, but show on cart/home
   ) {
     return null;
   }

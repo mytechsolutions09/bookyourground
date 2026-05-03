@@ -867,13 +867,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '300',
     color: '#212121',
-    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+    fontFamily: 'Inter',
   },
   subtitle: {
     fontSize: 12,
     fontWeight: '300',
     color: '#6B7280',
-    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+    fontFamily: 'Inter',
   },
   editorCols: {
     flexDirection: 'row',
@@ -895,7 +895,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '300',
     color: '#111827',
-    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+    fontFamily: 'Inter',
     marginBottom: 8,
   },
   previewList: {
@@ -912,14 +912,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '300',
     color: '#374151',
-    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+    fontFamily: 'Inter',
   },
   previewSub: {
     marginTop: 4,
     fontSize: 11,
     fontWeight: '300',
     color: '#6B7280',
-    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+    fontFamily: 'Inter',
   },
   previewContent: {
     flexDirection: 'row',
@@ -987,7 +987,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '300',
     color: '#6B7280',
-    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+    fontFamily: 'Inter',
     textAlign: 'center',
   },
   dayBlock: {
@@ -1024,19 +1024,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '300',
     color: '#374151',
-    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+    fontFamily: 'Inter',
   },
   dayLabel: {
     fontSize: 13,
     fontWeight: '300',
     color: '#374151',
-    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+    fontFamily: 'Inter',
   },
   emptyText: {
     fontSize: 12,
     fontWeight: '300',
     color: '#6B7280',
-    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+    fontFamily: 'Inter',
     textAlign: 'center',
   },
   slotsRow: {
@@ -1068,7 +1068,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '300',
     color: '#374151',
-    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+    fontFamily: 'Inter',
     maxWidth: 88,
     textAlign: 'center',
   },
@@ -1087,14 +1087,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '300',
     color: '#111827',
-    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+    fontFamily: 'Inter',
     marginBottom: 4,
   },
   addSlotsHint: {
     fontSize: 12,
     fontWeight: '300',
     color: '#6B7280',
-    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+    fontFamily: 'Inter',
     marginBottom: 8,
   },
   addSlotsInput: {
@@ -1107,7 +1107,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '300',
     color: '#111827',
-    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+    fontFamily: 'Inter',
     marginBottom: 4,
   },
   addAnotherBtn: {
@@ -1124,7 +1124,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '300',
     color: '#2563EB',
-    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+    fontFamily: 'Inter',
   },
   addSlotsRow: {
     flexDirection: 'row',
@@ -1144,7 +1144,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '300',
     color: '#6B7280',
-    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+    fontFamily: 'Inter',
   },
   priceWrap: {
     flexDirection: 'row',
@@ -1155,7 +1155,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '300',
     color: '#4B5563',
-    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+    fontFamily: 'Inter',
     marginRight: 2,
   },
   priceInput: {
@@ -1167,7 +1167,7 @@ const styles = StyleSheet.create({
     borderColor: '#D1D5DB',
     fontSize: 10,
     fontWeight: '300',
-    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+    fontFamily: 'Inter',
     textAlign: 'center',
   },
   priceInputSet: {
@@ -1187,7 +1187,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '300',
     color: '#6B7280',
-    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+    fontFamily: 'Inter',
     textAlign: 'center',
   },
   loadingWrap: {
@@ -1200,7 +1200,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '300',
     color: '#6B7280',
-    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+    fontFamily: 'Inter',
   },
   draftField: {
     marginBottom: 6,
@@ -1210,7 +1210,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '300',
     color: '#374151',
-    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+    fontFamily: 'Inter',
     marginBottom: 2,
   },
 });
@@ -1296,7 +1296,7 @@ const startTimeDropdownStyles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '300',
     color: '#111827',
-    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+    fontFamily: 'Inter',
   },
   menu: {
     position: 'absolute',
@@ -1324,7 +1324,7 @@ const startTimeDropdownStyles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '300',
     color: '#374151',
-    fontFamily: Platform.OS === 'web' ? '"Inter", sans-serif' : undefined,
+    fontFamily: 'Inter',
   },
   optionTextActive: {
     color: '#10b981',

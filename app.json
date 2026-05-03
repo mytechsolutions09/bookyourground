@@ -11,6 +11,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.arpitkanotra.bookyourground",
+      "buildNumber": "1",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "This app requires camera access to take photos of your sports ground.",
@@ -48,7 +49,11 @@
       "expo-font",
       "./plugins/withVerificationAsset",
       "expo-video",
-      "expo-audio"
+      "expo-audio",
+      "expo-location",
+      "expo-camera",
+      "expo-image-picker",
+      "expo-notifications"
     ],
     "experiments": {
       "typedRoutes": true

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Platform, View, StyleSheet, ScrollView, TouchableOpacity, Text, useWindowDimensions, LayoutAnimation, UIManager, Dimensions, DeviceEventEmitter } from 'react-native';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -33,6 +33,7 @@ const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
 
 export default function GroundsTabScreen() {
   const { width } = useWindowDimensions();
+  const isWeb = Platform.OS === 'web';
   const { user } = useAuth();
   const { tab, type } = useLocalSearchParams();
   const isSmall = width < 900;
@@ -203,7 +204,7 @@ export default function GroundsTabScreen() {
         <TouchableOpacity
           key={t.id}
           style={[styles.tab, activeTab === t.id && styles.activeTab]}
-          onPress={() => handleTabPress(t.id as any)}
+          onPress={() => onTabPress(t.id as any, t.index)}
         >
           <Text style={[
             styles.tabText, 

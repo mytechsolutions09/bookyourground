@@ -275,6 +275,102 @@ serve(async (req) => {
       });
     }
 
+    if (action === 'create-razorpay-shop-order') {
+      const { orderDetails } = body;
+      const amount = orderDetails.remaining_amount;
+      
+      const keyId = Deno.env.get('RAZORPAY_KEY_ID');
+      const keySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
+
+      if (!keyId || !keySecret) {
+        throw new Error('Razorpay keys not configured.');
+      }
+
+      const response = await fetch('https://api.razorpay.com/v1/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Basic ' + btoa(`${keyId}:${keySecret}`),
+        },
+        body: JSON.stringify({
+          amount: Math.round(amount * 100),
+          currency: 'INR',
+          receipt: `shop_${Date.now()}`
+        }),
+      });
+
+      const order = await response.json();
+      if (!response.ok) throw new Error(order.error?.description || 'Razorpay order failed');
+
+      return new Response(JSON.stringify({ success: true, razorpayOrder: { ...order, key_id: keyId } }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (action === 'verify-razorpay-shop-payment') {
+      const { razorpay_order_id, razorpay_payment_id, razorpay_signature, orderDetails, cartItems } = body;
+      
+      // 1. Verify Signature
+      const keySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
+      const text = razorpay_order_id + "|" + razorpay_payment_id;
+      const encoder = new TextEncoder();
+      const secretData = encoder.encode(keySecret);
+      const data = encoder.encode(text);
+      
+      const key = await crypto.subtle.importKey('raw', secretData, { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+      const signatureBuffer = await crypto.subtle.sign('HMAC', key, data);
+      const generatedSignature = Array.from(new Uint8Array(signatureBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+      
+      if (generatedSignature !== razorpay_signature) throw new Error('Invalid signature');
+
+      // 2. Create Order
+      const { data: order, error: orderError } = await supabaseClient
+        .from('shop_orders')
+        .insert({
+          user_id: user.id,
+          total_amount: orderDetails.total_amount,
+          status: 'processing',
+          payment_status: 'paid',
+          payment_method: orderDetails.wallet_amount > 0 ? `split_wallet_${orderDetails.payment_method}` : orderDetails.payment_method,
+          shipping_address: orderDetails.shipping_address,
+          billing_address: orderDetails.billing_address,
+          customer_name: orderDetails.customer_name,
+          customer_phone: orderDetails.customer_phone
+        })
+        .select()
+        .single();
+
+      if (orderError) throw orderError;
+
+      // 3. Create Items
+      const itemsToInsert = cartItems.map((item: any) => ({
+        order_id: order.id,
+        product_id: item.product.id,
+        quantity: item.quantity,
+        price_at_purchase: item.product.price,
+        selected_attributes: item.selected_attributes
+      }));
+      await supabaseClient.from('shop_order_items').insert(itemsToInsert);
+
+      // 4. Handle Wallet Deduction if split
+      if (orderDetails.wallet_amount > 0) {
+        await supabaseClient.rpc('process_wallet_transaction', {
+          p_user_id: user.id,
+          p_amount: -orderDetails.wallet_amount,
+          p_type: 'used',
+          p_description: `Split Payment for Shop Order #${order.id.substring(0, 8).toUpperCase()}`,
+          p_booking_id: null
+        });
+      }
+
+      // 5. Clear Cart
+      await supabaseClient.from('shop_cart').delete().eq('user_id', user.id);
+
+      return new Response(JSON.stringify({ success: true, orderId: order.id }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     if (action === 'create-payu-hash') {
       const { txnid, amount, firstname, email } = body;
       

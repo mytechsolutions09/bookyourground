@@ -26,6 +26,7 @@ import {
   Users,
 } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUI } from '@/contexts/UIContext';
 import Animated, { 
   useAnimatedStyle, 
   useSharedValue, 
@@ -125,6 +126,12 @@ function GroundCardExpo({ ground, index, scrollX, onPress }: { ground: any; inde
 export default function SelectSportScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const { setTabBarVisible } = useUI();
+  
+  useEffect(() => {
+    setTabBarVisible(false);
+    return () => setTabBarVisible(true);
+  }, []);
   
   const [sports, setSports] = useState<any[]>([]);
   const [locations, setLocations] = useState<any[]>([]);

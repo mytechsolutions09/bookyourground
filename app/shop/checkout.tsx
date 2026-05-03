@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Platform, ActivityIndicator, Alert, useWindowDimensions } from 'react-native';
+import { WebView } from 'react-native-webview';
 import { useRouter, Stack } from 'expo-router';
-import { ChevronLeft, MapPin, CreditCard, ShoppingBag, Truck, ShieldCheck, ChevronDown } from 'lucide-react-native';
+import { ChevronLeft, MapPin, CreditCard, ShoppingBag, Truck, ShieldCheck, ChevronDown, Smartphone, Globe } from 'lucide-react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Modal, FlatList, Pressable } from 'react-native';
 import { supabase } from '@/lib/supabase';
@@ -35,12 +36,19 @@ export default function CheckoutScreen() {
   const [billingState, setBillingState] = useState('Delhi');
   const [billingPinCode, setBillingPinCode] = useState('');
   const [sameAsDelivery, setSameAsDelivery] = useState(true);
-  const [paymentMethod, setPaymentMethod] = useState('razorpay');
+  const [paymentMethod, setPaymentMethod] = useState('upi');
   const [saveInfo, setSaveInfo] = useState(true);
+  const [useWallet, setUseWallet] = useState(false);
 
   const [isStateModalVisible, setIsStateModalVisible] = useState(false);
   const [pickingFor, setPickingFor] = useState<'delivery' | 'billing'>('delivery');
   const [walletBalance, setWalletBalance] = useState(0);
+
+  const walletAmountToUse = useWallet ? Math.min(walletBalance, totalAmount) : 0;
+  const remainingPayable = totalAmount - walletAmountToUse;
+
+  const [showRazorpayWebView, setShowRazorpayWebView] = useState(false);
+  const [razorpayOrderData, setRazorpayOrderData] = useState<any>(null);
 
   const INDIAN_STATES = [
     'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat', 
@@ -113,116 +121,57 @@ export default function CheckoutScreen() {
     }
   };
 
-  const handleWalletOrder = async () => {
+  const handlePlaceOrder = async () => {
     if (!fullName || !phoneNumber || !address || !city || !pinCode) {
       Alert.alert('Missing Info', 'Please fill in all contact and delivery details');
       return;
     }
 
-    if (walletBalance < totalAmount) {
-      Alert.alert('Insufficient Balance', 'You do not have enough wallet balance for this order.');
-      return;
-    }
-
     try {
       setLoading(true);
-      
+
+      const orderDetails = {
+        total_amount: totalAmount,
+        wallet_amount: walletAmountToUse,
+        remaining_amount: remainingPayable,
+        payment_method: remainingPayable > 0 ? paymentMethod : 'wallet',
+        shipping_address: `${address}, ${city}, ${state}, ${pinCode}`,
+        billing_address: sameAsDelivery ? `${address}, ${city}, ${state}, ${pinCode}` : `${billingAddress}, ${billingCity}, ${billingState}, ${billingPinCode}`,
+        customer_name: fullName,
+        customer_phone: phoneNumber,
+        save_info: saveInfo
+      };
+
+      // 1. Process via Edge Function
       const { data, error } = await supabase.functions.invoke('payment-gateway', {
         body: {
-          action: 'confirm-wallet-shop',
-          orderDetails: {
-            total_amount: totalAmount,
-            shipping_address: `${address}, ${city}, ${state}, ${pinCode}`,
-            billing_address: sameAsDelivery ? `${address}, ${city}, ${state}, ${pinCode}` : `${billingAddress}, ${billingCity}, ${billingState}, ${billingPinCode}`,
-            customer_name: fullName,
-            customer_phone: phoneNumber
-          },
-          cartItems: cartItems
+          action: remainingPayable > 0 ? 'create-razorpay-shop-order' : 'confirm-wallet-shop',
+          orderDetails,
+          cartItems
         }
       });
 
       if (error) throw error;
+
       if (data && data.success) {
-        // Save info if requested
-        if (saveInfo) {
-          const infoToSave = { fullName, phoneNumber, address, city, state, pinCode };
-          await AsyncStorage.setItem('checkout_saved_info', JSON.stringify(infoToSave));
+        if (remainingPayable === 0) {
+          // Success for full wallet payment
+          Alert.alert('Success', 'Order placed successfully using wallet balance!');
+          router.replace('/(tabs)/shop');
+        } else {
+          // Proceed to Razorpay for remaining amount
+          if (Platform.OS === 'web') {
+            await openRazorpayWeb(data.razorpayOrder, orderDetails);
+          } else {
+            // Native logic
+            setRazorpayOrderData(data.razorpayOrder);
+            setShowRazorpayWebView(true);
+          }
         }
-        
-        Alert.alert('Success', 'Order placed successfully using wallet balance!');
-        router.push('/(tabs)/shop');
       } else {
-        throw new Error(data?.error || 'Failed to process wallet payment');
-      }
-    } catch (err: any) {
-      console.error('Wallet order error:', err);
-      Alert.alert('Error', err.message || 'Could not place order');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePlaceOrder = async () => {
-    if (!address || !city || !pinCode) {
-      Alert.alert('Missing Info', 'Please fill in all address details');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      
-      // 1. Create Order
-      const { data: order, error: orderError } = await supabase
-        .from('shop_orders')
-        .insert({
-          user_id: user?.id,
-          total_amount: totalAmount,
-          status: 'pending',
-          payment_status: 'paid',
-          payment_method: paymentMethod,
-          shipping_address: `${address}, ${city}, ${state}, ${pinCode}`,
-          billing_address: sameAsDelivery ? `${address}, ${city}, ${state}, ${pinCode}` : `${billingAddress}, ${billingCity}, ${billingState}, ${billingPinCode}`,
-          customer_name: fullName,
-          customer_phone: phoneNumber
-        })
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
-
-      // 2. Create Order Items
-      const orderItems = cartItems.map(item => ({
-        order_id: order.id,
-        product_id: item.product.id,
-        quantity: item.quantity,
-        price_at_purchase: item.product.price,
-        selected_attributes: item.selected_attributes
-      }));
-
-      const { error: itemsError } = await supabase
-        .from('shop_order_items')
-        .insert(orderItems);
-
-      if (itemsError) throw itemsError;
-
-      // 3. Save info if requested
-      if (saveInfo) {
-        const infoToSave = {
-          fullName,
-          phoneNumber,
-          address,
-          city,
-          state,
-          pinCode
-        };
-        await AsyncStorage.setItem('checkout_saved_info', JSON.stringify(infoToSave));
+        throw new Error(data?.error || 'Failed to initialize payment');
       }
 
-      // 4. Clear Cart
-      await supabase.from('shop_cart').delete().eq('user_id', user?.id);
-
-      Alert.alert('Success', 'Your order has been placed!');
-      router.push('/(tabs)/shop');
     } catch (err: any) {
       console.error('Checkout error:', err);
       Alert.alert('Error', err.message || 'Could not place order');
@@ -230,6 +179,179 @@ export default function CheckoutScreen() {
       setLoading(false);
     }
   };
+
+  const openRazorpayWeb = async (order: any, orderDetails: any) => {
+    const loadScript = (src: string) => {
+      return new Promise((resolve) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.id = 'razorpay-sdk';
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        if (!document.getElementById('razorpay-sdk')) {
+          document.body.appendChild(script);
+        } else {
+          resolve(true);
+        }
+      });
+    };
+
+    const res = await loadScript('https://checkout.razorpay.com/v1/checkout.js');
+    if (!res) {
+      Alert.alert('Error', 'Razorpay SDK failed to load');
+      return;
+    }
+
+    const options = {
+      key: order.key_id,
+      amount: order.amount,
+      currency: order.currency,
+      name: 'Book Your Ground Shop',
+      description: `Order Payment for ${fullName}`,
+      order_id: order.id,
+      prefill: {
+        name: fullName,
+        contact: phoneNumber,
+      },
+      handler: async function (response: any) {
+        try {
+          setLoading(true);
+          const { data: verifyData, error: verifyError } = await supabase.functions.invoke('payment-gateway', {
+            body: {
+              action: 'verify-razorpay-shop-payment',
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              orderDetails,
+              cartItems
+            },
+          });
+
+          if (verifyError) throw verifyError;
+          
+          if (verifyData && verifyData.success) {
+            Alert.alert('Success', 'Payment successful! Order placed.');
+            router.replace('/(tabs)/shop');
+          } else {
+            throw new Error(verifyData?.error || 'Payment verification failed.');
+          }
+        } catch (err: any) {
+          Alert.alert('Payment Error', err.message);
+        } finally {
+          setLoading(false);
+        }
+      },
+      theme: { color: '#f8688a' }
+    };
+
+    const rzp = new (window as any).Razorpay(options);
+    rzp.open();
+  };
+
+  const handleRazorpayMobileMessage = async (event: any) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      
+      if (data.status === 'success') {
+        setShowRazorpayWebView(false);
+        setLoading(true);
+        
+        const { data: verifyData, error: verifyError } = await supabase.functions.invoke('payment-gateway', {
+          body: {
+            action: 'verify-razorpay-shop-payment',
+            razorpay_order_id: data.response.razorpay_order_id,
+            razorpay_payment_id: data.response.razorpay_payment_id,
+            razorpay_signature: data.response.razorpay_signature,
+            orderDetails: {
+              total_amount: totalAmount,
+              wallet_amount: walletAmountToUse,
+              remaining_amount: remainingPayable,
+              payment_method: paymentMethod,
+              shipping_address: `${address}, ${city}, ${state}, ${pinCode}`,
+              billing_address: sameAsDelivery ? `${address}, ${city}, ${state}, ${pinCode}` : `${billingAddress}, ${billingCity}, ${billingState}, ${billingPinCode}`,
+              customer_name: fullName,
+              customer_phone: phoneNumber,
+              save_info: saveInfo
+            },
+            cartItems
+          },
+        });
+
+        if (verifyError) throw verifyError;
+        
+        if (verifyData && verifyData.success) {
+          Alert.alert('Success', 'Payment successful! Order placed.');
+          router.replace('/(tabs)/shop');
+        } else {
+          throw new Error(verifyData?.error || 'Payment verification failed.');
+        }
+      } else if (data.status === 'dismissed' || data.status === 'failed') {
+        setShowRazorpayWebView(false);
+        if (data.status === 'failed') {
+          Alert.alert('Payment Failed', data.response?.error?.description || 'Payment was unsuccessful.');
+        }
+      }
+    } catch (err: any) {
+      setShowRazorpayWebView(false);
+      Alert.alert('Payment Error', err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const razorpayMobileHtml = razorpayOrderData ? `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <style>
+          body { background-color: #f8fafc; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: -apple-system, system-ui; }
+          .loader { border: 4px solid #f3f3f3; border-top: 4px solid #f8688a; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+          @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        </style>
+      </head>
+      <body>
+        <div class="loader"></div>
+        <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+        <script>
+          var options = {
+            "key": "${razorpayOrderData.key_id}",
+            "amount": "${razorpayOrderData.amount}",
+            "currency": "${razorpayOrderData.currency}",
+            "name": "Book Your Ground Shop",
+            "description": "Payment for ${fullName}",
+            "order_id": "${razorpayOrderData.id}",
+            "prefill": {
+              "name": "${fullName}",
+              "contact": "${phoneNumber}"
+            },
+            "theme": { "color": "#f8688a" },
+            "handler": function (response) {
+              window.ReactNativeWebView.postMessage(JSON.stringify({
+                status: 'success',
+                response: response
+              }));
+            },
+            "modal": {
+              "ondismiss": function() {
+                window.ReactNativeWebView.postMessage(JSON.stringify({
+                  status: 'dismissed'
+                }));
+              }
+            }
+          };
+          var rzp = new Razorpay(options);
+          rzp.on('payment.failed', function (response){
+            window.ReactNativeWebView.postMessage(JSON.stringify({
+              status: 'failed',
+              response: response
+            }));
+          });
+          setTimeout(function() { rzp.open(); }, 500);
+        </script>
+      </body>
+    </html>
+  ` : '';
 
   const content = (
     <View style={[styles.container, Platform.OS === 'web' && styles.webContainer]}>
@@ -387,34 +509,56 @@ export default function CheckoutScreen() {
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Payment Method</Text>
               </View>
-              <View style={styles.paymentOptions}>
+              
+              {/* Wallet Option */}
+              {walletBalance > 0 && (
                 <TouchableOpacity 
-                  style={[styles.paymentCard, paymentMethod === 'razorpay' && styles.paymentCardActive]}
-                  onPress={() => setPaymentMethod('razorpay')}
+                  style={[styles.walletToggle, useWallet && styles.walletToggleActive]}
+                  onPress={() => setUseWallet(!useWallet)}
                 >
-                  <CreditCard size={20} color={paymentMethod === 'razorpay' ? '#f8688a' : '#9CA3AF'} />
-                  <Text style={[styles.paymentText, paymentMethod === 'razorpay' && styles.paymentTextActive]}>Online</Text>
-                </TouchableOpacity>
-                {walletBalance > 0 && (
-                  <TouchableOpacity 
-                    style={[styles.paymentCard, paymentMethod === 'wallet' && styles.paymentCardActive]}
-                    onPress={() => setPaymentMethod('wallet')}
-                  >
-                    <ShoppingBag size={20} color={paymentMethod === 'wallet' ? '#f8688a' : '#9CA3AF'} />
-                    <View style={{ alignItems: 'center' }}>
-                      <Text style={[styles.paymentText, paymentMethod === 'wallet' && styles.paymentTextActive]}>Wallet</Text>
-                      <Text style={{ fontSize: 9, color: '#64748B' }}>₹{walletBalance}</Text>
+                  <View style={styles.walletInfo}>
+                    <ShoppingBag size={20} color={useWallet ? '#f8688a' : '#64748B'} />
+                    <View>
+                      <Text style={styles.walletTitle}>Use Wallet Balance</Text>
+                      <Text style={styles.walletSubtitle}>Available: ₹{walletBalance.toLocaleString('en-IN')}</Text>
                     </View>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity 
-                  style={[styles.paymentCard, paymentMethod === 'upi' && styles.paymentCardActive]}
-                  onPress={() => setPaymentMethod('upi')}
-                >
-                  <Text style={[styles.upiIcon, paymentMethod === 'upi' && styles.upiIconActive]}>UPI</Text>
-                  <Text style={[styles.paymentText, paymentMethod === 'upi' && styles.paymentTextActive]}>UPI/GPay</Text>
+                  </View>
+                  <View style={[styles.checkbox, useWallet && styles.checkboxChecked]}>
+                    {useWallet && <ShieldCheck size={12} color="#FFFFFF" />}
+                  </View>
                 </TouchableOpacity>
-              </View>
+              )}
+
+              {remainingPayable > 0 && (
+                <View style={{ marginTop: 16 }}>
+                  <Text style={styles.subSectionTitle}>Pay remaining ₹{remainingPayable.toLocaleString('en-IN')} via:</Text>
+                  <View style={styles.paymentGrid}>
+                    <TouchableOpacity 
+                      style={[styles.paymentCard, paymentMethod === 'upi' && styles.paymentCardActive]}
+                      onPress={() => setPaymentMethod('upi')}
+                    >
+                      <Smartphone size={20} color={paymentMethod === 'upi' ? '#f8688a' : '#9CA3AF'} />
+                      <Text style={[styles.paymentText, paymentMethod === 'upi' && styles.paymentTextActive]}>UPI</Text>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity 
+                      style={[styles.paymentCard, paymentMethod === 'card' && styles.paymentCardActive]}
+                      onPress={() => setPaymentMethod('card')}
+                    >
+                      <CreditCard size={20} color={paymentMethod === 'card' ? '#f8688a' : '#9CA3AF'} />
+                      <Text style={[styles.paymentText, paymentMethod === 'card' && styles.paymentTextActive]}>Card</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity 
+                      style={[styles.paymentCard, paymentMethod === 'netbanking' && styles.paymentCardActive]}
+                      onPress={() => setPaymentMethod('netbanking')}
+                    >
+                      <Globe size={20} color={paymentMethod === 'netbanking' ? '#f8688a' : '#9CA3AF'} />
+                      <Text style={[styles.paymentText, paymentMethod === 'netbanking' && styles.paymentTextActive]}>Net Banking</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
             </View>
           </View>
 
@@ -443,14 +587,14 @@ export default function CheckoutScreen() {
                   <View>
                     <TouchableOpacity 
                       style={[styles.placeOrderBtn, { marginTop: 24 }, loading && { opacity: 0.7 }]}
-                      onPress={paymentMethod === 'wallet' ? handleWalletOrder : handlePlaceOrder}
-                      disabled={loading || (paymentMethod === 'wallet' && walletBalance < totalAmount)}
+                      onPress={handlePlaceOrder}
+                      disabled={loading}
                     >
                       {loading ? (
                         <ActivityIndicator color="#FFFFFF" />
                       ) : (
                         <Text style={styles.placeOrderText}>
-                          {paymentMethod === 'wallet' ? 'Pay via Wallet' : 'Place Order'}
+                          {remainingPayable === 0 ? 'Pay via Wallet' : 'Place Order'}
                         </Text>
                       )}
                     </TouchableOpacity>
@@ -491,15 +635,15 @@ export default function CheckoutScreen() {
       {Platform.OS !== 'web' && (
         <View style={styles.bottomBar}>
           <TouchableOpacity 
-            style={[styles.placeOrderBtn, (loading || (paymentMethod === 'wallet' && walletBalance < totalAmount)) && { opacity: 0.7 }]}
-            onPress={paymentMethod === 'wallet' ? handleWalletOrder : handlePlaceOrder}
-            disabled={loading || (paymentMethod === 'wallet' && walletBalance < totalAmount)}
+            style={[styles.placeOrderBtn, loading && { opacity: 0.7 }]}
+            onPress={handlePlaceOrder}
+            disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
               <Text style={styles.placeOrderText}>
-                {paymentMethod === 'wallet' ? 'Pay via Wallet' : 'Place Order'} • ₹{totalAmount.toLocaleString('en-IN')}
+                {remainingPayable === 0 ? 'Pay via Wallet' : 'Place Order'} • ₹{totalAmount.toLocaleString('en-IN')}
               </Text>
             )}
           </TouchableOpacity>
@@ -546,6 +690,30 @@ export default function CheckoutScreen() {
             />
           </View>
         </Pressable>
+      </Modal>
+
+      {/* Razorpay WebView Modal */}
+      <Modal
+        visible={showRazorpayWebView}
+        animationType="slide"
+        onRequestClose={() => setShowRazorpayWebView(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+          <View style={{ height: 60, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
+            <TouchableOpacity onPress={() => setShowRazorpayWebView(false)}>
+              <ChevronLeft size={24} color="#2b2f4b" />
+            </TouchableOpacity>
+            <Text style={{ fontSize: 16, fontWeight: '600', marginLeft: 16, color: '#2b2f4b' }}>Secure Payment</Text>
+          </View>
+          <WebView
+            source={{ html: razorpayMobileHtml }}
+            onMessage={handleRazorpayMobileMessage}
+            style={{ flex: 1 }}
+            javaScriptEnabled={true}
+            domStorageEnabled={true}
+            startInLoadingState={true}
+          />
+        </View>
       </Modal>
     </View>
   );
@@ -751,6 +919,45 @@ const styles = StyleSheet.create({
   paymentOptions: {
     flexDirection: 'row',
     gap: 10,
+  },
+  walletToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  walletToggleActive: {
+    borderColor: '#f8688a',
+    backgroundColor: 'rgba(248, 104, 138, 0.05)',
+  },
+  walletInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  walletTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#2b2f4b',
+  },
+  walletSubtitle: {
+    fontSize: 12,
+    color: '#64748b',
+  },
+  subSectionTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#94a3b8',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+  },
+  paymentGrid: {
+    flexDirection: 'row',
+    gap: 12,
   },
   paymentCard: {
     flex: 1,

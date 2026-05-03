@@ -6,7 +6,7 @@ import { DeviceEventEmitter } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import WebLayout from '@/components/web/WebLayout';
 import LandingBookingForm from '@/components/landing/LandingBookingForm';
-import MobileAppNavbar from '../components/MobileAppNavbar';
+import MobileAppNavbar from '../../components/MobileAppNavbar';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { GroundWithImages } from '@/types';

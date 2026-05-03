@@ -15,7 +15,7 @@ export default function GroundLayout() {
         },
         headerShadowVisible: false,
         contentStyle: { backgroundColor: '#FFFFFF' },
-        animation: 'slide_from_bottom',
+        animation: 'slide_from_right',
       }}
     />
   );

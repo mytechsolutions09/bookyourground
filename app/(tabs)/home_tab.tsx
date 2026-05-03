@@ -168,7 +168,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sportFilter, setSportFilter] = useState('cricket');
+  const [sportFilter, setSportFilter] = useState('all');
   const { setTabBarVisible } = useUI();
   const { cityName, refreshLocation } = useLocation();
   
@@ -214,6 +214,15 @@ export default function HomeScreen() {
       setRefreshing(false);
     }
   }, []);
+
+  const handleSearch = () => {
+    if (searchQuery.trim()) {
+      router.push({
+        pathname: '/search',
+        params: { q: searchQuery.trim() }
+      });
+    }
+  };
 
   const stats = useMemo(() => {
     const venueCount = grounds.length;
@@ -369,13 +378,17 @@ export default function HomeScreen() {
             </View>
 
             <View style={styles.floatingSearchContainer}>
-              <Search size={18} color="#94A3B8" strokeWidth={2.5} />
+              <TouchableOpacity onPress={handleSearch}>
+                <Search size={18} color="#94A3B8" strokeWidth={2.5} />
+              </TouchableOpacity>
               <TextInput
                 style={styles.floatingSearchInput}
                 placeholder="Search grounds, city..."
                 placeholderTextColor="#94A3B8"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
+                onSubmitEditing={handleSearch}
+                returnKeyType="search"
               />
               {searchQuery.length > 0 && (
                 <TouchableOpacity onPress={() => setSearchQuery('')}>
@@ -413,23 +426,7 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* ── Quick Actions ───────────────────────────────── */}
-        <View style={styles.quickActionsSection}>
-          <TouchableOpacity 
-            style={styles.findGroundBtn}
-            onPress={() => router.push('/select-sport')}
-            activeOpacity={0.9}
-          >
-            <View style={styles.findGroundIconBox}>
-              <Search size={22} color="#00ea6b" strokeWidth={3} />
-            </View>
-            <View style={styles.findGroundTextBox}>
-              <Text style={styles.findGroundBtnTitle}>Find a ground</Text>
-              <Text style={styles.findGroundBtnSub}>Pick your sport & play</Text>
-            </View>
-            <ArrowRight size={20} color="#94A3B8" />
-          </TouchableOpacity>
-        </View>
+
 
 
 

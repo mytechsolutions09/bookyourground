@@ -167,13 +167,14 @@ export default function ShopScreen() {
   const loadCartCount = async () => {
     if (!user) return;
     try {
-      const { count, error } = await supabase
+      const { data, error } = await supabase
         .from('shop_cart')
-        .select('*', { count: 'exact', head: true })
+        .select('quantity')
         .eq('user_id', user.id);
       
-      if (!error && count !== null) {
-        setCartCount(count);
+      if (!error && data) {
+        const total = data.reduce((sum, item) => sum + (item.quantity || 0), 0);
+        setCartCount(total);
       }
     } catch (err) {
       console.error('Error loading cart count:', err);
@@ -263,11 +264,40 @@ export default function ShopScreen() {
       return;
     }
     try {
-      const { error } = await supabase
+      // For quick add from main shop, we assume default (empty) attributes
+      const selected_attributes = {};
+
+      // Check if item already exists
+      const { data: existingItems, error: fetchError } = await supabase
         .from('shop_cart')
-        .upsert({ user_id: user.id, product_id: productId }, { onConflict: 'user_id,product_id' });
+        .select('id, quantity, selected_attributes')
+        .eq('user_id', user.id)
+        .eq('product_id', productId);
+
+      if (fetchError) throw fetchError;
+
+      const existingItem = existingItems?.find(item => 
+        !item.selected_attributes || Object.keys(item.selected_attributes).length === 0
+      );
+
+      if (existingItem) {
+        const { error: updateError } = await supabase
+          .from('shop_cart')
+          .update({ quantity: (existingItem.quantity || 0) + 1 })
+          .eq('id', existingItem.id);
+        if (updateError) throw updateError;
+      } else {
+        const { error: insertError } = await supabase
+          .from('shop_cart')
+          .insert({ 
+            user_id: user.id, 
+            product_id: productId,
+            selected_attributes,
+            quantity: 1
+          });
+        if (insertError) throw insertError;
+      }
       
-      if (error) throw error;
       loadCartCount();
       if (Platform.OS === 'web') alert('Added to cart!');
       else router.push('/shop/cart');
@@ -307,7 +337,6 @@ export default function ShopScreen() {
   const headerAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: headerTranslateY.value }],
     opacity: interpolate(scrollY.value, [0, 50], [1, 0.98], Extrapolate.CLAMP),
-    backgroundColor: scrollY.value > 20 ? 'rgba(255, 255, 255, 0.95)' : 'transparent',
   }));
 
   const bannerAnimatedStyle = useAnimatedStyle(() => ({
@@ -359,12 +388,6 @@ export default function ShopScreen() {
                 <RNText style={styles.oldPrice}>₹{Number(product.old_price).toLocaleString('en-IN')}</RNText>
               )}
             </View>
-            <TouchableOpacity 
-              style={styles.addToCartBtn}
-              onPress={() => addToCart(product.id)}
-            >
-              <ShoppingCart size={18} color="#FFFFFF" strokeWidth={2.5} />
-            </TouchableOpacity>
           </View>
         </View>
       </Pressable>
@@ -559,7 +582,7 @@ export default function ShopScreen() {
           <View style={styles.modalHeader}>
             <RNText style={styles.modalTitle}>Filter & Sort</RNText>
             <TouchableOpacity onPress={() => setIsFilterVisible(false)} style={styles.modalCloseBtn}>
-              <X size={24} color="#FFFFFF" />
+              <X size={24} color="#0F172A" />
             </TouchableOpacity>
           </View>
 
@@ -636,16 +659,19 @@ export default function ShopScreen() {
       <WebLayout hideHeader={isSmall} isPublicNoSidebar={isSmall}>
         <View style={styles.screen}>
           {isSmall && (
-            <View style={[styles.floatingHeader, { paddingTop: insets.top }]}>
-              <TouchableOpacity style={styles.cartIcon} onPress={() => router.push('/shop/cart')}>
-                <ShoppingCart size={24} color="#0F172A" strokeWidth={2} />
+            <Animated.View style={[styles.floatingHeader, headerAnimatedStyle, { top: insets.top }]}>
+              <TouchableOpacity 
+                style={styles.cartIcon}
+                onPress={() => router.push('/shop/cart')}
+              >
+                <ShoppingCart size={22} color="#2b2f4b" strokeWidth={2} />
                 {cartCount > 0 && (
                   <View style={styles.cartBadge}>
                     <RNText style={styles.cartBadgeText}>{cartCount}</RNText>
                   </View>
                 )}
               </TouchableOpacity>
-            </View>
+            </Animated.View>
           )}
           {content(Platform.OS === 'web' ? undefined : verticalScrollHandler)}
         </View>
@@ -656,17 +682,19 @@ export default function ShopScreen() {
 
   return (
     <View style={styles.screen}>
-      <View style={[styles.floatingHeader, { paddingTop: insets.top }]}>
-        <TouchableOpacity style={styles.cartIcon} onPress={() => router.push('/shop/cart')}>
-          <ShoppingCart size={24} color="#0F172A" strokeWidth={2} />
+      <Animated.View style={[styles.floatingHeader, headerAnimatedStyle, { top: insets.top }]}>
+        <TouchableOpacity 
+          style={styles.cartIcon}
+          onPress={() => router.push('/shop/cart')}
+        >
+          <ShoppingCart size={22} color="#2b2f4b" strokeWidth={2} />
           {cartCount > 0 && (
             <View style={styles.cartBadge}>
               <RNText style={styles.cartBadgeText}>{cartCount}</RNText>
             </View>
           )}
         </TouchableOpacity>
-      </View>
-      
+      </Animated.View>
       {content(Platform.OS === 'web' ? undefined : verticalScrollHandler)}
       {renderFilterModal()}
     </View>

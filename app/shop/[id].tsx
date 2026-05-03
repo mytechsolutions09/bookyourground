@@ -21,6 +21,12 @@ import WebLayout from '@/components/web/WebLayout';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUI } from '@/contexts/UIContext';
+import Reanimated, { 
+  useSharedValue, 
+  useAnimatedStyle, 
+  useAnimatedScrollHandler, 
+  interpolate 
+} from 'react-native-reanimated';
 
 export default function ProductDetailScreen() {
   const { width: windowWidth } = useWindowDimensions();
@@ -38,6 +44,23 @@ export default function ProductDetailScreen() {
   const [selectedSize, setSelectedSize] = useState<any>(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [cartCount, setCartCount] = useState(0);
+  const scrollY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+    },
+  });
+
+  const thumbnailAnimatedStyle = useAnimatedStyle(() => ({
+    zIndex: scrollY.value > 10 ? 5 : 30,
+    opacity: interpolate(scrollY.value, [0, 50], [1, 0.8], 'clamp'),
+    transform: [{ translateY: interpolate(scrollY.value, [0, 100], [0, 20], 'clamp') }]
+  }));
+
+  const tagAnimatedStyle = useAnimatedStyle(() => ({
+    zIndex: scrollY.value > 5 ? 5 : 30,
+  }));
 
   useEffect(() => {
     setTabBarVisible(false);
@@ -48,6 +71,7 @@ export default function ProductDetailScreen() {
     if (id) {
       loadProduct();
       checkIfFavorited();
+      if (user) loadCartCount();
     }
   }, [id, user?.id]);
 
@@ -102,6 +126,23 @@ export default function ProductDetailScreen() {
     }
   };
 
+  const loadCartCount = async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from('shop_cart')
+        .select('quantity')
+        .eq('user_id', user.id);
+      
+      if (!error && data) {
+        const total = data.reduce((sum, item) => sum + (item.quantity || 0), 0);
+        setCartCount(total);
+      }
+    } catch (err) {
+      console.error('Error loading cart count:', err);
+    }
+  };
+
   const toggleFavorite = async () => {
     if (!user) {
       router.push('/(auth)/login');
@@ -145,22 +186,48 @@ export default function ProductDetailScreen() {
     }
     if (!product) return;
     try {
-      const selected_attributes = {
-        size: selectedSize,
-        color: selectedColor?.name
-      };
-
-      const { error } = await supabase
-        .from('shop_cart')
-        .upsert({ 
-          user_id: user.id, 
-          product_id: product.id,
-          selected_attributes 
-        }, { 
-          onConflict: 'user_id,product_id,selected_attributes' 
-        });
+      const isShoes = product.category?.name === 'Shoes';
+      const selected_attributes: any = {};
       
-      if (error) throw error;
+      if (isShoes) {
+        selected_attributes.size = selectedSize;
+        selected_attributes.color = selectedColor?.name;
+      }
+
+      // Check if item with same attributes already exists
+      const { data: existingItems, error: fetchError } = await supabase
+        .from('shop_cart')
+        .select('id, quantity, selected_attributes')
+        .eq('user_id', user.id)
+        .eq('product_id', product.id);
+
+      if (fetchError) throw fetchError;
+
+      const existingItem = existingItems?.find(item => 
+        JSON.stringify(item.selected_attributes) === JSON.stringify(selected_attributes)
+      );
+
+      if (existingItem) {
+        // Update quantity
+        const { error: updateError } = await supabase
+          .from('shop_cart')
+          .update({ quantity: (existingItem.quantity || 0) + 1 })
+          .eq('id', existingItem.id);
+        if (updateError) throw updateError;
+      } else {
+        // Insert new item
+        const { error: insertError } = await supabase
+          .from('shop_cart')
+          .insert({ 
+            user_id: user.id, 
+            product_id: product.id,
+            selected_attributes,
+            quantity: 1
+          });
+        if (insertError) throw insertError;
+      }
+      
+      loadCartCount();
       router.push('/shop/cart');
     } catch (err) {
       console.error('Error adding to cart:', err);
@@ -256,7 +323,9 @@ export default function ProductDetailScreen() {
         {/* Hero tag and thumbnails moved to bottom of JSX for better touch handling */}
       </View>
 
-      <ScrollView 
+      <Reanimated.ScrollView 
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
         style={[styles.scroll, { zIndex: 10 }]} 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, { paddingTop: isUltraNarrow ? 320 : 440 }]}
@@ -393,62 +462,94 @@ export default function ProductDetailScreen() {
 
           <View style={styles.footerGap} />
         </View>
-      </ScrollView>
-
-      {/* Header Overlay moved to interactive overlays block below */}
+      </Reanimated.ScrollView>
 
       {/* Mobile-only interactive overlays */}
       {!isSmall ? null : (
-        <View pointerEvents="box-none" style={[StyleSheet.absoluteFill, { zIndex: 5 }]}>
-          {/* Header Overlay */}
-          <View pointerEvents="box-none" style={[styles.imageOverlay, { top: Math.max(insets.top, 20), zIndex: 6 }]}>
-            <TouchableOpacity 
-              style={styles.backBtn} 
-              onPress={() => router.back()}
-            >
-              <ChevronLeft size={24} color="#2b2f4b" />
-            </TouchableOpacity>
-            <View style={styles.rightActions}>
-              <TouchableOpacity style={styles.actionCircle} onPress={handleShare}>
-                <Share2 size={20} color="#2b2f4b" />
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.actionCircle} 
-                onPress={() => router.push('/shop/cart')}
+        <>
+          {/* Lower priority elements that go UNDER content on scroll */}
+          <Reanimated.View 
+            pointerEvents="box-none" 
+            style={[
+              StyleSheet.absoluteFill,
+              { zIndex: 5 }, // Below ScrollView (10) but above Fixed Image (1)
+              thumbnailAnimatedStyle
+            ]}
+          >
+            {product.images && product.images.length > 1 && (
+              <View 
+                pointerEvents="box-none" 
+                style={[
+                  styles.mobileThumbnailsOverlay, 
+                  { top: (isUltraNarrow ? 320 : 440) - 100, bottom: undefined, height: 100 }
+                ]}
               >
-                <ShoppingCart size={20} color="#2b2f4b" />
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 20 }}>
+                  {product.images.map((img: string, i: number) => (
+                    <TouchableOpacity 
+                      key={i} 
+                      style={[styles.mobileThumb, activeImageIndex === i && styles.mobileThumbActive]}
+                      onPress={() => setActiveImageIndex(i)}
+                    >
+                      <Image source={{ uri: img }} style={styles.mobileThumbImage} />
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+            
+            {product.tag && (
+              <View 
+                style={[
+                  styles.heroTag, 
+                  { top: (isUltraNarrow ? 320 : 440) - 40, bottom: undefined }
+                ]}
+              >
+                <Text style={styles.heroTagText}>{product.tag}</Text>
+              </View>
+            )}
+          </Reanimated.View>
+
+          {/* High priority elements that stay ON TOP */}
+          <View pointerEvents="box-none" style={[StyleSheet.absoluteFill, { zIndex: 20 }]}>
+            {/* Header Overlay */}
+            <View pointerEvents="box-none" style={[styles.imageOverlay, { top: Math.max(insets.top, 20), zIndex: 6 }]}>
+              <TouchableOpacity 
+                style={styles.backBtn} 
+                onPress={() => router.back()}
+              >
+                <ChevronLeft size={24} color="#2b2f4b" />
               </TouchableOpacity>
-              <TouchableOpacity style={styles.actionCircle} onPress={toggleFavorite}>
-                <Heart 
-                  size={20} 
-                  color={isFavorited ? "#f8688a" : "#2b2f4b"} 
-                  fill={isFavorited ? "#f8688a" : "none"} 
-                />
-              </TouchableOpacity>
+              
+              <View style={styles.rightActions}>
+                <TouchableOpacity 
+                  style={styles.actionCircle} 
+                  onPress={handleShare}
+                >
+                  <Share2 size={20} color="#2b2f4b" />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.actionCircle} 
+                  onPress={() => router.push('/shop/cart')}
+                >
+                  <ShoppingCart size={20} color="#2b2f4b" />
+                  {cartCount > 0 && (
+                    <View style={styles.cartBadgeOverlay}>
+                      <Text style={styles.cartBadgeTextOverlay}>{cartCount}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.actionCircle} onPress={toggleFavorite}>
+                  <Heart 
+                    size={20} 
+                    color={isFavorited ? '#f8688a' : '#2b2f4b'} 
+                    fill={isFavorited ? '#f8688a' : 'transparent'} 
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-
-          {product.images && product.images.length > 1 && (
-            <View pointerEvents="box-none" style={[styles.mobileThumbnailsOverlay, { top: (isUltraNarrow ? 320 : 440) - 100, bottom: undefined, height: 100, zIndex: 6 }]}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 20 }}>
-                {product.images.map((img: string, i: number) => (
-                  <TouchableOpacity 
-                    key={i} 
-                    style={[styles.mobileThumb, activeImageIndex === i && styles.mobileThumbActive]}
-                    onPress={() => setActiveImageIndex(i)}
-                  >
-                    <Image source={{ uri: img }} style={styles.mobileThumbImage} />
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
-          {product.tag && (
-            <View style={[styles.heroTag, { top: (isUltraNarrow ? 320 : 440) - 40, bottom: undefined }]}>
-              <Text style={styles.heroTagText}>{product.tag}</Text>
-            </View>
-          )}
-        </View>
+        </>
       )}
     </View>
   );
@@ -456,16 +557,16 @@ export default function ProductDetailScreen() {
   const bottomActions = (
     <View style={[styles.bottomBar, isUltraNarrow && { paddingHorizontal: 8, gap: 6 }]}>
       <TouchableOpacity 
-        style={[styles.addToCartSecondary, isUltraNarrow && { height: 40 }]}
+        style={[styles.addToCartSecondary, isUltraNarrow && { height: 48 }]}
         onPress={addToCart}
       >
-        <Text style={[styles.addToCartSecondaryText, isUltraNarrow && { fontSize: 12 }]}>Add to Cart</Text>
+        <Text style={[styles.addToCartSecondaryText, isUltraNarrow && { fontSize: 13 }]}>Add to Cart</Text>
       </TouchableOpacity>
       <TouchableOpacity 
-        style={[styles.buyNowBtn, isUltraNarrow && { height: 40 }]}
-        onPress={addToCart}
+        style={[styles.buyNowBtn, isUltraNarrow && { height: 48 }]}
+        onPress={() => addToCart()} // Buy now also adds to cart then goes to cart
       >
-        <Text style={[styles.buyNowText, isUltraNarrow && { fontSize: 12 }]}>Buy Now</Text>
+        <Text style={[styles.buyNowText, isUltraNarrow && { fontSize: 13 }]}>Buy Now</Text>
       </TouchableOpacity>
     </View>
   );
@@ -702,7 +803,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingTop: 400,
-    paddingBottom: 120,
+    paddingBottom: 160,
   },
   mainImage: {
     width: '100%',
@@ -922,7 +1023,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   footerGap: {
-    height: 100,
+    height: 140,
   },
   bottomBar: {
     position: 'absolute',
@@ -931,18 +1032,19 @@ const styles = StyleSheet.create({
     right: 0,
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: Platform.OS === 'ios' ? 28 : 12,
+    paddingTop: 16,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    borderTopColor: '#F1F5F9',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 20,
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 15,
+    elevation: 30,
+    zIndex: 1000,
   },
   cartIconBtn: {
     width: 48,
@@ -964,33 +1066,45 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#F3F4F6',
   },
-  addToCartSecondary: {
-    flex: 1,
-    height: 48,
-    borderRadius: 100,
-    backgroundColor: 'rgba(43, 47, 75, 0.4)',
-    borderColor: 'rgba(43, 47, 75, 0.5)',
-    borderWidth: 1,
+  cartBadgeOverlay: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    backgroundColor: '#f8688a',
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    ...Platform.select({
-      web: { backdropFilter: 'blur(8px)' }
-    }) as any,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    zIndex: 10,
+  },
+  cartBadgeTextOverlay: {
+    fontSize: 8,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    fontFamily: 'Inter',
+  },
+  addToCartSecondary: {
+    flex: 1,
+    height: 54,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   addToCartSecondaryText: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-    fontSize: 14,
+    color: '#1E293B',
+    fontWeight: '700',
+    fontSize: 15,
     fontFamily: 'Inter',
-    letterSpacing: -0.3,
   },
   buyNowBtn: {
-    flex: 1.2,
-    height: 48,
-    borderRadius: 100,
-    backgroundColor: 'rgba(248, 104, 138, 0.4)',
-    borderColor: 'rgba(248, 104, 138, 0.5)',
-    borderWidth: 1,
+    flex: 1.5,
+    height: 54,
+    borderRadius: 16,
+    backgroundColor: '#f8688a',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#f8688a',
@@ -1004,10 +1118,9 @@ const styles = StyleSheet.create({
   },
   buyNowText: {
     color: '#FFFFFF',
-    fontWeight: '800',
-    fontSize: 14,
+    fontWeight: '700',
+    fontSize: 15,
     fontFamily: 'Inter',
-    letterSpacing: -0.3,
   },
 
   // Web Styles

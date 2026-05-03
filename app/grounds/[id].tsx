@@ -432,27 +432,8 @@ export default function GroundDetailsScreen() {
               </Pressable>
             )}
 
-            <View style={styles.starsSummaryRow}>
-              {[1, 2, 3, 4, 5].map((i) => {
-                const filled = reviews.length > 0 && i <= Math.round(averageRating);
-                return (
-                  <Star
-                    key={i}
-                    size={18}
-                    color={filled ? '#FFA000' : '#D1D5DB'}
-                    fill={filled ? '#FFA000' : 'none'}
-                  />
-                );
-              })}
-              <Text style={styles.rating}>
-                {reviews.length > 0
-                  ? `${averageRating.toFixed(1)} (${reviews.length} reviews)`
-                  : 'No reviews yet'}
-              </Text>
-            </View>
-
-            {/* Price strip (mobile) - Derived from custom slot prices */}
-            {Platform.OS !== 'web' ? (() => {
+            {/* Price strip - Priority info */}
+            {(() => {
               const slots = (ground as any).time_slots || [];
               const prices = slots
                 .filter((s: any) => s.is_available && s.custom_price != null)
@@ -476,7 +457,27 @@ export default function GroundDetailsScreen() {
                   </View>
                 </View>
               );
-            })() : null}
+            })()}
+
+            {/* Rating summary - Now moved below price */}
+            <View style={styles.starsSummaryRow}>
+              {[1, 2, 3, 4, 5].map((i) => {
+                const filled = reviews.length > 0 && i <= Math.round(averageRating);
+                return (
+                  <Star
+                    key={i}
+                    size={18}
+                    color={filled ? '#FFA000' : '#D1D5DB'}
+                    fill={filled ? '#FFA000' : 'none'}
+                  />
+                );
+              })}
+              <Text style={styles.rating}>
+                {reviews.length > 0
+                  ? `${averageRating.toFixed(1)} (${reviews.length} reviews)`
+                  : 'No reviews yet'}
+              </Text>
+            </View>
 
             {/* ── Booking form (Now part of the main container) ── */}
             {ground.id ? (
