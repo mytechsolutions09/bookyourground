@@ -11,6 +11,7 @@ import { UIProvider, useUI } from '@/contexts/UIContext';
 import { MobileTabBarHost } from '@/components/navigation/MobileTabBarHost';
 
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 // Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -76,14 +77,16 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <LocationProvider>
-        <AuthProvider>
-          <UIProvider>
-            <RootLayoutInner />
-            <StatusBar style="auto" />
-          </UIProvider>
-        </AuthProvider>
-      </LocationProvider>
+      <SafeAreaProvider>
+        <LocationProvider>
+          <AuthProvider>
+            <UIProvider>
+              <RootLayoutInner />
+              <StatusBar style="auto" />
+            </UIProvider>
+          </AuthProvider>
+        </LocationProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

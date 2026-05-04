@@ -1324,7 +1324,7 @@ export function useCricketScoring() {
 
 return {
     savePlayingXi,
-    matchId, phase, result, currentIdx,
+    matchId, phase, result, currentIdx, inningsList,
     inn, inn1: inningsList[0], inn2: inningsList[1],
     matchConfig,
     striker, nonStriker, bowler, crr, rrr, yetToBat,

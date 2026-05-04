@@ -1,74 +1,77 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, Platform, Image } from 'react-native';
-import { Slot, useRouter, usePathname } from 'expo-router';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Swords, 
-  Trophy, 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  Image, 
+  Platform, 
+  Dimensions, 
+  Animated as RNAnimated, 
+  ScrollView,
+  ActivityIndicator,
+  Modal,
+  Share,
+  Alert
+} from 'react-native';
+import { 
+  Plus, 
+  Settings, 
+  Share2, 
+  Camera, 
+  Trash2, 
+  MapPin, 
+  Eye, 
   Users, 
-  BarChart3, 
-  PlayCircle,
-  Plus,
+  Trophy, 
+  Calendar, 
+  Clock, 
+  ChevronRight, 
+  ChevronLeft,
+  History,
+  TrendingUp,
+  QrCode,
   X,
-  Radio,
   HelpCircle,
-  Calendar
+  Swords,
+  Radio
 } from 'lucide-react-native';
-import { Modal } from 'react-native';
-import WebLayout from '@/components/web/WebLayout';
-import MobileAppNavbar from '@/components/MobileAppNavbar';
-import { useUI } from '@/contexts/UIContext';
+
+import { Stack, useRouter, useLocalSearchParams, usePathname } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { 
-  useSharedValue, 
   useAnimatedStyle, 
+  useSharedValue, 
+  withSpring, 
   withTiming, 
-  withSpring,
-  Easing, 
   useAnimatedScrollHandler,
-  runOnJS
+  runOnJS,
+  interpolate,
+  Extrapolate
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import * as ImagePicker from 'expo-image-picker';
-import { 
-  ChevronLeft,
-  QrCode,
-  Share2,
-  MapPin,
-  UserPlus,
-  BarChart2,
-  Clock,
-  ChevronRight,
-  Eye,
-  Award,
-  Calendar as CalendarIcon,
-  Camera,
-  Trash2,
-  TrendingUp,
-  Zap,
-  Flame,
-  Shield,
-  Target,
-  Database,
-  Star,
-} from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Alert, ActivityIndicator } from 'react-native';
+import { useAuth } from '@/contexts/AuthContext';
+import { getPlayerTags, PlayerTag } from '@/lib/stats-logic';
+import QRCode from 'react-native-qrcode-svg';
 
-import CricketPlayerProfile from './player-profile';
+// Import sub-tab components
 import CricketMatches from './matches';
-import CricketTournaments from './tournaments';
-import CricketTeams from './teams';
 import CricketStats from './stats';
-import CricketHighlights from './highlights';
 import CricketTrophies from './trophies';
 import CricketBadges from './badges';
+import CricketTournaments from './tournaments';
+import CricketTeams from './teams';
+import CricketHighlights from './highlights';
 import CricketPhotos from './photos';
 import CricketConnections from './connections';
-import { getPlayerTags, PlayerStats, PlayerTag } from '@/lib/stats-logic';
-import QRCode from 'react-native-qrcode-svg';
-import * as Sharing from 'expo-sharing';
-import { captureRef } from 'react-native-view-shot';
+import CricketPlayerProfile from './player-profile';
+
+const { width: windowWidth } = Dimensions.get('window');
+
+const HEADER_MAX_HEIGHT = 300;
+const HEADER_MIN_HEIGHT = 100;
+const SUB_BAR_HEIGHT = 48;
 
 const TABS = [
   { id: 'player-profile', label: 'Profile', index: 0 },
@@ -86,328 +89,75 @@ const TABS = [
 export default function CricketLayout() {
   const router = useRouter();
   const pathname = usePathname();
-  const { width: windowWidth } = useWindowDimensions();
-  const insets = useSafeAreaInsets();
-  const { setTabBarVisible } = useUI();
-
-  // Find initial tab from URL
-  const initialTabId = TABS.find(t => pathname.includes(t.id))?.id || 'player-profile';
-  const initialIndex = TABS.find(t => t.id === initialTabId)?.index || 0;
-
-  const [activeTabId, setActiveTabId] = React.useState(initialTabId);
-  const horizontalPagerRef = React.useRef<any>(null);
-  const tabScrollRef = React.useRef<ScrollView>(null);
-  
-  const [isActionModalVisible, setIsActionModalVisible] = React.useState(false);
-  
   const { user } = useAuth();
-  const [profile, setProfile] = React.useState<any>(null);
-  const [followerCount, setFollowerCount] = React.useState(0);
-  const [playerTags, setPlayerTags] = React.useState<PlayerTag[]>([]);
-  const [uploading, setUploading] = React.useState(false);
-  const [isAvatarOptionsVisible, setIsAvatarOptionsVisible] = React.useState(false);
-  const [isQrModalVisible, setIsQrModalVisible] = React.useState(false);
-  const qrRef = React.useRef<any>(null);
-  
+  const insets = useSafeAreaInsets();
+  const [profile, setProfile] = useState<any>(null);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [uploading, setUploading] = useState(false);
+  const [activeTabId, setActiveTabId] = useState('player-profile');
+  const [isActionModalVisible, setIsActionModalVisible] = useState(false);
+  const [isAvatarModalVisible, setIsAvatarModalVisible] = useState(false);
+  const [isQrModalVisible, setIsQrModalVisible] = useState(false);
+
   const animatedScrollY = useSharedValue(0);
+  const horizontalPagerRef = useRef<ScrollView>(null);
+  const tabScrollRef = useRef<ScrollView>(null);
+  const initialIndex = TABS.findIndex(t => t.id === activeTabId) || 0;
+
   const lastScrollY = useSharedValue(0);
   const tabScrollPositions = useSharedValue(TABS.map(() => 0));
   const activeTabIndex = useSharedValue(initialIndex);
+  const [tabMeasurements, setTabMeasurements] = React.useState<any[]>([]);
+  const [dynamicTags, setDynamicTags] = useState<PlayerTag[]>([]);
 
-  // Sub-tab animation indexes
-  const statsIdx = useSharedValue(0);
-  const teamsIdx = useSharedValue(0);
-  const tournamentsIdx = useSharedValue(0);
-  const trophiesIdx = useSharedValue(0);
-  const badgesIdx = useSharedValue(0);
-  const connectionsIdx = useSharedValue(0);
-
-  const HEADER_MAX_HEIGHT = 300;
-  const HEADER_MIN_HEIGHT = 105;
-
-  React.useEffect(() => {
-    if (user?.id) {
-      loadProfileData();
-    }
-  }, [user?.id]);
-
-  const loadProfileData = async () => {
-    try {
-      const { data } = await supabase.from('profiles').select('*').eq('id', user?.id).single();
-      if (data) setProfile(data);
-      
-      const { count } = await supabase.from('profiles_follows').select('*', { count: 'exact', head: true }).eq('following_id', user?.id);
-      setFollowerCount(count || 0);
-
-      // Aggregating Stats for Tags
-      const { data: memberRecords } = await supabase
-        .from('team_members')
-        .select('id')
-        .eq('profile_id', user?.id);
-
-      if (memberRecords && memberRecords.length > 0) {
-        const memberIds = memberRecords.map(m => m.id).filter(id => !!id);
-        const { data: statsData } = await supabase
-          .from('player_ball_stats')
-          .select('*')
-          .in('member_id', memberIds)
-          .eq('ball_type', 'leather');
-        
-        if (statsData && statsData.length > 0) {
-            const agg = statsData.reduce((acc, curr) => ({
-              matches_played: acc.matches_played + curr.matches_played,
-              total_runs: acc.total_runs + curr.total_runs,
-              strike_rate: Math.max(acc.strike_rate, curr.strike_rate),
-              total_wickets: acc.total_wickets + curr.total_wickets,
-              innings_batted: acc.innings_batted + (curr.innings_batted || 0),
-              innings_bowled: acc.innings_bowled + (curr.innings_bowled || 0),
-              not_outs: acc.not_outs + (curr.not_outs || 0),
-              runs_conceded: acc.runs_conceded + (curr.runs_conceded || 0),
-              overs_bowled: acc.overs_bowled + (Number(curr.overs_bowled) || 0)
-            }), { 
-              matches_played: 0, total_runs: 0, strike_rate: 0, total_wickets: 0, 
-              innings_batted: 0, innings_bowled: 0, not_outs: 0, runs_conceded: 0,
-              overs_bowled: 0
-            });
-            setPlayerTags(getPlayerTags(agg));
-        }
-      }
-    } catch (err) {
-      console.error('Error loading profile:', err);
-    }
-  };
-
-  const uploadImage = React.useCallback(async (uri: string) => {
-    if (!user?.id) return;
-    
-    try {
-      setUploading(true);
-      const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
-      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-      const filePath = `${fileName}`;
-      const contentType = `image/${fileExt === 'png' ? 'png' : 'jpeg'}`;
-
-      // Use ArrayBuffer instead of Blob for more reliable local file reading in React Native
-      const response = await fetch(uri);
-      const arrayBuffer = await response.arrayBuffer();
-
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, arrayBuffer, {
-          contentType,
-          upsert: true
-        });
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: publicUrl })
-        .eq('id', user.id);
-
-      if (updateError) throw updateError;
-      
-      setProfile((prev: any) => ({ ...prev, avatar_url: publicUrl }));
-      Alert.alert('Success', 'Profile photo updated successfully!');
-    } catch (error: any) {
-      console.error('Upload error:', error);
-      Alert.alert('Upload Failed', error.message || 'Failed to upload image. Please try again.');
-    } finally {
-      setUploading(false);
-    }
-  }, [user?.id]);
-
-  const pickImage = React.useCallback(async () => {
-    try {
-      // Launch picker directly - modern Expo handles permissions automatically
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.5,
-      });
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        const selectedUri = result.assets[0].uri;
-        // Close modal AFTER we have the image to avoid animation/lock issues
-        setIsAvatarOptionsVisible(false);
-        // Small delay ensures modal dismissal doesn't interrupt the subsequent upload state change
-        setTimeout(() => uploadImage(selectedUri), 300);
-      }
-    } catch (error: any) {
-      console.error('Image picking error:', error);
-      Alert.alert('Gallery Error', 'Could not open image gallery. Please ensure you have given permission in Settings.');
-    }
-  }, [uploadImage]);
-
-  const removeAvatar = React.useCallback(async () => {
-    setIsAvatarOptionsVisible(false);
-    try {
-      setUploading(true);
-      const { error } = await supabase
-        .from('profiles')
-        .update({ avatar_url: null })
-        .eq('id', user?.id);
-
-      if (error) throw error;
-      setProfile((prev: any) => ({ ...prev, avatar_url: null }));
-      Alert.alert('Success', 'Profile photo removed');
-    } catch (error) {
-      Alert.alert('Error', 'Failed to remove photo');
-    } finally {
-      setUploading(false);
-    }
-  }, [user?.id]);
-
-  const handleAvatarPress = React.useCallback(() => {
-    setIsAvatarOptionsVisible(true);
-  }, []);
-
-  const handleShareProfile = async () => {
-    try {
-      const shareUrl = `https://bookyourground.com/player/${user?.id}`;
-      await Share2.onPress; // Lucide icon doesn't have onPress, I mean use logical share
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const shareQr = async () => {
-    try {
-      const uri = await captureRef(qrRef, {
-        format: 'png',
-        quality: 0.8,
-      });
-      await Sharing.shareAsync(uri);
-    } catch (err) {
-      console.error(err);
-      Alert.alert('Error', 'Could not share QR code');
-    }
-  };
-
-  const renderQrModal = () => (
-    <Modal
-      animationType="fade"
-      transparent={true}
-      visible={isQrModalVisible}
-      onRequestClose={() => setIsQrModalVisible(false)}
-    >
-      <TouchableOpacity 
-        style={styles.qrModalOverlay}
-        activeOpacity={1}
-        onPress={() => setIsQrModalVisible(false)}
-      >
-        <View style={styles.qrCard}>
-          <View style={styles.qrHeader}>
-            <Text style={styles.qrTitle}>Player ID</Text>
-            <TouchableOpacity onPress={() => setIsQrModalVisible(false)}>
-              <X size={20} color="#64748B" />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.qrContent} ref={qrRef} collapsable={false}>
-            <View style={styles.qrWrapper}>
-              <QRCode
-                value={`https://bookyourground.com/player/${user?.id}`}
-                size={200}
-                color="#06392e"
-                backgroundColor="#FFFFFF"
-              />
-            </View>
-            <Text style={styles.qrPlayerName}>{formatName(profile?.full_name)}</Text>
-            <Text style={styles.qrSubtext}>Scan to view profile</Text>
-          </View>
-
-          <TouchableOpacity style={styles.shareQrBtn} onPress={shareQr}>
-            <Share2 size={18} color="#FFFFFF" strokeWidth={2.5} />
-            <Text style={styles.shareQrBtnText}>Share QR Code</Text>
-          </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
-    </Modal>
-  );
-
-  const renderAvatarOptions = () => (
-    <Modal
-      animationType="fade"
-      transparent={true}
-      visible={isAvatarOptionsVisible}
-      onRequestClose={() => setIsAvatarOptionsVisible(false)}
-    >
-      <TouchableOpacity 
-        style={styles.avatarModalOverlay}
-        activeOpacity={1}
-        onPress={() => setIsAvatarOptionsVisible(false)}
-      >
-        <View style={styles.avatarOptionsCard}>
-          <View style={styles.avatarOptionsHeader}>
-            <Text style={styles.avatarOptionsTitle}>Profile Picture</Text>
-            <TouchableOpacity onPress={() => setIsAvatarOptionsVisible(false)}>
-              <X size={20} color="#64748B" />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.avatarOptionsGrid}>
-            <TouchableOpacity 
-              style={styles.avatarOptionItem}
-              onPress={pickImage}
-            >
-              <View style={[styles.avatarOptionIcon, { backgroundColor: '#F0FDF4' }]}>
-                <Camera size={24} color="#01b854" />
-              </View>
-              <Text style={styles.avatarOptionLabel}>{profile?.avatar_url ? 'Change Photo' : 'Add Photo'}</Text>
-            </TouchableOpacity>
-
-            {profile?.avatar_url && (
-              <TouchableOpacity 
-                style={styles.avatarOptionItem}
-                onPress={removeAvatar}
-              >
-                <View style={[styles.avatarOptionIcon, { backgroundColor: '#FEF2F2' }]}>
-                  <Trash2 size={24} color="#EF4444" />
-                </View>
-                <Text style={styles.avatarOptionLabel}>Remove</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-      </TouchableOpacity>
-    </Modal>
-  );
-
-  const formatName = (name: string) => {
-    if (!name) return name;
-    return name.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
-  };
+  const [matchesTab, setMatchesTab] = React.useState('played');
+  const matchesIdx = useSharedValue(0);
 
   const [statsTab, setStatsTab] = React.useState('batting');
-  const [teamsTab, setTeamsTab] = React.useState('your');
+  const statsIdx = useSharedValue(0);
+
   const [tournamentsTab, setTournamentsTab] = React.useState('all');
+  const tournamentsIdx = useSharedValue(0);
+
+  const [teamsTab, setTeamsTab] = React.useState('your');
+  const teamsIdx = useSharedValue(0);
+
   const [trophiesTab, setTrophiesTab] = React.useState('matches');
+  const trophiesIdx = useSharedValue(0);
+
   const [badgesTab, setBadgesTab] = React.useState('batting');
+  const badgesIdx = useSharedValue(0);
+
   const [connectionsTab, setConnectionsTab] = React.useState('followers');
+  const connectionsIdx = useSharedValue(0);
 
-  // Auto-scroll the tab bar when active tab changes
-  React.useEffect(() => {
-    const idx = TABS.find(t => t.id === activeTabId)?.index || 0;
-    tabScrollRef.current?.scrollTo({ x: idx * 90 - (windowWidth/2) + 45, animated: true });
-  }, [activeTabId]);
+  const [tabBarVisible, setTabBarVisible] = useState(true);
 
-  // Handle manual tab press
-  const onTabPress = (tabId: string, idx: number) => {
-    setActiveTabId(tabId);
-    activeTabIndex.value = idx;
-    animatedScrollY.value = tabScrollPositions.value[idx] || 0;
-    horizontalPagerRef.current?.scrollTo({ x: idx * windowWidth, animated: true });
-  };
+  useEffect(() => {
+    if (user) {
+      fetchProfile();
+      fetchFollowers();
+      fetchDynamicTags();
+    }
+  }, [user]);
 
   // Sync pager when pathname changes (e.g. from bottom bar or deep link)
   React.useEffect(() => {
-    const tabId = TABS.find(t => pathname.includes(t.id))?.id || 'player-profile';
+    // Only sync if the pathname has a specific sub-tab ID.
+    // We avoid defaulting to 'player-profile' if we are already on another tab 
+    // and the pathname doesn't explicitly ask for 'player-profile'.
+    const targetTab = TABS.find(t => t.id !== 'player-profile' && pathname.includes(t.id));
+    
+    // If the pathname specifically mentions 'player-profile', then we go there.
+    const isExplicitProfile = pathname.includes('player-profile') || pathname.endsWith('/cricket');
+    
+    let tabId = activeTabId;
+    if (targetTab) {
+      tabId = targetTab.id;
+    } else if (isExplicitProfile) {
+      tabId = 'player-profile';
+    }
+
     if (tabId !== activeTabId) {
       const idx = TABS.find(t => t.id === tabId)?.index || 0;
       setActiveTabId(tabId);
@@ -417,55 +167,94 @@ export default function CricketLayout() {
     }
   }, [pathname, windowWidth]);
 
-  // Re-align pager when window width changes (e.g. unfolding Samsung Fold)
-  React.useEffect(() => {
-    const idx = TABS.find(t => t.id === activeTabId)?.index || 0;
-    // Use a small delay to ensure layout has finished
-    const timer = setTimeout(() => {
-      horizontalPagerRef.current?.scrollTo({ x: idx * windowWidth, animated: false });
-    }, 100);
-    return () => clearTimeout(timer);
-  }, [windowWidth]);
+  const fetchDynamicTags = async () => {
+    try {
+      // Fetch member IDs for the user
+      const { data: members } = await supabase
+        .from('team_members')
+        .select('id')
+        .eq('profile_id', user?.id);
+      
+      const memberIds = members?.map(m => m.id) || [];
+      if (memberIds.length === 0) return;
 
-  const horizontalScrollHandler = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      const x = event.contentOffset.x;
-      const index = x / windowWidth;
-      const leftIdx = Math.floor(index);
-      const rightIdx = Math.ceil(index);
-      const progress = index - leftIdx;
+      // Fetch stats
+      const { data: statsData } = await supabase
+        .from('player_ball_stats')
+        .select('*')
+        .in('member_id', memberIds);
+      
+      if (statsData && statsData.length > 0) {
+        const summed = statsData.reduce((acc: any, curr: any) => ({
+          total_runs: (acc.total_runs || 0) + (curr.total_runs || 0),
+          total_wickets: (acc.total_wickets || 0) + (curr.total_wickets || 0),
+          matches_played: (acc.matches_played || 0) + (curr.matches_played || 0),
+          innings_batted: (acc.innings_batted || 0) + (curr.innings_batted || 0),
+          innings_bowled: (acc.innings_bowled || 0) + (curr.innings_bowled || 0),
+          not_outs: (acc.not_outs || 0) + (curr.not_outs || 0),
+          runs_conceded: (acc.runs_conceded || 0) + (curr.runs_conceded || 0),
+          overs_bowled: (acc.overs_bowled || 0) + (curr.overs_bowled || 0),
+          strike_rate: curr.strike_rate || 0, // Simplified SR for now
+        }), {});
 
-      if (leftIdx >= 0 && rightIdx < TABS.length) {
-        const leftScroll = tabScrollPositions.value[leftIdx] || 0;
-        const rightScroll = tabScrollPositions.value[rightIdx] || 0;
-        animatedScrollY.value = leftScroll * (1 - progress) + rightScroll * progress;
+        const calculatedTags = getPlayerTags(summed);
+        setDynamicTags(calculatedTags);
       }
+    } catch (error) {
+      console.error('Error fetching dynamic tags:', error);
+    }
+  };
 
-      const activeIdx = Math.round(index);
-      const tab = TABS[activeIdx];
-      if (tab && tab.id !== activeTabId) {
-        activeTabIndex.value = activeIdx;
-        runOnJS(setActiveTabId)(tab.id);
-      }
-    },
-  });
+  const fetchProfile = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user?.id)
+        .single();
+      if (error) throw error;
+      setProfile(data);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    }
+  };
 
-  React.useEffect(() => {
-    return () => setTabBarVisible(true);
-  }, []);
+  const fetchFollowers = async () => {
+    try {
+      const { count, error } = await supabase
+        .from('connections')
+        .select('*', { count: 'exact', head: true })
+        .eq('following_id', user?.id);
+      if (error) throw error;
+      setFollowerCount(count || 0);
+    } catch (error) {
+      console.error('Error fetching followers:', error);
+    }
+  };
+
+  const handleAvatarPress = () => {
+    setIsAvatarModalVisible(true);
+  };
+
+  const onTabPress = (tabId: string, index: number) => {
+    setActiveTabId(tabId);
+    activeTabIndex.value = index;
+    horizontalPagerRef.current?.scrollTo({ x: index * windowWidth, animated: true });
+    
+    // Center the tab in the scroll view
+    const tabWidth = 80; // approximate
+    const screenWidth = Dimensions.get('window').width;
+    tabScrollRef.current?.scrollTo({
+      x: index * tabWidth - screenWidth / 2 + tabWidth / 2,
+      animated: true
+    });
+  };
 
   const verticalScrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
+      animatedScrollY.value = event.contentOffset.y;
+      
       const currentY = event.contentOffset.y;
-      animatedScrollY.value = currentY;
-
-      // Update the current tab's stored scroll position
-      const idx = activeTabIndex.value;
-      const newPositions = [...tabScrollPositions.value];
-      newPositions[idx] = currentY;
-      tabScrollPositions.value = newPositions;
-
-      // Immersive scroll: hide/show bottom tab bar based on direction
       if (currentY > lastScrollY.value + 10 && currentY > 100) {
         // Scrolling Down -> Hide Bar
         runOnJS(setTabBarVisible)(false);
@@ -477,9 +266,11 @@ export default function CricketLayout() {
     },
   });
 
+  const hasSubBar = activeTabId === 'stats' || activeTabId === 'trophies' || activeTabId === 'badges' || activeTabId === 'connections' || activeTabId === 'teams' || activeTabId === 'tournaments';
+
   const headerHeight = useAnimatedStyle(() => {
-    const hasSubBar = activeTabId === 'stats' || activeTabId === 'trophies' || activeTabId === 'badges' || activeTabId === 'connections' || activeTabId === 'teams' || activeTabId === 'tournaments';
-    const currentMinHeight = hasSubBar ? HEADER_MIN_HEIGHT + 48 : HEADER_MIN_HEIGHT;
+    // Standardize min height to avoid jumps between tabs with/without sub-bars
+    const currentMinHeight = HEADER_MIN_HEIGHT + 44; 
     const height = 260 - animatedScrollY.value;
     return {
       height: Math.max(currentMinHeight, height),
@@ -494,13 +285,15 @@ export default function CricketLayout() {
   });
 
   const mainIndicatorStyle = useAnimatedStyle(() => {
-    // Offset calculation matching the gap: 20 + approx tab width
-    const baseOffset = 80; 
+    const current = tabMeasurements[activeTabIndex.value];
+    if (!current) return { width: 0, opacity: 0 };
+
     return {
       transform: [
-        { translateX: withSpring(activeTabIndex.value * baseOffset + 16, { damping: 25, stiffness: 120 }) }
+        { translateX: current.x }
       ],
-      width: 48,
+      width: current.width,
+      opacity: 1,
     };
   });
 
@@ -542,11 +335,12 @@ export default function CricketLayout() {
 
   const headerContainerStyle = useAnimatedStyle(() => {
     // Keep header height consistent across all tabs for a stable UI
-    const currentMaxHeight = HEADER_MAX_HEIGHT + 48;
-    const currentMinHeight = HEADER_MIN_HEIGHT + 48;
+    // We use a fixed offset for the sub-bar area even if it's not present to prevent layout jumps
+    const baseMaxHeight = HEADER_MAX_HEIGHT + SUB_BAR_HEIGHT;
+    const baseMinHeight = HEADER_MIN_HEIGHT + SUB_BAR_HEIGHT;
     
     return {
-      height: Math.max(currentMinHeight + insets.top, currentMaxHeight + insets.top - animatedScrollY.value),
+      height: Math.max(baseMinHeight + insets.top, baseMaxHeight + insets.top - animatedScrollY.value),
       position: 'absolute',
       top: 0,
       left: 0,
@@ -663,7 +457,140 @@ export default function CricketLayout() {
     </Modal>
   );
 
-  const isCompact = windowWidth < 900;
+  const renderAvatarOptions = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={isAvatarModalVisible}
+      onRequestClose={() => setIsAvatarModalVisible(false)}
+    >
+      <TouchableOpacity 
+        style={styles.avatarModalOverlay}
+        activeOpacity={1}
+        onPress={() => setIsAvatarModalVisible(false)}
+      >
+        <View style={styles.avatarOptionsCard}>
+          <View style={styles.avatarOptionsHeader}>
+            <Text style={styles.avatarOptionsTitle}>Profile Picture</Text>
+            <TouchableOpacity onPress={() => setIsAvatarModalVisible(false)}>
+              <X size={20} color="#64748B" />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.avatarOptionsGrid}>
+            <TouchableOpacity 
+              style={styles.avatarOptionItem}
+              onPress={() => {
+                 setIsAvatarModalVisible(false);
+                 // handle pick image
+              }}
+            >
+              <View style={[styles.avatarOptionIcon, { backgroundColor: '#F0FDF4' }]}>
+                <Camera size={24} color="#01b854" />
+              </View>
+              <Text style={styles.avatarOptionLabel}>Camera</Text>
+            </TouchableOpacity>
+
+            {profile?.avatar_url && (
+              <TouchableOpacity 
+                style={styles.avatarOptionItem}
+                onPress={() => {
+                   setIsAvatarModalVisible(false);
+                   // handle delete
+                }}
+              >
+                <View style={[styles.avatarOptionIcon, { backgroundColor: '#FEF2F2' }]}>
+                  <Trash2 size={24} color="#EF4444" />
+                </View>
+                <Text style={styles.avatarOptionLabel}>Remove</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+
+  const renderQrModal = () => (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={isQrModalVisible}
+      onRequestClose={() => setIsQrModalVisible(false)}
+    >
+      <TouchableOpacity 
+        style={styles.qrModalOverlay}
+        activeOpacity={1}
+        onPress={() => setIsQrModalVisible(false)}
+      >
+        <View style={styles.qrCard}>
+          <View style={styles.qrHeader}>
+            <Text style={styles.qrTitle}>Player ID</Text>
+            <TouchableOpacity onPress={() => setIsQrModalVisible(false)}>
+              <X size={24} color="#64748B" />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.qrContent}>
+            <View style={styles.qrWrapper}>
+              <QRCode
+                value={`https://bookyourground.com/cricket-player/${user?.id}`}
+                size={200}
+                color="#06392e"
+                backgroundColor="white"
+              />
+            </View>
+            <Text style={styles.qrPlayerName}>{profile?.full_name}</Text>
+            <Text style={styles.qrSubtext}>Scan to view profile</Text>
+          </View>
+
+          <TouchableOpacity 
+            style={styles.shareQrBtn}
+            onPress={() => {
+              Share.share({
+                message: `Check out my cricket profile on Book Your Ground: https://bookyourground.com/cricket-player/${user?.id}`,
+              });
+            }}
+          >
+            <Share2 size={20} color="#FFFFFF" />
+            <Text style={styles.shareQrBtnText}>Share Profile</Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Modal>
+  );
+
+  const formatName = (name: string) => {
+    if (!name) return '';
+    return name.split(' ').map(s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()).join(' ');
+  };
+
+  const horizontalScrollHandler = (event: any) => {
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(offsetX / windowWidth);
+    if (index !== activeTabIndex.value && index >= 0 && index < TABS.length) {
+      const tab = TABS[index];
+      activeTabIndex.value = index;
+      setActiveTabId(tab.id);
+      
+      // Center the tab
+      const tabWidth = 80;
+      tabScrollRef.current?.scrollTo({
+        x: index * tabWidth - Dimensions.get('window').width / 2 + tabWidth / 2,
+        animated: true
+      });
+    }
+  };
+
+  const onMomentumScrollEnd = (event: any) => {
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(offsetX / windowWidth);
+    const tab = TABS[index];
+    if (tab) {
+      setActiveTabId(tab.id);
+      activeTabIndex.value = index;
+    }
+  };
 
   const content = (
     <View style={styles.container}>
@@ -706,7 +633,11 @@ export default function CricketLayout() {
               </View>
             </TouchableOpacity>
             <View style={styles.headerTextInfo}>
-              <Text style={styles.headerPlayerName}>{formatName(profile?.full_name) || 'Loading...'}</Text>
+              {profile?.full_name ? (
+                <Text style={styles.headerPlayerName}>{formatName(profile.full_name)}</Text>
+              ) : (
+                <View style={styles.skeletonName} />
+              )}
               
               <View style={styles.headerBadgeRow}>
                 <View style={styles.headerLocGroup}>
@@ -729,220 +660,227 @@ export default function CricketLayout() {
                 {[
                   profile?.player_type,
                   profile?.batting_style?.includes('Right') ? 'RHB' : profile?.batting_style?.includes('Left') ? 'LHB' : null,
-                  profile?.bowling_style
-                ].filter(Boolean).map((tag, i, arr) => (
-                  <React.Fragment key={i}>
+                  profile?.bowling_style,
+                  ...dynamicTags.map(t => t.label)
+                ].filter(Boolean).map((tag, i) => (
+                  <View key={i} style={[
+                    styles.headerTag, 
+                    dynamicTags.some(dt => dt.label === tag) && { backgroundColor: '#15803d40', borderColor: '#15803d' }
+                  ]}>
                     <Text style={styles.headerTagText}>{tag}</Text>
-                    {i < arr.length - 1 && <View style={styles.headerTagDot} />}
-                  </React.Fragment>
+                  </View>
                 ))}
               </View>
 
-              {/* Performance Tags - Destroyer, Wildcard etc. */}
-              {playerTags.length > 0 && (
-                <View style={styles.perfTagRow}>
-                  {playerTags.map(tag => (
-                    <View key={tag.id} style={[styles.perfTag, { backgroundColor: 'rgba(255,255,255,0.1)' }]}>
-                      <Text style={styles.perfTagText}>{tag.label}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
-              
-              <View style={styles.headerRankRow}>
-                <View style={styles.rankBadge}>
-                  <Text style={styles.rankText}>Rank</Text>
-                </View>
-                <TouchableOpacity style={styles.insightsBtn}>
-                  <BarChart2 size={12} color="#06392e" />
-                  <Text style={styles.insightsBtnText}>Insights</Text>
+              <View style={styles.headerMetricsRow}>
+                <TouchableOpacity style={styles.headerMetricBadge} onPress={() => router.push('/cricket/rank')}>
+                  <Trophy size={12} color="#FFD700" />
+                  <Text style={styles.headerMetricBadgeText}>Rank: #12</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.headerMetricBadge} onPress={() => router.push('/cricket/insights')}>
+                  <TrendingUp size={12} color="#FFFFFF" />
+                  <Text style={styles.headerMetricBadgeText}>Insights</Text>
+                  <ChevronRight size={10} color="#FFFFFF90" />
                 </TouchableOpacity>
               </View>
             </View>
           </View>
         </Animated.View>
 
-        {/* Mini Header / Nav (Always visible) */}
-        <View style={[styles.miniHeader, { top: insets.top }]}>
-           <TouchableOpacity onPress={() => router.back()} style={styles.miniNavBtn}>
-             <ChevronLeft size={24} color="#FFFFFF" />
-           </TouchableOpacity>
-           <Animated.View style={[styles.miniTitleContainer, miniHeaderTitleOpacity]}>
-             <Text style={styles.miniTitleText}>{formatName(profile?.full_name) || 'Cricket'}</Text>
-           </Animated.View>
-           <View style={styles.miniNavRight}>
-              <TouchableOpacity style={styles.miniNavBtn} onPress={() => setIsQrModalVisible(true)}>
-                <QrCode size={20} color="#FFFFFF" />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.miniNavBtn}>
-                <Share2 size={20} color="#FFFFFF" />
-              </TouchableOpacity>
-           </View>
+        {/* Persistent Top Actions */}
+        <View style={[styles.topActionRow, { paddingTop: insets.top + 5, height: 56 + insets.top }]}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.actionCircleBtn}>
+            <ChevronLeft size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+          
+          <Animated.View style={[styles.centeredMiniTitle, miniHeaderTitleOpacity]}>
+            <Text style={styles.miniHeaderTitle} numberOfLines={1}>
+              {formatName(profile?.full_name)}
+            </Text>
+          </Animated.View>
+
+          <View style={styles.rightActionsGroup}>
+            <TouchableOpacity onPress={() => setIsQrModalVisible(true)} style={styles.actionCircleBtn}>
+              <QrCode size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={() => Share.share({ message: `Check out my profile: https://bookyourground.com/cricket-player/${user?.id}` })} 
+              style={styles.actionCircleBtn}
+            >
+              <Share2 size={20} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Horizontal Slider Tabs - Clean & Smooth */}
-        {!pathname.includes('/scoring') && (
-          <View style={styles.tabsStickyWrapper}>
-            <View style={styles.tabsContainer}>
-              <ScrollView 
-                ref={tabScrollRef}
-                horizontal 
-                showsHorizontalScrollIndicator={false} 
-                contentContainerStyle={styles.tabsScroll} 
-                style={{ flex: 1 }}
-              >
-                <Animated.View style={[styles.mainTabIndicator, mainIndicatorStyle]} />
+        {/* Tab Bar (Always Sticky) */}
+        <View style={styles.tabsStickyWrapper}>
+          <View style={styles.tabsContainer}>
+            <ScrollView 
+              ref={tabScrollRef}
+              horizontal 
+              showsHorizontalScrollIndicator={false} 
+              contentContainerStyle={styles.tabsScroll} 
+              style={{ flex: 1 }}
+            >
+              <Animated.View style={[styles.mainTabIndicator, mainIndicatorStyle]} />
+              
+              {TABS.map((tab) => (
+                <TouchableOpacity 
+                  key={tab.id} 
+                  style={styles.tab} 
+                  onPress={() => onTabPress(tab.id, tab.index)}
+                  onLayout={(e) => {
+                    const { x, width } = e.nativeEvent.layout;
+                    setTabMeasurements(prev => {
+                      const next = [...prev];
+                      next[tab.index] = { x, width };
+                      return next;
+                    });
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[
+                    styles.tabText, 
+                    activeTabId === tab.id && styles.tabTextActive
+                  ]}>
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <TouchableOpacity 
+              style={styles.plusIconWrapper}
+              onPress={() => setIsActionModalVisible(true)}
+            >
+              <Plus size={24} color="#01b854" strokeWidth={3} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Sub-bar area - Fixed height for all tabs to ensure consistent header height when pinned */}
+          <View style={[styles.subBarInjection, !hasSubBar && { height: SUB_BAR_HEIGHT }]}>
+            {hasSubBar && (
+              <View style={styles.toggleGroup}>
+                {activeTabId === 'matches' && null}
                 
-                {TABS.map((tab) => (
-                  <TouchableOpacity 
-                    key={tab.id} 
-                    style={styles.tab} 
-                    onPress={() => onTabPress(tab.id, tab.index)}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[
-                      styles.tabText, 
-                      activeTabId === tab.id && styles.tabTextActive
-                    ]}>
-                      {tab.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
+                {activeTabId === 'tournaments' && (
+                  <>
+                    <Animated.View style={[styles.subTabPill, tournamentsPillStyle]} />
+                    {[
+                      { id: 'all', label: 'All' },
+                      { id: 'participate', label: 'Participate' },
+                      { id: 'network', label: 'Network' },
+                      { id: 'nearby', label: 'Nearby' },
+                    ].map((chip) => (
+                      <TouchableOpacity
+                        key={chip.id}
+                        onPress={() => setTournamentsTab(chip.id)}
+                        style={styles.toggleBtn}
+                      >
+                        <Text style={[styles.toggleBtnText, tournamentsTab === chip.id && styles.toggleBtnTextActive]}>{chip.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </>
+                )}
 
-              <TouchableOpacity 
-                style={styles.plusIconWrapper}
-                onPress={() => setIsActionModalVisible(true)}
-              >
-                <Plus size={24} color="#01b854" strokeWidth={3} />
-              </TouchableOpacity>
-            </View>
+                {activeTabId === 'teams' && (
+                  <>
+                    <Animated.View style={[styles.subTabPill, teamsPillStyle]} />
+                    {[
+                      { id: 'your', label: 'Your' },
+                      { id: 'all', label: 'All' },
+                      { id: 'top teams', label: 'Top Teams' },
+                      { id: 'networks', label: 'Networks' },
+                    ].map((chip) => (
+                      <TouchableOpacity
+                        key={chip.id}
+                        onPress={() => setTeamsTab(chip.id)}
+                        style={styles.toggleBtn}
+                      >
+                        <Text style={[styles.toggleBtnText, teamsTab === chip.id && styles.toggleBtnTextActive]}>{chip.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </>
+                )}
+                
+                {activeTabId === 'stats' && (
+                  <>
+                    <Animated.View style={[styles.subTabPill, statsPillStyle]} />
+                    {[
+                      { id: 'batting', label: 'Batting' },
+                      { id: 'bowling', label: 'Bowling' },
+                      { id: 'fielding', label: 'Fielding' },
+                      { id: 'captain', label: 'Captain' },
+                    ].map((chip) => (
+                      <TouchableOpacity
+                        key={chip.id}
+                        onPress={() => setStatsTab(chip.id)}
+                        style={styles.toggleBtn}
+                      >
+                        <Text style={[styles.toggleBtnText, statsTab === chip.id && styles.toggleBtnTextActive]}>{chip.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </>
+                )}
 
-            {/* Sub-bar injection - Fixed height for all tabs to ensure consistent content alignment */}
-            {(activeTabId === 'stats' || activeTabId === 'trophies' || activeTabId === 'badges' || activeTabId === 'connections' || activeTabId === 'teams' || activeTabId === 'tournaments') ? (
-              <View style={styles.subBarInjection}>
-                <View style={styles.toggleGroup}>
-                  {activeTabId === 'tournaments' && (
-                    <>
-                      <Animated.View style={[styles.subTabPill, tournamentsPillStyle]} />
-                      {[
-                        { id: 'all', label: 'All' },
-                        { id: 'participate', label: 'Participate' },
-                        { id: 'network', label: 'Network' },
-                        { id: 'nearby', label: 'Nearby' },
-                      ].map((chip) => (
-                        <TouchableOpacity
-                          key={chip.id}
-                          onPress={() => setTournamentsTab(chip.id)}
-                          style={styles.toggleBtn}
-                        >
-                          <Text style={[styles.toggleBtnText, tournamentsTab === chip.id && styles.toggleBtnTextActive]}>{chip.label}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </>
-                  )}
+                {activeTabId === 'trophies' && (
+                  <>
+                    <Animated.View style={[styles.subTabPill, trophiesPillStyle]} />
+                    {[
+                      { id: 'matches', label: 'Matches' },
+                      { id: 'tournaments', label: 'Tournaments' },
+                    ].map((chip) => (
+                      <TouchableOpacity
+                        key={chip.id}
+                        onPress={() => setTrophiesTab(chip.id)}
+                        style={styles.toggleBtn}
+                      >
+                        <Text style={[styles.toggleBtnText, trophiesTab === chip.id && styles.toggleBtnTextActive]}>{chip.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </>
+                )}
 
-                  {activeTabId === 'teams' && (
-                    <>
-                      <Animated.View style={[styles.subTabPill, teamsPillStyle]} />
-                      {[
-                        { id: 'your', label: 'Your' },
-                        { id: 'all', label: 'All' },
-                        { id: 'top teams', label: 'Top Teams' },
-                        { id: 'networks', label: 'Networks' },
-                      ].map((chip) => (
-                        <TouchableOpacity
-                          key={chip.id}
-                          onPress={() => setTeamsTab(chip.id)}
-                          style={styles.toggleBtn}
-                        >
-                          <Text style={[styles.toggleBtnText, teamsTab === chip.id && styles.toggleBtnTextActive]}>{chip.label}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </>
-                  )}
-                  
-                  {activeTabId === 'stats' && (
-                    <>
-                      <Animated.View style={[styles.subTabPill, statsPillStyle]} />
-                      {[
-                        { id: 'batting', label: 'Batting' },
-                        { id: 'bowling', label: 'Bowling' },
-                        { id: 'fielding', label: 'Fielding' },
-                        { id: 'captain', label: 'Captain' },
-                      ].map((chip) => (
-                        <TouchableOpacity
-                          key={chip.id}
-                          onPress={() => setStatsTab(chip.id)}
-                          style={styles.toggleBtn}
-                        >
-                          <Text style={[styles.toggleBtnText, statsTab === chip.id && styles.toggleBtnTextActive]}>{chip.label}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </>
-                  )}
+                {activeTabId === 'badges' && (
+                  <>
+                    <Animated.View style={[styles.subTabPill, badgesPillStyle]} />
+                    {[
+                      { id: 'batting', label: 'Batting' },
+                      { id: 'bowling', label: 'Bowling' },
+                      { id: 'fielding', label: 'Fielding' },
+                    ].map((chip) => (
+                      <TouchableOpacity
+                        key={chip.id}
+                        onPress={() => setBadgesTab(chip.id)}
+                        style={styles.toggleBtn}
+                      >
+                        <Text style={[styles.toggleBtnText, badgesTab === chip.id && styles.toggleBtnTextActive]}>{chip.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </>
+                )}
 
-                  {activeTabId === 'trophies' && (
-                    <>
-                      <Animated.View style={[styles.subTabPill, trophiesPillStyle]} />
-                      {[
-                        { id: 'matches', label: 'Matches' },
-                        { id: 'tournaments', label: 'Tournaments' },
-                      ].map((chip) => (
-                        <TouchableOpacity
-                          key={chip.id}
-                          onPress={() => setTrophiesTab(chip.id)}
-                          style={styles.toggleBtn}
-                        >
-                          <Text style={[styles.toggleBtnText, trophiesTab === chip.id && styles.toggleBtnTextActive]}>{chip.label}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </>
-                  )}
-
-                  {activeTabId === 'badges' && (
-                    <>
-                      <Animated.View style={[styles.subTabPill, badgesPillStyle]} />
-                      {[
-                        { id: 'batting', label: 'Batting' },
-                        { id: 'bowling', label: 'Bowling' },
-                        { id: 'fielding', label: 'Fielding' },
-                      ].map((chip) => (
-                        <TouchableOpacity
-                          key={chip.id}
-                          onPress={() => setBadgesTab(chip.id)}
-                          style={styles.toggleBtn}
-                        >
-                          <Text style={[styles.toggleBtnText, badgesTab === chip.id && styles.toggleBtnTextActive]}>{chip.label}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </>
-                  )}
-
-                  {activeTabId === 'connections' && (
-                    <>
-                      <Animated.View style={[styles.subTabPill, connectionsPillStyle]} />
-                      {[
-                        { id: 'followers', label: 'Followers' },
-                        { id: 'following', label: 'Following' },
-                      ].map((chip) => (
-                        <TouchableOpacity
-                          key={chip.id}
-                          onPress={() => setConnectionsTab(chip.id)}
-                          style={styles.toggleBtn}
-                        >
-                          <Text style={[styles.toggleBtnText, connectionsTab === chip.id && styles.toggleBtnTextActive]}>{chip.label}</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </>
-                  )}
-                </View>
+                {activeTabId === 'connections' && (
+                  <>
+                    <Animated.View style={[styles.subTabPill, connectionsPillStyle]} />
+                    {[
+                      { id: 'followers', label: 'Followers' },
+                      { id: 'following', label: 'Following' },
+                    ].map((chip) => (
+                      <TouchableOpacity
+                        key={chip.id}
+                        onPress={() => setConnectionsTab(chip.id)}
+                        style={styles.toggleBtn}
+                      >
+                        <Text style={[styles.toggleBtnText, connectionsTab === chip.id && styles.toggleBtnTextActive]}>{chip.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </>
+                )}
               </View>
-            ) : (
-              <View style={[styles.subBarInjection, { height: 48, paddingVertical: 0 }]} />
             )}
           </View>
-        )}
+        </View>
       </Animated.View>
 
       <Animated.ScrollView
@@ -952,6 +890,7 @@ export default function CricketLayout() {
         showsHorizontalScrollIndicator={false}
         contentOffset={{ x: initialIndex * windowWidth, y: 0 }}
         onScroll={horizontalScrollHandler}
+        onMomentumScrollEnd={onMomentumScrollEnd}
         scrollEventThrottle={16}
         style={{ flex: 1 }}
       >
@@ -964,15 +903,21 @@ export default function CricketLayout() {
               contentContainerStyle={[
                 styles.mainScrollContent, 
                 { 
-                  paddingTop: HEADER_MAX_HEIGHT + 48 + insets.top,
-                  paddingBottom: 100 // Add some bottom padding for better scroll feel
+                  paddingTop: HEADER_MAX_HEIGHT + SUB_BAR_HEIGHT + insets.top,
+                  paddingBottom: 100
                 }
               ]} 
               showsVerticalScrollIndicator={false}
             >
               <View style={styles.contentContainer}>
                 {tab.id === 'player-profile' && <CricketPlayerProfile />}
-                {tab.id === 'matches' && <CricketMatches playerId={user?.id} />}
+                {tab.id === 'matches' && (
+                  <CricketMatches 
+                    playerId={user?.id} 
+                    categoryFilter={matchesTab} 
+                    onCategoryChange={setMatchesTab}
+                  />
+                )}
                 {tab.id === 'stats' && <CricketStats activeSubTab={statsTab} />}
                 {tab.id === 'trophies' && <CricketTrophies />}
                 {tab.id === 'badges' && <CricketBadges />}
@@ -986,59 +931,8 @@ export default function CricketLayout() {
           </View>
         ))}
       </Animated.ScrollView>
-      {renderActionModal()}
     </View>
   );
-
-  // Added synchronization effects for sub-tabs
-  React.useEffect(() => {
-    const list = ['batting', 'bowling', 'fielding', 'captain'];
-    statsIdx.value = withSpring(list.indexOf(statsTab), { damping: 20 });
-  }, [statsTab]);
-
-  React.useEffect(() => {
-    const list = ['your', 'all', 'top teams', 'networks'];
-    teamsIdx.value = withSpring(list.indexOf(teamsTab), { damping: 20 });
-  }, [teamsTab]);
-
-  React.useEffect(() => {
-    const list = ['all', 'participate', 'network', 'nearby'];
-    tournamentsIdx.value = withSpring(list.indexOf(tournamentsTab), { damping: 20 });
-  }, [tournamentsTab]);
-
-  React.useEffect(() => {
-    const list = ['matches', 'tournaments'];
-    trophiesIdx.value = withSpring(list.indexOf(trophiesTab), { damping: 20 });
-  }, [trophiesTab]);
-
-  React.useEffect(() => {
-    const list = ['batting', 'bowling', 'fielding'];
-    badgesIdx.value = withSpring(list.indexOf(badgesTab), { damping: 20 });
-  }, [badgesTab]);
-
-  React.useEffect(() => {
-    const list = ['followers', 'following'];
-    connectionsIdx.value = withSpring(list.indexOf(connectionsTab), { damping: 20 });
-  }, [connectionsTab]);
-
-  if (pathname.includes('/scoring')) {
-    if (Platform.OS === 'web' && !isCompact) {
-      return (
-        <WebLayout noCard>
-          <Slot />
-        </WebLayout>
-      );
-    }
-    return <Slot />;
-  }
-
-  if (Platform.OS === 'web' && !isCompact) {
-    return (
-      <WebLayout noCard>
-        {content}
-      </WebLayout>
-    );
-  }
 
   return content;
 }
@@ -1048,10 +942,178 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
+  headerAvatar: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarPlaceholder: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#01b854',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarWrapper: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 4,
+    borderColor: '#FFFFFF30',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  avatarEditBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    left: 0,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileHeaderContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  headerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  headerTextInfo: {
+    flex: 1,
+  },
+  headerPlayerName: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 4,
+    fontFamily: 'Inter',
+  },
+  headerBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  headerLocGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  headerLocation: {
+    fontSize: 12,
+    color: '#FFFFFFCC',
+    fontWeight: '600',
+    fontFamily: 'Inter',
+  },
+  headerDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: '#FFFFFF60',
+    marginHorizontal: 8,
+  },
+  headerMetricGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  headerStat: {
+    fontSize: 12,
+    color: '#FFFFFFCC',
+    fontWeight: '600',
+    fontFamily: 'Inter',
+  },
+  headerTagRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 4,
+  },
+  headerTagText: {
+    fontSize: 9,
+    color: '#FFFFFF',
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    fontFamily: 'Inter',
+  },
+  headerTag: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  headerTagDot: {
+    width: 2,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: '#FFFFFF40',
+    marginHorizontal: 6,
+  },
+  topActionRow: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    zIndex: 100,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  actionCircleBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  centeredMiniTitle: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 8,
+  },
+  headerMetricBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  headerMetricBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    fontFamily: 'Inter',
+  },
+  headerMetricsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+  },
+  miniHeaderTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    fontFamily: 'Inter',
+  },
+  rightActionsGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
   tabsStickyWrapper: {
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
     zIndex: 10,
     position: 'absolute',
     bottom: 0,
@@ -1061,29 +1123,25 @@ const styles = StyleSheet.create({
   tabsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    maxWidth: 1200,
-    alignSelf: 'center',
-    width: '100%',
-    paddingHorizontal: 0,
+    paddingRight: 12,
   },
   tabsScroll: {
-    paddingTop: 12,
+    paddingTop: 10,
     paddingHorizontal: 16,
     gap: 20,
   },
   tab: {
-    paddingBottom: 12,
+    paddingBottom: 10,
     minWidth: 60,
     alignItems: 'center',
   },
   tabText: {
-    fontFamily: 'Inter',
     fontSize: 14,
-    fontWeight: '400',
+    fontWeight: '700',
     color: '#94A3B8',
+    fontFamily: 'Inter',
   },
   tabTextActive: {
-    fontWeight: '600',
     color: '#01b854',
   },
   mainTabIndicator: {
@@ -1094,285 +1152,49 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     zIndex: 1,
   },
-  subTabPill: {
-    position: 'absolute',
-    top: 2,
-    bottom: 2,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 3,
-  },
-  profileHeaderContent: {
-    paddingHorizontal: 20,
-    zIndex: 2,
-    maxWidth: 650,
-    alignSelf: 'center',
-    width: '100%',
-  },
-  headerTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  avatarWrapper: {
-    position: 'relative',
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.3)',
-  },
-  headerAvatar: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 40,
-  },
-  avatarPlaceholder: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 40,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-    borderStyle: 'dashed',
-  },
-  avatarEditBadge: {
-    position: 'absolute',
-    bottom: -2,
-    right: -2,
-    backgroundColor: '#06392e',
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#06392e',
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
-    zIndex: 10,
-  },
-  headerTextInfo: {
-    flex: 1,
-  },
-  headerPlayerName: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    fontFamily: 'Inter',
-    marginBottom: 2,
-  },
-  headerBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  headerLocGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  headerMetricGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  headerLocation: {
-    fontSize: 13,
-    color: '#FFFFFFCC',
-    fontWeight: '600',
-    fontFamily: 'Inter',
-  },
-  headerDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: 'rgba(255,255,255,0.5)',
-  },
-  headerStat: {
-    fontSize: 13,
-    color: '#FFFFFFCC',
-    fontWeight: '600',
-    fontFamily: 'Inter',
-  },
-  headerTagRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 16,
-  },
-  headerTagText: {
-    fontSize: 11.5,
-    color: '#FFFFFFCC',
-    fontWeight: '600',
-    fontFamily: 'Inter',
-  },
-  headerTagDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: 'rgba(255,255,255,0.4)',
-  },
-  perfTagRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 8,
-  },
-  perfTag: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  perfTagText: {
-    fontSize: 10,
-    color: '#FFFFFF',
-    fontWeight: '800',
-    fontFamily: 'Inter',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  headerRankRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 12,
-    marginBottom: 20,
-  },
-  rankBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  rankText: {
-    fontSize: 11,
-    color: '#FCD34D',
-    fontWeight: '700',
-    fontFamily: 'Inter',
-  },
-  insightsBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#FCD34D', // Yellow Golden
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  insightsBtnText: {
-    fontSize: 12,
-    color: '#06392e', // Dark theme text
-    fontWeight: '700',
-    fontFamily: 'Inter',
-  },
-  miniHeader: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    height: 55,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    zIndex: 10,
-    maxWidth: 650,
-    alignSelf: 'center',
-  },
-  miniNavBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  miniTitleContainer: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  miniTitleText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    fontFamily: 'Inter',
-  },
-  tabText: {
-    fontFamily: 'Inter',
-    fontSize: 12,
-    fontWeight: '500',
-    color: '#64748B',
-  },
-  tabTextActive: {
-    fontFamily: 'Inter',
-    fontWeight: '700',
-    color: '#01b854',
-  },
-  miniNavRight: {
-    flexDirection: 'row',
-    gap: 8,
-  },
   subBarInjection: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 6,
     backgroundColor: '#FFFFFF',
   },
   toggleGroup: {
+    flex: 1,
     flexDirection: 'row',
     backgroundColor: '#F1F5F9',
-    borderRadius: 12,
-    padding: 2,
-    width: '100%', // Full width
+    borderRadius: 10,
+    padding: 3,
+    height: 36,
+    position: 'relative',
+  },
+  subTabPill: {
+    position: 'absolute',
+    top: 3,
+    bottom: 3,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   toggleBtn: {
-    flex: 1, // Distribute space equally
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: 'transparent',
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  toggleBtnActive: {
-    backgroundColor: '#FFFFFF', // Light Grey (White) active state
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 3,
+    zIndex: 1,
   },
   toggleBtnText: {
     fontSize: 12,
+    fontWeight: '700',
     color: '#64748B',
-    fontWeight: '600',
     fontFamily: 'Inter',
   },
   toggleBtnTextActive: {
-    fontFamily: 'Inter',
-    color: '#334155', // Dark text on light background
-    fontWeight: '700',
+    color: '#01b854',
   },
   plusIconWrapper: {
     width: 40,
@@ -1591,5 +1413,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     fontFamily: 'Inter',
+  },
+  skeletonName: {
+    height: 24,
+    width: 140,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 6,
+    marginBottom: 8,
   },
 });

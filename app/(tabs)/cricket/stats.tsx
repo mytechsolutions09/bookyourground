@@ -257,13 +257,21 @@ const CricketStats = React.memo(({ activeSubTab }: { activeSubTab: string }) => 
 
 
       <View style={styles.statsContent}>
-
-
          {loading ? (
-             <View style={styles.loadingBox}>
-                <ActivityIndicator color="#01b854" />
-                <Text style={styles.loadingText}>Generating Performance Data...</Text>
-             </View>
+           <View style={styles.skeletonContainer}>
+              <View style={styles.skeletonHeader} />
+              <View style={styles.skeletonGrid}>
+                {[1,2,3,4,5,6,7,8,9].map(i => (
+                  <View key={i} style={styles.skeletonTile} />
+                ))}
+              </View>
+              <View style={styles.skeletonHeader} />
+              <View style={styles.skeletonGrid}>
+                {[1,2,3,4,5,6].map(i => (
+                  <View key={i} style={styles.skeletonTile} />
+                ))}
+              </View>
+           </View>
           ) : subTab === 'leaders' ? (
              <View>
                 <Text style={styles.leaderSectionTitle}>Top Batters</Text>
@@ -300,14 +308,6 @@ const CricketStats = React.memo(({ activeSubTab }: { activeSubTab: string }) => 
                 {renderStatGroup('other', true)}
             </View>
           )}
-
-         <View style={styles.adBanner}>
-            <Image source={{ uri: 'https://images.pexels.com/photos/3628912/pexels-photo-3628912.jpeg' }} style={styles.adImage} />
-            <View style={styles.adOverlay}>
-               <Text style={styles.adTitle}>Upgrade to Pro{'\n'}<Text style={styles.adTitleBold}>Unlock Advanced Charts</Text></Text>
-               <TouchableOpacity style={styles.adBtn}><Text style={styles.adBtnText}>Upgrade</Text></TouchableOpacity>
-            </View>
-         </View>
       </View>
     </View>
   );
@@ -569,5 +569,30 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#64748B',
     fontWeight: '400',
+  },
+  skeletonContainer: {
+    padding: 8,
+  },
+  skeletonHeader: {
+    height: 20,
+    width: '40%',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 4,
+    marginBottom: 16,
+    marginTop: 8,
+  },
+  skeletonGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 24,
+  },
+  skeletonTile: {
+    width: '31%',
+    height: 60,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
 });

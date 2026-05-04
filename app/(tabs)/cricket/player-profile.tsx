@@ -73,6 +73,7 @@ const PlayerProfileView = () => {
   const [recentMatches, setRecentMatches] = useState<any[]>([]);
   const [globalStats, setGlobalStats] = useState<any>(null);
   const [fetchingData, setFetchingData] = useState(true);
+  const [formFilter, setFormFilter] = useState<'all' | 'played'>('played');
 
   useEffect(() => {
     if (profile) {
@@ -202,6 +203,13 @@ const PlayerProfileView = () => {
       setFetchingData(false);
     }
   };
+
+  const filteredForms = React.useMemo(() => {
+    if (formFilter === 'played') {
+      return recentMatches.filter(m => m.score !== 'DNP');
+    }
+    return recentMatches;
+  }, [recentMatches, formFilter]);
 
   const formatDateDisplay = (dateStr: string | null) => {
     if (!dateStr) return 'Not Set';
@@ -405,14 +413,25 @@ const PlayerProfileView = () => {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <RNText style={styles.sectionTitle}>Recent Forms</RNText>
-          <TouchableOpacity>
-            <RNText style={styles.viewAllBtn}>History</RNText>
-          </TouchableOpacity>
+          <View style={styles.formToggle}>
+            <TouchableOpacity 
+              onPress={() => setFormFilter('all')}
+              style={[styles.formToggleBtn, formFilter === 'all' && styles.formToggleBtnActive]}
+            >
+              <RNText style={[styles.formToggleText, formFilter === 'all' && styles.formToggleTextActive]}>All</RNText>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={() => setFormFilter('played')}
+              style={[styles.formToggleBtn, formFilter === 'played' && styles.formToggleBtnActive]}
+            >
+              <RNText style={[styles.formToggleText, formFilter === 'played' && styles.formToggleTextActive]}>Played</RNText>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.formCard}>
-          {recentMatches.length > 0 ? (
-            recentMatches.map((m, idx) => (
+          {filteredForms.length > 0 ? (
+            filteredForms.map((m, idx) => (
               <React.Fragment key={m.id}>
                 <View style={styles.formRow}>
                   <View style={[styles.matchInfo, { flex: 1 }]}>
@@ -429,7 +448,7 @@ const PlayerProfileView = () => {
             ))
           ) : (
             <View style={{ padding: 20, alignItems: 'center' }}>
-              <RNText style={{ color: '#94A3B8', fontSize: 13 }}>No recent matches found</RNText>
+              <RNText style={{ color: '#94A3B8', fontSize: 13 }}>No matches match this filter</RNText>
             </View>
           )}
         </View>
@@ -768,6 +787,34 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#64748B',
     lineHeight: 18,
+  },
+  formToggle: {
+    flexDirection: 'row',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 8,
+    padding: 2,
+  },
+  formToggleBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  formToggleBtnActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  formToggleText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748B',
+    fontFamily: 'Inter',
+  },
+  formToggleTextActive: {
+    color: '#01b854',
   },
 });
 

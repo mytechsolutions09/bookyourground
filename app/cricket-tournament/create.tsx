@@ -20,7 +20,8 @@ import {
   FileText, 
   DollarSign,
   Image as ImageIcon,
-  Check
+  Check,
+  Users
 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';

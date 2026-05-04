@@ -53,6 +53,7 @@ const HEADER_MIN_HEIGHT = 110;
 const CONTENT_MIN_HEIGHT = windowHeight - HEADER_MIN_HEIGHT;
 
 const TABS = [
+  { id: 'profile', label: 'Profile' },
   { id: 'matches', label: 'Matches' },
   { id: 'stats', label: 'Stats' },
   { id: 'trophies', label: 'Trophies' },
@@ -61,7 +62,6 @@ const TABS = [
   { id: 'highlights', label: 'Highlights' },
   { id: 'photos', label: 'Photos' },
   { id: 'connections', label: 'Connections' },
-  { id: 'profile', label: 'Profile' },
 ];
 
 export default function PlayerProfile() {
@@ -81,7 +81,7 @@ export default function PlayerProfile() {
   const [matches, setMatches] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('matches');
+  const [activeTab, setActiveTab] = useState('profile');
   const [statsTab, setStatsTab] = useState('batting');
   const [trophiesTab, setTrophiesTab] = useState('matches');
   const [badgesTab, setBadgesTab] = useState('batting');
@@ -102,6 +102,10 @@ export default function PlayerProfile() {
   const badgesPagerRef = useRef<ScrollView>(null);
   const highlightsPagerRef = useRef<ScrollView>(null);
   const connectionsPagerRef = useRef<ScrollView>(null);
+  
+  const isScrollingProgrammatically = useRef(false);
+  const [measuredPagerWidth, setMeasuredPagerWidth] = useState(windowWidth);
+  const tabMeasurements = useRef<Record<number, { x: number, width: number }>>({});
 
   const [isInnerSwiping, setIsInnerSwiping] = useState(false);
   const [mainScrollEnabled, setMainScrollEnabled] = useState(true);
@@ -134,8 +138,12 @@ export default function PlayerProfile() {
 
   useEffect(() => {
     const idx = TABS.findIndex(t => t.id === activeTab);
-    if (idx !== -1) {
-      tabBarRef.current?.scrollTo({ x: idx * 90 - (windowWidth / 2) + 45, animated: true });
+    const measurement = tabMeasurements.current[idx];
+    if (measurement && tabBarRef.current) {
+      tabBarRef.current.scrollTo({ 
+        x: measurement.x - (windowWidth / 2) + (measurement.width / 2),
+        animated: true 
+      });
     }
   }, [activeTab]);
 
@@ -575,7 +583,34 @@ export default function PlayerProfile() {
   const onSubPagerBegin = () => setMainScrollEnabled(false);
   const onSubPagerEnd = (type: string, e: any) => {
     setMainScrollEnabled(true);
-    onSubPagerScrollEnd(type, e);
+    if (isScrollingProgrammatically.current) return;
+    const offset = e.nativeEvent.contentOffset.x;
+    const width = e.nativeEvent.layoutMeasurement.width || measuredPagerWidth;
+    const index = Math.round(offset / width);
+    
+    let subTabs: any[] = [];
+    switch (type) {
+      case 'stats': 
+        subTabs = [{ id: 'batting' }, { id: 'bowling' }, { id: 'fielding' }, { id: 'captain' }];
+        if (subTabs[index] && subTabs[index].id !== statsTab) setStatsTab(subTabs[index].id);
+        break;
+      case 'trophies':
+        subTabs = [{ id: 'matches' }, { id: 'tournaments' }];
+        if (subTabs[index] && subTabs[index].id !== trophiesTab) setTrophiesTab(subTabs[index].id);
+        break;
+      case 'badges':
+        subTabs = [{ id: 'batting' }, { id: 'bowling' }, { id: 'fielding' }];
+        if (subTabs[index] && subTabs[index].id !== badgesTab) setBadgesTab(subTabs[index].id);
+        break;
+      case 'highlights':
+        subTabs = [{ id: 'recent' }, { id: 'batting' }, { id: 'bowling' }];
+        if (subTabs[index] && subTabs[index].id !== highlightsTab) setHighlightsTab(subTabs[index].id);
+        break;
+      case 'connections':
+        subTabs = [{ id: 'followers' }, { id: 'following' }];
+        if (subTabs[index] && subTabs[index].id !== connectionsTab) setConnectionsTab(subTabs[index].id);
+        break;
+    }
   };
 
   const renderStatsGrid = (recordType: string, discipline: string) => {
@@ -656,71 +691,57 @@ export default function PlayerProfile() {
   };
 
   const onTabPress = (tabId: string, index: number) => {
+    if (activeTab === tabId) return;
+    isScrollingProgrammatically.current = true;
     setActiveTab(tabId);
-    mainPagerRef.current?.scrollTo({ x: index * windowWidth, animated: true });
+    mainPagerRef.current?.scrollTo({ x: index * measuredPagerWidth, animated: true });
+    
+    setTimeout(() => {
+      isScrollingProgrammatically.current = false;
+    }, 600);
   };
 
   const onSubTabPress = (type: string, tabId: string, index: number) => {
+    isScrollingProgrammatically.current = true;
+    const targetX = index * measuredPagerWidth;
     switch (type) {
       case 'stats':
         setStatsTab(tabId);
-        statsPagerRef.current?.scrollTo({ x: index * windowWidth, animated: true });
+        statsPagerRef.current?.scrollTo({ x: targetX, animated: true });
         break;
       case 'trophies':
         setTrophiesTab(tabId);
-        trophiesPagerRef.current?.scrollTo({ x: index * windowWidth, animated: true });
+        trophiesPagerRef.current?.scrollTo({ x: targetX, animated: true });
         break;
       case 'badges':
         setBadgesTab(tabId);
-        badgesPagerRef.current?.scrollTo({ x: index * windowWidth, animated: true });
+        badgesPagerRef.current?.scrollTo({ x: targetX, animated: true });
         break;
       case 'highlights':
         setHighlightsTab(tabId);
-        highlightsPagerRef.current?.scrollTo({ x: index * windowWidth, animated: true });
+        highlightsPagerRef.current?.scrollTo({ x: targetX, animated: true });
         break;
       case 'connections':
         setConnectionsTab(tabId);
-        connectionsPagerRef.current?.scrollTo({ x: index * windowWidth, animated: true });
+        connectionsPagerRef.current?.scrollTo({ x: targetX, animated: true });
         break;
     }
+    
+    setTimeout(() => {
+      isScrollingProgrammatically.current = false;
+    }, 600);
   };
 
   const onMainPagerScrollEnd = (e: any) => {
+    if (isScrollingProgrammatically.current) return;
     const offset = e.nativeEvent.contentOffset.x;
-    const index = Math.round(offset / windowWidth);
-    if (TABS[index]) {
+    const width = e.nativeEvent.layoutMeasurement.width || measuredPagerWidth;
+    const index = Math.round(offset / width);
+    if (TABS[index] && TABS[index].id !== activeTab) {
       setActiveTab(TABS[index].id);
     }
   };
 
-  const onSubPagerScrollEnd = (type: string, e: any) => {
-    const offset = e.nativeEvent.contentOffset.x;
-    const index = Math.round(offset / windowWidth);
-    
-    let subTabs: any[] = [];
-    switch (type) {
-      case 'stats': 
-        subTabs = [{ id: 'batting' }, { id: 'bowling' }, { id: 'fielding' }, { id: 'captain' }];
-        if (subTabs[index]) setStatsTab(subTabs[index].id);
-        break;
-      case 'trophies':
-        subTabs = [{ id: 'matches' }, { id: 'tournaments' }];
-        if (subTabs[index]) setTrophiesTab(subTabs[index].id);
-        break;
-      case 'badges':
-        subTabs = [{ id: 'batting' }, { id: 'bowling' }, { id: 'fielding' }];
-        if (subTabs[index]) setBadgesTab(subTabs[index].id);
-        break;
-      case 'highlights':
-        subTabs = [{ id: 'recent' }, { id: 'batting' }, { id: 'bowling' }];
-        if (subTabs[index]) setHighlightsTab(subTabs[index].id);
-        break;
-      case 'connections':
-        subTabs = [{ id: 'followers' }, { id: 'following' }];
-        if (subTabs[index]) setConnectionsTab(subTabs[index].id);
-        break;
-    }
-  };
 
   const renderQRModal = () => (
     <Modal
@@ -951,7 +972,14 @@ export default function PlayerProfile() {
                 <TouchableOpacity 
                   key={tab.id} 
                   onPress={() => onTabPress(tab.id, idx)}
+                  onLayout={(e) => {
+                    tabMeasurements.current[idx] = {
+                      x: e.nativeEvent.layout.x,
+                      width: e.nativeEvent.layout.width
+                    };
+                  }}
                   style={[styles.tabItem, activeTab === tab.id && styles.activeTabItem]}
+                  hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
                 >
                   <Text style={[styles.tabLabel, activeTab === tab.id && styles.activeTabLabel]}>
                     {tab.label}
@@ -1052,10 +1080,10 @@ export default function PlayerProfile() {
                   { id: 'batting', label: 'Batting' },
                   { id: 'bowling', label: 'Bowling' },
                   { id: 'fielding', label: 'Fielding' },
-                ].map((chip) => (
+                ].map((chip, idx) => (
                   <TouchableOpacity
                     key={chip.id}
-                    onPress={() => setBadgesTab(chip.id)}
+                    onPress={() => onSubTabPress('badges', chip.id, idx)}
                     style={[
                       styles.toggleTab,
                       badgesTab === chip.id && styles.toggleTabActive
@@ -1080,10 +1108,10 @@ export default function PlayerProfile() {
                   { id: 'recent', label: 'Recent' },
                   { id: 'batting', label: 'Batting' },
                   { id: 'bowling', label: 'Bowling' },
-                ].map((chip) => (
+                ].map((chip, idx) => (
                   <TouchableOpacity
                     key={chip.id}
-                    onPress={() => setHighlightsTab(chip.id)}
+                    onPress={() => onSubTabPress('highlights', chip.id, idx)}
                     style={[
                       styles.toggleTab,
                       highlightsTab === chip.id && styles.toggleTabActive
@@ -1107,10 +1135,10 @@ export default function PlayerProfile() {
                 {[
                   { id: 'followers', label: 'Followers' },
                   { id: 'following', label: 'Following' },
-                ].map((chip) => (
+                ].map((chip, idx) => (
                   <TouchableOpacity
                     key={chip.id}
-                    onPress={() => setConnectionsTab(chip.id)}
+                    onPress={() => onSubTabPress('connections', chip.id, idx)}
                     style={[
                       styles.toggleTab,
                       connectionsTab === chip.id && styles.toggleTabActive
@@ -1142,211 +1170,12 @@ export default function PlayerProfile() {
             showsHorizontalScrollIndicator={false}
             onMomentumScrollEnd={onMainPagerScrollEnd}
             scrollEventThrottle={16}
+            onLayout={(e) => {
+              setMeasuredPagerWidth(e.nativeEvent.layout.width);
+            }}
           >
-            {/* Slide 1: Matches */}
-            <View style={{ width: windowWidth }}>
-              <View style={styles.tabSlideContent}>
-                {(() => {
-                  const filteredMatches = matches.filter(m => 
-                    matchFilter === 'all' || playedMatchIds.includes(m.id)
-                  );
-                  return (filteredMatches && filteredMatches.length > 0) ? (
-                    filteredMatches.map(renderMatchCard)
-                  ) : (
-                    <View style={styles.emptyState}>
-                      <Clock size={48} color="#E2E8F0" />
-                      <Text style={styles.emptyText}>
-                        {matchFilter === 'all' ? 'No matches played yet' : 'No matches played by user yet'}
-                      </Text>
-                    </View>
-                  );
-                })()}
-              </View>
-            </View>
-
-            {/* Slide 2: Stats */}
-            <View style={{ width: windowWidth }}>
-              <View style={styles.fullWidthSlide}>
-                <ScrollView
-                  ref={statsPagerRef}
-                  horizontal
-                  pagingEnabled
-                  showsHorizontalScrollIndicator={false}
-                  onScrollBeginDrag={onSubPagerBegin}
-                  onScrollEndDrag={() => setMainScrollEnabled(true)}
-                  onMomentumScrollEnd={(e) => onSubPagerEnd('stats', e)}
-                >
-                  {['batting', 'bowling', 'fielding', 'captain'].map((sub) => (
-                    <View key={sub} style={{ width: windowWidth, paddingHorizontal: 16 }}>
-                      <View style={styles.statsContainer}>
-                        {['overall', 'leather', 'tennis', 'other'].map((recordType, index) => (
-                          <View key={recordType}>
-                            {index > 0 && <View style={styles.recordDivider} />}
-                            <View style={styles.recordSection}>
-                              <View style={styles.recordTitleRow}>
-                                <View style={[styles.titleDot, { backgroundColor: recordType === 'overall' ? '#1e2030' : (recordType === 'leather' ? '#ef4444' : (recordType === 'tennis' ? '#01b854' : '#f59e0b')) }]} />
-                                <Text style={styles.recordTitle}>
-                                  {recordType.charAt(0).toUpperCase() + recordType.slice(1)} Ball Records
-                                </Text>
-                              </View>
-                              <View style={styles.statsGrid}>
-                                {renderStatsGrid(recordType, sub)}
-                              </View>
-                            </View>
-                          </View>
-                        ))}
-                      </View>
-                    </View>
-                  ))}
-                </ScrollView>
-              </View>
-            </View>
-
-            {/* Slide 3: Trophies */}
-            <View style={{ width: windowWidth }}>
-              <View style={styles.fullWidthSlide}>
-                <ScrollView
-                  ref={trophiesPagerRef}
-                  horizontal
-                  pagingEnabled
-                  showsHorizontalScrollIndicator={false}
-                  onScrollBeginDrag={onSubPagerBegin}
-                  onScrollEndDrag={() => setMainScrollEnabled(true)}
-                  onMomentumScrollEnd={(e) => onSubPagerEnd('trophies', e)}
-                >
-                  {['matches', 'tournaments'].map((sub) => (
-                    <View key={sub} style={{ width: windowWidth, paddingHorizontal: 16 }}>
-                      <View style={styles.emptyState}>
-                        <Trophy size={48} color="#E2E8F0" />
-                        <Text style={styles.emptyText}>No {sub} trophies won yet</Text>
-                      </View>
-                    </View>
-                  ))}
-                </ScrollView>
-              </View>
-            </View>
-
-            {/* Slide 4: Badges */}
-            <View style={{ width: windowWidth }}>
-              <View style={styles.fullWidthSlide}>
-                <ScrollView
-                  ref={badgesPagerRef}
-                  horizontal
-                  pagingEnabled
-                  showsHorizontalScrollIndicator={false}
-                  onScrollBeginDrag={onSubPagerBegin}
-                  onScrollEndDrag={() => setMainScrollEnabled(true)}
-                  onMomentumScrollEnd={(e) => onSubPagerEnd('badges', e)}
-                >
-                  {['batting', 'bowling', 'fielding'].map((sub) => (
-                    <View key={sub} style={{ width: windowWidth, paddingHorizontal: 16 }}>
-                      <View style={styles.emptyState}>
-                        <Award size={48} color="#E2E8F0" />
-                        <Text style={styles.emptyText}>No {sub} badges earned yet</Text>
-                      </View>
-                    </View>
-                  ))}
-                </ScrollView>
-              </View>
-            </View>
-
-            {/* Slide 5: Teams */}
-            <View style={{ width: windowWidth }}>
-              <View style={styles.tabSlideContent}>
-                {teams.length > 0 ? (
-                  teams.map(renderTeamCard)
-                ) : (
-                  <View style={styles.emptyState}>
-                    <Users size={48} color="#E2E8F0" />
-                    <Text style={styles.emptyText}>No teams joined yet</Text>
-                  </View>
-                )}
-              </View>
-            </View>
-
-            {/* Slide 6: Highlights */}
-            <View style={{ width: windowWidth }}>
-              <View style={styles.fullWidthSlide}>
-                <ScrollView
-                  ref={highlightsPagerRef}
-                  horizontal
-                  pagingEnabled
-                  showsHorizontalScrollIndicator={false}
-                  onScrollBeginDrag={onSubPagerBegin}
-                  onScrollEndDrag={() => setMainScrollEnabled(true)}
-                  onMomentumScrollEnd={(e) => onSubPagerEnd('highlights', e)}
-                >
-                  {['recent', 'batting', 'bowling'].map((sub) => (
-                    <View key={sub} style={{ width: windowWidth, paddingHorizontal: 16 }}>
-                      <View style={styles.highlightsGrid}>
-                        {[
-                          {
-                            id: 'h1',
-                            title: 'Stunning Cover Drive for Four',
-                            thumbnail: 'https://images.pexels.com/photos/3628912/pexels-photo-3628912.jpeg',
-                            duration: '0:15',
-                            views: '1.2K',
-                            date: '2d ago'
-                          },
-                          {
-                            id: 'h2',
-                            title: 'Wicket: Perfect Yorker dismissal',
-                            thumbnail: 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg',
-                            duration: '0:22',
-                            views: '850',
-                            date: '5d ago'
-                          }
-                        ].map(renderHighlightCard)}
-                      </View>
-                    </View>
-                  ))}
-                </ScrollView>
-              </View>
-            </View>
-
-            {/* Slide 7: Photos */}
-            <View style={{ width: windowWidth }}>
-              <View style={styles.tabSlideContent}>
-                <View style={styles.photosGrid}>
-                  {[
-                    { id: 'p1', url: 'https://images.pexels.com/photos/3628912/pexels-photo-3628912.jpeg' },
-                    { id: 'p2', url: 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg' },
-                    { id: 'p3', url: 'https://images.pexels.com/photos/3760259/pexels-photo-3760259.jpeg' }
-                  ].map((photo) => (
-                    <TouchableOpacity key={photo.id} style={styles.photoTile}>
-                      <Image source={{ uri: photo.url }} style={styles.photoImage} />
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            </View>
-
-            {/* Slide 8: Connections */}
-            <View style={{ width: windowWidth }}>
-              <View style={styles.fullWidthSlide}>
-                <ScrollView
-                  ref={connectionsPagerRef}
-                  horizontal
-                  pagingEnabled
-                  showsHorizontalScrollIndicator={false}
-                  onScrollBeginDrag={onSubPagerBegin}
-                  onScrollEndDrag={() => setMainScrollEnabled(true)}
-                  onMomentumScrollEnd={(e) => onSubPagerEnd('connections', e)}
-                >
-                  {['followers', 'following'].map((sub) => (
-                    <View key={sub} style={{ width: windowWidth, paddingHorizontal: 16 }}>
-                      <View style={styles.emptyState}>
-                        <Users size={48} color="#E2E8F0" />
-                        <Text style={styles.emptyText}>No {sub} yet</Text>
-                      </View>
-                    </View>
-                  ))}
-                </ScrollView>
-              </View>
-            </View>
-
-            {/* Slide 9: Profile Details */}
-            <View style={{ width: windowWidth }}>
+            {/* Slide 1: Profile Details */}
+            <View style={{ width: measuredPagerWidth }}>
               <View style={styles.tabSlideContent}>
                 <View style={styles.profileDetailsCard}>
                   <Text style={styles.sectionTitle}>Personal Details</Text>
@@ -1373,6 +1202,211 @@ export default function PlayerProfile() {
                     </View>
                   </View>
                 </View>
+              </View>
+            </View>
+
+            {/* Slide 2: Matches */}
+            <View style={{ width: measuredPagerWidth }}>
+              <View style={styles.tabSlideContent}>
+                {(() => {
+                  const filteredMatches = matches.filter(m => 
+                    matchFilter === 'all' || playedMatchIds.includes(m.id)
+                  );
+                  return (filteredMatches && filteredMatches.length > 0) ? (
+                    filteredMatches.map(renderMatchCard)
+                  ) : (
+                    <View style={styles.emptyState}>
+                      <Clock size={48} color="#E2E8F0" />
+                      <Text style={styles.emptyText}>
+                        {matchFilter === 'all' ? 'No matches played yet' : 'No matches played by user yet'}
+                      </Text>
+                    </View>
+                  );
+                })()}
+              </View>
+            </View>
+
+            {/* Slide 3: Stats */}
+            <View style={{ width: measuredPagerWidth }}>
+              <View style={styles.fullWidthSlide}>
+                <ScrollView
+                  ref={statsPagerRef}
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  onScrollBeginDrag={onSubPagerBegin}
+                  onScrollEndDrag={() => setMainScrollEnabled(true)}
+                  onMomentumScrollEnd={(e) => onSubPagerEnd('stats', e)}
+                  onLayout={(e) => {
+                    setMeasuredPagerWidth(e.nativeEvent.layout.width);
+                  }}
+                >
+                  {['batting', 'bowling', 'fielding', 'captain'].map((sub) => (
+                    <View key={sub} style={{ width: measuredPagerWidth, paddingHorizontal: 16 }}>
+                      <View style={styles.statsContainer}>
+                        {['overall', 'leather', 'tennis', 'other'].map((recordType, index) => (
+                          <View key={recordType}>
+                            {index > 0 && <View style={styles.recordDivider} />}
+                            <View style={styles.recordSection}>
+                              <View style={styles.recordTitleRow}>
+                                <View style={[styles.titleDot, { backgroundColor: recordType === 'overall' ? '#1e2030' : (recordType === 'leather' ? '#ef4444' : (recordType === 'tennis' ? '#01b854' : '#f59e0b')) }]} />
+                                <Text style={styles.recordTitle}>
+                                  {recordType.charAt(0).toUpperCase() + recordType.slice(1)} Ball Records
+                                </Text>
+                              </View>
+                              <View style={styles.statsGrid}>
+                                {renderStatsGrid(recordType, sub)}
+                              </View>
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+
+            {/* Slide 4: Trophies */}
+            <View style={{ width: measuredPagerWidth }}>
+              <View style={styles.fullWidthSlide}>
+                <ScrollView
+                  ref={trophiesPagerRef}
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  onScrollBeginDrag={onSubPagerBegin}
+                  onScrollEndDrag={() => setMainScrollEnabled(true)}
+                  onMomentumScrollEnd={(e) => onSubPagerEnd('trophies', e)}
+                >
+                  {['matches', 'tournaments'].map((sub) => (
+                    <View key={sub} style={{ width: measuredPagerWidth, paddingHorizontal: 16 }}>
+                      <View style={styles.emptyState}>
+                        <Trophy size={48} color="#E2E8F0" />
+                        <Text style={styles.emptyText}>No {sub} trophies won yet</Text>
+                      </View>
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+
+            {/* Slide 5: Badges */}
+            <View style={{ width: measuredPagerWidth }}>
+              <View style={styles.fullWidthSlide}>
+                <ScrollView
+                  ref={badgesPagerRef}
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  onScrollBeginDrag={onSubPagerBegin}
+                  onScrollEndDrag={() => setMainScrollEnabled(true)}
+                  onMomentumScrollEnd={(e) => onSubPagerEnd('badges', e)}
+                >
+                  {['batting', 'bowling', 'fielding'].map((sub) => (
+                    <View key={sub} style={{ width: measuredPagerWidth, paddingHorizontal: 16 }}>
+                      <View style={styles.emptyState}>
+                        <Award size={48} color="#E2E8F0" />
+                        <Text style={styles.emptyText}>No {sub} badges earned yet</Text>
+                      </View>
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+
+            {/* Slide 6: Teams */}
+            <View style={{ width: measuredPagerWidth }}>
+              <View style={styles.tabSlideContent}>
+                {teams.length > 0 ? (
+                  teams.map(renderTeamCard)
+                ) : (
+                  <View style={styles.emptyState}>
+                    <Users size={48} color="#E2E8F0" />
+                    <Text style={styles.emptyText}>No teams joined yet</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {/* Slide 7: Highlights */}
+            <View style={{ width: measuredPagerWidth }}>
+              <View style={styles.fullWidthSlide}>
+                <ScrollView
+                  ref={highlightsPagerRef}
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  onScrollBeginDrag={onSubPagerBegin}
+                  onScrollEndDrag={() => setMainScrollEnabled(true)}
+                  onMomentumScrollEnd={(e) => onSubPagerEnd('highlights', e)}
+                >
+                  {['recent', 'batting', 'bowling'].map((sub) => (
+                    <View key={sub} style={{ width: measuredPagerWidth, paddingHorizontal: 16 }}>
+                      <View style={styles.highlightsGrid}>
+                        {[
+                          {
+                            id: 'h1',
+                            title: 'Stunning Cover Drive for Four',
+                            thumbnail: 'https://images.pexels.com/photos/3628912/pexels-photo-3628912.jpeg',
+                            duration: '0:15',
+                            views: '1.2K',
+                            date: '2d ago'
+                          },
+                          {
+                            id: 'h2',
+                            title: 'Wicket: Perfect Yorker dismissal',
+                            thumbnail: 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg',
+                            duration: '0:22',
+                            views: '850',
+                            date: '5d ago'
+                          }
+                        ].map(renderHighlightCard)}
+                      </View>
+                    </View>
+                  ))}
+                </ScrollView>
+              </View>
+            </View>
+
+            {/* Slide 8: Photos */}
+            <View style={{ width: measuredPagerWidth }}>
+              <View style={styles.tabSlideContent}>
+                <View style={styles.photosGrid}>
+                  {[
+                    { id: 'p1', url: 'https://images.pexels.com/photos/3628912/pexels-photo-3628912.jpeg' },
+                    { id: 'p2', url: 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg' },
+                    { id: 'p3', url: 'https://images.pexels.com/photos/3760259/pexels-photo-3760259.jpeg' }
+                  ].map((photo) => (
+                    <TouchableOpacity key={photo.id} style={styles.photoTile}>
+                      <Image source={{ uri: photo.url }} style={styles.photoImage} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </View>
+
+            {/* Slide 9: Connections */}
+            <View style={{ width: measuredPagerWidth }}>
+              <View style={styles.fullWidthSlide}>
+                <ScrollView
+                  ref={connectionsPagerRef}
+                  horizontal
+                  pagingEnabled
+                  showsHorizontalScrollIndicator={false}
+                  onScrollBeginDrag={onSubPagerBegin}
+                  onScrollEndDrag={() => setMainScrollEnabled(true)}
+                  onMomentumScrollEnd={(e) => onSubPagerEnd('connections', e)}
+                >
+                  {['followers', 'following'].map((sub) => (
+                    <View key={sub} style={{ width: measuredPagerWidth, paddingHorizontal: 16 }}>
+                      <View style={styles.emptyState}>
+                        <Users size={48} color="#E2E8F0" />
+                        <Text style={styles.emptyText}>No {sub} yet</Text>
+                      </View>
+                    </View>
+                  ))}
+                </ScrollView>
               </View>
             </View>
           </ScrollView>
@@ -1585,10 +1619,11 @@ const styles = StyleSheet.create({
   },
   tabContentContainer: {
     paddingHorizontal: 16,
-    gap: 20,
+    gap: 16,
   },
   tabItem: {
     paddingBottom: 12,
+    paddingHorizontal: 12,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },

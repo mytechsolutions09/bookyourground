@@ -528,7 +528,7 @@ export default function GroundDetailsScreen() {
                 >
                   {String(ground.cricket_pitch_surface ?? '').trim()
                     ? String(ground.cricket_pitch_surface)
-                    : '—'}
+                    : '-'}
                 </Text>
               </View>
             ) : null}

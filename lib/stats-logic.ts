@@ -106,6 +106,15 @@ export function getPlayerTags(stats: PlayerStats | null): PlayerTag[] {
         color: '#10B981', // Emerald
         icon: 'database'
       });
+    } else if (eco >= 6.5 && eco <= 7.5 && wktsPerInn >= 0.8) {
+       tags.push({
+        id: 'classicist',
+        label: 'Classicist',
+        type: 'bowling',
+        description: 'Technical master of line and length with disciplined control.',
+        color: '#15803d', // Green
+        icon: 'target'
+      });
     } else if (wktsPerInn > 1.1 && eco > 9.0) {
       tags.push({
         id: 'wildcard',

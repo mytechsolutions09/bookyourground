@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, TextInput, useWindowDimensions, Share, PanResponder, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
-import { ChevronRight, History, Calendar, Search, Radio, Trophy, Clock, Share2, Settings, ChevronLeft } from 'lucide-react-native';
+import { ChevronRight, History, Calendar, Search, Radio, Trophy, Clock, Share2, Settings, ChevronLeft, Users } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useCricketScoring } from '@/hooks/useCricketScoring';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,16 +27,17 @@ const DATE_FILTERS = [
 
 interface CricketMatchesProps {
   playerId?: string;
+  categoryFilter?: string;
+  onCategoryChange?: (val: string) => void;
 }
 
-const CricketMatches = React.memo(({ playerId }: CricketMatchesProps) => {
+const CricketMatches = React.memo(({ playerId, categoryFilter = 'played', onCategoryChange }: CricketMatchesProps) => {
   const router = useRouter();
   const { session } = useAuth();
   const effectivePlayerId = playerId || session?.user?.id;
   const { width } = useWindowDimensions();
   const isLargeScreen = width > 1024;
   
-  const [category, setCategory] = useState('played');
   const [status, setStatus] = useState('result');
   const [dateFilter, setDateFilter] = useState('all_time');
   const [searchQuery, setSearchQuery] = useState('');
@@ -190,7 +191,7 @@ const CricketMatches = React.memo(({ playerId }: CricketMatchesProps) => {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
     return allMatches.filter(m => {
-      if (category === 'played') {
+      if (categoryFilter === 'played') {
          if (!userPlayedMatches.includes(m.id)) {
             return false;
          }
@@ -221,7 +222,7 @@ const CricketMatches = React.memo(({ playerId }: CricketMatchesProps) => {
 
       return true;
     });
-  }, [allMatches, category, status, userPlayedMatches, dateFilter, searchQuery]);
+  }, [allMatches, categoryFilter, status, userPlayedMatches, dateFilter, searchQuery]);
 
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
@@ -252,6 +253,11 @@ const CricketMatches = React.memo(({ playerId }: CricketMatchesProps) => {
           <Text style={[styles.dropdownTriggerText, isOpen && styles.dropdownTriggerTextActive]} numberOfLines={1}>
             {selectedLabel}
           </Text>
+          <ChevronRight 
+            size={12} 
+            color={isOpen ? "#01b854" : "#CBD5E1"} 
+            style={{ marginLeft: 4, transform: [{ rotate: '90deg' }] }} 
+          />
         </TouchableOpacity>
 
         {isOpen && (
@@ -393,9 +399,10 @@ const CricketMatches = React.memo(({ playerId }: CricketMatchesProps) => {
   );
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, paddingHorizontal: 16 }}>
       {/* Consolidated Search & Filters Row */}
-      <View style={styles.controlsRow}>
+      {/* Search and Date Filter Row */}
+      <View style={styles.topFiltersRow}>
         <View style={styles.searchBox}>
           <Search size={14} color="#94A3B8" />
           <TextInput
@@ -406,34 +413,36 @@ const CricketMatches = React.memo(({ playerId }: CricketMatchesProps) => {
             onChangeText={setSearchQuery}
           />
         </View>
-
-        <View style={styles.filtersContainer}>
+        <View style={{ width: 80 }}>
           <FilterDropdown 
-            id="category" 
-            label="Cat" 
-            value={category} 
+            id="cat" 
+            label="Type" 
+            value={categoryFilter} 
             options={CATEGORY_TABS} 
-            onSelect={setCategory} 
-            icon={Trophy}
+            onSelect={(val) => onCategoryChange?.(val)} 
           />
+        </View>
+        <View style={{ width: 80 }}>
           <FilterDropdown 
             id="status" 
-            label="Stat" 
+            label="Status" 
             value={status} 
             options={STATUS_FILTERS} 
             onSelect={setStatus} 
-            icon={Radio}
           />
+        </View>
+        <View style={{ width: 80 }}>
           <FilterDropdown 
             id="date" 
             label="Date" 
             value={dateFilter} 
             options={DATE_FILTERS} 
             onSelect={setDateFilter} 
-            icon={Calendar}
           />
         </View>
       </View>
+
+
 
       {/* Matches List */}
       <View style={styles.matchesList}>
@@ -456,47 +465,45 @@ const CricketMatches = React.memo(({ playerId }: CricketMatchesProps) => {
 export default CricketMatches;
 
 const styles = StyleSheet.create({
-  controlsRow: {
+  topFiltersRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 20,
-    zIndex: 100,
+    gap: 6,
+    marginBottom: 16,
+    zIndex: 110,
   },
   searchBox: {
-    flex: 1.5,
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 8, // Slightly tighter corners for smaller height
-    paddingHorizontal: 10,
-    height: 34, // Reduced to match filters
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 38,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    gap: 6,
+    gap: 8,
   },
   searchBoxInput: {
     fontFamily: 'Inter',
     flex: 1,
-    fontSize: 12,
+    fontSize: 13,
     color: '#1E293B',
     fontWeight: '500',
+    paddingVertical: 0,
   },
-  filtersContainer: {
-    flex: 2.5,
-    flexDirection: 'row',
-    gap: 6,
-  },
+
+
   dropdownTrigger: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 8,
-    height: 34, // Fixed height to match search
-    borderRadius: 8,
+    paddingHorizontal: 6,
+    height: 38,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
   },
   dropdownTriggerActive: {
     borderColor: '#01b854',
@@ -507,6 +514,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: '#64748B',
+    flex: 1,
   },
   dropdownTriggerTextActive: {
     color: '#01b854',
