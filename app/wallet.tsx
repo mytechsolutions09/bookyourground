@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Platform, TouchableOpacity, useWindowDimensions, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Platform, TouchableOpacity, useWindowDimensions, ScrollView, ActivityIndicator, Modal } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
 import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import { ArrowUp, ArrowDown, CreditCard, Calendar, Filter, X } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency } from '@/utils/helpers';
+import { useUI } from '@/contexts/UIContext';
 
 const THEME_BG = '#043529';
 const ACCENT = '#c8f35c'; 
@@ -29,6 +30,25 @@ export default function WalletScreen() {
   const [hasMore, setHasMore] = useState(true);
   const [fromDate, setFromDate] = useState<string | null>(null);
   const [toDate, setToDate] = useState<string | null>(null);
+  const [activeMainTab, setActiveMainTab] = useState<'transactions' | 'summary'>('transactions');
+  const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
+  const [activeFilterType, setActiveFilterType] = useState<'from' | 'to' | null>(null);
+
+  const { setTabBarVisible } = useUI();
+  const lastScrollY = useRef(0);
+
+  const onScroll = (event: any) => {
+    if (Platform.OS === 'web') return;
+    const currentY = event.nativeEvent.contentOffset.y;
+    const diff = currentY - lastScrollY.current;
+
+    if (diff > 10 && currentY > 50) {
+      setTabBarVisible(false);
+    } else if (diff < -10) {
+      setTabBarVisible(true);
+    }
+    lastScrollY.current = currentY;
+  };
 
   const isOwner = profile?.role === 'ground_owner';
 
@@ -195,6 +215,8 @@ export default function WalletScreen() {
       style={styles.root}
       contentContainerStyle={[styles.scrollContent, (Platform.OS === 'web' && !isCompact) && styles.scrollContentWeb]}
       showsVerticalScrollIndicator={false}
+      onScroll={onScroll}
+      scrollEventThrottle={16}
     >
       <View style={styles.mainLayout}>
         <View style={styles.centerContent}>
@@ -209,97 +231,135 @@ export default function WalletScreen() {
             </View>
           </View>
 
-          <View style={styles.historyHeader}>
-            <Text style={styles.sectionTitle}>Transaction History</Text>
-            
-            <View style={styles.filterContainer}>
-              <View style={styles.dateFilterGroup}>
-                <View style={styles.datePickerInput}>
-                   <Calendar size={14} color="#64748B" />
-                   <Text style={[styles.dateTextLabel, fromDate && styles.dateTextActive]}>
-                     {fromDate ? new Date(fromDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'From Date'}
-                   </Text>
-                   {Platform.OS === 'web' && (
-                     <input
-                       type="date"
-                       value={fromDate || ''}
-                       onChange={(e) => setFromDate(e.target.value || null)}
-                       style={styles.webDatePicker}
-                     />
-                   )}
+          {isCompact && (
+            <View style={styles.mobileTabs}>
+              <TouchableOpacity 
+                style={[styles.mobileTab, activeMainTab === 'transactions' && styles.mobileTabActive]}
+                onPress={() => setActiveMainTab('transactions')}
+              >
+                <Text style={[styles.mobileTabText, activeMainTab === 'transactions' && styles.mobileTabTextActive]}>Transactions</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.mobileTab, activeMainTab === 'summary' && styles.mobileTabActive]}
+                onPress={() => setActiveMainTab('summary')}
+              >
+                <Text style={[styles.mobileTabText, activeMainTab === 'summary' && styles.mobileTabTextActive]}>Wallet Summary</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {(!isCompact || activeMainTab === 'transactions') && (
+            <>
+              <View style={styles.historyHeader}>
+                <Text style={styles.sectionTitle}>Transaction History</Text>
+                
+                <View style={styles.filterContainer}>
+                  <View style={styles.dateFilterGroup}>
+                    <TouchableOpacity 
+                      style={styles.datePickerInput}
+                      onPress={() => {
+                        if (Platform.OS !== 'web') {
+                          setActiveFilterType('from');
+                          setIsFilterModalVisible(true);
+                        }
+                      }}
+                    >
+                       <Calendar size={14} color="#64748B" />
+                       <Text style={[styles.dateTextLabel, fromDate && styles.dateTextActive]}>
+                         {fromDate ? new Date(fromDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'From Date'}
+                       </Text>
+                       {Platform.OS === 'web' && (
+                         <input
+                           type="date"
+                           value={fromDate || ''}
+                           onChange={(e) => setFromDate(e.target.value || null)}
+                           style={styles.webDatePicker}
+                         />
+                       )}
+                    </TouchableOpacity>
+
+                    <Text style={styles.dateSeparator}>to</Text>
+
+                    <TouchableOpacity 
+                      style={styles.datePickerInput}
+                      onPress={() => {
+                        if (Platform.OS !== 'web') {
+                          setActiveFilterType('to');
+                          setIsFilterModalVisible(true);
+                        }
+                      }}
+                    >
+                       <Calendar size={14} color="#64748B" />
+                       <Text style={[styles.dateTextLabel, toDate && styles.dateTextActive]}>
+                         {toDate ? new Date(toDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'To Date'}
+                       </Text>
+                       {Platform.OS === 'web' && (
+                         <input
+                           type="date"
+                           value={toDate || ''}
+                           onChange={(e) => setToDate(e.target.value || null)}
+                           style={styles.webDatePicker}
+                         />
+                       )}
+                    </TouchableOpacity>
+
+                    {(fromDate || toDate) && (
+                      <TouchableOpacity 
+                        onPress={() => { setFromDate(null); setToDate(null); }} 
+                        style={styles.clearBtn}
+                      >
+                        <X size={14} color="#dc2626" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
                 </View>
+              </View>
 
-                <Text style={styles.dateSeparator}>to</Text>
-
-                <View style={styles.datePickerInput}>
-                   <Calendar size={14} color="#64748B" />
-                   <Text style={[styles.dateTextLabel, toDate && styles.dateTextActive]}>
-                     {toDate ? new Date(toDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'To Date'}
-                   </Text>
-                   {Platform.OS === 'web' && (
-                     <input
-                       type="date"
-                       value={toDate || ''}
-                       onChange={(e) => setToDate(e.target.value || null)}
-                       style={styles.webDatePicker}
-                     />
-                   )}
-                </View>
-
-                {(fromDate || toDate) && (
-                  <TouchableOpacity 
-                    onPress={() => { setFromDate(null); setToDate(null); }} 
-                    style={styles.clearBtn}
-                  >
-                    <X size={14} color="#dc2626" />
-                  </TouchableOpacity>
+              <View style={styles.transactionsList}>
+                {loading && transactions.length === 0 ? (
+                  <ActivityIndicator color={THEME_BG} size="large" style={{ marginTop: 20 }} />
+                ) : transactions.map(tx => {
+                   const isPos = tx.isPositive;
+                   return (
+                     <View key={tx.id} style={styles.txCard}>
+                        <View style={[styles.txIconBox, isPos ? styles.txIconBoxPos : styles.txIconBoxNeg]}>
+                           {isPos ? <ArrowUp size={20} color="#15803d" /> : <ArrowDown size={20} color="#dc2626" />}
+                        </View>
+                        <View style={styles.txInfo}>
+                           <Text style={styles.txTitle} numberOfLines={1}>{tx.title}</Text>
+                           <Text style={styles.txSub} numberOfLines={1}>{tx.sub}</Text>
+                        </View>
+                        <View style={styles.txValues}>
+                           <Text style={[styles.txAmount, isPos ? styles.txAmountPos : styles.txAmountNeg]}>
+                             {isPos ? '+' : '-'}{formatCurrency(tx.amount)}
+                           </Text>
+                           <Text style={styles.txDate}>{tx.date}</Text>
+                        </View>
+                     </View>
+                   );
+                })}
+                
+                {transactions.length === 0 && !loading && (
+                  <View style={styles.emptyState}>
+                    <Text style={styles.emptyStateText}>No transactions yet</Text>
+                    <Text style={styles.emptyStateSub}>Refunds and rewards will appear here</Text>
+                  </View>
                 )}
               </View>
-            </View>
-          </View>
-          <View style={styles.transactionsList}>
-            {loading && transactions.length === 0 ? (
-              <ActivityIndicator color={THEME_BG} size="large" style={{ marginTop: 20 }} />
-            ) : transactions.map(tx => {
-               const isPos = tx.isPositive;
-               return (
-                 <View key={tx.id} style={styles.txCard}>
-                    <View style={[styles.txIconBox, isPos ? styles.txIconBoxPos : styles.txIconBoxNeg]}>
-                       {isPos ? <ArrowUp size={20} color="#15803d" /> : <ArrowDown size={20} color="#dc2626" />}
-                    </View>
-                    <View style={styles.txInfo}>
-                       <Text style={styles.txTitle} numberOfLines={1}>{tx.title}</Text>
-                       <Text style={styles.txSub} numberOfLines={1}>{tx.sub}</Text>
-                    </View>
-                    <View style={styles.txValues}>
-                       <Text style={[styles.txAmount, isPos ? styles.txAmountPos : styles.txAmountNeg]}>
-                         {isPos ? '+' : '-'}{formatCurrency(tx.amount)}
-                       </Text>
-                       <Text style={styles.txDate}>{tx.date}</Text>
-                    </View>
-                 </View>
-               );
-            })}
-            
-            {transactions.length === 0 && !loading && (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyStateText}>No transactions yet</Text>
-                <Text style={styles.emptyStateSub}>Refunds and rewards will appear here</Text>
+
+              <View style={styles.viewAllWrapper}>
+                 {hasMore ? (
+                   <TouchableOpacity style={styles.viewAllBtn} onPress={loadMore} disabled={loading}>
+                     <Text style={styles.viewAllTxt}>{loading ? 'Loading...' : 'Load More'}</Text>
+                   </TouchableOpacity>
+                 ) : transactions.length > 0 && (
+                   <Text style={styles.noMoreText}>End of history</Text>
+                 )}
               </View>
-            )}
-          </View>
+            </>
+          )}
 
-          <View style={styles.viewAllWrapper}>
-             {hasMore ? (
-               <TouchableOpacity style={styles.viewAllBtn} onPress={loadMore} disabled={loading}>
-                 <Text style={styles.viewAllTxt}>{loading ? 'Loading...' : 'Load More'}</Text>
-               </TouchableOpacity>
-             ) : transactions.length > 0 && (
-               <Text style={styles.noMoreText}>End of history</Text>
-             )}
-          </View>
-
-          {isCompact && (
+          {isCompact && activeMainTab === 'summary' && (
             <View style={styles.compactExtraInfo}>
               {renderRightPanel()}
             </View>
@@ -319,6 +379,79 @@ export default function WalletScreen() {
     <View style={styles.nativeWrapper}>
       <MobileAppNavbar title="Wallet" titleColor="#043529" lightBg />
       {content}
+
+      {/* Mobile Date Filter Modal */}
+      {Platform.OS !== 'web' && (
+        <Modal
+          visible={isFilterModalVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setIsFilterModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Date Range</Text>
+                <TouchableOpacity onPress={() => setIsFilterModalVisible(false)}>
+                  <X size={20} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.modalOptions}>
+                <TouchableOpacity 
+                  style={styles.modalOption}
+                  onPress={() => {
+                    setFromDate(null);
+                    setToDate(null);
+                    setIsFilterModalVisible(false);
+                  }}
+                >
+                  <Text style={styles.modalOptionText}>All Time</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.modalOption}
+                  onPress={() => {
+                    const d = new Date();
+                    d.setDate(d.getDate() - 7);
+                    setFromDate(d.toISOString().split('T')[0]);
+                    setToDate(new Date().toISOString().split('T')[0]);
+                    setIsFilterModalVisible(false);
+                  }}
+                >
+                  <Text style={styles.modalOptionText}>Last 7 Days</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.modalOption}
+                  onPress={() => {
+                    const d = new Date();
+                    d.setDate(d.getDate() - 30);
+                    setFromDate(d.toISOString().split('T')[0]);
+                    setToDate(new Date().toISOString().split('T')[0]);
+                    setIsFilterModalVisible(false);
+                  }}
+                >
+                  <Text style={styles.modalOptionText}>Last 30 Days</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={styles.modalOption}
+                  onPress={() => {
+                    const d = new Date();
+                    d.setMonth(d.getMonth() - 3);
+                    setFromDate(d.toISOString().split('T')[0]);
+                    setToDate(new Date().toISOString().split('T')[0]);
+                    setIsFilterModalVisible(false);
+                  }}
+                >
+                  <Text style={styles.modalOptionText}>Last 90 Days</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -648,5 +781,73 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 4,
-  }
+  },
+  mobileTabs: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 4,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  mobileTab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 12,
+  },
+  mobileTabActive: {
+    backgroundColor: '#043529',
+  },
+  mobileTabText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#64748B',
+    fontFamily: 'Inter',
+  },
+  mobileTabTextActive: {
+    color: '#FFFFFF',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  modalOptions: {
+    gap: 12,
+  },
+  modalOption: {
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  modalOptionText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
 });

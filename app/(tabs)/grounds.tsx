@@ -27,16 +27,19 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useIsCompact } from '@/hooks/useIsCompact';
+import { useHasMounted } from '@/hooks/useHasMounted';
+
 const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
-
-
 
 export default function GroundsTabScreen() {
   const { width } = useWindowDimensions();
+  const hasMounted = useHasMounted();
+  const isCompact = useIsCompact();
   const isWeb = Platform.OS === 'web';
   const { user } = useAuth();
   const { tab, type } = useLocalSearchParams();
-  const isSmall = width < 900;
+  const isSmall = isCompact;
   const [activeTab, setActiveTab] = useState<'book' | 'opponent' | 'favorite'>((tab as any) || 'book');
   const horizontalPagerRef = React.useRef<any>(null);
   const tabScrollRef = React.useRef<ScrollView>(null);
@@ -362,6 +365,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderRadius: 20,
     padding: 4,
+    width: '94%', // Safer percentage instead of dynamic calculation in static styles
     alignSelf: 'center',
     borderWidth: 1,
     borderColor: '#F1F5F9',
@@ -402,11 +406,13 @@ const styles = StyleSheet.create({
   },
   tabText: {
     color: '#64748B',
+    fontSize: 12,
     fontWeight: '600',
     fontFamily: 'Inter',
   },
   activeTabText: {
     color: '#01b854',
+    fontSize: 12,
     fontWeight: '700',
     fontFamily: 'Inter',
   },

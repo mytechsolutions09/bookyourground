@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Platform, ScrollView, TextInput, Alert, TouchableOpacity, ActivityIndicator, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, Platform, ScrollView, TextInput, Alert, TouchableOpacity, ActivityIndicator, useWindowDimensions, Linking } from 'react-native';
 import WebLayout from '@/components/web/WebLayout';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
@@ -499,6 +499,27 @@ function OwnerSettingsInner() {
           <View style={styles.helpItem}>
             <Text style={styles.helpTitle}>FULL</Text>
             <Text style={styles.helpText}>The ground is fully occupied by two teams or a full-ground booking. No more slots available.</Text>
+          </View>
+        </View>
+        <View style={[styles.helpSection, { marginTop: 24 }]}>
+          <Text style={styles.helpHeader}>Support & Assistance</Text>
+          <Text style={styles.helpText}>Need help with settlements, bookings, or account issues?</Text>
+          
+          <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
+            <Button 
+              title="Raise a Ticket" 
+              onPress={() => router.push('/(tabs)/support' as any)}
+              variant="outline"
+              size="small"
+              style={{ flex: 1 }}
+            />
+            <Button 
+              title="Email Support" 
+              onPress={() => Linking.openURL('mailto:support@bookyourground.com')}
+              variant="outline"
+              size="small"
+              style={{ flex: 1 }}
+            />
           </View>
         </View>
       </Card>

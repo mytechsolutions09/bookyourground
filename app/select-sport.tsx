@@ -12,6 +12,7 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  useWindowDimensions,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,6 +26,7 @@ import {
   User,
   Users,
 } from 'lucide-react-native';
+import { useHasMounted } from '@/hooks/useHasMounted';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUI } from '@/contexts/UIContext';
 import Animated, { 
@@ -45,7 +47,7 @@ import { supabase } from '@/lib/supabase';
 import { makeGroundPath } from '@/utils/groundSlug';
 import FindGroundSkeleton from '@/components/landing/FindGroundSkeleton';
 
-const { width, height } = Dimensions.get('window');
+const { width: STATIC_WIDTH, height: STATIC_HEIGHT } = Dimensions.get('window');
 const HEADER_TABS = [70, 55, 50, 50, 45]; // Sport, Location, Date, Team, Time heights
 const TEAMS_OPTIONS = [
   { id: 'one', label: '1 Team', icon: User },
@@ -72,7 +74,7 @@ const formatDateFull = (date: Date) => {
   return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]}`;
 };
 
-function GroundCardExpo({ ground, index, scrollX, onPress }: { ground: any; index: number; scrollX: any; onPress: () => void }) {
+function GroundCardExpo({ ground, index, scrollX, onPress, width }: { ground: any; index: number; scrollX: any; onPress: () => void; width: number }) {
   const primaryImage = ground.ground_images?.[0]?.image_url || 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
   
   const animatedStyle = useAnimatedStyle(() => {
@@ -124,6 +126,7 @@ function GroundCardExpo({ ground, index, scrollX, onPress }: { ground: any; inde
 }
 
 export default function SelectSportScreen() {
+  const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const { setTabBarVisible } = useUI();
@@ -151,6 +154,7 @@ export default function SelectSportScreen() {
   const verticalScrollY = useSharedValue(0);
   const horizontalScrollX = useSharedValue(0);
   const modalY = useSharedValue(height);
+  const hasMounted = useHasMounted();
 
   const onHorizontalScroll = (event: any) => {
     horizontalScrollX.value = event.nativeEvent.contentOffset.x;
@@ -659,6 +663,7 @@ export default function SelectSportScreen() {
                       index={i} 
                       scrollX={horizontalScrollX} 
                       onPress={() => handleSelectGround(g)} 
+                      width={width}
                     />
                   ))}
                 </ScrollView>
@@ -683,15 +688,15 @@ export default function SelectSportScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
   verticalScrollView: { flex: 1 },
-  fullPage: { width: width, height: height },
-  bgPin: { position: 'absolute', top: 0, left: 0, right: 0, height: height },
+  fullPage: { width: STATIC_WIDTH, height: STATIC_HEIGHT },
+  bgPin: { position: 'absolute', top: 0, left: 0, right: 0, height: STATIC_HEIGHT },
   headerOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000, pointerEvents: 'box-none' },
   statusBarFill: { position: 'absolute', top: 0, left: 0, right: 0 },
   headerTab: { position: 'absolute', left: 0, right: 0, justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 },
   centerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  tabText: { fontSize: 16, fontWeight: '900', color: '#00ea6b', fontFamily: 'Inter' },
+  tabText: { fontSize: 20, fontWeight: '900', color: '#FFFFFF', fontFamily: 'Inter' },
   tabTextSmall: { fontSize: 16, fontWeight: '900', color: '#043529', fontFamily: 'Inter' },
-  slide: { width: width, alignItems: 'center', justifyContent: 'center', padding: 20, paddingBottom: 160 },
+  slide: { width: STATIC_WIDTH, alignItems: 'center', justifyContent: 'center', padding: 20, paddingBottom: 100 },
   iconCircle: { width: 140, height: 140, borderRadius: 70, backgroundColor: 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center', marginBottom: 30 },
   iconCircleSmall: { width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(0,0,0,0.05)', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
   heroName: { fontSize: 44, fontWeight: '900', color: '#FFFFFF', textAlign: 'center', letterSpacing: -1 },
@@ -715,8 +720,8 @@ const styles = StyleSheet.create({
   activeDotDark: { backgroundColor: '#043529', width: 32 },
   
   // RESULTS CARDS
-  cardFullContainer: { width: width, alignItems: 'center', justifyContent: 'flex-start', paddingTop: 20, paddingBottom: 20 },
-  cardFull: { backgroundColor: 'white', borderRadius: 24, width: width * 0.92, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.2, shadowRadius: 30, elevation: 12, minHeight: 480 },
+  cardFullContainer: { width: STATIC_WIDTH, alignItems: 'center', justifyContent: 'flex-start', paddingTop: 20, paddingBottom: 20 },
+  cardFull: { backgroundColor: 'white', borderRadius: 24, width: STATIC_WIDTH * 0.92, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 20 }, shadowOpacity: 0.2, shadowRadius: 30, elevation: 12, minHeight: 480 },
   cardFullImage: { width: '100%', height: 260 },
   cardFullContent: { padding: 20, gap: 8, flex: 1 },
   cardFullTitle: { fontSize: 22, fontWeight: '900', color: '#0F172A' },

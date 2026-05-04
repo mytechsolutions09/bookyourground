@@ -7,6 +7,7 @@
     "dev": "EXPO_NO_TELEMETRY=1 expo start",
     "build": "npm run build:web",
     "build:web": "expo export --platform web",
+    "build:debug": "EXPO_PUBLIC_DEBUG=true expo export --platform web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "postinstall": "node scripts/patch-metro-symbolicate.js"

@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { useIsCompact } from '@/hooks/useIsCompact';
+import { useHasMounted } from '@/hooks/useHasMounted';
 import {
   View,
   Text,
@@ -201,15 +203,16 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
     contentPaddingTop = 0,
     premiumCards = false,
   } = props;
+  const hasMounted = useHasMounted();
+  const isCompact = useIsCompact();
   const { user } = useAuth();
   const { width: windowWidth } = useWindowDimensions();
   const isWeb = Platform.OS === 'web';
-  const IS_DARK = !isWeb || windowWidth < 900;
-  const isCompact = windowWidth < 900;
+  const IS_DARK = useMemo(() => (hasMounted ? (!isWeb || windowWidth < 900) : false), [hasMounted, isWeb, windowWidth]);
   
   const isEffectiveLight = true;
-  const isUltraNarrow = !isWeb || windowWidth < 350;
-  const styles = React.useMemo(() => getStyles(isWeb, isEffectiveLight, noCard, windowWidth), [isWeb, isEffectiveLight, noCard, windowWidth]);
+  const isUltraNarrow = useMemo(() => (hasMounted ? (!isWeb || windowWidth < 350) : false), [hasMounted, isWeb, windowWidth]);
+  const styles = React.useMemo(() => getStyles(isWeb, isEffectiveLight, noCard, hasMounted ? windowWidth : 1200), [isWeb, isEffectiveLight, noCard, windowWidth, hasMounted]);
 
   /** Landing: Search → pick ground → Book Now. Skip when booking a known ground. */
   const useLandingSearchFlow = hideGroundPicker && !initialGroundId;
@@ -2775,12 +2778,9 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     lineHeight: 18,
   },
   teamToggleOptionActive: {
-    backgroundColor: 'rgba(1, 184, 84, 0.12)',
-    borderColor: 'rgba(1, 184, 84, 0.4)',
+    backgroundColor: '#ECFDF5',
+    borderColor: '#059669',
     borderWidth: 1.5,
-    ...Platform.select({
-      web: { backdropFilter: 'blur(8px)' }
-    }) as any,
   },
   teamToggleText: {
     fontSize: 14,
@@ -2789,7 +2789,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     color: '#64748B',
   },
   teamToggleTextActive: {
-    color: '#01b854',
+    color: '#059669',
     fontWeight: '800',
   },
   teamToggleTextDisabled: {
@@ -3265,12 +3265,9 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     gap: 2,
   },
   dateChipActive: {
-    backgroundColor: 'rgba(1, 184, 84, 0.12)',
-    borderColor: 'rgba(1, 184, 84, 0.4)',
+    backgroundColor: '#ECFDF5',
+    borderColor: '#059669',
     borderWidth: 1.5,
-    ...Platform.select({
-      web: { backdropFilter: 'blur(8px)' }
-    }) as any,
   },
   dateChipDisabled: {
     opacity: 0.5,
@@ -3291,7 +3288,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     fontSize: 11,
   },
   dateChipTextActive: {
-    color: '#01b854',
+    color: '#059669',
     fontWeight: '800',
   },
   dateChipTextBookGroundNative: {
@@ -3308,7 +3305,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     fontSize: 9,
   },
   dateChipWeekdayActive: {
-    color: '#01b854',
+    color: '#059669',
     fontWeight: '800',
   },
   dateChipWeekdayBookGroundNative: {
@@ -3387,12 +3384,9 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     paddingHorizontal: 8,
   },
   timeSlotChipActive: {
-    backgroundColor: 'rgba(1, 184, 84, 0.12)',
-    borderColor: 'rgba(1, 184, 84, 0.4)',
+    backgroundColor: '#ECFDF5',
+    borderColor: '#059669',
     borderWidth: 1.5,
-    ...Platform.select({
-      web: { backdropFilter: 'blur(8px)' }
-    }) as any,
   },
   timeSlotChipDisabled: {
     opacity: 0.5,
@@ -3423,7 +3417,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     fontSize: 11,
   },
   timeSlotTextActive: {
-    color: '#01b854',
+    color: '#059669',
     fontWeight: '800',
   },
   timeSlotTextBookGroundNative: {

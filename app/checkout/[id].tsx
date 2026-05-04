@@ -1054,10 +1054,12 @@ export default function CheckoutScreen() {
                       <RNText style={styles.topRightBadgeText}>Booked {randomBookedCount} times today</RNText>
                     </View>
 
-                    <View style={styles.middleLeftBadge}>
-                      <Zap size={14} color="#FFFFFF" fill="#FFFFFF" />
-                      <RNText style={styles.middleLeftBadgeText}>Only {randomSlotsLeft} slots left</RNText>
-                    </View>
+                    {Platform.OS !== 'web' && (
+                      <View style={styles.middleLeftBadge}>
+                        <Zap size={14} color="#FFFFFF" fill="#FFFFFF" />
+                        <RNText style={styles.middleLeftBadgeText}>Only {randomSlotsLeft} slots left</RNText>
+                      </View>
+                    )}
 
                     <TouchableOpacity onPress={() => router.back()} style={styles.imageBackBtn}>
                       <View style={styles.backBtnInner}>

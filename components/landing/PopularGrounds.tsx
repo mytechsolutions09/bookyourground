@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useIsCompact } from '@/hooks/useIsCompact';
 import { View, Text, StyleSheet, Platform, ActivityIndicator, ScrollView, TouchableOpacity, Image, useWindowDimensions } from 'react-native';
 import { Star } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
@@ -14,6 +15,7 @@ import Animated, {
 import { DeviceEventEmitter } from 'react-native';
 
 export default function PopularGrounds() {
+  const isCompact = useIsCompact();
   const { width } = useWindowDimensions();
   const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,9 +23,9 @@ export default function PopularGrounds() {
   // Animation values
   const headingOpacity = useSharedValue(0);
   const headingTranslateY = useSharedValue(30);
-  const cardTranslateX1 = useSharedValue(width > 900 ? 100 : 0);
-  const cardTranslateX2 = useSharedValue(width > 900 ? 150 : 0);
-  const cardTranslateX3 = useSharedValue(width > 900 ? 200 : 0);
+  const cardTranslateX1 = useSharedValue(!isCompact ? 100 : 0);
+  const cardTranslateX2 = useSharedValue(!isCompact ? 150 : 0);
+  const cardTranslateX3 = useSharedValue(!isCompact ? 200 : 0);
   const cardOpacity1 = useSharedValue(0);
   const cardOpacity2 = useSharedValue(0);
   const cardOpacity3 = useSharedValue(0);

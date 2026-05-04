@@ -13,6 +13,7 @@ import {
   useWindowDimensions,
   TouchableOpacity,
 } from 'react-native';
+import { useIsCompact } from '@/hooks/useIsCompact';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { MapPin, Star, ArrowLeft, Phone, Navigation2, CheckCircle2, Heart, ChevronRight, Share2, Map as MapIcon } from 'lucide-react-native';
 import { 
@@ -37,6 +38,7 @@ import WebLayout from '@/components/web/WebLayout';
 import LandingBookingForm from '@/components/landing/LandingBookingForm';
 import { Share } from 'react-native';
 import GroundDetailSkeleton from '@/components/landing/GroundDetailSkeleton';
+import NativeMap from '@/components/grounds/NativeMap';
 
 const MAP_ID = "DEMO_MAP_ID";
 const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
@@ -69,8 +71,7 @@ export default function GroundDetailsPrettyUrlScreen() {
   const [reviewSortOrder, setReviewSortOrder] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>('newest');
   const [currentTotal, setCurrentTotal] = useState<number | null>(null);
 
-  const { width } = useWindowDimensions();
-  const isCompact = width < 900;
+  const isCompact = useIsCompact();
   const isWeb = Platform.OS === 'web';
   const isLargeWeb = isWeb && !isCompact;
 
@@ -500,87 +501,12 @@ export default function GroundDetailsPrettyUrlScreen() {
                 </Card>
 
                 {/* ── Customer Reviews ── */}
-                <Section style={[styles.section, styles.reviewsSectionCard]}>
-                  <View style={styles.reviewHeaderMain}>
-                    <Text style={styles.sectionTitle}>Customer Reviews</Text>
-                    
-                    <View style={styles.reviewStatsSummary}>
-                      <View style={styles.avgRatingBadge}>
-                        <Text style={styles.avgRatingValue}>{averageRating.toFixed(1)}</Text>
-                        <Text style={styles.avgRatingText}> out of 5</Text>
-                      </View>
-                      <Text style={styles.reviewCountText}>({reviews.length} reviews)</Text>
-                    </View>
-
-                    <Pressable 
-                      style={styles.writeReviewBtn}
-                      onPress={() => router.push('/(tabs)/bookings' as any)}
-                    >
-                      <Star size={14} color="#6B7280" />
-                      <Text style={styles.writeReviewText}>Write a Review</Text>
-                    </Pressable>
-                  </View>
-
-                  <View style={styles.sortContainer}>
-                    <Text style={styles.sortByLabel}>Sort by:</Text>
-                    <View style={styles.sortChipsRow}>
-                      {[
-                        { id: 'newest', label: 'Most Recent' },
-                        { id: 'oldest', label: 'Oldest' },
-                        { id: 'highest', label: 'Highest Rated' },
-                        { id: 'lowest', label: 'Lowest Rated' },
-                      ].map((opt) => (
-                        <Pressable 
-                          key={opt.id}
-                          onPress={() => setReviewSortOrder(opt.id as any)}
-                          style={[styles.sortChip, reviewSortOrder === opt.id && styles.sortChipActive]}
-                        >
-                          <Text style={[styles.sortChipText, reviewSortOrder === opt.id && styles.sortChipTextActive]}>
-                            {opt.label}
-                          </Text>
-                        </Pressable>
-                      ))}
-                    </View>
-                  </View>
-
-                  {reviews.length === 0 ? (
-                    <Text style={styles.noReviewsText}>
-                      No reviews yet. Go to your past bookings to leave a review.
-                    </Text>
-                  ) : (
-                    <View style={styles.reviewsList}>
-                      {reviews.map((r, idx) => (
-                        <View key={r.id ?? idx} style={styles.reviewItem}>
-                          <View style={styles.reviewHeader}>
-                            <View style={styles.reviewRatingRow}>
-                              {[1,2,3,4,5].map((s) => (
-                                <Star
-                                  key={s}
-                                  size={13}
-                                  color={s <= r.rating ? '#dcc093' : '#374151'}
-                                  fill={s <= r.rating ? '#dcc093' : 'none'}
-                                />
-                              ))}
-                              <Text style={styles.reviewRatingText}>{r.rating}/5</Text>
-                            </View>
-
-                            <View style={styles.reviewAuthorDateColumn}>
-                              {r.user?.full_name && (
-                                <Text style={styles.reviewAuthorText}>{r.user.full_name.toUpperCase()}</Text>
-                              )}
-                              {r.created_at && (
-                                <Text style={styles.reviewDateText}>{formatDate(r.created_at)}</Text>
-                              )}
-                            </View>
-                          </View>
-                          {r.comment ? (
-                            <Text style={styles.reviewCommentText}>{r.comment}</Text>
-                          ) : null}
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                </Section>
+                <ReviewsSection 
+                  reviews={reviews} 
+                  averageRating={averageRating} 
+                  reviewSortOrder={reviewSortOrder} 
+                  setReviewSortOrder={setReviewSortOrder} 
+                />
               </View>
 
               <View style={styles.webRightColumn}>
@@ -716,22 +642,30 @@ export default function GroundDetailsPrettyUrlScreen() {
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Location</Text>
                 {Platform.OS === 'web' ? (
-                <View style={{ height: 250, borderRadius: 16, overflow: 'hidden' }}>
-                     <WebMap ground={ground} mapsUrl={mapsUrl} />
+                  <View style={{ height: 250, borderRadius: 16, overflow: 'hidden' }}>
+                    <WebMap ground={ground} mapsUrl={mapsUrl} />
                   </View>
                 ) : (
-                  <View style={styles.mobileMapPlaceholder}>
-                    <MapIcon size={40} color="#94A3B8" strokeWidth={1.5} />
-                    <Text style={styles.mobileMapPlaceholderText}>Map preview available on Web</Text>
+                  <View style={{ height: 200, borderRadius: 16, overflow: 'hidden', backgroundColor: '#F1F5F9', marginBottom: 12 }}>
+                    <NativeMap ground={ground} />
                     {mapsUrl && (
-                      <Pressable onPress={() => Linking.openURL(mapsUrl)} style={styles.mapsLinkWrap}>
-                        <Navigation2 size={16} color="#01b854" strokeWidth={2.5} />
-                        <Text style={styles.mapsLinkText}>Get Directions</Text>
+                      <Pressable 
+                        onPress={() => Linking.openURL(mapsUrl)} 
+                        style={[styles.mapsLinkWrap, { position: 'absolute', bottom: 12, right: 12, backgroundColor: '#FFFFFF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 }]}
+                      >
+                        <Navigation2 size={14} color="#01b854" strokeWidth={2.5} />
+                        <Text style={[styles.mapsLinkText, { marginBottom: 0 }]}>Directions</Text>
                       </Pressable>
                     )}
                   </View>
                 )}
               </View>
+              <ReviewsSection 
+                reviews={reviews} 
+                averageRating={averageRating} 
+                reviewSortOrder={reviewSortOrder} 
+                setReviewSortOrder={setReviewSortOrder} 
+              />
             </>
           )}
 
@@ -944,7 +878,6 @@ function WebMap({ ground, mapsUrl }: { ground: GroundWithImages, mapsUrl: string
           style={{ width: '100%', height: '100%', borderRadius: 16 }}
           gestureHandling={'greedy'}
           disableDefaultUI={true}
-          styles={CLEAN_MAP_STYLES}
         >
           {coords && (
             <>
@@ -1029,25 +962,43 @@ function AmenitiesList({ ground }: { ground: GroundWithImages }) {
 
 function ReviewsSection({ reviews, averageRating, reviewSortOrder, setReviewSortOrder }: any) {
   return (
-    <Section style={styles.section}>
+    <Section style={[styles.section, styles.reviewsSectionCard]}>
       <View style={styles.reviewHeaderMain}>
-        <Text style={styles.sectionTitle}>Reviews</Text>
+        <Text style={styles.sectionTitle}>Customer Reviews</Text>
+        
         <View style={styles.reviewStatsSummary}>
-          <Text style={styles.avgRatingValue}>{averageRating.toFixed(1)}</Text>
+          <View style={styles.avgRatingBadge}>
+            <Text style={styles.avgRatingValue}>{averageRating.toFixed(1)}</Text>
+            <Text style={styles.avgRatingText}> out of 5</Text>
+          </View>
           <Text style={styles.reviewCountText}>({reviews.length} reviews)</Text>
         </View>
+
+        <Pressable 
+          style={styles.writeReviewBtn}
+          onPress={() => router.push('/(tabs)/bookings' as any)}
+        >
+          <Star size={14} color="#6B7280" />
+          <Text style={styles.writeReviewText}>Write a Review</Text>
+        </Pressable>
       </View>
 
       <View style={styles.sortContainer}>
+        <Text style={styles.sortByLabel}>Sort by:</Text>
         <View style={styles.sortChipsRow}>
-          {['newest', 'highest', 'lowest'].map((id) => (
+          {[
+            { id: 'newest', label: 'Most Recent' },
+            { id: 'oldest', label: 'Oldest' },
+            { id: 'highest', label: 'Highest Rated' },
+            { id: 'lowest', label: 'Lowest Rated' },
+          ].map((opt) => (
             <Pressable 
-              key={id}
-              onPress={() => setReviewSortOrder(id as any)}
-              style={[styles.sortChip, reviewSortOrder === id && styles.sortChipActive]}
+              key={opt.id}
+              onPress={() => setReviewSortOrder(opt.id as any)}
+              style={[styles.sortChip, reviewSortOrder === opt.id && styles.sortChipActive]}
             >
-              <Text style={[styles.sortChipText, reviewSortOrder === id && styles.sortChipTextActive]}>
-                {id.charAt(0).toUpperCase() + id.slice(1)}
+              <Text style={[styles.sortChipText, reviewSortOrder === opt.id && styles.sortChipTextActive]}>
+                {opt.label}
               </Text>
             </Pressable>
           ))}
@@ -1055,21 +1006,38 @@ function ReviewsSection({ reviews, averageRating, reviewSortOrder, setReviewSort
       </View>
 
       {reviews.length === 0 ? (
-        <Text style={styles.noReviewsText}>No reviews yet.</Text>
+        <Text style={styles.noReviewsText}>
+          No reviews yet. Go to your past bookings to leave a review.
+        </Text>
       ) : (
         <View style={styles.reviewsList}>
-          {reviews.slice(0, 5).map((r: any, idx: number) => (
+          {reviews.map((r: any, idx: number) => (
             <View key={r.id ?? idx} style={styles.reviewItem}>
               <View style={styles.reviewHeader}>
                 <View style={styles.reviewRatingRow}>
                   {[1,2,3,4,5].map((s) => (
-                    <Star key={s} size={12} color={s <= r.rating ? '#dcc093' : '#E5E7EB'} fill={s <= r.rating ? '#dcc093' : 'none'} />
+                    <Star
+                      key={s}
+                      size={13}
+                      color={s <= r.rating ? '#dcc093' : '#374151'}
+                      fill={s <= r.rating ? '#dcc093' : 'none'}
+                    />
                   ))}
+                  <Text style={styles.reviewRatingText}>{r.rating}/5</Text>
                 </View>
-                <Text style={styles.reviewDateText}>{formatDate(r.created_at)}</Text>
+
+                <View style={styles.reviewAuthorDateColumn}>
+                  {r.user?.full_name && (
+                    <Text style={styles.reviewAuthorText}>{r.user.full_name.toUpperCase()}</Text>
+                  )}
+                  {r.created_at && (
+                    <Text style={styles.reviewDateText}>{formatDate(r.created_at)}</Text>
+                  )}
+                </View>
               </View>
-              <Text style={styles.reviewAuthorText}>{r.user?.full_name || 'Anonymous'}</Text>
-              {r.comment && <Text style={styles.reviewCommentText}>{r.comment}</Text>}
+              {r.comment ? (
+                <Text style={styles.reviewCommentText}>{r.comment}</Text>
+              ) : null}
             </View>
           ))}
         </View>

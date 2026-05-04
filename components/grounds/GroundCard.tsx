@@ -30,6 +30,7 @@ interface GroundCardProps {
   /** Enable premium glass effect with full image background. */
   glass?: boolean;
   onUtilizationPress?: () => void;
+  hideTeamPrice?: boolean;
 }
 
 export default function GroundCard({
@@ -46,13 +47,14 @@ export default function GroundCard({
   showBookButton = false,
   glass = false,
   onUtilizationPress,
+  hideTeamPrice = false,
 }: GroundCardProps) {
   const { width } = useWindowDimensions();
   const isUltraNarrow = width < 350;
   
   const basePrice = displayPricePerUnit ?? ground.base_price_per_hour ?? 0;
   const teamPrice = Math.round(basePrice / 2);
-  const showTeamPrice = !(String(ground.pitch_type ?? '').toLowerCase().includes('box'));
+  const showTeamPrice = !hideTeamPrice && !(String(ground.pitch_type ?? '').toLowerCase().includes('box'));
 
   const isWeb = Platform.OS === 'web';
   const isLight = glass ? false : lightMode;

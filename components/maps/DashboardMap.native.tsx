@@ -33,8 +33,6 @@ export default function DashboardMap() {
     }
   };
 
-
-
   if (loading) {
     return (
       <View style={styles.loading}>

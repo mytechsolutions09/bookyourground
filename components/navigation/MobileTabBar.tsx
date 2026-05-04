@@ -29,7 +29,7 @@ function getActiveTab(
 ): 'home' | 'grounds' | 'bookings' | 'favorites' | 'profile' | 'find-opponent' | 'stats' | 'shop' | 'inventory' | 'find' {
   const root = segments[0];
   if (root === 'inventory') return 'inventory';
-  if (root === 'select-sport') return 'find';
+  if (root === 'select-sport' || root === 'search') return 'find';
   if (root === 'find-an-opponent') return 'find-opponent';
   if (root === 'ground' || root === 'grounds' || root === 'book-my-ground') {
     return 'grounds';
@@ -45,7 +45,7 @@ function getActiveTab(
   if (tab === 'cricket') return 'stats';
   if (tab === 'bookings') return 'bookings';
   if (tab === 'favorites') return 'favorites';
-  if (tab === 'find-an-opponent') return 'find-opponent';
+  if (tab === 'find-an-opponent' || tab === 'search') return 'find-opponent';
   if (tab === 'profile') return 'profile';
   if (tab === 'shop') return 'shop';
   if (tab === 'inventory') return 'inventory';
@@ -182,7 +182,7 @@ export default function MobileTabBar() {
       
       <Pressable
         style={styles.item}
-        onPress={() => activeTab === 'shop' ? go('/shop/cart', 'cart') : go('/select-sport', 'find')}
+        onPress={() => activeTab === 'shop' ? go('/shop/cart', 'cart') : go(Platform.OS === 'web' ? '/search' : '/select-sport', 'find')}
       >
         {activeTab === 'shop' ? (
           <View style={{ position: 'relative' }}>
@@ -196,8 +196,10 @@ export default function MobileTabBar() {
           </View>
         ) : (
           <>
-            <Search size={size} color={activeTab === 'find' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'find' ? 2.5 : 2} />
-            <Text style={[styles.label, { color: activeTab === 'find' ? ACTIVE : INACTIVE }]}>Find</Text>
+            <Search size={size} color={(activeTab === 'find' || activeTab === 'find-opponent') ? ACTIVE : INACTIVE} strokeWidth={(activeTab === 'find' || activeTab === 'find-opponent') ? 2.5 : 2} />
+            <Text style={[styles.label, { color: (activeTab === 'find' || activeTab === 'find-opponent') ? ACTIVE : INACTIVE }]}>
+              {Platform.OS === 'web' ? 'Search' : 'Find'}
+            </Text>
           </>
         )}
       </Pressable>

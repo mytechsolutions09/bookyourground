@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useIsCompact } from '@/hooks/useIsCompact';
 import {
   View,
   Text,
@@ -31,8 +32,8 @@ type LocationOption = {
   city: string;
   state: string;
 };
-
 export default function HeroWeb() {
+  const isMobile = useIsCompact();
   const { width, height } = useWindowDimensions();
   const [locations, setLocations] = useState<LocationOption[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<string>('');
@@ -47,8 +48,6 @@ export default function HeroWeb() {
 
   // Calendar State
   const [viewDate, setViewDate] = useState(new Date());
-
-  const isMobile = width < 900;
 
   useEffect(() => {
     const fetchLocations = async () => {

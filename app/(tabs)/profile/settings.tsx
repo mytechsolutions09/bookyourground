@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Platform, ScrollView, TextInput, Alert, ActivityIndicator, TouchableOpacity, Modal, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, Platform, ScrollView, TextInput, Alert, ActivityIndicator, TouchableOpacity, Modal, useWindowDimensions, Linking } from 'react-native';
 import { Mail, Phone, CheckCircle } from 'lucide-react-native';
 import { router } from 'expo-router';
 import WebLayout from '@/components/web/WebLayout';
@@ -206,12 +206,22 @@ function UserSettingsInner() {
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.menuItem, { borderBottomWidth: 0, paddingBottom: 0 }]}
-            onPress={() => router.push('/contact' as any)}
+            style={styles.menuItem}
+            onPress={() => router.push('/(tabs)/support' as any)}
           >
             <View>
-              <Text style={styles.menuItemTitle}>Contact Us</Text>
-              <Text style={styles.menuItemSubtitle}>Get in touch with our support team.</Text>
+              <Text style={styles.menuItemTitle}>Support Center</Text>
+              <Text style={styles.menuItemSubtitle}>Raise tickets and track your requests.</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={[styles.menuItem, { borderBottomWidth: 0, paddingBottom: 0 }]}
+            onPress={() => Linking.openURL('mailto:support@bookyourground.com')}
+          >
+            <View>
+              <Text style={styles.menuItemTitle}>Email Us</Text>
+              <Text style={styles.menuItemSubtitle}>support@bookyourground.com</Text>
             </View>
           </TouchableOpacity>
         </Card>

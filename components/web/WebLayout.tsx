@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import { useHasMounted } from '@/hooks/useHasMounted';
+import { useIsCompact } from '@/hooks/useIsCompact';
 import {
   View,
   Text,
@@ -86,8 +88,7 @@ const NavLink = ({
 }) => {
   const pathname = usePathname();
   const segments = useSegments();
-  const { width } = useWindowDimensions();
-  const isCompact = width < 900;
+  const isCompact = useIsCompact();
   
   const [hovered, setHovered] = useState(false);
   const normalize = (value: string) => {
@@ -165,6 +166,7 @@ const NavLink = ({
 };
 
 export default function WebLayout({ children, noCard, hideHeader, viewMode, showAddForm, isPublicNoSidebar: propIsPublicNoSidebar }: WebLayoutProps) {
+  const isCompact = useIsCompact();
   const { profile, signOut, user } = useAuth();
   const pathname = usePathname();
   const segments = useSegments();
@@ -187,7 +189,6 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
   const { isTabBarVisible } = useUI();
   const [isBottomBarVisible, setIsBottomBarVisible] = useState(true);
   const [isNavbarVisible, setIsNavbarVisible] = useState(true);
-  const isCompact = useMemo(() => width < 900, [width]);
   const isInTabs = useMemo(() => segments.includes('(tabs)'), [segments]);
   const groundsHref = isCompact ? '/grounds' : '/book-my-ground';
   const cleanPath = (pathname || '').split('?')[0];
@@ -701,6 +702,17 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                           style={[
                             styles.headerPrimaryButtonText,
                             scrolled && styles.headerPrimaryButtonTextScrolled,
+                            { color: '#00ea6b' }
+                          ]}
+                          onPress={() => router.push('/grounds' as any)}
+                        >
+                          GROUNDS
+                        </Text>
+
+                        <Text
+                          style={[
+                            styles.headerPrimaryButtonText,
+                            scrolled && styles.headerPrimaryButtonTextScrolled,
                             { color: '#dcc093' }
                           ]}
                           onPress={() => router.push('/shop' as any)}
@@ -742,11 +754,6 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                             source={{ uri: profile?.avatar_url || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' }}
                             style={styles.profileAvatar}
                           />
-                          {!((cleanPath === '/book-my-ground' || cleanPath === '/find-an-opponent')) && (
-                            <Text style={[styles.profileName, scrolled && styles.profileNameScrolled]}>
-                              {profile?.full_name?.split(' ')[0] || 'User'}
-                            </Text>
-                          )}
                         </TouchableOpacity>
                       </View>
                     )}
@@ -866,6 +873,16 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
             <View style={styles.headerRight}>
               {!isCompact && !isAdminLayout && (
                 <View style={{ flexDirection: 'row', gap: 20, alignItems: 'center' }}>
+
+                  <Text
+                    style={[
+                      styles.headerNavLink,
+                      (cleanPath === '/grounds' || cleanPath === '/(tabs)/grounds') ? { color: '#00ea6b', borderBottomWidth: 2, borderBottomColor: '#00ea6b', paddingBottom: 4, fontWeight: '700' } : { color: '#FFFFFF' }
+                    ]}
+                    onPress={() => router.push('/grounds' as any)}
+                  >
+                    GROUNDS
+                  </Text>
 
                   <Text
                     style={[
@@ -1173,7 +1190,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
           {[
             { label: 'Home', icon: House, href: '/' },
             { label: 'Grounds', icon: LandPlot, href: '/book-my-ground' },
-            { label: 'Opposition', icon: Swords, href: '/find-an-opponent' },
+            { label: 'Search', icon: Search, href: '/search' },
             { label: 'Shop', icon: ShoppingBag, href: '/shop' },
             { label: 'Cricket', icon: Trophy, href: '/cricket/player-profile' },
           ].map((item) => {
@@ -1181,7 +1198,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
             const isActive = cleanPath === item.href ||
               (item.label === 'Cricket' && cleanPath.startsWith('/cricket')) ||
               (item.label === 'Shop' && cleanPath.startsWith('/shop')) ||
-              (item.label === 'Opposition' && cleanPath.startsWith('/find-an-opponent')) ||
+              (item.label === 'Search' && cleanPath.startsWith('/search')) ||
               (item.href === '/grounds' && cleanPath === '/book-my-ground') ||
               (item.href === '/favorites' && cleanPath === '/favorites') ||
               (item.href === '/' && cleanPath === '');

@@ -1,8 +1,10 @@
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Platform, Modal, Pressable, ScrollView, TextInput, Switch, Alert, ActivityIndicator, Image, useWindowDimensions } from 'react-native';
+import { useIsCompact } from '@/hooks/useIsCompact';
+import { useHasMounted } from '@/hooks/useHasMounted';
 import { router } from 'expo-router';
-import { Plus, BarChart2 } from 'lucide-react-native';
+import { Plus, BarChart2, X as XIcon, Settings, Eye, Calendar, Download } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { supabase } from '@/lib/supabase';
@@ -59,9 +61,14 @@ export default function OwnerGroundsScreen() {
   const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
   const [loading, setLoading] = useState(true);
   const { width } = useWindowDimensions();
-  const isUltraNarrow = width < 350;
-  const isTablet = width >= 600 && width < 900;
-  const numColumns = Platform.OS === 'web' ? (width > 1200 ? 3 : (width > 800 ? 2 : 1)) : 1;
+  const hasMounted = useHasMounted();
+  const isCompact = useIsCompact();
+  
+  const isUltraNarrow = hasMounted ? width < 350 : false;
+  const isTablet = hasMounted ? (width >= 600 && width < 900) : false;
+  const numColumns = hasMounted 
+    ? (Platform.OS === 'web' ? (width > 1200 ? 3 : (width > 800 ? 2 : 1)) : 1)
+    : 1;
   const [selectedGroundId, setSelectedGroundId] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
@@ -553,6 +560,7 @@ export default function OwnerGroundsScreen() {
                 setUtilizationGroundId(item.id);
                 setShowUtilizationModal(true);
               }}
+              hideTeamPrice={true}
             />
           </View>
         )}
@@ -679,14 +687,16 @@ export default function OwnerGroundsScreen() {
               onPress={handleImportGround}
               variant="outline"
               size="small"
-              style={{ borderColor: '#BBF7D0', backgroundColor: '#F0FDF4' }}
-              textStyle={{ color: '#16A34A' }}
+              style={{ borderColor: '#BBF7D0', backgroundColor: '#F0FDF4', height: 36, paddingVertical: 0 }}
+              textStyle={{ color: '#16A34A', fontSize: 13 }}
             />
             <Button
               title="Add Ground"
               onPress={() => router.push('/(owner)/add-ground')}
               variant="primary"
               size="small"
+              style={{ height: 36, paddingVertical: 0 }}
+              textStyle={{ fontSize: 13 }}
             />
           </View>
         </View>
@@ -711,12 +721,11 @@ export default function OwnerGroundsScreen() {
                   {grounds.find(g => g.id === selectedGroundId)?.name}
                 </Text>
               </View>
-              <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setSelectedGroundId(null)}>
-                <Text style={styles.modalCloseText}>CLOSE</Text>
+              <TouchableOpacity style={styles.modalCloseBtnNew} onPress={() => setSelectedGroundId(null)}>
+                <XIcon size={20} color="#64748B" />
               </TouchableOpacity>
             </View>
-
-            <View style={{ padding: 16, gap: 12 }}>
+            <View style={{ padding: 24, gap: 16 }}>
               <Button
                 title="Edit Venue & Pricing"
                 onPress={() => {
@@ -725,23 +734,31 @@ export default function OwnerGroundsScreen() {
                 }}
                 variant="primary"
                 fullWidth
+                size="large"
+                style={styles.premiumGlassButton}
+                textStyle={styles.premiumGlassButtonText}
+                leftIcon={<Settings size={18} color="#FFFFFF" />}
               />
               
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <Button
-                  title="View Public Page"
+                  title="View Public"
                   onPress={() => {
                     const ground = grounds.find(g => g.id === selectedGroundId);
                     if (ground) router.push(makeGroundPath(ground) as any);
                   }}
                   variant="outline"
-                  style={{ flex: 1 }}
+                  style={{ flex: 1, height: 48, borderRadius: 16, borderColor: '#E2E8F0' }}
+                  textStyle={{ fontSize: 13, color: '#0F172A' }}
+                  leftIcon={<Eye size={16} color="#64748B" />}
                 />
                 <Button
-                  title="Manage Bookings"
-                  onPress={() => router.push('/(owner)/bookings')}
+                  title="Bookings"
+                  onPress={() => router.push('/(owner)/ground-bookings')}
                   variant="outline"
-                  style={{ flex: 1 }}
+                  style={{ flex: 1, height: 48, borderRadius: 16, borderColor: '#E2E8F0' }}
+                  textStyle={{ fontSize: 13, color: '#0F172A' }}
+                  leftIcon={<Calendar size={16} color="#64748B" />}
                 />
               </View>
 
@@ -753,6 +770,9 @@ export default function OwnerGroundsScreen() {
                 }}
                 variant="outline"
                 fullWidth
+                style={{ height: 48, borderRadius: 16, borderColor: '#E2E8F0', borderStyle: 'dashed' }}
+                textStyle={{ fontSize: 14, color: '#64748B' }}
+                leftIcon={<Download size={16} color="#94A3B8" />}
               />
             </View>
           </Card>
@@ -1020,7 +1040,7 @@ export default function OwnerGroundsScreen() {
         <Pressable style={styles.modalOverlay} onPress={() => setShowUtilizationModal(false)} />
         <View style={styles.modalWrap}>
           <Card style={[styles.modalCard, { width: 450, maxWidth: '95vw', padding: 0 }]}>
-            <View style={styles.utilDetailHeader}>
+            <View style={[styles.utilDetailHeader, { borderBottomWidth: 0 }]}>
               <View style={styles.utilDetailIconBox}>
                 <BarChart2 size={24} color="#059669" />
               </View>
@@ -1030,8 +1050,8 @@ export default function OwnerGroundsScreen() {
                   {grounds.find(g => g.id === utilizationGroundId)?.name}
                 </Text>
               </View>
-              <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setShowUtilizationModal(false)}>
-                <Text style={styles.modalCloseText}>CLOSE</Text>
+              <TouchableOpacity style={styles.modalCloseBtnNew} onPress={() => setShowUtilizationModal(false)}>
+                <XIcon size={20} color="#64748B" />
               </TouchableOpacity>
             </View>
 
@@ -1124,7 +1144,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   webHeader: {
-    paddingVertical: 12,
+    paddingVertical: 8,
     paddingHorizontal: 24,
     flexDirection: Platform.OS === 'web' ? 'row' : 'column',
     flexWrap: 'wrap',
@@ -1134,17 +1154,17 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F1F5F9',
     backgroundColor: '#FFFFFF',
     marginBottom: 0,
-    gap: 16,
+    gap: 12,
     width: '100%',
     maxWidth: 1400,
     alignSelf: 'center',
   },
   webTitle: {
     fontFamily: 'Inter',
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '900',
     color: '#0F172A',
-    letterSpacing: -0.5,
+    letterSpacing: -0.4,
   },
   title: {
     fontFamily: 'Inter',
@@ -1244,10 +1264,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-    marginBottom: 8,
+    paddingHorizontal: 24,
+    paddingTop: 24,
   },
   modalTitleNew: {
     fontFamily: 'Inter',
@@ -1272,6 +1290,30 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     color: '#64748B',
+  },
+  modalCloseBtnNew: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  premiumGlassButton: {
+    backgroundColor: '#01b854',
+    borderRadius: 16,
+    height: 54,
+    shadowColor: '#01b854',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  premiumGlassButtonText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 15,
+    fontFamily: 'Inter',
   },
   modalScroll: {
     overflow: 'visible',

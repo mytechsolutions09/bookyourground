@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Image, Alert, Platform, TextInput, Pressable, Linking } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { MapPin, Star, Heart } from 'lucide-react-native';
+import { MapPin, Star, Heart, Navigation2, Map as MapIcon } from 'lucide-react-native';
+import NativeMap from '@/components/grounds/NativeMap';
 import { supabase } from '@/lib/supabase';
 import { slugifyGroundSegment } from '@/utils/groundSlug';
 import { isCricketGroundType } from '@/utils/cricketGround';
@@ -578,6 +579,35 @@ export default function GroundDetailsScreen() {
           </Card>
 
           <Card style={styles.section}>
+            <Text style={styles.sectionTitle}>Location</Text>
+            {Platform.OS === 'web' ? (
+              <View style={styles.webMapPlaceholder}>
+                <Text style={styles.description}>
+                  {ground.address}, {ground.city}, {ground.state}
+                </Text>
+                {mapsUrl && (
+                  <Pressable onPress={() => Linking.openURL(mapsUrl)} style={styles.mapsLinkWrap}>
+                    <Text style={styles.mapsLinkText}>Open in Google Maps</Text>
+                  </Pressable>
+                )}
+              </View>
+            ) : (
+              <View style={{ height: 200, borderRadius: 16, overflow: 'hidden', backgroundColor: '#F1F5F9', marginBottom: 12 }}>
+                <NativeMap ground={ground} />
+                {mapsUrl && (
+                  <Pressable 
+                    onPress={() => Linking.openURL(mapsUrl)} 
+                    style={[styles.mapsLinkWrap, { position: 'absolute', bottom: 12, right: 12, backgroundColor: '#FFFFFF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 }]}
+                  >
+                    <Navigation2 size={14} color="#01b854" strokeWidth={2.5} />
+                    <Text style={[styles.mapsLinkText, { marginBottom: 0 }]}>Directions</Text>
+                  </Pressable>
+                )}
+              </View>
+            )}
+          </Card>
+
+          <Card style={styles.section}>
             <Text style={styles.sectionTitle}>Reviews</Text>
 
             {reviews.length === 0 && (
@@ -722,6 +752,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#F9FAFB',
+  },
+  mobileMapPlaceholder: {
+    height: 200,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderStyle: 'dashed',
+    gap: 8,
+  },
+  mobileMapPlaceholderText: {
+    fontFamily: 'Inter',
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
+    marginBottom: 8,
   },
   imageCard: {
     padding: 0,
@@ -1027,5 +1075,12 @@ const styles = StyleSheet.create({
   bookButton: {
     marginTop: 8,
     marginBottom: 32,
+  },
+  webMapPlaceholder: {
+    padding: 16,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
 });

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useIsCompact } from '@/hooks/useIsCompact';
 import {
   ScrollView,
   View,
@@ -45,9 +46,9 @@ export default function LandingScrollContent({
 }: {
   variant: Variant;
 }) {
+  const isCompact = useIsCompact();
   const isWeb = Platform.OS === 'web';
   const { width, height } = useWindowDimensions();
-  const isCompact = width < 900;
   const heroHeight = isCompact ? height : 850;
 
   if (isWeb && variant === 'web') {

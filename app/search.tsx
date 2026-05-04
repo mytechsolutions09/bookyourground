@@ -158,16 +158,21 @@ export default function SearchScreen() {
         gQuery = gQuery.eq('pitch_type', typKey);
       }
 
+      const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      let dow = '';
+      let rpcDate = date;
+
       if (date && date !== 'All') {
-        const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-        let dow = '';
         if (date === 'Today') {
+          rpcDate = new Date().toISOString().split('T')[0];
           dow = days[new Date().getDay()];
         } else if (date === 'Tomorrow') {
           const tomorrow = new Date();
           tomorrow.setDate(tomorrow.getDate() + 1);
+          rpcDate = tomorrow.toISOString().split('T')[0];
           dow = days[tomorrow.getDay()];
         } else {
+          rpcDate = date;
           dow = days[new Date(date).getDay()];
         }
         gQuery = gQuery.eq('time_slots.day_of_week', dow).eq('time_slots.is_available', true);
@@ -176,11 +181,11 @@ export default function SearchScreen() {
       let { data: gs } = await gQuery.limit(30);
 
       // 1.5 Filter grounds by slot if date and time are provided
-      if (date && date !== 'All' && time && gs && gs.length > 0) {
+      if (rpcDate && rpcDate !== 'All' && time && gs && gs.length > 0) {
         try {
           const { data: allowedData } = await supabase.rpc('available_ground_ids_for_slot', {
             p_ground_ids: gs.map(g => g.id),
-            p_booking_date: date,
+            p_booking_date: rpcDate,
             p_start_time: `${time}:00`,
           });
 

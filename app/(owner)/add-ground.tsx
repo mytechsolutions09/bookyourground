@@ -14,6 +14,7 @@ import {
   useWindowDimensions,
   Linking,
 } from 'react-native';
+import { useIsCompact } from '@/hooks/useIsCompact';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -85,7 +86,7 @@ function labelForSlotDays(days: DayOfWeek[]): string {
 
 export default function AddGroundScreen() {
   const { user } = useAuth();
-  const { width: windowWidth } = useWindowDimensions();
+  const isCompact = useIsCompact();
   const [loading, setLoading] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [locationRows, setLocationRows] = useState<any[]>([]);

@@ -166,7 +166,6 @@ function MultiMarkerMap({
         mapId={MAP_ID}
         gestureHandling={'greedy'}
         disableDefaultUI={false}
-        styles={CLEAN_MAP_STYLES}
         clickableIcons={false}
       >
         {grounds.map((g) => {

@@ -343,9 +343,9 @@ export default function OwnerInventoryScreen() {
   };
 
 
-  return (
-    <View style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
-      <MobileAppNavbar title="Inventory" titleColor="#00ea6b" />
+  const mainContent = (
+    <View style={{ flex: 1 }}>
+      {!isWeb && <MobileAppNavbar title="Inventory" titleColor="#00ea6b" />}
 
       {/* Filters bar */}
       <View style={{ backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#F0F0F0' }}>
@@ -393,7 +393,7 @@ export default function OwnerInventoryScreen() {
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 100 }}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} tintColor="#00ea6b" />}
+        refreshControl={!isWeb ? <RefreshControl refreshing={loading} onRefresh={loadData} tintColor="#00ea6b" /> : undefined}
       >
         {loading ? (
           <View style={{ padding: 60, alignItems: 'center' }}>
@@ -535,6 +535,22 @@ export default function OwnerInventoryScreen() {
           </View>
         </View>
       </Modal>
+    </View>
+  );
+
+  if (isWeb && !isSmall) {
+    return (
+      <WebLayout>
+        <View style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
+          {mainContent}
+        </View>
+      </WebLayout>
+    );
+  }
+
+  return (
+    <View style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
+      {mainContent}
     </View>
   );
 }

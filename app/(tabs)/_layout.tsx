@@ -11,6 +11,7 @@ import {
   Trophy,
   ShoppingBag,
   BarChart2,
+  Search,
 } from 'lucide-react-native';
 import { ActivityIndicator, Platform, useWindowDimensions, View, Pressable, StyleSheet, Text as RNText } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
@@ -51,6 +52,8 @@ const CustomTabBar = ({ state, descriptors, navigation, router, insets, isTabBar
           if (!isFocused && !event.defaultPrevented) {
             if (route.name === 'grounds') {
               router.push('/book-my-ground');
+            } else if (Platform.OS === 'web' && route.name === 'find-an-opponent') {
+              router.push('/search');
             } else {
               navigation.navigate(route.name);
             }
@@ -181,8 +184,8 @@ export default function TabLayout() {
           <Tabs.Screen
             name="find-an-opponent"
             options={{
-              title: 'Opposition',
-              tabBarIcon: ({ color, size }) => <Swords size={size} color={color} />,
+              title: Platform.OS === 'web' ? 'Search' : 'Opposition',
+              tabBarIcon: ({ color, size }) => Platform.OS === 'web' ? <Search size={size} color={color} /> : <Swords size={size} color={color} />,
             }}
           />
           <Tabs.Screen

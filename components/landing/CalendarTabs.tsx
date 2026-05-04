@@ -28,12 +28,20 @@ export default function CalendarTabs() {
   }, []);
 
   useEffect(() => {
-    if (typeof navigator !== 'undefined' && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        (err) => console.log("CalendarTabs location denied:", err)
-      );
-    }
+    const getPos = () => {
+      if (typeof navigator !== 'undefined' && navigator.geolocation) {
+        // On web, some browsers block geolocation on non-secure origins.
+        if (Platform.OS === 'web' && !window.isSecureContext) {
+          console.warn("Geolocation skipped: Insecure origin.");
+          return;
+        }
+        navigator.geolocation.getCurrentPosition(
+          (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+          (err) => console.log("CalendarTabs location denied:", err)
+        );
+      }
+    };
+    getPos();
   }, []);
 
   const loadAvailability = async (date: Date) => {
