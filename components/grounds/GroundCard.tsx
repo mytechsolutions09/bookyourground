@@ -52,7 +52,7 @@ export default function GroundCard({
   const { width } = useWindowDimensions();
   const isUltraNarrow = width < 350;
   
-  const basePrice = displayPricePerUnit ?? ground.base_price_per_hour ?? 0;
+  const basePrice = displayPricePerUnit ?? ground.min_price ?? ground.base_price_per_hour ?? 0;
   const teamPrice = Math.round(basePrice / 2);
   const showTeamPrice = !hideTeamPrice && !(String(ground.pitch_type ?? '').toLowerCase().includes('box'));
 
@@ -194,125 +194,129 @@ export default function GroundCard({
         </View>
 
         <View style={[styles.content, isUltraNarrow && { padding: 12 }]}>
-          <View style={[
-            styles.titlePriceRow, 
-            (isUltraNarrow || compact) && { flexDirection: 'column', alignItems: 'flex-start', gap: 4 }
-          ]}>
-            <Text 
-              style={[
-                styles.name, 
-                Platform.OS !== 'web' && styles.nameNative,
-                compact && styles.nameCompact,
-                isUltraNarrow && { fontSize: 18 }
-              ]} 
-              numberOfLines={2}
-            >
-              {ground.name}
-            </Text>
-            <View style={styles.priceBlock}>
-              {!isUltraNarrow && <Text style={styles.priceFromLabel}>from</Text>}
-              <Text style={[styles.priceValueNew, compact && { fontSize: 16 }]}>₹{basePrice}</Text>
-              <Text style={styles.priceUnitNew}>/slot</Text>
-            </View>
-          </View>
-
-          <View style={[
-            styles.locationBadgeRow,
-            isUltraNarrow && { flexDirection: 'column', alignItems: 'flex-start', gap: 8 }
-          ]}>
-            <View style={styles.locationRowShort}>
-              <MapPin size={isUltraNarrow ? 14 : 16} color="#64748B" />
-              <Text style={[styles.locationTextNew, isUltraNarrow && { fontSize: 13 }]}>
-                {ground.city}, {ground.state}
+          <View>
+            <View style={[
+              styles.titlePriceRow, 
+              (isUltraNarrow || compact) && { flexDirection: 'column', alignItems: 'flex-start', gap: 4 }
+            ]}>
+              <Text 
+                style={[
+                  styles.name, 
+                  Platform.OS !== 'web' && styles.nameNative,
+                  compact && styles.nameCompact,
+                  isUltraNarrow && { fontSize: 18 }
+                ]} 
+                numberOfLines={2}
+              >
+                {ground.name}
               </Text>
+              <View style={styles.priceBlock}>
+                {!isUltraNarrow && <Text style={styles.priceFromLabel}>from</Text>}
+                <Text style={[styles.priceValueNew, compact && { fontSize: 16 }]}>₹{basePrice}</Text>
+                <Text style={styles.priceUnitNew}>/slot</Text>
+              </View>
             </View>
-            
-            {showTeamPrice && (
-              <View style={[styles.teamPriceBadge, isUltraNarrow && { paddingHorizontal: 6, paddingVertical: 4 }]}>
-                <Users size={isUltraNarrow ? 12 : 14} color="#059669" />
-                <Text style={[styles.teamPriceBadgeText, isUltraNarrow && { fontSize: 11 }]}>
-                  ₹{teamPrice}/team
+
+            <View style={[
+              styles.locationBadgeRow,
+              isUltraNarrow && { flexDirection: 'column', alignItems: 'flex-start', gap: 8 }
+            ]}>
+              <View style={styles.locationRowShort}>
+                <MapPin size={isUltraNarrow ? 14 : 16} color="#64748B" />
+                <Text style={[styles.locationTextNew, isUltraNarrow && { fontSize: 13 }]}>
+                  {ground.city}, {ground.state}
                 </Text>
               </View>
+              
+              {showTeamPrice && (
+                <View style={[styles.teamPriceBadge, isUltraNarrow && { paddingHorizontal: 6, paddingVertical: 4 }]}>
+                  <Users size={isUltraNarrow ? 12 : 14} color="#059669" />
+                  <Text style={[styles.teamPriceBadgeText, isUltraNarrow && { fontSize: 11 }]}>
+                    ₹{teamPrice}/team
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            {/* Rating Row */}
+            <View style={styles.ratingRowNew}>
+              <View style={[styles.ratingBadgeNew, reviewCount === 0 && { backgroundColor: '#94A3B8' }]}>
+                <Star size={14} color="#FFFFFF" fill="#FFFFFF" />
+                <Text style={styles.ratingTextNew}>
+                  {reviewCount > 0 ? averageRating.toFixed(1) : '0.0'}
+                </Text>
+              </View>
+              <View style={styles.ratingDivider} />
+              <Text style={styles.reviewCountText}>
+                {reviewCount > 0 ? `${reviewCount} Reviews` : 'No reviews yet'}
+              </Text>
+            </View>
+
+            {/* Utilization Card */}
+            {occupancyRate !== null && (
+              <TouchableOpacity 
+                activeOpacity={onUtilizationPress ? 0.7 : 1}
+                onPress={(e) => {
+                  if (onUtilizationPress) {
+                    e.stopPropagation();
+                    onUtilizationPress();
+                  }
+                }}
+                style={[styles.utilizationCard, compact && { padding: 12, marginBottom: 12 }]}
+              >
+                <View style={[styles.utilizationHeader, compact && { marginBottom: 8 }]}>
+                  <View style={[styles.utilizationIconBox, compact && { width: 28, height: 28, borderRadius: 6 }]}>
+                    <BarChart2 size={compact ? 14 : 16} color="#059669" />
+                  </View>
+                  <Text style={[styles.utilizationTitle, compact && { fontSize: 14 }]}>Utilization</Text>
+                  <Text style={[styles.utilizationPercentage, compact && { fontSize: 16 }]}>{Math.round(occupancyRate)}%</Text>
+                </View>
+                
+                <View style={styles.progressContainer}>
+                  <View style={styles.progressBarBg}>
+                    <View 
+                      style={[
+                        styles.progressBarFill, 
+                        { width: `${Math.min(100, occupancyRate)}%` }
+                      ]} 
+                    />
+                  </View>
+                </View>
+                
+                <Text style={[styles.utilizationSub, compact && { fontSize: 11 }, isUltraNarrow && { fontSize: 10 }]}>
+                  Usually busy on evenings and weekends
+                </Text>
+              </TouchableOpacity>
             )}
           </View>
 
-          {/* Rating Row */}
-          <View style={styles.ratingRowNew}>
-            <View style={[styles.ratingBadgeNew, reviewCount === 0 && { backgroundColor: '#94A3B8' }]}>
-              <Star size={14} color="#FFFFFF" fill="#FFFFFF" />
-              <Text style={styles.ratingTextNew}>
-                {reviewCount > 0 ? averageRating.toFixed(1) : '0.0'}
-              </Text>
-            </View>
-            <View style={styles.ratingDivider} />
-            <Text style={styles.reviewCountText}>
-              {reviewCount > 0 ? `${reviewCount} Reviews` : 'No reviews yet'}
-            </Text>
-          </View>
-
-          {/* Utilization Card */}
-          {occupancyRate !== null && (
-            <TouchableOpacity 
-              activeOpacity={onUtilizationPress ? 0.7 : 1}
-              onPress={(e) => {
-                if (onUtilizationPress) {
-                  e.stopPropagation();
-                  onUtilizationPress();
-                }
-              }}
-              style={[styles.utilizationCard, compact && { padding: 12, marginBottom: 12 }]}
-            >
-              <View style={[styles.utilizationHeader, compact && { marginBottom: 8 }]}>
-                <View style={[styles.utilizationIconBox, compact && { width: 28, height: 28, borderRadius: 6 }]}>
-                  <BarChart2 size={compact ? 14 : 16} color="#059669" />
+          <View>
+            {/* Bottom Action: View Maps */}
+            {mapsUrl && (
+              <TouchableOpacity
+                style={styles.viewMapsAction}
+                onPress={() => {
+                  void Linking.openURL(mapsUrl);
+                }}
+              >
+                <View style={styles.viewMapsLeft}>
+                  <View style={styles.viewMapsIconBox}>
+                    <MapIcon size={18} color="#059669" />
+                  </View>
+                  <Text style={styles.viewMapsText}>View Maps</Text>
                 </View>
-                <Text style={[styles.utilizationTitle, compact && { fontSize: 14 }]}>Utilization</Text>
-                <Text style={[styles.utilizationPercentage, compact && { fontSize: 16 }]}>{Math.round(occupancyRate)}%</Text>
-              </View>
-              
-              <View style={styles.progressContainer}>
-                <View style={styles.progressBarBg}>
-                  <View 
-                    style={[
-                      styles.progressBarFill, 
-                      { width: `${Math.min(100, occupancyRate)}%` }
-                    ]} 
-                  />
-                </View>
-              </View>
-              
-              <Text style={[styles.utilizationSub, compact && { fontSize: 11 }, isUltraNarrow && { fontSize: 10 }]}>
-                Usually busy on evenings and weekends
-              </Text>
-            </TouchableOpacity>
-          )}
-
-          {/* Bottom Action: View Maps */}
-          {mapsUrl && (
-            <TouchableOpacity
-              style={styles.viewMapsAction}
-              onPress={() => {
-                void Linking.openURL(mapsUrl);
-              }}
-            >
-              <View style={styles.viewMapsLeft}>
-                <View style={styles.viewMapsIconBox}>
-                  <MapIcon size={18} color="#059669" />
-                </View>
-                <Text style={styles.viewMapsText}>View Maps</Text>
-              </View>
-              <ChevronRight size={18} color="#94A3B8" />
-            </TouchableOpacity>
-          )}
-
-          {showBookButton && (
-            <View style={styles.bookButtonWrapper}>
-              <TouchableOpacity style={styles.bookButton} onPress={onPress}>
-                <Text style={styles.bookButtonText}>Book this slot</Text>
+                <ChevronRight size={18} color="#94A3B8" />
               </TouchableOpacity>
-            </View>
-          )}
+            )}
+
+            {showBookButton && (
+              <View style={styles.bookButtonWrapper}>
+                <TouchableOpacity style={styles.bookButton} onPress={onPress}>
+                  <Text style={styles.bookButtonText}>Book this slot</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
         </View>
       </Card>
     );
@@ -333,10 +337,12 @@ const styles = StyleSheet.create({
   touchable: {
     width: '100%',
     alignSelf: 'stretch',
+    flex: 1,
   },
   touchableCompact: {
     marginBottom: 8,
     paddingHorizontal: 0,
+    flex: 1,
   },
   card: {
     padding: 0,
@@ -344,9 +350,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     width: '100%',
     alignSelf: 'stretch',
+    flex: 1,
   },
   cardCompact: {
     marginBottom: 8,
+    flex: 1,
   },
   cardNative: {
     backgroundColor: '#FFFFFF',
@@ -409,6 +417,8 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
+    flex: 1,
+    justifyContent: 'space-between',
   },
   titlePriceRow: {
     flexDirection: 'row',

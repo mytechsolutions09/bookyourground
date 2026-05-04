@@ -190,7 +190,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
   const [isBottomBarVisible, setIsBottomBarVisible] = useState(true);
   const [isNavbarVisible, setIsNavbarVisible] = useState(true);
   const isInTabs = useMemo(() => segments.includes('(tabs)'), [segments]);
-  const groundsHref = isCompact ? '/grounds' : '/book-my-ground';
+   const groundsHref = '/book-my-ground';
   const cleanPath = (pathname || '').split('?')[0];
   const isLanding = cleanPath === '/' || cleanPath === '';
   const isMarketing = (cleanPath === '/book-my-ground' || cleanPath === '/find-an-opponent' || cleanPath === '/grounds' || cleanPath === '/(tabs)/grounds') && !segments.includes('(admin)');
@@ -704,7 +704,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                             scrolled && styles.headerPrimaryButtonTextScrolled,
                             { color: '#00ea6b' }
                           ]}
-                          onPress={() => router.push('/grounds' as any)}
+                          onPress={() => router.push('/book-my-ground' as any)}
                         >
                           GROUNDS
                         </Text>
@@ -877,9 +877,9 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                   <Text
                     style={[
                       styles.headerNavLink,
-                      (cleanPath === '/grounds' || cleanPath === '/(tabs)/grounds') ? { color: '#00ea6b', borderBottomWidth: 2, borderBottomColor: '#00ea6b', paddingBottom: 4, fontWeight: '700' } : { color: '#FFFFFF' }
+                      (cleanPath === '/grounds' || cleanPath === '/(tabs)/grounds' || cleanPath === '/book-my-ground') ? { color: '#00ea6b', borderBottomWidth: 2, borderBottomColor: '#00ea6b', paddingBottom: 4, fontWeight: '700' } : { color: '#FFFFFF' }
                     ]}
-                    onPress={() => router.push('/grounds' as any)}
+                    onPress={() => router.push('/book-my-ground' as any)}
                   >
                     GROUNDS
                   </Text>
@@ -1179,7 +1179,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
         </View>
       </View>
 
-      {isCompact && !isInTabs && !isCheckoutPage && (
+      {isCompact && !isInTabs && !isCheckoutPage && cleanPath !== '/search' && (
         <View style={[
           styles.bottomBar,
           (!isBottomBarVisible || !isTabBarVisible) && { 

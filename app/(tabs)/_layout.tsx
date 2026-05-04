@@ -198,8 +198,8 @@ export default function TabLayout() {
           <Tabs.Screen
             name="cricket"
             options={{
-              title: 'Stats',
-              tabBarIcon: ({ color, size }) => <BarChart2 size={size} color={color} />,
+              title: 'Cricket',
+              tabBarIcon: ({ color, size }) => <Trophy size={size} color={color} />,
             }}
           />
 

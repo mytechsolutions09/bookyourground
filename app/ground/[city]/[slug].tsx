@@ -512,37 +512,7 @@ export default function GroundDetailsPrettyUrlScreen() {
               <View style={styles.webRightColumn}>
                 <View style={styles.stickySidebar}>
                   <Card style={styles.sidebarBookingCard}>
-                    <Text style={styles.sidebarPriceTitle}>Book Your Slot</Text>
-                    {(() => {
-                      const slots = (ground as any).time_slots || [];
-                      const prices = slots
-                        .filter((s: any) => s.is_available && s.custom_price != null)
-                        .map((s: any) => Number(s.custom_price));
-                      
-                      if (prices.length === 0) return null;
-                      const minPrice = Math.min(...prices);
-                      const maxPrice = Math.max(...prices);
-                      const hasVariation = minPrice !== maxPrice;
 
-                      return (
-                        <View style={styles.sidebarPriceRow}>
-                          {currentTotal !== null ? (
-                            <>
-                              <Text style={styles.sidebarPriceUnit}>Total: </Text>
-                              <Text style={styles.sidebarPriceValue}>₹{currentTotal.toLocaleString('en-IN')}</Text>
-                            </>
-                          ) : (
-                            <>
-                              <Text style={styles.sidebarPriceUnit}>{hasVariation ? 'Starting ' : 'Price '}</Text>
-                              <Text style={styles.sidebarPriceValue}>₹{minPrice.toLocaleString('en-IN')}</Text>
-                              <Text style={styles.sidebarPriceUnit}>
-                                {String(ground.pitch_type ?? '').toLowerCase().includes('box') ? ' /hr' : ' /match'}
-                              </Text>
-                            </>
-                          )}
-                        </View>
-                      );
-                    })()}
                     
                     <View style={styles.formContainer}>
                       <LandingBookingForm

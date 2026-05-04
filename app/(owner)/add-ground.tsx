@@ -86,6 +86,7 @@ function labelForSlotDays(days: DayOfWeek[]): string {
 
 export default function AddGroundScreen() {
   const { user } = useAuth();
+  const { width } = useWindowDimensions();
   const isCompact = useIsCompact();
   const [loading, setLoading] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
@@ -185,7 +186,7 @@ export default function AddGroundScreen() {
     Number.isFinite(draftCustomPrice) &&
     draftCustomPrice > 0;
 
-  const showPreviewRightPanel = Platform.OS === 'web' && windowWidth >= 900;
+  const showPreviewRightPanel = Platform.OS === 'web' && width >= 900;
 
   const mapsUrl = useMemo(() => {
     const { address, city, state, pincode, latitude, longitude } = formData;

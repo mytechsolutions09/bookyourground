@@ -1531,7 +1531,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
 
         const buildLoginReturnRoute = (): string => {
           if (useLandingSearchFlow) {
-            return separateSearchResults ? '/book-my-ground' : '/(tabs)/grounds';
+            return '/book-my-ground';
           }
           if (initialGroundId && selectedGround) {
             const q = new URLSearchParams();
@@ -1549,7 +1549,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
             const qs = q.toString();
             return `/grounds/${encodeURIComponent(initialGroundId)}${qs ? `?${qs}` : ''}`;
           }
-          return '/(tabs)/grounds';
+          return '/book-my-ground';
         };
 
         const loginUrl = `/(auth)/login?redirect=${encodeURIComponent(buildLoginReturnRoute())}`;

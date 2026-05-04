@@ -21,6 +21,7 @@ import Animated, {
   useSharedValue, 
   useAnimatedStyle, 
   withTiming, 
+  withSpring,
   Easing, 
   useAnimatedScrollHandler,
   runOnJS
@@ -112,6 +113,14 @@ export default function CricketLayout() {
   const lastScrollY = useSharedValue(0);
   const tabScrollPositions = useSharedValue(TABS.map(() => 0));
   const activeTabIndex = useSharedValue(initialIndex);
+
+  // Sub-tab animation indexes
+  const statsIdx = useSharedValue(0);
+  const teamsIdx = useSharedValue(0);
+  const tournamentsIdx = useSharedValue(0);
+  const trophiesIdx = useSharedValue(0);
+  const badgesIdx = useSharedValue(0);
+  const connectionsIdx = useSharedValue(0);
 
   const HEADER_MAX_HEIGHT = 300;
   const HEADER_MIN_HEIGHT = 105;
@@ -484,6 +493,47 @@ export default function CricketLayout() {
      };
   });
 
+  const mainIndicatorStyle = useAnimatedStyle(() => {
+    // Offset calculation matching the gap: 20 + approx tab width
+    const baseOffset = 80; 
+    return {
+      transform: [
+        { translateX: withSpring(activeTabIndex.value * baseOffset + 16, { damping: 25, stiffness: 120 }) }
+      ],
+      width: 48,
+    };
+  });
+
+  const statsPillStyle = useAnimatedStyle(() => ({
+    left: withSpring((statsIdx.value / 4) * 100 + '%', { damping: 25 }),
+    width: '25%',
+  }));
+
+  const teamsPillStyle = useAnimatedStyle(() => ({
+    left: withSpring((teamsIdx.value / 4) * 100 + '%', { damping: 25 }),
+    width: '25%',
+  }));
+
+  const tournamentsPillStyle = useAnimatedStyle(() => ({
+    left: withSpring((tournamentsIdx.value / 4) * 100 + '%', { damping: 25 }),
+    width: '25%',
+  }));
+
+  const trophiesPillStyle = useAnimatedStyle(() => ({
+    left: withSpring((trophiesIdx.value / 2) * 100 + '%', { damping: 25 }),
+    width: '50%',
+  }));
+
+  const badgesPillStyle = useAnimatedStyle(() => ({
+    left: withSpring((badgesIdx.value / 3) * 100 + '%', { damping: 25 }),
+    width: '33.33%',
+  }));
+
+  const connectionsPillStyle = useAnimatedStyle(() => ({
+    left: withSpring((connectionsIdx.value / 2) * 100 + '%', { damping: 25 }),
+    width: '50%',
+  }));
+
   const miniHeaderTitleOpacity = useAnimatedStyle(() => {
     return {
       opacity: Math.min(1, animatedScrollY.value / 150),
@@ -730,9 +780,10 @@ export default function CricketLayout() {
            </View>
         </View>
 
+        {/* Horizontal Slider Tabs - Clean & Smooth */}
         {!pathname.includes('/scoring') && (
-          <View style={[styles.tabsStickyWrapper, { position: 'absolute', bottom: 0, left: 0, right: 0 }]}>
-            <View style={styles.tabsInnerRow}>
+          <View style={styles.tabsStickyWrapper}>
+            <View style={styles.tabsContainer}>
               <ScrollView 
                 ref={tabScrollRef}
                 horizontal 
@@ -740,19 +791,25 @@ export default function CricketLayout() {
                 contentContainerStyle={styles.tabsScroll} 
                 style={{ flex: 1 }}
               >
-                 {TABS.map((tab) => (
-                   <TouchableOpacity 
-                     key={tab.id} 
-                     style={styles.tab} 
-                     onPress={() => onTabPress(tab.id, tab.index)}
-                   >
-                     <View style={[styles.tabUnderline, activeTabId === tab.id && styles.tabUnderlineActive]}>
-                       <Text style={[styles.tabText, activeTabId === tab.id && styles.tabTextActive]}>{tab.label}</Text>
-                     </View>
-                   </TouchableOpacity>
-                 ))}
+                <Animated.View style={[styles.mainTabIndicator, mainIndicatorStyle]} />
+                
+                {TABS.map((tab) => (
+                  <TouchableOpacity 
+                    key={tab.id} 
+                    style={styles.tab} 
+                    onPress={() => onTabPress(tab.id, tab.index)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[
+                      styles.tabText, 
+                      activeTabId === tab.id && styles.tabTextActive
+                    ]}>
+                      {tab.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </ScrollView>
-              
+
               <TouchableOpacity 
                 style={styles.plusIconWrapper}
                 onPress={() => setIsActionModalVisible(true)}
@@ -765,90 +822,120 @@ export default function CricketLayout() {
             {(activeTabId === 'stats' || activeTabId === 'trophies' || activeTabId === 'badges' || activeTabId === 'connections' || activeTabId === 'teams' || activeTabId === 'tournaments') ? (
               <View style={styles.subBarInjection}>
                 <View style={styles.toggleGroup}>
-                  {activeTabId === 'tournaments' && [
-                    { id: 'all', label: 'All' },
-                    { id: 'participate', label: 'Participate' },
-                    { id: 'network', label: 'Network' },
-                    { id: 'nearby', label: 'Nearby' },
-                  ].map((chip) => (
-                    <TouchableOpacity
-                      key={chip.id}
-                      onPress={() => setTournamentsTab(chip.id)}
-                      style={[styles.toggleBtn, tournamentsTab === chip.id && styles.toggleBtnActive]}
-                    >
-                      <Text style={[styles.toggleBtnText, tournamentsTab === chip.id && styles.toggleBtnTextActive]}>{chip.label}</Text>
-                    </TouchableOpacity>
-                  ))}
+                  {activeTabId === 'tournaments' && (
+                    <>
+                      <Animated.View style={[styles.subTabPill, tournamentsPillStyle]} />
+                      {[
+                        { id: 'all', label: 'All' },
+                        { id: 'participate', label: 'Participate' },
+                        { id: 'network', label: 'Network' },
+                        { id: 'nearby', label: 'Nearby' },
+                      ].map((chip) => (
+                        <TouchableOpacity
+                          key={chip.id}
+                          onPress={() => setTournamentsTab(chip.id)}
+                          style={styles.toggleBtn}
+                        >
+                          <Text style={[styles.toggleBtnText, tournamentsTab === chip.id && styles.toggleBtnTextActive]}>{chip.label}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </>
+                  )}
 
-                  {activeTabId === 'teams' && [
-                    { id: 'your', label: 'Your' },
-                    { id: 'all', label: 'All' },
-                    { id: 'top teams', label: 'Top Teams' },
-                    { id: 'networks', label: 'Networks' },
-                  ].map((chip) => (
-                    <TouchableOpacity
-                      key={chip.id}
-                      onPress={() => setTeamsTab(chip.id)}
-                      style={[styles.toggleBtn, teamsTab === chip.id && styles.toggleBtnActive]}
-                    >
-                      <Text style={[styles.toggleBtnText, teamsTab === chip.id && styles.toggleBtnTextActive]}>{chip.label}</Text>
-                    </TouchableOpacity>
-                  ))}
+                  {activeTabId === 'teams' && (
+                    <>
+                      <Animated.View style={[styles.subTabPill, teamsPillStyle]} />
+                      {[
+                        { id: 'your', label: 'Your' },
+                        { id: 'all', label: 'All' },
+                        { id: 'top teams', label: 'Top Teams' },
+                        { id: 'networks', label: 'Networks' },
+                      ].map((chip) => (
+                        <TouchableOpacity
+                          key={chip.id}
+                          onPress={() => setTeamsTab(chip.id)}
+                          style={styles.toggleBtn}
+                        >
+                          <Text style={[styles.toggleBtnText, teamsTab === chip.id && styles.toggleBtnTextActive]}>{chip.label}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </>
+                  )}
                   
-                  {activeTabId === 'stats' && [
-                    { id: 'batting', label: 'Batting' },
-                    { id: 'bowling', label: 'Bowling' },
-                    { id: 'fielding', label: 'Fielding' },
-                    { id: 'captain', label: 'Captain' },
-                  ].map((chip) => (
-                    <TouchableOpacity
-                      key={chip.id}
-                      onPress={() => setStatsTab(chip.id)}
-                      style={[styles.toggleBtn, statsTab === chip.id && styles.toggleBtnActive]}
-                    >
-                      <Text style={[styles.toggleBtnText, statsTab === chip.id && styles.toggleBtnTextActive]}>{chip.label}</Text>
-                    </TouchableOpacity>
-                  ))}
+                  {activeTabId === 'stats' && (
+                    <>
+                      <Animated.View style={[styles.subTabPill, statsPillStyle]} />
+                      {[
+                        { id: 'batting', label: 'Batting' },
+                        { id: 'bowling', label: 'Bowling' },
+                        { id: 'fielding', label: 'Fielding' },
+                        { id: 'captain', label: 'Captain' },
+                      ].map((chip) => (
+                        <TouchableOpacity
+                          key={chip.id}
+                          onPress={() => setStatsTab(chip.id)}
+                          style={styles.toggleBtn}
+                        >
+                          <Text style={[styles.toggleBtnText, statsTab === chip.id && styles.toggleBtnTextActive]}>{chip.label}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </>
+                  )}
 
-                  {activeTabId === 'trophies' && [
-                    { id: 'matches', label: 'Matches' },
-                    { id: 'tournaments', label: 'Tournaments' },
-                  ].map((chip) => (
-                    <TouchableOpacity
-                      key={chip.id}
-                      onPress={() => setTrophiesTab(chip.id)}
-                      style={[styles.toggleBtn, trophiesTab === chip.id && styles.toggleBtnActive]}
-                    >
-                      <Text style={[styles.toggleBtnText, trophiesTab === chip.id && styles.toggleBtnTextActive]}>{chip.label}</Text>
-                    </TouchableOpacity>
-                  ))}
+                  {activeTabId === 'trophies' && (
+                    <>
+                      <Animated.View style={[styles.subTabPill, trophiesPillStyle]} />
+                      {[
+                        { id: 'matches', label: 'Matches' },
+                        { id: 'tournaments', label: 'Tournaments' },
+                      ].map((chip) => (
+                        <TouchableOpacity
+                          key={chip.id}
+                          onPress={() => setTrophiesTab(chip.id)}
+                          style={styles.toggleBtn}
+                        >
+                          <Text style={[styles.toggleBtnText, trophiesTab === chip.id && styles.toggleBtnTextActive]}>{chip.label}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </>
+                  )}
 
-                  {activeTabId === 'badges' && [
-                    { id: 'batting', label: 'Batting' },
-                    { id: 'bowling', label: 'Bowling' },
-                    { id: 'fielding', label: 'Fielding' },
-                  ].map((chip) => (
-                    <TouchableOpacity
-                      key={chip.id}
-                      onPress={() => setBadgesTab(chip.id)}
-                      style={[styles.toggleBtn, badgesTab === chip.id && styles.toggleBtnActive]}
-                    >
-                      <Text style={[styles.toggleBtnText, badgesTab === chip.id && styles.toggleBtnTextActive]}>{chip.label}</Text>
-                    </TouchableOpacity>
-                  ))}
+                  {activeTabId === 'badges' && (
+                    <>
+                      <Animated.View style={[styles.subTabPill, badgesPillStyle]} />
+                      {[
+                        { id: 'batting', label: 'Batting' },
+                        { id: 'bowling', label: 'Bowling' },
+                        { id: 'fielding', label: 'Fielding' },
+                      ].map((chip) => (
+                        <TouchableOpacity
+                          key={chip.id}
+                          onPress={() => setBadgesTab(chip.id)}
+                          style={styles.toggleBtn}
+                        >
+                          <Text style={[styles.toggleBtnText, badgesTab === chip.id && styles.toggleBtnTextActive]}>{chip.label}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </>
+                  )}
 
-                  {activeTabId === 'connections' && [
-                    { id: 'followers', label: 'Followers' },
-                    { id: 'following', label: 'Following' },
-                  ].map((chip) => (
-                    <TouchableOpacity
-                      key={chip.id}
-                      onPress={() => setConnectionsTab(chip.id)}
-                      style={[styles.toggleBtn, connectionsTab === chip.id && styles.toggleBtnActive]}
-                    >
-                      <Text style={[styles.toggleBtnText, connectionsTab === chip.id && styles.toggleBtnTextActive]}>{chip.label}</Text>
-                    </TouchableOpacity>
-                  ))}
+                  {activeTabId === 'connections' && (
+                    <>
+                      <Animated.View style={[styles.subTabPill, connectionsPillStyle]} />
+                      {[
+                        { id: 'followers', label: 'Followers' },
+                        { id: 'following', label: 'Following' },
+                      ].map((chip) => (
+                        <TouchableOpacity
+                          key={chip.id}
+                          onPress={() => setConnectionsTab(chip.id)}
+                          style={styles.toggleBtn}
+                        >
+                          <Text style={[styles.toggleBtnText, connectionsTab === chip.id && styles.toggleBtnTextActive]}>{chip.label}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </>
+                  )}
                 </View>
               </View>
             ) : (
@@ -903,6 +990,48 @@ export default function CricketLayout() {
     </View>
   );
 
+  // Added synchronization effects for sub-tabs
+  React.useEffect(() => {
+    const list = ['batting', 'bowling', 'fielding', 'captain'];
+    statsIdx.value = withSpring(list.indexOf(statsTab), { damping: 20 });
+  }, [statsTab]);
+
+  React.useEffect(() => {
+    const list = ['your', 'all', 'top teams', 'networks'];
+    teamsIdx.value = withSpring(list.indexOf(teamsTab), { damping: 20 });
+  }, [teamsTab]);
+
+  React.useEffect(() => {
+    const list = ['all', 'participate', 'network', 'nearby'];
+    tournamentsIdx.value = withSpring(list.indexOf(tournamentsTab), { damping: 20 });
+  }, [tournamentsTab]);
+
+  React.useEffect(() => {
+    const list = ['matches', 'tournaments'];
+    trophiesIdx.value = withSpring(list.indexOf(trophiesTab), { damping: 20 });
+  }, [trophiesTab]);
+
+  React.useEffect(() => {
+    const list = ['batting', 'bowling', 'fielding'];
+    badgesIdx.value = withSpring(list.indexOf(badgesTab), { damping: 20 });
+  }, [badgesTab]);
+
+  React.useEffect(() => {
+    const list = ['followers', 'following'];
+    connectionsIdx.value = withSpring(list.indexOf(connectionsTab), { damping: 20 });
+  }, [connectionsTab]);
+
+  if (pathname.includes('/scoring')) {
+    if (Platform.OS === 'web' && !isCompact) {
+      return (
+        <WebLayout noCard>
+          <Slot />
+        </WebLayout>
+      );
+    }
+    return <Slot />;
+  }
+
   if (Platform.OS === 'web' && !isCompact) {
     return (
       <WebLayout noCard>
@@ -921,35 +1050,61 @@ const styles = StyleSheet.create({
   },
   tabsStickyWrapper: {
     backgroundColor: '#FFFFFF',
-    paddingTop: Platform.OS === 'web' ? 0 : 0,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
     zIndex: 10,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
   },
-  tabsInnerRow: {
+  tabsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     maxWidth: 1200,
     alignSelf: 'center',
     width: '100%',
-    paddingHorizontal: 16,
-    height: 52,
-    // Removed border here to place it on the indicator itself
+    paddingHorizontal: 0,
   },
   tabsScroll: {
-    paddingVertical: 5,
-    gap: 4, // Reduced from 8
+    paddingTop: 12,
+    paddingHorizontal: 16,
+    gap: 20,
   },
   tab: {
-    paddingHorizontal: 12, // Reduced from 16
-    backgroundColor: 'transparent',
+    paddingBottom: 12,
+    minWidth: 60,
+    alignItems: 'center',
   },
-  tabUnderline: {
-    height: '100%',
-    justifyContent: 'center',
-    borderBottomWidth: 3,
-    borderBottomColor: 'transparent',
+  tabText: {
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: '400',
+    color: '#94A3B8',
   },
-  tabUnderlineActive: {
-    borderBottomColor: '#01b854',
+  tabTextActive: {
+    fontWeight: '600',
+    color: '#01b854',
+  },
+  mainTabIndicator: {
+    position: 'absolute',
+    bottom: 0,
+    height: 2,
+    backgroundColor: '#01b854',
+    borderRadius: 2,
+    zIndex: 1,
+  },
+  subTabPill: {
+    position: 'absolute',
+    top: 2,
+    bottom: 2,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 3,
   },
   profileHeaderContent: {
     paddingHorizontal: 20,

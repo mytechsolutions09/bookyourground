@@ -1,10 +1,8 @@
 import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Platform, Modal, Pressable, ScrollView, TextInput, Switch, Alert, ActivityIndicator, Image, useWindowDimensions } from 'react-native';
-import { useIsCompact } from '@/hooks/useIsCompact';
-import { useHasMounted } from '@/hooks/useHasMounted';
 import { router } from 'expo-router';
-import { Plus, BarChart2, X as XIcon, Settings, Eye, Calendar, Download } from 'lucide-react-native';
+import { Plus } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { supabase } from '@/lib/supabase';
@@ -61,14 +59,9 @@ export default function OwnerGroundsScreen() {
   const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
   const [loading, setLoading] = useState(true);
   const { width } = useWindowDimensions();
-  const hasMounted = useHasMounted();
-  const isCompact = useIsCompact();
-  
-  const isUltraNarrow = hasMounted ? width < 350 : false;
-  const isTablet = hasMounted ? (width >= 600 && width < 900) : false;
-  const numColumns = hasMounted 
-    ? (Platform.OS === 'web' ? (width > 1200 ? 3 : (width > 800 ? 2 : 1)) : 1)
-    : 1;
+  const isUltraNarrow = width < 350;
+  const isTablet = width >= 600 && width < 900;
+  const numColumns = Platform.OS === 'web' ? (width > 1400 ? 4 : (width > 1100 ? 3 : (width > 768 ? 2 : 1))) : 1;
   const [selectedGroundId, setSelectedGroundId] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
@@ -79,8 +72,6 @@ export default function OwnerGroundsScreen() {
   const [editLocationKey, setEditLocationKey] = useState<string>('');
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [occupancyRates, setOccupancyRates] = useState<Record<string, number>>({});
-  const [showUtilizationModal, setShowUtilizationModal] = useState(false);
-  const [utilizationGroundId, setUtilizationGroundId] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -543,24 +534,19 @@ export default function OwnerGroundsScreen() {
     }
   };
 
-  const content = Platform.OS === 'web' ? (
+  const content = (
     <View style={styles.container}>
       <FlatList
         data={grounds}
         renderItem={({ item }) => (
-          <View style={styles.cardWrapper}>
+          <View style={{ flex: 1 }}>
             <GroundCard
               ground={item}
               onPress={() =>
                 setSelectedGroundId((prev) => (prev === item.id ? null : item.id))
               }
-              compact={numColumns > 1}
+              compact={Platform.OS === 'web'}
               occupancyRate={occupancyRates[item.id] ?? null}
-              onUtilizationPress={() => {
-                setUtilizationGroundId(item.id);
-                setShowUtilizationModal(true);
-              }}
-              hideTeamPrice={true}
             />
           </View>
         )}
@@ -586,89 +572,6 @@ export default function OwnerGroundsScreen() {
         }
       />
     </View>
-  ) : (
-    <FlatList
-      data={grounds}
-      keyExtractor={item => item.id}
-      refreshControl={<RefreshControl refreshing={loading} onRefresh={loadGrounds} />}
-      contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
-      ListHeaderComponent={
-        <TouchableOpacity
-          onPress={() => router.push('/(owner)/add-ground')}
-          style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#01b854', borderRadius: 14, padding: 14, marginBottom: 16 }}
-        >
-          <Plus size={18} color="#fff" />
-          <Text style={{ fontSize: 14, fontWeight: '700', color: '#fff' }}>Add New Ground</Text>
-        </TouchableOpacity>
-      }
-      ListEmptyComponent={
-        <View style={{ padding: 40, alignItems: 'center' }}>
-          <Text style={{ color: '#6B7280', fontSize: 14, textAlign: 'center' }}>
-            {loading ? 'Loading...' : 'No grounds found'}
-          </Text>
-        </View>
-      }
-      renderItem={({ item }) => (
-        <TouchableOpacity
-          onPress={() => setSelectedGroundId(prev => prev === item.id ? null : item.id)}
-          style={{ backgroundColor: '#fff', borderRadius: 16, marginBottom: 12, borderWidth: 1, borderColor: '#E2E8F0', overflow: 'hidden' }}
-        >
-          {/* Ground image */}
-          {item.ground_images?.[0]?.image_url ? (
-            <Image source={{ uri: item.ground_images[0].image_url }} style={{ width: '100%', height: 140 }} resizeMode="cover" />
-          ) : (
-            <View style={{ width: '100%', height: 100, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ color: '#9CA3AF', fontSize: 12 }}>No image</Text>
-            </View>
-          )}
-          <View style={{ padding: 14 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827' }}>{item.name}</Text>
-                <Text style={{ fontSize: 13, color: '#6B7280', marginTop: 3 }}>{item.city}, {item.state}</Text>
-              </View>
-              <View style={{ backgroundColor: item.active ? '#ECFDF5' : '#FEF2F2', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: item.active ? '#059669' : '#DC2626' }}>
-                  {item.active ? 'ACTIVE' : 'INACTIVE'}
-                </Text>
-              </View>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10 }}>
-              <View style={{ backgroundColor: '#F3F4F6', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-                <Text style={{ fontSize: 11, fontWeight: '600', color: '#374151' }}>{item.pitch_type}</Text>
-              </View>
-              {occupancyRates[item.id] != null && (
-                <View style={{ backgroundColor: '#F0FDF4', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-                  <Text style={{ fontSize: 11, fontWeight: '600', color: '#059669' }}>
-                    {Math.round(occupancyRates[item.id])}% utilized
-                  </Text>
-                </View>
-              )}
-            </View>
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-              <TouchableOpacity
-                onPress={() => startEditGround(item)}
-                style={{ flex: 1, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, padding: 10, alignItems: 'center' }}
-              >
-                <Text style={{ fontSize: 13, fontWeight: '600', color: '#374151' }}>Edit</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => router.push(makeGroundPath(item) as any)}
-                style={{ flex: 1, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, padding: 10, alignItems: 'center' }}
-              >
-                <Text style={{ fontSize: 13, fontWeight: '600', color: '#374151' }}>View</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => router.push('/(owner)/ground-bookings')}
-                style={{ flex: 1, backgroundColor: '#01b854', borderRadius: 10, padding: 10, alignItems: 'center' }}
-              >
-                <Text style={{ fontSize: 13, fontWeight: '700', color: '#fff' }}>Bookings</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </TouchableOpacity>
-      )}
-    />
   );
 
   const finalContent = (
@@ -687,16 +590,14 @@ export default function OwnerGroundsScreen() {
               onPress={handleImportGround}
               variant="outline"
               size="small"
-              style={{ borderColor: '#BBF7D0', backgroundColor: '#F0FDF4', height: 36, paddingVertical: 0 }}
-              textStyle={{ color: '#16A34A', fontSize: 13 }}
+              style={{ borderColor: '#BBF7D0', backgroundColor: '#F0FDF4' }}
+              textStyle={{ color: '#16A34A' }}
             />
             <Button
               title="Add Ground"
               onPress={() => router.push('/(owner)/add-ground')}
               variant="primary"
               size="small"
-              style={{ height: 36, paddingVertical: 0 }}
-              textStyle={{ fontSize: 13 }}
             />
           </View>
         </View>
@@ -714,18 +615,19 @@ export default function OwnerGroundsScreen() {
         <Pressable style={styles.modalOverlay} onPress={() => setSelectedGroundId(null)} />
         <View style={styles.modalWrap}>
           <Card style={[styles.modalCard, { width: 400, maxWidth: '90vw' }]}>
-            <View style={styles.modalHeaderNew}>
+            <View style={styles.modalHeader}>
               <View>
-                <Text style={styles.modalTitleNew}>Manage Ground</Text>
-                <Text style={styles.modalSubtitleNew}>
+                <Text style={styles.modalTitle}>Manage Ground</Text>
+                <Text style={{ fontSize: 13, color: '#64748B' }}>
                   {grounds.find(g => g.id === selectedGroundId)?.name}
                 </Text>
               </View>
-              <TouchableOpacity style={styles.modalCloseBtnNew} onPress={() => setSelectedGroundId(null)}>
-                <XIcon size={20} color="#64748B" />
+              <TouchableOpacity onPress={() => setSelectedGroundId(null)}>
+                <Text style={{ color: '#64748B', fontWeight: '800' }}>CLOSE</Text>
               </TouchableOpacity>
             </View>
-            <View style={{ padding: 24, gap: 16 }}>
+
+            <View style={{ padding: 16, gap: 12 }}>
               <Button
                 title="Edit Venue & Pricing"
                 onPress={() => {
@@ -734,31 +636,23 @@ export default function OwnerGroundsScreen() {
                 }}
                 variant="primary"
                 fullWidth
-                size="large"
-                style={styles.premiumGlassButton}
-                textStyle={styles.premiumGlassButtonText}
-                leftIcon={<Settings size={18} color="#FFFFFF" />}
               />
               
               <View style={{ flexDirection: 'row', gap: 12 }}>
                 <Button
-                  title="View Public"
+                  title="View Public Page"
                   onPress={() => {
                     const ground = grounds.find(g => g.id === selectedGroundId);
                     if (ground) router.push(makeGroundPath(ground) as any);
                   }}
                   variant="outline"
-                  style={{ flex: 1, height: 48, borderRadius: 16, borderColor: '#E2E8F0' }}
-                  textStyle={{ fontSize: 13, color: '#0F172A' }}
-                  leftIcon={<Eye size={16} color="#64748B" />}
+                  style={{ flex: 1 }}
                 />
                 <Button
-                  title="Bookings"
-                  onPress={() => router.push('/(owner)/ground-bookings')}
+                  title="Manage Bookings"
+                  onPress={() => router.push('/(owner)/bookings')}
                   variant="outline"
-                  style={{ flex: 1, height: 48, borderRadius: 16, borderColor: '#E2E8F0' }}
-                  textStyle={{ fontSize: 13, color: '#0F172A' }}
-                  leftIcon={<Calendar size={16} color="#64748B" />}
+                  style={{ flex: 1 }}
                 />
               </View>
 
@@ -770,9 +664,6 @@ export default function OwnerGroundsScreen() {
                 }}
                 variant="outline"
                 fullWidth
-                style={{ height: 48, borderRadius: 16, borderColor: '#E2E8F0', borderStyle: 'dashed' }}
-                textStyle={{ fontSize: 14, color: '#64748B' }}
-                leftIcon={<Download size={16} color="#94A3B8" />}
               />
             </View>
           </Card>
@@ -1031,86 +922,6 @@ export default function OwnerGroundsScreen() {
           </Card>
         </View>
       </Modal>
-      <Modal
-        transparent
-        visible={showUtilizationModal}
-        animationType="slide"
-        onRequestClose={() => setShowUtilizationModal(false)}
-      >
-        <Pressable style={styles.modalOverlay} onPress={() => setShowUtilizationModal(false)} />
-        <View style={styles.modalWrap}>
-          <Card style={[styles.modalCard, { width: 450, maxWidth: '95vw', padding: 0 }]}>
-            <View style={[styles.utilDetailHeader, { borderBottomWidth: 0 }]}>
-              <View style={styles.utilDetailIconBox}>
-                <BarChart2 size={24} color="#059669" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.utilDetailTitle}>Utilization Breakdown</Text>
-                <Text style={styles.utilDetailSubtitle}>
-                  {grounds.find(g => g.id === utilizationGroundId)?.name}
-                </Text>
-              </View>
-              <TouchableOpacity style={styles.modalCloseBtnNew} onPress={() => setShowUtilizationModal(false)}>
-                <XIcon size={20} color="#64748B" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={{ padding: 24 }}>
-              <View style={styles.utilMainCard}>
-                <Text style={styles.utilMainLabel}>This Month's Score</Text>
-                <Text style={styles.utilMainValue}>
-                  {Math.round(occupancyRates[utilizationGroundId || ''] ?? 0)}%
-                </Text>
-                <View style={styles.utilProgressBarBg}>
-                   <View 
-                     style={[
-                       styles.utilProgressBarFill, 
-                       { width: `${Math.round(occupancyRates[utilizationGroundId || ''] ?? 0)}%` }
-                     ]} 
-                   />
-                </View>
-              </View>
-
-              <Text style={styles.utilSectionHeader}>How it's calculated?</Text>
-              <View style={styles.utilCalcCard}>
-                <Text style={styles.utilCalcText}>
-                  Your utilization rate is based on activity in the <Text style={{ fontWeight: '700' }}>current calendar month</Text>.
-                </Text>
-                <View style={styles.utilCalcRow}>
-                  <View style={styles.utilCalcItem}>
-                    <Text style={styles.utilCalcVal}>Monthly</Text>
-                    <Text style={styles.utilCalcLab}>Time Window</Text>
-                  </View>
-                  <View style={styles.utilCalcDivider} />
-                  <View style={styles.utilCalcItem}>
-                    <Text style={styles.utilCalcVal}>Confirmed</Text>
-                    <Text style={styles.utilCalcLab}>Booking Status</Text>
-                  </View>
-                </View>
-                
-                <View style={styles.utilFormulaBox}>
-                  <Text style={styles.utilFormulaText}>
-                    (Confirmed Bookings / Total Possible Slots) × 100
-                  </Text>
-                </View>
-                
-                <Text style={[styles.utilCalcText, { marginTop: 16, fontSize: 13, color: '#64748B' }]}>
-                  This represents how effectively your venue is being used compared to your available weekly schedule.
-                </Text>
-              </View>
-
-              <View style={styles.utilTipsCard}>
-                <Text style={styles.utilTipsTitle}>Tips to increase utilization:</Text>
-                <Text style={styles.utilTipsText}>• Add more time slots for peak hours.</Text>
-                <Text style={styles.utilTipsText}>• Offer morning discounts during weekdays.</Text>
-                <Text style={styles.utilTipsText}>• Ensure your ground images are high quality.</Text>
-              </View>
-              
-              <View style={{ height: 20 }} />
-            </ScrollView>
-          </Card>
-        </View>
-      </Modal>
     </>
   );
 
@@ -1118,11 +929,7 @@ export default function OwnerGroundsScreen() {
     return <WebLayout>{finalContent}</WebLayout>;
   }
 
-  return (
-    <View style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
-      {finalContent}
-    </View>
-  );
+  return finalContent;
 }
 
 const IS_WEB = Platform.OS === 'web';
@@ -1135,8 +942,8 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#FFFFFF',
-    padding: 12,
-    paddingTop: Platform.OS === 'web' ? 24 : 56,
+    padding: 16,
+    paddingTop: Platform.OS === 'web' ? 48 : 64,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
     flexDirection: 'row',
@@ -1144,27 +951,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   webHeader: {
-    paddingVertical: 8,
-    paddingHorizontal: 24,
+    paddingVertical: 16,
+    paddingTop: 0,
     flexDirection: Platform.OS === 'web' ? 'row' : 'column',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
-    backgroundColor: '#FFFFFF',
-    marginBottom: 0,
-    gap: 12,
-    width: '100%',
-    maxWidth: 1400,
-    alignSelf: 'center',
+    marginBottom: 16,
+    gap: 16,
   },
   webTitle: {
     fontFamily: 'Inter',
-    fontSize: 20,
-    fontWeight: '900',
+    fontSize: 28,
+    fontWeight: '700',
     color: '#0F172A',
-    letterSpacing: -0.4,
+    letterSpacing: -0.5,
   },
   title: {
     fontFamily: 'Inter',
@@ -1189,18 +992,11 @@ const styles = StyleSheet.create({
   list: {
     padding: 16,
     paddingBottom: 100,
-    alignItems: 'center',
   },
   listRowWeb: {
-    justifyContent: 'flex-start',
-    width: '100%',
-    maxWidth: 1600,
+    flexDirection: 'row',
+    alignItems: 'stretch',
     gap: 16,
-  },
-  cardWrapper: {
-    paddingBottom: 16,
-    flex: 1,
-    maxWidth: 420,
   },
   editorCard: {
     marginBottom: 16,
@@ -1249,71 +1045,31 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     maxHeight: '90%',
-    borderRadius: 32,
-    overflow: 'hidden',
+    padding: 20,
+    borderRadius: 24,
+    overflow: 'visible',
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#F1F5F9',
     shadowColor: '#000',
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.15,
     shadowRadius: 30,
-    shadowOffset: { width: 0, height: 20 },
-    elevation: 10,
+    shadowOffset: { width: 0, height: 10 },
   },
-  modalHeaderNew: {
+  modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 24,
+    gap: 10,
+    marginBottom: 10,
   },
-  modalTitleNew: {
+  modalTitle: {
     fontFamily: 'Inter',
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '800',
     color: '#0F172A',
+    flex: 1,
     letterSpacing: -0.5,
-  },
-  modalSubtitleNew: {
-    fontFamily: 'Inter',
-    fontSize: 14,
-    color: '#64748B',
-    marginTop: 2,
-  },
-  modalCloseBtn: {
-    padding: 8,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 8,
-  },
-  modalCloseText: {
-    fontFamily: 'Inter',
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#64748B',
-  },
-  modalCloseBtnNew: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#F1F5F9',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  premiumGlassButton: {
-    backgroundColor: '#01b854',
-    borderRadius: 16,
-    height: 54,
-    shadowColor: '#01b854',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 10,
-    elevation: 4,
-  },
-  premiumGlassButtonText: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-    fontSize: 15,
-    fontFamily: 'Inter',
   },
   modalScroll: {
     overflow: 'visible',
@@ -1642,152 +1398,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
     backgroundColor: '#F8FAFC',
-  },
-  // Utilization Detail Styles
-  utilDetailHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-    gap: 16,
-  },
-  utilDetailIconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: '#ECFDF5',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  utilDetailTitle: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#0F172A',
-    fontFamily: 'Inter',
-  },
-  utilDetailSubtitle: {
-    fontSize: 13,
-    color: '#64748B',
-    marginTop: 2,
-    fontFamily: 'Inter',
-  },
-  utilMainCard: {
-    backgroundColor: '#059669',
-    borderRadius: 24,
-    padding: 24,
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  utilMainLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: 'rgba(255,255,255,0.8)',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginBottom: 8,
-  },
-  utilMainValue: {
-    fontSize: 48,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    letterSpacing: -1,
-  },
-  utilProgressBarBg: {
-    height: 6,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    width: '100%',
-    borderRadius: 3,
-    marginTop: 16,
-    overflow: 'hidden',
-  },
-  utilProgressBarFill: {
-    height: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 3,
-  },
-  utilSectionHeader: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#1E293B',
-    marginBottom: 12,
-    fontFamily: 'Inter',
-  },
-  utilCalcCard: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    marginBottom: 24,
-  },
-  utilCalcText: {
-    fontSize: 15,
-    color: '#475569',
-    lineHeight: 22,
-    fontFamily: 'Inter',
-  },
-  utilCalcRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 20,
-    paddingTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-  },
-  utilCalcItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  utilCalcVal: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  utilCalcLab: {
-    fontSize: 11,
-    color: '#64748B',
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  utilCalcDivider: {
-    width: 1,
-    height: 24,
-    backgroundColor: '#E2E8F0',
-  },
-  utilFormulaBox: {
-    backgroundColor: '#ECFDF5',
-    padding: 12,
-    borderRadius: 12,
-    marginTop: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#D1FAE5',
-  },
-  utilFormulaText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#059669',
-    fontFamily: 'Inter',
-  },
-  utilTipsCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-  },
-  utilTipsTitle: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginBottom: 12,
-  },
-  utilTipsText: {
-    fontSize: 14,
-    color: '#64748B',
-    lineHeight: 24,
-    fontFamily: 'Inter',
   },
 });
 

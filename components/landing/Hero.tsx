@@ -181,7 +181,7 @@ export default function Hero() {
                     styles.discoveryCta,
                     pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }
                   ]}
-                  onPress={() => router.push('/(tabs)/grounds' as any)}
+                  onPress={() => router.push('/book-my-ground' as any)}
                 >
                   <Text style={styles.discoveryCtaText}>Explore All Grounds</Text>
                   <ChevronRight size={18} color="#FFFFFF" />

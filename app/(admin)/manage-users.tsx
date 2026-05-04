@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, TouchableOpacity, Platform, TextInput, Switch } from 'react-native';
-import { User, Shield, Search, X, Mail, Phone, Calendar, ChevronRight, UserCircle2 } from 'lucide-react-native';
+import { User, Shield, Search, X, Mail, Phone, Calendar, ChevronRight, UserCircle2, Trash2 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { Profile } from '@/types';
 import { UserRole } from '@/types/database';
@@ -208,6 +208,50 @@ export default function ManageUsersScreen() {
     }
   };
 
+  const deleteUser = async (userId: string) => {
+    const performDelete = async () => {
+      try {
+        setLoading(true);
+        // Use the new RPC to delete from auth.users (cascades everything)
+        const { error } = await supabase.rpc('delete_user_permanently', {
+          target_user_id: userId
+        });
+
+        if (error) {
+          console.error('Deletion error:', error);
+          throw error;
+        }
+        
+        if (Platform.OS !== 'web') Alert.alert('Success', 'User deleted successfully');
+        else alert('User deleted successfully');
+        
+        loadUsers();
+        setSelectedUserId(null);
+      } catch (error: any) {
+        console.error('Caught deletion error:', error);
+        if (Platform.OS === 'web') alert('Error: ' + error.message);
+        else Alert.alert('Error', error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm('Are you sure you want to PERMANENTLY DELETE this user? This cannot be undone.')) {
+        performDelete();
+      }
+    } else {
+      Alert.alert(
+        'Delete User',
+        'Are you sure you want to PERMANENTLY DELETE this user? This cannot be undone.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete', style: 'destructive', onPress: performDelete },
+        ]
+      );
+    }
+  };
+
   const getRoleLabel = (role: UserRole) => {
     switch (role) {
       case 'ground_owner': return 'Ground Owner';
@@ -317,9 +361,14 @@ export default function ManageUsersScreen() {
           </View>
 
           <View style={[styles.cell, styles.colActions]}>
-             <View style={styles.webIconButton}>
-                <Text style={styles.webIconButtonText}>Manage Role</Text>
-                <ChevronRight size={14} color="#10b981" />
+             <View style={styles.webActionsRow}>
+                <TouchableOpacity 
+                   style={styles.webIconButton}
+                   onPress={() => setSelectedUserId(isExpanded ? null : item.id)}
+                >
+                   <Text style={styles.webIconButtonText}>Manage</Text>
+                   <ChevronRight size={14} color="#10b981" />
+                </TouchableOpacity>
              </View>
           </View>
         </TouchableOpacity>
@@ -393,6 +442,16 @@ export default function ManageUsersScreen() {
               </View>
             </View>
 
+            <View style={styles.webDangerZone}>
+               <TouchableOpacity 
+                 style={styles.webDeleteBtn}
+                 onPress={() => deleteUser(item.id)}
+               >
+                  <Trash2 size={14} color="#EF4444" />
+                  <Text style={styles.webDeleteBtnText}>Delete User Account</Text>
+               </TouchableOpacity>
+            </View>
+
             <View style={styles.footerMeta}>
               <Calendar size={12} color="#94A3B8" />
               <Text style={styles.footerMetaText}>Account Created: {new Date(item.created_at).toLocaleDateString()}</Text>
@@ -432,7 +491,13 @@ export default function ManageUsersScreen() {
               style={styles.mobileButton} 
               onPress={() => setSelectedUserId(selectedUserId === item.id ? null : item.id)}
             >
-                <Text style={styles.mobileButtonText}>Update Role</Text>
+                <Text style={styles.mobileButtonText}>Update User</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.mobileButton, { backgroundColor: '#FEE2E2', marginTop: 8 }]} 
+              onPress={() => deleteUser(item.id)}
+            >
+                <Text style={[styles.mobileButtonText, { color: '#EF4444' }]}>Delete User</Text>
             </TouchableOpacity>
         </View>
 
@@ -921,6 +986,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#10b981',
   },
+  webActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 12,
+  },
+  deleteIconButton: {
+    padding: 6,
+    borderRadius: 6,
+    backgroundColor: '#FEF2F2',
+  },
   expandedContent: {
     backgroundColor: '#F0FDF4',
     paddingHorizontal: 24,
@@ -1037,6 +1113,30 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#6B7280',
     fontWeight: '500',
+  },
+  webDangerZone: {
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(239, 68, 68, 0.1)',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  webDeleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FEE2E2',
+  },
+  webDeleteBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#EF4444',
   },
 
   // Mobile Styles

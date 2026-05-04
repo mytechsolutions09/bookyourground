@@ -91,6 +91,7 @@ export interface Database {
           active: boolean;
           created_at: string;
           updated_at: string;
+          min_price: number | null;
         };
         Insert: {
           id?: string;
@@ -118,6 +119,7 @@ export interface Database {
           active?: boolean;
           created_at?: string;
           updated_at?: string;
+          min_price?: number | null;
         };
         Update: {
           id?: string;
@@ -145,6 +147,7 @@ export interface Database {
           active?: boolean;
           created_at?: string;
           updated_at?: string;
+          min_price?: number | null;
         };
       };
       ground_images: {

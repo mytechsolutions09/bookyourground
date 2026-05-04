@@ -12,6 +12,7 @@ import {
   Image,
   ScrollView,
 } from 'react-native';
+import { Calendar as RNCalendar } from 'react-native-calendars';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import WebLayout from '@/components/web/WebLayout';
@@ -50,6 +51,7 @@ export default function SearchScreen() {
   const [types, setTypes] = useState<GroundType[]>([]);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showTypeModal, setShowTypeModal] = useState(false);
+  const [showDateModal, setShowDateModal] = useState(false);
   const [showTimeModal, setShowTimeModal] = useState(false);
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
 
@@ -315,6 +317,10 @@ export default function SearchScreen() {
         }
       }
       
+      if (item.min_price !== null && item.min_price !== undefined) {
+        return Number(item.min_price);
+      }
+
       const availablePrices = item.time_slots
         ?.filter((s: any) => s.is_available && s.custom_price != null)
         .map((s: any) => Number(s.custom_price));
@@ -552,33 +558,19 @@ export default function SearchScreen() {
                   style={styles.sidebarSearchInput}
                   value={query}
                   onChangeText={setQuery}
-                  placeholder="Keywords..."
+                  placeholder="Search city, venue or team..."
                   placeholderTextColor="#9CA3AF"
                   onSubmitEditing={() => performSearch(query, locationKey, typeKey)}
                   returnKeyType="search"
                 />
               </View>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mobileTabs}>
-                {(['all', 'grounds', 'matches'] as const).map(t => (
-                  <Pressable 
-                    key={t}
-                    onPress={() => setActiveTab(t)}
-                    style={[
-                      styles.tab, 
-                      activeTab === t && styles.tabActive
-                    ]}
-                  >
-                    <Text style={[
-                      styles.tabText, 
-                      activeTab === t && styles.tabTextActive
-                    ]}>
-                        {labels[t].toUpperCase()}
-                    </Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
 
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.mobileFiltersSlider}>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                contentContainerStyle={styles.mobileFiltersSlider}
+                style={styles.filtersScrollView}
+              >
                 <Pressable style={styles.mobileFilterPill} onPress={() => setShowLocationModal(true)}>
                   <MapPin size={12} color={locationKey ? '#01b854' : '#6B7280'} />
                   <Text style={[styles.mobileFilterPillText, locationKey && styles.mobileFilterPillTextActive]}>
@@ -586,10 +578,7 @@ export default function SearchScreen() {
                   </Text>
                 </Pressable>
 
-                <Pressable style={styles.mobileFilterPill} onPress={() => {
-                  const nextDate = dateKey === 'All' ? 'Today' : dateKey === 'Today' ? 'Tomorrow' : 'All';
-                  setDateKey(nextDate);
-                }}>
+                <Pressable style={styles.mobileFilterPill} onPress={() => setShowDateModal(true)}>
                   <Calendar size={12} color={dateKey !== 'All' ? '#01b854' : '#6B7280'} />
                   <Text style={[styles.mobileFilterPillText, dateKey !== 'All' && styles.mobileFilterPillTextActive]}>
                     {dateKey === 'All' || dateKey === 'Today' || dateKey === 'Tomorrow' ? dateKey : new Date(dateKey).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
@@ -614,14 +603,14 @@ export default function SearchScreen() {
           )}
 
           {/* Inline Modals for Mobile */}
-          {isCompact && (showLocationModal || showTypeModal || showTimeModal) && (
+          {isCompact && (showLocationModal || showTypeModal || showTimeModal || showDateModal) && (
             <View style={styles.mobileFilterDropdownOverlay}>
               <View style={styles.mobileFilterDropdownContent}>
                 <View style={styles.mobileDropdownHeader}>
                   <Text style={styles.mobileDropdownTitle}>
-                    {showLocationModal ? 'Select Location' : showTypeModal ? 'Select Ground Type' : 'Select Time'}
+                    {showLocationModal ? 'Select Location' : showTypeModal ? 'Select Ground Type' : showDateModal ? 'Select Date' : 'Select Time'}
                   </Text>
-                  <Pressable onPress={() => { setShowLocationModal(false); setShowTypeModal(false); setShowTimeModal(false); }}>
+                  <Pressable onPress={() => { setShowLocationModal(false); setShowTypeModal(false); setShowTimeModal(false); setShowDateModal(false); }}>
                     <Text style={styles.closeText}>Done</Text>
                   </Pressable>
                 </View>
@@ -647,6 +636,48 @@ export default function SearchScreen() {
                           <Text style={styles.dropdownOptionText}>{t.label || t.name}</Text>
                         </Pressable>
                       ))}
+                    </>
+                  ) : showDateModal ? (
+                    <>
+                      {['All', 'Today', 'Tomorrow'].map(d => (
+                        <Pressable 
+                          key={d} 
+                          style={styles.dropdownOption} 
+                          onPress={() => { setDateKey(d); setShowDateModal(false); }}
+                        >
+                          <Text style={styles.dropdownOptionText}>{d} {d === 'All' ? 'Dates' : ''}</Text>
+                        </Pressable>
+                      ))}
+                      <View style={styles.calendarWrapper}>
+                        <RNCalendar
+                          current={dateKey && dateKey !== 'All' && dateKey !== 'Today' && dateKey !== 'Tomorrow' ? dateKey : new Date().toISOString().split('T')[0]}
+                          minDate={new Date().toISOString().split('T')[0]}
+                          onDayPress={(day: any) => {
+                            setDateKey(day.dateString);
+                            setShowDateModal(false);
+                          }}
+                          markedDates={{
+                            [dateKey && dateKey !== 'All' && dateKey !== 'Today' && dateKey !== 'Tomorrow' ? dateKey : '']: {
+                              selected: true,
+                              disableTouchEvent: true,
+                              selectedColor: '#01b854',
+                              selectedTextColor: '#ffffff'
+                            }
+                          }}
+                          theme={{
+                            todayTextColor: '#01b854',
+                            arrowColor: '#01b854',
+                            selectedDayBackgroundColor: '#01b854',
+                            selectedDayTextColor: '#ffffff',
+                            textDayFontFamily: 'Inter',
+                            textMonthFontFamily: 'Inter',
+                            textDayHeaderFontFamily: 'Inter',
+                            textDayFontWeight: '600',
+                            textMonthFontWeight: '800',
+                            textDayHeaderFontWeight: '800',
+                          }}
+                        />
+                      </View>
                     </>
                   ) : (
                     <>
@@ -894,6 +925,12 @@ const styles = StyleSheet.create({
     color: '#01b854',
     fontWeight: '700',
   },
+  calendarWrapper: {
+    marginTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    paddingTop: 12,
+  },
   resultsArea: {
     flex: 1,
   },
@@ -902,7 +939,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
-    gap: 12,
+    gap: 8,
+  },
+  filtersScrollView: {
+    marginTop: 4,
+    marginHorizontal: -16, // Bleed out to edges for better scroll feel
+  },
+  mobileFiltersSlider: {
+    paddingHorizontal: 16,
+    paddingBottom: 4,
+    gap: 8,
   },
   mobileTabs: {
     marginTop: 4,

@@ -639,7 +639,7 @@ export default function GroundsNearYou() {
           
           <Pressable 
             style={styles.viewMoreRow}
-            onPress={() => router.push('/(tabs)/grounds' as any)}
+            onPress={() => router.push('/book-my-ground' as any)}
           >
             <Text style={styles.viewMoreText}>View all grounds</Text>
             <ChevronRight size={16} color="#00ea6b" />
