@@ -31,6 +31,8 @@ interface GroundCardProps {
   glass?: boolean;
   onUtilizationPress?: () => void;
   hideTeamPrice?: boolean;
+  /** Whether the card is being viewed by the owner (shows approval status tags). */
+  isOwnerView?: boolean;
 }
 
 export default function GroundCard({
@@ -48,6 +50,7 @@ export default function GroundCard({
   glass = false,
   onUtilizationPress,
   hideTeamPrice = false,
+  isOwnerView = false,
 }: GroundCardProps) {
   const { width } = useWindowDimensions();
   const isUltraNarrow = width < 350;
@@ -169,6 +172,13 @@ export default function GroundCard({
       >
         <View style={styles.imageWrapper}>
           <Image source={{ uri: primaryImage }} style={[styles.image, compact && styles.imageCompact]} />
+          
+          {isOwnerView && (ground as any).approved === false && (
+            <View style={styles.approvalBadge}>
+              <Text style={styles.approvalBadgeText}>Pending Approval</Text>
+            </View>
+          )}
+
           {onToggleFavorite && (
             <TouchableOpacity
               style={[
@@ -744,5 +754,30 @@ const styles = StyleSheet.create({
     color: '#475569',
     fontWeight: '700',
     fontFamily: 'Inter',
+  },
+  approvalBadge: {
+    position: 'absolute',
+    top: 12,
+    left: 12,
+    backgroundColor: '#FEF3C7', // Amber 100
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#FDE68A', // Amber 200
+    zIndex: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  approvalBadgeText: {
+    color: '#92400E', // Amber 800
+    fontSize: 11,
+    fontWeight: '800',
+    fontFamily: 'Inter',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });

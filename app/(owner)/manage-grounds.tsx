@@ -547,6 +547,7 @@ export default function OwnerGroundsScreen() {
               }
               compact={Platform.OS === 'web'}
               occupancyRate={occupancyRates[item.id] ?? null}
+              isOwnerView={true}
             />
           </View>
         )}
