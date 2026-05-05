@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -7,6 +7,7 @@ import {
   Image, 
   ScrollView, 
   Dimensions,
+  ActivityIndicator,
   Platform
 } from 'react-native';
 import { 
@@ -16,28 +17,120 @@ import {
   HelpCircle, 
   Share2,
   ChevronRight,
-  TrendingUp
+  TrendingUp,
+  Award
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 
 const { width } = Dimensions.get('window');
 
 const TABS = ['Batting', 'Bowling', 'Compare', 'Face Off'];
 
-const FORM_DATA = [
-  { id: '1', date: '24/04/26', match: 'Crixcus XI vs Flying Falcons', score: '40(18)', out: 'Bowled', ov: '20' },
-  { id: '2', date: '18/04/26', match: 'The Yankees vs Stellar Strikers', score: '94(45)', out: 'Caught out', ov: '20' },
-  { id: '3', date: '02/04/26', match: 'Ggn Titans vs The Yankees', score: '18(14)', out: 'Caught out', ov: '20' },
-  { id: '4', date: '27/03/26', match: 'Eicher Group vs The Yankees', score: '21(15)', out: 'Caught out', ov: '20' },
-  { id: '5', date: '22/03/26', match: 'Pardeep XI vs The Yankees', score: '1(3)', out: 'Caught out', ov: '20' },
-];
-
 export default function CricketInsights() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('Batting');
+  const [profile, setProfile] = useState<any>(null);
+  const [battingStats, setBattingStats] = useState<any[]>([]);
+  const [bowlingStats, setBowlingStats] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user?.id) {
+      loadData();
+    }
+  }, [user?.id]);
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      // 1. Fetch Profile
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user?.id)
+        .single();
+      setProfile(prof);
+
+      // 2. Fetch Batting Stats (Last 5)
+      const { data: bStats } = await supabase
+        .from('player_match_batting_stats')
+        .select('*')
+        .eq('profile_id', user?.id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      setBattingStats(bStats || []);
+
+      // 3. Fetch Bowling Stats (Last 5)
+      const { data: boStats } = await supabase
+        .from('player_match_bowling_stats')
+        .select('*')
+        .eq('profile_id', user?.id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      setBowlingStats(boStats || []);
+
+    } catch (error) {
+      console.error('Error loading insights:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const calculateBattingInsights = () => {
+    if (battingStats.length === 0) return { totalRuns: 0, caughtOut: 0, notOuts: 0, avg: '0.00', sr: '0.00' };
+    
+    const totalRuns = battingStats.reduce((sum, s) => sum + (s.runs || 0), 0);
+    const totalBalls = battingStats.reduce((sum, s) => sum + (s.balls || 0), 0);
+    const outs = battingStats.filter(s => s.is_out).length;
+    const caughtOut = battingStats.filter(s => s.dismissal_type === 'caught').length;
+    const notOuts = battingStats.length - outs;
+    
+    const avg = outs > 0 ? (totalRuns / outs).toFixed(2) : totalRuns.toFixed(2);
+    const sr = totalBalls > 0 ? ((totalRuns / totalBalls) * 100).toFixed(2) : '0.00';
+
+    return { totalRuns, caughtOut, notOuts, avg, sr };
+  };
+
+  const calculateBowlingInsights = () => {
+    if (bowlingStats.length === 0) return { totalWickets: 0, bestBowling: '-', avg: '0.00', econ: '0.00' };
+    
+    const totalWickets = bowlingStats.reduce((sum, s) => sum + (s.wickets || 0), 0);
+    const totalRuns = bowlingStats.reduce((sum, s) => sum + (s.runs_conceded || 0), 0);
+    const totalBalls = bowlingStats.reduce((sum, s) => sum + (s.legal_balls || 0), 0);
+    
+    const bestMatch = [...bowlingStats].sort((a, b) => {
+      if (b.wickets !== a.wickets) return b.wickets - a.wickets;
+      return a.runs_conceded - b.runs_conceded;
+    })[0];
+
+    const bestBowling = bestMatch ? `${bestMatch.wickets}/${bestMatch.runs_conceded}` : '-';
+    const econ = totalBalls > 0 ? ((totalRuns / (totalBalls / 6))).toFixed(2) : '0.00';
+    const avg = totalWickets > 0 ? (totalRuns / totalWickets).toFixed(2) : '0.00';
+
+    return { totalWickets, bestBowling, avg, econ };
+  };
+
+  const battingInsights = calculateBattingInsights();
+  const bowlingInsights = calculateBowlingInsights();
+
+  const formatName = (name: string) => {
+    if (!name) return 'Player';
+    return name.split(' ').map(s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()).join(' ');
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#7C3AED" />
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -46,7 +139,7 @@ export default function CricketInsights() {
         <TouchableOpacity onPress={() => router.back()} style={styles.headerIconBtn}>
           <ChevronLeft size={24} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Arpit Kanotra</Text>
+        <Text style={styles.headerTitle}>{formatName(profile?.full_name)}</Text>
         <View style={styles.headerRight}>
           <TouchableOpacity style={styles.headerIconBtn}>
             <Search size={24} color="#000" />
@@ -54,7 +147,7 @@ export default function CricketInsights() {
           <TouchableOpacity style={styles.headerIconBtn}>
             <View style={styles.notifWrapper}>
               <Bell size={24} color="#000" />
-              <View style={styles.notifBadge}><Text style={styles.notifText}>1</Text></View>
+              <View style={styles.notifBadge}><Text style={styles.notifText}>0</Text></View>
             </View>
           </TouchableOpacity>
         </View>
@@ -65,17 +158,19 @@ export default function CricketInsights() {
         <View style={styles.profileSection}>
           <View style={styles.profileCard}>
             <Image 
-              source={{ uri: 'https://i.pravatar.cc/150?u=arpit' }} 
+              source={profile?.avatar_url ? { uri: profile.avatar_url } : require('../../assets/avatar.png')} 
               style={styles.avatar}
             />
             <View style={styles.profileDetails}>
               <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>BATTING STYLE</Text>
-                <Text style={styles.detailValue}>RHB</Text>
+                <Text style={styles.detailLabel}>{activeTab === 'Bowling' ? 'BOWLING STYLE' : 'BATTING STYLE'}</Text>
+                <Text style={styles.detailValue}>
+                  {activeTab === 'Bowling' ? (profile?.bowling_style || 'N/A') : (profile?.batting_style || 'N/A')}
+                </Text>
               </View>
               <View style={styles.detailItem}>
-                <Text style={styles.detailLabel}>BATTING ORDER</Text>
-                <Text style={styles.detailValue}>None</Text>
+                <Text style={styles.detailLabel}>PLAYER ROLE</Text>
+                <Text style={styles.detailValue}>{profile?.player_type || 'N/A'}</Text>
               </View>
             </View>
             <View style={styles.profileDecorative}>
@@ -100,45 +195,97 @@ export default function CricketInsights() {
         </View>
 
         {/* Current Form Section */}
-        <View style={styles.formSection}>
-          <View style={styles.formHeader}>
-            <Text style={styles.formTitle}>
-              Current form <Text style={styles.formSubtitle}>(Last 5 Innings)</Text>
-            </Text>
-            <View style={styles.formHeaderIcons}>
-              <HelpCircle size={20} color="#94A3B8" />
-              <Share2 size={20} color="#94A3B8" />
-            </View>
-          </View>
-
-          {/* Table Header */}
-          <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderText, { width: 30 }]}>Sr.</Text>
-            <Text style={[styles.tableHeaderText, { width: 70 }]}>Date</Text>
-            <Text style={[styles.tableHeaderText, { flex: 1 }]}>Innings</Text>
-            <Text style={[styles.tableHeaderText, { width: 60, textAlign: 'center' }]}>Score</Text>
-            <Text style={[styles.tableHeaderText, { width: 70, textAlign: 'center' }]}>Out T...</Text>
-            <Text style={[styles.tableHeaderText, { width: 30, textAlign: 'right' }]}>Ov.</Text>
-          </View>
-
-          {/* Table Rows */}
-          {FORM_DATA.map((item, idx) => (
-            <View key={item.id} style={styles.tableRow}>
-              <Text style={[styles.tableRowText, { width: 30, color: '#94A3B8' }]}>{idx + 1}</Text>
-              <Text style={[styles.tableRowText, { width: 70, color: '#FFFFFF' }]}>{item.date}</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.matchText} numberOfLines={1}>{item.match}</Text>
+        {activeTab === 'Batting' && (
+          <View style={styles.formSection}>
+            <View style={styles.formHeader}>
+              <Text style={styles.formTitle}>
+                Current form <Text style={styles.formSubtitle}>(Last 5 Innings)</Text>
+              </Text>
+              <View style={styles.formHeaderIcons}>
+                <HelpCircle size={20} color="#94A3B8" />
+                <Share2 size={20} color="#94A3B8" />
               </View>
-              <Text style={[styles.tableRowText, { width: 60, textAlign: 'center', color: '#FFFFFF', fontWeight: '700' }]}>{item.score}</Text>
-              <Text style={[styles.tableRowText, { width: 70, textAlign: 'center', color: '#94A3B8' }]}>{item.out}</Text>
-              <Text style={[styles.tableRowText, { width: 30, textAlign: 'right', color: '#94A3B8' }]}>{item.ov}</Text>
             </View>
-          ))}
 
-          <TouchableOpacity style={styles.viewAllBtn}>
-            <Text style={styles.viewAllText}>View All</Text>
-          </TouchableOpacity>
-        </View>
+            {/* Table Header */}
+            <View style={styles.tableHeader}>
+              <Text style={[styles.tableHeaderText, { width: 30 }]}>Sr.</Text>
+              <Text style={[styles.tableHeaderText, { width: 70 }]}>Date</Text>
+              <Text style={[styles.tableHeaderText, { flex: 1 }]}>Innings</Text>
+              <Text style={[styles.tableHeaderText, { width: 60, textAlign: 'center' }]}>Score</Text>
+              <Text style={[styles.tableHeaderText, { width: 70, textAlign: 'center' }]}>Out T...</Text>
+              <Text style={[styles.tableHeaderText, { width: 30, textAlign: 'right' }]}>Ov.</Text>
+            </View>
+
+            {/* Table Rows */}
+            {battingStats.length > 0 ? battingStats.map((item, idx) => (
+              <View key={item.match_id} style={styles.tableRow}>
+                <Text style={[styles.tableRowText, { width: 30, color: '#94A3B8' }]}>{idx + 1}</Text>
+                <Text style={[styles.tableRowText, { width: 70, color: '#FFFFFF' }]}>{new Date(item.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.matchText} numberOfLines={1}>{item.match_title}</Text>
+                </View>
+                <Text style={[styles.tableRowText, { width: 60, textAlign: 'center', color: '#FFFFFF', fontWeight: '700' }]}>
+                  {item.runs}({item.balls})
+                </Text>
+                <Text style={[styles.tableRowText, { width: 70, textAlign: 'center', color: '#94A3B8', textTransform: 'capitalize' }]}>
+                  {item.is_out ? (item.dismissal_type || 'Out') : 'Not Out'}
+                </Text>
+                <Text style={[styles.tableRowText, { width: 30, textAlign: 'right', color: '#94A3B8' }]}>{item.match_overs}</Text>
+              </View>
+            )) : (
+              <View style={styles.emptyForm}>
+                <Text style={styles.emptyFormText}>No recent batting data available</Text>
+              </View>
+            )}
+
+            <TouchableOpacity style={styles.viewAllBtn}>
+              <Text style={styles.viewAllText}>View All</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {activeTab === 'Bowling' && (
+          <View style={styles.formSection}>
+            <View style={styles.formHeader}>
+              <Text style={styles.formTitle}>
+                Recent Bowling <Text style={styles.formSubtitle}>(Last 5 Innings)</Text>
+              </Text>
+            </View>
+
+            {/* Table Header */}
+            <View style={styles.tableHeader}>
+              <Text style={[styles.tableHeaderText, { width: 30 }]}>Sr.</Text>
+              <Text style={[styles.tableHeaderText, { width: 70 }]}>Date</Text>
+              <Text style={[styles.tableHeaderText, { flex: 1 }]}>Innings</Text>
+              <Text style={[styles.tableHeaderText, { width: 60, textAlign: 'center' }]}>O-M-R-W</Text>
+              <Text style={[styles.tableHeaderText, { width: 30, textAlign: 'right' }]}>Ov.</Text>
+            </View>
+
+            {/* Table Rows */}
+            {bowlingStats.length > 0 ? bowlingStats.map((item, idx) => (
+              <View key={item.match_id} style={styles.tableRow}>
+                <Text style={[styles.tableRowText, { width: 30, color: '#94A3B8' }]}>{idx + 1}</Text>
+                <Text style={[styles.tableRowText, { width: 70, color: '#FFFFFF' }]}>{new Date(item.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.matchText} numberOfLines={1}>{item.match_title}</Text>
+                </View>
+                <Text style={[styles.tableRowText, { width: 60, textAlign: 'center', color: '#FFFFFF', fontWeight: '700' }]}>
+                  {Math.floor(item.legal_balls / 6)}.{item.legal_balls % 6}-0-{item.runs_conceded}-{item.wickets}
+                </Text>
+                <Text style={[styles.tableRowText, { width: 30, textAlign: 'right', color: '#94A3B8' }]}>{item.match_overs}</Text>
+              </View>
+            )) : (
+              <View style={styles.emptyForm}>
+                <Text style={styles.emptyFormText}>No recent bowling data available</Text>
+              </View>
+            )}
+
+            <TouchableOpacity style={styles.viewAllBtn}>
+              <Text style={styles.viewAllText}>View All</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Insights Summary Cards */}
         <View style={styles.insightsSection}>
@@ -148,37 +295,74 @@ export default function CricketInsights() {
               <View style={styles.insightDividerLine} />
            </View>
 
-           <View style={styles.summaryCard}>
-              <View style={styles.summaryValueBox}>
-                 <Text style={styles.summaryValueText}>174</Text>
-              </View>
-              <Text style={styles.summaryLabelText}>Total runs in last 5 Innings</Text>
-           </View>
+           {activeTab === 'Batting' ? (
+             <>
+               <View style={styles.summaryCard}>
+                  <View style={styles.summaryValueBox}>
+                     <Text style={styles.summaryValueText}>{battingInsights.totalRuns}</Text>
+                  </View>
+                  <Text style={styles.summaryLabelText}>Total runs in last {battingStats.length} Innings</Text>
+               </View>
 
-           <View style={styles.summaryCard}>
-              <View style={styles.summaryValueBox}>
-                 <Text style={styles.summaryValueTextGreen}>4</Text>
-              </View>
-              <Text style={styles.summaryLabelText}>Caught out in last 5 Innings</Text>
-           </View>
+               <View style={styles.summaryCard}>
+                  <View style={styles.summaryValueBox}>
+                     <Text style={styles.summaryValueTextGreen}>{battingInsights.caughtOut}</Text>
+                  </View>
+                  <Text style={styles.summaryLabelText}>Caught out in last {battingStats.length} Innings</Text>
+               </View>
 
-           <View style={styles.summaryCard}>
-              <View style={styles.summaryValueBox}>
-                 <Text style={styles.summaryValueTextGreen}>0</Text>
-              </View>
-              <Text style={styles.summaryLabelText}>Not out in last 5 Innings</Text>
-           </View>
+               <View style={styles.summaryCard}>
+                  <View style={styles.summaryValueBox}>
+                     <Text style={styles.summaryValueTextGreen}>{battingInsights.notOuts}</Text>
+                  </View>
+                  <Text style={styles.summaryLabelText}>Not out in last {battingStats.length} Innings</Text>
+               </View>
 
-           <View style={styles.statsGrid}>
-              <View style={styles.statBox}>
-                 <Text style={styles.statBoxValue}>183.16</Text>
-                 <Text style={styles.statBoxLabel}>SR</Text>
-              </View>
-              <View style={styles.statBox}>
-                 <Text style={styles.statBoxValue}>34.80</Text>
-                 <Text style={styles.statBoxLabel}>Avg</Text>
-              </View>
-           </View>
+               <View style={styles.statsGrid}>
+                  <View style={styles.statBox}>
+                     <Text style={styles.statBoxValue}>{battingInsights.sr}</Text>
+                     <Text style={styles.statBoxLabel}>SR</Text>
+                  </View>
+                  <View style={styles.statBox}>
+                     <Text style={styles.statBoxValue}>{battingInsights.avg}</Text>
+                     <Text style={styles.statBoxLabel}>Avg</Text>
+                  </View>
+               </View>
+             </>
+           ) : activeTab === 'Bowling' ? (
+             <>
+               <View style={styles.summaryCard}>
+                  <View style={styles.summaryValueBox}>
+                     <Text style={styles.summaryValueText}>{bowlingInsights.totalWickets}</Text>
+                  </View>
+                  <Text style={styles.summaryLabelText}>Total wickets in last {bowlingStats.length} Innings</Text>
+               </View>
+
+               <View style={styles.summaryCard}>
+                  <View style={styles.summaryValueBox}>
+                     <Text style={styles.summaryValueTextGreen}>{bowlingInsights.bestBowling}</Text>
+                  </View>
+                  <Text style={styles.summaryLabelText}>Best performance in last {bowlingStats.length} Innings</Text>
+               </View>
+
+               <View style={styles.statsGrid}>
+                  <View style={styles.statBox}>
+                     <Text style={styles.statBoxValue}>{bowlingInsights.econ}</Text>
+                     <Text style={styles.statBoxLabel}>Econ</Text>
+                  </View>
+                  <View style={styles.statBox}>
+                     <Text style={styles.statBoxValue}>{bowlingInsights.avg}</Text>
+                     <Text style={styles.statBoxLabel}>Avg</Text>
+                  </View>
+               </View>
+             </>
+           ) : (
+             <View style={styles.emptyContainer}>
+               <TrendingUp size={48} color="#1E293B" />
+               <Text style={styles.emptyTitle}>Comparison & Face-Off Coming Soon</Text>
+               <Text style={styles.emptySubtitle}>We are working on bringing advanced head-to-head metrics to your dashboard.</Text>
+             </View>
+           )}
         </View>
       </ScrollView>
     </View>
@@ -189,6 +373,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center'
   },
   header: {
     flexDirection: 'row',
@@ -299,7 +489,7 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#64748B',
     fontFamily: 'Inter',
   },
@@ -440,5 +630,30 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#94A3B8',
     fontWeight: '700',
+  },
+  emptyForm: {
+    paddingVertical: 40,
+    alignItems: 'center'
+  },
+  emptyFormText: {
+    color: '#94A3B8',
+    fontSize: 14
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+    marginTop: 16,
+    textAlign: 'center'
+  },
+  emptySubtitle: {
+    color: '#94A3B8',
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 8
   }
 });

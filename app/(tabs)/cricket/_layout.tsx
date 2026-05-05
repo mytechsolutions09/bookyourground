@@ -12,7 +12,8 @@ import {
   ActivityIndicator,
   Modal,
   Share,
-  Alert
+  Alert,
+  useWindowDimensions
 } from 'react-native';
 import { 
   Plus, 
@@ -93,6 +94,7 @@ export default function CricketLayout() {
   const insets = useSafeAreaInsets();
   const [profile, setProfile] = useState<any>(null);
   const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [activeTabId, setActiveTabId] = useState('player-profile');
   const [isActionModalVisible, setIsActionModalVisible] = useState(false);
@@ -107,11 +109,13 @@ export default function CricketLayout() {
   const lastScrollY = useSharedValue(0);
   const tabScrollPositions = useSharedValue(TABS.map(() => 0));
   const activeTabIndex = useSharedValue(initialIndex);
-  const [tabMeasurements, setTabMeasurements] = React.useState<any[]>([]);
-  const [dynamicTags, setDynamicTags] = useState<PlayerTag[]>([]);
-  const [measuredPagerWidth, setMeasuredPagerWidth] = useState(windowWidth);
-  const horizontalOffset = useSharedValue(initialIndex * windowWidth);
+  const { width: windowWidth } = useWindowDimensions();
+  const [measuredPagerWidth, setMeasuredPagerWidth] = useState(0);
+  const pagerWidth = measuredPagerWidth || windowWidth;
+  
+  const horizontalOffset = useSharedValue(initialIndex * pagerWidth);
   const isScrollingProgrammatically = useRef(false);
+  const isInitialRender = useRef(true);
 
   const [matchesTab, setMatchesTab] = React.useState('played');
   const matchesIdx = useSharedValue(0);
@@ -136,13 +140,59 @@ export default function CricketLayout() {
 
   const [tabBarVisible, setTabBarVisible] = useState(true);
 
+  const [tabMeasurements, setTabMeasurements] = React.useState<any[]>([]);
+  const [dynamicTags, setDynamicTags] = useState<PlayerTag[]>([]);
+
   useEffect(() => {
     if (user) {
       fetchProfile();
-      fetchFollowers();
+      fetchFollowCounts();
       fetchDynamicTags();
     }
   }, [user]);
+
+  // Initial scroll sync
+  useEffect(() => {
+    if (isInitialRender.current && horizontalPagerRef.current && initialIndex > 0) {
+      isInitialRender.current = false;
+      setTimeout(() => {
+        horizontalPagerRef.current?.scrollTo({ x: initialIndex * pagerWidth, animated: false });
+      }, 100);
+    } else if (isInitialRender.current) {
+      isInitialRender.current = false;
+    }
+  }, [pagerWidth]);
+
+  // Sync sub-tab shared values for animations
+  useEffect(() => {
+    const idx = ['batting', 'bowling', 'fielding', 'captain'].indexOf(statsTab);
+    if (idx !== -1) statsIdx.value = idx;
+  }, [statsTab]);
+
+  useEffect(() => {
+    const idx = ['your', 'all', 'top teams', 'networks'].indexOf(teamsTab);
+    if (idx !== -1) teamsIdx.value = idx;
+  }, [teamsTab]);
+
+  useEffect(() => {
+    const idx = ['all', 'participate', 'network', 'nearby'].indexOf(tournamentsTab);
+    if (idx !== -1) tournamentsIdx.value = idx;
+  }, [tournamentsTab]);
+
+  useEffect(() => {
+    const idx = ['matches', 'tournaments'].indexOf(trophiesTab);
+    if (idx !== -1) trophiesIdx.value = idx;
+  }, [trophiesTab]);
+
+  useEffect(() => {
+    const idx = ['batting', 'bowling', 'fielding'].indexOf(badgesTab);
+    if (idx !== -1) badgesIdx.value = idx;
+  }, [badgesTab]);
+
+  useEffect(() => {
+    const idx = ['followers', 'following'].indexOf(connectionsTab);
+    if (idx !== -1) connectionsIdx.value = idx;
+  }, [connectionsTab]);
 
   // Sync pager when pathname changes (e.g. from bottom bar or deep link)
   React.useEffect(() => {
@@ -222,18 +272,37 @@ export default function CricketLayout() {
     }
   };
 
-  const fetchFollowers = async () => {
+  const fetchFollowCounts = async () => {
+    if (!user?.id) return;
     try {
-      const { count, error } = await supabase
-        .from('connections')
+      // Fetch Followers
+      const { count: followers, error: fErr } = await supabase
+        .from('profiles_follows')
         .select('*', { count: 'exact', head: true })
-        .eq('following_id', user?.id);
-      if (error) throw error;
-      setFollowerCount(count || 0);
+        .eq('following_id', user.id);
+      
+      if (fErr) throw fErr;
+      setFollowerCount(followers || 0);
+
+      // Fetch Following
+      const { count: following, error: gErr } = await supabase
+        .from('profiles_follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('follower_id', user.id);
+      
+      if (gErr) throw gErr;
+      setFollowingCount(following || 0);
     } catch (error) {
-      console.error('Error fetching followers:', error);
+      console.error('Error fetching follow counts:', error);
     }
   };
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchProfile();
+      fetchFollowCounts();
+    }
+  }, [user?.id]);
 
   const handleAvatarPress = () => {
     setIsAvatarModalVisible(true);
@@ -300,32 +369,32 @@ export default function CricketLayout() {
   });
 
   const statsPillStyle = useAnimatedStyle(() => ({
-    left: withSpring((statsIdx.value / 4) * 100 + '%', { damping: 25 }),
+    left: withTiming((statsIdx.value / 4) * 100 + '%', { duration: 250 }),
     width: '25%',
   }));
 
   const teamsPillStyle = useAnimatedStyle(() => ({
-    left: withSpring((teamsIdx.value / 4) * 100 + '%', { damping: 25 }),
+    left: withTiming((teamsIdx.value / 4) * 100 + '%', { duration: 250 }),
     width: '25%',
   }));
 
   const tournamentsPillStyle = useAnimatedStyle(() => ({
-    left: withSpring((tournamentsIdx.value / 4) * 100 + '%', { damping: 25 }),
+    left: withTiming((tournamentsIdx.value / 4) * 100 + '%', { duration: 250 }),
     width: '25%',
   }));
 
   const trophiesPillStyle = useAnimatedStyle(() => ({
-    left: withSpring((trophiesIdx.value / 2) * 100 + '%', { damping: 25 }),
+    left: withTiming((trophiesIdx.value / 2) * 100 + '%', { duration: 250 }),
     width: '50%',
   }));
 
   const badgesPillStyle = useAnimatedStyle(() => ({
-    left: withSpring((badgesIdx.value / 3) * 100 + '%', { damping: 25 }),
+    left: withTiming((badgesIdx.value / 3) * 100 + '%', { duration: 250 }),
     width: '33.33%',
   }));
 
   const connectionsPillStyle = useAnimatedStyle(() => ({
-    left: withSpring((connectionsIdx.value / 2) * 100 + '%', { damping: 25 }),
+    left: withTiming((connectionsIdx.value / 2) * 100 + '%', { duration: 250 }),
     width: '50%',
   }));
 
@@ -601,22 +670,32 @@ export default function CricketLayout() {
   };
 
   const onTabPress = (tabId: string, index: number) => {
+    if (activeTabId === tabId) return;
+    
+    isScrollingProgrammatically.current = true;
     setActiveTabId(tabId);
     activeTabIndex.value = index;
-    isScrollingProgrammatically.current = true;
-    horizontalPagerRef.current?.scrollTo({ x: index * (measuredPagerWidth || windowWidth), animated: true });
     
-    // Reset the flag after a delay
+    horizontalPagerRef.current?.scrollTo({ x: index * pagerWidth, animated: true });
+    
+    // Center the tab in the top bar
+    const tabData = tabMeasurements[index];
+    if (tabData) {
+      tabScrollRef.current?.scrollTo({
+        x: tabData.x - pagerWidth / 2 + tabData.width / 2,
+        animated: true
+      });
+    } else {
+      const approxTabWidth = 80;
+      tabScrollRef.current?.scrollTo({
+        x: index * approxTabWidth - pagerWidth / 2 + approxTabWidth / 2,
+        animated: true
+      });
+    }
+    
     setTimeout(() => {
       isScrollingProgrammatically.current = false;
     }, 600);
-
-    // Center the tab
-    const tabWidth = 80;
-    tabScrollRef.current?.scrollTo({
-      x: index * tabWidth - windowWidth / 2 + tabWidth / 2,
-      animated: true
-    });
   };
 
   const content = (
@@ -648,12 +727,11 @@ export default function CricketLayout() {
                 <View style={styles.avatarPlaceholder}>
                    <ActivityIndicator color="#FFFFFF" />
                 </View>
-              ) : profile?.avatar_url ? (
-                <Image source={{ uri: profile.avatar_url }} style={styles.headerAvatar} />
               ) : (
-                <View style={styles.avatarPlaceholder}>
-                   <Camera size={24} color="#FFFFFF90" />
-                </View>
+                <Image 
+                  source={profile?.avatar_url ? { uri: profile.avatar_url } : require('../../../assets/avatar.png')} 
+                  style={styles.headerAvatar} 
+                />
               )}
               <View style={styles.avatarEditBadge}>
                 {profile?.avatar_url ? <Trash2 size={10} color="#FF4444" /> : <Plus size={10} color="#FFFFFF" />}
@@ -702,7 +780,8 @@ export default function CricketLayout() {
               <View style={styles.headerMetricsRow}>
                 <TouchableOpacity style={styles.headerMetricBadge} onPress={() => router.push('/cricket/rank')}>
                   <Trophy size={12} color="#FFD700" />
-                  <Text style={styles.headerMetricBadgeText}>Rank: #12</Text>
+                  <Text style={styles.headerMetricBadgeText}>Leaderboard</Text>
+                  <ChevronRight size={10} color="#FFFFFF90" />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.headerMetricBadge} onPress={() => router.push('/cricket/insights')}>
                   <TrendingUp size={12} color="#FFFFFF" />
@@ -915,7 +994,6 @@ export default function CricketLayout() {
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        contentOffset={{ x: initialIndex * (measuredPagerWidth || windowWidth), y: 0 }}
         onScroll={horizontalScrollHandler}
         onMomentumScrollEnd={onMomentumScrollEnd}
         scrollEventThrottle={16}
@@ -925,7 +1003,7 @@ export default function CricketLayout() {
         style={{ flex: 1 }}
       >
         {TABS.map((tab) => (
-          <View key={`${tab.id}-${measuredPagerWidth || windowWidth}`} style={{ width: measuredPagerWidth || windowWidth, flex: 1 }}>
+          <View key={tab.id} style={{ width: pagerWidth, flex: 1 }}>
             <Animated.ScrollView 
               onScroll={verticalScrollHandler}
               scrollEventThrottle={16}
@@ -1167,7 +1245,7 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#94A3B8',
     fontFamily: 'Inter',
   },
@@ -1219,7 +1297,7 @@ const styles = StyleSheet.create({
   },
   toggleBtnText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#64748B',
     fontFamily: 'Inter',
   },

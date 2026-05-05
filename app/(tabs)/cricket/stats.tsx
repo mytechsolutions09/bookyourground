@@ -234,13 +234,10 @@ const CricketStats = React.memo(({ activeSubTab }: { activeSubTab: string }) => 
           <Text style={styles.leaderRank}>{rank}</Text>
         </View>
         
-        {avatar ? (
-          <Image source={{ uri: avatar }} style={styles.leaderAvatar} />
-        ) : (
-          <View style={styles.leaderAvatarPlaceholder}>
-            <Users2 size={16} color="#94A3B8" />
-          </View>
-        )}
+        <Image 
+          source={avatar ? { uri: avatar } : require('../../../assets/avatar.png')} 
+          style={styles.leaderAvatar} 
+        />
         
         <View style={styles.leaderInfo}>
           <Text style={styles.leaderName}>{name}</Text>

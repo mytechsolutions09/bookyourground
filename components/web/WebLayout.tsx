@@ -78,6 +78,7 @@ const NavLink = ({
   badge,
   meta,
   isActiveOverride,
+  disabled,
 }: {
   href: string;
   icon: any;
@@ -86,6 +87,7 @@ const NavLink = ({
   badge?: number | string;
   meta?: string;
   isActiveOverride?: boolean;
+  disabled?: boolean;
 }) => {
   const pathname = usePathname();
   const segments = useSegments();
@@ -122,12 +124,12 @@ const NavLink = ({
         hideLabel && { gap: 0 },
       ]}
       onPress={() => {
+        if (disabled) return;
         if (href === '/' || href === '') {
           router.replace('/' as any);
         } else {
           router.push(href as any);
         }
-
       }}
       {...(Platform.OS === 'web' ? {
         onMouseEnter: () => setHovered(true),
@@ -190,6 +192,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
   const { isTabBarVisible } = useUI();
   const [isBottomBarVisible, setIsBottomBarVisible] = useState(true);
   const [isNavbarVisible, setIsNavbarVisible] = useState(true);
+  const [hasPayoutSetup, setHasPayoutSetup] = useState<boolean | null>(null);
   const isInTabs = useMemo(() => segments.includes('(tabs)'), [segments]);
    const groundsHref = '/book-my-ground';
   const cleanPath = (pathname || '').split('?')[0];
@@ -242,6 +245,18 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
           .eq('user_id', user.id)
           .single();
         if (walletData) setWalletBalance(walletData.balance);
+
+        // Fetch Payout Setup Status for Ground Owners
+        if (profile?.role === 'ground_owner') {
+          const { data: bankData } = await supabase
+            .from('owner_bank_details')
+            .select('bank_name, account_number, ifsc')
+            .eq('owner_id', user.id)
+            .maybeSingle();
+          
+          const isComplete = !!(bankData && bankData.bank_name && bankData.account_number && bankData.ifsc);
+          setHasPayoutSetup(isComplete);
+        }
       } catch (err) {
         console.error('Sidebar fetch error:', err);
       } finally {
@@ -249,7 +264,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
       }
     }
     fetchSidebarData();
-  }, [user?.id]);
+  }, [user?.id, profile?.role]);
 
   const fetchNotifications = useCallback(async () => {
     if (!user?.id) return;
@@ -774,7 +789,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                           onPress={() => router.push('/profile')}
                         >
                           <Image
-                            source={{ uri: profile?.avatar_url || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' }}
+                            source={profile?.avatar_url ? { uri: profile.avatar_url } : require('../../assets/avatar.png')}
                             style={styles.profileAvatar}
                           />
                         </TouchableOpacity>
@@ -796,7 +811,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                         onPress={() => router.push('/profile')}
                       >
                         <Image
-                          source={{ uri: profile?.avatar_url || 'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2' }}
+                          source={profile?.avatar_url ? { uri: profile.avatar_url } : require('../../assets/avatar.png')}
                           style={styles.profileAvatarCompact}
                         />
                       </TouchableOpacity>
@@ -943,7 +958,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                           source={
                             profile?.avatar_url
                               ? { uri: profile.avatar_url }
-                              : require('@/assets/images/default-avatar.jpg')
+                              : require('../../assets/avatar.png')
                           }
                           style={styles.userAvatar}
                         />
@@ -1127,16 +1142,32 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                       <>
                         <Text style={styles.sidebarSectionTitle}>Ground owner</Text>
                         <NavLink href="/(owner)/owner-dashboard" icon={LayoutDashboard} label="Dashboard" />
-                        <NavLink href="/(owner)/manage-grounds" icon={MapPin} label="My grounds" />
-                        <NavLink href="/(owner)/inventory" icon={Package} label="Inventory" />
-                        <NavLink href="/wallet" icon={Wallet} label="Wallet" />
-
-                        <NavLink href="/(owner)/ground-bookings" icon={ClipboardList} label="Bookings" />
-                        <NavLink href="/profile/orders" icon={ShoppingBag} label="My Orders" />
-                        <NavLink href="/(owner)/earnings" icon={IndianRupee} label="Earnings" />
                         
-                        <NavLink href="/(owner)/settings" icon={Settings} label="Settings" />
-                        <NavLink href="/(tabs)/support" icon={Phone} label="Contact Us" />
+                        <View style={{ opacity: hasPayoutSetup === false ? 0.4 : 1 }}>
+                          <NavLink 
+                            href="/(owner)/manage-grounds" 
+                            icon={MapPin} 
+                            label="My grounds" 
+                            isActiveOverride={false} 
+                            badge={hasPayoutSetup === false ? 'Locked' : undefined}
+                            disabled={hasPayoutSetup === false}
+                          />
+                          <NavLink href="/(owner)/inventory" icon={Package} label="Inventory" disabled={hasPayoutSetup === false} />
+                          <NavLink href="/wallet" icon={Wallet} label="Wallet" disabled={hasPayoutSetup === false} />
+                          <NavLink href="/(owner)/ground-bookings" icon={ClipboardList} label="Bookings" disabled={hasPayoutSetup === false} />
+                          <NavLink href="/profile/orders" icon={ShoppingBag} label="My Orders" disabled={hasPayoutSetup === false} />
+                          <NavLink href="/(owner)/earnings" icon={IndianRupee} label="Earnings" disabled={hasPayoutSetup === false} />
+                          <NavLink href="/(owner)/settings" icon={Settings} label="Settings" disabled={hasPayoutSetup === false} />
+                          <NavLink href="/(tabs)/support" icon={Phone} label="Contact Us" disabled={hasPayoutSetup === false} />
+                        </View>
+
+                        {hasPayoutSetup === false && (
+                           <View style={{ padding: 12, backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: 12, marginHorizontal: 12, marginTop: 10 }}>
+                             <Text style={{ color: '#F87171', fontSize: 11, fontWeight: '600', textAlign: 'center' }}>
+                               Complete Payout Setup to unlock all features
+                             </Text>
+                           </View>
+                        )}
 
                         <View style={styles.sidebarDivider} />
                         <TouchableOpacity

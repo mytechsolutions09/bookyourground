@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, Platform, TouchableOpacity, useWindowDimensions, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, Platform, TouchableOpacity, useWindowDimensions, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { Building2, Calendar, IndianRupee, Star, LayoutDashboard, User, Mail, Phone, ShieldCheck, Pencil, Check, X, CalendarClock, Users, Swords, PlusCircle, Settings, LifeBuoy, PieChart } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,6 +7,8 @@ import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
 import { router } from 'expo-router';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
+import Modal from '@/components/ui/Modal';
+import Button from '@/components/ui/Button';
 import { formatBookingSlotSummary } from '@/utils/bookingSlotFormat';
 import Animated, { 
   useSharedValue, 
@@ -75,6 +77,8 @@ export default function OwnerDashboardScreen() {
   const [ifsc, setIfsc] = useState('');
   const [upiId, setUpiId] = useState('');
   const [savingBank, setSavingBank] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorModalMessage, setErrorModalMessage] = useState('');
 
   useEffect(() => {
     if (user) {
@@ -93,7 +97,9 @@ export default function OwnerDashboardScreen() {
         .eq('owner_id', user.id)
         .maybeSingle();
       
-      if (data) {
+      const isComplete = !!(data && data.bank_name && data.account_number && data.ifsc && data.upi_id);
+      
+      if (isComplete) {
         setHasBanking(true);
         setBankName(data.bank_name || '');
         setAccountNumber(data.account_number || '');
@@ -102,6 +108,12 @@ export default function OwnerDashboardScreen() {
       } else {
         setHasBanking(false);
         setActiveTab('payout');
+        if (data) {
+          setBankName(data.bank_name || '');
+          setAccountNumber(data.account_number || '');
+          setIfsc(data.ifsc || '');
+          setUpiId(data.upi_id || '');
+        }
       }
     } catch (err) {
       console.error('Error checking banking:', err);
@@ -338,7 +350,15 @@ export default function OwnerDashboardScreen() {
   }));
 
   const renderOwnerHub = () => (
-    <View style={styles.grid}>
+    <View>
+      {hasBanking && (
+        <View style={styles.verificationBanner}>
+          <ShieldCheck size={14} color="#0EA5E9" />
+          <Text style={styles.verificationText}>Verification in progress</Text>
+          <Text style={styles.verificationSubtext}>Our team is reviewing your payout details. Settlements will begin once verified.</Text>
+        </View>
+      )}
+      <View style={styles.grid}>
       <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]}>
         <View style={[styles.statBox, isUltraNarrow && { paddingVertical: 16, paddingHorizontal: 12, borderRadius: 20 }]}>
           <View style={styles.iconCircle}>
@@ -475,7 +495,8 @@ export default function OwnerDashboardScreen() {
         </View>
       </TouchableOpacity>
     </View>
-  );
+  </View>
+);
 
   const renderPersonalActivity = () => (
     <View style={styles.grid}>
@@ -548,7 +569,8 @@ export default function OwnerDashboardScreen() {
   const handleSaveBank = async () => {
     if (!user) return;
     if (!bankName.trim() || !accountNumber.trim() || !ifsc.trim() || !upiId.trim()) {
-      alert('All fields including UPI are required for payout setup.');
+      setErrorModalMessage('Please fill in all the required banking and UPI fields to continue.');
+      setShowErrorModal(true);
       return;
     }
     try {
@@ -564,10 +586,15 @@ export default function OwnerDashboardScreen() {
           updated_at: new Date().toISOString()
         }, { onConflict: 'owner_id' });
 
-      if (error) throw error;
-      setHasBanking(true);
-      setActiveTab('owner');
-      alert('Banking details saved successfully! Your dashboard is now active.');
+      if (error) {
+        console.error('Error saving bank details', error);
+        Alert.alert('Error', 'Could not save bank details. Please try again later.');
+        return;
+      }
+
+      // Re-check banking to unlock the dashboard
+      await checkBanking();
+      Alert.alert('Saved', 'Your payout details have been saved successfully.');
     } catch (e: any) {
       console.error('Error saving bank details:', e);
       alert('Error: ' + e.message);
@@ -580,7 +607,6 @@ export default function OwnerDashboardScreen() {
     <View style={styles.payoutContainer}>
       <Card style={styles.payoutCard}>
         <View style={styles.payoutHeader}>
-          <IndianRupee size={32} color={THEME_ACCENT} />
           <Text style={styles.payoutTitle}>Payout Information Required</Text>
           <Text style={styles.payoutSubtitle}>Please provide your banking and UPI details to enable dashboard features and receive payouts.</Text>
         </View>
@@ -591,9 +617,10 @@ export default function OwnerDashboardScreen() {
             <TextInput
               style={styles.formInput}
               value={bankName}
-              onChangeText={setBankName}
-              placeholder="e.g. HDFC Bank"
+              onChangeText={(text) => setBankName(text.toUpperCase())}
+              placeholder="e.g. HDFC BANK"
               placeholderTextColor={THEME_MUTED}
+              autoCapitalize="characters"
             />
           </View>
 
@@ -642,7 +669,7 @@ export default function OwnerDashboardScreen() {
             {savingBank ? (
               <ActivityIndicator color="#FFF" size="small" />
             ) : (
-              <Text style={styles.saveButtonText}>SAVE & ACTIVATE DASHBOARD</Text>
+              <Text style={styles.saveButtonText}>SAVE</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -761,34 +788,70 @@ export default function OwnerDashboardScreen() {
               <TouchableOpacity 
                 style={[styles.tabButton, activeTab === 'owner' && styles.activeTabButton, !hasBanking && styles.disabledTab]} 
                 onPress={() => hasBanking && setActiveTab('owner')}
+                disabled={!hasBanking}
               >
-                <Text style={[styles.tabText, activeTab === 'owner' && styles.activeTabText]}>Owner Hub</Text>
+                <LayoutDashboard size={18} color={activeTab === 'owner' ? THEME_ACCENT : (hasBanking ? THEME_MUTED : '#CBD5E1')} />
+                <Text style={[styles.tabText, activeTab === 'owner' && styles.activeTabText, !hasBanking && { color: '#CBD5E1' }]}>Dashboard</Text>
               </TouchableOpacity>
+
               <TouchableOpacity 
                 style={[styles.tabButton, activeTab === 'personal' && styles.activeTabButton, !hasBanking && styles.disabledTab]} 
                 onPress={() => hasBanking && setActiveTab('personal')}
+                disabled={!hasBanking}
               >
-                <Text style={[styles.tabText, activeTab === 'personal' && styles.activeTabText]}>Personal Activity</Text>
+                <User size={18} color={activeTab === 'personal' ? THEME_ACCENT : (hasBanking ? THEME_MUTED : '#CBD5E1')} />
+                <Text style={[styles.tabText, activeTab === 'personal' && styles.activeTabText, !hasBanking && { color: '#CBD5E1' }]}>Personal</Text>
               </TouchableOpacity>
+
               <TouchableOpacity 
                 style={[styles.tabButton, activeTab === 'profile' && styles.activeTabButton, !hasBanking && styles.disabledTab]} 
                 onPress={() => hasBanking && setActiveTab('profile')}
+                disabled={!hasBanking}
               >
-                <Text style={[styles.tabText, activeTab === 'profile' && styles.activeTabText]}>Profile</Text>
+                <ShieldCheck size={18} color={activeTab === 'profile' ? THEME_ACCENT : (hasBanking ? THEME_MUTED : '#CBD5E1')} />
+                <Text style={[styles.tabText, activeTab === 'profile' && styles.activeTabText, !hasBanking && { color: '#CBD5E1' }]}>My Profile</Text>
               </TouchableOpacity>
-              {!hasBanking && (
-                <TouchableOpacity 
-                  style={[styles.tabButton, activeTab === 'payout' && styles.activeTabButton]} 
-                  onPress={() => setActiveTab('payout')}
-                >
-                  <Text style={[styles.tabText, activeTab === 'payout' && styles.activeTabText]}>Payout Setup</Text>
-                </TouchableOpacity>
-              )}
+
+              <TouchableOpacity 
+                style={[styles.tabButton, activeTab === 'payout' && styles.activeTabButton]} 
+                onPress={() => setActiveTab('payout')}
+              >
+                <IndianRupee size={18} color={activeTab === 'payout' ? THEME_ACCENT : THEME_MUTED} />
+                <Text style={[styles.tabText, activeTab === 'payout' && styles.activeTabText]}>Payout Setup</Text>
+                {!hasBanking && (
+                  <View style={styles.alertBadge}>
+                    <Text style={styles.alertBadgeText}>Required</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
             </View>
 
             {activeTab === 'payout' ? renderPayoutSetup() : activeTab === 'owner' ? renderOwnerHub() : activeTab === 'personal' ? renderPersonalActivity() : renderProfileTab()}
           </View>
         </ScrollView>
+        <Modal 
+          visible={showErrorModal} 
+          onClose={() => setShowErrorModal(false)} 
+          title="Action Required"
+        >
+          <View style={{ alignItems: 'center', paddingVertical: 10 }}>
+            <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: '#FEF2F2', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+              <X size={30} color="#EF4444" />
+            </View>
+            <Text style={{ fontFamily: 'Inter', fontSize: 16, fontWeight: '700', color: '#111827', textAlign: 'center', marginBottom: 8 }}>
+              Incomplete Details
+            </Text>
+            <Text style={{ fontFamily: 'Inter', fontSize: 14, color: '#4B5563', textAlign: 'center', lineHeight: 20, marginBottom: 24 }}>
+              {errorModalMessage}
+            </Text>
+            <Button 
+              title="Understood" 
+              onPress={() => setShowErrorModal(false)}
+              variant="primary"
+              fullWidth
+            />
+          </View>
+        </Modal>
       </WebLayout>
     );
   }
@@ -826,6 +889,30 @@ export default function OwnerDashboardScreen() {
           )}
         </View>
       </Animated.View>
+      
+      <Modal 
+        visible={showErrorModal} 
+        onClose={() => setShowErrorModal(false)} 
+        title="Action Required"
+      >
+        <View style={{ alignItems: 'center', paddingVertical: 10 }}>
+          <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: '#FEF2F2', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+            <X size={30} color="#EF4444" />
+          </View>
+          <Text style={{ fontFamily: 'Inter', fontSize: 16, fontWeight: '700', color: '#111827', textAlign: 'center', marginBottom: 8 }}>
+            Incomplete Details
+          </Text>
+          <Text style={{ fontFamily: 'Inter', fontSize: 14, color: '#4B5563', textAlign: 'center', lineHeight: 20, marginBottom: 24 }}>
+            {errorModalMessage}
+          </Text>
+          <Button 
+            title="Understood" 
+            onPress={() => setShowErrorModal(false)}
+            variant="primary"
+            fullWidth
+          />
+        </View>
+      </Modal>
 
       <AnimatedScrollView
         ref={horizontalPagerRef}
@@ -1091,13 +1178,15 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   payoutTitle: {
+    fontFamily: 'Inter',
     fontSize: 22,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#0F172A',
     marginTop: 16,
     textAlign: 'center',
   },
   payoutSubtitle: {
+    fontFamily: 'Inter',
     fontSize: 14,
     color: '#64748B',
     textAlign: 'center',
@@ -1111,6 +1200,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   inputLabel: {
+    fontFamily: 'Inter',
     fontSize: 11,
     fontWeight: '700',
     color: '#64748B',
@@ -1118,16 +1208,22 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   formInput: {
-    backgroundColor: '#F1F5F9',
+    fontFamily: 'Inter',
+    backgroundColor: 'transparent',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 15,
     color: '#0F172A',
-    fontWeight: '600',
+    fontWeight: '500',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-  },
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+      }
+    })
+  } as any,
   saveButton: {
     backgroundColor: '#01b854',
     borderRadius: 16,
@@ -1137,9 +1233,47 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   saveButtonText: {
+    fontFamily: 'Inter',
     color: '#FFF',
     fontSize: 14,
     fontWeight: '800',
     letterSpacing: 1,
+  },
+  alertBadge: {
+    backgroundColor: '#EF4444',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  alertBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  verificationBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0F9FF',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    marginBottom: 24,
+    gap: 8,
+  },
+  verificationText: {
+    fontFamily: 'Inter',
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0369A1',
+  },
+  verificationSubtext: {
+    fontFamily: 'Inter',
+    fontSize: 12,
+    color: '#0C4A6E',
+    flex: 1,
   },
 });

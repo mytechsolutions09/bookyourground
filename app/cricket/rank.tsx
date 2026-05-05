@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -8,7 +8,8 @@ import {
   ScrollView, 
   FlatList,
   Dimensions,
-  Platform
+  Platform,
+  ActivityIndicator
 } from 'react-native';
 import { 
   Filter, 
@@ -22,33 +23,109 @@ import {
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { supabase } from '@/lib/supabase';
 
 const { width } = Dimensions.get('window');
 
 const CATEGORIES = ['Leather', 'Tennis', 'Box Cricket'];
 const TYPES = ['Batting', 'Bowling', 'Fielding'];
 
-const LEADERBOARD_DATA = [
-  { id: '1', name: 'Arpit Kanotra', city: 'Delhi', inn: 203, runs: 6466, avg: 36.95, sr: 157.90, rank: '638', isPro: true, avatar: 'https://i.pravatar.cc/150?u=arpit' },
-  { id: '2', name: 'Dk4', city: 'Delhi', inn: 2048, runs: 79215, avg: 53.89, sr: 157.29, rank: '001', isPro: false, avatar: 'https://i.pravatar.cc/150?u=dk4' },
-  { id: '3', name: 'Ravi Verma', city: 'Delhi', inn: 1419, runs: 45949, avg: 39.17, sr: 152.19, rank: '002', isPro: true, avatar: 'https://i.pravatar.cc/150?u=ravi' },
-  { id: '4', name: 'Sachin Gurjar', city: 'Delhi', inn: 749, runs: 39964, avg: 64.67, sr: 168.23, rank: '003', isPro: false, avatar: 'https://i.pravatar.cc/150?u=sachin' },
-  { id: '5', name: 'Gaurav Chaudhary (Shubham)', city: 'Delhi', inn: 908, runs: 31925, avg: 41.51, sr: 153.84, rank: '004', isPro: true, avatar: 'https://i.pravatar.cc/150?u=gaurav' },
-  { id: '6', name: 'Paras Sharma', city: 'Delhi', inn: 998, runs: 29145, avg: 35.03, sr: 139.46, rank: '005', isPro: true, avatar: 'https://i.pravatar.cc/150?u=paras' },
-  { id: '7', name: 'MS', city: 'Delhi', inn: 951, runs: 29037, avg: 41.19, sr: 144.35, rank: '006', isPro: true, avatar: 'https://i.pravatar.cc/150?u=ms' },
-];
-
 export default function CricketRank() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [activeCategory, setActiveCategory] = useState('Leather');
   const [activeType, setActiveType] = useState('Batting');
+  const [data, setData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const renderRankItem = ({ item }: { item: typeof LEADERBOARD_DATA[0] }) => (
-    <View style={styles.rankItem}>
+  React.useEffect(() => {
+    fetchLeaderboard();
+  }, [activeCategory, activeType]);
+
+  const fetchLeaderboard = async () => {
+    setLoading(true);
+    try {
+      const typeMap: Record<string, string> = {
+        'Leather': 'leather',
+        'Tennis': 'tennis',
+        'Box Cricket': 'other'
+      };
+      
+      const ballType = typeMap[activeCategory];
+      
+      let { data: lbData, error } = await supabase
+        .from('leaderboard')
+        .select('*')
+        .eq('ball_type', ballType);
+        
+      if (error) throw error;
+
+      if (lbData) {
+        const formatted = lbData.map(item => {
+          let rank = '000';
+          let displayStats = [];
+
+          if (activeType === 'Batting') {
+            rank = String(item.batting_rank).padStart(3, '0');
+            displayStats = [
+              { label: 'Inn', value: item.inn },
+              { label: 'Runs', value: item.runs },
+              { label: 'Avg', value: item.avg },
+              { label: 'SR', value: item.sr }
+            ];
+          } else if (activeType === 'Bowling') {
+            rank = String(item.bowling_rank).padStart(3, '0');
+            const economy = item.best_bowling_runs > 0 ? (item.best_bowling_runs / 6).toFixed(2) : '0.00'; // Simplified eco for now
+            displayStats = [
+              { label: 'Wkts', value: item.wickets },
+              { label: 'BBI', value: `${item.best_bowling_wickets}/${item.best_bowling_runs}` },
+              { label: 'Eco', value: economy }
+            ];
+          } else {
+            rank = String(item.fielding_rank).padStart(3, '0');
+            displayStats = [
+              { label: 'Catches', value: item.catches },
+              { label: 'Run Outs', value: item.run_outs },
+              { label: 'Stumpings', value: item.stumpings }
+            ];
+          }
+
+          return {
+            id: item.profile_id,
+            name: item.full_name,
+            city: item.city,
+            rank,
+            isPro: false, // Default to false for now
+            avatar: item.avatar_url,
+            displayStats
+          };
+        });
+
+        // Sort by rank number
+        formatted.sort((a, b) => parseInt(a.rank) - parseInt(b.rank));
+        setData(formatted);
+      }
+    } catch (err) {
+      console.error('Error fetching leaderboard:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderRankItem = ({ item }: { item: any }) => (
+    <TouchableOpacity 
+      style={styles.rankItem}
+      onPress={() => router.push(`/players/${item.id}` as any)}
+    >
       <View style={styles.playerInfoRow}>
         <View style={styles.avatarContainer}>
-          <Image source={{ uri: item.avatar }} style={styles.avatar} />
+          {item.avatar ? (
+            <Image source={{ uri: item.avatar }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatar, { backgroundColor: '#F1F5F9', justifyContent: 'center', alignItems: 'center' }]}>
+              <Star size={20} color="#CBD5E1" />
+            </View>
+          )}
           {item.isPro && (
             <View style={styles.proBadge}>
               <Text style={styles.proText}>PRO</Text>
@@ -61,20 +138,19 @@ export default function CricketRank() {
             <Text style={styles.cityText}>{item.city}</Text>
           </View>
           <View style={styles.statsRow}>
-            <Text style={styles.statLabel}>Inn: <Text style={styles.statValue}>{item.inn}</Text></Text>
-            <View style={styles.statDivider} />
-            <Text style={styles.statLabel}>Runs: <Text style={styles.statValue}>{item.runs}</Text></Text>
-            <View style={styles.statDivider} />
-            <Text style={styles.statLabel}>Avg: <Text style={styles.statValue}>{item.avg}</Text></Text>
-            <View style={styles.statDivider} />
-            <Text style={styles.statLabel}>SR: <Text style={styles.statValue}>{item.sr}</Text></Text>
+            {item.displayStats.map((stat: any, idx: number) => (
+              <React.Fragment key={idx}>
+                <Text style={styles.statLabel}>{stat.label}: <Text style={styles.statValue}>{stat.value}</Text></Text>
+                {idx < item.displayStats.length - 1 && <View style={styles.statDivider} />}
+              </React.Fragment>
+            ))}
           </View>
         </View>
         <View style={styles.rankContainer}>
           <Text style={styles.rankNumber}>{item.rank}</Text>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   return (
@@ -138,13 +214,26 @@ export default function CricketRank() {
       </View>
 
       {/* Leaderboard List */}
-      <FlatList
-        data={LEADERBOARD_DATA}
-        renderItem={renderRankItem}
-        keyExtractor={item => item.id}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContent}
-        ListFooterComponent={
+      {loading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#7C3AED" />
+          <Text style={{ marginTop: 12, color: '#64748B', fontFamily: 'Inter' }}>Loading Rankings...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={data}
+          renderItem={renderRankItem}
+          keyExtractor={item => item.id}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.listContent}
+          ListEmptyComponent={
+            <View style={{ padding: 40, alignItems: 'center' }}>
+              <Trophy size={48} color="#E2E8F0" />
+              <Text style={{ marginTop: 16, color: '#94A3B8', fontSize: 16, fontWeight: '600' }}>No Rankings Found</Text>
+              <Text style={{ color: '#CBD5E1', fontSize: 14 }}>Try changing category or filter</Text>
+            </View>
+          }
+          ListFooterComponent={
           <TouchableOpacity style={styles.challengeCard}>
              <View style={styles.challengeHeader}>
                 <View style={styles.challengeTitleRow}>
@@ -172,7 +261,8 @@ export default function CricketRank() {
              </View>
           </TouchableOpacity>
         }
-      />
+        />
+      )}
     </View>
   );
 }

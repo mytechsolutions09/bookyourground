@@ -7,6 +7,8 @@ import {
   TextInput,
   ActivityIndicator,
   Dimensions,
+  Platform,
+  Alert,
 } from 'react-native';
 import { 
   ChevronLeft, 
@@ -207,7 +209,7 @@ export const TeamSelectionView = ({
 // --- PLAYER SELECTION VIEW ---
 export const PlayerSelectionView = ({ 
   team, teamMembers, playingXi, onTogglePlayer, onToggleCaptain, 
-  onBack, onContinue, currentCaptain, searchQuery, setSearchQuery, onScanPlayer 
+  onBack, onContinue, currentCaptain, searchQuery, setSearchQuery, onScanPlayer, onAddPlayer 
 }: any) => {
   const filteredMembers = teamMembers.filter((m: any) => {
     const name = m.name || m.player_name || '';
@@ -227,24 +229,39 @@ export const PlayerSelectionView = ({
         <View style={{ width: 24 }} />
       </View>
 
-      <View style={{ paddingHorizontal: 16, paddingVertical: 10 }}>
-        <View style={styles.searchBarPremium}>
-          <Search size={20} color="#94A3B8" />
-          <TextInput 
-            placeholder="Search team players..."
-            style={styles.searchInputPremium}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor="#94A3B8"
-          />
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <View style={[styles.searchBarPremium, { flex: 1 }]}>
+            <Search size={20} color="#94A3B8" />
+            <TextInput 
+              placeholder="Search team players..."
+              style={styles.searchInputPremium}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor="#94A3B8"
+            />
+            <TouchableOpacity 
+              style={styles.qrBtnSmall}
+              onPress={onScanPlayer}
+            >
+              <QrCode size={20} color="#01b854" />
+            </TouchableOpacity>
+          </View>
           <TouchableOpacity 
-            style={styles.qrBtnSmall}
-            onPress={onScanPlayer}
+            style={{ 
+              backgroundColor: '#F1F5F9', 
+              width: 46, 
+              height: 46, 
+              borderRadius: 12, 
+              justifyContent: 'center', 
+              alignItems: 'center',
+              borderWidth: 1,
+              borderColor: '#E2E8F0'
+            }}
+            onPress={() => onAddPlayer && onAddPlayer()}
           >
-            <QrCode size={20} color="#01b854" />
+            <Plus size={24} color="#01b854" />
           </TouchableOpacity>
         </View>
-      </View>
 
       <ScrollView 
         style={{ flex: 1 }} 
@@ -287,10 +304,31 @@ export const PlayerSelectionView = ({
         })}
       </ScrollView>
 
+      <View style={{ paddingHorizontal: 16, marginBottom: 8 }}>
+        {!currentCaptain && playingXi.length > 0 && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF7ED', padding: 8, borderRadius: 8, gap: 8 }}>
+            <Crown size={14} color="#EA580C" />
+            <Text style={{ fontSize: 12, color: '#EA580C', fontWeight: '600' }}>Please assign a captain to proceed</Text>
+          </View>
+        )}
+      </View>
+
       <TouchableOpacity 
-        style={[styles.confirmBtn, playingXi.length === 0 && { opacity: 0.5 }, { marginHorizontal: 16 }]}
-        onPress={onContinue}
-        disabled={playingXi.length === 0}
+        style={[styles.confirmBtn, (playingXi.length < 2 || !currentCaptain) && { opacity: 0.5 }, { marginHorizontal: 16 }]}
+        onPress={() => {
+          if (playingXi.length < 2) {
+            if (Platform.OS === 'web') alert('Please select at least 2 players to proceed');
+            else Alert.alert('Min. Players Required', 'Please select at least 2 players to proceed.');
+            return;
+          }
+          if (!currentCaptain) {
+            if (Platform.OS === 'web') alert('Please assign a captain before proceeding');
+            else Alert.alert('Captain Required', 'Please assign a captain for the team before proceeding.');
+            return;
+          }
+          onContinue();
+        }}
+        disabled={playingXi.length < 2 || !currentCaptain}
       >
         <Text style={styles.confirmBtnText}>Confirm Team & Captain</Text>
         <ArrowRight size={20} color="#FFF" style={{ marginLeft: 8 }} />

@@ -42,7 +42,8 @@ import {
   Zap,
   Sword,
   ShieldCheck,
-  UserPlus
+  UserPlus,
+  UserMinus
 } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
@@ -785,11 +786,10 @@ export default function TeamDetailsPage() {
                                     <View style={styles.leaderboardPlayerInfo}>
                                       <RNText style={styles.leaderboardRank}>{idx + 1}</RNText>
                                       <View style={styles.leaderboardAvatar}>
-                                        {stat.member?.profile?.avatar_url ? (
-                                          <Image source={{ uri: stat.member.profile.avatar_url }} style={styles.avatarImg} />
-                                        ) : (
-                                          <RNText style={styles.avatarInitial}>{(stat.member?.player_name || '?')[0]}</RNText>
-                                        )}
+                                        <Image 
+                                          source={stat.member?.profile?.avatar_url ? { uri: stat.member.profile.avatar_url } : require('../../../assets/avatar.png')} 
+                                          style={styles.avatarImg} 
+                                        />
                                       </View>
                                       <RNText style={styles.leaderboardName} numberOfLines={1}>{stat.member?.player_name}</RNText>
                                     </View>
@@ -822,11 +822,10 @@ export default function TeamDetailsPage() {
                                     <View style={styles.leaderboardPlayerInfo}>
                                       <RNText style={styles.leaderboardRank}>{idx + 1}</RNText>
                                       <View style={styles.leaderboardAvatar}>
-                                        {stat.member?.profile?.avatar_url ? (
-                                          <Image source={{ uri: stat.member.profile.avatar_url }} style={styles.avatarImg} />
-                                        ) : (
-                                          <RNText style={styles.avatarInitial}>{(stat.member?.player_name || '?')[0]}</RNText>
-                                        )}
+                                        <Image 
+                                          source={stat.member?.profile?.avatar_url ? { uri: stat.member.profile.avatar_url } : require('../../../assets/avatar.png')} 
+                                          style={styles.avatarImg} 
+                                        />
                                       </View>
                                       <RNText style={styles.leaderboardName} numberOfLines={1}>{stat.member?.player_name}</RNText>
                                     </View>
@@ -856,11 +855,10 @@ export default function TeamDetailsPage() {
                       onPress={() => member.profile_id && router.push(`/players/${member.profile_id}` as any)}
                     >
                       <View style={styles.memberAvatar}>
-                        {member.profile?.avatar_url ? (
-                          <Image source={{ uri: member.profile.avatar_url }} style={styles.avatarImg} />
-                        ) : (
-                          <RNText style={styles.avatarInitial}>{(member.player_name || '?')[0]}</RNText>
-                        )}
+                        <Image 
+                          source={member.profile?.avatar_url ? { uri: member.profile.avatar_url } : require('../../../assets/avatar.png')} 
+                          style={styles.avatarImg} 
+                        />
                       </View>
                       <View style={styles.memberInfo}>
                         <View style={styles.memberNameRow}>
@@ -1163,11 +1161,10 @@ export default function TeamDetailsPage() {
                                         <View style={styles.leaderboardPlayerInfo}>
                                           <RNText style={styles.leaderboardRank}>{idx + 1}</RNText>
                                           <View style={styles.leaderboardAvatar}>
-                                            {stat.member?.profile?.avatar_url ? (
-                                              <Image source={{ uri: stat.member.profile.avatar_url }} style={styles.avatarImg} />
-                                            ) : (
-                                              <RNText style={styles.avatarInitial}>{(stat.member?.player_name || '?')[0]}</RNText>
-                                            )}
+                                            <Image 
+                                              source={stat.member?.profile?.avatar_url ? { uri: stat.member.profile.avatar_url } : require('../../../assets/avatar.png')} 
+                                              style={styles.avatarImg} 
+                                            />
                                           </View>
                                           <RNText style={styles.leaderboardName} numberOfLines={1}>{stat.member?.player_name}</RNText>
                                         </View>
@@ -1735,7 +1732,7 @@ const styles = StyleSheet.create({
   subTabText: {
     fontFamily: 'Inter',
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#64748B',
   },
   activeSubTabText: {
@@ -1773,7 +1770,7 @@ const styles = StyleSheet.create({
   },
   activeTabText: {
     fontFamily: 'Inter',
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#01b854',
   },
   chatTabLabel: {

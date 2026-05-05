@@ -343,13 +343,10 @@ export default function HomeScreen() {
                 style={styles.profileButton}
                 activeOpacity={0.7}
               >
-                {profile?.avatar_url ? (
-                  <Image source={{ uri: profile.avatar_url }} style={styles.profileImage} />
-                ) : (
-                  <View style={styles.profileIconPlaceholder}>
-                    <CircleUser size={22} color="#FFFFFF" strokeWidth={1.8} />
-                  </View>
-                )}
+                <Image 
+                  source={profile?.avatar_url ? { uri: profile.avatar_url } : require('../../assets/avatar.png')} 
+                  style={styles.profileImage} 
+                />
               </TouchableOpacity>
             </View>
 

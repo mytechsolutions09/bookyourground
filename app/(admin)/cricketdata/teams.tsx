@@ -263,13 +263,10 @@ export default function AdminCricketTeams() {
                         <View key={member.id} style={styles.memberRow}>
                           <View style={styles.memberInfo}>
                              <View style={styles.avatarWrap}>
-                                {member.profile?.avatar_url ? (
-                                    <Image source={{ uri: member.profile.avatar_url }} style={styles.memberAvatar} />
-                                ) : (
-                                    <View style={styles.avatarPlaceholder}>
-                                        <Text style={styles.avatarInitial}>{(member.player_name || member.profile?.full_name || '?').charAt(0)}</Text>
-                                    </View>
-                                )}
+                                <Image 
+                                  source={member.profile?.avatar_url ? { uri: member.profile.avatar_url } : require('../../../assets/avatar.png')} 
+                                  style={styles.memberAvatar} 
+                                />
                              </View>
                              <View>
                                 <View style={styles.nameRow}>

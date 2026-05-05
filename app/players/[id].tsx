@@ -89,6 +89,8 @@ export default function PlayerProfile() {
   const [connectionsTab, setConnectionsTab] = useState('followers');
   const [highlights, setHighlights] = useState<any[]>([]);
   const [photos, setPhotos] = useState<any[]>([]);
+  const [followers, setFollowers] = useState<any[]>([]);
+  const [following, setFollowing] = useState<any[]>([]);
   const [showQR, setShowQR] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
@@ -350,6 +352,19 @@ export default function PlayerProfile() {
         setIsFollowing(!!currentFollow);
       }
 
+      // 6. Fetch Connection Lists
+      const { data: followersList } = await supabase
+        .from('profiles_follows')
+        .select('follower_id, profile:profiles!follower_id(*)')
+        .eq('following_id', id);
+      setFollowers(followersList?.map(f => f.profile) || []);
+
+      const { data: followingList } = await supabase
+        .from('profiles_follows')
+        .select('following_id, profile:profiles!following_id(*)')
+        .eq('follower_id', id);
+      setFollowing(followingList?.map(f => f.profile) || []);
+
       // 5. Increment View Count (Skip if own profile)
       if (!isOwnProfile) {
         await supabase.rpc('increment_profile_views', { target_profile_id: id });
@@ -565,7 +580,7 @@ export default function PlayerProfile() {
       >
         <View style={styles.connectionLeft}>
           <Image 
-            source={{ uri: user.avatar_url || 'https://images.pexels.com/photos/3628912/pexels-photo-3628912.jpeg' }} 
+            source={user.avatar_url ? { uri: user.avatar_url } : require('../../assets/avatar.png')} 
             style={styles.connectionAvatar} 
           />
           <View style={styles.connectionMainInfo}>
@@ -766,13 +781,10 @@ export default function PlayerProfile() {
 
           <View ref={qrRef} collapsable={false} style={styles.qrCaptureArea}>
             <View style={styles.qrAvatarWrapper}>
-            {profile?.avatar_url ? (
-              <Image source={{ uri: profile.avatar_url }} style={styles.qrAvatar} />
-            ) : (
-              <View style={[styles.avatarPlaceholder, { backgroundColor: '#431043' }]}>
-                <Users size={24} color="#FFFFFF90" />
-              </View>
-            )}
+              <Image 
+                source={profile.avatar_url ? { uri: profile.avatar_url } : require('../../assets/avatar.png')} 
+                style={styles.qrAvatar} 
+              />
           </View>
           
           <Text style={styles.qrTitle}>{profile?.full_name}</Text>
@@ -891,13 +903,10 @@ export default function PlayerProfile() {
         >
           <View style={styles.playerMainRow}>
             <View style={styles.playerAvatarWrapper}>
-              {profile?.avatar_url ? (
-                <Image source={{ uri: profile.avatar_url }} style={styles.playerAvatar} />
-              ) : (
-                <View style={styles.avatarPlaceholder}>
-                  <Users size={32} color="#FFFFFF90" />
-                </View>
-              )}
+              <Image 
+                source={profile.avatar_url ? { uri: profile.avatar_url } : require('../../assets/avatar.png')} 
+                style={styles.playerAvatar} 
+              />
             </View>
             <View style={styles.playerTextInfo}>
               <Text style={styles.playerName}>{profile?.full_name || 'Loading...'}</Text>
@@ -1400,9 +1409,15 @@ export default function PlayerProfile() {
                 >
                   {['followers', 'following'].map((sub) => (
                     <View key={sub} style={{ width: measuredPagerWidth, paddingHorizontal: 16 }}>
-                      <View style={styles.emptyState}>
-                        <Users size={48} color="#E2E8F0" />
-                        <Text style={styles.emptyText}>No {sub} yet</Text>
+                      <View style={styles.tabSlideContent}>
+                        {(sub === 'followers' ? followers : following).length > 0 ? (
+                          (sub === 'followers' ? followers : following).map(renderConnectionCard)
+                        ) : (
+                          <View style={styles.emptyState}>
+                            <Users size={48} color="#E2E8F0" />
+                            <Text style={styles.emptyText}>No {sub} yet</Text>
+                          </View>
+                        )}
                       </View>
                     </View>
                   ))}

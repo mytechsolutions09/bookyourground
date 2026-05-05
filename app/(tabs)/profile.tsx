@@ -227,7 +227,7 @@ export default function ProfileScreen() {
             style={styles.avatarWrapperNew}
           >
             <Image
-              source={{ uri: profile?.avatar_url || 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg' }}
+              source={profile?.avatar_url ? { uri: profile.avatar_url } : require('../../assets/avatar.png')}
               style={[styles.avatarNew, isUltraNarrow && { width: 64, height: 64, borderRadius: 32 }]}
             />
             {uploading ? (

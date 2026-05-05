@@ -37,15 +37,16 @@ import {
   SuccessModal, 
   TeamScannerModal,
   TeamPickerModal,
-  TeamPickerView
+  TeamPickerView,
+  ManualPlayerModal
 } from './ScoringComponents';
 import { 
-  DashboardView, 
-  TeamSelectionView, 
+  DashboardView,
+  TeamSelectionView,
   PlayerSelectionView,
   MatchConfigurationView, 
   TossConfigurationView, 
-  OpeningSelectionView 
+  OpeningSelectionView
 } from './ScoringViews';
 import { 
   LiveScoringView, 
@@ -87,6 +88,7 @@ export default function ScoringScreen() {
   const [isRetiringHurt, setIsRetiringHurt] = useState(false);
   const [isRevisingTarget, setIsRevisingTarget] = useState(false);
   const [tempInputValue, setTempInputValue] = useState('');
+  const [isManualAddPlayerVisible, setIsManualAddPlayerVisible] = useState(false);
 
   // --- Match Data States ---
   const [teams, setTeams] = useState(INITIAL_TEAMS_DATA);
@@ -264,6 +266,9 @@ export default function ScoringScreen() {
     const isSelected = currentXi.find(p => p.id === player.id);
     if (isSelected) {
       setXi(prev => prev.filter(p => p.id !== player.id));
+      // Reset captain if removed from XI
+      if (side === 'A' && teamACaptain?.id === player.id) setTeamACaptain(null);
+      if (side === 'B' && teamBCaptain?.id === player.id) setTeamBCaptain(null);
     } else {
       setXi(prev => [...prev, player]);
     }
@@ -279,6 +284,23 @@ export default function ScoringScreen() {
     const isSelected = currentXi.find(p => p.id === player.id);
     if (!isSelected) {
       setXi(prev => [...prev, player]);
+    }
+  };
+
+  const handleManualAddPlayer = (player: any) => {
+    const newPlayer = {
+      ...player,
+      id: `manual-${Date.now()}`,
+      role: 'Player',
+      status: 'accepted'
+    };
+    
+    setTeamMembers(prev => [newPlayer, ...prev]);
+    
+    if (isSelectingPlayersA) {
+      setPlayingXiA(prev => [...prev, newPlayer]);
+    } else if (isSelectingPlayersB) {
+      setPlayingXiB(prev => [...prev, newPlayer]);
     }
   };
   const onFinalStart = async () => {
@@ -547,6 +569,7 @@ export default function ScoringScreen() {
           onTogglePlayer={(p: any) => togglePlayer(p, 'A')} onToggleCaptain={(p: any) => toggleCaptain(p, 'A')}
           onBack={() => setIsSelectingPlayersA(false)}
           onContinue={() => { setIsSelectingPlayersA(false); setIsSelectingPlayersB(true); }}
+          onAddPlayer={() => setIsManualAddPlayerVisible(true)}
         />
       ) : isSelectingPlayersB ? (
         <PlayerSelectionView 
@@ -555,6 +578,7 @@ export default function ScoringScreen() {
           onTogglePlayer={(p: any) => togglePlayer(p, 'B')} onToggleCaptain={(p: any) => toggleCaptain(p, 'B')}
           onBack={() => { setIsSelectingPlayersB(false); setIsSelectingPlayersA(true); }}
           onContinue={() => { setIsSelectingPlayersB(false); setIsConfiguringMatch(true); }}
+          onAddPlayer={() => setIsManualAddPlayerVisible(true)}
         />
       ) : isPickerOpen ? (
         <TeamPickerView 
@@ -593,6 +617,12 @@ export default function ScoringScreen() {
         onClose={() => setIsScanningTeam(false)} 
         onScan={handleTeamScan} 
         styles={styles} 
+      />
+      <ManualPlayerModal 
+        isVisible={isManualAddPlayerVisible}
+        onClose={() => setIsManualAddPlayerVisible(false)}
+        onAdd={handleManualAddPlayer}
+        styles={styles}
       />
       <ExtraRunsSelector 
         isVisible={isExtraRunsSelectorVisible}

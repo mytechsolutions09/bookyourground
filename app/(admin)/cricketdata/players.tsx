@@ -109,13 +109,10 @@ export default function AdminCricketPlayers() {
                    <View style={[styles.tableCell, styles.colPlayer]}>
                      <View style={styles.playerProfile}>
                         <View style={styles.avatarWrap}>
-                            {item.profile?.avatar_url ? (
-                                <Image source={{ uri: item.profile.avatar_url }} style={styles.avatar} />
-                            ) : (
-                                <View style={styles.avatarPlaceholder}>
-                                    <Text style={styles.avatarInitial}>{playerName.charAt(0)}</Text>
-                                </View>
-                            )}
+                            <Image 
+                              source={item.profile?.avatar_url ? { uri: item.profile.avatar_url } : require('../../../assets/avatar.png')} 
+                              style={styles.avatar} 
+                            />
                         </View>
                         <View>
                             <Text style={styles.cellMainText}>{playerName}</Text>

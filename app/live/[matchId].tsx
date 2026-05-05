@@ -518,8 +518,22 @@ export default function LiveScorecard() {
       if (m) {
         setMatch(m);
         let idA = m.team_a_id; let idB = m.team_b_id;
-        if (!idA && m.team_a) { const { data: tA } = await supabase.from('teams').select('id').eq('name', m.team_a).limit(1).single(); if (tA) idA = tA.id; }
-        if (!idB && m.team_b) { const { data: tB } = await supabase.from('teams').select('id').eq('name', m.team_b).limit(1).single(); if (tB) idB = tB.id; }
+        if (!idA && m.team_a) { 
+          const { data: tA } = await supabase.from('teams')
+            .select('id')
+            .ilike('name', m.team_a)
+            .limit(1)
+            .maybeSingle(); 
+          if (tA) idA = tA.id; 
+        }
+        if (!idB && m.team_b) { 
+          const { data: tB } = await supabase.from('teams')
+            .select('id')
+            .ilike('name', m.team_b)
+            .limit(1)
+            .maybeSingle(); 
+          if (tB) idB = tB.id; 
+        }
         const [sqA, sqB] = await Promise.all([
           idA ? supabase.from('team_members').select('*, profiles(*)').eq('team_id', idA) : Promise.resolve({ data: [] }),
           idB ? supabase.from('team_members').select('*, profiles(*)').eq('team_id', idB) : Promise.resolve({ data: [] })
@@ -609,10 +623,10 @@ export default function LiveScorecard() {
 
     const isExpanded = expandedInnings[innNum] !== false;
 
-    const toBat = battingSquad.filter(m => {
+    const toBatRaw = battingSquad.filter(m => {
        const pName = m.player_name || m.profiles?.full_name;
        return !sc.batters.find(b => b.name === pName);
-    }).map(m => m.player_name || m.profiles?.full_name).join(', ');
+    }).map(m => m.player_name || m.profiles?.full_name);
 
     return (
       <View style={[styles.scWrapper, { marginHorizontal: 12, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB', marginBottom: 0 }]}>
@@ -653,7 +667,23 @@ export default function LiveScorecard() {
               {sc.batters.map((b: any, i: number) => (
                 <View key={i} style={styles.scRow}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.scPlayerName}>{b.name}</Text>
+                    <TouchableOpacity 
+                      activeOpacity={0.7}
+                      onPress={() => {
+                        const searchName = b.name.trim().toLowerCase();
+                        const player = battingSquad.find(m => 
+                          (m.player_name || m.profiles?.full_name || '').trim().toLowerCase() === searchName
+                        );
+                        const profileId = player?.profiles?.id || player?.profile_id;
+                        if (profileId) {
+                          router.push(`/players/${profileId}`);
+                        } else {
+                          console.log('[Scorecard] Profile not found for:', b.name);
+                        }
+                      }}
+                    >
+                      <Text style={styles.scPlayerName}>{b.name}</Text>
+                    </TouchableOpacity>
                     <Text style={styles.scDismissal}>{b.dismissal}</Text>
                   </View>
                   <View style={{ flexDirection: 'row' }}>
@@ -694,10 +724,27 @@ export default function LiveScorecard() {
               </View>
 
               {/* To Bat */}
-              {toBat.length > 0 && (
+              {toBatRaw.length > 0 && (
                 <View style={styles.scToBatBox}>
                   <Text style={styles.scToBatLabel}>To bat:</Text>
-                  <Text style={styles.scToBatList}>{toBat}</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                    {toBatRaw.map((p, idx) => (
+                      <TouchableOpacity 
+                        key={idx} 
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          const searchName = p.trim().toLowerCase();
+                          const player = battingSquad.find(m => 
+                            (m.player_name || m.profiles?.full_name || '').trim().toLowerCase() === searchName
+                          );
+                          const profileId = player?.profiles?.id || player?.profile_id;
+                          if (profileId) router.push(`/players/${profileId}`);
+                        }}
+                      >
+                        <Text style={styles.scToBatList}>{p}{idx < toBatRaw.length - 1 ? ',' : ''}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
                 </View>
               )}
             </View>
@@ -716,7 +763,25 @@ export default function LiveScorecard() {
             <View style={styles.scTable}>
               {sc.bowlers.map((b: any, i: number) => (
                 <View key={i} style={styles.scRow}>
-                  <Text style={[styles.scPlayerName, { flex: 1 }]}>{b.name}</Text>
+                  <TouchableOpacity 
+                    style={{ flex: 1 }}
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      const bowlingSquad = isTeamA ? squadB : squadA;
+                      const searchName = b.name.trim().toLowerCase();
+                      const player = bowlingSquad.find(m => 
+                        (m.player_name || m.profiles?.full_name || '').trim().toLowerCase() === searchName
+                      );
+                      const profileId = player?.profiles?.id || player?.profile_id;
+                      if (profileId) {
+                        router.push(`/players/${profileId}`);
+                      } else {
+                        console.log('[Scorecard] Profile not found for bowler:', b.name);
+                      }
+                    }}
+                  >
+                    <Text style={styles.scPlayerName}>{b.name}</Text>
+                  </TouchableOpacity>
                   <View style={{ flexDirection: 'row' }}>
                     <Text style={[styles.scVal, { width: 30 }]}>{b.overs}</Text>
                     <Text style={[styles.scVal, { width: 30 }]}>{b.maidens}</Text>
@@ -739,7 +804,20 @@ export default function LiveScorecard() {
                   <View key={i} style={styles.fowRow}>
                     <View style={{ flexDirection: 'row', flex: 1, alignItems: 'center' }}>
                       <Text style={styles.fowNum}>{f.num}</Text>
-                      <Text style={styles.fowName}>{f.name}</Text>
+                      <TouchableOpacity 
+                        style={{ flex: 1, marginLeft: 8 }}
+                        activeOpacity={0.7}
+                        onPress={() => {
+                          const searchName = f.name.trim().toLowerCase();
+                          const player = battingSquad.find(m => 
+                            (m.player_name || m.profiles?.full_name || '').trim().toLowerCase() === searchName
+                          );
+                          const profileId = player?.profiles?.id || player?.profile_id;
+                          if (profileId) router.push(`/players/${profileId}`);
+                        }}
+                      >
+                        <Text style={styles.fowName}>{f.name}</Text>
+                      </TouchableOpacity>
                     </View>
                     <Text style={styles.fowScore}>
                       {f.score} <Text style={styles.fowOver}>({f.over} Ov)</Text>
@@ -767,8 +845,30 @@ export default function LiveScorecard() {
                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#111827' }}>{p.total_runs} <Text style={{ fontSize: 11, fontWeight: '400', color: '#6B7280' }}>({p.total_balls}b)</Text></Text>
                     </View>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                       <Text style={{ fontSize: 11, color: '#4B5563' }}>{p.batter_1_name}: {p.batter_1_runs}({p.batter_1_balls})</Text>
-                       <Text style={{ fontSize: 11, color: '#4B5563' }}>{p.batter_2_name}: {p.batter_2_runs}({p.batter_2_balls})</Text>
+                       <TouchableOpacity 
+                         activeOpacity={0.7}
+                         onPress={() => {
+                           const searchName = p.batter_1_name.trim().toLowerCase();
+                           const player = battingSquad.find(m => 
+                             (m.player_name || m.profiles?.full_name || '').trim().toLowerCase() === searchName
+                           );
+                           const profileId = player?.profiles?.id || player?.profile_id;
+                           if (profileId) router.push(`/players/${profileId}`);
+                       }}>
+                         <Text style={{ fontSize: 11, color: '#4B5563' }}>{p.batter_1_name}: {p.batter_1_runs}({p.batter_1_balls})</Text>
+                       </TouchableOpacity>
+                       <TouchableOpacity 
+                         activeOpacity={0.7}
+                         onPress={() => {
+                           const searchName = p.batter_2_name.trim().toLowerCase();
+                           const player = battingSquad.find(m => 
+                             (m.player_name || m.profiles?.full_name || '').trim().toLowerCase() === searchName
+                           );
+                           const profileId = player?.profiles?.id || player?.profile_id;
+                           if (profileId) router.push(`/players/${profileId}`);
+                       }}>
+                         <Text style={{ fontSize: 11, color: '#4B5563' }}>{p.batter_2_name}: {p.batter_2_runs}({p.batter_2_balls})</Text>
+                       </TouchableOpacity>
                     </View>
                   </View>
                 ))}
@@ -1071,6 +1171,8 @@ export default function LiveScorecard() {
                     .map((ball, idx, arr) => {
                     const nextBall = arr[idx+1];
                     const isOverEnd = nextBall && nextBall.over_number !== ball.over_number;
+                    const inn = inningsList.find(i => i.id === ball.innings_id);
+                    const isTeamA = inn ? inn.batting_team === match.team_a : true;
                     
                     // Simple over totals (runs/wkts)
                     const overBalls = arr.filter(b => b.over_number === ball.over_number && b.innings_id === ball.innings_id);
@@ -1100,7 +1202,37 @@ export default function LiveScorecard() {
                                <Text style={[styles.commsDescText, ball.is_wicket && { fontWeight: '700' }]}>{formatBallDescription(ball)}</Text>
                                {ball.is_wicket && (
                                  <View style={styles.wicketDetailBox}>
-                                    <Text style={styles.wicketDetailText}>{ball.batter_name} {ball.dismissal_type} {ball.fielder_name ? `c ${ball.fielder_name}` : ''} b {ball.bowler_name}</Text>
+                                    <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                                      <TouchableOpacity onPress={() => {
+                                        const p = (isTeamA ? squadA : squadB).find(m => (m.player_name || m.profiles?.full_name) === ball.batter_name);
+                                        const profileId = p?.profiles?.id || p?.profile_id;
+                                        if (profileId) router.push(`/players/${profileId}`);
+                                      }}>
+                                        <Text style={[styles.wicketDetailText, { fontWeight: '700' }]}>{ball.batter_name}</Text>
+                                      </TouchableOpacity>
+                                      <Text style={styles.wicketDetailText}> {ball.dismissal_type} </Text>
+                                      {ball.fielder_name && (
+                                        <>
+                                          <Text style={styles.wicketDetailText}>c </Text>
+                                          <TouchableOpacity onPress={() => {
+                                            const p = (!isTeamA ? squadA : squadB).find(m => (m.player_name || m.profiles?.full_name) === ball.fielder_name);
+                                            const profileId = p?.profiles?.id || p?.profile_id;
+                                            if (profileId) router.push(`/players/${profileId}`);
+                                          }}>
+                                            <Text style={[styles.wicketDetailText, { fontWeight: '700' }]}>{ball.fielder_name}</Text>
+                                          </TouchableOpacity>
+                                          <Text style={styles.wicketDetailText}> </Text>
+                                        </>
+                                      )}
+                                      <Text style={styles.wicketDetailText}>b </Text>
+                                      <TouchableOpacity onPress={() => {
+                                        const p = (!isTeamA ? squadA : squadB).find(m => (m.player_name || m.profiles?.full_name) === ball.bowler_name);
+                                        const profileId = p?.profiles?.id || p?.profile_id;
+                                        if (profileId) router.push(`/players/${profileId}`);
+                                      }}>
+                                        <Text style={[styles.wicketDetailText, { fontWeight: '700' }]}>{ball.bowler_name}</Text>
+                                      </TouchableOpacity>
+                                    </View>
                                  </View>
                                )}
                             </View>
@@ -1381,10 +1513,17 @@ export default function LiveScorecard() {
                           <Image source={{ uri: `https://i.pravatar.cc/100?u=${player.name}` }} style={styles.mvpAvatar} />
                           {(idx < 3) && <View style={styles.mvpProBadge}><Text style={styles.mvpProText}>PRO</Text></View>}
                        </View>
-                       <View style={styles.mvpInfoBody}>
-                          <Text style={styles.mvpPlayerName}>{player.name}</Text>
-                          <Text style={styles.mvpTeamName}>{idx % 2 === 0 ? match.team_a : match.team_b}</Text>
-                       </View>
+                        <TouchableOpacity 
+                          style={styles.mvpInfoBody}
+                          onPress={() => {
+                            const p = [...squadA, ...squadB].find(m => (m.player_name || m.profiles?.full_name) === player.name);
+                            const profileId = p?.profiles?.id || p?.profile_id;
+                            if (profileId) router.push(`/players/${profileId}`);
+                          }}
+                        >
+                           <Text style={styles.mvpPlayerName}>{player.name}</Text>
+                           <Text style={styles.mvpTeamName}>{idx % 2 === 0 ? match.team_a : match.team_b}</Text>
+                        </TouchableOpacity>
                        <View style={styles.mvpScoreBox}>
                           <Text style={styles.mvpScoreVal}>{player.points.toFixed(1)}</Text>
                        </View>
@@ -1660,19 +1799,20 @@ const styles = StyleSheet.create({
   tabScroll: { 
     backgroundColor: 'rgba(0,0,0,0.04)', 
     marginHorizontal: 16, 
-    marginVertical: 8, 
     borderRadius: 999,
     flexGrow: 0,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.02)',
+    height: 40,
   },
   tabContainerStyle: { 
-    paddingHorizontal: 4, 
-    height: 38, 
-    alignItems: 'center' 
+    paddingHorizontal: 12, 
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 38
   },
   tabBtnRaw: { 
-    height: 30, 
+    height: 32, 
     paddingHorizontal: 16, 
     marginHorizontal: 2, 
     alignItems: 'center', 
@@ -1694,9 +1834,8 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter' 
   },
   tabBtnTextActiveRaw: { 
-    color: '#01b854', 
-    fontWeight: '600', 
-    fontFamily: 'Inter' 
+    color: '#0D9488', 
+    fontWeight: '600'
   },
   
   scoreCard: { padding: 24, paddingBottom: 20 },
@@ -1751,14 +1890,14 @@ const styles = StyleSheet.create({
   bowlerName: { fontSize: 15, fontWeight: 'bold', color: '#111827' },
   bowlerStats: { flexDirection: 'row', gap: 16 },
   bowlerStat: { fontSize: 13, color: '#6B7280' },
-  tabContainerStyle: { paddingHorizontal: 16, paddingVertical: 12, gap: 10, flexDirection: 'row' },
+
   tabBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: '#F6F4F0' },
   tabBtnActive: { backgroundColor: '#111827' },
   tabBtnText: { fontSize: 13, fontWeight: '600', color: '#888780' },
   tabBtnTextActive: { color: '#FFFFFF' },
   infoRow: { flexDirection: 'row', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F1EFE8', justifyContent: 'space-between' },
-  infoLabel: { fontSize: 13, color: '#888780', fontWeight: '600' },
-  infoValue: { fontSize: 13, color: '#111827', fontWeight: 'bold', flex: 1, textAlign: 'right', paddingLeft: 20 },
+  infoLabel: { fontSize: 13, color: '#888780', fontWeight: '500' },
+  infoValue: { fontSize: 13, color: '#111827', fontWeight: '600', flex: 1, textAlign: 'right', paddingLeft: 20 },
   squadsShortcut: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1770,7 +1909,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   squadsShortcutText: { fontSize: 16, fontWeight: '700', color: '#111827' },
-  infoHeading: { fontSize: 18, fontWeight: '800', color: '#111827', marginBottom: 16 },
+  infoHeading: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 16 },
   notesSection: { backgroundColor: '#F3F4F6', padding: 16, marginTop: 24 },
   notesTitle: { fontSize: 16, fontWeight: '800', color: '#111827', marginBottom: 16 },
   teamNotesContainer: { backgroundColor: '#F9FAFB' },

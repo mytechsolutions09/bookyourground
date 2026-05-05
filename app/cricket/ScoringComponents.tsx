@@ -547,3 +547,65 @@ export const TeamPickerView = ({ onClose, teams, onSelect, onScanQr, onCreateTea
     </View>
   );
 };
+export const ManualPlayerModal = ({ isVisible, onClose, onAdd, styles }: any) => {
+  const [name, setName] = React.useState('');
+  const [number, setNumber] = React.useState('');
+
+  const handleAdd = () => {
+    if (!name.trim()) return;
+    onAdd({ player_name: name.trim(), player_phone: number.trim() });
+    setName('');
+    setNumber('');
+    onClose();
+  };
+
+  return (
+    <Modal
+      animationType="fade"
+      transparent={true}
+      visible={isVisible}
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.actionModalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Add Player Manually</Text>
+            <TouchableOpacity onPress={onClose}>
+              <X size={24} color="#94A3B8" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Player Name</Text>
+            <TextInput 
+              style={styles.formInput}
+              placeholder="e.g. John Doe"
+              value={name}
+              onChangeText={setName}
+              autoFocus
+            />
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.formLabel}>Phone / Jersey Number</Text>
+            <TextInput 
+              style={styles.formInput}
+              placeholder="e.g. 9988776655 or 07"
+              value={number}
+              onChangeText={setNumber}
+              keyboardType="phone-pad"
+            />
+          </View>
+
+          <TouchableOpacity 
+            style={[styles.startMatchBtn, { marginTop: 10, opacity: name.trim() ? 1 : 0.5 }]}
+            onPress={handleAdd}
+            disabled={!name.trim()}
+          >
+            <Text style={styles.startMatchBtnText}>Add to Team</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+};
