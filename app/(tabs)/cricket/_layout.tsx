@@ -109,6 +109,9 @@ export default function CricketLayout() {
   const activeTabIndex = useSharedValue(initialIndex);
   const [tabMeasurements, setTabMeasurements] = React.useState<any[]>([]);
   const [dynamicTags, setDynamicTags] = useState<PlayerTag[]>([]);
+  const [measuredPagerWidth, setMeasuredPagerWidth] = useState(windowWidth);
+  const horizontalOffset = useSharedValue(initialIndex * windowWidth);
+  const isScrollingProgrammatically = useRef(false);
 
   const [matchesTab, setMatchesTab] = React.useState('played');
   const matchesIdx = useSharedValue(0);
@@ -236,19 +239,7 @@ export default function CricketLayout() {
     setIsAvatarModalVisible(true);
   };
 
-  const onTabPress = (tabId: string, index: number) => {
-    setActiveTabId(tabId);
-    activeTabIndex.value = index;
-    horizontalPagerRef.current?.scrollTo({ x: index * windowWidth, animated: true });
-    
-    // Center the tab in the scroll view
-    const tabWidth = 80; // approximate
-    const screenWidth = Dimensions.get('window').width;
-    tabScrollRef.current?.scrollTo({
-      x: index * tabWidth - screenWidth / 2 + tabWidth / 2,
-      animated: true
-    });
-  };
+
 
   const verticalScrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -285,14 +276,25 @@ export default function CricketLayout() {
   });
 
   const mainIndicatorStyle = useAnimatedStyle(() => {
-    const current = tabMeasurements[activeTabIndex.value];
-    if (!current) return { width: 0, opacity: 0 };
-
+    if (tabMeasurements.length === 0) return { width: 0, opacity: 0 };
+    
+    const pagerWidth = measuredPagerWidth || windowWidth;
+    const index = horizontalOffset.value / pagerWidth;
+    const lowIdx = Math.floor(index);
+    const highIdx = Math.ceil(index);
+    const progress = index - lowIdx;
+    
+    const lowTab = tabMeasurements[Math.max(0, Math.min(lowIdx, TABS.length - 1))];
+    const highTab = tabMeasurements[Math.max(0, Math.min(highIdx, TABS.length - 1))];
+    
+    if (!lowTab || !highTab) return { width: 0, opacity: 0 };
+    
+    const translateX = lowTab.x + (highTab.x - lowTab.x) * progress;
+    const width = lowTab.width + (highTab.width - lowTab.width) * progress;
+    
     return {
-      transform: [
-        { translateX: current.x }
-      ],
-      width: current.width,
+      transform: [{ translateX }],
+      width,
       opacity: 1,
     };
   });
@@ -565,31 +567,56 @@ export default function CricketLayout() {
     return name.split(' ').map(s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()).join(' ');
   };
 
-  const horizontalScrollHandler = (event: any) => {
-    const offsetX = event.nativeEvent.contentOffset.x;
-    const index = Math.round(offsetX / windowWidth);
-    if (index !== activeTabIndex.value && index >= 0 && index < TABS.length) {
+  const syncTabState = (index: number) => {
+    if (index >= 0 && index < TABS.length) {
       const tab = TABS[index];
-      activeTabIndex.value = index;
       setActiveTabId(tab.id);
+      activeTabIndex.value = index;
       
       // Center the tab
       const tabWidth = 80;
       tabScrollRef.current?.scrollTo({
-        x: index * tabWidth - Dimensions.get('window').width / 2 + tabWidth / 2,
+        x: index * tabWidth - windowWidth / 2 + tabWidth / 2,
         animated: true
       });
     }
   };
 
-  const onMomentumScrollEnd = (event: any) => {
-    const offsetX = event.nativeEvent.contentOffset.x;
-    const index = Math.round(offsetX / windowWidth);
-    const tab = TABS[index];
-    if (tab) {
-      setActiveTabId(tab.id);
-      activeTabIndex.value = index;
+  const horizontalScrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      horizontalOffset.value = event.contentOffset.x;
+    },
+    onMomentumEnd: (event) => {
+      if (isScrollingProgrammatically.current) return;
+      const index = Math.round(event.contentOffset.x / (measuredPagerWidth || windowWidth));
+      runOnJS(syncTabState)(index);
     }
+  });
+
+  const onMomentumScrollEnd = (event: any) => {
+    isScrollingProgrammatically.current = false;
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(offsetX / (measuredPagerWidth || windowWidth));
+    syncTabState(index);
+  };
+
+  const onTabPress = (tabId: string, index: number) => {
+    setActiveTabId(tabId);
+    activeTabIndex.value = index;
+    isScrollingProgrammatically.current = true;
+    horizontalPagerRef.current?.scrollTo({ x: index * (measuredPagerWidth || windowWidth), animated: true });
+    
+    // Reset the flag after a delay
+    setTimeout(() => {
+      isScrollingProgrammatically.current = false;
+    }, 600);
+
+    // Center the tab
+    const tabWidth = 80;
+    tabScrollRef.current?.scrollTo({
+      x: index * tabWidth - windowWidth / 2 + tabWidth / 2,
+      animated: true
+    });
   };
 
   const content = (
@@ -888,14 +915,17 @@ export default function CricketLayout() {
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        contentOffset={{ x: initialIndex * windowWidth, y: 0 }}
+        contentOffset={{ x: initialIndex * (measuredPagerWidth || windowWidth), y: 0 }}
         onScroll={horizontalScrollHandler}
         onMomentumScrollEnd={onMomentumScrollEnd}
         scrollEventThrottle={16}
+        onLayout={(e) => {
+          setMeasuredPagerWidth(e.nativeEvent.layout.width);
+        }}
         style={{ flex: 1 }}
       >
         {TABS.map((tab) => (
-          <View key={`${tab.id}-${windowWidth}`} style={{ width: windowWidth, flex: 1 }}>
+          <View key={`${tab.id}-${measuredPagerWidth || windowWidth}`} style={{ width: measuredPagerWidth || windowWidth, flex: 1 }}>
             <Animated.ScrollView 
               onScroll={verticalScrollHandler}
               scrollEventThrottle={16}
@@ -1213,7 +1243,7 @@ const styles = StyleSheet.create({
     maxWidth: 650, // Matches the profile content for a cohesive look
     alignSelf: 'center',
     width: '100%',
-    paddingHorizontal: 0, // Padding is handled by children
+    paddingHorizontal: 16,
     paddingTop: 0,
   },
   modalOverlay: {

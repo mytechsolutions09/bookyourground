@@ -453,8 +453,13 @@ export function useCricketScoring() {
 
   const declareInnings = useCallback(async () => {
     if (!inn) return;
-    const confirm = typeof window !== 'undefined' ? window.confirm('Are you sure you want to declare/end this innings?') : true;
-    if (!confirm) return;
+    
+    // In React Native, we should use Alert.alert, but for now we'll check if window exists
+    // for web and skip for native or implement a safer check.
+    if (typeof window !== 'undefined' && window.confirm) {
+      const confirm = window.confirm('Are you sure you want to declare/end this innings?');
+      if (!confirm) return;
+    }
 
     if (currentIdx === 0) {
       await supabase.from('innings').update({ 
@@ -1333,5 +1338,6 @@ return {
     swapBatters, markRetiredHurt, reviseTarget, updateMatchConfig, changeSquad, declareInnings,
     startMatch, resumeMatch, addBall, addExtra, addWicket,
     changeBowler, addNewBowler, undoLastBall, startSecondInnings, setOpeners,
+    isScoring: !!matchId && !!inn
   };
 }

@@ -13,7 +13,7 @@ import {
   Animated,
   Pressable
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { 
   X, 
@@ -21,20 +21,23 @@ import {
   Plus, 
   User, 
   Users, 
-  PlusCircle, 
-  Crown
+  Crown,
+  ChevronRight,
+  Camera
 } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCricketScoring } from '@/hooks/useCricketScoring';
 
 // Modular Imports
 import { styles } from './scoring-styles';
-import { INITIAL_TEAMS_DATA } from './scoring-constants';
+import { INITIAL_TEAMS_DATA, INDIAN_STATES } from './scoring-constants';
 import { 
   SuccessModal, 
   TeamScannerModal,
   TeamPickerModal,
+  TeamPickerView
 } from './ScoringComponents';
 import { 
   DashboardView, 
@@ -54,9 +57,10 @@ import {
 
 export default function ScoringScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { session } = useAuth();
   const { width: windowWidth } = useWindowDimensions();
-  const { matchId: urlMatchId, live, startMatch: directStart } = useLocalSearchParams();
+  const { matchId: urlMatchId, live, startMatch: directStart, createTeam } = useLocalSearchParams();
 
   // --- UI Visibility States ---
   const [isSelectingTeams, setIsSelectingTeams] = useState(false);
@@ -70,6 +74,8 @@ export default function ScoringScreen() {
   const [isFlipping, setIsFlipping] = useState(false);
   const [isScanningTeam, setIsScanningTeam] = useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [isLiveSession, setIsLiveSession] = useState(false);
+  const [isCreateTeamModalVisible, setIsCreateTeamModalVisible] = useState(false);
   const [pickingFor, setPickingFor] = useState<'A' | 'B' | null>(null);
   const [isLoadingMembers, setIsLoadingMembers] = useState(false);
   const [isSelectingNextBowler, setIsSelectingNextBowler] = useState(false);
@@ -77,6 +83,10 @@ export default function ScoringScreen() {
   const [isExtraRunsSelectorVisible, setIsExtraRunsSelectorVisible] = useState(false);
   const [activeExtraType, setActiveExtraType] = useState<'wide' | 'noball' | 'bye' | 'legbye' | null>(null);
   const [isMoreSheetVisible, setIsMoreSheetVisible] = useState(false);
+  const [isSelectingNewBatter, setIsSelectingNewBatter] = useState(false);
+  const [isRetiringHurt, setIsRetiringHurt] = useState(false);
+  const [isRevisingTarget, setIsRevisingTarget] = useState(false);
+  const [tempInputValue, setTempInputValue] = useState('');
 
   // --- Match Data States ---
   const [teams, setTeams] = useState(INITIAL_TEAMS_DATA);
@@ -92,6 +102,9 @@ export default function ScoringScreen() {
   const [playerSearchQuery, setPlayerSearchQuery] = useState('');
   const [dbSearchResults, setDbSearchResults] = useState<any[]>([]);
   const [isSearchingDb, setIsSearchingDb] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showStateDropdown, setShowStateDropdown] = useState(false);
+  const [teamForm, setTeamForm] = useState({ name: '', location: '', captain: '', image: '' });
 
   const [tossResult, setTossResult] = useState<{ winner: any, decision: 'bat' | 'bowl' | null }>({ winner: null, decision: null });
   const [matchState, setMatchState] = useState<{ striker: any, nonStriker: any, bowler: any, keeper: any }>({ striker: null, nonStriker: null, bowler: null, keeper: null });
@@ -139,22 +152,30 @@ export default function ScoringScreen() {
     striker,
     nonStriker,
     bowler,
-    crr
+    crr,
+    changeBowler,
+    addNewBowler,
+    setOpeners,
+    startSecondInnings,
+    isScoring: hookIsScoring
   } = useCricketScoring();
-
-  // Remove redundant calculations since they come from the hook
 
   // --- Effects ---
   useEffect(() => {
     fetchTeams();
-    fetchMatches();
 
     if (urlMatchId) {
       handleResume(urlMatchId as string);
-    } else if (directStart === 'true') {
+    } else if (directStart === 'true' || live === 'true') {
+      setIsScoring(false); 
+      if (live === 'true') setIsLiveSession(true);
       setIsSelectingTeams(true);
     }
-  }, [urlMatchId, directStart]);
+
+    if (createTeam === 'true') {
+      setIsCreateTeamModalVisible(true);
+    }
+  }, [urlMatchId, directStart, live, createTeam, session]);
 
   useEffect(() => {
     if (isSelectingPlayersA || isSelectingPlayersB) {
@@ -169,11 +190,6 @@ export default function ScoringScreen() {
     if (data) setTeams(data);
   };
 
-  const fetchMatches = async () => {
-    const { data } = await supabase.from('matches').select('*, match_live_state(*)').order('created_at', { ascending: false });
-    if (data) setFetchedMatches(data);
-  };
-
   const fetchTeamMembers = async (teamId: string) => {
     setIsLoadingMembers(true);
     const { data } = await supabase.from('team_members').select('*, profiles(avatar_url)').eq('team_id', teamId);
@@ -184,8 +200,37 @@ export default function ScoringScreen() {
   const handleResume = async (id: string) => {
     const res = await resumeMatch(id);
     if (res.status === 'success' || res.status === 'needs_setup') {
-      setIsScoring(res.status === 'success');
-      setIsConfiguringMatch(res.status === 'needs_setup');
+      const config = res.config;
+      const xiData = (res as any).xiData || [];
+      
+      if (config) {
+        const [{ data: tA }, { data: tB }] = await Promise.all([
+          supabase.from('teams').select('*').eq('id', config.teamAId).maybeSingle(),
+          supabase.from('teams').select('*').eq('id', config.teamBId).maybeSingle()
+        ]);
+
+        if (tA) setSelectedTeamA(tA);
+        if (tB) setSelectedTeamB(tB);
+        
+        if (xiData.length > 0 && tA && tB) {
+          const xiA = xiData.filter((r: any) => r.team_id === tA.id).map((r: any) => ({
+            ...r.team_members,
+            id: r.player_id
+          }));
+          const xiB = xiData.filter((r: any) => r.team_id === tB.id).map((r: any) => ({
+            ...r.team_members,
+            id: r.player_id
+          }));
+          setPlayingXiA(xiA.filter(p => !!p.id));
+          setPlayingXiB(xiB.filter(p => !!p.id));
+        }
+
+        if (res.status === 'success') {
+          setIsScoring(true);
+        } else {
+          setIsConfiguringMatch(true); 
+        }
+      }
     }
   };
 
@@ -231,34 +276,158 @@ export default function ScoringScreen() {
     
     setCaptain(player);
     
-    // Ensure captain is in the XI without toggling them out
     const isSelected = currentXi.find(p => p.id === player.id);
     if (!isSelected) {
       setXi(prev => [...prev, player]);
     }
   };
   const onFinalStart = async () => {
-    const config = {
-      teamA: selectedTeamA?.name,
-      teamB: selectedTeamB?.name,
-      teamAId: selectedTeamA?.id,
-      teamBId: selectedTeamB?.id,
-      teamAPlayers: playingXiA.map(p => p.player_name),
-      teamBPlayers: playingXiB.map(p => p.player_name),
-      overs: parseInt(matchConfig.totalOvers),
-      players: playingXiA.length,
-      venue: matchConfig.ground || 'Standard Ground',
-      matchType: matchConfig.type
-    };
+    try {
+      const sName = matchState.striker?.player_name || '';
+      const nsName = matchState.nonStriker?.player_name || '';
+      const bwrName = matchState.bowler?.player_name || '';
+      const kprName = matchState.keeper?.player_name || '';
 
-    const sName = matchState.striker?.player_name || '';
-    const nsName = matchState.nonStriker?.player_name || '';
-    const bwrName = matchState.bowler?.player_name || '';
-    const kprName = matchState.keeper?.player_name || '';
+      if (inn && (inn.target !== undefined && inn.target !== null)) {
+        await setOpeners(sName, nsName, bwrName, kprName);
+      } else {
+        const battingFirstTeam = tossResult.decision === 'bat' 
+          ? tossResult.winner 
+          : (tossResult.winner?.id === selectedTeamA?.id ? selectedTeamB : selectedTeamA);
+        
+        const isTeamAFirst = battingFirstTeam?.id === selectedTeamA?.id;
+        let bPlayers = (isTeamAFirst ? playingXiA : playingXiB).map(p => p.player_name);
+        let blPlayers = (isTeamAFirst ? playingXiB : playingXiA).map(p => p.player_name);
 
-    await startMatch(config, tossResult.winner?.name, tossResult.decision as 'bat' | 'bowl', { striker: sName, nonStriker: nsName, bowler: bwrName, keeper: kprName });
-    setIsSelectingOpeners(false);
-    setIsScoring(true);
+        bPlayers = [sName, nsName, ...bPlayers.filter(p => p !== sName && p !== nsName)];
+        blPlayers = [bwrName, ...blPlayers.filter(p => p !== bwrName)];
+
+        const config = {
+          teamA: selectedTeamA?.name,
+          teamB: selectedTeamB?.name,
+          teamAId: selectedTeamA?.id,
+          teamBId: selectedTeamB?.id,
+          teamAPlayers: isTeamAFirst ? bPlayers : blPlayers,
+          teamBPlayers: isTeamAFirst ? blPlayers : bPlayers,
+          overs: parseInt(matchConfig.totalOvers || '20'),
+          players: playingXiA.length,
+          venue: matchConfig.ground || 'Standard Ground',
+          matchType: matchConfig.type
+        };
+
+        const result = await startMatch(config, tossResult.winner?.name, tossResult.decision as 'bat' | 'bowl', { striker: sName, nonStriker: nsName, bowler: bwrName, keeper: kprName });
+        
+        if (result?.matchId) {
+          await savePlayingXi(result.matchId, selectedTeamA.id, playingXiA, teamACaptain?.id);
+          await savePlayingXi(result.matchId, selectedTeamB.id, playingXiB, teamBCaptain?.id);
+        }
+      }
+
+      setIsSelectingOpeners(false);
+      setIsScoring(true);
+    } catch (error) {
+      console.error('[Scoring] Error starting match:', error);
+      alert('Failed to start match. Please check your internet and try again.');
+    }
+  };
+
+  const uploadLogo = async (uri: string) => {
+    try {
+      if (!session?.user?.id) throw new Error('User not logged in');
+      const fileName = `${Date.now()}.png`;
+      const filePath = `${session.user.id}/${fileName}`;
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      const arrayBuffer = await new Response(blob).arrayBuffer();
+
+      const { error } = await supabase.storage
+        .from('team-logos')
+        .upload(filePath, arrayBuffer, {
+          contentType: 'image/png',
+          upsert: true,
+        });
+
+      if (error) throw error;
+      const { data: { publicUrl } } = supabase.storage
+        .from('team-logos')
+        .getPublicUrl(filePath);
+      return publicUrl;
+    } catch (err) {
+      console.error('Logo upload failed:', err);
+      return null;
+    }
+  };
+
+  const handleCreateTeam = async () => {
+    if (!session?.user?.id) {
+      alert('You must be logged in to create a team');
+      return;
+    }
+    if (!teamForm.name || !teamForm.location || !teamForm.captain) {
+      alert('Please fill all required fields');
+      return;
+    }
+
+    setIsSubmitting(true);
+    let publicImageUrl = null;
+
+    try {
+      if (teamForm.image) {
+        publicImageUrl = await uploadLogo(teamForm.image);
+      }
+
+      const { error } = await supabase
+        .from('teams')
+        .insert([{
+          name: teamForm.name,
+          location: teamForm.location,
+          captain: teamForm.captain,
+          image_url: publicImageUrl,
+          owner_id: session.user.id
+        }]);
+
+      if (error) {
+        alert('Error creating team: ' + error.message);
+      } else {
+        setIsCreateTeamModalVisible(false);
+        setTeamForm({ name: '', location: '', captain: '', image: '' });
+        fetchTeams();
+        setIsSuccessModalVisible(true);
+      }
+    } catch (error) {
+      alert('Something went wrong. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const pickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1
+    });
+
+    if (!result.canceled) {
+      setTeamForm({ ...teamForm, image: result.assets[0].uri });
+    }
+  };
+
+  const handleSelectBowler = (p: any) => {
+    addNewBowler(p.player_name);
+    setIsSelectingNextBowler(false);
+  };
+
+  const handleSelectNewBatter = async (p: any) => {
+    if (pendingWicketData) {
+       await addWicket({
+         ...pendingWicketData,
+         newBatterName: p.player_name
+       });
+       setPendingWicketData(null);
+    }
+    setIsSelectingNewBatter(false);
   };
 
   const handleAddBall = async (runs: number) => {
@@ -277,32 +446,45 @@ export default function ScoringScreen() {
   };
 
   const handleWicketConfirm = async () => {
-    // Basic implementation for now, using the striker as the one out
     const dismissed = striker;
     if (dismissed) {
-      await addWicket({ 
+      setPendingWicketData({ 
         dismissedName: dismissed.name, 
         dismissalType: dismissalState.type, 
         fielder: dismissalState.fielder?.player_name 
       });
       setIsConfiguringDismissal(false);
       setDismissalState({ type: '', fielder: null });
-      // If not all out, we'll need a new batter, but for now just continue
+      
+      setIsSelectingNewBatter(true);
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom, backgroundColor: '#FFFFFF' }]}>
       <Stack.Screen options={{ headerShown: false }} />
       
-      {isScoring ? (
+      {(isScoring || hookIsScoring) ? (
         isSelectingNextBowler ? (
           <BowlerSelectionView 
             inn={inn} 
             selectedTeamA={selectedTeamA} selectedTeamB={selectedTeamB}
             playingXiA={playingXiA} playingXiB={playingXiB}
             tossResult={tossResult}
-            onSelectBowler={() => setIsSelectingNextBowler(false)}
+            onSelectBowler={handleSelectBowler}
+          />
+        ) : isSelectingNewBatter ? (
+          <PlayerSelectionView
+            team={inn?.battingTeam === selectedTeamA?.name ? selectedTeamA : selectedTeamB}
+            teamMembers={teamMembers}
+            playingXi={inn?.battingTeam === selectedTeamA?.name ? playingXiA : playingXiB}
+            currentCaptain={null}
+            isLoading={isLoadingMembers}
+            onTogglePlayer={handleSelectNewBatter}
+            onToggleCaptain={() => {}}
+            onBack={() => setIsSelectingNewBatter(false)}
+            onContinue={() => {}}
+            title="Select New Batter"
           />
         ) : isConfiguringDismissal ? (
           <DismissalConfigurationView 
@@ -321,7 +503,9 @@ export default function ScoringScreen() {
             onOpenMore={() => setIsMoreSheetVisible(true)}
             onOpenSettings={() => {}}
             onStartSecondInnings={async () => {
-              await declareInnings();
+              await startSecondInnings();
+              setIsScoring(false);
+              setIsSelectingOpeners(true);
             }}
             onOpenBowlerSelection={() => setIsSelectingNextBowler(true)}
             onOpenWicketConfig={() => setIsConfiguringDismissal(true)}
@@ -372,19 +556,34 @@ export default function ScoringScreen() {
           onBack={() => { setIsSelectingPlayersB(false); setIsSelectingPlayersA(true); }}
           onContinue={() => { setIsSelectingPlayersB(false); setIsConfiguringMatch(true); }}
         />
-      ) : isSelectingTeams ? (
+      ) : isPickerOpen ? (
+        <TeamPickerView 
+          teams={teams}
+          onSelect={(team) => {
+            if (pickingFor === 'A') setSelectedTeamA(team);
+            else setSelectedTeamB(team);
+            setIsPickerOpen(false);
+          }}
+          onClose={() => setIsPickerOpen(false)}
+          onScanQr={() => {
+            setIsPickerOpen(false);
+            setIsScanningTeam(true);
+          }}
+          onCreateTeam={() => {
+            setIsPickerOpen(false);
+            setIsCreateTeamModalVisible(true);
+          }}
+          styles={styles}
+          title={pickingFor === 'A' ? "Select Home Team" : "Select Away Team"}
+        />
+      ) : (
         <TeamSelectionView 
           teams={teams} selectedTeamA={selectedTeamA} selectedTeamB={selectedTeamB}
           onOpenPickerA={() => { setPickingFor('A'); setIsPickerOpen(true); }}
           onOpenPickerB={() => { setPickingFor('B'); setIsPickerOpen(true); }}
-          onBack={() => setIsSelectingTeams(false)}
-          onContinue={() => { setIsSelectingTeams(false); setIsSelectingPlayersA(true); }}
-        />
-      ) : (
-        <DashboardView 
-          fetchedMatches={fetchedMatches}
-          onStartNewMatch={() => setIsSelectingTeams(true)}
-          onMatchPress={(id: string) => handleResume(id)}
+          onScanQr={() => setIsScanningTeam(true)}
+          onBack={() => router.back()}
+          onContinue={() => setIsSelectingPlayersA(true)}
         />
       )}
 
@@ -394,22 +593,6 @@ export default function ScoringScreen() {
         onClose={() => setIsScanningTeam(false)} 
         onScan={handleTeamScan} 
         styles={styles} 
-      />
-      <TeamPickerModal 
-        isVisible={isPickerOpen}
-        onClose={() => setIsPickerOpen(false)}
-        teams={teams}
-        onSelect={(team) => {
-          if (pickingFor === 'A') setSelectedTeamA(team);
-          else setSelectedTeamB(team);
-          setIsPickerOpen(false);
-        }}
-        onScanQr={() => {
-          setIsPickerOpen(false);
-          setIsScanningTeam(true);
-        }}
-        styles={styles}
-        title={pickingFor === 'A' ? "Select Home Team" : "Select Away Team"}
       />
       <ExtraRunsSelector 
         isVisible={isExtraRunsSelectorVisible}
@@ -421,18 +604,183 @@ export default function ScoringScreen() {
         isVisible={isMoreSheetVisible}
         onClose={() => setIsMoreSheetVisible(false)}
         onSwapBatters={swapBatters}
-        onRetireHurt={() => {
-           const name = prompt("Enter player name to retire:");
-           if (name) markRetiredHurt(name);
-        }}
-        onReviseTarget={() => {
-           const target = prompt("Enter new target:");
-           if (target) reviseTarget(parseInt(target));
-        }}
+        onRetireHurt={() => setIsRetiringHurt(true)}
+        onReviseTarget={() => setIsRevisingTarget(true)}
         onChangeSquad={() => {}}
         onDeclareInnings={declareInnings}
         onUndo={undoLastBall}
       />
-    </SafeAreaView>
+
+      <Modal visible={isRetiringHurt} transparent animationType="fade">
+        <View style={styles.sheetOverlay}>
+          <View style={[styles.sheetContent, { padding: 24 }]}>
+            <Text style={styles.selectionTitle}>Retire Player</Text>
+            <Text style={styles.selectionSubTitleSmall}>Enter player name to mark as retired hurt</Text>
+            <TextInput 
+              style={styles.modalInput}
+              value={tempInputValue}
+              onChangeText={setTempInputValue}
+              placeholder="Player name"
+            />
+            <View style={{ flexDirection: 'row', gap: 12, marginTop: 24 }}>
+              <TouchableOpacity style={[styles.cancelExtraBtn, { flex: 1 }]} onPress={() => setIsRetiringHurt(false)}>
+                <Text style={styles.cancelExtraText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.startMatchMainBtn, { flex: 1, height: 48, marginTop: 0 }]} onPress={() => {
+                markRetiredHurt(tempInputValue);
+                setIsRetiringHurt(false);
+                setTempInputValue('');
+              }}>
+                <Text style={styles.startMatchMainBtnText}>Confirm</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={isRevisingTarget} transparent animationType="fade">
+        <View style={styles.sheetOverlay}>
+          <View style={[styles.sheetContent, { padding: 24 }]}>
+            <Text style={styles.selectionTitle}>Revise Target</Text>
+            <Text style={styles.selectionSubTitleSmall}>Set a new target for the chasing team</Text>
+            <TextInput 
+              style={styles.modalInput}
+              value={tempInputValue}
+              onChangeText={setTempInputValue}
+              placeholder="e.g. 150"
+              keyboardType="numeric"
+            />
+            <View style={{ flexDirection: 'row', gap: 12, marginTop: 24 }}>
+              <TouchableOpacity style={[styles.cancelExtraBtn, { flex: 1 }]} onPress={() => setIsRevisingTarget(false)}>
+                <Text style={styles.cancelExtraText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.startMatchMainBtn, { flex: 1, height: 48, marginTop: 0 }]} onPress={() => {
+                reviseTarget(parseInt(tempInputValue));
+                setIsRevisingTarget(false);
+                setTempInputValue('');
+              }}>
+                <Text style={styles.startMatchMainBtnText}>Set Target</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={isCreateTeamModalVisible}
+        onRequestClose={() => setIsCreateTeamModalVisible(false)}
+      >
+        <View style={styles.sheetOverlay}>
+          <View style={[styles.sheetContent, { height: 'auto', maxHeight: '95%', width: '100%' }]}>
+            <View style={styles.sheetHandle} />
+            <View style={styles.modalHeaderRow}>
+              <View>
+                <Text style={styles.sheetTitle}>Create New Team</Text>
+                <Text style={styles.sheetSubtitle}>Build your squad from scratch</Text>
+              </View>
+              <TouchableOpacity onPress={() => setIsCreateTeamModalVisible(false)}>
+                <X size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={{ padding: 24 }} showsVerticalScrollIndicator={false}>
+              <View style={{ gap: 20 }}>
+                <View>
+                  <Text style={styles.configLabel}>Team Name</Text>
+                  <TextInput 
+                    style={styles.configInput} 
+                    placeholder="e.g. Royal Challengers" 
+                    value={teamForm.name}
+                    onChangeText={(t) => setTeamForm({...teamForm, name: t})}
+                  />
+                </View>
+
+                <View>
+                  <Text style={styles.configLabel}>Location (State)</Text>
+                  <TouchableOpacity 
+                    style={styles.configInput}
+                    onPress={() => setShowStateDropdown(!showStateDropdown)}
+                  >
+                    <View style={styles.selectionHeader}>
+                      <Text style={[teamForm.location ? { color: '#1E293B' } : { color: '#9CA3AF' }]}>
+                        {teamForm.location || 'Select State'}
+                      </Text>
+                      <ChevronRight 
+                        size={20} 
+                        color="#9CA3AF" 
+                        style={{ transform: [{ rotate: showStateDropdown ? '90deg' : '0deg' }] }} 
+                      />
+                    </View>
+                  </TouchableOpacity>
+
+                  {showStateDropdown && (
+                    <View style={styles.dropdownMenu}>
+                      <ScrollView nestedScrollEnabled style={{ maxHeight: 200 }}>
+                        {INDIAN_STATES.map((state) => (
+                          <TouchableOpacity 
+                            key={state}
+                            style={styles.dropdownOption}
+                            onPress={() => {
+                              setTeamForm({ ...teamForm, location: state });
+                              setShowStateDropdown(false);
+                            }}
+                          >
+                            <Text style={styles.dropdownOptionText}>{state}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
+                </View>
+
+                <View>
+                  <Text style={styles.configLabel}>Captain Name</Text>
+                  <TextInput 
+                    style={styles.configInput} 
+                    placeholder="e.g. Virat Kohli" 
+                    value={teamForm.captain}
+                    onChangeText={(t) => setTeamForm({...teamForm, captain: t})}
+                  />
+                </View>
+
+                <View>
+                  <Text style={styles.configLabel}>Team Logo</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+                    <TouchableOpacity 
+                      style={{ 
+                        width: 80, height: 80, borderRadius: 40, backgroundColor: '#F1F5F9',
+                        justifyContent: 'center', alignItems: 'center', overflow: 'hidden'
+                      }} 
+                      onPress={pickImage}
+                    >
+                      {teamForm.image ? (
+                        <Image source={{ uri: teamForm.image }} style={{ width: '100%', height: '100%' }} />
+                      ) : (
+                        <Camera size={24} color="#94A3B8" />
+                      )}
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={pickImage}>
+                      <Text style={{ color: '#01b854', fontWeight: '700' }}>
+                        {teamForm.image ? 'Change Logo' : 'Upload Logo'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <TouchableOpacity 
+                  style={[styles.confirmBtn, isSubmitting && { opacity: 0.7 }, { marginTop: 20 }]} 
+                  onPress={handleCreateTeam}
+                  disabled={isSubmitting}
+                >
+                  <Text style={styles.confirmBtnText}>{isSubmitting ? 'Creating...' : 'Create Team'}</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 }

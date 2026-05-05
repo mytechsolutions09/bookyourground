@@ -8,8 +8,9 @@
 #01b854
 #a5ff8a
 #dcc093
-#232838 
+#2d3450
 #f8688a pink
+
 
 npx expo start
 npx expo start --web
@@ -28,3 +29,6 @@ push to dev
 
 
 when owner cancels a match , send mail to person who booked the ground
+
+resend-intelligentgamerai@gmail.com
+

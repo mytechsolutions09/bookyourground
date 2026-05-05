@@ -349,7 +349,7 @@ export const TeamScannerModal = ({ isVisible, onClose, onScan, styles }) => {
   );
 };
 
-export const TeamPickerModal = ({ isVisible, onClose, teams, onSelect, onScanQr, styles, title }) => {
+export const TeamPickerModal = ({ isVisible, onClose, teams, onSelect, onScanQr, onCreateTeam, styles, title }) => {
   const [search, setSearch] = React.useState('');
   
   const filteredTeams = teams.filter(t => 
@@ -365,37 +365,153 @@ export const TeamPickerModal = ({ isVisible, onClose, teams, onSelect, onScanQr,
       onRequestClose={onClose}
     >
       <View style={styles.modalOverlay}>
-        <View style={[styles.sheetContent, { height: '80%' }]}>
+        <View style={[styles.sheetContent, { height: '90%' }]}>
           <View style={styles.sheetHandle} />
           <View style={styles.modalHeaderRow}>
-            <View>
+            <TouchableOpacity onPress={onClose}>
+              <ChevronLeft size={24} color="#1E293B" />
+            </TouchableOpacity>
+            <View style={{ flex: 1, alignItems: 'center', marginRight: 24 }}>
               <Text style={styles.sheetTitle}>{title}</Text>
               <Text style={styles.sheetSubtitle}>{teams.length} teams available</Text>
             </View>
-            <TouchableOpacity onPress={onClose}>
-              <X size={24} color="#6B7280" />
-            </TouchableOpacity>
           </View>
 
-          <View style={{ padding: 20, gap: 16 }}>
-            <View style={styles.searchBar}>
-              <Search size={20} color="#94A3B8" />
-              <TextInput 
-                placeholder="Search teams..."
-                style={styles.searchInput}
-                value={search}
-                onChangeText={setSearch}
-              />
+          <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+            <View style={{ padding: 20, gap: 16 }}>
+              <View style={styles.searchBar}>
+                <Search size={20} color="#94A3B8" />
+                <TextInput 
+                  placeholder="Search teams..."
+                  style={styles.searchInput}
+                  value={search}
+                  onChangeText={setSearch}
+                  placeholderTextColor="#94A3B8"
+                />
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <TouchableOpacity style={[styles.scanQrBtnSmall, { flex: 1 }]} onPress={onScanQr}>
+                  <QrCode size={24} color="#01b854" />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.scanQrBtnTextSmall} numberOfLines={1}>QR Scan</Text>
+                    <Text style={styles.scanQrBtnSubTextSmall} numberOfLines={1}>Scan team QR</Text>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.scanQrBtnSmall, { flex: 1, borderColor: '#DCFCE7' }]} onPress={onCreateTeam}>
+                   <View style={{ width: 24, height: 24, borderRadius: 6, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}>
+                      <Plus size={18} color="#01b854" />
+                   </View>
+                   <View style={{ flex: 1 }}>
+                    <Text style={styles.scanQrBtnTextSmall} numberOfLines={1}>Create Team</Text>
+                    <Text style={styles.scanQrBtnSubTextSmall} numberOfLines={1}>Add a new team</Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+
+              <View style={{ marginTop: 10 }}>
+                {filteredTeams.length === 0 ? (
+                  <View style={{ padding: 40, alignItems: 'center' }}>
+                    <Text style={{ color: '#94A3B8' }}>No teams found</Text>
+                  </View>
+                ) : filteredTeams.map((team) => (
+                  <TouchableOpacity 
+                    key={team.id} 
+                    style={styles.teamPickerItem}
+                    onPress={() => {
+                      onSelect(team);
+                      onClose();
+                    }}
+                  >
+                    <View style={[styles.teamAvatarSmall, { backgroundColor: team.bgColor || '#F1F5F9' }]}>
+                      <Text style={styles.teamInitialSmall}>{team.initials || team.name[0]}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.teamPickerName}>{team.name}</Text>
+                      <View style={styles.teamPickerLocRow}>
+                        <MapPin size={12} color="#01b854" />
+                        <Text style={styles.teamPickerLoc}>{team.location || 'Unknown Location'}</Text>
+                      </View>
+                    </View>
+                    <ChevronRight size={20} color="#CBD5E1" />
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <View style={styles.footerBanner}>
+                 <Trophy size={48} color="#01b854" />
+                 <View style={styles.footerBannerContent}>
+                    <Text style={styles.footerBannerTitle}>Can't find your team?</Text>
+                    <Text style={styles.footerBannerSub}>Create a new team and invite your players to get started.</Text>
+                 </View>
+              </View>
             </View>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+};
 
-            <TouchableOpacity style={styles.scanQrBtnSmall} onPress={onScanQr}>
-              <QrCode size={20} color="#01b854" />
-              <Text style={styles.scanQrBtnTextSmall}>Add New via QR</Text>
+export const TeamPickerView = ({ onClose, teams, onSelect, onScanQr, onCreateTeam, styles, title }) => {
+  const [search, setSearch] = React.useState('');
+  
+  const filteredTeams = teams.filter(t => 
+    t.name.toLowerCase().includes(search.toLowerCase()) || 
+    t.location?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <View style={styles.selectionView}>
+      <View style={styles.selectionHeader}>
+        <TouchableOpacity onPress={onClose}>
+          <ChevronLeft size={24} color="#1E293B" />
+        </TouchableOpacity>
+        <View style={{ flex: 1, alignItems: 'center' }}>
+          <Text style={styles.selectionTitle}>{title}</Text>
+          <Text style={styles.selectionSubtitle}>{teams.length} teams available</Text>
+        </View>
+        <View style={{ width: 24 }} />
+      </View>
+
+      <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false}>
+        <View style={{ padding: 20, gap: 16 }}>
+          <View style={styles.searchBar}>
+            <Search size={20} color="#94A3B8" />
+            <TextInput 
+              placeholder="Search teams..."
+              style={styles.searchInput}
+              value={search}
+              onChangeText={setSearch}
+              placeholderTextColor="#94A3B8"
+            />
+          </View>
+
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <TouchableOpacity style={[styles.scanQrBtnSmall, { flex: 1 }]} onPress={onScanQr}>
+              <QrCode size={24} color="#01b854" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.scanQrBtnTextSmall} numberOfLines={1}>QR Scan</Text>
+                <Text style={styles.scanQrBtnSubTextSmall} numberOfLines={1}>Scan team QR</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.scanQrBtnSmall, { flex: 1, borderColor: '#DCFCE7' }]} onPress={onCreateTeam}>
+               <View style={{ width: 24, height: 24, borderRadius: 6, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}>
+                  <Plus size={18} color="#01b854" />
+               </View>
+               <View style={{ flex: 1 }}>
+                <Text style={styles.scanQrBtnTextSmall} numberOfLines={1}>Create Team</Text>
+                <Text style={styles.scanQrBtnSubTextSmall} numberOfLines={1}>Add a new team</Text>
+              </View>
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingTop: 0 }}>
-            {filteredTeams.map((team) => (
+          <View style={{ marginTop: 10 }}>
+            {filteredTeams.length === 0 ? (
+              <View style={{ padding: 40, alignItems: 'center' }}>
+                <Text style={{ color: '#94A3B8' }}>No teams found</Text>
+              </View>
+            ) : filteredTeams.map((team) => (
               <TouchableOpacity 
                 key={team.id} 
                 style={styles.teamPickerItem}
@@ -409,14 +525,25 @@ export const TeamPickerModal = ({ isVisible, onClose, teams, onSelect, onScanQr,
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.teamPickerName}>{team.name}</Text>
-                  <Text style={styles.teamPickerLoc}>{team.location || 'Unknown Location'}</Text>
+                  <View style={styles.teamPickerLocRow}>
+                    <MapPin size={12} color="#01b854" />
+                    <Text style={styles.teamPickerLoc}>{team.location || 'Unknown Location'}</Text>
+                  </View>
                 </View>
                 <ChevronRight size={20} color="#CBD5E1" />
               </TouchableOpacity>
             ))}
-          </ScrollView>
+          </View>
+
+          <View style={styles.footerBanner}>
+             <Trophy size={48} color="#01b854" />
+             <View style={styles.footerBannerContent}>
+                <Text style={styles.footerBannerTitle}>Can't find your team?</Text>
+                <Text style={styles.footerBannerSub}>Create a new team and invite your players to get started.</Text>
+             </View>
+          </View>
         </View>
-      </View>
-    </Modal>
+      </ScrollView>
+    </View>
   );
 };

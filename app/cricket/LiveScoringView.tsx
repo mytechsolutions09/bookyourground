@@ -24,7 +24,10 @@ import {
   UserMinus,
   Flag,
   PenSquare,
-  Users2
+  Users2,
+  Edit3,
+  Activity,
+  CircleCheck,
 } from 'lucide-react-native';
 import { styles } from './scoring-styles';
 
@@ -33,161 +36,137 @@ export const LiveScoringView = ({
   inn, matchConfig, tossResult, matchPhase, 
   striker, nonStriker, bowler, crr,
   onAddBall, onUndo, onOpenMore, onOpenSettings, onStartSecondInnings,
-  onOpenBowlerSelection, onOpenWicketConfig, onOpenExtraSelector
+  onOpenBowlerSelection, onOpenWicketConfig, onOpenExtraSelector, onSwapBatters
 }: any) => {
   if (!inn) return null;
   
   const formatOvers = (legalBalls: number) => `${Math.floor(legalBalls / 6)}.${legalBalls % 6}`;
   const oversStr = formatOvers(inn.legalBalls);
   
-  const calcSR = (r: number, b: number) => b === 0 ? '0.0' : ((r / b) * 100).toFixed(1);
-  const calcEco = (r: number, b: number, o: number) => {
-     const totalBalls = (o * 6) + b;
-     return totalBalls === 0 ? '0.0' : (r / (totalBalls / 6)).toFixed(1);
-  };
-
   return (
-    <View style={styles.scoringContainer}>
-       {/* Top Scoreboard */}
-       <View style={styles.mainScoreboard}>
-          <View style={styles.scoreRow}>
+    <View style={styles.scoringMainPremium}>
+       <ScrollView 
+         style={{ flex: 1 }} 
+         contentContainerStyle={{ padding: 16 }}
+         showsVerticalScrollIndicator={false}
+       >
+          {/* Header Score Section */}
+          <View style={styles.premiumScoreHeader}>
              <View>
-                <Text style={styles.scoringTeamName}>{inn.battingTeam}</Text>
-                <View style={styles.scoreNumberRow}>
-                   <Text style={styles.bigRuns}>{inn.runs}-{inn.wickets}</Text>
-                   <Text style={styles.overText}>({oversStr})</Text>
+                <Text style={styles.scoringTeamLabel}>{inn.battingTeam.toUpperCase()}</Text>
+                <View style={styles.scoreRowLarge}>
+                   <Text style={styles.runsTextLarge}>{inn.runs}-{inn.wickets}</Text>
+                   <Text style={styles.oversTextLarge}>({oversStr})</Text>
                 </View>
              </View>
-             <View style={styles.crrBadge}>
-                <Text style={styles.crrLabel}>CRR</Text>
-                <Text style={styles.crrValue}>{crr}</Text>
+             <View style={styles.crrBoxPremium}>
+                <Text style={styles.crrLabelPremium}>CRR</Text>
+                <Text style={styles.crrValuePremium}>{crr || '0.00'}</Text>
              </View>
           </View>
-          
-          <View style={styles.targetRow}>
-             <Text style={styles.targetText}>
-               {inn.target 
-                 ? `Target: ${inn.target} | Need ${inn.target - inn.runs} from ${parseInt(matchConfig.totalOvers || '20') * 6 - inn.legalBalls} balls` 
-                 : `${tossResult.winner?.name} won the toss and opted to ${tossResult.decision === 'bowl' ? 'bowl' : 'bat'}`}
+
+          {/* Toss Info Banner */}
+          <View style={styles.tossBannerPremium}>
+             <CircleCheck size={18} color="#01b854" fill="#E8F5E9" />
+             <Text style={styles.tossBannerText}>
+                {tossResult.winner?.name} won the toss and opted to {tossResult.decision === 'bowl' ? 'bowl' : 'bat'}
              </Text>
           </View>
 
-          {/* In-Play Tables */}
-          <View style={[styles.playerStatsRow, { gap: 24 }]}>
-             <View style={[styles.batsmanCol, { flex: 3 }]}>
-                <View style={styles.statsHeader}>
-                   <Text style={[styles.statsHeaderText, { flex: 2 }]}>Batsman</Text>
-                   <View style={[styles.statsHeadValues, { gap: 10 }]}>
-                      <Text style={styles.statsHeaderTextFixed}>R</Text>
-                      <Text style={styles.statsHeaderTextFixed}>B</Text>
-                      <Text style={styles.statsHeaderTextFixed}>4s</Text>
-                      <Text style={styles.statsHeaderTextFixed}>6s</Text>
-                      <Text style={[styles.statsHeaderTextFixed, { width: 38 }]}>SR</Text>
-                   </View>
-                </View>
-                {[striker, nonStriker].map((b, idx) => (
-                  <View key={idx} style={styles.statsRow}>
-                     <Text style={[styles.playerName, b?.onStrike && { color: '#01b854' }, { flex: 2 }]} numberOfLines={1}>
-                        {b?.name || '---'}{b?.onStrike ? '*' : ''}
-                     </Text>
-                     <View style={[styles.statsValues, { gap: 10 }]}>
-                        <Text style={styles.statsValueTextFixed}>{b?.runs || 0}</Text>
-                        <Text style={styles.statsValueTextFixed}>{b?.balls || 0}</Text>
-                        <Text style={styles.statsValueTextFixed}>{b?.fours || 0}</Text>
-                        <Text style={styles.statsValueTextFixed}>{b?.sixes || 0}</Text>
-                        <Text style={[styles.statsValueTextFixed, { width: 38 }]}>{calcSR(b?.runs || 0, b?.balls || 0)}</Text>
+          {/* Batter Section */}
+          <View style={styles.batterSectionPremium}>
+             <View style={styles.batterRowPremium}>
+                {[
+                  { label: 'BATTER 1', data: striker },
+                  { label: 'BATTER 2', data: nonStriker }
+                ].map((item, idx) => (
+                  <View key={idx} style={styles.batterCardPremium}>
+                     <View style={styles.cardHeaderSmall}>
+                        <Text style={styles.cardLabelSmall}>{item.label}</Text>
+                        <TouchableOpacity style={styles.playerEditBtnSmall} onPress={onSwapBatters}>
+                           <Edit3 size={14} color="#01b854" />
+                        </TouchableOpacity>
                      </View>
+                     <Text style={styles.playerNameCard} numberOfLines={1}>
+                        {item.data?.name || '---'}
+                     </Text>
+                     <Text style={styles.playerScoreCard}>
+                        {item.data?.runs || 0} <Text style={styles.playerBallsCard}>({item.data?.balls || 0})</Text>
+                     </Text>
                   </View>
                 ))}
              </View>
-             <View style={[styles.bowlerCol, { flex: 3 }]}>
-                <View style={styles.statsHeader}>
-                   <Text style={[styles.statsHeaderText, { flex: 2 }]}>Bowler</Text>
-                   <View style={[styles.statsHeadValues, { gap: 10 }]}>
-                      <Text style={styles.statsHeaderTextFixed}>O</Text>
-                      <Text style={styles.statsHeaderTextFixed}>M</Text>
-                      <Text style={styles.statsHeaderTextFixed}>R</Text>
-                      <Text style={styles.statsHeaderTextFixed}>W</Text>
-                      <Text style={[styles.statsHeaderTextFixed, { width: 32 }]}>Eco</Text>
-                   </View>
-                </View>
-                <TouchableOpacity style={styles.statsRow} onPress={onOpenBowlerSelection}>
-                   <Text style={[styles.playerName, { flex: 2 }]} numberOfLines={1}>
-                      {bowler?.name || 'Select Bowler...'}
-                   </Text>
-                   <View style={[styles.statsValues, { gap: 10 }]}>
-                      <Text style={styles.statsValueTextFixed}>{bowler?.overs ?? 0}.{bowler?.balls ?? 0}</Text>
-                      <Text style={styles.statsValueTextFixed}>{bowler?.maidens || 0}</Text>
-                      <Text style={styles.statsValueTextFixed}>{bowler?.runs || 0}</Text>
-                      <Text style={styles.statsValueTextFixed}>{bowler?.wickets || 0}</Text>
-                      <Text style={[styles.statsValueTextFixed, { width: 32 }]}>{calcEco(bowler?.runs || 0, bowler?.balls || 0, bowler?.overs || 0)}</Text>
-                   </View>
+          </View>
+
+          {/* Bowler Section */}
+          <View style={styles.bowlerCardPremium}>
+             <View style={styles.cardHeaderSmall}>
+                <Text style={styles.cardLabelSmall}>BOWLER</Text>
+                <TouchableOpacity style={styles.playerEditBtnSmall} onPress={onOpenBowlerSelection}>
+                   <Activity size={14} color="#01b854" />
                 </TouchableOpacity>
              </View>
+             <Text style={styles.playerNameCard}>
+                {bowler?.name || 'Select Bowler...'}
+             </Text>
+             <Text style={styles.bowlerStatsCard}>
+                {bowler?.overs ?? 0}.{bowler?.balls ?? 0} - {bowler?.maidens || 0} - {bowler?.runs || 0} - {bowler?.wickets || 0}
+             </Text>
           </View>
 
-          {/* Ball Timeline */}
-          <View style={styles.timelineContainer}>
-             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                {inn.overBalls?.slice(-12).map((b: any, i: number) => (
-                  <View key={i} style={[styles.ballCircle, b.label === 'W' && styles.ballWicket, (b.label === '4' || b.label === '6') && styles.ballBoundary]}>
-                     <Text style={[styles.ballLabel, (b.label === 'W' || b.label === '4' || b.label === '6') && { color: '#FFFFFF' }]}>{b.label}</Text>
-                  </View>
+          {/* Control Section */}
+          <View style={styles.controlsSectionPremium}>
+             <Text style={styles.controlHeaderLabel}>START THE OVER...</Text>
+             
+             <View style={styles.controlGridRow}>
+                {[0, 1, 2, 3].map(n => (
+                  <TouchableOpacity key={n} style={styles.runBtnPremium} onPress={() => onAddBall(n)}>
+                     <Text style={styles.runBtnTextPremium}>{n}</Text>
+                  </TouchableOpacity>
                 ))}
-                {inn.overBalls?.length === 0 && <Text style={styles.statsHeaderText}>Start the over...</Text>}
-             </ScrollView>
-          </View>
-       </View>
+             </View>
 
-       {/* Scoring Wheel */}
-       <View style={styles.scoringWheel}>
-          <View style={styles.wheelRow}>
-             {[0, 1, 2, 3].map(n => (
-               <TouchableOpacity key={n} style={styles.runBtn} onPress={() => onAddBall(n)}>
-                  <Text style={styles.runBtnText}>{n}</Text>
-               </TouchableOpacity>
-             ))}
-          </View>
-          <View style={styles.wheelRow}>
-             {[4, 6].map(n => (
-               <TouchableOpacity key={n} style={[styles.runBtn, styles.boundaryBtn]} onPress={() => onAddBall(n)}>
-                  <Text style={styles.boundaryBtnText}>{n}</Text>
-               </TouchableOpacity>
-             ))}
-              <TouchableOpacity style={[styles.runBtn, styles.wicketBtn]} onPress={onOpenWicketConfig}>
-                 <Text style={styles.runBtnText}>W</Text>
-              </TouchableOpacity>
-          </View>
-          <View style={styles.extraRow}>
-             {['wide', 'noball', 'bye', 'legbye'].map(type => (
-               <TouchableOpacity key={type} style={styles.extraBtn} onPress={() => onOpenExtraSelector(type)}>
-                 <Text style={styles.extraBtnText}>{type === 'wide' ? 'WD' : type === 'noball' ? 'NB' : type === 'bye' ? 'BYE' : 'LB'}</Text>
-               </TouchableOpacity>
-             ))}
-          </View>
-       </View>
+             <View style={styles.controlGridRow}>
+                <TouchableOpacity style={[styles.runBtnPremium, styles.boundary4Btn]} onPress={() => onAddBall(4)}>
+                   <Text style={styles.runBtnTextPremium}>4</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.runBtnPremium, styles.boundary6Btn]} onPress={() => onAddBall(6)}>
+                   <Text style={styles.runBtnTextPremium}>6</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.runBtnPremium, styles.wicketBtnPremium]} onPress={onOpenWicketConfig}>
+                   <Text style={styles.runBtnTextPremium}>W</Text>
+                </TouchableOpacity>
+             </View>
 
-       {/* Bottom Actions */}
-       <View style={styles.scoringActions}>
-          <TouchableOpacity style={styles.actionIconBtn} onPress={onUndo}>
-            <RotateCcw size={20} color="#6B7280" />
-            <Text style={styles.actionIconText}>Undo</Text>
+             <View style={styles.controlGridRow}>
+                {[
+                  { id: 'wide', label: 'WD' },
+                  { id: 'noball', label: 'NB' },
+                  { id: 'bye', label: 'BYE' },
+                  { id: 'legbye', label: 'LB' }
+                ].map(opt => (
+                  <TouchableOpacity key={opt.id} style={styles.extraBtnPremium} onPress={() => onOpenExtraSelector(opt.id)}>
+                     <Text style={styles.extraBtnTextPremium}>{opt.label}</Text>
+                  </TouchableOpacity>
+                ))}
+             </View>
+          </View>
+       </ScrollView>
+
+       {/* Footer Navigation */}
+       <View style={styles.scoringFooterPremium}>
+          <TouchableOpacity style={styles.footerActionBtn} onPress={onUndo}>
+             <RotateCcw size={22} color="#64748B" />
+             <Text style={styles.footerActionText}>Undo</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionIconBtn} onPress={onOpenMore}>
-            <MoreHorizontal size={20} color="#6B7280" />
-            <Text style={styles.actionIconText}>More</Text>
+          <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenMore}>
+             <MoreHorizontal size={22} color="#64748B" />
+             <Text style={styles.footerActionText}>More</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionIconBtn} onPress={onOpenSettings}>
-            <Settings size={20} color="#6B7280" />
-            <Text style={styles.actionIconText}>Settings</Text>
+          <TouchableOpacity style={styles.footerActionBtn} onPress={onOpenSettings}>
+             <Settings size={22} color="#64748B" />
+             <Text style={styles.footerActionText}>Settings</Text>
           </TouchableOpacity>
-          
-          {matchPhase === 'innings_break' && (
-            <TouchableOpacity style={[styles.actionIconBtn, { backgroundColor: '#FFF7ED', width: '30%' }]} onPress={onStartSecondInnings}>
-              <ChevronRight size={20} color="#F97316" />
-              <Text style={[styles.actionIconText, { color: '#F97316' }]}>2nd Inning</Text>
-            </TouchableOpacity>
-          )}
        </View>
     </View>
   );
