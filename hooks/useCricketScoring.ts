@@ -221,6 +221,10 @@ export function useCricketScoring() {
   const pushLiveState = useCallback(async (innState: InningState, config: any, mid: string, innNumber: number, statusResult: string | null = null) => {
     if (!mid) return;
 
+    const batting = innState.batters.filter(b => b.status === 'batting' && !b.out);
+    const striker = batting.find(b => b.onStrike) || batting[0];
+    const nonStriker = batting.filter(b => b.name !== striker?.name)[0];
+
     const payload: any = {
       match_id: mid,
       innings_number: innNumber,
@@ -233,21 +237,21 @@ export function useCricketScoring() {
       target: innState.target,
       crr: parseFloat(innState.legalBalls > 0 ? ((innState.runs / innState.legalBalls) * 6).toFixed(2) : '0'),
       rrr: (innState.target && config.totalOvers) ? parseFloat((((innState.target - innState.runs) / ((parseInt(config.totalOvers) * 6) - innState.legalBalls)) * 6).toFixed(2)) : null,
-      striker_name: innState.striker?.name || null,
-      striker_runs: innState.striker?.runs || 0,
-      striker_balls: innState.striker?.balls || 0,
-      striker_fours: innState.striker?.fours || 0,
-      striker_sixes: innState.striker?.sixes || 0,
-      nonstriker_name: innState.nonStriker?.name || null,
-      nonstriker_runs: innState.nonStriker?.runs || 0,
-      nonstriker_balls: innState.nonStriker?.balls || 0,
-      nonstriker_fours: innState.nonStriker?.fours || 0,
-      nonstriker_sixes: innState.nonStriker?.sixes || 0,
-      bowler_name: innState.bowler?.name || null,
-      bowler_overs: innState.bowler ? `${innState.bowler.overs}.${innState.bowler.balls}` : '0.0',
-      bowler_runs: innState.bowler?.runs || 0,
-      bowler_wickets: innState.bowler?.wickets || 0,
-      bowler_maidens: innState.bowler?.maidens || 0,
+      striker_name: striker?.name || null,
+      striker_runs: striker?.runs || 0,
+      striker_balls: striker?.balls || 0,
+      striker_fours: striker?.fours || 0,
+      striker_sixes: striker?.sixes || 0,
+      nonstriker_name: nonStriker?.name || null,
+      nonstriker_runs: nonStriker?.runs || 0,
+      nonstriker_balls: nonStriker?.balls || 0,
+      nonstriker_fours: nonStriker?.fours || 0,
+      nonstriker_sixes: nonStriker?.sixes || 0,
+      bowler_name: innState.bowlerName || (innState.bowlers[innState.currentBowlerIdx]?.name) || null,
+      bowler_overs: innState.bowlers[innState.currentBowlerIdx] ? `${innState.bowlers[innState.currentBowlerIdx].overs}.${innState.bowlers[innState.currentBowlerIdx].balls}` : '0.0',
+      bowler_runs: innState.bowlers[innState.currentBowlerIdx]?.runs || 0,
+      bowler_wickets: innState.bowlers[innState.currentBowlerIdx]?.wickets || 0,
+      bowler_maidens: innState.bowlers[innState.currentBowlerIdx]?.maidens || 0,
       last_ball_label: innState.overBalls.length > 0 ? innState.overBalls[innState.overBalls.length - 1].label : null,
       last_ball_type: innState.overBalls.length > 0 ? innState.overBalls[innState.overBalls.length - 1].type : null,
       current_over_balls: JSON.stringify(innState.overBalls),
@@ -322,10 +326,18 @@ export function useCricketScoring() {
         team_b: config.teamB,
         team_a_id: config.teamAId,
         team_b_id: config.teamBId,
-        overs: config.overs,
-        players: config.players,
-        venue: config.venue,
-        match_type: config.matchType,
+        match_type: config.type,
+        total_overs: parseInt(config.totalOvers || '20'),
+        overs_per_bowler: parseInt(config.oversPerBowler || '4'),
+        ball_type: config.ballType,
+        pitch_type: config.pitchType,
+        wagon_wheel: config.wagonWheel,
+        state: config.state,
+        city: config.city,
+        ground: config.ground,
+        powerplay_overs: parseInt(config.powerplayOvers || '6'),
+        wide_runs: parseInt(config.wideRuns || '1'),
+        no_ball_runs: parseInt(config.noBallRuns || '1'),
         status: 'toss',
       })
       .select()
@@ -374,9 +386,10 @@ export function useCricketScoring() {
         title: `${config.teamA} vs ${config.teamB}`,
         team_a: config.teamA,
         team_b: config.teamB,
-        overs: config.overs,
-        venue: config.venue,
-        match_type: config.matchType
+        total_overs: parseInt(config.totalOvers || '20'),
+        overs_per_bowler: parseInt(config.oversPerBowler || '4'),
+        ground: config.ground,
+        match_type: config.type
       }).eq('id', mid);
     }
 
@@ -658,9 +671,12 @@ export function useCricketScoring() {
       }
     }
 
-    const ballType = runs === 4 ? 'four' : runs === 6 ? 'six' : runs === 0 ? 'dot' : 'run';
-    const ballLabel = runs === 0 ? '•' : String(runs);
-    next.overBalls = [...next.overBalls, { type: ballType, label: ballLabel, area }];
+    next.overBalls = [...next.overBalls, { 
+      runs, 
+      is_wicket: false, 
+      extra_type: null,
+      label: runs === 0 ? '•' : String(runs)
+    }];
 
     if (runs % 2 === 1) next.batters = rotateStrike(next.batters);
 
@@ -668,6 +684,9 @@ export function useCricketScoring() {
       next = handleOverEnd(next);
       next.batters = rotateStrike(next.batters);
     }
+
+    const ballType = runs === 4 ? 'four' : runs === 6 ? 'six' : runs === 0 ? 'dot' : 'run';
+    const ballLabel = runs === 0 ? '•' : String(runs);
 
     setInn(next);
     await logBall(next, { runs, type: ballType, label: ballLabel, area }, matchId!);
@@ -684,13 +703,14 @@ export function useCricketScoring() {
     let next = { ...inn, batters: inn.batters.map(b => ({ ...b })), bowlers: inn.bowlers.map(b => ({ ...b })) };
     const bowlerIdx = next.currentBowlerIdx;
     const labels: Record<string, string> = { wide: 'Wd', noball: 'Nb', bye: 'B', legbye: 'LB', penalty: 'P' };
-    const ballType = type === 'wide' ? 'wide' : type === 'noball' ? 'noball' : 'run';
 
     // Calculation: 
     // Wide/NB: 1 (base) + additionalRuns
     // Bye/LB/Penalty: additionalRuns (if any, typically >= 1)
     const baseExtra = (type === 'wide' || type === 'noball') ? 1 : 0;
     const totalRuns = baseExtra + additionalRuns;
+    const ballType = type === 'wide' ? 'wide' : type === 'noball' ? 'noball' : 'run';
+    const ballLabel = `${totalRuns}${labels[type]}`;
 
     next.runs += totalRuns;
     next.extras[type] = (next.extras[type] || 0) + totalRuns;
@@ -742,8 +762,13 @@ export function useCricketScoring() {
        }
     }
 
-    const label = additionalRuns > 0 ? `${labels[type]}${additionalRuns}` : labels[type];
-    next.overBalls = [...next.overBalls, { type: ballType, label }];
+    next.overBalls = [...next.overBalls, { 
+      runs: additionalRuns, 
+      extras: totalRuns,
+      extra_type: type,
+      is_wicket: false,
+      label: ballLabel
+    }];
 
     if (isLegalBall) {
       next.balls += 1;
@@ -760,7 +785,7 @@ export function useCricketScoring() {
     }
 
     setInn(next);
-    await logBall(next, { runs: totalRuns, extras: totalRuns, extraType: type, type: ballType, label }, matchId!);
+    await logBall(next, { runs: totalRuns, extras: totalRuns, extraType: type, type: ballType, label: ballLabel }, matchId!);
     await syncPartnershipInDB(next, matchId!);
     await pushLiveState(next, matchConfig, matchId!, currentIdx + 1);
     await checkEnd(next, matchConfig, matchId!);
@@ -790,7 +815,12 @@ export function useCricketScoring() {
       
       next.balls += 1;
       next.legalBalls += 1;
-      next.overBalls = [...next.overBalls, { type: 'wicket', label: 'W' }];
+      next.overBalls = [...next.overBalls, { 
+        runs: 0, 
+        is_wicket: true, 
+        extra_type: null,
+        label: 'W' 
+      }];
       
       await logBall(next, { isWicket: true, dismissalType, fielder, type: 'wicket', label: 'W', batter_name: dismissedName }, matchId!);
       await syncPartnershipInDB(next, matchId!, true, dismissedName);
@@ -849,21 +879,24 @@ export function useCricketScoring() {
           if (typeof window !== 'undefined') alert(`Bowler ${name} already bowled their limit of ${limit} overs!`);
           return prev;
         }
-        return {
-    ...prev, currentBowlerIdx: prev.bowlers.indexOf(exists) };
       }
-      const newBowler: Bowler = {
-        name, overs: 0, balls: 0, runs: 0, wickets: 0, maidens: 0, overRuns: 0
-      };
-      const nextBowlers = [...prev.bowlers, newBowler];
-      return {
-    ...prev, bowlers: nextBowlers, currentBowlerIdx: nextBowlers.length - 1 };
+      
+      const next = exists 
+        ? { ...prev, currentBowlerIdx: prev.bowlers.indexOf(exists) }
+        : { ...prev, bowlers: [...prev.bowlers, { name, overs: 0, balls: 0, runs: 0, wickets: 0, maidens: 0, overRuns: 0, dots: 0, fours: 0, sixes: 0 }], currentBowlerIdx: prev.bowlers.length };
+      
+      pushLiveState(next, matchConfig, matchId!, currentIdx + 1);
+      return next;
     });
-  }, []);
+  }, [matchId, matchConfig, currentIdx, pushLiveState]);
 
   const changeBowler = useCallback((bowlerIdx: number) => {
-    setInn(prev => ({ ...prev, currentBowlerIdx: bowlerIdx }));
-  }, []);
+    setInn(prev => {
+      const next = { ...prev, currentBowlerIdx: bowlerIdx };
+      pushLiveState(next, matchConfig, matchId!, currentIdx + 1);
+      return next;
+    });
+  }, [matchId, matchConfig, currentIdx, pushLiveState]);
 
   const undoLastBall = useCallback(async () => {
     if (historyRef.current.length === 0) {
@@ -1101,9 +1134,7 @@ export function useCricketScoring() {
           batters: [],
           bowlers: [],
           currentBowlerIdx: 0,
-          overBalls: typeof live?.current_over_balls === 'string' 
-            ? JSON.parse(live.current_over_balls) 
-            : (live?.current_over_balls || []),
+          overBalls: [], // Will reconstruct from logs below
           allOvers: [],
           target: innRow.target,
           inningsId: innRow.id,
@@ -1112,7 +1143,21 @@ export function useCricketScoring() {
         console.log('[DEBUG-SQUAD] Inning', innNum, 'Batting Team:', battingTeam, 'Squad Size:', state.battingPlayers.length);
 
         const battersMap: Record<string, Batter> = {};
+        state.battingPlayers.forEach(name => {
+          battersMap[name] = { 
+            name, runs: 0, balls: 0, fours: 0, sixes: 0, dots: 0, 
+            onStrike: false, status: 'yet', out: false, dismissal: '', 
+            startTime: undefined 
+          };
+        });
+
         const bowlersMap: Record<string, Bowler> = {};
+        state.bowlingPlayers.forEach(name => {
+          bowlersMap[name] = { 
+            name, overs: 0, balls: 0, runs: 0, wickets: 0, maidens: 0, 
+            overRuns: 0, dots: 0, fours: 0, sixes: 0 
+          };
+        });
 
 
         innLogs.forEach((ball: any) => {
@@ -1151,7 +1196,26 @@ export function useCricketScoring() {
           if (ball.extra_type && state.extras[ball.extra_type] !== undefined) {
             state.extras[ball.extra_type] += (ball.extras || 0);
           }
+
+          // Reconstruct overBalls for the current/last over
+          const overNum = Math.floor(calcLegal / 6);
+          const currentOverNum = Math.floor(state.legalBalls / 6); 
+          // Wait, state.legalBalls is final after loop.
+          // Let's do it based on innRow.legal_balls if we know it, or just keep a running list and clear it at over end.
         });
+
+        // After the loop, calcLegal has total legal balls.
+        const finalOverNum = Math.floor(calcLegal / 6);
+        const isOverComplete = calcLegal > 0 && calcLegal % 6 === 0;
+
+        state.overBalls = isOverComplete ? [] : innLogs
+          .filter(ball => ball.over_num === finalOverNum)
+          .map(ball => ({
+            runs: ball.runs || 0,
+            is_wicket: ball.is_wicket || false,
+            extra_type: ball.extra_type || null,
+            label: ball.is_wicket ? 'W' : (ball.label || (ball.runs ?? '0'))
+          }));
 
         
         state.legalBalls = Math.max(innRow.legal_balls || 0, calcLegal);
@@ -1159,8 +1223,12 @@ export function useCricketScoring() {
         if (live) {
           // Ensure striker and non-striker are in the batters list
           [live.striker_name, live.nonstriker_name].forEach(name => {
-            if (name && !battersMap[name]) {
-              battersMap[name] = { name, runs: 0, balls: 0, fours: 0, sixes: 0, dots: 0, onStrike: false, status: 'batting', out: false, dismissal: '', startTime: Date.now() };
+            if (name) {
+              if (!battersMap[name]) {
+                battersMap[name] = { name, runs: 0, balls: 0, fours: 0, sixes: 0, dots: 0, onStrike: false, status: 'batting', out: false, dismissal: '', startTime: Date.now() };
+              } else {
+                battersMap[name].status = 'batting';
+              }
             }
           });
 
@@ -1176,10 +1244,23 @@ export function useCricketScoring() {
             } else if (!b.out && b.balls > 0 && (!live.striker_name || !live.nonstriker_name)) {
               // Fallback: if they faced balls and are not out, they must be one of the current batters
               b.status = 'batting';
-              // If no strike info, first one gets it
-              if (!Object.values(battersMap).some(tmp => tmp.onStrike)) b.onStrike = true;
             }
           });
+
+          // Final safety: If we still don't have 2 batters (and not all out), pick from "yet"
+          const activeCount = Object.values(battersMap).filter(b => b.status === 'batting' && !b.out).length;
+          const totalPlayers = Number(config?.players || 11);
+          const maxWickets = Math.min(totalPlayers - 1, 10);
+          
+          if (activeCount < 2 && state.wickets < maxWickets) {
+            const yetToBat = Object.values(battersMap).filter(b => b.status === 'yet' && !b.out);
+            for (let i = 0; i < (2 - activeCount); i++) {
+              if (yetToBat[i]) {
+                yetToBat[i].status = 'batting';
+                if (activeCount === 0 && i === 0) yetToBat[i].onStrike = true;
+              }
+            }
+          }
           
           state.currentBowlerIdx = state.bowlers.findIndex(b => b.name === live.bowler_name);
           if (state.currentBowlerIdx === -1) {
@@ -1272,7 +1353,7 @@ export function useCricketScoring() {
       const strikers = prev.batters.filter(b => b.onStrike);
       const nonStrikers = prev.batters.filter(b => b.status === 'batting' && !b.onStrike);
       if (strikers.length && nonStrikers.length) {
-         return {
+         const next = {
            ...prev,
            batters: prev.batters.map(b => {
              if (b.name === strikers[0].name) return { ...b, onStrike: false };
@@ -1280,10 +1361,12 @@ export function useCricketScoring() {
              return b;
            })
          };
+         pushLiveState(next, matchConfig, matchId!, currentIdx + 1);
+         return next;
       }
       return prev;
     });
-  }, []);
+  }, [matchId, matchConfig, currentIdx, pushLiveState]);
 
   const markRetiredHurt = useCallback(async (playerName: string) => {
     if (!inn) return;
@@ -1316,12 +1399,16 @@ export function useCricketScoring() {
   const changeSquad = useCallback(async (teamId: string, newPlayers: any[]) => {
     setInn(prev => {
        if (!prev) return prev;
-       const teamBatters = prev.batters.map(b => b.name.toLowerCase());
-       const added = newPlayers.filter(p => !teamBatters.includes(p.name.toLowerCase()));
+       const teamBatters = prev.batters.map(b => (b.name || '').toLowerCase());
+       const added = newPlayers.filter(p => {
+         const pName = p.player_name || p.name || '';
+         return pName && !teamBatters.includes(pName.toLowerCase());
+       });
        return {
          ...prev,
          batters: [...prev.batters, ...added.map(p => ({
-           name: p.name, runs: 0, balls: 0, dots: 0, fours: 0, sixes: 0, onStrike: false, status: 'yet', out: false, dismissal: ''
+           name: p.player_name || p.name, 
+           runs: 0, balls: 0, dots: 0, fours: 0, sixes: 0, onStrike: false, status: 'yet', out: false, dismissal: ''
          }))]
        };
     });
@@ -1338,6 +1425,7 @@ return {
     swapBatters, markRetiredHurt, reviseTarget, updateMatchConfig, changeSquad, declareInnings,
     startMatch, resumeMatch, addBall, addExtra, addWicket,
     changeBowler, addNewBowler, undoLastBall, startSecondInnings, setOpeners,
-    isScoring: !!matchId && !!inn
+    isScoring: !!matchId && !!inn,
+    balls: inn?.overBalls || []
   };
 }

@@ -89,12 +89,8 @@ export default function CricketConnections() {
           <ActivityIndicator size="large" color="#01b854" />
         </View>
       ) : (
-        <FlatList
-          data={data}
-          renderItem={renderItem}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.listContent}
-          ListEmptyComponent={
+        <View style={styles.listContent}>
+          {data.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Users2 size={48} color="#E2E8F0" />
               <Text style={styles.emptyTitle}>
@@ -104,8 +100,14 @@ export default function CricketConnections() {
                 {activeTab === 'followers' ? 'Build your profile to attract followers.' : 'Discover players and follow them.'}
               </Text>
             </View>
-          }
-        />
+          ) : (
+            data.map(item => (
+              <React.Fragment key={item.id}>
+                {renderItem({ item })}
+              </React.Fragment>
+            ))
+          )}
+        </View>
       )}
     </View>
   );

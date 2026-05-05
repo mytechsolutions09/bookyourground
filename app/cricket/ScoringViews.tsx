@@ -9,7 +9,12 @@ import {
   Dimensions,
   Platform,
   Alert,
+  Image,
+  Pressable,
+  Modal,
+  StyleSheet,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -49,6 +54,7 @@ import {
   CircleCheck,
   ClipboardList,
   Play,
+  CheckCircle2,
 } from 'lucide-react-native';
 import { styles } from './scoring-styles';
 
@@ -98,119 +104,166 @@ export const TeamSelectionView = ({
   onBack, onContinue 
 }: any) => (
   <View style={styles.selectionView}>
-    <View style={styles.selectionHeader}>
-      <TouchableOpacity onPress={onBack}>
+    <View style={styles.selectionHeaderPremium}>
+      <TouchableOpacity onPress={onBack} style={styles.backBtnCircle}>
         <ChevronLeft size={24} color="#1E293B" />
       </TouchableOpacity>
-      <View style={{ alignItems: 'center' }}>
-        <Text style={styles.selectionTitle}>Select Teams</Text>
-        <Text style={styles.selectionSubtitle}>Choose your home and away teams</Text>
+      <View style={{ flex: 1, marginLeft: 16 }}>
+        <Text style={styles.selectionTitlePremium}>Match Setup</Text>
+        <Text style={styles.selectionSubtitlePremium}>Step 1: Choose Teams</Text>
       </View>
-      <View style={{ width: 24 }} />
+      <View style={{ width: 40 }} />
     </View>
     
     <ScrollView 
       style={{ flex: 1 }} 
-      contentContainerStyle={{ paddingHorizontal: 0, paddingTop: 0, paddingBottom: 20, flexGrow: 1, justifyContent: 'center' }}
+      contentContainerStyle={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 40 }}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.vsSelectionCard}>
-        {/* Home Team Side */}
-        <TouchableOpacity 
-          style={[styles.vsSelectionSide, selectedTeamA && styles.vsSelectionSideActive]}
-          onPress={onOpenPickerA}
-        >
-          <View style={styles.sideBadgeHome}>
-             <Text style={styles.sideBadgeText}>HOME TEAM</Text>
-          </View>
-          <View style={[styles.vsSelectionAvatar, { borderColor: '#01b854' }]}>
-            {selectedTeamA ? (
-              <Text style={styles.vsSelectionInitial}>{selectedTeamA.initials || selectedTeamA.name[0]}</Text>
-            ) : (
-              <Briefcase size={32} color="#01b854" />
+      <View style={styles.matchSetupCard}>
+        <View style={styles.matchTeamsVertical}>
+          {/* Home Team Side */}
+          <TouchableOpacity 
+            style={[styles.teamSelectBox, selectedTeamA && styles.teamSelectBoxActive]}
+            onPress={onOpenPickerA}
+          >
+            <View style={styles.teamBadgeHome}>
+               <Text style={styles.teamBadgeText}>HOME TEAM</Text>
+            </View>
+            
+            <View style={styles.teamAvatarLarge}>
+              {selectedTeamA ? (
+                selectedTeamA.image_url ? (
+                  <Image source={{ uri: selectedTeamA.image_url }} style={styles.teamAvatarImg} />
+                ) : (
+                  <Text style={styles.teamInitialLarge}>{selectedTeamA.name[0]}</Text>
+                )
+              ) : (
+                <View style={styles.emptyAvatarCircle}>
+                  <Users size={32} color="#94A3B8" />
+                </View>
+              )}
+            </View>
+            
+            <View style={styles.teamInfoContainer}>
+              <Text style={styles.teamNameLabel} numberOfLines={1}>
+                {selectedTeamA?.name || 'Select Home Team'}
+              </Text>
+              <Text style={styles.teamSubLabel}>
+                {selectedTeamA ? (selectedTeamA.location || 'Official Team') : 'Tap to select home squad'}
+              </Text>
+            </View>
+            
+            {selectedTeamA && (
+              <View style={styles.selectedCheckCircle}>
+                <Check size={14} color="#FFF" />
+              </View>
             )}
-          </View>
-          <Text style={styles.vsSelectionName} numberOfLines={1}>
-            {selectedTeamA?.name || 'Select Home Team'}
-          </Text>
-          <Text style={styles.vsSelectionTap}>Tap to choose</Text>
-        </TouchableOpacity>
+          </TouchableOpacity>
 
-        <View style={styles.vsBadgeContainerLarge}>
-          <Text style={styles.vsBadgeTextLarge}>vs</Text>
-        </View>
-
-        {/* Away Team Side */}
-        <TouchableOpacity 
-          style={[styles.vsSelectionSide, selectedTeamB && styles.vsSelectionSideActive]}
-          onPress={onOpenPickerB}
-        >
-          <View style={styles.sideBadgeAway}>
-             <Text style={styles.sideBadgeText}>AWAY TEAM</Text>
+          <View style={styles.vsBadgePremium}>
+            <View style={styles.vsLine} />
+            <View style={styles.vsCircle}>
+              <Text style={styles.vsTextPremium}>VS</Text>
+            </View>
+            <View style={styles.vsLine} />
           </View>
-          <View style={[styles.vsSelectionAvatar, { borderColor: '#01b854' }]}>
-            {selectedTeamB ? (
-              <Text style={styles.vsSelectionInitial}>{selectedTeamB.initials || selectedTeamB.name[0]}</Text>
-            ) : (
-              <Briefcase size={32} color="#01b854" />
+
+          {/* Away Team Side */}
+          <TouchableOpacity 
+            style={[styles.teamSelectBox, selectedTeamB && styles.teamSelectBoxActive]}
+            onPress={onOpenPickerB}
+          >
+            <View style={styles.teamBadgeAway}>
+               <Text style={styles.teamBadgeText}>AWAY TEAM</Text>
+            </View>
+            
+            <View style={[styles.teamAvatarLarge, { borderColor: '#f8688a' }]}>
+              {selectedTeamB ? (
+                selectedTeamB.image_url ? (
+                  <Image source={{ uri: selectedTeamB.image_url }} style={styles.teamAvatarImg} />
+                ) : (
+                  <Text style={[styles.teamInitialLarge, { color: '#f8688a' }]}>{selectedTeamB.name[0]}</Text>
+                )
+              ) : (
+                <View style={styles.emptyAvatarCircle}>
+                  <Users size={32} color="#94A3B8" />
+                </View>
+              )}
+            </View>
+            
+            <View style={styles.teamInfoContainer}>
+              <Text style={styles.teamNameLabel} numberOfLines={1}>
+                {selectedTeamB?.name || 'Select Away Team'}
+              </Text>
+              <Text style={styles.teamSubLabel}>
+                {selectedTeamB ? (selectedTeamB.location || 'Official Team') : 'Tap to select away squad'}
+              </Text>
+            </View>
+
+            {selectedTeamB && (
+              <View style={[styles.selectedCheckCircle, { backgroundColor: '#f8688a' }]}>
+                <Check size={14} color="#FFF" />
+              </View>
             )}
-          </View>
-          <Text style={styles.vsSelectionName} numberOfLines={1}>
-            {selectedTeamB?.name || 'Select Away Team'}
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.setupInfoBox}>
+        <View style={styles.setupInfoItem}>
+          <Shield size={20} color="#01b854" />
+          <Text style={styles.setupInfoText}>Official Player Stats Tracking</Text>
+        </View>
+        <View style={styles.setupInfoItem}>
+          <Zap size={20} color="#01b854" />
+          <Text style={styles.setupInfoText}>Real-time Score Updates</Text>
+        </View>
+      </View>
+
+      {!selectedTeamA || !selectedTeamB ? (
+        <View style={styles.hintCard}>
+          <Info size={20} color="#64748B" />
+          <Text style={styles.hintText}>
+            You need to select both teams to proceed with the match setup.
           </Text>
-          <Text style={styles.vsSelectionTap}>Tap to choose</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.selectionGuideBox}>
-        <View style={styles.guideIconWrapper}>
-          <Info size={20} color="#01b854" />
         </View>
-        <Text style={styles.selectionGuideText}>
-          Tap on a side to select or add a team via QR code.
-        </Text>
-        <TouchableOpacity style={styles.guideQrBtn} onPress={onScanQr}>
-          <QrCode size={20} color="#01b854" />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.benefitsRow}>
-        <View style={styles.benefitItem}>
-          <Shield size={24} color="#01b854" />
-          <Text style={styles.benefitTitle}>Official Teams</Text>
-          <Text style={styles.benefitSub}>Verified & Updated</Text>
+      ) : (
+        <View style={styles.successSetupBox}>
+          <CheckCircle2 size={20} color="#01b854" />
+          <Text style={styles.successSetupText}>Teams Ready for Action!</Text>
         </View>
-        <View style={styles.benefitDivider} />
-        <View style={styles.benefitItem}>
-          <Users size={24} color="#01b854" />
-          <Text style={styles.benefitTitle}>Easy Selection</Text>
-          <Text style={styles.benefitSub}>Quick & Simple</Text>
-        </View>
-        <View style={styles.benefitDivider} />
-        <View style={styles.benefitItem}>
-          <Star size={24} color="#01b854" />
-          <Text style={styles.benefitTitle}>Better Matches</Text>
-          <Text style={styles.benefitSub}>More Exciting</Text>
-        </View>
-      </View>
+      )}
     </ScrollView>
 
-    <TouchableOpacity 
-      style={[styles.confirmBtn, (!selectedTeamA || !selectedTeamB) && { opacity: 0.5 }]}
-      onPress={onContinue}
-      disabled={!selectedTeamA || !selectedTeamB}
-    >
-      <Text style={styles.confirmBtnText}>Continue to Players</Text>
-      <ArrowRight size={20} color="#FFF" style={{ marginLeft: 8 }} />
-    </TouchableOpacity>
+    <View style={styles.stickyFooterSelection}>
+      <TouchableOpacity 
+        style={[styles.continueBtnPremium, (!selectedTeamA || !selectedTeamB) && styles.continueBtnDisabled]}
+        onPress={onContinue}
+        disabled={!selectedTeamA || !selectedTeamB}
+      >
+        <LinearGradient
+          colors={(!selectedTeamA || !selectedTeamB) ? ['#CBD5E1', '#94A3B8'] : ['#01b854', '#06392e']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.continueBtnGradient}
+        >
+          <Text style={styles.continueBtnTextPremium}>Continue to Players</Text>
+          <ArrowRight size={20} color="#FFF" />
+        </LinearGradient>
+      </TouchableOpacity>
+    </View>
   </View>
 );
+
 
 // --- PLAYER SELECTION VIEW ---
 export const PlayerSelectionView = ({ 
   team, teamMembers, playingXi, onTogglePlayer, onToggleCaptain, 
-  onBack, onContinue, currentCaptain, searchQuery, setSearchQuery, onScanPlayer, onAddPlayer 
+  onBack, onContinue, currentCaptain, searchQuery, setSearchQuery, onScanPlayer, onAddPlayer,
+  title
 }: any) => {
+  const isLive = !!title;
   const filteredMembers = teamMembers.filter((m: any) => {
     const name = m.name || m.player_name || '';
     return name.toLowerCase().includes((searchQuery || '').toLowerCase());
@@ -223,13 +276,13 @@ export const PlayerSelectionView = ({
           <ChevronLeft size={24} color="#1E293B" />
         </TouchableOpacity>
         <View style={{ flex: 1, alignItems: 'center' }}>
-          <Text style={styles.selectionTitle} numberOfLines={1}>{team?.name || 'Select Players'}</Text>
+          <Text style={styles.selectionTitle} numberOfLines={1}>{title || team?.name || 'Select Players'}</Text>
           <Text style={styles.selectionSubtitle}>{playingXi.length} Players Selected</Text>
         </View>
         <View style={{ width: 24 }} />
       </View>
 
-        <View style={{ flexDirection: 'row', gap: 10 }}>
+        <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 16, marginBottom: 16 }}>
           <View style={[styles.searchBarPremium, { flex: 1 }]}>
             <Search size={20} color="#94A3B8" />
             <TextInput 
@@ -239,12 +292,6 @@ export const PlayerSelectionView = ({
               onChangeText={setSearchQuery}
               placeholderTextColor="#94A3B8"
             />
-            <TouchableOpacity 
-              style={styles.qrBtnSmall}
-              onPress={onScanPlayer}
-            >
-              <QrCode size={20} color="#01b854" />
-            </TouchableOpacity>
           </View>
           <TouchableOpacity 
             style={{ 
@@ -291,7 +338,7 @@ export const PlayerSelectionView = ({
                   </View>
                 </View>
 
-                {isSelected && (
+                {isSelected && !isLive && (
                   <TouchableOpacity 
                     style={[styles.captainBtn, isCaptain && styles.captainBtnActive, { width: 36, height: 36, borderRadius: 18 }]} 
                     onPress={() => onToggleCaptain(m)}
@@ -305,7 +352,7 @@ export const PlayerSelectionView = ({
       </ScrollView>
 
       <View style={{ paddingHorizontal: 16, marginBottom: 8 }}>
-        {!currentCaptain && playingXi.length > 0 && (
+        {!currentCaptain && playingXi.length > 0 && !isLive && (
           <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF7ED', padding: 8, borderRadius: 8, gap: 8 }}>
             <Crown size={14} color="#EA580C" />
             <Text style={{ fontSize: 12, color: '#EA580C', fontWeight: '600' }}>Please assign a captain to proceed</Text>
@@ -314,23 +361,23 @@ export const PlayerSelectionView = ({
       </View>
 
       <TouchableOpacity 
-        style={[styles.confirmBtn, (playingXi.length < 2 || !currentCaptain) && { opacity: 0.5 }, { marginHorizontal: 16 }]}
+        style={[styles.confirmBtn, (playingXi.length < (isLive ? 1 : 2) || (!isLive && !currentCaptain)) && { opacity: 0.5 }, { marginHorizontal: 16 }]}
         onPress={() => {
-          if (playingXi.length < 2) {
+          if (!isLive && playingXi.length < 2) {
             if (Platform.OS === 'web') alert('Please select at least 2 players to proceed');
             else Alert.alert('Min. Players Required', 'Please select at least 2 players to proceed.');
             return;
           }
-          if (!currentCaptain) {
+          if (!isLive && !currentCaptain) {
             if (Platform.OS === 'web') alert('Please assign a captain before proceeding');
             else Alert.alert('Captain Required', 'Please assign a captain for the team before proceeding.');
             return;
           }
           onContinue();
         }}
-        disabled={playingXi.length < 2 || !currentCaptain}
+        disabled={playingXi.length < (isLive ? 1 : 2) || (!isLive && !currentCaptain)}
       >
-        <Text style={styles.confirmBtnText}>Confirm Team & Captain</Text>
+        <Text style={styles.confirmBtnText}>{isLive ? 'Confirm Selection' : 'Confirm Team & Captain'}</Text>
         <ArrowRight size={20} color="#FFF" style={{ marginLeft: 8 }} />
       </TouchableOpacity>
     </View>
@@ -385,7 +432,11 @@ export const MatchConfigurationView = ({
         <View style={styles.vsDisplayCompact}>
           <TouchableOpacity style={styles.vsTeamCompact} onPress={onSelectPlayersA}>
             <View style={styles.teamAvatarSmall}>
-               <Text style={styles.teamInitialSmall}>{selectedTeamA?.initials || selectedTeamA?.name?.[0]}</Text>
+               {selectedTeamA?.image ? (
+                 <Image source={{ uri: selectedTeamA.image }} style={styles.teamAvatarSmallImage} />
+               ) : (
+                 <Text style={styles.teamInitialSmall}>{selectedTeamA?.initials || selectedTeamA?.name?.[0]}</Text>
+               )}
             </View>
             <View style={styles.vsInfoContainer}>
               <Text style={styles.vsTeamNameCompact} numberOfLines={1}>{selectedTeamA?.name}</Text>
@@ -402,7 +453,11 @@ export const MatchConfigurationView = ({
 
           <TouchableOpacity style={[styles.vsTeamCompact, { flexDirection: 'row-reverse' }]} onPress={onSelectPlayersB}>
             <View style={styles.teamAvatarSmall}>
-               <Text style={styles.teamInitialSmall}>{selectedTeamB?.initials || selectedTeamB?.name?.[0]}</Text>
+               {selectedTeamB?.image ? (
+                 <Image source={{ uri: selectedTeamB.image }} style={styles.teamAvatarSmallImage} />
+               ) : (
+                 <Text style={styles.teamInitialSmall}>{selectedTeamB?.initials || selectedTeamB?.name?.[0]}</Text>
+               )}
             </View>
             <View style={[styles.vsInfoContainer, { alignItems: 'flex-end', marginRight: 12, marginLeft: 0 }]}>
               <Text style={styles.vsTeamNameCompact} numberOfLines={1}>{selectedTeamB?.name}</Text>
@@ -477,60 +532,130 @@ export const MatchConfigurationView = ({
           </View>
         </View>
 
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          <View style={[styles.configSection, { flex: 1 }]}>
+            <View style={styles.configSectionHeader}>
+               <Clock size={18} color="#01b854" />
+               <Text style={styles.configSectionTitle}>No. of Overs</Text>
+            </View>
+            <View style={styles.configInputPremium}>
+               <TextInput 
+                 keyboardType="numeric"
+                 style={{ flex: 1, fontSize: 16, fontWeight: '700', color: '#06392e' }}
+                 value={(matchConfig.totalOvers || 20).toString()}
+                 onChangeText={(val) => setMatchConfig({ ...matchConfig, totalOvers: val })}
+               />
+            </View>
+          </View>
+
+          <View style={[styles.configSection, { flex: 1 }]}>
+            <View style={styles.configSectionHeader}>
+               <Users size={18} color="#01b854" />
+               <Text style={styles.configSectionTitle}>Overs/Bowler</Text>
+            </View>
+            <View style={styles.configInputPremium}>
+               <TextInput 
+                 keyboardType="numeric"
+                 style={{ flex: 1, fontSize: 16, fontWeight: '700', color: '#06392e' }}
+                 value={(matchConfig.oversPerBowler || 4).toString()}
+                 onChangeText={(val) => setMatchConfig({ ...matchConfig, oversPerBowler: val })}
+               />
+            </View>
+          </View>
+        </View>
+
         <View style={styles.configSection}>
           <View style={styles.configSectionHeader}>
-             <Clock size={18} color="#01b854" />
-             <Text style={styles.configSectionTitle}>No. of Overs</Text>
+             <Zap size={18} color="#01b854" />
+             <Text style={styles.configSectionTitle}>Powerplay Overs</Text>
           </View>
           <View style={styles.configInputPremium}>
              <TextInput 
                keyboardType="numeric"
                style={{ flex: 1, fontSize: 16, fontWeight: '700', color: '#06392e' }}
-               value={(matchConfig.totalOvers || 20).toString()}
-               onChangeText={(val) => setMatchConfig({ ...matchConfig, totalOvers: val })}
+               value={(matchConfig.powerplayOvers || 6).toString()}
+               onChangeText={(val) => setMatchConfig({ ...matchConfig, powerplayOvers: val })}
              />
-             <ChevronDown size={20} color="#01b854" />
+             <Text style={{ color: '#94A3B8', fontSize: 12 }}>Balls 1 to X</Text>
           </View>
         </View>
 
         <View style={styles.configSection}>
           <View style={styles.configSectionHeader}>
              <MapPin size={18} color="#01b854" />
-             <Text style={styles.configSectionTitle}>Ground Name</Text>
+             <Text style={styles.configSectionTitle}>Venue Details</Text>
           </View>
-          <View style={styles.searchBarPremium}>
-             <Search size={20} color="#94A3B8" />
-             <TextInput 
-               placeholder="Search or Enter Ground"
-               style={styles.searchInputPremium}
-               value={matchConfig.ground}
-               onChangeText={(val) => {
-                 setMatchConfig({ ...matchConfig, ground: val });
-                 searchGrounds(val);
-               }}
-               placeholderTextColor="#94A3B8"
-             />
-          </View>
-          
-          {showGroundDropdown && groundResults.length > 0 && (
-            <View style={styles.dropdownList}>
-               <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled>
-                 {groundResults.map((g: any) => (
-                   <TouchableOpacity 
-                     key={g.id} 
-                     style={styles.dropdownItem}
-                     onPress={() => {
-                        setMatchConfig({ ...matchConfig, ground: g.name });
-                        setShowGroundDropdown(false);
-                     }}
-                   >
-                     <MapPin size={14} color="#94A3B8" style={{ marginRight: 10 }} />
-                     <Text style={styles.dropdownItemText}>{g.name}</Text>
-                   </TouchableOpacity>
-                 ))}
-               </ScrollView>
+          <View style={{ gap: 12 }}>
+            <View style={styles.searchBarPremium}>
+               <Search size={20} color="#94A3B8" />
+               <TextInput 
+                 placeholder="Ground Name"
+                 style={styles.searchInputPremium}
+                 value={matchConfig.ground}
+                 onChangeText={(val) => {
+                   setMatchConfig({ ...matchConfig, ground: val });
+                   searchGrounds(val);
+                 }}
+                 placeholderTextColor="#94A3B8"
+               />
             </View>
-          )}
+            
+            {showGroundDropdown && groundResults.length > 0 && (
+              <View style={styles.dropdownList}>
+                 <ScrollView style={{ maxHeight: 150 }} nestedScrollEnabled>
+                   {groundResults.map((g: any) => (
+                     <TouchableOpacity 
+                       key={g.id} 
+                       style={styles.dropdownItem}
+                       onPress={() => {
+                          setMatchConfig({ ...matchConfig, ground: g.name });
+                          setShowGroundDropdown(false);
+                       }}
+                     >
+                       <MapPin size={14} color="#94A3B8" style={{ marginRight: 10 }} />
+                       <Text style={styles.dropdownItemText}>{g.name}</Text>
+                     </TouchableOpacity>
+                   ))}
+                 </ScrollView>
+              </View>
+            )}
+
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+               <TextInput 
+                  style={[styles.configInputPremium, { flex: 1 }]} 
+                  placeholder="State"
+                  value={matchConfig.state}
+                  onChangeText={(val) => setMatchConfig({ ...matchConfig, state: val })}
+                  placeholderTextColor="#94A3B8"
+               />
+               <TextInput 
+                  style={[styles.configInputPremium, { flex: 1 }]} 
+                  placeholder="City"
+                  value={matchConfig.city}
+                  onChangeText={(val) => setMatchConfig({ ...matchConfig, city: val })}
+                  placeholderTextColor="#94A3B8"
+               />
+            </View>
+          </View>
+        </View>
+
+        <View style={[styles.configSection, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
+          <View style={styles.configSectionHeader}>
+             <Target size={18} color="#01b854" />
+             <Text style={styles.configSectionTitle}>Wagon Wheel Tracking</Text>
+          </View>
+          <TouchableOpacity 
+            onPress={() => setMatchConfig({ ...matchConfig, wagonWheel: !matchConfig.wagonWheel })}
+            style={{ 
+              width: 50, height: 28, borderRadius: 14, backgroundColor: matchConfig.wagonWheel ? '#01b854' : '#E2E8F0',
+              paddingHorizontal: 4, justifyContent: 'center'
+            }}
+          >
+            <View style={{ 
+              width: 20, height: 20, borderRadius: 10, backgroundColor: '#FFF',
+              alignSelf: matchConfig.wagonWheel ? 'flex-end' : 'flex-start'
+            }} />
+          </TouchableOpacity>
         </View>
 
         <View style={{ marginVertical: 10, height: 1, backgroundColor: '#F1F5F9' }} />
@@ -561,32 +686,6 @@ export const MatchConfigurationView = ({
           </View>
         </View>
 
-        <View style={styles.configSection}>
-          <View style={styles.configSectionHeader}>
-             <Shield size={18} color="#01b854" />
-             <Text style={styles.configSectionTitle}>Match Rules</Text>
-          </View>
-          <View style={{ flexDirection: 'row', gap: 12 }}>
-             <View style={[styles.configInputPremium, { flex: 1, height: 48 }]}>
-                <Text style={{ fontSize: 12, color: '#64748B', marginRight: 8 }}>Wide:</Text>
-                <TextInput 
-                   keyboardType="numeric"
-                   style={{ flex: 1, fontSize: 14, fontWeight: '700', color: '#06392e' }}
-                   value={matchConfig.wideRuns?.toString()}
-                   onChangeText={(val) => setMatchConfig({ ...matchConfig, wideRuns: val })}
-                />
-             </View>
-             <View style={[styles.configInputPremium, { flex: 1, height: 48 }]}>
-                <Text style={{ fontSize: 12, color: '#64748B', marginRight: 8 }}>No Ball:</Text>
-                <TextInput 
-                   keyboardType="numeric"
-                   style={{ flex: 1, fontSize: 14, fontWeight: '700', color: '#06392e' }}
-                   value={matchConfig.noBallRuns?.toString()}
-                   onChangeText={(val) => setMatchConfig({ ...matchConfig, noBallRuns: val })}
-                />
-             </View>
-          </View>
-        </View>
       </ScrollView>
 
       <TouchableOpacity style={styles.confirmBtn} onPress={onNext}>
@@ -608,7 +707,6 @@ export const TossConfigurationView = ({
       </TouchableOpacity>
       <View style={{ flex: 1, alignItems: 'center' }}>
         <Text style={styles.selectionTitle}>Toss Details</Text>
-        <Text style={styles.selectionSubtitle}>Match setup</Text>
       </View>
       <View style={{ width: 24 }} />
     </View>
@@ -693,7 +791,7 @@ export const TossConfigurationView = ({
                    )}
                    <View style={[styles.tossDecisionIconBox, isActive && styles.tossDecisionIconBoxActive]}>
                       {React.cloneElement(opt.icon as React.ReactElement, { 
-                        color: isActive ? '#FFF' : '#64748B' 
+                        color: isActive ? '#01b854' : '#64748B' 
                       })}
                    </View>
                    <Text style={[styles.tossDecisionText, isActive && styles.tossDecisionTextActive]}>{opt.label}</Text>
@@ -720,13 +818,11 @@ export const TossConfigurationView = ({
     </ScrollView>
 
     <TouchableOpacity 
-      style={[styles.confirmBtn, (!tossResult.winner || !tossResult.decision) && { opacity: 0.5 }]} 
+      style={[styles.confirmBtn, (!tossResult.winner || !tossResult.decision) && { opacity: 0.5 }, { marginHorizontal: 16, marginBottom: 16 }]} 
       onPress={onNext}
       disabled={!tossResult.winner || !tossResult.decision}
     >
-      <Flag size={20} color="#FFF" style={{ marginRight: 8 }} />
       <Text style={styles.confirmBtnText}>Ready to Play</Text>
-      <ArrowRight size={20} color="#FFF" style={{ marginLeft: 'auto' }} />
     </TouchableOpacity>
   </View>
 );
@@ -784,8 +880,7 @@ export const OpeningSelectionView = ({
           <ChevronLeft size={24} color="#1E293B" />
         </TouchableOpacity>
         <View style={{ flex: 1, alignItems: 'center' }}>
-          <Text style={styles.selectionTitle}>Select Openers</Text>
-          <Text style={styles.selectionSubtitle}>Choose players for key positions</Text>
+          <Text style={styles.selectionTitle}>Select</Text>
         </View>
         <View style={{ width: 24 }} />
       </View>
@@ -872,16 +967,123 @@ export const OpeningSelectionView = ({
       </ScrollView>
 
       <TouchableOpacity 
-        style={[styles.confirmBtn, !allSelected && { opacity: 0.5 }]} 
+        style={[styles.confirmBtn, !allSelected && { opacity: 0.5 }, { marginHorizontal: 16, marginBottom: 16 }]} 
         onPress={onStart}
         disabled={!allSelected}
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
-          <Play size={20} color="#FFF" fill="#FFF" style={{ marginRight: 8 }} />
-          <Text style={styles.confirmBtnText}>Start Match</Text>
-          <ArrowRight size={20} color="#FFF" style={{ marginLeft: 'auto' }} />
-        </View>
+        <Text style={styles.confirmBtnText}>Start Match</Text>
       </TouchableOpacity>
     </View>
+  );
+};
+
+// --- SCORING SETTINGS SIDE SHEET ---
+export const ScoringSettingsSheet = ({ isVisible, onClose, onAction }: any) => {
+  const sections = [
+    {
+      title: 'Match Settings',
+      icon: <Target size={18} color="#666" />,
+      items: [
+        { label: 'Edit Scorecard', id: 'edit_scorecard' },
+        { label: 'Change Match Overs', id: 'change_overs' },
+        { label: 'Match Rules (WD, NB, WW)', id: 'match_rules' },
+        { label: 'Revise Target (DLS/VJD)', id: 'revise_target' },
+        { label: 'Add Bonus Runs', id: 'bonus_runs' },
+        { label: 'Give Penalty Runs', id: 'penalty_runs' },
+        { label: 'End / Declare Innings', id: 'end_innings' },
+        { label: 'End Match', id: 'end_match' },
+      ]
+    },
+    {
+      title: 'Players Settings',
+      icon: <Users size={18} color="#666" />,
+      items: [
+        { label: 'Change Playing Squad', id: 'change_squad' },
+        { label: 'Change Bowler', id: 'change_bowler' },
+        { label: 'Replace Batters', id: 'replace_batters' },
+        { label: 'Retired Hurt (Batter)', id: 'retired_hurt' },
+      ]
+    },
+    {
+      title: 'Scorer Settings',
+      icon: <Briefcase size={18} color="#666" />,
+      items: [
+        { label: 'Change Scorer', id: 'change_scorer' },
+        { label: 'Add Match Officials/Streamer', id: 'add_officials' },
+        { label: 'Select Power Play Overs', id: 'powerplay' },
+        { label: 'Set Match Breaks', id: 'match_breaks' },
+        { label: 'Add Scorer Notes', id: 'scorer_notes' },
+      ]
+    },
+    {
+      title: 'Other Options',
+      icon: <Layers size={18} color="#666" />,
+      items: [
+        { label: 'Scoring Help', id: 'help' },
+        { label: 'Share the App', id: 'share' },
+      ]
+    }
+  ];
+
+  console.log('[ScoringSettingsSheet] Render, isVisible:', isVisible);
+  if (!isVisible) return null;
+
+  return (
+    <Modal
+      transparent
+      visible={isVisible}
+      animationType="slide"
+      onRequestClose={onClose}
+      statusBarTranslucent
+    >
+      <View style={styles.sideSheetOverlay}>
+        <Pressable 
+          style={StyleSheet.absoluteFill} 
+          onPress={onClose} 
+        >
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} />
+        </Pressable>
+        
+        <View style={{ flex: 1, flexDirection: 'row', pointerEvents: 'box-none' }}>
+          <View style={{ flex: 0.2 }} />
+          <View style={[styles.sideSheetContainer, { flex: 0.8, height: '100%' }]}>
+            <View style={styles.sideSheetHeader}>
+              <Text style={styles.sideSheetTitle}>Settings</Text>
+              <TouchableOpacity onPress={onClose} style={styles.sideSheetCloseBtn}>
+                <X size={20} color="#333" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.sideSheetContent} showsVerticalScrollIndicator={false}>
+              {sections.map((section, idx) => (
+                <View key={idx} style={styles.sideSheetSection}>
+                  <View style={styles.sideSheetSectionHeader}>
+                    {section.icon}
+                    <Text style={styles.sideSheetSectionTitle}>{section.title}</Text>
+                    <ChevronDown size={16} color="#999" />
+                  </View>
+                  <View style={styles.sideSheetSectionItems}>
+                    {section.items.map((item, i) => (
+                      <TouchableOpacity 
+                        key={i} 
+                        style={styles.sideSheetItem}
+                        onPress={() => {
+                          onAction(item.id);
+                          onClose();
+                        }}
+                      >
+                        <Text style={styles.sideSheetItemText}>{item.label}</Text>
+                        <ChevronRight size={14} color="#CCC" />
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              ))}
+              <View style={{ height: 40 }} />
+            </ScrollView>
+          </View>
+        </View>
+      </View>
+    </Modal>
   );
 };

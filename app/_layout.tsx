@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Platform, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -27,11 +27,13 @@ export default function RootLayout() {
     'Inter-Black': require('../assets/fonts/Inter-Black.ttf'),
   });
 
+  const splashHidden = useRef(false);
+
   useFrameworkReady();
 
   useEffect(() => {
-    if (fontsLoaded || fontError) {
-      // Hide the splash screen as soon as fonts are loaded or there's an error
+    if ((fontsLoaded || fontError) && !splashHidden.current) {
+      splashHidden.current = true;
       SplashScreen.hideAsync().catch(() => {});
     }
   }, [fontsLoaded, fontError]);
