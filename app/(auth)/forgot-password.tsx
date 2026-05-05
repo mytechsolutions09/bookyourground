@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
   loginLinkText: { 
     fontSize: 13, 
     fontWeight: '700', 
-    color: '#475569',
+    color: '#FFFFFF',
     fontFamily: 'Inter',
   },
 });
@@ -427,7 +427,7 @@ const webStyles = StyleSheet.create({
     borderRadius: 100, 
     height: 48, 
     borderWidth: 1.5, 
-    borderColor: '#475569', 
+    borderColor: '#94A3B8', 
     alignItems: 'center', 
     justifyContent: 'center', 
     width: '100%' 
@@ -435,7 +435,7 @@ const webStyles = StyleSheet.create({
   outlineButtonText: { 
     fontSize: 14, 
     fontWeight: '700', 
-    color: '#475569', 
+    color: '#FFFFFF', 
     textTransform: 'uppercase' as any,
     fontFamily: 'Inter',
   },

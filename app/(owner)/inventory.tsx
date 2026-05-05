@@ -566,7 +566,6 @@ export default function OwnerInventoryScreen() {
               </View>
             ) : (
               <View style={styles.noGroundSelected}>
-                 <ActivityIndicator size="small" color="#00ea6b" />
                  <Text style={styles.emptyText}>No grounds found in your inventory</Text>
               </View>
             )}

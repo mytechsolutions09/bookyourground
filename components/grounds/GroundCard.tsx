@@ -104,6 +104,9 @@ export default function GroundCard({
           
           {/* Top Floating Badges */}
           <View style={styles.topBadgesRow}>
+            <View style={styles.glassPitchTypeBadge}>
+              <Text style={styles.glassPitchTypeText}>{ground.pitch_type || 'Cricket'}</Text>
+            </View>
              {onToggleFavorite && (
                 <TouchableOpacity
                   style={styles.favBtnGlass}
@@ -126,35 +129,52 @@ export default function GroundCard({
           <View style={styles.glassContent}>
             <View style={styles.glassHeaderRow}>
               <View style={{ flex: 1, marginRight: 12 }}>
-                <Text style={nameStyle}>
+                <Text style={nameStyle} numberOfLines={1}>
                   {ground.name}
                 </Text>
+                <View style={styles.locationRowShort}>
+                  <MapPin size={10} color="#64748B" />
+                  <Text style={locationStyle} numberOfLines={1}>{ground.city}, {ground.state}</Text>
+                </View>
               </View>
               <View style={styles.glassPriceBlock}>
                 <Text style={priceStyle}>
                   {formatCurrency(displayPricePerUnit ?? ground.base_price_per_hour ?? 0)}
-                  <Text style={styles.priceUnitGlass}>
-                    {unitLabelOverride ?? (String(ground.pitch_type ?? '').toLowerCase().includes('box') ? '/hr' : ' / match')}
-                  </Text>
+                </Text>
+                <Text style={styles.priceUnitGlass}>
+                  {unitLabelOverride ?? (String(ground.pitch_type ?? '').toLowerCase().includes('box') ? '/hr' : ' / match')}
                 </Text>
               </View>
             </View>
 
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
-              <View style={styles.locationRowShort}>
-                <MapPin size={12} color="#1e293b" />
-                <Text style={[locationStyle, { color: '#334155' }]} numberOfLines={1}>{ground.city}</Text>
+            <View style={styles.glassBottomRow}>
+              <View style={styles.glassRatingInfo}>
+                <Star size={12} color="#059669" fill="#059669" />
+                <Text style={styles.glassRatingText}>
+                  {reviewCount > 0 ? averageRating.toFixed(1) : '5.0'}
+                </Text>
+                <Text style={styles.glassReviewCount}>
+                  ({reviewCount > 0 ? reviewCount : 'New'})
+                </Text>
               </View>
 
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Star size={10} color={reviewCount > 0 ? "#059669" : "#64748B"} fill={reviewCount > 0 ? "#059669" : "none"} />
-                <Text style={{ fontSize: 11, fontWeight: '900', color: '#0F172A' }}>
-                  {reviewCount > 0 ? averageRating.toFixed(1) : '0.0'}
-                </Text>
-                <Text style={{ fontSize: 10, color: '#1e293b', fontWeight: '700' }}>
-                  ({reviewCount})
-                </Text>
-              </View>
+              {showBookButton ? (
+                <TouchableOpacity 
+                  style={styles.glassBookBtn}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    onPress();
+                  }}
+                >
+                  <Text style={styles.glassBookBtnText}>BOOK NOW</Text>
+                  <ChevronRight size={14} color="#FFFFFF" strokeWidth={3} />
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.glassViewDetails}>
+                  <Text style={styles.glassViewDetailsText}>View Details</Text>
+                  <ChevronRight size={14} color="#01b854" strokeWidth={3} />
+                </View>
+              )}
             </View>
           </View>
         </Card>
@@ -346,8 +366,6 @@ export default function GroundCard({
 const styles = StyleSheet.create({
   touchable: {
     width: '100%',
-    alignSelf: 'stretch',
-    flex: 1,
   },
   touchableCompact: {
     marginBottom: 8,
@@ -359,8 +377,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: 16,
     width: '100%',
-    alignSelf: 'stretch',
-    flex: 1,
   },
   cardCompact: {
     marginBottom: 8,
@@ -779,5 +795,85 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  glassPitchTypeBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    ...Platform.select({
+      web: {
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+      },
+    }) as any,
+  },
+  glassPitchTypeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '800',
+    fontFamily: 'Inter',
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+  },
+  glassBottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  glassRatingInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  glassRatingText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  glassReviewCount: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '600',
+    fontFamily: 'Inter',
+  },
+  glassBookBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#01b854',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 100,
+    gap: 4,
+    shadowColor: '#01b854',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  glassBookBtnText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '900',
+    fontFamily: 'Inter',
+    letterSpacing: 0.5,
+  },
+  glassViewDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  glassViewDetailsText: {
+    color: '#01b854',
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: 'Inter',
   },
 });

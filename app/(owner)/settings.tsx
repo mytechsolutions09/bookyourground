@@ -16,7 +16,7 @@ import Animated, {
   runOnJS
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
 
 const IS_WEB = Platform.OS === 'web';
 const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);

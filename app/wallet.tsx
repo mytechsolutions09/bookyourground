@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Platform, TouchableOpacity, useWindowDimensions, ScrollView, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, StyleSheet, Platform, TouchableOpacity, useWindowDimensions, ScrollView, ActivityIndicator, Modal, TextInput } from 'react-native';
 import React, { useState, useEffect, useRef } from 'react';
 import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
@@ -255,15 +255,7 @@ export default function WalletScreen() {
                 
                 <View style={styles.filterContainer}>
                   <View style={styles.dateFilterGroup}>
-                    <TouchableOpacity 
-                      style={styles.datePickerInput}
-                      onPress={() => {
-                        if (Platform.OS !== 'web') {
-                          setActiveFilterType('from');
-                          setIsFilterModalVisible(true);
-                        }
-                      }}
-                    >
+                    <View style={styles.datePickerInput}>
                        <Calendar size={14} color="#64748B" />
                        <Text style={[styles.dateTextLabel, fromDate && styles.dateTextActive]}>
                          {fromDate ? new Date(fromDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'From Date'}
@@ -272,23 +264,38 @@ export default function WalletScreen() {
                          <input
                            type="date"
                            value={fromDate || ''}
-                           onChange={(e) => setFromDate(e.target.value || null)}
-                           style={styles.webDatePicker}
+                           onChange={(e: any) => setFromDate(e.target.value || null)}
+                           style={{
+                             position: 'absolute',
+                             top: 0,
+                             left: 0,
+                             right: 0,
+                             bottom: 0,
+                             opacity: 0,
+                             width: '100%',
+                             height: '100%',
+                             cursor: 'pointer',
+                             zIndex: 2,
+                             border: 'none',
+                             appearance: 'none',
+                             WebkitAppearance: 'none'
+                           }}
                          />
                        )}
-                    </TouchableOpacity>
+                       {Platform.OS !== 'web' && (
+                         <TouchableOpacity 
+                           style={StyleSheet.absoluteFill} 
+                           onPress={() => {
+                             setActiveFilterType('from');
+                             setIsFilterModalVisible(true);
+                           }} 
+                         />
+                       )}
+                    </View>
 
-                    <Text style={styles.dateSeparator}>to</Text>
+                    <Text style={styles.dateSeparator}>TO</Text>
 
-                    <TouchableOpacity 
-                      style={styles.datePickerInput}
-                      onPress={() => {
-                        if (Platform.OS !== 'web') {
-                          setActiveFilterType('to');
-                          setIsFilterModalVisible(true);
-                        }
-                      }}
-                    >
+                    <View style={styles.datePickerInput}>
                        <Calendar size={14} color="#64748B" />
                        <Text style={[styles.dateTextLabel, toDate && styles.dateTextActive]}>
                          {toDate ? new Date(toDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'To Date'}
@@ -297,11 +304,34 @@ export default function WalletScreen() {
                          <input
                            type="date"
                            value={toDate || ''}
-                           onChange={(e) => setToDate(e.target.value || null)}
-                           style={styles.webDatePicker}
+                           onChange={(e: any) => setToDate(e.target.value || null)}
+                           style={{
+                             position: 'absolute',
+                             top: 0,
+                             left: 0,
+                             right: 0,
+                             bottom: 0,
+                             opacity: 0,
+                             width: '100%',
+                             height: '100%',
+                             cursor: 'pointer',
+                             zIndex: 2,
+                             border: 'none',
+                             appearance: 'none',
+                             WebkitAppearance: 'none'
+                           }}
                          />
                        )}
-                    </TouchableOpacity>
+                       {Platform.OS !== 'web' && (
+                         <TouchableOpacity 
+                           style={StyleSheet.absoluteFill} 
+                           onPress={() => {
+                             setActiveFilterType('to');
+                             setIsFilterModalVisible(true);
+                           }} 
+                         />
+                       )}
+                    </View>
 
                     {(fromDate || toDate) && (
                       <TouchableOpacity 
@@ -731,21 +761,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    padding: 6,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    gap: 8,
+    overflow: 'hidden',
+    minWidth: Platform.OS === 'web' ? 320 : '100%',
   },
   datePickerInput: {
+    flex: 1,
     position: 'relative',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    backgroundColor: '#F8FAFC',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#F1F5F9',
   },
   dateTextLabel: {
     fontSize: 12,
@@ -757,22 +787,20 @@ const styles = StyleSheet.create({
     color: '#0F172A',
   },
   dateSeparator: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '800',
     color: '#94A3B8',
     textTransform: 'uppercase',
-  },
-  webDatePicker: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    opacity: 0,
-    cursor: 'pointer',
-    width: '100%',
-    zIndex: 1,
-  },
+    width: 32,
+    textAlign: 'center',
+    letterSpacing: 0.5,
+    backgroundColor: '#FFFFFF',
+    height: '100%',
+    textAlignVertical: 'center',
+    display: Platform.OS === 'web' ? 'flex' : undefined,
+    alignItems: 'center',
+    justifyContent: 'center',
+  } as any,
   clearBtn: {
     width: 28,
     height: 28,

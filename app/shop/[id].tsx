@@ -45,6 +45,7 @@ export default function ProductDetailScreen() {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [cartCount, setCartCount] = useState(0);
+  const [activeWebTab, setActiveWebTab] = useState('DETAILS');
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -694,36 +695,97 @@ export default function ProductDetailScreen() {
 
                     <View style={styles.webTabsContainer}>
                       <View style={styles.webTabsHeader}>
-                        <TouchableOpacity style={[styles.webTab, styles.webTabActive]}>
-                          <Text style={styles.webTabTextActive}>DETAILS</Text>
+                        <TouchableOpacity 
+                          style={[styles.webTab, activeWebTab === 'DETAILS' && styles.webTabActive]}
+                          onPress={() => setActiveWebTab('DETAILS')}
+                        >
+                          <Text style={activeWebTab === 'DETAILS' ? styles.webTabTextActive : styles.webTabText}>DETAILS</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.webTab}>
-                          <Text style={styles.webTabText}>SPECIFICATIONS</Text>
+                        <TouchableOpacity 
+                          style={[styles.webTab, activeWebTab === 'SPECIFICATIONS' && styles.webTabActive]}
+                          onPress={() => setActiveWebTab('SPECIFICATIONS')}
+                        >
+                          <Text style={activeWebTab === 'SPECIFICATIONS' ? styles.webTabTextActive : styles.webTabText}>SPECIFICATIONS</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.webTab}>
-                          <Text style={styles.webTabText}>REVIEWS</Text>
+                        <TouchableOpacity 
+                          style={[styles.webTab, activeWebTab === 'REVIEWS' && styles.webTabActive]}
+                          onPress={() => setActiveWebTab('REVIEWS')}
+                        >
+                          <Text style={activeWebTab === 'REVIEWS' ? styles.webTabTextActive : styles.webTabText}>REVIEWS</Text>
                         </TouchableOpacity>
                       </View>
                       
                       <View style={styles.webTabContent}>
-                        <Text style={styles.webDetailDescription}>
-                          {product.description || 'Engineered knit upper for breathability • Nitrogen-infused midsole • 8.2 oz • 6mm drop • Ideal for tempo runs and daily training'}
-                        </Text>
-                        
-                        <View style={styles.webFeaturesGrid}>
-                          <View style={styles.webFeatureItem}>
-                            <TrendingUp size={18} color="#2b2f4b" />
-                            <Text style={styles.webFeatureText}>Lightweight</Text>
+                        {activeWebTab === 'DETAILS' && (
+                          <>
+                            <Text style={styles.webDetailDescription}>
+                              {product.description || 'Engineered knit upper for breathability • Nitrogen-infused midsole • 8.2 oz • 6mm drop • Ideal for tempo runs and daily training'}
+                            </Text>
+                            
+                            <View style={styles.webFeaturesGrid}>
+                              {product.features && product.features.length > 0 ? (
+                                product.features.map((feature: string, index: number) => (
+                                  <View key={index} style={styles.webFeatureItem}>
+                                    <CheckCircle2 size={18} color="#2b2f4b" />
+                                    <Text style={styles.webFeatureText}>{feature}</Text>
+                                  </View>
+                                ))
+                              ) : (
+                                <>
+                                  <View style={styles.webFeatureItem}>
+                                    <TrendingUp size={18} color="#2b2f4b" />
+                                    <Text style={styles.webFeatureText}>Lightweight</Text>
+                                  </View>
+                                  <View style={styles.webFeatureItem}>
+                                    <Star size={18} color="#2b2f4b" />
+                                    <Text style={styles.webFeatureText}>Responsive</Text>
+                                  </View>
+                                  <View style={styles.webFeatureItem}>
+                                    <ShieldCheck size={18} color="#2b2f4b" />
+                                    <Text style={styles.webFeatureText}>12-month warranty</Text>
+                                  </View>
+                                </>
+                              )}
+                            </View>
+                          </>
+                        )}
+
+                        {activeWebTab === 'SPECIFICATIONS' && (
+                          <View style={styles.specTable}>
+                            {product.specifications && Object.keys(product.specifications).filter(k => !['images', 'features', 'colors', 'sizes'].includes(k)).length > 0 ? (
+                              Object.entries(product.specifications)
+                                .filter(([key]) => !['images', 'features', 'colors', 'sizes'].includes(key))
+                                .map(([key, value]: [string, any], index, array) => {
+                                  const isLast = index === array.length - 1;
+                                  let displayValue = String(value);
+                                  
+                                  if (Array.isArray(value)) {
+                                    displayValue = value.map(v => (typeof v === 'object' && v !== null) ? (v.name || v.label || JSON.stringify(v)) : String(v)).join(', ');
+                                  } else if (typeof value === 'object' && value !== null) {
+                                    displayValue = JSON.stringify(value);
+                                  }
+
+                                  return (
+                                    <View key={key} style={[styles.specRow, isLast && { borderBottomWidth: 0 }]}>
+                                      <Text style={styles.specKey}>{key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}</Text>
+                                      <Text style={styles.specValue}>{displayValue}</Text>
+                                    </View>
+                                  );
+                                })
+                            ) : (
+                              <Text style={styles.webDetailDescription}>No specifications available for this product.</Text>
+                            )}
                           </View>
-                          <View style={styles.webFeatureItem}>
-                            <Star size={18} color="#2b2f4b" />
-                            <Text style={styles.webFeatureText}>Responsive</Text>
+                        )}
+
+                        {activeWebTab === 'REVIEWS' && (
+                          <View style={{ alignItems: 'center', paddingVertical: 32 }}>
+                            <Star size={48} color="#D1D5DB" />
+                            <Text style={[styles.webDetailDescription, { textAlign: 'center', marginTop: 16 }]}>
+                              No reviews yet. Be the first to review this product!
+                            </Text>
                           </View>
-                          <View style={styles.webFeatureItem}>
-                            <ShieldCheck size={18} color="#2b2f4b" />
-                            <Text style={styles.webFeatureText}>12-month warranty</Text>
-                          </View>
-                        </View>
+                        )}
                       </View>
                     </View>
                   </>

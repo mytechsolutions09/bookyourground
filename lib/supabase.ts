@@ -13,9 +13,5 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     detectSessionInUrl: false,
     storage: AsyncStorage,
-    // Default browser lock uses Web Locks + steal recovery; concurrent refresh /
-    // React Strict Mode can surface "another request stole it". Serialize auth
-    // in-process on web instead (RN already uses a no-op / process lock path).
-    ...(Platform.OS === 'web' ? { lock: processLock } : {}),
   },
 });

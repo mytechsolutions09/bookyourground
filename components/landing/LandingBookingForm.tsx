@@ -1677,7 +1677,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                   key={g.id}
                   style={[
                     styles.searchResultTile,
-                    isSearchTwoColumn && styles.searchResultTileHalf,
+                    isSearchTwoColumn && styles.searchResultTileWeb,
                   ]}
                 >
                    <GroundCard
@@ -2443,10 +2443,17 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
             noCard && { marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F1F5F9' }
           ]}
         >
-          <Text style={styles.searchResultsTitle}>Search results</Text>
-          <Text style={styles.searchResultsSubtitle}>
-            Grounds that match your location, type, and optional date and time.
-          </Text>
+          <View style={styles.searchResultsHeader}>
+            <View>
+              <Text style={styles.searchResultsTitle}>Available Grounds</Text>
+              <Text style={styles.searchResultsSubtitle}>
+                Found {searchResults.length} grounds matching your filters
+              </Text>
+            </View>
+            <View style={styles.resultsBadge}>
+              <Text style={styles.resultsBadgeText}>PREMIUM SELECTION</Text>
+            </View>
+          </View>
           {searchResultsBody}
         </ContainerComponent>
       ) : null}
@@ -2947,12 +2954,10 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
   },
   /** Second card below the form when `separateSearchResults` (e.g. /book-my-ground). */
   searchResultsCard: {
-    marginTop: 20,
+    marginTop: 24,
+    padding: 24,
+    borderRadius: 24,
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    paddingVertical: 20,
-    paddingRight: 20,
-    paddingLeft: 12,
     borderWidth: 1,
     borderColor: '#F1F5F9',
     shadowColor: '#000',
@@ -2961,45 +2966,68 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     shadowRadius: 20,
     elevation: 3,
   },
+  searchResultsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
   searchResultsTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F172A',
     fontFamily: 'Inter',
-    color: isLight ? '#111827' : '#F9FAFB',
     marginBottom: 4,
   },
   searchResultsSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
+    color: '#64748B',
+    fontWeight: '500',
     fontFamily: 'Inter',
-    color: isLight ? '#64748B' : '#E5E7EB',
-    marginBottom: 16,
+  },
+  resultsBadge: {
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 100,
+    borderWidth: 1,
+    borderColor: '#D1FAE5',
+  },
+  resultsBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#059669',
+    letterSpacing: 1,
   },
   searchSpinner: {
     marginVertical: 12,
   },
   searchResultsScroller: {
     marginTop: 8,
+    width: '100%',
   },
   searchResultsGrid: {
     flexDirection: 'column',
     gap: 16,
     paddingBottom: 4,
     width: '100%',
-    alignSelf: 'stretch',
-    alignItems: 'stretch',
   },
   searchResultsGridTwoCol: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    gap: 20,
   },
   searchResultTile: {
     width: '100%',
-    alignSelf: 'stretch',
+  },
+  searchResultTileWeb: {
+    width: (windowWidth >= 1200 ? '23.5%' : windowWidth >= 900 ? '31.5%' : '48.5%') as any,
   },
   searchResultTileHalf: {
-    width: '48%',
-    maxWidth: '48%',
+    width: '48.5%',
   },
   smallMuted: {
     fontSize: 13,

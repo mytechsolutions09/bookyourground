@@ -366,12 +366,6 @@ export default function CheckoutScreen() {
       )}
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {Platform.OS === 'web' && (
-          <View style={styles.webHeader}>
-            <Text style={styles.webTitle}>Checkout</Text>
-            <Text style={styles.webSubtitle}>Complete your order details below</Text>
-          </View>
-        )}
 
         <View style={Platform.OS === 'web' ? [styles.webLayoutRow, isCompact && styles.webLayoutRowCompact] : null}>
           <View style={Platform.OS === 'web' ? styles.webLayoutMain : null}>
@@ -757,20 +751,6 @@ const styles = StyleSheet.create({
   },
   webContainer: {
     backgroundColor: '#F3F4F6',
-  },
-  webHeader: {
-    marginBottom: 32,
-    marginTop: 16,
-  },
-  webTitle: {
-    fontSize: 32,
-    fontWeight: '600',
-    color: '#2b2f4b',
-    marginBottom: 8,
-  },
-  webSubtitle: {
-    fontSize: 16,
-    color: '#64748b',
   },
   webLayoutRow: {
     flexDirection: 'row',

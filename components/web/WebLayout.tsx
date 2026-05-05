@@ -47,6 +47,7 @@ import {
   ClipboardList,
   Phone,
   ShoppingBag,
+  ShoppingCart,
   Wallet,
   MessageSquare,
   Bell,
@@ -499,6 +500,28 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
   // hide the left sidebar for all roles so the content can take full width.
   const isPublicNoSidebar =
     propIsPublicNoSidebar || isLanding || (isMarketing && !isSuperAdmin && !isOwnerGroundsDashboard) || isGroundInfoPage || isBookingDetails || isCheckoutPage || isLegalOrInfoPage || (cleanPath === '/find-an-opponent' && !isSuperAdmin) || cleanPath === '/(tabs)/grounds' || cleanPath === '/shop' || cleanPath.startsWith('/shop/') || cleanPath === '/search' || cleanPath.startsWith('/live/') || (cleanPath.startsWith('/cricket/') && !cleanPath.startsWith('/cricketdata'));
+  const isOwnerNoHeaderPage = isGroundOwner && !isCompact && (
+    cleanPath === '/profile' || 
+    cleanPath === '/(tabs)/profile' || 
+    cleanPath === '/owner-dashboard' ||
+    cleanPath === '/(owner)/owner-dashboard' ||
+    cleanPath === '/manage-grounds' ||
+    cleanPath === '/(owner)/manage-grounds' ||
+    cleanPath === '/inventory' ||
+    cleanPath === '/(owner)/inventory' ||
+    cleanPath === '/wallet' ||
+    cleanPath === '/(owner)/wallet' ||
+    cleanPath === '/ground-bookings' ||
+    cleanPath === '/(owner)/ground-bookings' ||
+    cleanPath === '/profile/orders' ||
+    cleanPath === '/earnings' ||
+    cleanPath === '/(owner)/earnings' ||
+    cleanPath === '/settings' ||
+    cleanPath === '/(owner)/settings' ||
+    cleanPath === '/support' ||
+    cleanPath === '/(tabs)/support'
+  );
+
   // Treat the presence of a Supabase `user` as authenticated even if `profile`
   // hasn't loaded yet (prevents briefly showing "Sign In").
   const isAuthenticated = !!user || !!profile || isSuperAdmin;
@@ -786,7 +809,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
         </View>
       )}
 
-      {!hideHeader && !isLanding && !isMarketing && (!isGroundDetails || isOwnerGroundsDashboard) && !(isCheckoutPage && isCompact) && (
+      {!hideHeader && !isLanding && !isMarketing && (!isGroundDetails || isOwnerGroundsDashboard) && !(isCheckoutPage && isCompact) && !isOwnerNoHeaderPage && (
         <View
           style={[
             styles.header,
@@ -894,6 +917,14 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                     SHOP
                   </Text>
 
+                  {isShop && (
+                    <TouchableOpacity
+                      onPress={() => router.push('/shop/cart')}
+                      style={{ paddingHorizontal: 4 }}
+                    >
+                      <ShoppingCart size={22} color="#f8688a" />
+                    </TouchableOpacity>
+                  )}
 
                   {!isAuthenticated ? (
                     <Text
@@ -924,6 +955,16 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                   )}
                 </View>
               )}
+              {isCompact && isShop && (
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <TouchableOpacity
+                    onPress={() => router.push('/shop/cart')}
+                    style={{ paddingHorizontal: 12 }}
+                  >
+                    <ShoppingCart size={24} color="#f8688a" />
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
           </View>
         </View>
@@ -943,6 +984,20 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                 isAdminRoute && { transition: 'width 0.3s ease-in-out' } as any,
               ]}
             >
+              {isOwnerNoHeaderPage && (
+                <TouchableOpacity
+                  onPress={() => router.replace('/')}
+                  style={[styles.logo, { marginBottom: 32, paddingHorizontal: 4 }]}
+                  accessibilityRole="link"
+                  accessibilityLabel="Book My Ground — home"
+                >
+                  <Image
+                    source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
+                    style={styles.logoImage}
+                    resizeMode="contain"
+                  />
+                </TouchableOpacity>
+              )}
               <ScrollView
                 showsVerticalScrollIndicator={false}
                 showsHorizontalScrollIndicator={false}
@@ -1080,7 +1135,6 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                         <NavLink href="/profile/orders" icon={ShoppingBag} label="My Orders" />
                         <NavLink href="/(owner)/earnings" icon={IndianRupee} label="Earnings" />
                         
-                        <NavLink href="/(owner)/add-ground" icon={PlusCircle} label="Add ground" />
                         <NavLink href="/(owner)/settings" icon={Settings} label="Settings" />
                         <NavLink href="/(tabs)/support" icon={Phone} label="Contact Us" />
 
@@ -1173,7 +1227,8 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
             overflow: 'visible',
             flex: 1
           },
-          !isPublicNoSidebar && !isCompact && !noCard && styles.mainAppCard
+          !isPublicNoSidebar && !isCompact && !noCard && styles.mainAppCard,
+          isOwnerNoHeaderPage && { maxHeight: '100vh', paddingTop: 32 }
         ]}>
           {children}
         </View>

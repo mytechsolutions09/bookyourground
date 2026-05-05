@@ -1164,34 +1164,39 @@ export default function CheckoutScreen() {
             )}
             
             {/* Coupon Section */}
-            <View style={[styles.couponContainer, isCompactCheckout && { marginBottom: 12, padding: 4 }]}>
-              <View style={[styles.couponIconBox, isCompactCheckout && { width: 30, height: 30 }]}>
-                <Ticket size={isCompactCheckout ? 16 : 20} color="#059669" />
+            <View style={{ marginBottom: isCompactCheckout ? 16 : 24 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, paddingHorizontal: 4 }}>
+                <RNText style={{ fontSize: 13, fontWeight: '600', color: '#64748B', fontFamily: 'Inter' }}>Have a coupon?</RNText>
+                <TouchableOpacity 
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                  onPress={() => { setIsCouponsModalVisible(true); fetchAvailableCoupons(); }}
+                >
+                   <Ticket size={14} color="#059669" />
+                   <RNText style={{ fontSize: 13, fontWeight: '700', color: '#059669', fontFamily: 'Inter' }}>View Offers</RNText>
+                </TouchableOpacity>
               </View>
-              <RNTextInput 
-                style={[styles.couponInputNew, isCompactCheckout && { height: 36, fontSize: 13 }]}
-                placeholder="Enter coupon code"
-                placeholderTextColor="#94A3B8"
-                value={couponCode}
-                onChangeText={setCouponCode}
-                autoCapitalize="characters"
-              />
-              <TouchableOpacity 
-                style={[styles.applyBtnNew, applyingCoupon && { opacity: 0.7 }, isCompactCheckout && { height: 30, paddingHorizontal: 12 }, booking.coupon_id && { backgroundColor: '#FEE2E2' }]}
-                onPress={() => booking.coupon_id ? removeCoupon() : applyCouponCode(couponCode)}
-                disabled={applyingCoupon}
-              >
-                 <RNText style={[styles.applyBtnTextNew, isCompactCheckout && { fontSize: 12 }, booking.coupon_id && { color: '#EF4444' }]}>
-                   {applyingCoupon ? '...' : (booking.coupon_id ? 'Remove' : 'Apply')}
-                 </RNText>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.offersBtnNew}
-                onPress={() => { setIsCouponsModalVisible(true); fetchAvailableCoupons(); }}
-              >
-                 <Ticket size={isCompactCheckout ? 14 : 20} color="#059669" />
-                 <RNText style={[styles.offersBtnTextNew, isCompactCheckout && { fontSize: 12 }]}>Offers</RNText>
-              </TouchableOpacity>
+              <View style={[styles.couponContainer, { marginBottom: 0 }, isCompactCheckout && { padding: 4 }]}>
+                <View style={[styles.couponIconBox, isCompactCheckout && { width: 30, height: 30 }]}>
+                  <Ticket size={isCompactCheckout ? 16 : 20} color="#059669" />
+                </View>
+                <RNTextInput 
+                  style={[styles.couponInputNew, isCompactCheckout && { height: 36, fontSize: 13 }]}
+                  placeholder="Enter coupon code"
+                  placeholderTextColor="#94A3B8"
+                  value={couponCode}
+                  onChangeText={setCouponCode}
+                  autoCapitalize="characters"
+                />
+                <TouchableOpacity 
+                  style={[styles.applyBtnNew, applyingCoupon && { opacity: 0.7 }, isCompactCheckout && { height: 30, paddingHorizontal: 12 }, booking.coupon_id && { backgroundColor: '#FEE2E2' }, { marginRight: 0 }]}
+                  onPress={() => booking.coupon_id ? removeCoupon() : applyCouponCode(couponCode)}
+                  disabled={applyingCoupon}
+                >
+                   <RNText style={[styles.applyBtnTextNew, isCompactCheckout && { fontSize: 12 }, booking.coupon_id && { color: '#EF4444' }]}>
+                     {applyingCoupon ? '...' : (booking.coupon_id ? 'Remove' : 'Apply')}
+                   </RNText>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Price Breakdown */}
@@ -1806,21 +1811,6 @@ const styles = StyleSheet.create({
   applyBtnTextNew: {
     color: '#FFFFFF',
     fontSize: 13,
-    fontWeight: '600',
-    fontFamily: 'Inter',
-  },
-  offersBtnNew: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingRight: 12,
-    borderLeftWidth: 1,
-    borderLeftColor: '#E2E8F0',
-    paddingLeft: 12,
-  },
-  offersBtnTextNew: {
-    fontSize: 14,
-    color: '#059669',
     fontWeight: '600',
     fontFamily: 'Inter',
   },

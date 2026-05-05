@@ -258,6 +258,35 @@ export default function OwnerDashboardScreen() {
     }
   };
 
+  const startEditing = (field: 'full_name' | 'phone' | 'business_name', value: string) => {
+    setEditingField(field);
+    setEditValue(value);
+  };
+
+  const handleSave = async () => {
+    if (!user || !editingField) return;
+    try {
+      setIsSaving(true);
+      const { error } = await supabase
+        .from('profiles')
+        .update({ [editingField]: editValue.trim() })
+        .eq('id', user.id);
+
+      if (error) throw error;
+      
+      if (updateProfile) {
+        await updateProfile({ [editingField]: editValue.trim() });
+      }
+      
+      setEditingField(null);
+    } catch (err: any) {
+      console.error('Error updating profile:', err);
+      alert('Error: ' + err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const insets = useSafeAreaInsets();
   const horizontalPagerRef = React.useRef<any>(null);
   const lastScrollY = useSharedValue(0);
@@ -623,7 +652,7 @@ export default function OwnerDashboardScreen() {
 
   const renderProfileTab = () => (
     <View style={styles.grid}>
-      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]}>
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '31.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]}>
         <View style={[styles.statBox, isUltraNarrow && { paddingVertical: 16, paddingHorizontal: 12, borderRadius: 20 }]}>
           {editingField !== 'full_name' && (
             <TouchableOpacity 
@@ -663,7 +692,7 @@ export default function OwnerDashboardScreen() {
         </View>
       </View>
 
-      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]}>
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '31.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]}>
         <View style={[styles.statBox, isUltraNarrow && { paddingVertical: 16, paddingHorizontal: 12, borderRadius: 20 }]}>
           <View style={styles.iconCircle}>
             <Mail size={20} color="#01b854" />
@@ -674,7 +703,7 @@ export default function OwnerDashboardScreen() {
         </View>
       </View>
 
-      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]}>
+      <View style={[styles.statBoxWrapper, { width: width > 900 ? '31.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]}>
         <View style={[styles.statBox, isUltraNarrow && { paddingVertical: 16, paddingHorizontal: 12, borderRadius: 20 }]}>
           {editingField !== 'phone' && (
             <TouchableOpacity 
@@ -715,45 +744,6 @@ export default function OwnerDashboardScreen() {
         </View>
       </View>
 
-      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]}>
-        <View style={[styles.statBox, isUltraNarrow && { paddingVertical: 16, paddingHorizontal: 12, borderRadius: 20 }]}>
-          {editingField !== 'business_name' && (
-            <TouchableOpacity 
-              style={styles.editBtn} 
-              onPress={() => startEditing('business_name', profile?.business_name || '')}
-            >
-              <Pencil size={12} color="#01b854" />
-            </TouchableOpacity>
-          )}
-          <View style={styles.iconCircle}>
-            <ShieldCheck size={20} color="#01b854" />
-          </View>
-          <Text style={styles.statsLabel}>Business</Text>
-          
-          {editingField === 'business_name' ? (
-            <View style={styles.editContainer}>
-              <TextInput
-                style={styles.editInput}
-                value={editValue}
-                onChangeText={setEditValue}
-                autoFocus
-                placeholder="Business name"
-              />
-              <View style={styles.editActions}>
-                <TouchableOpacity onPress={handleSave} disabled={isSaving}>
-                  {isSaving ? <ActivityIndicator size="small" color="#01b854" /> : <Check size={18} color="#01b854" />}
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setEditingField(null)} disabled={isSaving}>
-                  <X size={18} color="#EF4444" />
-                </TouchableOpacity>
-              </View>
-            </View>
-          ) : (
-            <Text style={styles.statsValueSmall} numberOfLines={1}>{profile?.business_name || 'Personal Account'}</Text>
-          )}
-          <Text style={styles.statsCaption}>{profile?.business_verified ? 'Verified Partner' : 'Verification pending'}</Text>
-        </View>
-      </View>
     </View>
   );
 
@@ -1058,9 +1048,9 @@ const styles = StyleSheet.create({
   editContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: 'transparent',
     borderRadius: 999,
-    paddingHorizontal: 16,
+    paddingHorizontal: 0,
     marginVertical: 2,
     maxWidth: '100%',
   },
@@ -1071,6 +1061,11 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     paddingVertical: 10,
     fontFamily: 'Inter',
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+      }
+    })
   } as any,
   editActions: {
     flexDirection: 'row',

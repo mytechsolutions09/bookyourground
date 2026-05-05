@@ -595,14 +595,14 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     height: 46,
     borderWidth: 1.5,
-    borderColor: '#475569',
+    borderColor: '#94A3B8',
     alignItems: 'center',
     justifyContent: 'center',
   },
   outlineBtnText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#475569',
+    color: '#FFFFFF',
     letterSpacing: 0.5,
     fontFamily: 'Inter',
   },
@@ -614,7 +614,7 @@ const styles = StyleSheet.create({
   forgotText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#475569',
+    color: '#FFFFFF',
     fontFamily: 'Inter',
   },
 });
@@ -704,7 +704,7 @@ const webStyles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   forgotWrap: { alignSelf: 'flex-end', marginBottom: 16 },
-  forgotText: { fontSize: 13, fontWeight: '700', color: '#475569', fontFamily: 'Inter' },
+  forgotText: { fontSize: 13, fontWeight: '700', color: '#FFFFFF', fontFamily: 'Inter' },
 });
 
 const modalStyles = StyleSheet.create({

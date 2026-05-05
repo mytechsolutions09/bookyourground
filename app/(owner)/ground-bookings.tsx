@@ -1240,13 +1240,7 @@ export default function OwnerBookingsScreen() {
         }
         onEndReached={() => loadBookings(true)}
         onEndReachedThreshold={0.5}
-        ListFooterComponent={
-          loadingMore ? (
-            <View style={{ paddingVertical: 20, alignItems: 'center' }}>
-              <ActivityIndicator color="#059669" />
-            </View>
-          ) : null
-        }
+        ListFooterComponent={null}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>No bookings yet</Text>
