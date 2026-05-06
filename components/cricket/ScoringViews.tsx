@@ -13,6 +13,7 @@ import {
   Pressable,
   Modal,
   StyleSheet,
+  Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { 
@@ -1025,14 +1026,31 @@ export const ScoringSettingsSheet = ({ isVisible, onClose, onAction }: any) => {
     }
   ];
 
-  console.log('[ScoringSettingsSheet] Render, isVisible:', isVisible);
+  const slideVal = React.useRef(new Animated.Value(windowWidth)).current;
+
+  React.useEffect(() => {
+    if (isVisible) {
+      Animated.timing(slideVal, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(slideVal, {
+        toValue: windowWidth,
+        duration: 250,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [isVisible]);
+
   if (!isVisible) return null;
 
   return (
     <Modal
       transparent
       visible={isVisible}
-      animationType="slide"
+      animationType="none"
       onRequestClose={onClose}
       statusBarTranslucent
     >
@@ -1041,12 +1059,30 @@ export const ScoringSettingsSheet = ({ isVisible, onClose, onAction }: any) => {
           style={StyleSheet.absoluteFill} 
           onPress={onClose} 
         >
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }} />
+          <Animated.View 
+            style={{ 
+              flex: 1, 
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              opacity: slideVal.interpolate({
+                inputRange: [0, windowWidth],
+                outputRange: [1, 0]
+              })
+            }} 
+          />
         </Pressable>
         
         <View style={{ flex: 1, flexDirection: 'row', pointerEvents: 'box-none' }}>
           <View style={{ flex: 0.2 }} />
-          <View style={[styles.sideSheetContainer, { flex: 0.8, height: '100%' }]}>
+          <Animated.View 
+            style={[
+              styles.sideSheetContainer, 
+              { 
+                flex: 0.8, 
+                height: '100%',
+                transform: [{ translateX: slideVal }]
+              }
+            ]}
+          >
             <View style={styles.sideSheetHeader}>
               <Text style={styles.sideSheetTitle}>Settings</Text>
               <TouchableOpacity onPress={onClose} style={styles.sideSheetCloseBtn}>
@@ -1081,7 +1117,7 @@ export const ScoringSettingsSheet = ({ isVisible, onClose, onAction }: any) => {
               ))}
               <View style={{ height: 40 }} />
             </ScrollView>
-          </View>
+          </Animated.View>
         </View>
       </View>
     </Modal>

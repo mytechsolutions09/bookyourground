@@ -476,10 +476,6 @@ const PlayerProfileView = () => {
     </ScrollView>
   );
 
-  if (Platform.OS === 'web') {
-    return content;
-  }
-
   return content;
 };
 

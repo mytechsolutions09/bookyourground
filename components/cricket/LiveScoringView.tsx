@@ -81,7 +81,7 @@ export const LiveScoringView = ({
           <View style={styles.tossBannerPremium}>
              <CircleCheck size={18} color="#01b854" fill="#E8F5E9" />
              <Text style={styles.tossBannerText}>
-                {tossResult.winner?.name} won the toss and opted to {tossResult.decision === 'bowl' ? 'bowl' : 'bat'}
+                {tossResult?.winner?.name} won the toss and opted to {tossResult?.decision === 'bowl' ? 'bowl' : 'bat'}
              </Text>
           </View>
 
@@ -218,11 +218,11 @@ export const LiveScoringView = ({
 export const BowlerSelectionView = ({ 
   isVisible, inn, selectedTeamA, selectedTeamB, playingXiA, playingXiB, tossResult, onSelectBowler 
 }: any) => {
-  const battingTeam = tossResult.decision === 'bat' ? tossResult.winner : (tossResult.winner?.id === selectedTeamA?.id ? selectedTeamB : selectedTeamA);
-  const bowlingTeam = battingTeam?.id === selectedTeamA?.id ? selectedTeamB : selectedTeamA;
-  const bowlingPlayers = bowlingTeam?.id === selectedTeamA?.id ? playingXiA : playingXiB;
-
   if (!isVisible || !inn) return null;
+
+  const battingTeam = tossResult?.decision === 'bat' ? tossResult?.winner : (tossResult?.winner?.id === selectedTeamA?.id ? selectedTeamB : selectedTeamA);
+  const bowlingTeam = battingTeam?.id === selectedTeamA?.id ? selectedTeamB : selectedTeamA;
+  const bowlingPlayers = (bowlingTeam?.id === selectedTeamA?.id ? playingXiA : playingXiB) || [];
 
   return (
     <Modal
@@ -240,12 +240,12 @@ export const BowlerSelectionView = ({
            </View>
 
            <View style={[styles.overSummaryBanner, { borderRadius: 0 }]}>
-              <Text style={styles.overSummaryText}>Over {Math.floor(inn.balls / 6)} Completed</Text>
-              <Text style={styles.scoreSummaryText}>{inn.runs}/{inn.wickets}</Text>
+              <Text style={styles.overSummaryText}>Over {Math.floor((inn?.legalBalls || 0) / 6)} Completed</Text>
+              <Text style={styles.scoreSummaryText}>{inn?.runs || 0}/{inn?.wickets || 0}</Text>
            </View>
 
            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
-              <Text style={styles.configLabel}>Choose Bowler for Over {Math.floor(inn.balls / 6) + 1}</Text>
+              <Text style={styles.configLabel}>Choose Bowler for Over {Math.floor((inn?.legalBalls || 0) / 6) + 1}</Text>
               <View style={styles.playerGrid}>
                  {bowlingPlayers.map((p: any) => (
                    <TouchableOpacity 

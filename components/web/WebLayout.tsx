@@ -584,7 +584,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
   // On ground info (/grounds/[id]) and booking info (/bookings/[id]) pages,
   // hide the left sidebar for all roles so the content can take full width.
   const isPublicNoSidebar = useMemo(() => 
-    propIsPublicNoSidebar || isLanding || (isMarketing && !isSuperAdmin && !isOwnerGroundsDashboard) || isGroundInfoPage || isBookingDetails || isCheckoutPage || isLegalOrInfoPage || (cleanPath === '/find-an-opponent' && !isSuperAdmin) || cleanPath === '/(tabs)/grounds' || cleanPath === '/shop' || cleanPath.startsWith('/shop/') || cleanPath === '/search' || cleanPath.startsWith('/live/') || (cleanPath.startsWith('/cricket/') && !cleanPath.startsWith('/cricketdata')),
+    propIsPublicNoSidebar || isLanding || (isMarketing && !isSuperAdmin && !isOwnerGroundsDashboard) || isGroundInfoPage || isBookingDetails || isCheckoutPage || isLegalOrInfoPage || (cleanPath === '/find-an-opponent' && !isSuperAdmin) || cleanPath === '/(tabs)/grounds' || cleanPath === '/shop' || cleanPath.startsWith('/shop/') || cleanPath === '/search' || cleanPath.startsWith('/live/') || (cleanPath.startsWith('/cricket/') && !cleanPath.startsWith('/cricketdata')) || cleanPath.startsWith('/players/'),
     [propIsPublicNoSidebar, isLanding, isMarketing, isSuperAdmin, isOwnerGroundsDashboard, isGroundInfoPage, isBookingDetails, isCheckoutPage, isLegalOrInfoPage, cleanPath]
   );
 

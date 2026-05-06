@@ -24,6 +24,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
+import { getPlayerSlug } from '@/lib/utils';
 
 const { width } = Dimensions.get('window');
 
@@ -115,7 +116,7 @@ export default function CricketRank() {
   const renderRankItem = ({ item }: { item: any }) => (
     <TouchableOpacity 
       style={styles.rankItem}
-      onPress={() => router.push(`/players/${item.id}` as any)}
+      onPress={() => router.push(`/players/${getPlayerSlug(item.name, item.id)}` as any)}
     >
       <View style={styles.playerInfoRow}>
         <View style={styles.avatarContainer}>

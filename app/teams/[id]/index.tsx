@@ -48,6 +48,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { getPlayerSlug } from '@/lib/utils';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import TeamChatTab from '@/components/teams/TeamChatTab';
 import QRCode from 'react-native-qrcode-svg';
@@ -781,7 +782,7 @@ export default function TeamDetailsPage() {
                                   <TouchableOpacity 
                                     key={stat.id} 
                                     style={[styles.leaderboardRow, idx === 9 && { borderBottomWidth: 0 }]}
-                                    onPress={() => stat.member?.profile_id && router.push(`/players/${stat.member.profile_id}` as any)}
+                                    onPress={() => stat.member?.profile_id && router.push(`/players/${getPlayerSlug(stat.member.player_name, stat.member.profile_id)}` as any)}
                                   >
                                     <View style={styles.leaderboardPlayerInfo}>
                                       <RNText style={styles.leaderboardRank}>{idx + 1}</RNText>
@@ -817,7 +818,7 @@ export default function TeamDetailsPage() {
                                   <TouchableOpacity 
                                     key={stat.id} 
                                     style={[styles.leaderboardRow, idx === 9 && { borderBottomWidth: 0 }]}
-                                    onPress={() => stat.member?.profile_id && router.push(`/players/${stat.member.profile_id}` as any)}
+                                    onPress={() => stat.member?.profile_id && router.push(`/players/${getPlayerSlug(stat.member.player_name, stat.member.profile_id)}` as any)}
                                   >
                                     <View style={styles.leaderboardPlayerInfo}>
                                       <RNText style={styles.leaderboardRank}>{idx + 1}</RNText>
@@ -852,7 +853,7 @@ export default function TeamDetailsPage() {
                     <TouchableOpacity 
                       key={member.id} 
                       style={styles.memberRow}
-                      onPress={() => member.profile_id && router.push(`/players/${member.profile_id}` as any)}
+                      onPress={() => member.profile_id && router.push(`/players/${getPlayerSlug(member.player_name, member.profile_id)}` as any)}
                     >
                       <View style={styles.memberAvatar}>
                         <Image 
@@ -1119,7 +1120,7 @@ export default function TeamDetailsPage() {
                                       <TouchableOpacity 
                                         key={stat.id} 
                                         style={[styles.leaderboardRow, idx === 9 && { borderBottomWidth: 0 }]}
-                                        onPress={() => stat.member?.profile_id && router.push(`/players/${stat.member.profile_id}` as any)}
+                                        onPress={() => stat.member?.profile_id && router.push(`/players/${getPlayerSlug(stat.member.player_name, stat.member.profile_id)}` as any)}
                                       >
                                         <View style={styles.leaderboardPlayerInfo}>
                                           <RNText style={styles.leaderboardRank}>{idx + 1}</RNText>
@@ -1156,7 +1157,7 @@ export default function TeamDetailsPage() {
                                       <TouchableOpacity 
                                         key={stat.id} 
                                         style={[styles.leaderboardRow, idx === 9 && { borderBottomWidth: 0 }]}
-                                        onPress={() => stat.member?.profile_id && router.push(`/players/${stat.member.profile_id}` as any)}
+                                        onPress={() => stat.member?.profile_id && router.push(`/players/${getPlayerSlug(stat.member.player_name, stat.member.profile_id)}` as any)}
                                       >
                                         <View style={styles.leaderboardPlayerInfo}>
                                           <RNText style={styles.leaderboardRank}>{idx + 1}</RNText>
@@ -1192,7 +1193,7 @@ export default function TeamDetailsPage() {
                         <TouchableOpacity 
                           key={member.id} 
                           style={styles.memberRow}
-                          onPress={() => member.profile_id && router.push(`/players/${member.profile_id}` as any)}
+                          onPress={() => member.profile_id && router.push(`/players/${getPlayerSlug(member.player_name, member.profile_id)}` as any)}
                         >
                           <View style={styles.memberAvatar}>
                             {member.profile?.avatar_url ? (

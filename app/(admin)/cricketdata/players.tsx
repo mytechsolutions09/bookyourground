@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Activit
 import { useRouter } from 'expo-router';
 import { User, Search, Filter, ShieldCheck, Mail, Phone, Users, ChevronRight } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
+import { getPlayerSlug } from '@/lib/utils';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import CricketSubbar from '@/components/admin/CricketSubbar';
@@ -105,7 +106,10 @@ export default function AdminCricketPlayers() {
             
             if (isWeb) {
                return (
-                 <View style={styles.tableRow}>
+                 <TouchableOpacity 
+                   style={styles.tableRow}
+                   onPress={() => item.profile_id && router.push(`/players/${getPlayerSlug(playerName, item.profile_id)}` as any)}
+                 >
                    <View style={[styles.tableCell, styles.colPlayer]}>
                      <View style={styles.playerProfile}>
                         <View style={styles.avatarWrap}>
@@ -148,27 +152,32 @@ export default function AdminCricketPlayers() {
                    <View style={[styles.tableCell, styles.colContact]}>
                      <Text style={styles.cellMainText}>{item.profile?.phone || item.player_phone || 'N/A'}</Text>
                    </View>
-                 </View>
+                 </TouchableOpacity>
                );
             }
 
             return (
-              <Card style={styles.mobileCard}>
-                <View style={styles.mobileHeader}>
-                    <Text style={styles.mobilePlayerName}>{playerName}</Text>
-                    <View style={[styles.statusTag, item.status === 'accepted' ? styles.statusAccepted : styles.statusPending]}>
-                        <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
-                    </View>
-                </View>
-                <View style={styles.mobileInfoRow}>
-                    <Users size={14} color="#6B7280" />
-                    <Text style={styles.mobileMetaText}>{item.team?.name || 'No Team'} • {item.role}</Text>
-                </View>
-                <View style={styles.mobileInfoRow}>
-                    <User size={14} color="#6B7280" />
-                    <Text style={styles.mobileMetaText}>Admin: {teamAdmin}</Text>
-                </View>
-              </Card>
+              <TouchableOpacity 
+                activeOpacity={0.7}
+                onPress={() => item.profile_id && router.push(`/players/${getPlayerSlug(playerName, item.profile_id)}` as any)}
+              >
+                <Card style={styles.mobileCard}>
+                  <View style={styles.mobileHeader}>
+                      <Text style={styles.mobilePlayerName}>{playerName}</Text>
+                      <View style={[styles.statusTag, item.status === 'accepted' ? styles.statusAccepted : styles.statusPending]}>
+                          <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
+                      </View>
+                  </View>
+                  <View style={styles.mobileInfoRow}>
+                      <Users size={14} color="#6B7280" />
+                      <Text style={styles.mobileMetaText}>{item.team?.name || 'No Team'} • {item.role}</Text>
+                  </View>
+                  <View style={styles.mobileInfoRow}>
+                      <User size={14} color="#6B7280" />
+                      <Text style={styles.mobileMetaText}>Admin: {teamAdmin}</Text>
+                  </View>
+                </Card>
+              </TouchableOpacity>
             );
           }}
           ListEmptyComponent={

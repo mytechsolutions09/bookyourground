@@ -13,8 +13,11 @@ import {
   Modal,
   Share,
   Alert,
-  useWindowDimensions
+  useWindowDimensions,
+  TextInput
 } from 'react-native';
+import WebLayout from '@/components/web/WebLayout';
+import { useIsCompact } from '@/hooks/useIsCompact';
 import { 
   Plus, 
   Settings, 
@@ -92,6 +95,7 @@ export default function CricketLayout() {
   const pathname = usePathname();
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
+  const isCompact = useIsCompact();
   const [profile, setProfile] = useState<any>(null);
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
@@ -117,7 +121,7 @@ export default function CricketLayout() {
   const isScrollingProgrammatically = useRef(false);
   const isInitialRender = useRef(true);
 
-  const [matchesTab, setMatchesTab] = React.useState('played');
+  const [matchesStatus, setMatchesStatus] = React.useState('all');
   const matchesIdx = useSharedValue(0);
 
   const [statsTab, setStatsTab] = React.useState('batting');
@@ -188,6 +192,11 @@ export default function CricketLayout() {
     const idx = ['batting', 'bowling', 'fielding'].indexOf(badgesTab);
     if (idx !== -1) badgesIdx.value = idx;
   }, [badgesTab]);
+
+  useEffect(() => {
+    const idx = ['all', 'live', 'upcoming', 'result'].indexOf(matchesStatus);
+    if (idx !== -1) matchesIdx.value = idx;
+  }, [matchesStatus]);
 
   useEffect(() => {
     const idx = ['followers', 'following'].indexOf(connectionsTab);
@@ -326,7 +335,7 @@ export default function CricketLayout() {
     },
   });
 
-  const hasSubBar = activeTabId === 'stats' || activeTabId === 'trophies' || activeTabId === 'badges' || activeTabId === 'connections' || activeTabId === 'teams' || activeTabId === 'tournaments';
+  const hasSubBar = activeTabId === 'matches' || activeTabId === 'stats' || activeTabId === 'trophies' || activeTabId === 'badges' || activeTabId === 'connections' || activeTabId === 'teams' || activeTabId === 'tournaments';
 
   const headerHeight = useAnimatedStyle(() => {
     // Standardize min height to avoid jumps between tabs with/without sub-bars
@@ -370,6 +379,11 @@ export default function CricketLayout() {
 
   const statsPillStyle = useAnimatedStyle(() => ({
     left: withTiming((statsIdx.value / 4) * 100 + '%', { duration: 250 }),
+    width: '25%',
+  }));
+
+  const matchesPillStyle = useAnimatedStyle(() => ({
+    left: withTiming((matchesIdx.value / 4) * 100 + '%', { duration: 250 }),
     width: '25%',
   }));
 
@@ -715,7 +729,8 @@ export default function CricketLayout() {
         <Animated.View style={[
           styles.profileHeaderContent, 
           profileInfoOpacity, 
-          { paddingTop: insets.top + 70 }
+          { paddingTop: insets.top + 70 },
+          Platform.OS === 'web' && styles.webResponsiveContent
         ]}>
           <View style={styles.headerTopRow}>
             <TouchableOpacity 
@@ -794,7 +809,11 @@ export default function CricketLayout() {
         </Animated.View>
 
         {/* Persistent Top Actions */}
-        <View style={[styles.topActionRow, { paddingTop: insets.top + 5, height: 56 + insets.top }]}>
+        <View style={[
+          styles.topActionRow, 
+          { paddingTop: insets.top + 5, height: 56 + insets.top },
+          Platform.OS === 'web' && styles.webResponsiveContent
+        ]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.actionCircleBtn}>
             <ChevronLeft size={22} color="#FFFFFF" />
           </TouchableOpacity>
@@ -820,7 +839,7 @@ export default function CricketLayout() {
 
         {/* Tab Bar (Always Sticky) */}
         <View style={styles.tabsStickyWrapper}>
-          <View style={styles.tabsContainer}>
+          <View style={[styles.tabsContainer, Platform.OS === 'web' && styles.webResponsiveContent]}>
             <ScrollView 
               ref={tabScrollRef}
               horizontal 
@@ -864,10 +883,32 @@ export default function CricketLayout() {
           </View>
 
           {/* Sub-bar area - Fixed height for all tabs to ensure consistent header height when pinned */}
-          <View style={[styles.subBarInjection, !hasSubBar && { height: SUB_BAR_HEIGHT }]}>
+          <View style={[
+            styles.subBarInjection, 
+            !hasSubBar && { height: SUB_BAR_HEIGHT },
+            Platform.OS === 'web' && styles.webResponsiveContent
+          ]}>
             {hasSubBar && (
               <View style={styles.toggleGroup}>
-                {activeTabId === 'matches' && null}
+                {activeTabId === 'matches' && (
+                  <>
+                    <Animated.View style={[styles.subTabPill, matchesPillStyle]} />
+                    {[
+                      { id: 'all', label: 'All' },
+                      { id: 'live', label: 'Live' },
+                      { id: 'upcoming', label: 'Upcoming' },
+                      { id: 'result', label: 'Result' },
+                    ].map((chip) => (
+                      <TouchableOpacity
+                        key={chip.id}
+                        onPress={() => setMatchesStatus(chip.id)}
+                        style={styles.toggleBtn}
+                      >
+                        <Text style={[styles.toggleBtnText, matchesStatus === chip.id && styles.toggleBtnTextActive]}>{chip.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </>
+                )}
                 
                 {activeTabId === 'tournaments' && (
                   <>
@@ -1022,8 +1063,8 @@ export default function CricketLayout() {
                 {tab.id === 'matches' && (
                   <CricketMatches 
                     playerId={user?.id} 
-                    categoryFilter={matchesTab} 
-                    onCategoryChange={setMatchesTab}
+                    statusFilter={matchesStatus}
+                    onStatusChange={(val: string) => setMatchesStatus(val)}
                   />
                 )}
                 {tab.id === 'stats' && <CricketStats activeSubTab={statsTab} />}
@@ -1041,11 +1082,20 @@ export default function CricketLayout() {
       </Animated.ScrollView>
     </View>
   );
+  
+  if (Platform.OS === 'web') {
+    return <WebLayout hideHeader={!isCompact}>{content}</WebLayout>;
+  }
 
   return content;
 }
 
 const styles = StyleSheet.create({
+  webResponsiveContent: {
+    maxWidth: 650,
+    alignSelf: 'center',
+    width: '100%',
+  },
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',

@@ -479,7 +479,9 @@ export function useCricketScoring() {
         status: 'completed', 
         runs: inn.runs, 
         wickets: inn.wickets, 
-        legal_balls: inn.legalBalls 
+        legal_balls: inn.legalBalls,
+        batting_players: inn.batters,
+        bowling_players: inn.bowlers
       }).eq('id', inn.inningsId);
       
       await supabase.from('matches').update({ status: 'innings_break' }).eq('id', matchId!);
@@ -507,7 +509,9 @@ export function useCricketScoring() {
         status: 'completed', 
         runs: inn.runs, 
         wickets: inn.wickets, 
-        legal_balls: inn.legalBalls 
+        legal_balls: inn.legalBalls,
+        batting_players: inn.batters,
+        bowling_players: inn.bowlers
       }).eq('id', inn.inningsId);
       
       await supabase.from('matches').update({ status: 'completed' }).eq('id', matchId!);
@@ -550,7 +554,9 @@ export function useCricketScoring() {
         status: 'completed', 
         runs: innState.runs, 
         wickets: innState.wickets, 
-        legal_balls: innState.legalBalls 
+        legal_balls: innState.legalBalls,
+        batting_players: innState.batters,
+        bowling_players: innState.bowlers
       }).eq('id', innState.inningsId);
       
       const { error: matchErr } = await supabase.from('matches').update({ status: 'innings_break' }).eq('id', mid);
@@ -586,7 +592,9 @@ export function useCricketScoring() {
         status: 'completed', 
         runs: innState.runs, 
         wickets: innState.wickets, 
-        legal_balls: innState.legalBalls 
+        legal_balls: innState.legalBalls,
+        batting_players: innState.batters,
+        bowling_players: innState.bowlers
       }).eq('id', innState.inningsId);
       
       const { error: matchErr } = await supabase.from('matches').update({ status: 'completed', result_text: resultText }).eq('id', mid);
@@ -1414,6 +1422,20 @@ export function useCricketScoring() {
     });
   }, []);
 
+  const endMatch = useCallback(async (resultText?: string) => {
+    if (!matchId) return;
+    try {
+      await Promise.all([
+        supabase.from('matches').update({ status: 'completed', result_text: resultText }).eq('id', matchId),
+        supabase.from('match_live_state').update({ match_status: 'completed', result_text: resultText }).eq('match_id', matchId)
+      ]);
+      setPhase('completed');
+      setResult(resultText || 'Match Completed');
+    } catch (err) {
+      console.error('Failed to end match:', err);
+    }
+  }, [matchId]);
+
 return {
     savePlayingXi,
     matchId, phase, result, currentIdx, inningsList,
@@ -1424,7 +1446,7 @@ return {
     formatOvers,
     swapBatters, markRetiredHurt, reviseTarget, updateMatchConfig, changeSquad, declareInnings,
     startMatch, resumeMatch, addBall, addExtra, addWicket,
-    changeBowler, addNewBowler, undoLastBall, startSecondInnings, setOpeners,
+    changeBowler, addNewBowler, undoLastBall, startSecondInnings, setOpeners, endMatch,
     isScoring: !!matchId && !!inn,
     balls: inn?.overBalls || []
   };

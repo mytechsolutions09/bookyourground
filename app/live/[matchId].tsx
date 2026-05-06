@@ -14,6 +14,7 @@ import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-g
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, Stack, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { getPlayerSlug } from '@/lib/utils';
 import { useUI } from '@/contexts/UIContext';
 import WebLayout from '@/components/web/WebLayout';
 import { ChevronRight, ChevronLeft, ChevronDown, Award, MessageCircle, Share2, Trophy, BarChart3, Settings, Sliders, HelpCircle, ImagePlus, Camera, Zap, Flame, Star, Activity, Target, Shield } from 'lucide-react-native';
@@ -676,7 +677,7 @@ export default function LiveScorecard() {
                         );
                         const profileId = player?.profiles?.id || player?.profile_id;
                         if (profileId) {
-                          router.push(`/players/${profileId}`);
+                          router.push(`/players/${getPlayerSlug(b.name, profileId)}`);
                         } else {
                           console.log('[Scorecard] Profile not found for:', b.name);
                         }
@@ -738,7 +739,7 @@ export default function LiveScorecard() {
                             (m.player_name || m.profiles?.full_name || '').trim().toLowerCase() === searchName
                           );
                           const profileId = player?.profiles?.id || player?.profile_id;
-                          if (profileId) router.push(`/players/${profileId}`);
+                          if (profileId) router.push(`/players/${getPlayerSlug(p, profileId)}`);
                         }}
                       >
                         <Text style={styles.scToBatList}>{p}{idx < toBatRaw.length - 1 ? ',' : ''}</Text>
@@ -774,7 +775,7 @@ export default function LiveScorecard() {
                       );
                       const profileId = player?.profiles?.id || player?.profile_id;
                       if (profileId) {
-                        router.push(`/players/${profileId}`);
+                        router.push(`/players/${getPlayerSlug(b.name, profileId)}`);
                       } else {
                         console.log('[Scorecard] Profile not found for bowler:', b.name);
                       }
@@ -813,7 +814,7 @@ export default function LiveScorecard() {
                             (m.player_name || m.profiles?.full_name || '').trim().toLowerCase() === searchName
                           );
                           const profileId = player?.profiles?.id || player?.profile_id;
-                          if (profileId) router.push(`/players/${profileId}`);
+                          if (profileId) router.push(`/players/${getPlayerSlug(f.name, profileId)}`);
                         }}
                       >
                         <Text style={styles.fowName}>{f.name}</Text>
@@ -853,7 +854,7 @@ export default function LiveScorecard() {
                              (m.player_name || m.profiles?.full_name || '').trim().toLowerCase() === searchName
                            );
                            const profileId = player?.profiles?.id || player?.profile_id;
-                           if (profileId) router.push(`/players/${profileId}`);
+                           if (profileId) router.push(`/players/${getPlayerSlug(p.batter_1_name, profileId)}`);
                        }}>
                          <Text style={{ fontSize: 11, color: '#4B5563' }}>{p.batter_1_name}: {p.batter_1_runs}({p.batter_1_balls})</Text>
                        </TouchableOpacity>
@@ -865,7 +866,7 @@ export default function LiveScorecard() {
                              (m.player_name || m.profiles?.full_name || '').trim().toLowerCase() === searchName
                            );
                            const profileId = player?.profiles?.id || player?.profile_id;
-                           if (profileId) router.push(`/players/${profileId}`);
+                           if (profileId) router.push(`/players/${getPlayerSlug(p.batter_2_name, profileId)}`);
                        }}>
                          <Text style={{ fontSize: 11, color: '#4B5563' }}>{p.batter_2_name}: {p.batter_2_runs}({p.batter_2_balls})</Text>
                        </TouchableOpacity>
@@ -1206,7 +1207,7 @@ export default function LiveScorecard() {
                                       <TouchableOpacity onPress={() => {
                                         const p = (isTeamA ? squadA : squadB).find(m => (m.player_name || m.profiles?.full_name) === ball.batter_name);
                                         const profileId = p?.profiles?.id || p?.profile_id;
-                                        if (profileId) router.push(`/players/${profileId}`);
+                                        if (profileId) router.push(`/players/${getPlayerSlug(ball.batter_name, profileId)}`);
                                       }}>
                                         <Text style={[styles.wicketDetailText, { fontWeight: '700' }]}>{ball.batter_name}</Text>
                                       </TouchableOpacity>
@@ -1217,7 +1218,7 @@ export default function LiveScorecard() {
                                           <TouchableOpacity onPress={() => {
                                             const p = (!isTeamA ? squadA : squadB).find(m => (m.player_name || m.profiles?.full_name) === ball.fielder_name);
                                             const profileId = p?.profiles?.id || p?.profile_id;
-                                            if (profileId) router.push(`/players/${profileId}`);
+                                            if (profileId) router.push(`/players/${getPlayerSlug(ball.fielder_name, profileId)}`);
                                           }}>
                                             <Text style={[styles.wicketDetailText, { fontWeight: '700' }]}>{ball.fielder_name}</Text>
                                           </TouchableOpacity>
@@ -1228,7 +1229,7 @@ export default function LiveScorecard() {
                                       <TouchableOpacity onPress={() => {
                                         const p = (!isTeamA ? squadA : squadB).find(m => (m.player_name || m.profiles?.full_name) === ball.bowler_name);
                                         const profileId = p?.profiles?.id || p?.profile_id;
-                                        if (profileId) router.push(`/players/${profileId}`);
+                                        if (profileId) router.push(`/players/${getPlayerSlug(ball.bowler_name, profileId)}`);
                                       }}>
                                         <Text style={[styles.wicketDetailText, { fontWeight: '700' }]}>{ball.bowler_name}</Text>
                                       </TouchableOpacity>
@@ -1518,7 +1519,7 @@ export default function LiveScorecard() {
                           onPress={() => {
                             const p = [...squadA, ...squadB].find(m => (m.player_name || m.profiles?.full_name) === player.name);
                             const profileId = p?.profiles?.id || p?.profile_id;
-                            if (profileId) router.push(`/players/${profileId}`);
+                            if (profileId) router.push(`/players/${getPlayerSlug(player.name, profileId)}`);
                           }}
                         >
                            <Text style={styles.mvpPlayerName}>{player.name}</Text>

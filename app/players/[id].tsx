@@ -17,6 +17,7 @@ import {
   StatusBar
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { extractUuid, getPlayerSlug } from '@/lib/utils';
 import { 
   ChevronLeft,
   QrCode,
@@ -46,6 +47,8 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import WebLayout from '@/components/web/WebLayout';
+import { useIsCompact } from '@/hooks/useIsCompact';
 
 const { width: windowWidth, height: windowHeight } = Dimensions.get('window');
 const HEADER_MAX_HEIGHT = 280;
@@ -65,11 +68,14 @@ const TABS = [
 ];
 
 export default function PlayerProfile() {
-  const { id } = useLocalSearchParams();
+  const { id: rawId } = useLocalSearchParams();
+  const id = extractUuid(rawId as string);
+
   const { user } = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const scrollY = useRef(new Animated.Value(0)).current;
+  const isCompact = useIsCompact();
   
   const [profile, setProfile] = useState<any>(null);
   const [stats, setStats] = useState<any>({
@@ -94,7 +100,7 @@ export default function PlayerProfile() {
   const [showQR, setShowQR] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
-  const [matchFilter, setMatchFilter] = useState('all');
+  const [matchFilter, setMatchFilter] = useState('played');
   const [playedMatchIds, setPlayedMatchIds] = useState<string[]>([]);
   const qrRef = useRef<any>(null);
   const mainPagerRef = useRef<ScrollView>(null);
@@ -167,13 +173,30 @@ export default function PlayerProfile() {
         .single();
       
       if (profileError) throw profileError;
-      setProfile(profileData);
 
-      // Scroll to 'matches' tab (index 0) if not already there
+      // Calculate age if DOB exists
+      let calculatedAge = profileData.age;
+      if (!calculatedAge && profileData.dob) {
+        const birthDate = new Date(profileData.dob);
+        const today = new Date();
+        calculatedAge = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+          calculatedAge--;
+        }
+      }
+      
+      setProfile({
+        ...profileData,
+        age: calculatedAge,
+        locality: profileData.city || profileData.address || 'N/A'
+      });
+
+      // Scroll to 'matches' tab (index 1) if not already there
       if (activeTab !== 'matches') {
         setActiveTab('matches');
-        mainPagerRef.current?.scrollTo({ x: 0, animated: false });
-        tabBarRef.current?.scrollTo({ x: 0, animated: false });
+        mainPagerRef.current?.scrollTo({ x: 1 * (measuredPagerWidth || windowWidth), animated: false });
+        tabBarRef.current?.scrollTo({ x: 80, animated: false }); // Approximate offset for second tab
       }
 
       // Initialize with empty states to ensure UI renders
@@ -193,7 +216,7 @@ export default function PlayerProfile() {
       });
 
       // 2. Fetch team memberships with team details
-      const { data: teamMembers } = await supabase
+      const { data: teamMembers, error: membersError } = await supabase
         .from('team_members')
         .select(`
           id,
@@ -202,18 +225,37 @@ export default function PlayerProfile() {
           teams (
             id,
             name,
-            logo_url,
-            city,
-            total_matches,
-            total_wins
+            image_url,
+            location
           )
         `)
         .eq('profile_id', id);
 
-      if (teamMembers && teamMembers.length > 0) {
-        const teamIds = teamMembers.map(tm => tm.team_id);
-        const memberIds = teamMembers.map(tm => tm.id);
+      if (membersError) {
+        console.error('[PlayerProfile] Error fetching memberships:', membersError);
+      }
+
+      let matchData: any[] = [];
+
+      // Collect all possible identities for this player
+      const teamIds = teamMembers?.map(tm => tm.team_id).filter(Boolean) || [];
+      const profileMemberIds = teamMembers?.map(tm => tm.id).filter(Boolean) || [];
+      let allMemberIds = [...profileMemberIds];
+      
+      const pName = profileData?.full_name;
+      if (pName) {
+        const { data: nameMatches } = await supabase
+          .from('team_members')
+          .select('id')
+          .ilike('player_name', `%${pName}%`);
         
+        if (nameMatches) {
+          const extraIds = nameMatches.map(nm => nm.id);
+          allMemberIds = [...new Set([...allMemberIds, ...extraIds])];
+        }
+      }
+
+      if (teamMembers && teamMembers.length > 0) {
         // Transform and set teams state
         const playerTeams = teamMembers
           .filter(tm => tm.teams)
@@ -222,117 +264,183 @@ export default function PlayerProfile() {
             player_role: tm.role
           }));
         setTeams(playerTeams);
+      } else {
+        setTeams([]);
+      }
 
-        // Fetch matches history
-        const { data: matchData } = await supabase
+      // 2.5 Fetch matches where user was part of the Playing XI (any identity)
+      const { data: playedMatchData } = await supabase
+        .from('match_playing_xi')
+        .select('match_id')
+        .in('player_id', allMemberIds);
+      
+      const playingIds = playedMatchData?.map(pm => pm.match_id) || [];
+      setPlayedMatchIds(playingIds);
+
+      // 2. Fetch matches history (Teams History + Personal History)
+      const matchQuery = teamIds.length > 0 ? 
+        `team_a_id.in.(${teamIds.join(',')}),team_b_id.in.(${teamIds.join(',')})` : 
+        '';
+      const playedQuery = playingIds.length > 0 ? 
+        `id.in.(${playingIds.join(',')})` : 
+        '';
+      
+      const finalOrQuery = [matchQuery, playedQuery].filter(Boolean).join(',');
+
+      if (finalOrQuery) {
+        const { data: fetchedMatches, error: matchesError } = await supabase
           .from('matches')
           .select(`
             *,
-            match_live_state (*)
+            match_live_state (*),
+            innings (*)
           `)
-          .or(`team_a_id.in.(${teamIds.join(',')}),team_b_id.in.(${teamIds.join(',')})`)
+          .or(finalOrQuery)
           .order('created_at', { ascending: false });
         
-        setMatches(matchData || []);
-
-        // Fetch matches where user was part of Playing XI
-        const { data: playedMatchData } = await supabase
-          .from('match_playing_xi')
-          .select('match_id')
-          .in('player_id', memberIds);
-        
-        if (playedMatchData) {
-          setPlayedMatchIds(playedMatchData.map(pm => pm.match_id));
+        if (matchesError) {
+          console.error('[PlayerProfile] Matches error:', matchesError);
+          setMatches([]);
+        } else {
+          matchData = fetchedMatches || [];
+          setMatches(matchData);
         }
-
-        // 3. Fetch all ball stats
-        const { data: statsData } = await supabase
-          .from('player_ball_stats')
-          .select('*')
-          .in('member_id', memberIds);
-        
-        if (statsData) {
-          const createEmptyDiscipline = () => ({
-            matches: 0,
-            batting: { innings: 0, runs: 0, highest: 0, average: 0, sr: 0, fifties: 0, hundreds: 0, fours: 0, sixes: 0, not_outs: 0, ducks: 0, won: 0, lost: 0 },
-            bowling: { innings: 0, wickets: 0, best: '-', economy: 0, sr: 0, runs_conceded: 0, overs: 0, five_w: 0 },
-            fielding: { catches: 0, stumpings: 0, runouts: 0 },
-            captain: { matches: 0, wins: 0, losses: 0, win_pc: '0' }
-          });
-
-          const ballTypes = ['overall', 'leather', 'tennis', 'other'];
-          const statsByBall: Record<string, any> = {
-            overall: createEmptyDiscipline(),
-            leather: createEmptyDiscipline(),
-            tennis: createEmptyDiscipline(),
-            other: createEmptyDiscipline()
-          };
-
-          statsData.forEach(curr => {
-            const types = ['overall', curr.ball_type || 'other'];
-            types.forEach(type => {
-              const s = statsByBall[type];
-              if (!s) return;
-              s.matches += (curr.matches_played || 0);
-              
-              // Batting
-              s.batting.innings += (curr.innings_batted || 0);
-              s.batting.runs += (curr.total_runs || 0);
-              s.batting.highest = Math.max(s.batting.highest, curr.highest_score || 0);
-              s.batting.fifties += (curr.fifties || 0);
-              s.batting.hundreds += (curr.hundreds || 0);
-              s.batting.fours += (curr.fours || 0);
-              s.batting.sixes += (curr.sixes || 0);
-              s.batting.not_outs += (curr.not_outs || 0);
-              s.batting.ducks += (curr.ducks || 0);
-              
-              // Bowling
-              s.bowling.innings += (curr.innings_bowled || 0);
-              s.bowling.wickets += (curr.total_wickets || 0);
-              s.bowling.runs_conceded += (curr.runs_conceded || 0);
-              s.bowling.overs += (Number(curr.overs_bowled) || 0);
-              
-              // Fielding
-              s.fielding.catches += (curr.total_catches || 0);
-              s.fielding.stumpings += (curr.total_stumpings || 0);
-              s.fielding.runouts += (curr.total_runouts || 0);
-            });
-          });
-
-          // Calculate derived stats
-          Object.values(statsByBall).forEach(s => {
-            if (s.batting.innings > 0) {
-              const outs = s.batting.innings - s.batting.not_outs;
-              s.batting.average = outs > 0 ? (s.batting.runs / outs).toFixed(2) : s.batting.runs;
-              s.batting.sr = s.batting.innings > 0 ? (s.batting.runs / (s.batting.innings * 20)) * 100 : 0; // Simplified SR if balls faced missing
-            }
-            if (s.bowling.overs > 0) {
-              s.bowling.economy = s.bowling.runs_conceded / s.bowling.overs;
-            }
-            if (s.bowling.wickets > 0) {
-              s.bowling.average = (s.bowling.runs_conceded / s.bowling.wickets).toFixed(2);
-            } else {
-              s.bowling.average = s.bowling.runs_conceded.toFixed(2);
-            }
-          });
-
-          // Captaincy (Overall only for simplicity in this mockup)
-          const captainMatches = matchData?.filter(m => m.team_a_captain_id === id || m.team_b_captain_id === id) || [];
-          const captainWins = captainMatches.filter(m => {
-            const isTeamA = m.team_a_captain_id === id;
-            return (isTeamA && m.match_live_state?.winner_id === m.team_a_id) || (!isTeamA && m.match_live_state?.winner_id === m.team_b_id);
-          }).length;
-
-          statsByBall.overall.captain = {
-            matches: captainMatches.length,
-            wins: captainWins,
-            losses: captainMatches.length - captainWins,
-            win_pc: captainMatches.length > 0 ? ((captainWins / captainMatches.length) * 100).toFixed(1) : '0'
-          };
-
-          setStats(statsByBall);
-        }
+      } else {
+        setMatches([]);
       }
+
+      // 3. Fetch all match-by-match stats from views
+      const [battingRes, bowlingRes] = await Promise.all([
+        supabase
+          .from('player_match_batting_stats')
+          .select('*')
+          .eq('profile_id', id),
+        supabase
+          .from('player_match_bowling_stats')
+          .select('*')
+          .eq('profile_id', id)
+      ]);
+
+      const battingStatsData = battingRes.data || [];
+      const bowlingStatsData = bowlingRes.data || [];
+      
+      const statsByBall: Record<string, any> = {
+        overall: createEmptyDiscipline(),
+        leather: createEmptyDiscipline(),
+        tennis: createEmptyDiscipline(),
+        other: createEmptyDiscipline()
+      };
+
+      // Process Batting Stats
+      battingStatsData.forEach(curr => {
+        const type = 'overall'; // For now, views don't have ball_type, defaulting to overall
+        const s = statsByBall[type];
+        
+        s.batting.innings += 1;
+        s.batting.runs += (curr.runs || 0);
+        s.batting.highest = Math.max(s.batting.highest, curr.runs || 0);
+        if (curr.runs >= 50 && curr.runs < 100) s.batting.fifties += 1;
+        if (curr.runs >= 100) s.batting.hundreds += 1;
+        s.batting.fours += (curr.fours || 0);
+        s.batting.sixes += (curr.sixes || 0);
+        if (!curr.is_out) s.batting.not_outs += 1;
+        if (curr.is_out && curr.runs === 0) s.batting.ducks += 1;
+      });
+
+      // Process Bowling Stats
+      bowlingStatsData.forEach(curr => {
+        const type = 'overall';
+        const s = statsByBall[type];
+        
+        s.bowling.innings += 1;
+        s.bowling.wickets += (curr.wickets || 0);
+        s.bowling.runs_conceded += (curr.runs_conceded || 0);
+        
+        const legalBalls = curr.legal_balls || 0;
+        const overs = Math.floor(legalBalls / 6) + (legalBalls % 6) / 10;
+        s.bowling.overs += overs;
+        
+        if (curr.wickets >= 5) s.bowling.five_w += 1;
+        
+        // Update best bowling
+        const currentBest = s.bowling.best === '-' ? { w: 0, r: 999 } : { 
+          w: parseInt(s.bowling.best.split('/')[0]), 
+          r: parseInt(s.bowling.best.split('/')[1]) 
+        };
+        if (curr.wickets > currentBest.w || (curr.wickets === currentBest.w && curr.runs_conceded < currentBest.r)) {
+          s.bowling.best = `${curr.wickets}/${curr.runs_conceded}`;
+        }
+      });
+
+      // Matches count (unique match IDs from both)
+      const allStatsMatches = new Set([
+        ...battingStatsData.map(b => b.match_id),
+        ...bowlingStatsData.map(b => b.match_id)
+      ]);
+      statsByBall.overall.matches = allStatsMatches.size;
+
+      // Calculate derived stats
+      Object.values(statsByBall).forEach(s => {
+        if (s.batting.innings > 0) {
+          const outs = s.batting.innings - s.batting.not_outs;
+          s.batting.average = outs > 0 ? (s.batting.runs / outs) : s.batting.runs;
+          const totalBalls = battingStatsData.reduce((acc, b) => acc + (b.balls || 0), 0);
+          s.batting.sr = totalBalls > 0 ? ((s.batting.runs / totalBalls) * 100) : 0;
+        }
+        if (s.bowling.overs > 0) {
+          const totalLegalBalls = bowlingStatsData.reduce((acc, b) => acc + (b.legal_balls || 0), 0);
+          s.bowling.economy = totalLegalBalls > 0 ? ((s.bowling.runs_conceded / totalLegalBalls) * 6) : 0;
+          
+          if (s.bowling.wickets > 0) {
+            s.bowling.average = (s.bowling.runs_conceded / s.bowling.wickets);
+            s.bowling.sr = (totalLegalBalls / s.bowling.wickets);
+          } else {
+            s.bowling.average = s.bowling.runs_conceded;
+            s.bowling.sr = 0;
+          }
+        }
+      });
+
+      // Captaincy (Overall only)
+      const captainMatches = matchData?.filter(m => m.team_a_captain_id === id || m.team_b_captain_id === id) || [];
+      const captainWins = captainMatches.filter(m => {
+        const isTeamA = m.team_a_captain_id === id;
+        return (isTeamA && m.match_live_state?.winner_id === m.team_a_id) || (!isTeamA && m.match_live_state?.winner_id === m.team_b_id);
+      }).length;
+
+      statsByBall.overall.captain = {
+        matches: captainMatches.length,
+        wins: captainWins,
+        losses: captainMatches.length - captainWins,
+        win_pc: captainMatches.length > 0 ? ((captainWins / captainMatches.length) * 100).toFixed(1) : '0'
+      };
+
+      setStats(statsByBall);
+
+      // 3.5 Fetch Highlights (Top performances)
+      const topBatting = battingStatsData
+        .filter(b => b.runs >= 30)
+        .map(b => ({
+          id: `bat-${b.match_id}`,
+          type: 'batting',
+          title: `${b.runs} Runs vs ${b.team_a === profileData.full_name ? b.team_b : b.team_a}`,
+          description: `${b.runs}(${b.balls}) with ${b.fours} fours and ${b.sixes} sixes`,
+          date: b.created_at,
+          match_id: b.match_id
+        }));
+      
+      const topBowling = bowlingStatsData
+        .filter(b => b.wickets >= 3)
+        .map(b => ({
+          id: `bowl-${b.match_id}`,
+          type: 'bowling',
+          title: `${b.wickets} Wickets vs ${b.team_a === profileData.full_name ? b.team_b : b.team_a}`,
+          description: `${b.wickets}/${b.runs_conceded} in match`,
+          date: b.created_at,
+          match_id: b.match_id
+        }));
+
+      setHighlights([...topBatting, ...topBowling].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
 
       // 4. Fetch Connections (Followers/Following)
       const { data: followData } = await supabase
@@ -422,7 +530,7 @@ export default function PlayerProfile() {
     try {
       await Share.share({
         message: `Check out ${profile?.full_name}'s cricket profile on Book Your Ground!`,
-        url: `https://bookyourground.com/players/${id}`
+        url: `https://bookyourground.com/players/${getPlayerSlug(profile?.full_name, id)}`
       });
     } catch (error) {
       console.error('Error sharing:', error);
@@ -430,12 +538,47 @@ export default function PlayerProfile() {
   };
 
   const renderMatchCard = (match: any) => {
-    const isTeamA = match.match_live_state?.team_a_id === match.team_a_id;
+    const live = match.match_live_state;
     const team1Name = match.team_a || 'Team A';
     const team2Name = match.team_b || 'Team B';
-    const score1 = match.match_live_state?.team_a_score || '0/0';
-    const score2 = match.match_live_state?.team_b_score || '0/0';
-    const statusDisplay = match.status === 'completed' || match.match_live_state?.status === 'completed' ? 'RESULT' : (match.status === 'Live' ? 'LIVE' : 'UPCOMING');
+    
+    // Calculate scores from innings and live state
+    const firstInn = match.innings?.find((i: any) => i.innings_number === 1);
+    const secondInn = match.innings?.find((i: any) => i.innings_number === 2);
+    
+    const formatScore = (runs: number, wickets: number, legal_balls: number) => {
+      return `${runs}/${wickets} (${Math.floor(legal_balls / 6)}.${legal_balls % 6})`;
+    };
+
+    let score1 = '0/0';
+    let score2 = '0/0';
+
+    // Priority 1: Current live batting team
+    if (live?.batting_team === team1Name) {
+      score1 = formatScore(live.runs || 0, live.wickets || 0, live.legal_balls || 0);
+    } else if (live?.batting_team === team2Name) {
+      score2 = formatScore(live.runs || 0, live.wickets || 0, live.legal_balls || 0);
+    }
+
+    // Priority 2: Historic innings data for team 1
+    if (score1 === '0/0') {
+      const inn = firstInn?.batting_team === team1Name ? firstInn : (secondInn?.batting_team === team1Name ? secondInn : null);
+      if (inn) score1 = formatScore(inn.runs || 0, inn.wickets || 0, inn.legal_balls || 0);
+    }
+
+    // Priority 3: Historic innings data for team 2
+    if (score2 === '0/0') {
+      const inn = firstInn?.batting_team === team2Name ? firstInn : (secondInn?.batting_team === team2Name ? secondInn : null);
+      if (inn) score2 = formatScore(inn.runs || 0, inn.wickets || 0, inn.legal_balls || 0);
+    }
+
+    // Special Case: If match_live_state has pre-formatted score strings (some schemas do)
+    if (live?.team_a_score && score1 === '0/0') score1 = live.team_a_score;
+    if (live?.team_b_score && score2 === '0/0') score2 = live.team_b_score;
+
+    const isCompleted = match.status === 'completed' || live?.match_status === 'completed' || live?.match_status === 'Result' || match.status === 'Result';
+    const isLive = !isCompleted && (match.status === 'live' || match.status === 'Live' || !!live);
+    const statusDisplay = isCompleted ? 'RESULT' : (isLive ? 'LIVE' : 'UPCOMING');
     
     const getBadgeStyle = () => {
       if (statusDisplay === 'RESULT') return { backgroundColor: '#005b80' };
@@ -464,14 +607,18 @@ export default function PlayerProfile() {
         <View style={styles.matchScoreRow}>
           <View style={styles.teamScoreInfo}>
             <Text style={styles.matchTeamName}>{team1Name}</Text>
-            <Text style={styles.matchTeamScore}>{score1}</Text>
+            {statusDisplay !== 'UPCOMING' && (
+              <Text style={styles.matchTeamScore}>{score1}</Text>
+            )}
           </View>
         </View>
 
         <View style={styles.matchScoreRow}>
           <View style={styles.teamScoreInfo}>
             <Text style={styles.matchTeamName}>{team2Name}</Text>
-            <Text style={styles.matchTeamScore}>{score2}</Text>
+            {statusDisplay !== 'UPCOMING' && (
+              <Text style={styles.matchTeamScore}>{score2}</Text>
+            )}
           </View>
         </View>
 
@@ -510,8 +657,8 @@ export default function PlayerProfile() {
       >
         <View style={styles.teamCardLeft}>
           <View style={styles.teamLogoWrapper}>
-            {team.logo_url ? (
-              <Image source={{ uri: team.logo_url }} style={styles.teamLogo} />
+            {team.image_url ? (
+              <Image source={{ uri: team.image_url }} style={styles.teamLogo} />
             ) : (
               <View style={styles.teamLogoPlaceholder}>
                 <Users size={24} color="#CBD5E1" />
@@ -522,7 +669,7 @@ export default function PlayerProfile() {
             <Text style={styles.teamName} numberOfLines={1}>{team.name}</Text>
             <View style={styles.teamMetaRow}>
               <MapPin size={12} color="#94A3B8" />
-              <Text style={styles.teamCity}>{team.city || 'Location N/A'}</Text>
+              <Text style={styles.teamCity}>{team.location || 'Location N/A'}</Text>
             </View>
           </View>
         </View>
@@ -548,23 +695,32 @@ export default function PlayerProfile() {
       <TouchableOpacity 
         key={highlight.id} 
         style={styles.highlightCard}
-        onPress={() => Alert.alert('Play Video', 'Video player integration coming soon!')}
+        onPress={() => {
+          if (highlight.match_id) {
+            router.push(`/live/${highlight.match_id}`);
+          } else {
+            Alert.alert('Play Video', 'Video player integration coming soon!');
+          }
+        }}
       >
         <View style={styles.thumbnailWrapper}>
-          <Image source={{ uri: highlight.thumbnail }} style={styles.thumbnail} />
+          <Image 
+            source={{ uri: highlight.thumbnail || 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg' }} 
+            style={styles.thumbnail} 
+          />
           <View style={styles.playOverlay}>
             <PlayCircle size={32} color="#FFFFFF" strokeWidth={2.5} />
           </View>
           <View style={styles.durationBadge}>
-            <Text style={styles.durationText}>{highlight.duration}</Text>
+            <Text style={styles.durationText}>{highlight.duration || '0:30'}</Text>
           </View>
         </View>
         <View style={styles.highlightMeta}>
           <Text style={styles.highlightTitle} numberOfLines={2}>{highlight.title}</Text>
           <View style={styles.highlightBottom}>
-            <Text style={styles.highlightViewCount}>{highlight.views} views</Text>
+            <Text style={styles.highlightViewCount}>{highlight.views || 'Dynamic'} views</Text>
             <View style={styles.dotMini} />
-            <Text style={styles.highlightDate}>{highlight.date}</Text>
+            <Text style={styles.highlightDate}>{highlight.date ? new Date(highlight.date).toLocaleDateString() : 'Recent'}</Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -576,7 +732,7 @@ export default function PlayerProfile() {
       <TouchableOpacity 
         key={user.id} 
         style={styles.connectionCard}
-        onPress={() => router.push(`/players/${user.id}`)}
+        onPress={() => router.push(`/players/${getPlayerSlug(user.full_name, user.id)}`)}
       >
         <View style={styles.connectionLeft}>
           <Image 
@@ -647,8 +803,8 @@ export default function PlayerProfile() {
           <DataCard label="NO" value={data.not_outs || 0} />
           <DataCard label="RUNS" value={data.runs} />
           <DataCard label="HS" value={data.highest} />
-          <DataCard label="AVG" value={data.average} />
-          <DataCard label="SR" value={data.sr.toFixed(2)} />
+          <DataCard label="AVG" value={Number(data.average || 0).toFixed(2)} />
+          <DataCard label="SR" value={Number(data.sr || 0).toFixed(2)} />
           <DataCard label="100S" value={data.hundreds} />
           <DataCard label="50S" value={data.fifties} />
           <DataCard label="4S" value={data.fours} />
@@ -665,10 +821,10 @@ export default function PlayerProfile() {
           <DataCard label="MAT" value={stats[recordType].matches} />
           <DataCard label="INNS" value={data.innings} />
           <DataCard label="WKTS" value={data.wickets} />
-          <DataCard label="ECON" value={data.economy.toFixed(2)} />
-          <DataCard label="OVERS" value={data.overs.toFixed(1)} />
-          <DataCard label="SR" value={data.sr.toFixed(2)} />
-          <DataCard label="AVG" value={data.average || '0.00'} />
+          <DataCard label="ECON" value={Number(data.economy || 0).toFixed(2)} />
+          <DataCard label="OVERS" value={Number(data.overs || 0).toFixed(1)} />
+          <DataCard label="SR" value={Number(data.sr || 0).toFixed(2)} />
+          <DataCard label="AVG" value={Number(data.average || 0).toFixed(2)} />
           <DataCard label="RUNS" value={data.runs_conceded} />
           <DataCard label="5W" value={data.five_w || 0} />
           <DataCard label="BB" value={data.best} />
@@ -709,7 +865,7 @@ export default function PlayerProfile() {
     if (activeTab === tabId) return;
     isScrollingProgrammatically.current = true;
     setActiveTab(tabId);
-    mainPagerRef.current?.scrollTo({ x: index * measuredPagerWidth, animated: true });
+    mainPagerRef.current?.scrollTo({ x: index * (measuredPagerWidth || windowWidth), animated: true });
     
     setTimeout(() => {
       isScrollingProgrammatically.current = false;
@@ -718,7 +874,7 @@ export default function PlayerProfile() {
 
   const onSubTabPress = (type: string, tabId: string, index: number) => {
     isScrollingProgrammatically.current = true;
-    const targetX = index * measuredPagerWidth;
+    const targetX = index * (measuredPagerWidth || windowWidth);
     switch (type) {
       case 'stats':
         setStatsTab(tabId);
@@ -782,7 +938,7 @@ export default function PlayerProfile() {
           <View ref={qrRef} collapsable={false} style={styles.qrCaptureArea}>
             <View style={styles.qrAvatarWrapper}>
               <Image 
-                source={profile.avatar_url ? { uri: profile.avatar_url } : require('../../assets/avatar.png')} 
+                source={profile?.avatar_url ? { uri: profile.avatar_url } : require('../../assets/avatar.png')} 
                 style={styles.qrAvatar} 
               />
           </View>
@@ -792,7 +948,7 @@ export default function PlayerProfile() {
           
           <View style={styles.qrWrapper}>
             <QRCode
-              value={`https://bookyourground.com/players/${id}`}
+              value={`https://bookyourground.com/players/${getPlayerSlug(profile?.full_name, id)}`}
               size={180}
               color="#431043"
               backgroundColor="#FFFFFF"
@@ -838,25 +994,17 @@ export default function PlayerProfile() {
     extrapolate: 'clamp',
   });
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FFFFFF" />
-      </View>
-    );
-  }
-
-  return (
+  const content = (
     <View style={styles.container}>
       {/* 1. Mini Fixed Header (Always on Top) */}
-      <View style={[styles.miniHeader, { height: HEADER_MIN_HEIGHT, paddingTop: insets.top }]}>
+      <View style={[styles.miniHeader, { height: HEADER_MIN_HEIGHT, paddingTop: Platform.OS === 'web' ? 0 : insets.top }]}>
         <LinearGradient
           colors={['#431043', '#d34681']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={StyleSheet.absoluteFill}
         />
-        <View style={styles.miniHeaderContent}>
+        <View style={[styles.miniHeaderContent, Platform.OS === 'web' && { maxWidth: 'none', alignSelf: 'stretch' }]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.navBtn}>
             <ChevronLeft size={24} color="#FFFFFF" />
           </TouchableOpacity>
@@ -898,13 +1046,18 @@ export default function PlayerProfile() {
         <Animated.View 
           style={[
             styles.headerContent, 
-            { opacity: profileInfoOpacity, top: HEADER_MIN_HEIGHT }
+            { 
+              opacity: profileInfoOpacity, 
+              top: HEADER_MIN_HEIGHT,
+              paddingTop: Platform.OS === 'web' ? 0 : 0 // The top: HEADER_MIN_HEIGHT already pushes it down
+            },
+            Platform.OS === 'web' && { maxWidth: 'none', alignSelf: 'stretch' }
           ]}
         >
           <View style={styles.playerMainRow}>
             <View style={styles.playerAvatarWrapper}>
               <Image 
-                source={profile.avatar_url ? { uri: profile.avatar_url } : require('../../assets/avatar.png')} 
+                source={profile?.avatar_url ? { uri: profile.avatar_url } : require('../../assets/avatar.png')} 
                 style={styles.playerAvatar} 
               />
             </View>
@@ -945,7 +1098,10 @@ export default function PlayerProfile() {
                 {isFollowing ? 'Following' : 'Follow'}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.insightsBtn}>
+            <TouchableOpacity 
+              style={styles.insightsBtn}
+              onPress={() => onTabPress('stats', 2)}
+            >
               <BarChart2 size={18} color="#1e1b4b" />
               <Text style={styles.insightsBtnText}>Insights</Text>
             </TouchableOpacity>
@@ -968,7 +1124,7 @@ export default function PlayerProfile() {
         <View style={{ height: HEADER_MAX_HEIGHT - HEADER_MIN_HEIGHT }} />
 
         {/* Tab Selection + Sub-bar Container (Sticky) */}
-        <View style={styles.stickyPillsContainer}>
+        <View style={[styles.stickyPillsContainer, Platform.OS === 'web' && styles.webResponsiveHeader]}>
           <View style={styles.tabBarContainer}>
             <ScrollView 
               ref={tabBarRef}
@@ -1166,11 +1322,8 @@ export default function PlayerProfile() {
           )}
         </View>
 
-
-
-
         {/* Tab Content Pager */}
-        <View style={styles.mainPagerWrapper}>
+        <View style={[styles.mainPagerWrapper, Platform.OS === 'web' && styles.webResponsiveHeader]}>
           <ScrollView
             ref={mainPagerRef}
             horizontal
@@ -1185,7 +1338,7 @@ export default function PlayerProfile() {
           >
             {/* Slide 1: Profile Details */}
             <View style={{ width: measuredPagerWidth }}>
-              <View style={styles.tabSlideContent}>
+              <View style={[styles.tabSlideContent, Platform.OS === 'web' && styles.webResponsiveHeader]}>
                 <View style={styles.profileDetailsCard}>
                   <Text style={styles.sectionTitle}>Personal Details</Text>
                   <View style={styles.detailsGrid}>
@@ -1195,7 +1348,7 @@ export default function PlayerProfile() {
                     </View>
                     <View style={styles.detailItem}>
                       <Text style={styles.detailLabel}>Locality</Text>
-                      <Text style={styles.detailValue}>{profile?.city || 'N/A'}</Text>
+                      <Text style={styles.detailValue}>{profile?.locality || 'N/A'}</Text>
                     </View>
                     <View style={styles.detailItem}>
                       <Text style={styles.detailLabel}>Batting Style</Text>
@@ -1216,11 +1369,40 @@ export default function PlayerProfile() {
 
             {/* Slide 2: Matches */}
             <View style={{ width: measuredPagerWidth }}>
-              <View style={styles.tabSlideContent}>
+              <View style={[styles.tabSlideContent, Platform.OS === 'web' && styles.webResponsiveHeader]}>
                 {(() => {
-                  const filteredMatches = matches.filter(m => 
-                    matchFilter === 'all' || playedMatchIds.includes(m.id)
-                  );
+                  const filteredMatches = matches.filter(m => {
+                    if (matchFilter === 'all') return true;
+                    
+                    // Check explicit Playing XI table
+                    if (playedMatchIds.includes(m.id)) return true;
+                    
+                    // Fallback: Check if name is in innings or live state
+                    const pName = profile?.full_name;
+                    if (!pName) return false;
+                    const searchName = pName.toLowerCase().trim();
+                    
+                    // Check live state first
+                    const live = m.match_live_state;
+                    if (live) {
+                      const striker = (live.striker_name || '').toLowerCase().trim();
+                      const nonstriker = (live.nonstriker_name || '').toLowerCase().trim();
+                      const bowler = (live.bowler_name || '').toLowerCase().trim();
+                      if (striker.includes(searchName) || nonstriker.includes(searchName) || bowler.includes(searchName)) return true;
+                    }
+
+                    return m.innings?.some((inn: any) => {
+                      const batters = Array.isArray(inn.batting_players) ? inn.batting_players : [];
+                      const bowlers = Array.isArray(inn.bowling_players) ? inn.bowling_players : [];
+                      
+                      const hasName = (list: any[]) => list.some((b: any) => {
+                        const name = (typeof b === 'string' ? b : (b.name || b.player_name || '')).toLowerCase().trim();
+                        return name.includes(searchName) || searchName.includes(name);
+                      });
+
+                      return hasName(batters) || hasName(bowlers);
+                    });
+                  });
                   return (filteredMatches && filteredMatches.length > 0) ? (
                     filteredMatches.map(renderMatchCard)
                   ) : (
@@ -1256,7 +1438,7 @@ export default function PlayerProfile() {
                         {['overall', 'leather', 'tennis', 'other'].map((recordType, index) => (
                           <View key={recordType}>
                             {index > 0 && <View style={styles.recordDivider} />}
-                            <View style={styles.recordSection}>
+                            <View style={[styles.recordSection, Platform.OS === 'web' && styles.webResponsiveHeader]}>
                               <View style={styles.recordTitleRow}>
                                 <View style={[styles.titleDot, { backgroundColor: recordType === 'overall' ? '#1e2030' : (recordType === 'leather' ? '#ef4444' : (recordType === 'tennis' ? '#01b854' : '#f59e0b')) }]} />
                                 <Text style={styles.recordTitle}>
@@ -1326,7 +1508,7 @@ export default function PlayerProfile() {
 
             {/* Slide 6: Teams */}
             <View style={{ width: measuredPagerWidth }}>
-              <View style={styles.tabSlideContent}>
+              <View style={[styles.tabSlideContent, Platform.OS === 'web' && styles.webResponsiveHeader]}>
                 {teams.length > 0 ? (
                   teams.map(renderTeamCard)
                 ) : (
@@ -1350,37 +1532,34 @@ export default function PlayerProfile() {
                   onScrollEndDrag={() => setMainScrollEnabled(true)}
                   onMomentumScrollEnd={(e) => onSubPagerEnd('highlights', e)}
                 >
-                  {['recent', 'batting', 'bowling'].map((sub) => (
-                    <View key={sub} style={{ width: measuredPagerWidth, paddingHorizontal: 16 }}>
-                      <View style={styles.highlightsGrid}>
-                        {[
-                          {
-                            id: 'h1',
-                            title: 'Stunning Cover Drive for Four',
-                            thumbnail: 'https://images.pexels.com/photos/3628912/pexels-photo-3628912.jpeg',
-                            duration: '0:15',
-                            views: '1.2K',
-                            date: '2d ago'
-                          },
-                          {
-                            id: 'h2',
-                            title: 'Wicket: Perfect Yorker dismissal',
-                            thumbnail: 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg',
-                            duration: '0:22',
-                            views: '850',
-                            date: '5d ago'
-                          }
-                        ].map(renderHighlightCard)}
+                  {['recent', 'batting', 'bowling'].map((sub) => {
+                    const filteredHighlights = highlights.filter(h => {
+                      if (sub === 'recent') return true;
+                      return h.type === sub;
+                    });
+                    
+                    return (
+                      <View key={sub} style={{ width: measuredPagerWidth, paddingHorizontal: 16 }}>
+                        <View style={[styles.highlightsGrid, Platform.OS === 'web' && styles.webResponsiveHeader]}>
+                          {filteredHighlights.length > 0 ? (
+                            filteredHighlights.map(renderHighlightCard)
+                          ) : (
+                            <View style={styles.emptyState}>
+                              <Clock size={48} color="#E2E8F0" />
+                              <Text style={styles.emptyText}>No {sub} highlights found yet</Text>
+                            </View>
+                          )}
+                        </View>
                       </View>
-                    </View>
-                  ))}
+                    );
+                  })}
                 </ScrollView>
               </View>
             </View>
 
             {/* Slide 8: Photos */}
             <View style={{ width: measuredPagerWidth }}>
-              <View style={styles.tabSlideContent}>
+              <View style={[styles.tabSlideContent, Platform.OS === 'web' && styles.webResponsiveHeader]}>
                 <View style={styles.photosGrid}>
                   {[
                     { id: 'p1', url: 'https://images.pexels.com/photos/3628912/pexels-photo-3628912.jpeg' },
@@ -1409,7 +1588,7 @@ export default function PlayerProfile() {
                 >
                   {['followers', 'following'].map((sub) => (
                     <View key={sub} style={{ width: measuredPagerWidth, paddingHorizontal: 16 }}>
-                      <View style={styles.tabSlideContent}>
+                      <View style={[styles.tabSlideContent, Platform.OS === 'web' && styles.webResponsiveHeader]}>
                         {(sub === 'followers' ? followers : following).length > 0 ? (
                           (sub === 'followers' ? followers : following).map(renderConnectionCard)
                         ) : (
@@ -1432,6 +1611,12 @@ export default function PlayerProfile() {
       {renderQRModal()}
     </View>
   );
+
+  if (Platform.OS === 'web') {
+    return <WebLayout hideHeader={true} noCard={true}>{content}</WebLayout>;
+  }
+
+  return content;
 }
 
 const styles = StyleSheet.create({
@@ -1445,6 +1630,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center'
   },
+  webResponsiveHeader: {
+    maxWidth: 650,
+    alignSelf: 'center',
+    width: '100%',
+  },
   miniHeader: {
     position: 'absolute',
     top: 0,
@@ -1457,7 +1647,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: Platform.OS === 'web' ? 20 : 16,
   },
   headerAnimatedContainer: {
     position: 'absolute',
@@ -1478,7 +1668,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    paddingHorizontal: 20,
+    paddingHorizontal: Platform.OS === 'web' ? 20 : 20,
     paddingBottom: 24,
   },
   playerMainRow: {

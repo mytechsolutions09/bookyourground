@@ -31,15 +31,15 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCricketScoring } from '@/hooks/useCricketScoring';
 
 // Modular Imports
-import { styles } from './scoring-styles';
-import { INITIAL_TEAMS_DATA, INDIAN_STATES } from './scoring-constants';
+import { styles } from '@/components/cricket/scoring-styles';
+import { INITIAL_TEAMS_DATA, INDIAN_STATES } from '@/components/cricket/scoring-constants';
 import { 
   SuccessModal, 
   TeamScannerModal,
   TeamPickerModal,
   TeamPickerView,
   ManualPlayerModal
-} from './ScoringComponents';
+} from '@/components/cricket/ScoringComponents';
 import { 
   DashboardView,
   TeamSelectionView,
@@ -47,14 +47,14 @@ import {
   TossConfigurationView, 
   OpeningSelectionView,
   ScoringSettingsSheet
-} from './ScoringViews';
+} from '@/components/cricket/ScoringViews';
 import { 
   LiveScoringView, 
   BowlerSelectionView,
   DismissalConfigurationView,
   ExtraRunsSelector,
   MoreActionsModal
-} from './LiveScoringView';
+} from '@/components/cricket/LiveScoringView';
 
 export default function ScoringScreen() {
   const router = useRouter();
@@ -167,6 +167,7 @@ export default function ScoringScreen() {
     addNewBowler,
     setOpeners,
     startSecondInnings,
+    endMatch,
     isScoring: hookIsScoring
   } = useCricketScoring(urlMatchId as string);
 
@@ -588,6 +589,22 @@ export default function ScoringScreen() {
           setIsSelectingPlayersA(true);
         } else {
           setIsSelectingPlayersB(true);
+        }
+        break;
+      case 'end_match':
+        if (Platform.OS === 'web') {
+          if (confirm('Are you sure you want to end this match?')) {
+            endMatch('Match ended by scorer');
+          }
+        } else {
+          Alert.alert(
+            'End Match',
+            'Are you sure you want to end this match?',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'End Match', style: 'destructive', onPress: () => endMatch('Match ended by scorer') }
+            ]
+          );
         }
         break;
       default:

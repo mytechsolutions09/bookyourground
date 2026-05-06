@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Image, Platform, ScrollView, 
 import { Users2, Award, Zap, Swords, Target, Activity, ChevronDown } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import { getPlayerSlug } from '@/lib/utils';
 
 type SubTab = 'batting' | 'bowling' | 'fielding' | 'captain' | 'leaders';
 
@@ -228,7 +229,7 @@ const CricketStats = React.memo(({ activeSubTab }: { activeSubTab: string }) => 
     return (
       <TouchableOpacity 
         style={styles.leaderRow}
-        onPress={() => router.push(`/players/${profileId}` as any)}
+        onPress={() => router.push(`/players/${getPlayerSlug(name, profileId)}` as any)}
       >
         <View style={styles.leaderRankBox}>
           <Text style={styles.leaderRank}>{rank}</Text>

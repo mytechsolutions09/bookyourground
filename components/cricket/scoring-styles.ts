@@ -347,9 +347,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: -1, height: 1 },
-    textShadowRadius: 10
+    textShadow: 'rgba(0, 0, 0, 0.75) -1px 1px 10px'
   },
   longOff: { bottom: 35, left: 45, width: 80, height: 60 },
   longOn: { bottom: 35, right: 45, width: 80, height: 60 },

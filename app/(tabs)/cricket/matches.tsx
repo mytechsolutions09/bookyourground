@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, TextInput, useWindowDimensions, Share, PanResponder, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, TextInput, useWindowDimensions, Share, PanResponder, Dimensions, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ChevronRight, History, Calendar, Search, Radio, Trophy, Clock, Share2, Settings, ChevronLeft, Users } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
@@ -29,18 +29,32 @@ interface CricketMatchesProps {
   playerId?: string;
   categoryFilter?: string;
   onCategoryChange?: (val: string) => void;
+  statusFilter?: string;
+  onStatusChange?: (val: string) => void;
 }
 
-const CricketMatches = React.memo(({ playerId, categoryFilter = 'played', onCategoryChange }: CricketMatchesProps) => {
+const CricketMatches = React.memo(({ 
+  playerId, 
+  categoryFilter = 'all', 
+  onCategoryChange,
+  statusFilter,
+  onStatusChange
+}: CricketMatchesProps) => {
   const router = useRouter();
   const { session } = useAuth();
   const effectivePlayerId = playerId || session?.user?.id;
   const { width } = useWindowDimensions();
   const isLargeScreen = width > 1024;
   
-  const [status, setStatus] = useState('result');
+  const [status, setStatus] = useState(statusFilter || 'result');
   const [dateFilter, setDateFilter] = useState('all_time');
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    if (statusFilter && statusFilter !== status) {
+      setStatus(statusFilter);
+    }
+  }, [statusFilter]);
   const [fetchedMatches, setFetchedMatches] = useState<any[]>([]);
   const [userTeams, setUserTeams] = useState<string[]>([]);
   const [userPlayedMatches, setUserPlayedMatches] = useState<string[]>([]);
@@ -400,44 +414,26 @@ const CricketMatches = React.memo(({ playerId, categoryFilter = 'played', onCate
 
   return (
     <View style={{ flex: 1, paddingHorizontal: 16 }}>
-      {/* Consolidated Search & Filters Row */}
-      {/* Search and Date Filter Row */}
+      {/* Search & Secondary Filters Row */}
       <View style={styles.topFiltersRow}>
         <View style={styles.searchBox}>
           <Search size={14} color="#94A3B8" />
           <TextInput
             style={styles.searchBoxInput}
-            placeholder="Search..."
+            placeholder="Search matches..."
             placeholderTextColor="#94A3B8"
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
         </View>
-        <View style={{ width: 80 }}>
-          <FilterDropdown 
-            id="cat" 
-            label="Type" 
-            value={categoryFilter} 
-            options={CATEGORY_TABS} 
-            onSelect={(val) => onCategoryChange?.(val)} 
-          />
-        </View>
-        <View style={{ width: 80 }}>
-          <FilterDropdown 
-            id="status" 
-            label="Status" 
-            value={status} 
-            options={STATUS_FILTERS} 
-            onSelect={setStatus} 
-          />
-        </View>
-        <View style={{ width: 80 }}>
+        <View style={{ width: 100 }}>
           <FilterDropdown 
             id="date" 
             label="Date" 
             value={dateFilter} 
             options={DATE_FILTERS} 
             onSelect={setDateFilter} 
+            icon={Calendar}
           />
         </View>
       </View>
@@ -465,10 +461,42 @@ const CricketMatches = React.memo(({ playerId, categoryFilter = 'played', onCate
 export default CricketMatches;
 
 const styles = StyleSheet.create({
+  statusToggleWrapper: {
+    marginBottom: 16,
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    padding: 4,
+  },
+  toggleTab: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  toggleTabActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  toggleLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+    fontFamily: 'Inter',
+  },
+  toggleLabelActive: {
+    color: '#01b854',
+  },
   topFiltersRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 10,
     marginBottom: 16,
     zIndex: 110,
   },

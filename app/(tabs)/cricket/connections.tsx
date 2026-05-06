@@ -4,6 +4,7 @@ import { Users2, Search, UserPlus, UserCheck, ChevronRight } from 'lucide-react-
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
+import { getPlayerSlug } from '@/lib/utils';
 
 export default function CricketConnections() {
   const { user } = useAuth();
@@ -48,7 +49,7 @@ export default function CricketConnections() {
   const renderItem = ({ item }: { item: any }) => (
     <TouchableOpacity 
       style={styles.connectionItem}
-      onPress={() => router.push(`/players/${item.id}` as any)}
+      onPress={() => router.push(`/players/${getPlayerSlug(item.full_name, item.id)}` as any)}
     >
       <View style={styles.avatarContainer}>
         {item.avatar_url ? (
