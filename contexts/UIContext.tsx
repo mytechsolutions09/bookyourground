@@ -13,13 +13,15 @@ export function UIProvider({ children }: { children: React.ReactNode }) {
   const [isTabBarVisible, setTabBarVisible] = useState(true);
   const [tabAnimation, setTabAnimation] = useState<'slide_from_left' | 'slide_from_right' | 'slide_from_bottom' | 'none'>('slide_from_right');
 
+  const value = React.useMemo(() => ({ 
+    isTabBarVisible, 
+    setTabBarVisible,
+    tabAnimation,
+    setTabAnimation
+  }), [isTabBarVisible, tabAnimation]);
+
   return (
-    <UIContext.Provider value={{ 
-      isTabBarVisible, 
-      setTabBarVisible,
-      tabAnimation,
-      setTabAnimation
-    }}>
+    <UIContext.Provider value={value}>
       {children}
     </UIContext.Provider>
   );

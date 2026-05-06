@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { UserRole } from '@/types/database';
@@ -105,7 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const loadProfile = async (userId: string) => {
+  const loadProfile = useCallback(async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -123,9 +123,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const signUp = async (email: string, password: string, fullName: string, phone: string, role: UserRole = 'user', businessName?: string, address?: string, state?: string, teamName?: string, playerType?: string, captchaToken?: string) => {
+  const signUp = useCallback(async (email: string, password: string, fullName: string, phone: string, role: UserRole = 'user', businessName?: string, address?: string, state?: string, teamName?: string, playerType?: string, captchaToken?: string) => {
     try {
       // Ensure we are signed out before trying to sign up to avoid session collision/refresh errors
       await supabase.auth.signOut();
@@ -154,9 +154,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       return { error };
     }
-  };
+  }, []);
 
-  const signIn = async (email: string, password: string, captchaToken?: string) => {
+  const signIn = useCallback(async (email: string, password: string, captchaToken?: string) => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -165,27 +165,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
     });
     return { error };
-  };
+  }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     await supabase.auth.signOut();
-  };
+  }, []);
 
-  const resetPassword = async (email: string) => {
+  const resetPassword = useCallback(async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
     });
     return { error };
-  };
+  }, []);
 
-  const changePassword = async (newPassword: string) => {
+  const changePassword = useCallback(async (newPassword: string) => {
     const { error } = await supabase.auth.updateUser({
       password: newPassword,
     });
     return { error };
-  };
+  }, []);
 
-  const updateProfile = async (updates: Partial<Profile>) => {
+  const updateProfile = useCallback(async (updates: Partial<Profile>) => {
     if (!user) return { error: new Error('No user logged in') };
 
     const { error } = await supabase
@@ -198,23 +198,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     return { error };
-  };
+  }, [user?.id, profile]);
+
+  const value = useMemo(() => ({
+    user,
+    profile,
+    session,
+    loading,
+    signUp,
+    signIn,
+    signOut,
+    updateProfile,
+    resetPassword,
+    changePassword,
+    loadProfile,
+  }), [user, profile, session, loading, signUp, signIn, signOut, updateProfile, resetPassword, changePassword, loadProfile]);
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        profile,
-        session,
-        loading,
-        signUp,
-        signIn,
-        signOut,
-        updateProfile,
-        resetPassword,
-        changePassword,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

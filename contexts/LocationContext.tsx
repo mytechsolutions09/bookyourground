@@ -85,8 +85,13 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     refreshLocation();
   }, []);
 
+  const value = React.useMemo(() => ({
+    ...locationData,
+    refreshLocation
+  }), [locationData]);
+
   return (
-    <LocationContext.Provider value={{ ...locationData, refreshLocation }}>
+    <LocationContext.Provider value={value}>
       {children}
     </LocationContext.Provider>
   );
