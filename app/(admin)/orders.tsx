@@ -1,25 +1,31 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform, ActivityIndicator, TextInput, ScrollView } from 'react-native';
-import { ShoppingBag, Package, ChevronRight, Search, Calendar, User, IndianRupee, Clock, Filter, Mail, Phone, MapPin } from 'lucide-react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform, ActivityIndicator, TextInput, ScrollView, DeviceEventEmitter } from 'react-native';
+import { ShoppingBag, Package, ChevronRight, Search, Calendar, User, IndianRupee, Clock, Filter, Mail, Phone, MapPin, RotateCcw } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import Modal from '@/components/ui/Modal';
 import { formatDate, formatDateTime } from '@/utils/helpers';
+import { useLocalSearchParams, router } from 'expo-router';
 
 const IS_WEB = Platform.OS === 'web';
 
 export default function AdminOrdersScreen() {
+  const params = useLocalSearchParams();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
-  const [activeStatus, setActiveStatus] = useState<string>('all');
+  const activeStatus = (params.filter as string) || 'all';
 
   useEffect(() => {
     loadOrders();
   }, []);
+
+  const setActiveStatus = (status: string) => {
+    router.setParams({ filter: status });
+  };
 
   const loadOrders = async () => {
     try {
@@ -62,6 +68,33 @@ export default function AdminOrdersScreen() {
     }
   };
 
+  const updateReturnStatus = async (itemId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('shop_order_items')
+        .update({ return_status: newStatus })
+        .eq('id', itemId);
+
+      if (error) throw error;
+      
+      // Update local state
+      const updatedOrders = orders.map(o => ({
+        ...o,
+        items: o.items.map((i: any) => i.id === itemId ? { ...i, return_status: newStatus } : i)
+      }));
+      setOrders(updatedOrders);
+      
+      if (selectedOrder) {
+        const updatedItems = selectedOrder.items.map((i: any) => 
+          i.id === itemId ? { ...i, return_status: newStatus } : i
+        );
+        setSelectedOrder({ ...selectedOrder, items: updatedItems });
+      }
+    } catch (err) {
+      console.error('Error updating return status:', err);
+    }
+  };
+
   const filteredOrders = useMemo(() => {
     return orders.filter(o => {
       const matchesSearch = 
@@ -69,7 +102,8 @@ export default function AdminOrdersScreen() {
         (o.user?.full_name?.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (o.user?.email?.toLowerCase().includes(searchQuery.toLowerCase()));
       
-      const matchesStatus = activeStatus === 'all' || o.status === activeStatus;
+      const matchesStatus = activeStatus === 'all' || 
+        (activeStatus === 'returns' ? o.items?.some((i: any) => i.return_status !== null) : o.status === activeStatus);
       
       return matchesSearch && matchesStatus;
     });
@@ -102,7 +136,15 @@ export default function AdminOrdersScreen() {
       onPress={() => setSelectedOrder(item)}
     >
       <View style={[styles.cell, { flex: 1.5 }]}>
-        <Text style={styles.orderIdText}>#{item.id.slice(0, 8).toUpperCase()}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Text style={styles.orderIdText}>#{item.id.slice(0, 8).toUpperCase()}</Text>
+          {item.items?.some((i: any) => i.return_status === 'requested') && (
+            <View style={styles.miniReturnBadge}>
+              <RotateCcw size={10} color="#92400E" />
+              <Text style={styles.miniReturnBadgeText}>RETURN</Text>
+            </View>
+          )}
+        </View>
         <Text style={styles.dateText}>{formatDate(item.created_at)}</Text>
       </View>
       
@@ -156,7 +198,7 @@ export default function AdminOrdersScreen() {
 
       <View style={styles.filterRow}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {['all', 'pending', 'processing', 'shipped', 'delivered', 'cancelled'].map(status => (
+          {['all', 'pending', 'processing', 'shipped', 'delivered', 'cancelled', 'returns'].map(status => (
             <TouchableOpacity 
               key={status}
               style={[styles.filterChip, activeStatus === status && styles.filterChipActive]}
@@ -260,12 +302,57 @@ export default function AdminOrdersScreen() {
             <View style={styles.itemsSection}>
               <Text style={styles.modalSectionTitle}>Ordered Items</Text>
               {selectedOrder.items?.map((item: any) => (
-                <View key={item.id} style={styles.orderItem}>
-                  <View style={styles.itemMain}>
-                    <Text style={styles.itemName}>{item.product?.name}</Text>
-                    <Text style={styles.itemMeta}>Qty: {item.quantity} × ₹{Number(item.price_at_purchase).toLocaleString('en-IN')}</Text>
+                <View key={item.id} style={styles.orderItemContainer}>
+                  <View style={styles.orderItem}>
+                    <View style={styles.itemMain}>
+                      <Text style={styles.itemName}>{item.product?.name}</Text>
+                      <Text style={styles.itemMeta}>Qty: {item.quantity} × ₹{Number(item.price_at_purchase).toLocaleString('en-IN')}</Text>
+                    </View>
+                    <Text style={styles.itemTotal}>₹{Number(item.quantity * item.price_at_purchase).toLocaleString('en-IN')}</Text>
                   </View>
-                  <Text style={styles.itemTotal}>₹{Number(item.quantity * item.price_at_purchase).toLocaleString('en-IN')}</Text>
+                  
+                  {item.return_status && (
+                    <View style={styles.returnRequestBox}>
+                      <View style={styles.returnHeader}>
+                        <View style={styles.returnLabelGroup}>
+                          <RotateCcw size={14} color="#dc8d3c" />
+                          <Text style={styles.returnRequestLabel}>Return Requested</Text>
+                        </View>
+                        <View style={[styles.returnStatusBadge, { backgroundColor: item.return_status === 'requested' ? '#FEF3C7' : item.return_status === 'approved' ? '#D1FAE5' : '#F3F4F6' }]}>
+                          <Text style={[styles.returnStatusText, { color: item.return_status === 'requested' ? '#92400E' : item.return_status === 'approved' ? '#065F46' : '#374151' }]}>
+                            {item.return_status.toUpperCase()}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={styles.returnReasonText}>Reason: {item.return_reason || 'No reason provided'}</Text>
+                      
+                      {item.return_status === 'requested' && (
+                        <View style={styles.returnActions}>
+                          <TouchableOpacity 
+                            style={[styles.returnActionBtn, styles.approveBtn]}
+                            onPress={() => updateReturnStatus(item.id, 'approved')}
+                          >
+                            <Text style={styles.approveBtnText}>Approve</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity 
+                            style={[styles.returnActionBtn, styles.rejectBtn]}
+                            onPress={() => updateReturnStatus(item.id, 'rejected')}
+                          >
+                            <Text style={styles.rejectBtnText}>Reject</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+
+                      {item.return_status === 'approved' && (
+                        <TouchableOpacity 
+                          style={[styles.returnActionBtn, styles.completeBtn]}
+                          onPress={() => updateReturnStatus(item.id, 'completed')}
+                        >
+                          <Text style={styles.completeBtnText}>Mark as Completed</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  )}
                 </View>
               ))}
             </View>
@@ -472,6 +559,22 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
   },
+  miniReturnBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 0.5,
+    borderColor: '#F59E0B',
+  },
+  miniReturnBadgeText: {
+    fontSize: 8,
+    fontWeight: '900',
+    color: '#92400E',
+  },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -561,6 +664,85 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
     color: '#1E293B',
+  },
+  orderItemContainer: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    paddingVertical: 12,
+  },
+  returnRequestBox: {
+    backgroundColor: '#FFFBEB',
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#FEF3C7',
+  },
+  returnHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  returnLabelGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  returnRequestLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  returnStatusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  returnStatusText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  returnReasonText: {
+    fontSize: 12,
+    color: '#4B5563',
+    fontStyle: 'italic',
+    marginBottom: 12,
+  },
+  returnActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  returnActionBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  approveBtn: {
+    backgroundColor: '#D1FAE5',
+  },
+  approveBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#065F46',
+  },
+  rejectBtn: {
+    backgroundColor: '#FEE2E2',
+  },
+  rejectBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#991B1B',
+  },
+  completeBtn: {
+    backgroundColor: '#E0E7FF',
+    width: '100%',
+  },
+  completeBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#3730A3',
   },
   statusActionSection: {
     marginTop: 8,

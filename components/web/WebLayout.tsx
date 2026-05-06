@@ -125,6 +125,10 @@ const NavLink = ({
       ]}
       onPress={() => {
         if (disabled) return;
+        const normalizedHref = normalize(href);
+        const normalizedPath = normalize(pathname || '');
+        if (clean(normalizedPath) === clean(normalizedHref)) return;
+
         if (href === '/' || href === '') {
           router.replace('/' as any);
         } else {
@@ -171,6 +175,7 @@ const NavLink = ({
 export default function WebLayout({ children, noCard, hideHeader, viewMode, showAddForm, isPublicNoSidebar: propIsPublicNoSidebar }: WebLayoutProps) {
   const isCompact = useIsCompact();
   const { profile, signOut, user } = useAuth();
+  const params = useLocalSearchParams();
   const pathname = usePathname();
   const segments = useSegments();
   const { width } = useWindowDimensions();
@@ -467,8 +472,8 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
 
       if (Math.abs(y - lastScrollPosRef.current) > 10) {
         if (y > lastScrollPosRef.current && y > 100) {
-          setIsBottomBarVisible(false);
-          setIsNavbarVisible(false);
+          setIsBottomBarVisible(prev => prev === false ? prev : false);
+          setIsNavbarVisible(prev => prev === false ? prev : false);
         } else if (y < lastScrollPosRef.current || y < 50) {
           setIsBottomBarVisible(true);
           setIsNavbarVisible(true);
@@ -782,61 +787,57 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
 
                     {!((cleanPath === '/book-my-ground' || cleanPath === '/find-an-opponent')) && (
                       <>
-                        <Text
-                          style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}
-                          onPress={() => router.push('/cricket/player-profile' as any)}
-                        >
-                          CRICKET
-                        </Text>
+                        <TouchableOpacity onPress={() => router.push('/cricket/player-profile' as any)}>
+                          <Text style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}>
+                            CRICKET
+                          </Text>
+                        </TouchableOpacity>
 
-                        <Text
-                          style={[
-                            styles.headerPrimaryButtonText,
-                            scrolled && styles.headerPrimaryButtonTextScrolled,
-                            { color: '#00ea6b' }
-                          ]}
-                          onPress={() => router.push('/book-my-ground' as any)}
-                        >
-                          GROUNDS
-                        </Text>
+                        {isLanding && (
+                          <>
+                            <TouchableOpacity onPress={() => router.push('/book-my-ground' as any)}>
+                              <Text style={[
+                                styles.headerPrimaryButtonText,
+                                scrolled && styles.headerPrimaryButtonTextScrolled,
+                                { color: '#00ea6b' }
+                              ]}>
+                                GROUNDS
+                              </Text>
+                            </TouchableOpacity>
 
-                        <Text
-                          style={[
-                            styles.headerPrimaryButtonText,
-                            scrolled && styles.headerPrimaryButtonTextScrolled,
-                            { color: '#dcc093' }
-                          ]}
-                          onPress={() => router.push('/shop' as any)}
-                        >
-                          SHOP
-                        </Text>
+                            <TouchableOpacity onPress={() => router.push('/shop' as any)}>
+                              <Text style={[
+                                styles.headerPrimaryButtonText,
+                                scrolled && styles.headerPrimaryButtonTextScrolled,
+                                { color: '#dcc093' }
+                              ]}>
+                                SHOP
+                              </Text>
+                            </TouchableOpacity>
+                          </>
+                        )}
                       </>
                     )}
 
                     {cleanPath === '/book-my-ground' && (
-                      <Text
-                        style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}
-                        onPress={() => router.push('/find-an-opponent')}
-                      >
-                        FIND AN OPPOSITION
-                      </Text>
+                      <TouchableOpacity onPress={() => router.push('/find-an-opponent')}>
+                        <Text style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}>
+                          FIND AN OPPOSITION
+                        </Text>
+                      </TouchableOpacity>
                     )}
 
-
-
-
-
                     {!isAuthenticated ? (
-                      <Text
-                        style={[styles.headerSecondaryButtonText, scrolled && styles.headerSecondaryButtonTextScrolled]}
+                      <TouchableOpacity 
+                        style={styles.headerSecondaryButton}
                         onPress={() => router.push('/(auth)/login' as any)}
                       >
-                        SIGN IN
-                      </Text>
+                        <Text style={[styles.headerSecondaryButtonText, scrolled && styles.headerSecondaryButtonTextScrolled]}>
+                          SIGN IN
+                        </Text>
+                      </TouchableOpacity>
                     ) : (
                       <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
-
-
                         <TouchableOpacity
                           style={styles.profileChip}
                           onPress={() => router.push('/profile')}
@@ -907,83 +908,70 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
 
             {(cleanPath.includes('/products') || cleanPath.includes('/orders')) && !isCompact && isSuperAdmin && (
               <View style={{ flexDirection: 'row', gap: 24, marginLeft: 32, alignItems: 'center' }}>
-                <Text
-                  style={[styles.headerNavLink, cleanPath.includes('/orders') && styles.headerNavLinkActive]}
-                  onPress={() => router.push('/(admin)/orders')}
-                >
-                  SHOP ORDERS
-                </Text>
-                <Text
-                  style={[styles.headerNavLink, viewMode === 'products' && !showAddForm && styles.headerNavLinkActive]}
+                <TouchableOpacity onPress={() => router.push('/(admin)/orders')}>
+                  <Text style={[styles.headerNavLink, cleanPath.includes('/orders') && !params.filter && styles.headerNavLinkActive]}>
+                    SHOP ORDERS
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => router.push('/(admin)/orders?filter=returns')}>
+                  <Text style={[styles.headerNavLink, cleanPath.includes('/orders') && params.filter === 'returns' && styles.headerNavLinkActive]}>
+                    RETURNS
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => {
+                  if (!cleanPath.includes('/products')) {
+                    router.push('/(admin)/products');
+                  }
+                  window.dispatchEvent(new CustomEvent('setShopView', { detail: 'products' }));
+                }}>
+                  <Text style={[styles.headerNavLink, viewMode === 'products' && !showAddForm && styles.headerNavLinkActive]}>
+                    PRODUCTS
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => {
+                  if (!cleanPath.includes('/products')) {
+                    router.push('/(admin)/products');
+                  }
+                  window.dispatchEvent(new CustomEvent('setShopView', { detail: 'categories' }));
+                }}>
+                  <Text style={[styles.headerNavLink, viewMode === 'categories' && styles.headerNavLinkActive]}>
+                    CATEGORIES
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={{ backgroundColor: '#00ea6b', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 }}
                   onPress={() => {
                     if (!cleanPath.includes('/products')) {
                       router.push('/(admin)/products');
                     }
-                    if (Platform.OS === 'web') {
-                      window.dispatchEvent(new CustomEvent('setShopView', { detail: 'products' }));
-                    } else if (DeviceEventEmitter) {
-                      DeviceEventEmitter.emit('setShopView', 'products');
-                    }
+                    window.dispatchEvent(new Event('openAddProduct'));
                   }}
                 >
-                  PRODUCTS
-                </Text>
-                <Text
-                  style={[styles.headerNavLink, viewMode === 'categories' && styles.headerNavLinkActive]}
-                  onPress={() => {
-                    if (!cleanPath.includes('/products')) {
-                      router.push('/(admin)/products');
-                    }
-                    if (Platform.OS === 'web') {
-                      window.dispatchEvent(new CustomEvent('setShopView', { detail: 'categories' }));
-                    } else if (DeviceEventEmitter) {
-                      DeviceEventEmitter.emit('setShopView', 'categories');
-                    }
-                  }}
-                >
-                  CATEGORIES
-                </Text>
-                <Text
-                  style={[styles.headerNavLink, showAddForm && styles.headerNavLinkActive]}
-                  onPress={() => {
-                    if (!cleanPath.includes('/products')) {
-                      router.push('/(admin)/products');
-                    }
-                    if (Platform.OS === 'web') {
-                      window.dispatchEvent(new Event('openAddProduct'));
-                    } else if (DeviceEventEmitter) {
-                      DeviceEventEmitter.emit('openAddProduct');
-                    }
-                  }}
-                >
-                  ADD PRODUCT
-                </Text>
+                  <Text style={{ color: '#043529', fontSize: 12, fontWeight: '700' }}>+ ADD PRODUCT</Text>
+                </TouchableOpacity>
               </View>
             )}
 
             <View style={styles.headerRight}>
               {!isCompact && !isAdminLayout && (
                 <View style={{ flexDirection: 'row', gap: 20, alignItems: 'center' }}>
-
-                  <Text
-                    style={[
+                  <TouchableOpacity onPress={() => router.push('/book-my-ground' as any)}>
+                    <Text style={[
                       styles.headerNavLink,
-                      (cleanPath === '/grounds' || cleanPath === '/(tabs)/grounds' || cleanPath === '/book-my-ground') ? { color: '#00ea6b', borderBottomWidth: 2, borderBottomColor: '#00ea6b', paddingBottom: 4, fontWeight: '700' } : { color: '#FFFFFF' }
-                    ]}
-                    onPress={() => router.push('/book-my-ground' as any)}
-                  >
-                    GROUNDS
-                  </Text>
+                      (cleanPath === '/grounds' || cleanPath === '/(tabs)/grounds' || cleanPath === '/book-my-ground') && styles.headerNavLinkActive
+                    ]}>
+                      GROUNDS
+                    </Text>
+                  </TouchableOpacity>
 
-                  <Text
-                    style={[
+                  <TouchableOpacity onPress={() => router.push('/shop' as any)}>
+                    <Text style={[
                       styles.headerNavLink,
-                      (cleanPath === '/shop' || isShop) ? { color: '#f8688a', borderBottomWidth: 2, borderBottomColor: '#f8688a', paddingBottom: 4, fontWeight: '700' } : { color: '#FFFFFF' }
-                    ]}
-                    onPress={() => router.push('/shop' as any)}
-                  >
-                    SHOP
-                  </Text>
+                      cleanPath.startsWith('/shop') && styles.headerNavLinkActive
+                    ]}>
+                      SHOP
+                    </Text>
+                  </TouchableOpacity>
 
                   {isShop && (
                     <TouchableOpacity

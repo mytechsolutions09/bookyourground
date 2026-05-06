@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, ActivityIndicator, Modal, TextInput } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { ChevronLeft, Package, Calendar, Clock, MapPin, CreditCard, ShieldCheck, Mail, Phone, ShoppingBag } from 'lucide-react-native';
+import { ChevronLeft, Package, Calendar, Clock, MapPin, CreditCard, ShieldCheck, Mail, Phone, ShoppingBag, RotateCcw, AlertCircle, CheckCircle2, XCircle, IndianRupee } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUI } from '@/contexts/UIContext';
@@ -9,6 +8,7 @@ import { formatDateTime } from '@/utils/helpers';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import WebLayout from '@/components/web/WebLayout';
 import { StatusBar } from 'expo-status-bar';
+import { BlurView } from 'expo-blur';
 
 const IS_WEB = Platform.OS === 'web';
 
@@ -19,6 +19,10 @@ export default function OrderDetailsScreen() {
   const { setTabBarVisible } = useUI();
   const [order, setOrder] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [returnModalVisible, setReturnModalVisible] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any | null>(null);
+  const [returnReason, setReturnReason] = useState('');
+  const [submittingReturn, setSubmittingReturn] = useState(false);
 
   useEffect(() => {
     setTabBarVisible(false);
@@ -47,6 +51,45 @@ export default function OrderDetailsScreen() {
       console.error('Error loading order details:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleReturnRequest = async () => {
+    if (!selectedItem || !returnReason.trim()) return;
+
+    try {
+      setSubmittingReturn(true);
+      const { error } = await supabase
+        .from('shop_order_items')
+        .update({
+          return_status: 'requested',
+          return_reason: returnReason,
+          return_requested_at: new Date().toISOString()
+        })
+        .eq('id', selectedItem.id);
+
+      if (error) throw error;
+
+      setReturnModalVisible(false);
+      setReturnReason('');
+      setSelectedItem(null);
+      loadOrderDetails();
+      alert('Return request submitted successfully!');
+    } catch (err) {
+      console.error('Error requesting return:', err);
+      alert('Failed to submit return request. Please try again.');
+    } finally {
+      setSubmittingReturn(false);
+    }
+  };
+
+  const getReturnStatusInfo = (status: string) => {
+    switch (status) {
+      case 'requested': return { label: 'Return Requested', color: '#F59E0B', icon: <RotateCcw size={12} color="#F59E0B" /> };
+      case 'approved': return { label: 'Return Approved', color: '#10B981', icon: <CheckCircle2 size={12} color="#10B981" /> };
+      case 'rejected': return { label: 'Return Rejected', color: '#EF4444', icon: <XCircle size={12} color="#EF4444" /> };
+      case 'completed': return { label: 'Return Completed', color: '#6366F1', icon: <Package size={12} color="#6366F1" /> };
+      default: return null;
     }
   };
 
@@ -100,19 +143,70 @@ export default function OrderDetailsScreen() {
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Items Ordered</Text>
         <View style={styles.card}>
-          {order.items?.map((item: any, index: number) => (
-            <View key={item.id} style={[styles.itemRow, index === order.items.length - 1 && { borderBottomWidth: 0 }]}>
-              <Image 
-                source={{ uri: item.product?.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200&q=80' }} 
-                style={styles.itemImage} 
-              />
-              <View style={styles.itemInfo}>
-                <Text style={styles.itemName} numberOfLines={2}>{item.product?.name}</Text>
-                <Text style={styles.itemQty}>Qty: {item.quantity} × ₹{Number(item.price_at_purchase).toLocaleString('en-IN')}</Text>
+          {order.items?.map((item: any, index: number) => {
+            const returnInfo = getReturnStatusInfo(item.return_status);
+            return (
+              <View key={item.id} style={[styles.itemRow, index === order.items.length - 1 && { borderBottomWidth: 0 }]}>
+                <Image 
+                  source={{ uri: item.product?.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200&q=80' }} 
+                  style={styles.itemImage} 
+                />
+                <View style={{ flex: 1 }}>
+                  <View style={styles.itemInfo}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.itemName} numberOfLines={2}>{item.product?.name}</Text>
+                      <Text style={styles.itemQty}>Qty: {item.quantity} × ₹{Number(item.price_at_purchase).toLocaleString('en-IN')}</Text>
+                    </View>
+                    <Text style={styles.itemTotal}>₹{Number(item.quantity * item.price_at_purchase).toLocaleString('en-IN')}</Text>
+                  </View>
+
+                  {/* Return Status or Button */}
+                  {item.return_status ? (
+                    <View style={[styles.returnStatusBadge, { borderColor: returnInfo?.color }]}>
+                      {returnInfo?.icon}
+                      <Text style={[styles.returnStatusText, { color: returnInfo?.color }]}>{returnInfo?.label}</Text>
+                    </View>
+                  ) : (
+                    (() => {
+                      const isDelivered = order.status === 'delivered';
+                      const deliveredAt = order.delivered_at || order.updated_at; // Fallback to updated_at if delivered_at is not set yet
+                      const returnPeriodDays = item.product?.return_period_days || 7;
+                      
+                      const isWithinReturnPeriod = isDelivered && deliveredAt && (() => {
+                        const deliveryDate = new Date(deliveredAt);
+                        const now = new Date();
+                        const diffInDays = (now.getTime() - deliveryDate.getTime()) / (1000 * 3600 * 24);
+                        return diffInDays <= returnPeriodDays;
+                      })();
+
+                      if (isDelivered && isWithinReturnPeriod) {
+                        return (
+                          <TouchableOpacity 
+                            style={styles.returnBtn}
+                            onPress={() => {
+                              setSelectedItem(item);
+                              setReturnModalVisible(true);
+                            }}
+                          >
+                            <RotateCcw size={14} color="#dc8d3c" />
+                            <Text style={styles.returnBtnText}>Return Item</Text>
+                          </TouchableOpacity>
+                        );
+                      } else if (isDelivered && !isWithinReturnPeriod) {
+                        return (
+                          <View style={styles.expiredBadge}>
+                            <AlertCircle size={12} color="#94A3B8" />
+                            <Text style={styles.expiredText}>Return period expired</Text>
+                          </View>
+                        );
+                      }
+                      return null;
+                    })()
+                  )}
+                </View>
               </View>
-              <Text style={styles.itemTotal}>₹{Number(item.quantity * item.price_at_purchase).toLocaleString('en-IN')}</Text>
-            </View>
-          ))}
+            );
+          })}
         </View>
       </View>
 
@@ -164,6 +258,62 @@ export default function OrderDetailsScreen() {
       </View>
 
       <View style={{ height: 40 }} />
+
+      {/* Return Request Modal */}
+      <Modal
+        visible={returnModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setReturnModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <BlurView intensity={20} style={StyleSheet.absoluteFill} tint="dark" />
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader_}>
+              <RotateCcw size={24} color="#dc8d3c" />
+              <Text style={styles.modalTitle}>Request Return</Text>
+            </View>
+            
+            <Text style={styles.modalSubtitle}>
+              Please tell us why you want to return {selectedItem?.product?.name}
+            </Text>
+
+            <TextInput
+              style={styles.reasonInput}
+              placeholder="Reason for return (e.g., Size doesn't fit, Received damaged product...)"
+              placeholderTextColor="#94A3B8"
+              multiline
+              numberOfLines={4}
+              value={returnReason}
+              onChangeText={setReturnReason}
+            />
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity 
+                style={styles.cancelBtn}
+                onPress={() => {
+                  setReturnModalVisible(false);
+                  setReturnReason('');
+                }}
+              >
+                <Text style={styles.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.submitBtn, (!returnReason.trim() || submittingReturn) && styles.submitBtnDisabled]}
+                onPress={handleReturnRequest}
+                disabled={!returnReason.trim() || submittingReturn}
+              >
+                {submittingReturn ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Text style={styles.submitBtnText}>Submit Request</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 
@@ -272,40 +422,169 @@ const styles = StyleSheet.create({
   },
   itemRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
+    alignItems: 'flex-start',
+    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
-    gap: 12,
+    gap: 16,
   },
   itemImage: {
-    width: 60,
-    height: 60,
+    width: 70,
+    height: 70,
     borderRadius: 12,
     backgroundColor: '#F8FAFC',
     resizeMode: 'cover',
   },
   itemInfo: {
-    flex: 1,
-    gap: 4,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 12,
   },
   itemName: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
     color: '#1F2937',
     fontFamily: 'Inter',
   },
   itemQty: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#64748B',
     fontWeight: '500',
     fontFamily: 'Inter',
+    marginTop: 2,
   },
   itemTotal: {
     fontSize: 14,
     fontWeight: '700',
     color: '#1F2937',
     fontFamily: 'Inter',
+  },
+  returnBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FFF7ED',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FED7AA',
+    alignSelf: 'flex-start',
+  },
+  returnBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#dc8d3c',
+  },
+  returnStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    alignSelf: 'flex-start',
+  },
+  returnStatusText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  expiredBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: '#F1F5F9',
+    alignSelf: 'flex-start',
+  },
+  expiredText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#94A3B8',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
+    width: '100%',
+    maxWidth: 450,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 5,
+  },
+  modalHeader_: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1F2937',
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  reasonInput: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 16,
+    height: 120,
+    fontSize: 14,
+    color: '#1F2937',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    textAlignVertical: 'top',
+    marginBottom: 24,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  cancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+    backgroundColor: '#F1F5F9',
+  },
+  cancelBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  submitBtn: {
+    flex: 2,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+    backgroundColor: '#dc8d3c',
+  },
+  submitBtnDisabled: {
+    opacity: 0.6,
+  },
+  submitBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   grid: {
     flexDirection: Platform.OS === 'web' ? 'row' : 'column',

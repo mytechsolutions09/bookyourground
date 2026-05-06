@@ -135,6 +135,10 @@ export default function TabLayout() {
           <Stack.Screen name="bookings" />
           <Stack.Screen name="favorites" />
           <Stack.Screen name="profile" />
+          <Stack.Screen name="profile/orders" />
+          <Stack.Screen name="profile/settings" />
+          <Stack.Screen name="profile/notifications" />
+          <Stack.Screen name="profile/order-details" />
           <Stack.Screen name="support" />
           <Stack.Screen name="logout" />
           <Stack.Screen name="cricket" />

@@ -114,7 +114,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .maybeSingle();
 
       if (error) throw error;
-      setProfile(data);
+      setProfile(prev => {
+        // Shallow check for stability
+        if (prev && data && prev.id === data.id && prev.role === data.role && prev.full_name === data.full_name) {
+          return prev;
+        }
+        return data;
+      });
       
       // Also schedule reminders here in case onAuthStateChange didn't catch it
       void scheduleMatchReminders(userId);
