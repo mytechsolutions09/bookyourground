@@ -1597,18 +1597,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 100,
-    backgroundColor: 'rgba(1, 184, 84, 0.08)',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
-    borderColor: 'rgba(1, 184, 84, 0.25)',
-    ...Platform.select({
-      web: { backdropFilter: 'blur(8px)' }
-    }) as any,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
   },
   amenityText: {
     fontFamily: 'Inter',
     fontSize: 13,
-    color: '#043529',
-    fontWeight: '700',
+    color: '#06392e',
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
 
   // ── Reviews ───────────────────────────────────────────

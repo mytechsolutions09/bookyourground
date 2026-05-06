@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, Share, ActivityIndicator, Animated, Easing, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { slugify } from '@/utils/helpers';
 import { 
   ChevronLeft, 
   ShoppingCart, 
@@ -33,7 +34,7 @@ export default function ProductDetailScreen() {
   const isCompact = windowWidth < 1024;
   const isSmall = windowWidth < 768;
   const isUltraNarrow = windowWidth < 350;
-  const { id } = useLocalSearchParams();
+  const { slug } = useLocalSearchParams();
   const router = useRouter();
   const { user } = useAuth();
   const { setTabBarVisible } = useUI();
@@ -69,37 +70,65 @@ export default function ProductDetailScreen() {
   }, []);
 
   useEffect(() => {
-    if (id) {
+    if (slug) {
       loadProduct();
-      checkIfFavorited();
       if (user) loadCartCount();
     }
-  }, [id, user?.id]);
+  }, [slug, user?.id]);
+
+  useEffect(() => {
+    if (product?.id && user) {
+      checkIfFavorited();
+    }
+  }, [product?.id, user]);
 
   const loadProduct = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(slug as string);
+      
+      let query = supabase
         .from('shop_products')
         .select(`
           *,
           category:shop_categories(name)
-        `)
-        .eq('id', id)
-        .single();
+        `);
+
+      if (isUuid) {
+        query = query.eq('id', slug);
+      } else {
+        const nameGuess = (slug as string).split('-').join(' ');
+        query = query.ilike('name', nameGuess);
+      }
+
+      const { data, error } = await query.maybeSingle();
       
-      if (error) throw error;
-      setProduct(data);
+      let finalProduct = data;
+
+      if (!finalProduct) {
+        const { data: allProds } = await supabase.from('shop_products').select('*, category:shop_categories(name)');
+        finalProduct = allProds?.find(p => slugify(p.name) === slug);
+      }
+      
+      if (!finalProduct) throw new Error('Product not found');
+      
+      setProduct(finalProduct);
+
+      // Redirect to proper slug if accessed via ID
+      if (isUuid && finalProduct.name) {
+        const properSlug = slugify(finalProduct.name);
+        router.replace(`/shop/${properSlug}`);
+      }
       // Auto-select first color
-      if (data.specifications?.colors && data.specifications.colors.length > 0) {
-        setSelectedColor(data.specifications.colors[0]);
+      if (finalProduct.specifications?.colors && finalProduct.specifications.colors.length > 0) {
+        setSelectedColor(finalProduct.specifications.colors[0]);
       } else {
         setSelectedColor({ name: 'Red Rush', hex: '#f8688a' });
       }
 
       // Auto-select first size
-      if (data.specifications?.sizes && data.specifications.sizes.length > 0) {
-        setSelectedSize(data.specifications.sizes[0]);
+      if (finalProduct.specifications?.sizes && finalProduct.specifications.sizes.length > 0) {
+        setSelectedSize(finalProduct.specifications.sizes[0]);
       } else {
         setSelectedSize(8);
       }
@@ -111,13 +140,13 @@ export default function ProductDetailScreen() {
   };
 
   const checkIfFavorited = async () => {
-    if (!user || !id) return;
+    if (!user || !product?.id) return;
     try {
       const { data, error } = await supabase
         .from('shop_favorites')
         .select('id')
         .eq('user_id', user.id)
-        .eq('product_id', id)
+        .eq('product_id', product.id)
         .single();
       
       setIsFavorited(!!data);
@@ -155,12 +184,12 @@ export default function ProductDetailScreen() {
           .from('shop_favorites')
           .delete()
           .eq('user_id', user.id)
-          .eq('product_id', id);
+          .eq('product_id', product.id);
         setIsFavorited(false);
       } else {
         await supabase
           .from('shop_favorites')
-          .upsert({ user_id: user.id, product_id: id });
+          .upsert({ user_id: user.id, product_id: product.id });
         setIsFavorited(true);
       }
     } catch (err) {
@@ -171,7 +200,7 @@ export default function ProductDetailScreen() {
   const handleShare = async () => {
     if (!product) return;
     try {
-      const shareUrl = Platform.OS === 'web' ? window.location.href : `https://bookyourground.com/shop/${id}`;
+      const shareUrl = Platform.OS === 'web' ? window.location.href : `https://bookyourground.com/shop/${slug}`;
       await Share.share({
         message: `Check out this ${product.name} on Cricket Hub!\n${shareUrl}`,
       });

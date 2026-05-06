@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { router, usePathname, useSegments, useLocalSearchParams } from 'expo-router';
 import {
-  Hop as Home, // still used for some public nav
+  House as Home, // still used for some public nav
   LayoutDashboard,
   Calendar,
   User,
@@ -70,7 +70,7 @@ interface WebLayoutProps {
   isPublicNoSidebar?: boolean;
 }
 
-const NavLink = ({
+const NavLink = React.memo(({
   href,
   icon: Icon,
   label,
@@ -110,7 +110,7 @@ const NavLink = ({
     hrefSegments.length > 0
       ? hrefSegments.length === segments.length &&
       hrefSegments.every((seg, i) => segments[i] === seg)
-      : currentPath === targetHref
+      : (currentPath === targetHref || pathname === href)
   );
   const iconColor = isActive ? '#00ea6b' : 'rgba(255,255,255,0.7)';
   const activeStyle = styles.navLinkActive;
@@ -127,7 +127,8 @@ const NavLink = ({
         if (disabled) return;
         const normalizedHref = normalize(href);
         const normalizedPath = normalize(pathname || '');
-        if (clean(normalizedPath) === clean(normalizedHref)) return;
+        // Only return early if the full path (including groups) matches EXACTLY
+        if (normalizedPath === normalizedHref) return;
 
         if (href === '/' || href === '') {
           router.replace('/' as any);
@@ -170,7 +171,7 @@ const NavLink = ({
       )}
     </TouchableOpacity>
   );
-};
+});
 
 export default function WebLayout({ children, noCard, hideHeader, viewMode, showAddForm, isPublicNoSidebar: propIsPublicNoSidebar }: WebLayoutProps) {
   const isCompact = useIsCompact();
@@ -180,7 +181,8 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
   const segments = useSegments();
   const { width } = useWindowDimensions();
   const renderCount = useRef(0);
-  if (__DEV__ && Platform.OS === 'web') {
+  const hasMounted = useHasMounted();
+  if (__DEV__ && Platform.OS === 'web' && renderCount.current < 5) {
     renderCount.current++;
     console.log('WebLayout render:', renderCount.current, pathname);
   }
@@ -201,6 +203,9 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
   const [showNotificationsDropdown, setShowNotificationsDropdown] = useState(false);
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const { isTabBarVisible } = useUI();
+  const isBottomBarVisibleRef = useRef(true);
+  const isNavbarVisibleRef = useRef(true);
+  const isScrolledRef = useRef(false);
   const [isBottomBarVisible, setIsBottomBarVisible] = useState(true);
   const [isNavbarVisible, setIsNavbarVisible] = useState(true);
   const [hasPayoutSetup, setHasPayoutSetup] = useState<boolean | null>(null);
@@ -438,23 +443,28 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
       
       const y = window.scrollY;
       
-      // Use setScrolled only when state changes to avoid unnecessary re-renders
-      setScrolled(prev => {
-        const isScrolled = y > 50;
-        if (prev === isScrolled) return prev;
-        return isScrolled;
-      });
+      const isScrolled = y > 50;
+      if (isScrolled !== isScrolledRef.current) {
+        isScrolledRef.current = isScrolled;
+        setScrolled(isScrolled);
+      }
 
-      // Only update bottom bar visibility from window scroll if we're NOT on a landing/marketing page
-      // (because those pages handle their own scroll events via mainScroll listener)
       if (!isLanding && !isMarketing && !isShop) {
         if (Math.abs(y - lastScrollPosRef.current) > 5) {
           if (y > lastScrollPosRef.current && y > 50) {
-            setIsBottomBarVisible(false);
-            setIsNavbarVisible(false);
+            if (isBottomBarVisibleRef.current) {
+              isBottomBarVisibleRef.current = false;
+              isNavbarVisibleRef.current = false;
+              setIsBottomBarVisible(false);
+              setIsNavbarVisible(false);
+            }
           } else if (y < lastScrollPosRef.current - 5 || y < 20) {
-            setIsBottomBarVisible(true);
-            setIsNavbarVisible(true);
+            if (!isBottomBarVisibleRef.current) {
+              isBottomBarVisibleRef.current = true;
+              isNavbarVisibleRef.current = true;
+              setIsBottomBarVisible(true);
+              setIsNavbarVisible(true);
+            }
           }
           lastScrollPosRef.current = y;
         }
@@ -464,19 +474,27 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     const sub = DeviceEventEmitter.addListener('mainScroll', (data) => {
       const y = data.y;
       
-      setScrolled(prev => {
-        const isScrolled = y > 50;
-        if (prev === isScrolled) return prev;
-        return isScrolled;
-      });
+      const isScrolled = y > 50;
+      if (isScrolled !== isScrolledRef.current) {
+        isScrolledRef.current = isScrolled;
+        setScrolled(isScrolled);
+      }
 
       if (Math.abs(y - lastScrollPosRef.current) > 10) {
         if (y > lastScrollPosRef.current && y > 100) {
-          setIsBottomBarVisible(prev => prev === false ? prev : false);
-          setIsNavbarVisible(prev => prev === false ? prev : false);
+          if (isBottomBarVisibleRef.current) {
+            isBottomBarVisibleRef.current = false;
+            isNavbarVisibleRef.current = false;
+            setIsBottomBarVisible(false);
+            setIsNavbarVisible(false);
+          }
         } else if (y < lastScrollPosRef.current || y < 50) {
-          setIsBottomBarVisible(true);
-          setIsNavbarVisible(true);
+          if (!isBottomBarVisibleRef.current) {
+            isBottomBarVisibleRef.current = true;
+            isNavbarVisibleRef.current = true;
+            setIsBottomBarVisible(true);
+            setIsNavbarVisible(true);
+          }
         }
         lastScrollPosRef.current = y;
       }
@@ -616,6 +634,14 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
 
   if (Platform.OS !== 'web') {
     return <>{children}</>;
+  }
+
+  if (!hasMounted) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#F5F5F5', justifyContent: 'center', alignItems: 'center' }}>
+        {children}
+      </View>
+    );
   }
 
   return (
@@ -787,11 +813,13 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
 
                     {!((cleanPath === '/book-my-ground' || cleanPath === '/find-an-opponent')) && (
                       <>
-                        <TouchableOpacity onPress={() => router.push('/cricket/player-profile' as any)}>
-                          <Text style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}>
-                            CRICKET
-                          </Text>
-                        </TouchableOpacity>
+                    {isAuthenticated && (
+                      <TouchableOpacity onPress={() => router.push('/cricket/player-profile' as any)}>
+                        <Text style={[styles.headerPrimaryButtonText, scrolled && styles.headerPrimaryButtonTextScrolled]}>
+                          CRICKET
+                        </Text>
+                      </TouchableOpacity>
+                    )}
 
                         {isLanding && (
                           <>
@@ -1326,7 +1354,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
               (item.label === 'Cricket' && cleanPath.startsWith('/cricket')) ||
               (item.label === 'Shop' && cleanPath.startsWith('/shop')) ||
               (item.label === 'Search' && cleanPath.startsWith('/search')) ||
-              (item.href === '/grounds' && cleanPath === '/book-my-ground') ||
+              (item.href === '/book-my-ground' && cleanPath === '/book-my-ground') ||
               (item.href === '/favorites' && cleanPath === '/favorites') ||
               (item.href === '/' && cleanPath === '');
             return (
@@ -1361,10 +1389,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5F5',
+    width: '100%',
     ...Platform.select({
       web: {
         overflow: 'hidden' as any,
         height: '100vh' as any,
+        minHeight: '100vh' as any,
       }
     })
   },

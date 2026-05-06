@@ -1657,19 +1657,33 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                   ? searchSlotPriceByGroundId[g.id]!
                   : null;
 
-              const currentBasePrice = slotCustom ?? g.base_price_per_hour ?? 0;
-              let displayPricePerUnit: number;
-              let unitLabelOverride: string;
+              // If a slot is chosen, we prioritize the slot-specific price (from DB or ground base).
+              // If no slot is chosen, we pass null to GroundCard so it can show "from ₹min_price".
+              let displayPricePerUnit: number | null = null;
+              let unitLabelOverride: string | undefined;
 
-              if (isBox) {
-                displayPricePerUnit = currentBasePrice;
-                unitLabelOverride = '/hr';
+              if (wantsSlotFilter) {
+                const currentBasePrice = slotCustom ?? g.base_price_per_hour ?? g.min_price ?? 0;
+                if (isBox) {
+                  displayPricePerUnit = currentBasePrice;
+                  unitLabelOverride = '/hr';
+                } else if (teamType === 'one') {
+                  displayPricePerUnit = Math.round((currentBasePrice / 2) * 100) / 100;
+                  unitLabelOverride = ' / team';
+                } else {
+                  displayPricePerUnit = currentBasePrice;
+                  unitLabelOverride = ' / match';
+                }
               } else {
-                displayPricePerUnit =
-                  teamType === 'one'
-                    ? Math.round((currentBasePrice / 2) * 100) / 100
-                    : currentBasePrice;
-                unitLabelOverride = ' / match';
+                // Default view (no specific slot chosen): pass half-min-price if "1 team" selected
+                const startingBase = g.min_price || g.base_price_per_hour || 0;
+                if (teamType === 'one' && !isBox) {
+                  displayPricePerUnit = Math.round((startingBase / 2) * 100) / 100;
+                  unitLabelOverride = ' / team';
+                } else {
+                  displayPricePerUnit = null;
+                  unitLabelOverride = undefined;
+                }
               }
 
               return (
@@ -1702,6 +1716,8 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                     showBookingSchedule={false}
                     showBookButton={wantsSlotFilter}
                     glass={premiumCards}
+                    hideTeamPrice={teamType === 'one'}
+                    showFromLabel={!wantsSlotFilter}
                   />
                 </View>
               );

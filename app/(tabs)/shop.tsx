@@ -29,6 +29,7 @@ import {
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { slugify } from '@/utils/helpers';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import WebLayout from '@/components/web/WebLayout';
 import Animated, { 
@@ -355,7 +356,10 @@ export default function ShopScreen() {
           { width: cardWidth },
           pressed && { transform: [{ scale: 0.98 }] }
         ]}
-        onPress={() => router.push({ pathname: '/shop/[id]', params: { id: product.id } })}
+        onPress={() => {
+          const slug = slugify(product.name);
+          router.push({ pathname: '/shop/[slug]', params: { slug } });
+        }}
       >
         <View style={[styles.imageWrapper, width < 600 && { height: 280 }]}>
           <Image 

@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUI } from '@/contexts/UIContext';
 import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
+import { slugify } from '@/utils/helpers';
 
 export default function CartScreen() {
   const { width } = useWindowDimensions();
@@ -114,51 +115,58 @@ export default function CartScreen() {
           <View>
             <View style={styles.itemsSection}>
               {cartItems.map((item) => (
-                <View key={item.id} style={styles.cartItem}>
-                  <Image 
-                    source={{ uri: item.product.images?.[0] || 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=400&q=80' }} 
-                    style={styles.itemImage} 
-                  />
-                  <View style={styles.itemInfo}>
-                    <Text style={styles.itemName} numberOfLines={1}>{item.product.name}</Text>
-                    {item.selected_attributes && (
-                      <View style={styles.attributesRow}>
-                        {item.selected_attributes.size && (
-                          <Text style={styles.attributeText}>Size: {item.selected_attributes.size}</Text>
-                        )}
-                        {item.selected_attributes.color && (
-                          <Text style={styles.attributeText}>Color: {item.selected_attributes.color}</Text>
-                        )}
-                      </View>
-                    )}
-                    <Text style={styles.itemCategory}>{item.product.tag || 'Standard'}</Text>
-                    <Text style={styles.itemPrice}>₹{item.product.price.toLocaleString('en-IN')}</Text>
-                    
-                    <View style={styles.qtyRow}>
-                      <View style={styles.qtySelector}>
+                  <TouchableOpacity 
+                    key={item.id} 
+                    style={styles.cartItem}
+                    onPress={() => {
+                      const slug = slugify(item.product.name);
+                      router.push(`/shop/${slug}`);
+                    }}
+                  >
+                    <Image 
+                      source={{ uri: item.product.images?.[0] || 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=400&q=80' }} 
+                      style={styles.itemImage} 
+                    />
+                    <View style={styles.itemInfo}>
+                      <Text style={styles.itemName} numberOfLines={1}>{item.product.name}</Text>
+                      {item.selected_attributes && (
+                        <View style={styles.attributesRow}>
+                          {item.selected_attributes.size && (
+                            <Text style={styles.attributeText}>Size: {item.selected_attributes.size}</Text>
+                          )}
+                          {item.selected_attributes.color && (
+                            <Text style={styles.attributeText}>Color: {item.selected_attributes.color}</Text>
+                          )}
+                        </View>
+                      )}
+                      <Text style={styles.itemCategory}>{item.product.tag || 'Standard'}</Text>
+                      <Text style={styles.itemPrice}>₹{item.product.price.toLocaleString('en-IN')}</Text>
+                      
+                      <View style={styles.qtyRow}>
+                        <View style={styles.qtySelector}>
+                          <TouchableOpacity 
+                            onPress={() => updateQuantity(item.id, -1)}
+                            style={styles.qtyBtn}
+                          >
+                            <Minus size={16} color="#2b2f4b" />
+                          </TouchableOpacity>
+                          <Text style={styles.qtyText}>{item.quantity}</Text>
+                          <TouchableOpacity 
+                            onPress={() => updateQuantity(item.id, 1)}
+                            style={styles.qtyBtn}
+                          >
+                            <Plus size={16} color="#2b2f4b" />
+                          </TouchableOpacity>
+                        </View>
                         <TouchableOpacity 
-                          onPress={() => updateQuantity(item.id, -1)}
-                          style={styles.qtyBtn}
+                          onPress={() => removeItem(item.id)}
+                          style={styles.removeBtn}
                         >
-                          <Minus size={16} color="#2b2f4b" />
-                        </TouchableOpacity>
-                        <Text style={styles.qtyText}>{item.quantity}</Text>
-                        <TouchableOpacity 
-                          onPress={() => updateQuantity(item.id, 1)}
-                          style={styles.qtyBtn}
-                        >
-                          <Plus size={16} color="#2b2f4b" />
+                          <Trash2 size={18} color="#EF4444" />
                         </TouchableOpacity>
                       </View>
-                      <TouchableOpacity 
-                        onPress={() => removeItem(item.id)}
-                        style={styles.removeBtn}
-                      >
-                        <Trash2 size={18} color="#EF4444" />
-                      </TouchableOpacity>
                     </View>
-                  </View>
-                </View>
+                  </TouchableOpacity>
               ))}
             </View>
 

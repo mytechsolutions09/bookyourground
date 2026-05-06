@@ -4,7 +4,7 @@ import { ChevronLeft, Package, Calendar, Clock, MapPin, CreditCard, ShieldCheck,
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUI } from '@/contexts/UIContext';
-import { formatDateTime } from '@/utils/helpers';
+import { formatDateTime, slugify } from '@/utils/helpers';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import WebLayout from '@/components/web/WebLayout';
 import { StatusBar } from 'expo-status-bar';
@@ -146,7 +146,15 @@ export default function OrderDetailsScreen() {
           {order.items?.map((item: any, index: number) => {
             const returnInfo = getReturnStatusInfo(item.return_status);
             return (
-              <View key={item.id} style={[styles.itemRow, index === order.items.length - 1 && { borderBottomWidth: 0 }]}>
+              <TouchableOpacity 
+                key={item.id} 
+                style={[styles.itemRow, index === order.items.length - 1 && { borderBottomWidth: 0 }]}
+                onPress={() => {
+                  if (item.product?.name) {
+                    router.push(`/shop/${slugify(item.product.name)}`);
+                  }
+                }}
+              >
                 <Image 
                   source={{ uri: item.product?.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200&q=80' }} 
                   style={styles.itemImage} 
@@ -183,7 +191,8 @@ export default function OrderDetailsScreen() {
                         return (
                           <TouchableOpacity 
                             style={styles.returnBtn}
-                            onPress={() => {
+                            onPress={(e) => {
+                              e.stopPropagation(); // Prevent going to product page
                               setSelectedItem(item);
                               setReturnModalVisible(true);
                             }}
@@ -204,7 +213,7 @@ export default function OrderDetailsScreen() {
                     })()
                   )}
                 </View>
-              </View>
+              </TouchableOpacity>
             );
           })}
         </View>

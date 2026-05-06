@@ -33,6 +33,8 @@ interface GroundCardProps {
   hideTeamPrice?: boolean;
   /** Whether the card is being viewed by the owner (shows approval status tags). */
   isOwnerView?: boolean;
+  /** Force show "from" label even if displayPricePerUnit is set. */
+  showFromLabel?: boolean;
 }
 
 export default function GroundCard({
@@ -51,6 +53,7 @@ export default function GroundCard({
   onUtilizationPress,
   hideTeamPrice = false,
   isOwnerView = false,
+  showFromLabel = false,
 }: GroundCardProps) {
   const { width } = useWindowDimensions();
   const isUltraNarrow = width < 350;
@@ -139,7 +142,7 @@ export default function GroundCard({
               </View>
               <View style={styles.glassPriceBlock}>
                 <Text style={priceStyle}>
-                  {formatCurrency(displayPricePerUnit ?? ground.base_price_per_hour ?? 0)}
+                  {formatCurrency(basePrice)}
                 </Text>
                 <Text style={styles.priceUnitGlass}>
                   {unitLabelOverride ?? (String(ground.pitch_type ?? '').toLowerCase().includes('box') ? '/hr' : ' / match')}
@@ -241,9 +244,13 @@ export default function GroundCard({
                 {ground.name}
               </Text>
               <View style={styles.priceBlock}>
-                {!isUltraNarrow && <Text style={styles.priceFromLabel}>from</Text>}
+                {!isUltraNarrow && (showFromLabel || displayPricePerUnit === null || displayPricePerUnit === undefined) && (
+                  <Text style={styles.priceFromLabel}>from</Text>
+                )}
                 <Text style={[styles.priceValueNew, compact && { fontSize: 16 }]}>₹{basePrice}</Text>
-                <Text style={styles.priceUnitNew}>/slot</Text>
+                <Text style={styles.priceUnitNew}>
+                  {unitLabelOverride ?? (String(ground.pitch_type ?? '').toLowerCase().includes('box') ? '/hr' : ' / match')}
+                </Text>
               </View>
             </View>
 
