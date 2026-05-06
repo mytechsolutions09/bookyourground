@@ -13,10 +13,11 @@ import {
   BarChart2,
   Search,
 } from 'lucide-react-native';
-import { ActivityIndicator, Platform, useWindowDimensions, View, Pressable, StyleSheet, Text as RNText } from 'react-native';
+import { ActivityIndicator, Platform, View, Pressable, StyleSheet, Text as RNText } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUI } from '@/contexts/UIContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useIsCompact } from '@/hooks/useIsCompact';
 
 const AUTH_REQUIRED_TAB = new Set(['dashboard', 'bookings', 'profile']);
 
@@ -80,7 +81,7 @@ const CustomTabBar = ({ state, descriptors, navigation, router, insets, isTabBar
 
 export default function TabLayout() {
   const router = useRouter();
-  const { width } = useWindowDimensions();
+  const isCompact = useIsCompact();
   const { user, loading } = useAuth();
   const segments = useSegments();
   const pathname = usePathname() ?? '';
@@ -96,7 +97,7 @@ export default function TabLayout() {
     return false;
   }, [segments, pathname]);
 
-  const hideTabBarOnBigScreens = Platform.OS === 'web' && width >= 900;
+  const hideTabBarOnBigScreens = Platform.OS === 'web' && !isCompact;
 
   const nativeTabBarOff = {
     tabBar: () => null,

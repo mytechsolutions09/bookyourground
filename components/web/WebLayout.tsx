@@ -174,6 +174,12 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
   const pathname = usePathname();
   const segments = useSegments();
   const { width } = useWindowDimensions();
+  const renderCount = useRef(0);
+  if (__DEV__ && Platform.OS === 'web') {
+    renderCount.current++;
+    console.log('WebLayout render:', renderCount.current, pathname);
+  }
+
   const [scrolled, setScrolled] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
@@ -194,23 +200,38 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
   const [isNavbarVisible, setIsNavbarVisible] = useState(true);
   const [hasPayoutSetup, setHasPayoutSetup] = useState<boolean | null>(null);
   const isInTabs = useMemo(() => segments.includes('(tabs)'), [segments]);
-   const groundsHref = '/book-my-ground';
-  const cleanPath = (pathname || '').split('?')[0];
-  const isLanding = cleanPath === '/' || cleanPath === '';
-  const isMarketing = (cleanPath === '/book-my-ground' || cleanPath === '/find-an-opponent' || cleanPath === '/grounds' || cleanPath === '/(tabs)/grounds') && !segments.includes('(admin)');
-  const isShop = cleanPath === '/shop' || cleanPath.startsWith('/shop/');
-  // Treat only ground detail routes as "ground details" (hide sidebar, use hero header).
-  // Plain /grounds (lists, dashboards) should use the normal app navbar.
-  const isGroundDetails =
-    cleanPath.startsWith('/grounds/') || cleanPath.startsWith('/ground/');
-  const isBookingDetails = cleanPath.startsWith('/bookings/');
-  const isCheckoutPage = cleanPath.startsWith('/checkout/');
-  const isLegalOrInfoPage =
+  const groundsHref = '/book-my-ground';
+  
+  const cleanPath = useMemo(() => (pathname || '').split('?')[0], [pathname]);
+  
+  const isLanding = useMemo(() => cleanPath === '/' || cleanPath === '', [cleanPath]);
+  
+  const isMarketing = useMemo(() => 
+    (cleanPath === '/book-my-ground' || 
+     cleanPath === '/find-an-opponent' || 
+     cleanPath === '/grounds' || 
+     cleanPath === '/(tabs)/grounds') && !segments.includes('(admin)'),
+    [cleanPath, segments]
+  );
+
+  const isShop = useMemo(() => cleanPath === '/shop' || cleanPath.startsWith('/shop/'), [cleanPath]);
+  
+  const isGroundDetails = useMemo(() =>
+    cleanPath.startsWith('/grounds/') || cleanPath.startsWith('/ground/'),
+    [cleanPath]
+  );
+
+  const isBookingDetails = useMemo(() => cleanPath.startsWith('/bookings/'), [cleanPath]);
+  const isCheckoutPage = useMemo(() => cleanPath.startsWith('/checkout/'), [cleanPath]);
+  
+  const isLegalOrInfoPage = useMemo(() =>
     cleanPath === '/terms' ||
     cleanPath === '/privacy' ||
     cleanPath === '/refund-policy' ||
     cleanPath === '/contact' ||
-    cleanPath === '/cricket/player-profile';
+    cleanPath === '/cricket/player-profile',
+    [cleanPath]
+  );
   
   const lastScrollPosRef = useRef(0);
   const searchInputRef = React.useRef<TextInput>(null);
@@ -292,7 +313,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     return () => clearInterval(interval);
   }, [fetchNotifications]);
 
-  const markAllAsRead = async () => {
+  const markAllAsRead = useCallback(async () => {
     if (!user?.id) return;
     try {
       await supabase
@@ -305,7 +326,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     } catch (err) {
       console.error('Mark as read error:', err);
     }
-  };
+  }, [user?.id, fetchNotifications]);
 
   const performSearch = useCallback(async (query: string) => {
     if (query.length < 2) {
@@ -408,8 +429,16 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
 
   useEffect(() => {
     const handleScroll = () => {
+      if (Platform.OS !== 'web') return;
+      
       const y = window.scrollY;
-      setScrolled(y > 50);
+      
+      // Use setScrolled only when state changes to avoid unnecessary re-renders
+      setScrolled(prev => {
+        const isScrolled = y > 50;
+        if (prev === isScrolled) return prev;
+        return isScrolled;
+      });
 
       // Only update bottom bar visibility from window scroll if we're NOT on a landing/marketing page
       // (because those pages handle their own scroll events via mainScroll listener)
@@ -428,8 +457,14 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     };
 
     const sub = DeviceEventEmitter.addListener('mainScroll', (data) => {
-      setScrolled(data.y > 50);
       const y = data.y;
+      
+      setScrolled(prev => {
+        const isScrolled = y > 50;
+        if (prev === isScrolled) return prev;
+        return isScrolled;
+      });
+
       if (Math.abs(y - lastScrollPosRef.current) > 10) {
         if (y > lastScrollPosRef.current && y > 100) {
           setIsBottomBarVisible(false);
@@ -443,9 +478,13 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     });
 
     if (Platform.OS === 'web') {
-      handleScroll();
+      // Initialize scroll state
+      const initialY = window.scrollY;
+      if (initialY > 50) setScrolled(true);
+      
       window.addEventListener('scroll', handleScroll, { passive: true });
     }
+    
     return () => {
       if (Platform.OS === 'web') {
         window.removeEventListener('scroll', handleScroll);
@@ -484,7 +523,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     '/cricketdata',
     '/(admin)/cricketdata',
   ];
-  const isAdminRoute =
+  const isAdminRoute = useMemo(() => 
     adminPathnames.includes(cleanPath) ||
     cleanPath.startsWith('/cricketdata') ||
     cleanPath.startsWith('/(admin)/') ||
@@ -492,50 +531,64 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     cleanPath === '/add-ground' ||
     cleanPath === '/(owner)/add-ground' ||
     cleanPath === '/matches' ||
-    cleanPath === '/find-an-opponent' ||
-    cleanPath === '/matches' ||
-    cleanPath === '/find-an-opponent';
+    cleanPath === '/find-an-opponent',
+    [cleanPath]
+  );
   // On ground info (/grounds/[id]) and booking info (/bookings/[id]) pages,
   // hide the left sidebar for all roles so the content can take full width.
   const isGroundInfoPage = isGroundDetails;
   const adminEmail = 'invirtualcoin@gmail.com';
-  const isSuperAdmin =
+  
+  const isSuperAdmin = useMemo(() => 
     profile?.role === 'super_admin' ||
-    (user?.email?.toLowerCase() ?? '') === adminEmail.toLowerCase();
-  const isGroundOwner = profile?.role === 'ground_owner';
-  const isOwnerGroundsDashboard = isGroundOwner && cleanPath === '/grounds';
-  const isUserRoute =
+    (user?.email?.toLowerCase() ?? '') === adminEmail.toLowerCase(),
+    [profile?.role, user?.email]
+  );
+  
+  const isGroundOwner = useMemo(() => profile?.role === 'ground_owner', [profile?.role]);
+  
+  const isOwnerGroundsDashboard = useMemo(() => isGroundOwner && cleanPath === '/grounds', [isGroundOwner, cleanPath]);
+  
+  const isUserRoute = useMemo(() => 
     !isGroundOwner &&
     !isSuperAdmin &&
     (cleanPath.includes('/dashboard') ||
       cleanPath.includes('/bookings') ||
-      cleanPath.includes('/profile'));
+      cleanPath.includes('/profile')),
+    [isGroundOwner, isSuperAdmin, cleanPath]
+  );
 
   // On ground info (/grounds/[id]) and booking info (/bookings/[id]) pages,
   // hide the left sidebar for all roles so the content can take full width.
-  const isPublicNoSidebar =
-    propIsPublicNoSidebar || isLanding || (isMarketing && !isSuperAdmin && !isOwnerGroundsDashboard) || isGroundInfoPage || isBookingDetails || isCheckoutPage || isLegalOrInfoPage || (cleanPath === '/find-an-opponent' && !isSuperAdmin) || cleanPath === '/(tabs)/grounds' || cleanPath === '/shop' || cleanPath.startsWith('/shop/') || cleanPath === '/search' || cleanPath.startsWith('/live/') || (cleanPath.startsWith('/cricket/') && !cleanPath.startsWith('/cricketdata'));
-  const isOwnerNoHeaderPage = isGroundOwner && !isCompact && (
-    cleanPath === '/profile' || 
-    cleanPath === '/(tabs)/profile' || 
-    cleanPath === '/owner-dashboard' ||
-    cleanPath === '/(owner)/owner-dashboard' ||
-    cleanPath === '/manage-grounds' ||
-    cleanPath === '/(owner)/manage-grounds' ||
-    cleanPath === '/inventory' ||
-    cleanPath === '/(owner)/inventory' ||
-    cleanPath === '/wallet' ||
-    cleanPath === '/(owner)/wallet' ||
-    cleanPath === '/ground-bookings' ||
-    cleanPath === '/(owner)/ground-bookings' ||
-    cleanPath === '/profile/orders' ||
-    cleanPath === '/earnings' ||
-    cleanPath === '/(owner)/earnings' ||
-    cleanPath === '/settings' ||
-    cleanPath === '/(owner)/settings' ||
-    cleanPath === '/support' ||
-    cleanPath === '/(tabs)/support'
+  const isPublicNoSidebar = useMemo(() => 
+    propIsPublicNoSidebar || isLanding || (isMarketing && !isSuperAdmin && !isOwnerGroundsDashboard) || isGroundInfoPage || isBookingDetails || isCheckoutPage || isLegalOrInfoPage || (cleanPath === '/find-an-opponent' && !isSuperAdmin) || cleanPath === '/(tabs)/grounds' || cleanPath === '/shop' || cleanPath.startsWith('/shop/') || cleanPath === '/search' || cleanPath.startsWith('/live/') || (cleanPath.startsWith('/cricket/') && !cleanPath.startsWith('/cricketdata')),
+    [propIsPublicNoSidebar, isLanding, isMarketing, isSuperAdmin, isOwnerGroundsDashboard, isGroundInfoPage, isBookingDetails, isCheckoutPage, isLegalOrInfoPage, cleanPath]
   );
+
+  const shouldHideAppHeader = useMemo(() => {
+    if (isCompact) return false;
+    
+    if (isGroundOwner) {
+      const ownerRoutes = [
+        '/profile', '/(tabs)/profile', '/owner-dashboard', '/(owner)/owner-dashboard',
+        '/manage-grounds', '/(owner)/manage-grounds', '/inventory', '/(owner)/inventory',
+        '/wallet', '/(owner)/wallet', '/ground-bookings', '/(owner)/ground-bookings',
+        '/profile/orders', '/earnings', '/(owner)/earnings', '/settings', '/(owner)/settings',
+        '/support', '/(tabs)/support'
+      ];
+      return ownerRoutes.includes(cleanPath);
+    }
+    
+    if (!isGroundOwner && !isSuperAdmin) {
+      const userRoutes = [
+        '/profile/orders', '/dashboard', '/(tabs)/dashboard', '/profile', '/(tabs)/profile',
+        '/bookings', '/(tabs)/bookings', '/favorites', '/wallet', '/support', '/(tabs)/support'
+      ];
+      return userRoutes.includes(cleanPath);
+    }
+    
+    return false;
+  }, [isCompact, isGroundOwner, isSuperAdmin, cleanPath]);
 
   // Treat the presence of a Supabase `user` as authenticated even if `profile`
   // hasn't loaded yet (prevents briefly showing "Sign In").
@@ -824,7 +877,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
         </View>
       )}
 
-      {!hideHeader && !isLanding && !isMarketing && (!isGroundDetails || isOwnerGroundsDashboard) && !(isCheckoutPage && isCompact) && !isOwnerNoHeaderPage && (
+      {!hideHeader && !isLanding && !isMarketing && (!isGroundDetails || isOwnerGroundsDashboard) && !(isCheckoutPage && isCompact) && !shouldHideAppHeader && (
         <View
           style={[
             styles.header,
@@ -999,7 +1052,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                 isAdminRoute && { transition: 'width 0.3s ease-in-out' } as any,
               ]}
             >
-              {isOwnerNoHeaderPage && (
+              {shouldHideAppHeader && (
                 <TouchableOpacity
                   onPress={() => router.replace('/')}
                   style={[styles.logo, { marginBottom: 32, paddingHorizontal: 4 }]}
@@ -1259,7 +1312,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
             flex: 1
           },
           !isPublicNoSidebar && !isCompact && !noCard && styles.mainAppCard,
-          isOwnerNoHeaderPage && { maxHeight: '100vh', paddingTop: 32 }
+          shouldHideAppHeader && { maxHeight: '100vh', paddingTop: 32 }
         ]}>
           {children}
         </View>

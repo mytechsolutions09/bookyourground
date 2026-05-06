@@ -695,6 +695,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
     ...Platform.select({
       web: {
         backdropFilter: 'blur(24px) saturate(180%)',

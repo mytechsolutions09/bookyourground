@@ -75,18 +75,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // console.log('Auth state change:', event, !!session);
+      // Only update if the session or user has actually changed to prevent re-render loops
+      setSession(prev => {
+        if (prev?.access_token === session?.access_token) return prev;
+        return session;
+      });
+
+      const newUser = session?.user ?? null;
+      setUser(prev => {
+        if (prev?.id === newUser?.id) return prev;
+        return newUser;
+      });
       
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        await loadProfile(session.user.id);
+      if (newUser) {
+        // Only reload profile if user ID changed or profile is missing
+        if (!profile || profile.id !== newUser.id) {
+          await loadProfile(newUser.id);
+        }
         // Schedule 6 AM reminders for today's matches
-        void scheduleMatchReminders(session.user.id);
+        void scheduleMatchReminders(newUser.id);
       } else {
         setProfile(null);
-        // If we get a SIGNED_OUT event or similar without a session, ensure loading is stopped
         setLoading(false);
       }
     });

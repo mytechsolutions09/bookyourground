@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Platform, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -28,6 +28,11 @@ export default function RootLayout() {
   });
 
   const splashHidden = useRef(false);
+  const renderCount = useRef(0);
+  if (__DEV__ && Platform.OS === 'web') {
+    renderCount.current++;
+    console.log('Root layout render:', renderCount.current);
+  }
 
   useFrameworkReady();
 
