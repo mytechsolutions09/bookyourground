@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView as RNScrollView, ActivityIndicator, useWindowDimensions, Platform, TouchableOpacity, Image, Share, PanResponder, Dimensions } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -305,31 +306,62 @@ const getInningsAnalysisData = (innLogs: any[], totalOvers: number) => {
 };
 
 const getPartnerships = (innLogs: any[]) => {
+  if (!innLogs || innLogs.length === 0) return [];
+  
   const ps: any[] = [];
-  let currentP = { runs: 0, balls: 0, b1: '', b2: '' };
-  const sorted = [...innLogs].sort((a,b) => (a.over_number * 10 + a.ball_number) - (b.over_number * 10 + b.ball_number));
+  let currentP: any = null;
+  
+  const sorted = [...innLogs].sort((a,b) => (a.over_number * 100 + a.ball_number) - (b.over_number * 100 + b.ball_number));
   
   sorted.forEach(b => {
-    currentP.runs += (b.runs || 0) + (b.extras || 0);
-    if (!b.extra_type || b.extra_type === 'noball') currentP.balls += 1;
+    if (!currentP) {
+      currentP = { 
+        batter_1_name: b.batter_name || 'Striker', batter_1_runs: 0, batter_1_balls: 0,
+        batter_2_name: '', batter_2_runs: 0, batter_2_balls: 0,
+        extras: 0, total_runs: 0, wicket_number: ps.length + 1
+      };
+    }
+    
+    if (!currentP.batter_2_name && b.batter_name && b.batter_name !== currentP.batter_1_name) {
+      currentP.batter_2_name = b.batter_name;
+    }
+    
+    const runs = b.runs || 0;
+    const extras = b.extras || 0;
+    currentP.total_runs += (runs + extras);
+    currentP.extras += extras;
+    
+    if (b.batter_name === currentP.batter_1_name) {
+      currentP.batter_1_runs += runs;
+      if (!b.extra_type || b.extra_type === 'noball') currentP.batter_1_balls++;
+    } else if (b.batter_name === currentP.batter_2_name) {
+      currentP.batter_2_runs += runs;
+      if (!b.extra_type || b.extra_type === 'noball') currentP.batter_2_balls++;
+    } else if (b.batter_name && !currentP.batter_2_name) {
+      currentP.batter_2_name = b.batter_name;
+      currentP.batter_2_runs += runs;
+      if (!b.extra_type || b.extra_type === 'noball') currentP.batter_2_balls++;
+    }
+    
     if (b.is_wicket) {
-      ps.push({ ...currentP, out: b.batter_name });
-      currentP = { runs: 0, balls: 0, b1: '', b2: '' };
+      ps.push({ ...currentP });
+      currentP = null;
     }
   });
-  // Add last active partnership if any
-  if (currentP.balls > 0) ps.push({ ...currentP, out: 'Ongoing' });
+  
+  if (currentP) ps.push({ ...currentP });
   return ps;
 };
 
 const getRunTypesData = (innLogs: any[]) => {
-  const counts = { '0': 0, '1': 0, '2': 0, '3': 0, '4': 0, '6': 0, 'Out': 0 };
+  const counts = { '0': 0, '1': 0, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0, 'Out': 0 };
   innLogs.forEach(b => {
     if (b.runs === 0 && !b.extra_type) counts['0']++;
     else if (b.runs === 1) counts['1']++;
     else if (b.runs === 2) counts['2']++;
     else if (b.runs === 3) counts['3']++;
     else if (b.runs === 4) counts['4']++;
+    else if (b.runs === 5) counts['5']++;
     else if (b.runs === 6) counts['6']++;
     if (b.is_wicket) counts['Out']++;
   });
@@ -349,6 +381,7 @@ export default function LiveScorecard() {
   const [squadA, setSquadA] = useState<any[]>([]);
   const [squadB, setSquadB] = useState<any[]>([]);
   const [ballLogs, setBallLogs] = useState<any[]>([]);
+
   const [matchImages, setMatchImages] = useState<any[]>([]);
   const [inningsList, setInningsList] = useState<any[]>([]);
   const [partnerships, setPartnerships] = useState<any[]>([]);
@@ -356,7 +389,100 @@ export default function LiveScorecard() {
   const [isUploading, setIsUploading] = useState(false);
   const [commsInningsFilter, setCommsInningsFilter] = useState<'all' | 1 | 2>('all');
   const [showCommsDropdown, setShowCommsDropdown] = useState(false);
-  const [activeTab, setActiveTab] = useState('info');
+   const [commsTypeFilter, setCommsTypeFilter] = useState<'all' | 'overs' | 'wickets' | 'boundaries'>('all');
+   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
+   const [expandedMVPPlayer, setExpandedMVPPlayer] = useState<string | null>(null);
+   const [activeTab, setActiveTab] = useState('info');
+
+  const overSnapshots = useMemo(() => {
+    const snapshots: Record<string, any> = {};
+    if (!inningsList || inningsList.length === 0) return snapshots;
+
+    [1, 2].forEach(innNum => {
+      const inn = inningsList.find(i => Number(i.innings_number) === innNum);
+      const innLogs = ballLogs.filter(l => {
+        if (l.innings_id && inn) return l.innings_id === inn.id;
+        if (innNum === 1 && !l.innings_id) return true;
+        return false;
+      });
+
+      const sorted = [...innLogs].sort((a,b) => {
+        const aVal = (a.over_number || 0) * 100 + (a.ball_number || 0);
+        const bVal = (b.over_number || 0) * 100 + (b.ball_number || 0);
+        return aVal - bVal;
+      });
+
+      let totalRuns = 0;
+      let totalWickets = 0;
+      let batters: Record<string, any> = {};
+      let bowlers: Record<string, any> = {};
+      let lastBatter1: string | null = null;
+      let lastBatter2: string | null = null;
+      
+      let currentOver: number = -1;
+      let overRuns = 0;
+      let overWickets = 0;
+      let overSequence: string[] = [];
+
+      sorted.forEach((ball, idx) => {
+        const ballRuns = (ball.runs || 0) + (ball.extras || 0);
+        totalRuns += ballRuns;
+        if (ball.is_wicket) totalWickets += 1;
+
+        // Player Stats tracking
+        const bName = ball.batter_name || ball.striker_name || ball.player_name;
+        const nbName = ball.non_striker_name;
+        const bowlerName = ball.bowler_name;
+
+        if (bName) {
+          if (!batters[bName]) batters[bName] = { runs: 0, balls: 0 };
+          batters[bName].runs += (ball.runs || 0);
+          if (!ball.extra_type || (ball.extra_type !== 'wide' && ball.extra_type !== 'noball')) {
+            batters[bName].balls += 1;
+          }
+          lastBatter1 = bName;
+        }
+        if (nbName) lastBatter2 = nbName;
+
+        if (bowlerName) {
+          if (!bowlers[bowlerName]) bowlers[bowlerName] = { runs: 0, wickets: 0, balls: 0 };
+          bowlers[bowlerName].runs += ballRuns;
+          if (ball.is_wicket) bowlers[bowlerName].wickets += 1;
+          if (!ball.extra_type || (ball.extra_type !== 'wide' && ball.extra_type !== 'noball')) {
+            bowlers[bowlerName].balls += 1;
+          }
+        }
+
+        if (ball.over_number !== currentOver) {
+          if (currentOver !== -1) {
+            snapshots[`${innNum}-${currentOver}`] = {
+              totalRuns, totalWickets, overRuns, overWickets, overSequence,
+              b1: lastBatter1 ? { name: lastBatter1, ...batters[lastBatter1] } : null,
+              b2: lastBatter2 ? { name: lastBatter2, ...batters[lastBatter2] } : null,
+              bowler: bowlerName ? { name: bowlerName, ...bowlers[bowlerName] } : null
+            };
+          }
+          currentOver = ball.over_number;
+          overRuns = 0;
+          overWickets = 0;
+          overSequence = [];
+        }
+        overRuns += ballRuns;
+        if (ball.is_wicket) overWickets += 1;
+        overSequence.push(ball.label);
+
+        if (idx === sorted.length - 1) {
+          snapshots[`${innNum}-${currentOver}`] = {
+            totalRuns, totalWickets, overRuns, overWickets, overSequence,
+            b1: lastBatter1 ? { name: lastBatter1, ...batters[lastBatter1] } : null,
+            b2: lastBatter2 ? { name: lastBatter2, ...batters[lastBatter2] } : null,
+            bowler: bowlerName ? { name: bowlerName, ...bowlers[bowlerName] } : null
+          };
+        }
+      });
+    });
+    return snapshots;
+  }, [ballLogs, inningsList]);
 
   const { width: windowWidth } = useWindowDimensions();
   const translateX = useSharedValue(0);
@@ -468,7 +594,7 @@ export default function LiveScorecard() {
           .single();
 
         if (error) throw error;
-        setMatchImages(prev => [...prev, data]);
+        setMatchImages(prev => [data, ...prev]);
       } catch (err) {
         console.error('Gallery upload error:', err);
       } finally {
@@ -481,31 +607,106 @@ export default function LiveScorecard() {
     const players: Record<string, any> = {};
     const ensurePlayer = (name: string) => {
       if (!players[name]) {
-        players[name] = { name, points: 0, runs: 0, balls: 0, wickets: 0, dots: 0, catches: 0, fours: 0, sixes: 0, team: '' };
+        players[name] = { 
+          name, points: 0, 
+          batting: 0, bowling: 0, fielding: 0,
+          runs: 0, balls: 0, wickets: 0, dots: 0, catches: 0, fours: 0, sixes: 0, team: '' 
+        };
       }
     };
+
+    // 1. Get team-level context and batting orders
+    // Ball logs are sorted by over DESC, so reverse for chronological order
+    const chronoLogs = [...ballLogs].reverse();
+    const teamContext: Record<string, { runs: number, balls: number, battingOrder: string[] }> = {};
+    
+    chronoLogs.forEach(ball => {
+      const innId = ball.innings_id || 'default';
+      if (!teamContext[innId]) teamContext[innId] = { runs: 0, balls: 0, battingOrder: [] };
+      
+      // Update team score (CricHeroes style: only runs that count towards team total)
+      teamContext[innId].runs += (ball.runs || 0) + (ball.extras || 0);
+      if (!['wide', 'penalty'].includes(ball.extra_type)) {
+        teamContext[innId].balls += 1;
+      }
+      
+      if (ball.batter_name && !teamContext[innId].battingOrder.includes(ball.batter_name)) {
+        teamContext[innId].battingOrder.push(ball.batter_name);
+      }
+    });
+
+    // 2. Constants for calculation
+    const matchOvers = match.overs || 20;
+    const baseRunsPerWicket = matchOvers <= 7 ? 12 : matchOvers <= 12 ? 14 : matchOvers <= 16 ? 16 : matchOvers <= 20 ? 18 : 22;
+    const strengthMap = [1, 1, 1, 1, 0.8, 0.8, 0.8, 0.8, 0.6, 0.6, 0.6]; // Batting position weight
+
+    // 3. Process Ball-by-Ball Contributions
     ballLogs.forEach(ball => {
+      const innId = ball.innings_id || 'default';
+      const context = teamContext[innId];
+      
+      // BATTING
       if (ball.batter_name) {
         ensurePlayer(ball.batter_name);
         players[ball.batter_name].runs += (ball.runs || 0);
-        players[ball.batter_name].balls += 1;
-        players[ball.batter_name].points += (ball.runs || 0);
-        if (ball.runs === 4) { players[ball.batter_name].points += 1; players[ball.batter_name].fours += 1; }
-        if (ball.runs === 6) { players[ball.batter_name].points += 2; players[ball.batter_name].sixes += 1; }
+        if (!['wide', 'penalty'].includes(ball.extra_type)) {
+          players[ball.batter_name].balls += 1;
+        }
       }
+
+      // BOWLING & FIELDING
       if (ball.bowler_name) {
         ensurePlayer(ball.bowler_name);
-        if (ball.is_wicket) { players[ball.bowler_name].wickets += 1; players[ball.bowler_name].points += 20; }
-        if (ball.runs === 0 && !ball.extra_type) { players[ball.bowler_name].dots += 1; players[ball.bowler_name].points += 1; }
+        if (ball.is_wicket) {
+          players[ball.bowler_name].wickets += 1;
+          
+          // Get batter's position in this innings
+          const batterPos = context.battingOrder.indexOf(ball.batter_name) + 1 || 11;
+          const wktWeight = strengthMap[Math.min(batterPos - 1, 10)];
+          const wktPts = (baseRunsPerWicket * wktWeight) / 10;
+          
+          players[ball.bowler_name].bowling += wktPts;
+          players[ball.bowler_name].points += wktPts;
+
+          // FIELDING (Catch/Stumping)
+          if (ball.fielder_name && ['caught', 'stumped'].includes(ball.dismissal_type)) {
+            ensurePlayer(ball.fielder_name);
+            const fieldingPts = wktPts * 0.2; // 20% of the wicket's points
+            players[ball.fielder_name].fielding += fieldingPts;
+            players[ball.fielder_name].points += fieldingPts;
+          }
+        }
       }
-      if (ball.fielder_name) { ensurePlayer(ball.fielder_name); players[ball.fielder_name].catches += 1; players[ball.fielder_name].points += 10; }
     });
+
+    // 4. Post-processing (Bonuses & Final Totals)
     Object.values(players).forEach(p => {
-      if (p.runs >= 50) p.points += 5;
-      if (p.runs >= 100) p.points += 10;
-      if (p.wickets >= 3) p.points += 10;
-      if (p.wickets >= 5) p.points += 20;
+      // Find team context for this player
+      // We look for which innings they batted in
+      const playerInnId = Object.keys(teamContext).find(id => teamContext[id].battingOrder.includes(p.name));
+      const context = playerInnId ? teamContext[playerInnId] : null;
+
+      // Batting MVP = Basic (Runs/10) + SR Bonus
+      const basicBattingMVP = p.runs / 10;
+      let srBonus = 0;
+      if (context && context.balls > 0 && p.balls > 0) {
+        const teamSR = (context.runs / context.balls) * 100;
+        const playerSR = (p.runs / p.balls) * 100;
+        if (playerSR > teamSR) {
+          srBonus = (playerSR / teamSR) * 0.08 * basicBattingMVP;
+        }
+      }
+      p.batting = basicBattingMVP + srBonus;
+      p.points += p.batting;
+
+      // Bowling Milestones
+      let bowlingBonus = 0;
+      if (p.wickets >= 3) bowlingBonus += 0.5;
+      if (p.wickets >= 5) bowlingBonus += 0.5; // Total 1.0 for 5 wickets
+      p.bowling += bowlingBonus;
+      p.points += bowlingBonus;
     });
+
     return Object.values(players).sort((a, b) => b.points - a.points);
   };
 
@@ -587,6 +788,64 @@ export default function LiveScorecard() {
     }).subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [matchId]);
+
+  const renderWagonWheel = () => {
+    // Filter balls with runs and area data
+    const scoredBalls = ballLogs.filter(b => (b.runs > 0 || b.is_wicket) && b.wagon_wheel_area);
+    
+    const AREA_ANGLES: Record<string, number> = {
+      'mid_on': 30, 'mid_wicket': 70, 'square_leg': 110, 'fine_leg': 150,
+      'third_man': 210, 'point': 250, 'cover': 290, 'mid_off': 330, 'straight': 0,
+      'mid on': 30, 'mid wicket': 70, 'square leg': 110, 'fine leg': 150,
+      'third man': 210, 'mid off': 330
+    };
+
+    if (scoredBalls.length === 0) return null;
+
+    const centerX = 175;
+    const centerY = 175;
+    const radius = 160;
+
+    return (
+      <View style={{ ...StyleSheet.absoluteFillObject }}>
+        {scoredBalls.map((ball, idx) => {
+          const area = ball.wagon_wheel_area?.toLowerCase();
+          const angle = AREA_ANGLES[area] ?? (Math.random() * 360);
+          const rad = (angle - 90) * (Math.PI / 180);
+          
+          let color = '#FFFFFF';
+          if (ball.runs === 1) color = '#3B82F6';
+          else if (ball.runs === 2 || ball.runs === 3) color = '#EAB308';
+          else if (ball.runs === 4) color = '#A855F7';
+          else if (ball.runs === 6) color = '#EF4444';
+          else if (ball.is_wicket) color = '#F97316';
+
+          return (
+             <View key={idx} style={{ position: 'absolute', left: 170, top: 170, width: 2, height: 2 }}>
+                <View style={{
+                   position: 'absolute',
+                   width: 155,
+                   height: ball.runs >= 4 ? 2 : 1,
+                   backgroundColor: color,
+                   transformOrigin: '0% 50%',
+                   transform: [{ rotate: `${angle - 90}deg` }],
+                   opacity: 0.9
+                }} />
+                <View style={{
+                   position: 'absolute',
+                   width: 4,
+                   height: 4,
+                   borderRadius: 2,
+                   backgroundColor: color,
+                   left: 155 * Math.cos(rad),
+                   top: 155 * Math.sin(rad),
+                }} />
+             </View>
+          );
+        })}
+      </View>
+    );
+  };
 
   if (!live || !match) return (
     <View style={styles.loadingContainer}>
@@ -688,7 +947,7 @@ export default function LiveScorecard() {
                     <Text style={styles.scDismissal}>{b.dismissal}</Text>
                   </View>
                   <View style={{ flexDirection: 'row' }}>
-                    <Text style={[styles.scVal, { width: 30, fontWeight: '700' }]}>{b.runs}</Text>
+                    <Text style={[styles.scVal, { width: 30, fontWeight: '600' }]}>{b.runs}</Text>
                     <Text style={[styles.scVal, { width: 30 }]}>{b.balls}</Text>
                     <Text style={[styles.scVal, { width: 25 }]}>{b.fours}</Text>
                     <Text style={[styles.scVal, { width: 25 }]}>{b.sixes}</Text>
@@ -892,7 +1151,7 @@ export default function LiveScorecard() {
             onScroll={onScroll}
             scrollEventThrottle={16}
             style={{ flex: 1, backgroundColor: '#F6F4F0' }} 
-            contentContainerStyle={{ paddingTop, paddingVertical: 12, paddingBottom: 100 }}>
+            contentContainerStyle={{ paddingTop: paddingTop + 12, paddingHorizontal: 12, paddingBottom: 100 }}>
             {/* Main Score Display in Scoreboard Tab */}
             <View style={[styles.scoreCard, { backgroundColor: '#043529', margin: 12, borderRadius: 12 }]}>
               <View style={styles.scoreRow}>
@@ -917,9 +1176,9 @@ export default function LiveScorecard() {
               </View>
 
               <View style={styles.statsRow}>
-                <View style={[styles.statPill, { backgroundColor: 'rgba(255,255,255,0.1)' }]}><Text style={styles.statPillText}>CRR <Text style={{ fontWeight: 'bold' }}>{live.crr}</Text></Text></View>
+                <View style={[styles.statPill, { backgroundColor: 'rgba(255,255,255,0.1)' }]}><Text style={styles.statPillText}>CRR <Text style={{ fontWeight: '600' }}>{live.crr}</Text></Text></View>
                 {live.rrr && live.innings_number === 2 && (
-                  <View style={[styles.statPill, { backgroundColor: 'rgba(255,255,255,0.1)' }]}><Text style={styles.statPillText}>RRR <Text style={{ fontWeight: 'bold' }}>{live.rrr}</Text></Text></View>
+                  <View style={[styles.statPill, { backgroundColor: 'rgba(255,255,255,0.1)' }]}><Text style={styles.statPillText}>RRR <Text style={{ fontWeight: '600' }}>{live.rrr}</Text></Text></View>
                 )}
               </View>
 
@@ -1052,12 +1311,16 @@ export default function LiveScorecard() {
                 </View>
              </View>
 
-             {/* Milestones */}
-             <View style={{ padding: 16 }}>
+              <View style={{ padding: 16 }}>
                 <Text style={styles.sectionHeading}>Milestones</Text>
                 <View style={styles.milestoneCard}>
                    <View style={styles.milestoneImageContainer}>
-                      <Image source={{ uri: 'https://images.pexels.com/photos/3628912/pexels-photo-3628912.jpeg' }} style={styles.milestoneImg} />
+                      <LinearGradient
+                        colors={['#0D9488', '#065F46']}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={StyleSheet.absoluteFill}
+                      />
                       <View style={styles.milestoneOverlay}>
                          <View style={styles.proBadge}><Text style={styles.proBadgeText}>PRO</Text></View>
                          <Text style={styles.milestoneType}>Terrific Hitter!!</Text>
@@ -1075,7 +1338,13 @@ export default function LiveScorecard() {
              <View style={{ padding: 16 }}>
                 <Text style={styles.sectionHeading}>Heroes of the match</Text>
                 <View style={styles.heroCard}>
-                   <Image source={{ uri: 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg' }} style={styles.heroImg} />
+                   <LinearGradient
+                     colors={['#111827', '#374151']}
+                     style={StyleSheet.absoluteFill}
+                   />
+                   <View style={{ ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' }}>
+                      <Trophy size={80} color="rgba(255,255,255,0.05)" />
+                   </View>
                    <View style={styles.heroOverlay}>
                       <Text style={styles.heroLabel}>Player of the match</Text>
                       <Share2 size={24} color="#FFFFFF" style={{ position: 'absolute', top: 16, right: 16 }} />
@@ -1086,88 +1355,105 @@ export default function LiveScorecard() {
         );
       case 'comms':
         return (
-          <View style={{ flex: 1, backgroundColor: '#F6F4F0', padding: 12 }}>
-             {/* Filter Bar */}
-             <View style={{ zIndex: 100 }}>
-                <View style={[styles.commsFilterBar, { backgroundColor: 'transparent', padding: 0, borderBottomWidth: 0, marginBottom: 12 }]}>
-                   <TouchableOpacity 
-                      style={[styles.commsFilterBtn, { flex: 1, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB' }]}
-                      onPress={() => setShowCommsDropdown(!showCommsDropdown)}
-                   >
-                      <Text style={styles.commsFilterText}>
-                         {commsInningsFilter === 'all' ? 'All Innings' : (
-                            inningsList.find(i => i.innings_number === commsInningsFilter)?.batting_team || `Innings ${commsInningsFilter}`
-                         )}
-                      </Text>
-                      <ChevronDown size={16} color="#4B5563" />
-                   </TouchableOpacity>
-                   <View style={[styles.commsFilterBtn, { flex: 1, marginLeft: 10, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB' }]}>
-                      <Text style={styles.commsFilterText}>Full Commentary</Text>
-                      <ChevronDown size={16} color="#4B5563" />
-                   </View>
-                </View>
+          <View style={{ flex: 1, backgroundColor: '#F6F4F0', padding: 12, paddingTop: paddingTop + 12 }}>
+              {/* Filter Bar */}
+              <View style={{ zIndex: 1000, flexDirection: 'row', gap: 12, marginBottom: 12 }}>
+                 {/* Innings Filter */}
+                 <View style={{ flex: 1 }}>
+                    <TouchableOpacity 
+                       style={styles.commsFilterDropdownTrigger}
+                       onPress={() => { setShowCommsDropdown(!showCommsDropdown); setShowTypeDropdown(false); }}
+                    >
+                       <Text style={styles.commsFilterText} numberOfLines={1}>
+                          {commsInningsFilter === 'all' ? 'All Innings' : (
+                             inningsList.find(i => i.innings_number === commsInningsFilter)?.batting_team || `Innings ${commsInningsFilter}`
+                          )}
+                       </Text>
+                       <ChevronDown size={14} color="#4B5563" />
+                    </TouchableOpacity>
 
-                {showCommsDropdown && (
-                   <View style={{ 
-                      position: 'absolute', 
-                      top: 45, 
-                      left: 0, 
-                      width: '48%', 
-                      backgroundColor: '#FFFFFF', 
-                      borderRadius: 12, 
-                      padding: 4, 
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 4 },
-                      shadowOpacity: 0.1,
-                      shadowRadius: 8,
-                      elevation: 5,
-                      borderWidth: 1,
-                      borderColor: '#F3F4F6',
-                      zIndex: 1001
-                   }}>
-                      {[
-                        { label: 'All Innings', value: 'all' },
-                        { label: inningsList.find(i => i.innings_number === 1)?.batting_team || 'Innings 1', value: 1 },
-                        ...(inningsList.length > 1 ? [{ label: inningsList.find(i => i.innings_number === 2)?.batting_team || 'Innings 2', value: 2 }] : [])
-                      ].map((opt, i) => (
-                        <TouchableOpacity 
-                           key={i} 
-                           style={{ 
-                              paddingVertical: 10, 
-                              paddingHorizontal: 12, 
-                              borderRadius: 8,
-                              backgroundColor: commsInningsFilter === opt.value ? '#F0FDFA' : 'transparent'
-                           }}
-                           onPress={() => {
-                              setCommsInningsFilter(opt.value as any);
-                              setShowCommsDropdown(false);
-                           }}
-                        >
-                           <Text style={{ 
-                              fontSize: 14, 
-                              fontWeight: commsInningsFilter === opt.value ? '700' : '400',
-                              color: commsInningsFilter === opt.value ? '#0D9488' : '#374151'
-                           }}>
-                              {opt.label}
-                           </Text>
-                        </TouchableOpacity>
-                      ))}
-                   </View>
-                )}
-             </View>
+                    {showCommsDropdown && (
+                       <View style={styles.commsDropdownMenu}>
+                          {[
+                            { label: 'All Innings', value: 'all' },
+                            { label: inningsList.find(i => i.innings_number === 1)?.batting_team || 'Innings 1', value: 1 },
+                            ...(inningsList.length > 1 ? [{ label: inningsList.find(i => i.innings_number === 2)?.batting_team || 'Innings 2', value: 2 }] : [])
+                          ].map((opt, i) => (
+                            <TouchableOpacity 
+                               key={i} 
+                               style={[styles.commsDropdownItem, commsInningsFilter === opt.value && styles.commsDropdownItemActive]}
+                               onPress={() => {
+                                  setCommsInningsFilter(opt.value as any);
+                                  setShowCommsDropdown(false);
+                               }}
+                            >
+                               <Text style={[styles.commsDropdownItemText, commsInningsFilter === opt.value && styles.commsDropdownItemTextActive]}>
+                                  {opt.label}
+                               </Text>
+                            </TouchableOpacity>
+                          ))}
+                       </View>
+                    )}
+                 </View>
+
+                 {/* Type Filter */}
+                 <View style={{ flex: 1 }}>
+                    <TouchableOpacity 
+                       style={styles.commsFilterDropdownTrigger}
+                       onPress={() => { setShowTypeDropdown(!showTypeDropdown); setShowCommsDropdown(false); }}
+                    >
+                       <Text style={styles.commsFilterText}>
+                          {commsTypeFilter === 'all' ? 'Full' : commsTypeFilter.charAt(0).toUpperCase() + commsTypeFilter.slice(1)}
+                       </Text>
+                       <ChevronDown size={14} color="#4B5563" />
+                    </TouchableOpacity>
+
+                    {showTypeDropdown && (
+                       <View style={styles.commsDropdownMenu}>
+                          {[
+                            { label: 'Full', value: 'all' },
+                            { label: 'Overs', value: 'overs' },
+                            { label: 'Wickets', value: 'wickets' },
+                            { label: 'Boundaries', value: 'boundaries' }
+                          ].map((opt, i) => (
+                            <TouchableOpacity 
+                               key={i} 
+                               style={[styles.commsDropdownItem, commsTypeFilter === opt.value && styles.commsDropdownItemActive]}
+                               onPress={() => {
+                                  setCommsTypeFilter(opt.value as any);
+                                  setShowTypeDropdown(false);
+                               }}
+                            >
+                               <Text style={[styles.commsDropdownItemText, commsTypeFilter === opt.value && styles.commsDropdownItemTextActive]}>
+                                  {opt.label}
+                               </Text>
+                            </TouchableOpacity>
+                          ))}
+                       </View>
+                    )}
+                 </View>
+              </View>
 
              <View style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB' }}>
                <Animated.ScrollView 
                  onScroll={onScroll}
                  scrollEventThrottle={16}
                  style={{ flex: 1 }}
-                 contentContainerStyle={{ paddingTop }}>
+                 contentContainerStyle={{ paddingTop: 0, paddingBottom: 100 }}>
 
                   {ballLogs
                     .filter(ball => {
-                       if (commsInningsFilter === 'all') return true;
-                       const inn = inningsList.find(i => i.innings_number === commsInningsFilter);
-                       return ball.innings_id === inn?.id;
+                       // Innings Filter
+                       if (commsInningsFilter !== 'all') {
+                          const inn = inningsList.find(i => i.innings_number === commsInningsFilter);
+                          if (ball.innings_id !== inn?.id) return false;
+                       }
+                       
+                       // Type Filter
+                       if (commsTypeFilter === 'wickets') return ball.is_wicket;
+                       if (commsTypeFilter === 'boundaries') return ball.runs === 4 || ball.runs === 6;
+                       
+                       return true;
                     })
                     .map((ball, idx, arr) => {
                     const nextBall = arr[idx+1];
@@ -1179,6 +1465,8 @@ export default function LiveScorecard() {
                     const overBalls = arr.filter(b => b.over_number === ball.over_number && b.innings_id === ball.innings_id);
                     const overRuns = overBalls.reduce((acc, b) => acc + (b.runs || 0) + (b.extras || 0), 0);
                     const overWks = overBalls.filter(b => b.is_wicket).length;
+
+                    if (commsTypeFilter === 'overs' && !isOverEnd && idx !== arr.length - 1) return null;
 
                     return (
                       <View key={ball.id}>
@@ -1240,12 +1528,56 @@ export default function LiveScorecard() {
                          </View>
                          
                          {/* Over Summary */}
-                         {isOverEnd && (
-                           <View style={styles.overSummaryBlock}>
-                              <View style={styles.overBadge}><Text style={styles.overBadgeText}>END OF OVER {nextBall.over_number + 1}</Text></View>
-                              <Text style={styles.overSummaryRuns}>{overRuns} Run{overRuns !== 1 ? 's' : ''} | {overWks} Wkt{overWks !== 1 ? 's' : ''}</Text>
-                           </View>
-                         )}
+                         {isOverEnd && (() => {
+                            const snap = overSnapshots[`${inn?.innings_number || 1}-${ball.over_number}`];
+                            if (!snap) return null;
+                            
+                            // Context message (Innings 2 specific)
+                            let contextMsg = "";
+                            if (live.innings_number === 2 && live.target && !isCompleted) {
+                               const runsNeeded = Math.max(0, live.target - snap.totalRuns);
+                               const ballsLeft = Math.max(0, (live.overs_total * 6) - (ball.over_number + 1) * 6);
+                               contextMsg = `needs ${runsNeeded} runs in ${ballsLeft} balls to win this match.`;
+                            }
+
+                            return (
+                              <View style={styles.overSummaryBlock}>
+                                 <View style={styles.overSummaryHeader}>
+                                    <View style={styles.overBadge}><Text style={styles.overBadgeText}>OVER {ball.over_number + 1}</Text></View>
+                                    <View style={styles.overSummaryMain}>
+                                       <Text style={styles.overSummarySequence}>{snap.overSequence.join('  ')}</Text>
+                                       <Text style={styles.overSummaryRunsWkts}>{snap.overRuns} Runs | {snap.overWickets} Wkt</Text>
+                                    </View>
+                                    <Text style={styles.overSummaryTotalScore}>{snap.totalRuns}/{snap.totalWickets}</Text>
+                                 </View>
+                                 
+                                 <View style={styles.overSummaryStatsRow}>
+                                    {snap.b1 && (
+                                       <View style={styles.overSummaryStatItem}>
+                                          <Text style={styles.overSummaryStatLabel} numberOfLines={1}>{snap.b1.name}</Text>
+                                          <Text style={styles.overSummaryStatValue}>{snap.b1.runs}({snap.b1.balls})</Text>
+                                       </View>
+                                    )}
+                                    {snap.b2 && (
+                                       <View style={styles.overSummaryStatItem}>
+                                          <Text style={styles.overSummaryStatLabel} numberOfLines={1}>{snap.b2.name}</Text>
+                                          <Text style={styles.overSummaryStatValue}>{snap.b2.runs}({snap.b2.balls})</Text>
+                                       </View>
+                                    )}
+                                    {snap.bowler && (
+                                       <View style={[styles.overSummaryStatItem, { alignItems: 'flex-end' }]}>
+                                          <Text style={styles.overSummaryStatLabel} numberOfLines={1}>{snap.bowler.name}</Text>
+                                          <Text style={styles.overSummaryStatValue}>
+                                             {Math.floor(snap.bowler.balls/6)}.{snap.bowler.balls%6}-0-{snap.bowler.runs}-{snap.bowler.wickets}
+                                          </Text>
+                                       </View>
+                                    )}
+                                 </View>
+                                 
+                                 {contextMsg ? <Text style={styles.overSummaryContext}>{contextMsg}</Text> : null}
+                              </View>
+                            );
+                         })()}
                       </View>
                     );
                   })}
@@ -1278,14 +1610,16 @@ export default function LiveScorecard() {
         const an1 = getInningsAnalysisData(inn1Logs, totalMatchOvers);
         const an2 = getInningsAnalysisData(inn2Logs, totalMatchOvers);
         const ps1 = getPartnerships(inn1Logs);
+        const ps2 = getPartnerships(inn2Logs);
         const rt1 = getRunTypesData(inn1Logs);
+        const rt2 = getRunTypesData(inn2Logs);
 
         return (
           <Animated.ScrollView 
             onScroll={onScroll}
             scrollEventThrottle={16}
             style={{ flex: 1, backgroundColor: '#F6F4F0' }} 
-            contentContainerStyle={{ paddingTop, padding: 12, paddingBottom: 100 }}>
+            contentContainerStyle={{ paddingTop: paddingTop + 12, paddingHorizontal: 12, paddingBottom: 100 }}>
              {/* Insights Banner */}
              <View style={[styles.insightsBanner, { borderRadius: 12, marginBottom: 12, borderBottomWidth: 0 }]}>
                 <Text style={styles.insightsMsg}>Analyse this match in-depth with</Text>
@@ -1310,26 +1644,55 @@ export default function LiveScorecard() {
                    <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#F97316' }]} /><Text style={styles.legendText}>{match.team_b}</Text></View>
                 </View>
 
-                {/* Manhattan Chart Mockup */}
+                {/* Manhattan Chart */}
                 <View style={styles.manhattanContainer}>
-                   <View style={styles.yAxis}>{[24, 16, 8, 0].map(v => <Text key={v} style={styles.yText}>{v}</Text>)}</View>
-                   <View style={styles.chartArea}>
-                      <RNScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ alignItems: 'flex-end', height: 200, paddingBottom: 20 }}>
-                         {an1.map((ov, i) => (
-                           <View key={i} style={styles.overGroup}>
-                              <View style={[styles.overBar, { height: 40 + Math.random() * 100, backgroundColor: '#3B82F6' }]}>
-                                 {i % 4 === 0 && <View style={styles.wktBubble}><Text style={styles.wktBubbleText}>1W</Text></View>}
-                              </View>
-                              <View style={[styles.overBar, { height: 30 + Math.random() * 80, backgroundColor: '#F97316' }]}>
-                                 {i % 7 === 0 && <View style={[styles.wktBubble, { borderColor: '#F97316' }]}><Text style={styles.wktBubbleText}>2W</Text></View>}
-                              </View>
-                           </View>
-                         ))}
-                      </RNScrollView>
-                      <View style={styles.xAxis}>
-                         <Text style={styles.xAxisLabel}>Overs</Text>
-                      </View>
-                   </View>
+                   {(() => {
+                     const allRuns = [...an1.map(o => o.runs), ...an2.map(o => o.runs)];
+                     const maxRunsInOver = Math.max(...allRuns, 10);
+                     const yMax = Math.ceil(maxRunsInOver / 10) * 10;
+                     const yAxisTicks = [yMax, yMax * 0.75, yMax * 0.5, yMax * 0.25, 0].map(v => Math.round(v));
+                     
+                     return (
+                       <>
+                         <View style={styles.yAxis}>
+                           {yAxisTicks.map(v => <Text key={v} style={styles.yText}>{v}</Text>)}
+                         </View>
+                         <View style={styles.chartArea}>
+                            <RNScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ alignItems: 'flex-end', height: 220, paddingBottom: 20 }}>
+                               {Array.from({ length: totalMatchOvers }).map((_, i) => {
+                                 const ov1 = an1[i] || { runs: 0, wickets: 0 };
+                                 const ov2 = an2[i] || { runs: 0, wickets: 0 };
+                                 const h1 = (ov1.runs / yMax) * 160;
+                                 const h2 = (ov2.runs / yMax) * 160;
+                                 
+                                 return (
+                                   <View key={i} style={styles.overGroup}>
+                                      <View style={[styles.overBar, { height: Math.max(h1, 2), backgroundColor: '#3B82F6' }]}>
+                                         {ov1.wickets > 0 && (
+                                           <View style={styles.wktBubble}>
+                                             <Text style={styles.wktBubbleText}>{ov1.wickets}W</Text>
+                                           </View>
+                                         )}
+                                      </View>
+                                      <View style={[styles.overBar, { height: Math.max(h2, 2), backgroundColor: '#F97316' }]}>
+                                         {ov2.wickets > 0 && (
+                                           <View style={[styles.wktBubble, { borderColor: '#F97316' }]}>
+                                             <Text style={styles.wktBubbleText}>{ov2.wickets}W</Text>
+                                           </View>
+                                         )}
+                                      </View>
+                                      <Text style={{ position: 'absolute', bottom: -18, left: 0, right: 0, textAlign: 'center', fontSize: 10, color: '#9CA3AF' }}>{i + 1}</Text>
+                                   </View>
+                                 );
+                               })}
+                            </RNScrollView>
+                            <View style={styles.xAxis}>
+                               <Text style={styles.xAxisLabel}>Overs</Text>
+                            </View>
+                         </View>
+                       </>
+                     );
+                   })()}
                 </View>
              </View>
 
@@ -1342,146 +1705,419 @@ export default function LiveScorecard() {
                 <View style={styles.wagonWheelVisual}>
                    <View style={styles.groundCircle}>
                       <View style={styles.pitchArea} /><View style={styles.boundaryLine} /><View style={styles.innerCircle} />
+                      {renderWagonWheel()}
                    </View>
-                   <View style={styles.noDataOverlay}><Text style={styles.noDataText}>No wagon wheel data available.</Text></View>
+                   {ballLogs.filter(b => b.wagon_wheel_area).length === 0 && (
+                     <View style={styles.noDataOverlay}><Text style={styles.noDataText}>No wagon wheel data available.</Text></View>
+                   )}
                 </View>
-             </View>
-
-             {/* Partnership */}
-             <View style={styles.analysisCard}>
-               <View style={styles.cardHeaderRow}><Text style={styles.cardTitle}>Partnerships</Text></View>
-               <Text style={styles.subLabel}>{match.team_a}</Text>
-               <View style={{ gap: 20 }}>
-                  {partnerships.filter(p => {
-                    const inn = inningsList.find(i => i.id === p.innings_id);
-                    return inn?.innings_number === 1;
-                  }).map((p, i) => (
-                    <View key={i} style={{ gap: 8 }}>
-                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                         <Text style={{ fontSize: 12, fontWeight: '700', color: '#374151' }}>{p.wicket_number}{p.wicket_number === 1 ? 'st' : p.wicket_number === 2 ? 'nd' : p.wicket_number === 3 ? 'rd' : 'th'} Wicket</Text>
-                         <Text style={{ fontSize: 13, fontWeight: '800', color: '#111827' }}>{p.total_runs} <Text style={{ fontSize: 11, fontWeight: '400', color: '#6B7280' }}>({p.total_balls} balls)</Text></Text>
-                       </View>
-                       
-                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                          <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                             <Text style={{ fontSize: 11, fontWeight: '600' }}>{p.batter_1_name}</Text>
-                             <Text style={{ fontSize: 10, color: '#6B7280' }}>{p.batter_1_runs}({p.batter_1_balls})</Text>
-                          </View>
-                          
-                          <View style={{ flex: 2, height: 8, backgroundColor: '#F3F4F6', borderRadius: 4, overflow: 'hidden', flexDirection: 'row' }}>
-                             <View style={{ flex: p.batter_1_runs || 1, height: '100%', backgroundColor: '#0D9488' }} />
-                             <View style={{ flex: p.extras || 0, height: '100%', backgroundColor: '#F59E0B', opacity: 0.5 }} />
-                             <View style={{ flex: p.batter_2_runs || 1, height: '100%', backgroundColor: '#3B82F6' }} />
-                          </View>
-                          
-                          <View style={{ flex: 1, alignItems: 'flex-start' }}>
-                             <Text style={{ fontSize: 11, fontWeight: '600' }}>{p.batter_2_name}</Text>
-                             <Text style={{ fontSize: 10, color: '#6B7280' }}>{p.batter_2_runs}({p.batter_2_balls})</Text>
-                          </View>
-                       </View>
-                       {p.out_batter_name && (
-                         <Text style={{ fontSize: 9, color: '#EF4444', textAlign: 'center', fontStyle: 'italic' }}>Out: {p.out_batter_name}</Text>
-                       )}
-                    </View>
-                  ))}
-                  {partnerships.filter(p => inningsList.find(i => i.id === p.innings_id)?.innings_number === 1).length === 0 && (
-                    <Text style={{ fontSize: 12, color: '#9CA3AF', textAlign: 'center', padding: 20 }}>No partnership data available</Text>
-                  )}
-               </View>
-
-               {/* Repeat for Team B / Innings 2 */}
-               <View style={{ height: 1, backgroundColor: '#F3F4F6', marginVertical: 20 }} />
-               <Text style={styles.subLabel}>{match.team_b}</Text>
-               <View style={{ gap: 20 }}>
-                  {partnerships.filter(p => {
-                    const inn = inningsList.find(i => i.id === p.innings_id);
-                    return inn?.innings_number === 2;
-                  }).map((p, i) => (
-                    <View key={i} style={{ gap: 8 }}>
-                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                         <Text style={{ fontSize: 12, fontWeight: '700', color: '#374151' }}>{p.wicket_number}{p.wicket_number === 1 ? 'st' : p.wicket_number === 2 ? 'nd' : p.wicket_number === 3 ? 'rd' : 'th'} Wicket</Text>
-                         <Text style={{ fontSize: 13, fontWeight: '800', color: '#111827' }}>{p.total_runs} <Text style={{ fontSize: 11, fontWeight: '400', color: '#6B7280' }}>({p.total_balls} balls)</Text></Text>
-                       </View>
-                       
-                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                          <View style={{ flex: 1, alignItems: 'flex-end' }}>
-                             <Text style={{ fontSize: 11, fontWeight: '600' }}>{p.batter_1_name}</Text>
-                             <Text style={{ fontSize: 10, color: '#6B7280' }}>{p.batter_1_runs}({p.batter_1_balls})</Text>
-                          </View>
-                          
-                          <View style={{ flex: 2, height: 8, backgroundColor: '#F3F4F6', borderRadius: 4, overflow: 'hidden', flexDirection: 'row' }}>
-                             <View style={{ flex: p.batter_1_runs || 1, height: '100%', backgroundColor: '#0D9488' }} />
-                             <View style={{ flex: p.extras || 0, height: '100%', backgroundColor: '#F59E0B', opacity: 0.5 }} />
-                             <View style={{ flex: p.batter_2_runs || 1, height: '100%', backgroundColor: '#3B82F6' }} />
-                          </View>
-                          
-                          <View style={{ flex: 1, alignItems: 'flex-start' }}>
-                             <Text style={{ fontSize: 11, fontWeight: '600' }}>{p.batter_2_name}</Text>
-                             <Text style={{ fontSize: 10, color: '#6B7280' }}>{p.batter_2_runs}({p.batter_2_balls})</Text>
-                          </View>
-                       </View>
-                       {p.out_batter_name && (
-                         <Text style={{ fontSize: 9, color: '#EF4444', textAlign: 'center', fontStyle: 'italic' }}>Out: {p.out_batter_name}</Text>
-                       )}
-                    </View>
-                  ))}
-                  {partnerships.filter(p => inningsList.find(i => i.id === p.innings_id)?.innings_number === 2).length === 0 && (
-                    <Text style={{ fontSize: 12, color: '#9CA3AF', textAlign: 'center', padding: 20 }}>No partnership data available for 2nd innings</Text>
-                  )}
-               </View>
-             </View>
-
-             <View style={styles.analysisCard}>
-                <View style={styles.cardHeaderRow}><Text style={styles.cardTitle}>Worm</Text><Sliders size={20} color="#9CA3AF" /></View>
-                <View style={styles.chartLegend}>
-                   <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#3B82F6' }]} /><Text style={styles.legendText}>{match.team_a}</Text></View>
-                   <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#F97316' }]} /><Text style={styles.legendText}>{match.team_b}</Text></View>
-                </View>
-                <View style={{ height: 200, marginTop: 10 }}>
-                   <RNScrollView horizontal showsHorizontalScrollIndicator={false}>
-                      <View style={{ width: totalMatchOvers * 30 + 40, height: 200 }}>
-                         <View style={{ flex: 1, borderLeftWidth: 1, borderBottomWidth: 1, borderColor: '#E5E7EB', marginLeft: 20, marginBottom: 20 }}>
-                            {an1.map((ov, i) => i > 0 && (
-                               <View key={i} style={{ position: 'absolute', left: (i-1)*30, bottom: (an1[i-1].cumRuns / 250) * 160, width: 30, height: 2, backgroundColor: '#3B82F6', transform: [{ rotate: `${-Math.atan2((an1[i].cumRuns - an1[i-1].cumRuns)/250*160, 30)}rad` }], transformOrigin: 'left center' }}>
-                                 {ov.wickets > 0 && <View style={{ position: 'absolute', right: 0, bottom: 2, width: 6, height: 6, borderRadius: 3, backgroundColor: '#EF4444' }} />}
-                               </View>
-                            ))}
-                            {an2.map((ov, i) => i > 0 && an2[i].cumRuns > 0 && (
-                               <View key={i} style={{ position: 'absolute', left: (i-1)*30, bottom: (an2[i-1].cumRuns / 250) * 160, width: 30, height: 2, backgroundColor: '#F97316', transform: [{ rotate: `${-Math.atan2((an2[i].cumRuns - an2[i-1].cumRuns)/250*160, 30)}rad` }], transformOrigin: 'left center' }}>
-                                 {ov.wickets > 0 && <View style={{ position: 'absolute', right: 0, bottom: 2, width: 6, height: 6, borderRadius: 3, backgroundColor: '#EF4444' }} />}
-                               </View>
-                            ))}
-                         </View>
-                      </View>
-                   </RNScrollView>
-                </View>
-             </View>
-
-             <View style={styles.analysisCard}>
-                <View style={styles.cardHeaderRow}><Text style={styles.cardTitle}>Run rate</Text><Sliders size={20} color="#9CA3AF" /></View>
-                <View style={{ height: 200, marginTop: 10 }}>
-                   <View style={{ flex: 1, borderLeftWidth: 1, borderBottomWidth: 1, borderColor: '#E5E7EB', marginLeft: 30, marginBottom: 20 }}>
-                      <View style={{ position: 'absolute', left: 0, right: 0, bottom: (8/18)*160, height: 1, backgroundColor: '#FEF3C7', zIndex: 0 }} />
-                      {an1.map((ov, i) => <View key={i} style={{ position: 'absolute', left: i*20, bottom: (ov.runs / 18) * 160, width: 6, height: 6, borderRadius: 3, backgroundColor: '#3B82F6' }} />)}
-                      {an2.map((ov, i) => ov.runs > 0 && <View key={i} style={{ position: 'absolute', left: i*20, bottom: (ov.runs / 18) * 160, width: 6, height: 6, borderRadius: 3, backgroundColor: '#F97316' }} />)}
-                   </View>
-                </View>
-             </View>
-
-             <View style={styles.analysisCard}>
-                <View style={styles.cardHeaderRow}><Text style={styles.cardTitle}>Types of Runs</Text><Sliders size={20} color="#9CA3AF" /></View>
-                <View style={{ gap: 10 }}>
-                   {[6, 4, 3, 2, 1, 0].map(val => (
-                     <View key={val} style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Text style={{ fontSize: 12, fontWeight: '700', width: 20 }}>{val}</Text>
-                        <View style={{ flex: 1, height: 12, backgroundColor: '#F3F4F6', borderRadius: 6, overflow: 'hidden' }}>
-                           <View style={{ width: `${inn1Logs.length > 0 ? (rt1[val as any as keyof typeof rt1] / inn1Logs.length) * 400 : 0}%`, height: '100%', backgroundColor: val === 6 ? '#F97316' : '#3B82F6' }} />
-                        </View>
-                        <Text style={{ fontSize: 10, color: '#6B7280', marginLeft: 8 }}>{rt1[val as any as keyof typeof rt1]}</Text>
+                
+                <View style={styles.wagonLegend}>
+                   {[
+                     { label: 'Out', color: '#F97316' },
+                     { label: "0's", color: '#9CA3AF' },
+                     { label: "1's", color: '#3B82F6' },
+                     { label: "2s & 3s", color: '#EAB308' },
+                     { label: "4's", color: '#A855F7' },
+                     { label: "6's", color: '#EF4444' },
+                   ].map(item => (
+                     <View key={item.label} style={styles.wagonLegendItem}>
+                        <View style={[styles.wagonLegendDot, { backgroundColor: item.color }]} />
+                        <Text style={styles.wagonLegendText}>{item.label}</Text>
                      </View>
                    ))}
                 </View>
              </View>
+
+             <View style={styles.analysisCard}>
+                <View style={styles.cardHeaderRow}>
+                   <Text style={styles.cardTitle}>Partnerships</Text>
+                   <View style={styles.cardHeaderIcons}>
+                      <Sliders size={20} color="#9CA3AF" />
+                      <Share2 size={20} color="#9CA3AF" style={{ marginLeft: 16 }} />
+                   </View>
+                </View>
+
+                {/* Team A Partnerships */}
+                <Text style={{ fontSize: 12, color: '#6B7280', marginTop: 12, fontWeight: '600' }}>{match.team_a}</Text>
+                <View style={{ marginTop: 16 }}>
+                   {(() => {
+                     const allPs = [...ps1];
+                     if (allPs.length === 0) return <Text style={{ fontSize: 12, color: '#9CA3AF', textAlign: 'center', padding: 20 }}>No partnership data available</Text>;
+                     
+                     const maxTotal = Math.max(...allPs.map(p => (p.batter_1_runs || 0) + (p.batter_2_runs || 0) + (p.extras || 0)), 10);
+
+                     return allPs.map((p, i) => {
+                       const r1 = p.batter_1_runs || 0;
+                       const r2 = p.batter_2_runs || 0;
+                       const total = r1 + r2 + (p.extras || 0);
+                       const barWidthFactor = total === 0 ? 0 : (total / (maxTotal * 1.05));
+                       const pct1 = total === 0 ? 0.5 : (r1 + (p.extras || 0) / 2) / total;
+
+                       return (
+                         <View key={i} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                           <Text style={{ width: 110, textAlign: 'right', fontSize: 11, color: '#4B5563', marginRight: 8, fontWeight: '500' }}>
+                             {p.batter_1_name} {r1}({p.batter_1_balls})
+                           </Text>
+
+                           <View style={{ flex: 1, height: 24, flexDirection: 'row', borderRadius: 4, overflow: 'hidden', backgroundColor: '#F9FAFB' }}>
+                             <View style={{
+                               width: `${barWidthFactor * pct1 * 100}%`,
+                               backgroundColor: '#378ADD',
+                               minWidth: total === 0 ? 0 : 2,
+                             }} />
+                             <View style={{
+                               width: `${barWidthFactor * (1 - pct1) * 100}%`,
+                               backgroundColor: '#D85A30',
+                               minWidth: total === 0 ? 0 : 2,
+                             }} />
+                           </View>
+
+                           <Text style={{ fontSize: 11, color: '#4B5563', marginLeft: 8, width: 110, fontWeight: '500' }}>
+                             {p.batter_2_name || '...'} {r2}({p.batter_2_balls})
+                           </Text>
+                         </View>
+                       );
+                     });
+                   })()}
+                </View>
+
+                {/* Team B Partnerships */}
+                {match?.status !== 'setup' && inningsList.length > 1 && ps2.length > 0 && (
+                  <>
+                    <View style={{ height: 1, backgroundColor: '#F3F4F6', marginVertical: 20 }} />
+                    <Text style={{ fontSize: 12, color: '#6B7280', fontWeight: '600' }}>{match.team_b}</Text>
+                    <View style={{ marginTop: 16 }}>
+                       {(() => {
+                         const maxTotal = Math.max(...ps2.map(p => (p.batter_1_runs || 0) + (p.batter_2_runs || 0) + (p.extras || 0)), 10);
+
+                         return ps2.map((p, i) => {
+                           const r1 = p.batter_1_runs || 0;
+                           const r2 = p.batter_2_runs || 0;
+                           const total = r1 + r2 + (p.extras || 0);
+                           const barWidthFactor = total === 0 ? 0 : (total / (maxTotal * 1.05));
+                           const pct1 = total === 0 ? 0.5 : (r1 + (p.extras || 0) / 2) / total;
+
+                           return (
+                             <View key={i} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                               <Text style={{ width: 110, textAlign: 'right', fontSize: 11, color: '#4B5563', marginRight: 8, fontWeight: '500' }}>
+                                 {p.batter_1_name} {r1}({p.batter_1_balls})
+                               </Text>
+
+                               <View style={{ flex: 1, height: 24, flexDirection: 'row', borderRadius: 4, overflow: 'hidden', backgroundColor: '#F9FAFB' }}>
+                                 <View style={{
+                                   width: `${barWidthFactor * pct1 * 100}%`,
+                                   backgroundColor: '#378ADD',
+                                   minWidth: total === 0 ? 0 : 2,
+                                 }} />
+                                 <View style={{
+                                   width: `${barWidthFactor * (1 - pct1) * 100}%`,
+                                   backgroundColor: '#D85A30',
+                                   minWidth: total === 0 ? 0 : 2,
+                                 }} />
+                               </View>
+
+                               <Text style={{ fontSize: 11, color: '#4B5563', marginLeft: 8, width: 110, fontWeight: '500' }}>
+                                 {p.batter_2_name || '...'} {r2}({p.batter_2_balls})
+                               </Text>
+                             </View>
+                           );
+                         });
+                       })()}
+                    </View>
+                  </>
+                )}
+             </View>
+
+             <View style={styles.analysisCard}>
+                <View style={styles.cardHeaderRow}>
+                   <Text style={styles.cardTitle}>Worm</Text>
+                   <View style={styles.cardHeaderIcons}>
+                      <Sliders size={20} color="#9CA3AF" />
+                      <Share2 size={20} color="#9CA3AF" style={{ marginLeft: 16 }} />
+                   </View>
+                </View>
+                <View style={styles.chartLegend}>
+                   <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#3B82F6' }]} /><Text style={styles.legendText}>{match.team_a}</Text></View>
+                   <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#F97316' }]} /><Text style={styles.legendText}>{match.team_b}</Text></View>
+                </View>
+                
+                <View style={{ height: 240, marginTop: 16 }}>
+                   {(() => {
+                     const wormA = [{ over: 0, cumRuns: 0, wickets: 0 }, ...an1];
+                     const wormB = [{ over: 0, cumRuns: 0, wickets: 0 }, ...an2];
+                     const allCumRuns = [...wormA.map(o => o.cumRuns), ...wormB.map(o => o.cumRuns)];
+                     const maxY = Math.ceil(Math.max(...allCumRuns, 50) / 50) * 50;
+                     const yTicks = [maxY, maxY * 0.75, maxY * 0.5, maxY * 0.25, 0].map(v => Math.round(v));
+                     const chartHeight = 180;
+                     const stepX = 40;
+
+                     return (
+                       <View style={{ flexDirection: 'row', paddingRight: 20 }}>
+                         <View style={{ width: 35, height: chartHeight + 10, justifyContent: 'space-between', paddingBottom: 20 }}>
+                           {yTicks.map(v => (
+                             <Text key={v} style={{ fontSize: 10, color: '#9CA3AF', textAlign: 'right', paddingRight: 5 }}>{v}</Text>
+                           ))}
+                         </View>
+
+                         <RNScrollView horizontal showsHorizontalScrollIndicator={false}>
+                           <View style={{ width: (totalMatchOvers + 1) * stepX + 20, height: 240 }}>
+                             <View style={{ flex: 1, borderLeftWidth: 1, borderBottomWidth: 1, borderColor: '#E5E7EB', marginBottom: 30, position: 'relative' }}>
+                               {yTicks.map(tick => (
+                                 <View key={tick} style={{ position: 'absolute', left: 0, right: 0, bottom: (tick/maxY) * chartHeight, height: 1, backgroundColor: '#F3F4F6', zIndex: -1 }} />
+                               ))}
+
+                               {wormA.map((ov, i) => {
+                                 if (i === 0) return null;
+                                 const prev = wormA[i-1];
+                                 const x1 = (i-1) * stepX;
+                                 const y1 = (prev.cumRuns / maxY) * chartHeight;
+                                 const x2 = i * stepX;
+                                 const y2 = (ov.cumRuns / maxY) * chartHeight;
+                                 const angle = -Math.atan2(y2 - y1, x2 - x1);
+                                 const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+
+                                 return (
+                                   <React.Fragment key={`a-${i}`}>
+                                      <View style={{ 
+                                        position: 'absolute', left: x1, bottom: y1, width: length, height: 2, 
+                                        backgroundColor: '#3B82F6', transform: [{ rotate: `${angle}rad` }], 
+                                        transformOrigin: 'left center' 
+                                      }} />
+                                      {ov.wickets > 0 && (
+                                        <View style={{ 
+                                          position: 'absolute', left: x2 - 4, bottom: y2 - 4, 
+                                          width: 8, height: 8, borderRadius: 4, backgroundColor: '#FFFFFF', 
+                                          borderWidth: 2, borderColor: '#3B82F6', zIndex: 10 
+                                        }} />
+                                      )}
+                                   </React.Fragment>
+                                 );
+                               })}
+
+                               {wormB.map((ov, i) => {
+                                  if (i === 0) return null;
+                                  const prev = wormB[i-1];
+                                  if (ov.cumRuns === 0 && prev.cumRuns === 0 && i > 1) return null;
+                                  const x1 = (i-1) * stepX;
+                                  const y1 = (prev.cumRuns / maxY) * chartHeight;
+                                  const x2 = i * stepX;
+                                  const y2 = (ov.cumRuns / maxY) * chartHeight;
+                                  const angle = -Math.atan2(y2 - y1, x2 - x1);
+                                  const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+
+                                  return (
+                                    <React.Fragment key={`b-${i}`}>
+                                       <View style={{ 
+                                         position: 'absolute', left: x1, bottom: y1, width: length, height: 2, 
+                                         backgroundColor: '#F97316', transform: [{ rotate: `${angle}rad` }], 
+                                         transformOrigin: 'left center' 
+                                       }} />
+                                       {ov.wickets > 0 && (
+                                         <View style={{ 
+                                           position: 'absolute', left: x2 - 4, bottom: y2 - 4, 
+                                           width: 8, height: 8, borderRadius: 4, backgroundColor: '#FFFFFF', 
+                                           borderWidth: 2, borderColor: '#F97316', zIndex: 10 
+                                         }} />
+                                       )}
+                                    </React.Fragment>
+                                  );
+                               })}
+
+                               {Array.from({ length: totalMatchOvers + 1 }).map((_, i) => {
+                                  if (i % 2 !== 0 && totalMatchOvers > 10) return null;
+                                  return (
+                                    <Text key={i} style={{ position: 'absolute', left: i * stepX - 5, bottom: -22, fontSize: 10, color: '#9CA3AF', width: 20, textAlign: 'center' }}>
+                                      {i}
+                                    </Text>
+                                  );
+                               })}
+                               <Text style={{ position: 'absolute', left: (totalMatchOvers * stepX) / 2 - 20, bottom: -40, fontSize: 11, fontWeight: '600', color: '#9CA3AF' }}>Overs</Text>
+                             </View>
+                           </View>
+                         </RNScrollView>
+                       </View>
+                     );
+                   })()}
+                </View>
+             </View>
+
+             <View style={styles.analysisCard}>
+                <View style={styles.cardHeaderRow}>
+                   <Text style={styles.cardTitle}>Run rate</Text>
+                   <View style={styles.cardHeaderIcons}>
+                      <Sliders size={20} color="#9CA3AF" />
+                      <Share2 size={20} color="#9CA3AF" style={{ marginLeft: 16 }} />
+                   </View>
+                </View>
+                <View style={styles.chartLegend}>
+                   <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#3B82F6' }]} /><Text style={styles.legendText}>{match.team_a}</Text></View>
+                   <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#F97316' }]} /><Text style={styles.legendText}>{match.team_b}</Text></View>
+                </View>
+
+                <View style={{ height: 240, marginTop: 16 }}>
+                   {(() => {
+                     const rrA = an1.map(o => ({ ...o, rr: o.cumRuns / o.over }));
+                     const rrB = an2.map(o => ({ ...o, rr: o.cumRuns / o.over }));
+                     
+                     const allRR = [...rrA.map(o => o.rr), ...rrB.map(o => o.rr)];
+                     const maxY = Math.max(Math.ceil(Math.max(...allRR, 12) / 3) * 3, 12);
+                     const yTicks = [maxY, maxY * 0.75, maxY * 0.5, maxY * 0.25, 0].map(v => parseFloat(v.toFixed(1)));
+                     const chartHeight = 180;
+                     const stepX = 40;
+
+                     return (
+                       <View style={{ flexDirection: 'row', paddingRight: 20 }}>
+                         <View style={{ width: 35, height: chartHeight + 10, justifyContent: 'space-between', paddingBottom: 20 }}>
+                           {yTicks.map(v => (
+                             <Text key={v} style={{ fontSize: 10, color: '#9CA3AF', textAlign: 'right', paddingRight: 5 }}>{v}</Text>
+                           ))}
+                         </View>
+
+                         <RNScrollView horizontal showsHorizontalScrollIndicator={false}>
+                           <View style={{ width: (totalMatchOvers + 1) * stepX + 20, height: 240 }}>
+                             <View style={{ flex: 1, borderLeftWidth: 1, borderBottomWidth: 1, borderColor: '#E5E7EB', marginBottom: 30, position: 'relative' }}>
+                               
+                               {yTicks.map(tick => (
+                                 <View key={tick} style={{ position: 'absolute', left: 0, right: 0, bottom: (tick/maxY) * chartHeight, height: 1, backgroundColor: '#F3F4F6', zIndex: -1 }} />
+                               ))}
+
+                               {rrA.map((ov, i) => {
+                                 if (i === 0) return null;
+                                 const prev = rrA[i-1];
+                                 const x1 = i * stepX;
+                                 const y1 = (prev.rr / maxY) * chartHeight;
+                                 const x2 = (i + 1) * stepX;
+                                 const y2 = (ov.rr / maxY) * chartHeight;
+                                 const angle = -Math.atan2(y2 - y1, x2 - x1);
+                                 const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+
+                                 return (
+                                   <React.Fragment key={`a-rr-${i}`}>
+                                      <View style={{ 
+                                        position: 'absolute', left: x1, bottom: y1, width: length, height: 2, 
+                                        backgroundColor: '#3B82F6', transform: [{ rotate: `${angle}rad` }], 
+                                        transformOrigin: 'left center' 
+                                      }} />
+                                      {ov.wickets > 0 && (
+                                        <View style={{ 
+                                          position: 'absolute', left: x2 - 4, bottom: y2 - 4, 
+                                          width: 8, height: 8, borderRadius: 4, backgroundColor: '#FFFFFF', 
+                                          borderWidth: 2, borderColor: '#3B82F6', zIndex: 10 
+                                        }} />
+                                      )}
+                                   </React.Fragment>
+                                 );
+                               })}
+
+                               {rrB.map((ov, i) => {
+                                  if (i === 0) return null;
+                                  const prev = rrB[i-1];
+                                  if (ov.rr === 0 && prev.rr === 0 && i > 1) return null;
+
+                                  const x1 = i * stepX;
+                                  const y1 = (prev.rr / maxY) * chartHeight;
+                                  const x2 = (i + 1) * stepX;
+                                  const y2 = (ov.rr / maxY) * chartHeight;
+                                  const angle = -Math.atan2(y2 - y1, x2 - x1);
+                                  const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+
+                                  return (
+                                    <React.Fragment key={`b-rr-${i}`}>
+                                       <View style={{ 
+                                         position: 'absolute', left: x1, bottom: y1, width: length, height: 2, 
+                                         backgroundColor: '#F97316', transform: [{ rotate: `${angle}rad` }], 
+                                         transformOrigin: 'left center' 
+                                       }} />
+                                       {ov.wickets > 0 && (
+                                         <View style={{ 
+                                           position: 'absolute', left: x2 - 4, bottom: y2 - 4, 
+                                           width: 8, height: 8, borderRadius: 4, backgroundColor: '#FFFFFF', 
+                                           borderWidth: 2, borderColor: '#F97316', zIndex: 10 
+                                         }} />
+                                       )}
+                                    </React.Fragment>
+                                  );
+                               })}
+
+                               {Array.from({ length: totalMatchOvers + 1 }).map((_, i) => {
+                                  if (i % 2 !== 0 && totalMatchOvers > 10) return null;
+                                  if (i === 0) return null;
+                                  return (
+                                    <Text key={i} style={{ position: 'absolute', left: i * stepX - 5, bottom: -22, fontSize: 10, color: '#9CA3AF', width: 20, textAlign: 'center' }}>
+                                      {i}
+                                    </Text>
+                                  );
+                               })}
+                               <Text style={{ position: 'absolute', left: (totalMatchOvers * stepX) / 2 - 20, bottom: -40, fontSize: 11, fontWeight: '600', color: '#9CA3AF' }}>Overs</Text>
+                             </View>
+                           </View>
+                         </RNScrollView>
+                       </View>
+                     );
+                   })()}
+                </View>
+             </View>
+
+             <View style={styles.analysisCard}>
+                <View style={styles.cardHeaderRow}>
+                   <Text style={styles.cardTitle}>Types of Runs</Text>
+                   <View style={styles.cardHeaderIcons}>
+                      <Sliders size={20} color="#9CA3AF" />
+                      <Share2 size={20} color="#9CA3AF" style={{ marginLeft: 16 }} />
+                   </View>
+                </View>
+
+                <View style={styles.chartLegend}>
+                   <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#378ADD' }]} /><Text style={styles.legendText}>{match.team_a}</Text></View>
+                   <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: '#D85A30' }]} /><Text style={styles.legendText}>{match.team_b}</Text></View>
+                </View>
+
+                <View style={{ marginTop: 20, paddingRight: 40 }}>
+                   {(() => {
+                     const labels = ['6', '5', '4', '3', '2', '1'];
+                     const maxVal = Math.max(...labels.map(l => rt1[l as any as keyof typeof rt1] || 0), ...labels.map(l => rt2[l as any as keyof typeof rt2] || 0), 1);
+                     const chartWidth = windowWidth - 120;
+
+                     return labels.map(label => (
+                       <View key={label} style={{ marginBottom: 16 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                             <View style={{ width: 25 }}>
+                                <Text style={{ fontSize: 13, fontWeight: '700', color: '#4B5563' }}>{label}</Text>
+                             </View>
+                             <View style={{ flex: 1, gap: 4 }}>
+                                {/* Team A Bar */}
+                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                   <View style={{ 
+                                     height: 12, 
+                                     width: ((rt1[label as any as keyof typeof rt1] || 0) / maxVal) * chartWidth, 
+                                     backgroundColor: '#378ADD', 
+                                     borderRadius: 2 
+                                   }} />
+                                   <Text style={{ fontSize: 10, color: '#6B7280', marginLeft: 6, fontWeight: '600' }}>{rt1[label as any as keyof typeof rt1] || 0}</Text>
+                                </View>
+                                {/* Team B Bar */}
+                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                   <View style={{ 
+                                     height: 12, 
+                                     width: ((rt2[label as any as keyof typeof rt2] || 0) / maxVal) * chartWidth, 
+                                     backgroundColor: '#D85A30', 
+                                     borderRadius: 2 
+                                   }} />
+                                   <Text style={{ fontSize: 10, color: '#6B7280', marginLeft: 6, fontWeight: '600' }}>{rt2[label as any as keyof typeof rt2] || 0}</Text>
+                                </View>
+                             </View>
+                          </View>
+                       </View>
+                     ));
+                   })()}
+                   <View style={{ borderTopWidth: 1, borderColor: '#E5E7EB', marginTop: 8, paddingTop: 8, flexDirection: 'row', justifyContent: 'space-between' }}>
+                      <Text style={{ fontSize: 10, color: '#9CA3AF' }}>0</Text>
+                      <Text style={{ fontSize: 10, color: '#9CA3AF' }}>Frequency (Balls)</Text>
+                   </View>
+                </View>
+             </View>
+
           </Animated.ScrollView>
         );
       }
@@ -1490,53 +2126,76 @@ export default function LiveScorecard() {
         return (
           <View style={{ flex: 1, backgroundColor: '#F6F4F0', padding: 12 }}>
              {/* MVP Explanation Banner */}
-             <View style={[styles.mvpHeader, { backgroundColor: '#FFFFFF', borderRadius: 12, marginBottom: 12, borderWidth: 1, borderColor: '#E5E7EB', alignItems: 'center' }]}>
+             <View style={{ paddingVertical: 8, alignItems: 'flex-end', paddingHorizontal: 4 }}>
                 <TouchableOpacity 
-                   style={styles.calcTrigger}
                    onPress={() => router.push('/blog/mvp-calculation')}
                 >
-                   <Text style={[styles.calcTriggerText, { color: '#01b854' }]}>How is Most Valuable Players Calculated?</Text>
+                   <Text style={{ fontSize: 12, color: '#DAA520', fontWeight: '500', fontFamily: 'Inter' }}>How is Most Valuable Players Calculated?</Text>
                 </TouchableOpacity>
              </View>
 
-             <View style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB' }}>
-               <Animated.ScrollView 
-                 onScroll={onScroll}
-                 scrollEventThrottle={16}
-                 style={{ flex: 1 }}
-                 contentContainerStyle={{ paddingTop }}>
-                  {mvpData.map((player, idx) => (
-                    <View key={idx} style={styles.mvpPlayerRow}>
-                       <View style={styles.mvpRankBox}>
-                          <Text style={styles.mvpRankText}>{idx + 1}</Text>
+             <View style={{ flex: 1 }}>
+                 <Animated.ScrollView 
+                   onScroll={onScroll}
+                   scrollEventThrottle={16}
+                   style={{ flex: 1 }} 
+                   contentContainerStyle={{ paddingTop: paddingTop - 20, paddingBottom: 100 }}>
+                   
+                   <View style={{ backgroundColor: '#FFFFFF', borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB' }}>
+                  {mvpData.map((player, idx) => {
+                    const isExpanded = expandedMVPPlayer === player.name;
+                    const p = [...squadA, ...squadB].find(m => (m.player_name || m.profiles?.full_name) === player.name);
+                    const teamName = p?.team_name || (idx % 2 === 0 ? match.team_a : match.team_b);
+                    
+                    return (
+                       <View key={idx} style={{ marginBottom: 0 }}>
+                          <TouchableOpacity 
+                             style={[styles.mvpPlayerRow, isExpanded && { borderBottomWidth: 0, marginBottom: 0 }]}
+                             onPress={() => setExpandedMVPPlayer(isExpanded ? null : player.name)}
+                             activeOpacity={0.7}
+                          >
+                             <View style={styles.mvpRankBox}>
+                                <Text style={styles.mvpRankText}>{idx + 1}</Text>
+                             </View>
+                             <View style={styles.mvpAvatarContainer}>
+                                 <View style={[styles.mvpAvatar, { backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }]}>
+                                    {p?.profiles?.avatar_url ? (
+                                      <Image source={{ uri: p.profiles.avatar_url }} style={{ width: '100%', height: '100%' }} />
+                                    ) : (
+                                      <Text style={{ fontSize: 18, fontWeight: '700', color: '#9CA3AF' }}>{(player.name || '?').charAt(0)}</Text>
+                                    )}
+                                 </View>
+                             </View>
+                             <View style={styles.mvpInfoBody}>
+                                <Text style={styles.mvpPlayerName}>{player.name}</Text>
+                                <Text style={styles.mvpTeamName}>{teamName}</Text>
+                             </View>
+                             <View style={styles.mvpScoreBox}>
+                                <Text style={styles.mvpScoreVal}>{player.points.toFixed(3)}</Text>
+                             </View>
+                          </TouchableOpacity>
+                          
+                          {isExpanded && (
+                             <View style={styles.mvpDetailRow}>
+                                <Text style={styles.mvpDetailText}>
+                                   Batting: <Text style={styles.mvpDetailValue}>{player.batting.toFixed(3)}</Text> + 
+                                   Bowling: <Text style={styles.mvpDetailValue}>{player.bowling.toFixed(3)}</Text> + 
+                                   Fielding: <Text style={styles.mvpDetailValue}>{player.fielding.toFixed(3)}</Text> = 
+                                   <Text style={styles.mvpDetailTotal}> {player.points.toFixed(3)}</Text>
+                                </Text>
+                             </View>
+                          )}
                        </View>
-                       <View style={styles.mvpAvatarContainer}>
-                          <Image source={{ uri: `https://i.pravatar.cc/100?u=${player.name}` }} style={styles.mvpAvatar} />
-                          {(idx < 3) && <View style={styles.mvpProBadge}><Text style={styles.mvpProText}>PRO</Text></View>}
-                       </View>
-                        <TouchableOpacity 
-                          style={styles.mvpInfoBody}
-                          onPress={() => {
-                            const p = [...squadA, ...squadB].find(m => (m.player_name || m.profiles?.full_name) === player.name);
-                            const profileId = p?.profiles?.id || p?.profile_id;
-                            if (profileId) router.push(`/players/${getPlayerSlug(player.name, profileId)}`);
-                          }}
-                        >
-                           <Text style={styles.mvpPlayerName}>{player.name}</Text>
-                           <Text style={styles.mvpTeamName}>{idx % 2 === 0 ? match.team_a : match.team_b}</Text>
-                        </TouchableOpacity>
-                       <View style={styles.mvpScoreBox}>
-                          <Text style={styles.mvpScoreVal}>{player.points.toFixed(1)}</Text>
-                       </View>
-                    </View>
-                  ))}
+                    );
+                  })}
+                   </View>
                   {mvpData.length === 0 && (
                     <View style={{ padding: 60, alignItems: 'center' }}>
                        <Trophy size={48} color="#E5E7EB" />
                        <Text style={{ color: '#9CA3AF', marginTop: 12, textAlign: 'center' }}>Match points will appear as game progresses.</Text>
                     </View>
                   )}
-               </Animated.ScrollView>
+                 </Animated.ScrollView>
              </View>
           </View>
         );
@@ -1600,7 +2259,9 @@ export default function LiveScorecard() {
              <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#E5E7EB' }}>
                <View style={styles.squadTeamsHeader}>
                   <View style={styles.squadTeamInfo}>
-                     <Image source={{ uri: `https://ui-avatars.com/api/?name=${match.team_a}&background=0D9488&color=fff` }} style={styles.squadTeamLogo} />
+                     <View style={[styles.squadTeamLogo, { backgroundColor: '#0D9488', alignItems: 'center', justifyContent: 'center' }]}>
+                        <Text style={{ color: '#fff', fontWeight: 'bold' }}>{match.team_a.charAt(0)}</Text>
+                     </View>
                      <Text style={styles.squadTeamName}>{match.team_a}</Text>
                   </View>
                   <View style={[styles.squadTeamInfo, { justifyContent: 'flex-end', borderLeftWidth: 1, borderLeftColor: '#F3F4F6' }]}>
@@ -1608,7 +2269,9 @@ export default function LiveScorecard() {
                         <Text style={styles.squadTeamName}>{match.team_b}</Text>
                         <View style={styles.squadBannerBtn}><Text style={styles.squadBannerBtnText}>Get Squad Banner</Text></View>
                      </View>
-                     <Image source={{ uri: `https://ui-avatars.com/api/?name=${match.team_b}&background=DC2626&color=fff` }} style={styles.squadTeamLogo} />
+                     <View style={[styles.squadTeamLogo, { backgroundColor: '#DC2626', alignItems: 'center', justifyContent: 'center' }]}>
+                        <Text style={{ color: '#fff', fontWeight: 'bold' }}>{match.team_b.charAt(0)}</Text>
+                     </View>
                   </View>
                </View>
 
@@ -1622,10 +2285,16 @@ export default function LiveScorecard() {
                      {squadA.map((m, idx) => (
                         <View key={m.id} style={styles.squadPlayerRow}>
                            <View style={styles.playerAvatarContainer}>
-                              <Image 
-                                source={{ uri: m.profiles?.avatar_url || `https://i.pravatar.cc/150?u=${m.id}` }} 
-                                style={styles.playerAvatar} 
-                              />
+                              {m.profiles?.avatar_url ? (
+                                <Image 
+                                  source={{ uri: m.profiles.avatar_url }} 
+                                  style={styles.playerAvatar} 
+                                />
+                              ) : (
+                                <View style={[styles.playerAvatar, { backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' }]}>
+                                   <Text style={{ fontSize: 14, fontWeight: '700', color: '#9CA3AF' }}>{(m.player_name || m.profiles?.full_name || '?').charAt(0)}</Text>
+                                </View>
+                              )}
                               {m.profiles?.player_type === 'pro' && <View style={styles.proMiniBadge}><Text style={styles.proMiniText}>PRO</Text></View>}
                               {m.role === 'captain' && <View style={styles.captMiniBadge}><Text style={styles.captMiniText}>C</Text></View>}
                            </View>
@@ -1668,7 +2337,7 @@ export default function LiveScorecard() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <WebLayout noCard>
+      <WebLayout noCard hideHeader>
         <Stack.Screen options={{ title: `${match.team_a} vs ${match.team_b} - Live Score` }} />
         
         <Animated.View style={headerAnimatedStyle}>
@@ -1843,9 +2512,9 @@ const styles = StyleSheet.create({
   resultBanner: { backgroundColor: '#FAEEDA', padding: 10, borderRadius: 8, marginBottom: 16, alignItems: 'center' },
   resultText: { color: '#633806', fontSize: 13, fontWeight: 'bold' },
   scoreRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  battingTeamName: { fontSize: 12, color: '#01b854', opacity: 0.8, marginBottom: 4 },
-  bigScore: { fontSize: 48, fontWeight: '900', color: '#01b854' },
-  oversCount: { fontSize: 14, color: '#01b854', opacity: 0.9, marginTop: 8 },
+  battingTeamName: { fontSize: 12, color: '#01b854', opacity: 0.8, marginBottom: 4, fontFamily: 'Inter', fontWeight: '500' },
+  bigScore: { fontSize: 48, fontWeight: '800', color: '#01b854', fontFamily: 'Inter' },
+  oversCount: { fontSize: 14, color: '#01b854', opacity: 0.9, marginTop: 8, fontFamily: 'Inter' },
   targetBox: { 
     backgroundColor: 'rgba(255,255,255,0.1)', 
     borderRadius: 8, 
@@ -1859,25 +2528,28 @@ const styles = StyleSheet.create({
     fontSize: 10, 
     color: '#FFFFFF', 
     opacity: 0.8, 
-    fontWeight: '700', 
+    fontWeight: '600', 
     textTransform: 'uppercase', 
-    letterSpacing: 0.5 
+    letterSpacing: 0.5,
+    fontFamily: 'Inter' 
   },
   targetValue: { 
     fontSize: 24, 
-    fontWeight: '900', 
-    color: '#FFFFFF' 
+    fontWeight: '800', 
+    color: '#FFFFFF',
+    fontFamily: 'Inter' 
   },
   targetSub: { 
     fontSize: 10, 
     color: '#FFFFFF', 
     opacity: 0.9, 
     textAlign: 'center', 
-    marginTop: 4 
+    marginTop: 4,
+    fontFamily: 'Inter' 
   },
   statsRow: { flexDirection: 'row', gap: 10, marginTop: 20, flexWrap: 'wrap' },
   statPill: { backgroundColor: 'rgba(0, 0, 0, 0.2)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
-  statPillText: { fontSize: 12, color: '#01b854', fontWeight: 'bold' },
+  statPillText: { fontSize: 12, color: '#01b854', fontWeight: '600', fontFamily: 'Inter' },
   dataSection: { backgroundColor: '#FFFFFF', margin: 12, marginBottom: 0, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: '#E8E6E0' },
   sectionTitle: { fontSize: 11, color: '#888780', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: 12 },
   tableHead: { flexDirection: 'row', backgroundColor: '#F6F4F0', padding: 8, borderRadius: 4 },
@@ -1973,8 +2645,36 @@ const styles = StyleSheet.create({
 
   // Comms Styles
   commsFilterBar: { flexDirection: 'row', padding: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-  commsFilterBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#F9FAF7', borderRadius: 8, borderWidth: 1, borderColor: '#E5E7EB' },
-  commsFilterText: { fontSize: 13, fontWeight: '600', color: '#374151' },
+  commsFilterDropdownTrigger: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    paddingVertical: 8, 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#D1D5DB' 
+  },
+  commsFilterText: { fontSize: 14, fontWeight: '500', color: '#111827', fontFamily: 'Inter' },
+  commsDropdownMenu: { 
+    position: 'absolute', 
+    top: 40, 
+    left: 0, 
+    right: 0, 
+    backgroundColor: '#FFFFFF', 
+    borderRadius: 8, 
+    padding: 4, 
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    zIndex: 1001
+  },
+  commsDropdownItem: { paddingVertical: 10, paddingHorizontal: 12, borderRadius: 6 },
+  commsDropdownItemActive: { backgroundColor: '#F0FDFA' },
+  commsDropdownItemText: { fontSize: 13, color: '#374151', fontFamily: 'Inter' },
+  commsDropdownItemTextActive: { color: '#0D9488', fontWeight: '700' },
   commsBallRow: { flexDirection: 'row', padding: 16, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#F9FAF7' },
   commsBallLeft: { alignItems: 'center', width: 45, marginRight: 16 },
   commsOverNum: { fontSize: 13, fontWeight: '700', color: '#111827', marginBottom: 4 },
@@ -1987,11 +2687,19 @@ const styles = StyleSheet.create({
   commsDescText: { fontSize: 14, color: '#374151', lineHeight: 20 },
   wicketDetailBox: { marginTop: 8, padding: 8, backgroundColor: '#FEF2F2', borderRadius: 4, borderLeftWidth: 3, borderLeftColor: '#EF4444' },
   wicketDetailText: { fontSize: 12, color: '#B91C1C', fontStyle: 'italic' },
-  overSummaryBlock: { margin: 12, padding: 16, backgroundColor: '#F3F4F6', borderRadius: 12, flexDirection: 'row', alignItems: 'center' },
-  overBadge: { backgroundColor: '#111827', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6, marginRight: 12 },
-  overBadgeText: { color: '#FFFFFF', fontSize: 11, fontWeight: '900' },
-  overSummaryRuns: { flex: 1, fontSize: 13, fontWeight: '700', color: '#374151' },
-  overSummaryScore: { fontSize: 15, fontWeight: '800', color: '#111827' },
+  overSummaryBlock: { margin: 12, padding: 16, backgroundColor: '#F9FAFB', borderRadius: 12, borderWidth: 1, borderColor: '#F3F4F6' },
+  overSummaryHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
+  overSummaryMain: { flex: 1, marginLeft: 12 },
+  overSummarySequence: { fontSize: 13, color: '#4B5563', letterSpacing: 2, marginBottom: 4, fontFamily: 'Inter', fontWeight: '500' },
+  overSummaryRunsWkts: { fontSize: 15, fontWeight: '700', color: '#111827', fontFamily: 'Inter' },
+  overSummaryTotalScore: { fontSize: 18, fontWeight: '800', color: '#111827', fontFamily: 'Inter' },
+  overSummaryStatsRow: { flexDirection: 'row', paddingTop: 12, justifyContent: 'space-between' },
+  overSummaryStatItem: { flex: 1 },
+  overSummaryStatLabel: { fontSize: 12, color: '#6B7280', marginBottom: 2, fontFamily: 'Inter' },
+  overSummaryStatValue: { fontSize: 14, fontWeight: '700', color: '#111827', fontFamily: 'Inter' },
+  overSummaryContext: { marginTop: 12, fontSize: 13, color: '#0D9488', fontStyle: 'italic', fontFamily: 'Inter', fontWeight: '600' },
+  overBadge: { backgroundColor: '#F3F4F6', paddingHorizontal: 10, paddingVertical: 10, borderRadius: 8, marginRight: 0, width: 60, alignItems: 'center', justifyContent: 'center' },
+  overBadgeText: { color: '#111827', fontSize: 10, fontWeight: '900', textAlign: 'center' },
 
   // Analysis Styles
   insightsBanner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 12, backgroundColor: '#ECFEFF', borderBottomWidth: 1, borderBottomColor: '#CFFAFE' },
@@ -2016,13 +2724,36 @@ const styles = StyleSheet.create({
   wktBubbleText: { fontSize: 8, fontWeight: '800', color: '#111827' },
   xAxis: { height: 20, justifyContent: 'center', alignItems: 'center', borderTopWidth: 1, borderTopColor: '#E5E7EB' },
   xAxisLabel: { fontSize: 10, color: '#9CA3AF', marginTop: 4 },
-  wagonWheelVisual: { height: 200, backgroundColor: '#0D9488', borderRadius: 12, overflow: 'hidden', position: 'relative', alignItems: 'center', justifyContent: 'flex-end' },
-  groundCircle: { width: 350, height: 350, borderRadius: 175, backgroundColor: '#10B981', borderWidth: 8, borderColor: '#F97316', position: 'absolute', bottom: -175, alignItems: 'center' },
-  pitchArea: { width: 30, height: 50, backgroundColor: '#FDE68A', borderRadius: 4, marginTop: 20, borderWidth: 1, borderColor: '#F59E0B' },
-  boundaryLine: { position: 'absolute', top: 10, left: 10, right: 10, bottom: 10, borderRadius: 175, borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)', borderStyle: 'dashed' },
-  innerCircle: { position: 'absolute', top: 60, left: 60, right: 60, bottom: 60, borderRadius: 175, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
-  noDataOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.1)' },
-  noDataText: { color: '#FFFFFF', fontSize: 14, fontWeight: '600' },
+   wagonWheelVisual: { 
+     height: 380, 
+     backgroundColor: '#FFFFFF', 
+     borderRadius: 12, 
+     overflow: 'hidden', 
+     position: 'relative', 
+     alignItems: 'center', 
+     justifyContent: 'center',
+     padding: 10
+   },
+   groundCircle: { 
+     width: 340, 
+     height: 340, 
+     borderRadius: 170, 
+     backgroundColor: '#65A30D', 
+     borderWidth: 4, 
+     borderColor: '#EA580C', 
+     alignItems: 'center', 
+     justifyContent: 'center',
+     position: 'relative'
+   },
+   pitchArea: { width: 24, height: 44, backgroundColor: '#FEF3C7', borderRadius: 2, borderWidth: 1, borderColor: '#F59E0B' },
+   boundaryLine: { position: 'absolute', top: 5, left: 5, right: 5, bottom: 5, borderRadius: 170, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.5)', borderStyle: 'dashed' },
+   innerCircle: { position: 'absolute', top: 80, left: 80, right: 80, bottom: 80, borderRadius: 170, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
+   wagonLegend: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 16, justifyContent: 'center' },
+   wagonLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+   wagonLegendDot: { width: 10, height: 10, borderRadius: 2 },
+   wagonLegendText: { fontSize: 11, color: '#4B5563', fontWeight: '700' },
+   noDataOverlay: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.05)' },
+   noDataText: { color: '#6B7280', fontSize: 14, fontWeight: '600' },
   subLabel: { fontSize: 12, color: '#6B7280', marginBottom: 16 },
 
   // Scorecard Table Styles
@@ -2037,25 +2768,25 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6'
   },
-  scHeaderText: { color: '#111827', fontSize: 16, fontWeight: '700', fontFamily: 'Inter' },
-  scHeaderScore: { color: '#111827', fontSize: 22, fontWeight: '800', fontFamily: 'Inter' },
-  scHeaderOvers: { color: '#6B7280', fontSize: 13, fontWeight: '500', fontFamily: 'Inter' },
+  scHeaderText: { color: '#111827', fontSize: 16, fontWeight: '600', fontFamily: 'Inter' },
+  scHeaderScore: { color: '#111827', fontSize: 22, fontWeight: '700', fontFamily: 'Inter' },
+  scHeaderOvers: { color: '#6B7280', fontSize: 13, fontWeight: '400', fontFamily: 'Inter' },
   scTable: { paddingBottom: 12 },
   scRowHead: { flexDirection: 'row', backgroundColor: '#F9FAFB', paddingVertical: 10, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-  scCol: { fontSize: 12, fontWeight: '700', color: '#9CA3AF', textAlign: 'right' },
+  scCol: { fontSize: 12, fontWeight: '500', color: '#9CA3AF', textAlign: 'right', fontFamily: 'Inter' },
   scRow: { flexDirection: 'row', paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#F9FAFB', alignItems: 'flex-start' },
-  scPlayerName: { fontSize: 14, fontWeight: '700', color: '#C69E3D' },
-  scDismissal: { fontSize: 12, color: '#B4B2A9', marginTop: 2 },
-  scVal: { fontSize: 14, color: '#111827', textAlign: 'right' },
+  scPlayerName: { fontSize: 14, fontWeight: '600', color: '#C69E3D', fontFamily: 'Inter' },
+  scDismissal: { fontSize: 12, color: '#B4B2A9', marginTop: 2, fontFamily: 'Inter' },
+  scVal: { fontSize: 14, color: '#111827', textAlign: 'right', fontFamily: 'Inter' },
   scExtrasRow: { padding: 16, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
-  scExtrasLabel: { fontSize: 14, fontWeight: '500', color: '#6B7280' },
-  scExtrasVal: { fontSize: 14, color: '#111827', fontWeight: '700' },
-  scExtrasDetail: { fontSize: 12, color: '#9CA3AF' },
+  scExtrasLabel: { fontSize: 14, fontWeight: '500', color: '#6B7280', fontFamily: 'Inter' },
+  scExtrasVal: { fontSize: 14, color: '#111827', fontWeight: '600', fontFamily: 'Inter' },
+  scExtrasDetail: { fontSize: 12, color: '#9CA3AF', fontFamily: 'Inter' },
   scTotalRow: { padding: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB', backgroundColor: '#FFFFFF' },
-  scTotalLabel: { fontSize: 14, fontWeight: '500', color: '#6B7280' },
-  scTotalVal: { fontSize: 15, fontWeight: '800', color: '#111827' },
-  scTotalMeta: { fontSize: 13, color: '#6B7280', marginLeft: 6 },
-  scTotalCrr: { fontSize: 12, fontWeight: '800', color: '#111827' },
+  scTotalLabel: { fontSize: 14, fontWeight: '500', color: '#6B7280', fontFamily: 'Inter' },
+  scTotalVal: { fontSize: 15, fontWeight: '700', color: '#111827', fontFamily: 'Inter' },
+  scTotalMeta: { fontSize: 13, color: '#6B7280', marginLeft: 6, fontFamily: 'Inter' },
+  scTotalCrr: { fontSize: 12, fontWeight: '700', color: '#111827', fontFamily: 'Inter' },
   scToBatBox: { padding: 16, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
   scToBatLabel: { fontSize: 14, fontWeight: '700', color: '#111827', marginBottom: 4 },
   scToBatList: { fontSize: 13, color: '#6B7280', fontStyle: 'italic' },
@@ -2069,18 +2800,31 @@ const styles = StyleSheet.create({
   mvpHeader: { padding: 12, backgroundColor: '#FFFFFF', borderBottomWidth: 1, borderBottomColor: '#F3F4F6', alignItems: 'flex-end' },
   calcTrigger: { paddingHorizontal: 4, paddingVertical: 4 },
   calcTriggerText: { fontSize: 11, color: '#0D9488', fontWeight: 'bold' },
-  mvpPlayerRow: { flexDirection: 'row', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: '#F9FAFB' },
-  mvpRankBox: { width: 30, alignItems: 'center' },
-  mvpRankText: { fontSize: 13, color: '#4B5563', fontWeight: '500' },
-  mvpAvatarContainer: { position: 'relative', marginHorizontal: 12 },
-  mvpAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#F3F4F6' },
-  mvpProBadge: { position: 'absolute', top: -2, right: -4, backgroundColor: '#0D9488', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 4 },
-  mvpProText: { color: '#FFFFFF', fontSize: 8, fontWeight: 'bold' },
+  mvpPlayerRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6', backgroundColor: '#FFFFFF' },
+  mvpRankBox: { width: 30, alignItems: 'flex-start' },
+  mvpRankText: { fontSize: 14, color: '#6B7280', fontWeight: '400', fontFamily: 'Inter' },
+  mvpAvatarContainer: { position: 'relative', marginRight: 12 },
+  mvpAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#F3F4F6' },
+  mvpProBadge: { position: 'absolute', backgroundColor: '#0D9488', paddingHorizontal: 5, paddingVertical: 2, borderRadius: 8, borderWidth: 2, borderColor: '#FFFFFF' },
+  mvpProText: { color: '#FFFFFF', fontSize: 8, fontWeight: '800' },
   mvpInfoBody: { flex: 1 },
-  mvpPlayerName: { fontSize: 14, fontWeight: '700', color: '#111827' },
-  mvpTeamName: { fontSize: 11, color: '#6B7280', marginTop: 2, fontStyle: 'italic' },
-  mvpScoreBox: { paddingHorizontal: 8 },
-  mvpScoreVal: { fontSize: 22, fontWeight: '400', color: '#111827' },
+  mvpPlayerName: { fontSize: 14, fontWeight: '500', color: '#111827', fontFamily: 'Inter' },
+  mvpTeamName: { fontSize: 11, color: '#9CA3AF', marginTop: 1, fontStyle: 'italic', fontFamily: 'Inter' },
+  mvpScoreBox: { paddingLeft: 8 },
+  mvpScoreVal: { fontSize: 24, fontWeight: '400', color: '#111827', fontFamily: 'Inter' },
+  mvpDetailRow: { 
+    backgroundColor: '#F9FAFB', 
+    padding: 12, 
+    borderBottomLeftRadius: 12, 
+    borderBottomRightRadius: 12, 
+    borderWidth: 1, 
+    borderColor: '#F3F4F6', 
+    borderTopWidth: 0,
+    alignItems: 'center'
+  },
+  mvpDetailText: { fontSize: 12, color: '#6B7280', fontFamily: 'Inter' },
+  mvpDetailValue: { color: '#111827', fontWeight: '600' },
+  mvpDetailTotal: { color: '#0D9488', fontWeight: '800' },
 
   // Gallery Styles
   emptyGalleryContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },

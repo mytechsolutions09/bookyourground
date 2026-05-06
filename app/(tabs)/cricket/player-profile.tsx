@@ -46,6 +46,7 @@ import { getPlayerTags } from '@/lib/stats-logic';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import WebLayout from '@/components/web/WebLayout';
+import { useUI } from '@/contexts/UIContext';
 
 const INDIAN_STATES = [
   "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", 
@@ -61,9 +62,18 @@ const { width } = Dimensions.get('window');
 
 
 const PlayerProfileView = () => {
-  const { profile, loading: authLoading, user } = useAuth();
-  const { width } = useWindowDimensions();
-  const isUltraNarrow = width < 350;
+   const { profile, loading: authLoading, user } = useAuth();
+   const { width } = useWindowDimensions();
+   const { setTabBarVisible } = useUI();
+
+   useFocusEffect(
+     React.useCallback(() => {
+       setTabBarVisible(false);
+       return () => setTabBarVisible(true);
+     }, [setTabBarVisible])
+   );
+
+   const isUltraNarrow = width < 350;
   const isTablet = width >= 600 && width < 900;
   const isSmall = width < 900;
   const [isEditing, setIsEditing] = useState(false);
@@ -263,24 +273,35 @@ const PlayerProfileView = () => {
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
       <View style={[styles.responsiveContent, isTablet && { maxWidth: '90%' }]}>
       <View style={[styles.section, isUltraNarrow && { paddingHorizontal: 12 }]}>
-        <View style={styles.statsGrid}>
-          <View style={styles.statBox}>
-             <RNText style={styles.statValue}>{globalStats?.total_runs || 0}</RNText>
-             <RNText style={styles.statLabel}>Runs</RNText>
+        {fetchingData ? (
+          <View style={styles.statsGrid}>
+            {[1, 2, 3, 4].map(i => (
+              <View key={i} style={[styles.statBox, { backgroundColor: '#F1F5F9' }]}>
+                <View style={styles.skeletonStatValue} />
+                <View style={styles.skeletonStatLabel} />
+              </View>
+            ))}
           </View>
-          <View style={styles.statBox}>
-             <RNText style={styles.statValue}>{globalStats?.total_wickets || 0}</RNText>
-             <RNText style={styles.statLabel}>Wickets</RNText>
+        ) : (
+          <View style={styles.statsGrid}>
+            <View style={styles.statBox}>
+               <RNText style={styles.statValue}>{globalStats?.total_runs || 0}</RNText>
+               <RNText style={styles.statLabel}>Runs</RNText>
+            </View>
+            <View style={styles.statBox}>
+               <RNText style={styles.statValue}>{globalStats?.total_wickets || 0}</RNText>
+               <RNText style={styles.statLabel}>Wickets</RNText>
+            </View>
+            <View style={styles.statBox}>
+               <RNText style={styles.statValue}>{globalStats?.matches_played || 0}</RNText>
+               <RNText style={styles.statLabel}>Matches</RNText>
+            </View>
+            <View style={styles.statBox}>
+               <RNText style={styles.statValue}>{globalStats?.batting_avg || '0.0'}</RNText>
+               <RNText style={styles.statLabel}>Average</RNText>
+            </View>
           </View>
-          <View style={styles.statBox}>
-             <RNText style={styles.statValue}>{globalStats?.matches_played || 0}</RNText>
-             <RNText style={styles.statLabel}>Matches</RNText>
-          </View>
-          <View style={styles.statBox}>
-             <RNText style={styles.statValue}>{globalStats?.batting_avg || '0.0'}</RNText>
-             <RNText style={styles.statLabel}>Average</RNText>
-          </View>
-        </View>
+        )}
       </View>
 
       {fetchingData && (
@@ -493,8 +514,8 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   section: {
-    paddingHorizontal: 20,
-    marginTop: 20,
+    paddingHorizontal: 16,
+    marginTop: 4, // Minimized to sit almost flush under tabs
   },
   headerCard: {
     backgroundColor: '#FFFFFF',
@@ -565,8 +586,8 @@ const styles = StyleSheet.create({
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginTop: 12,
-    gap: 10,
+    marginTop: 8,
+    gap: 8,
   },
   statBox: {
     flex: 1,
@@ -811,6 +832,19 @@ const styles = StyleSheet.create({
   },
   formToggleTextActive: {
     color: '#01b854',
+  },
+  skeletonStatValue: {
+    height: 24,
+    width: 40,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 4,
+  },
+  skeletonStatLabel: {
+    height: 12,
+    width: 60,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 4,
+    marginTop: 8,
   },
 });
 

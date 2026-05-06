@@ -206,6 +206,7 @@ const styles = StyleSheet.create({
   teamList: {
     paddingHorizontal: 0,
     gap: 12,
+    marginTop: 12, // Added padding under subbar
   },
   teamCard: {
     backgroundColor: '#FFFFFF',

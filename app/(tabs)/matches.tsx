@@ -164,7 +164,7 @@ export default function MyMatchesScreen() {
               </View>
             )}
             keyExtractor={item => item.id}
-            numColumns={isWideWeb || isExtraWideWeb ? 3 : isMediumWeb ? 2 : 1}
+            numColumns={isExtraWideWeb ? 3 : (isWideWeb || isMediumWeb) ? 2 : 1}
             columnWrapperStyle={
               isWideWeb || isExtraWideWeb || isMediumWeb ? styles.webColumnWrapper : undefined
             }
@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   listNative: {
-    padding: 16,
+    padding: 12,
   },
   nativeItem: {
     marginBottom: 8,

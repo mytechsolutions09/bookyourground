@@ -75,7 +75,7 @@ const { width: windowWidth } = Dimensions.get('window');
 
 const HEADER_MAX_HEIGHT = 300;
 const HEADER_MIN_HEIGHT = 100;
-const SUB_BAR_HEIGHT = 48;
+const SUB_BAR_HEIGHT = 36;
 
 const TABS = [
   { id: 'player-profile', label: 'Profile', index: 0 },
@@ -194,7 +194,7 @@ export default function CricketLayout() {
   }, [badgesTab]);
 
   useEffect(() => {
-    const idx = ['all', 'live', 'upcoming', 'result'].indexOf(matchesStatus);
+    const idx = ['all', 'result'].indexOf(matchesStatus);
     if (idx !== -1) matchesIdx.value = idx;
   }, [matchesStatus]);
 
@@ -383,8 +383,8 @@ export default function CricketLayout() {
   }));
 
   const matchesPillStyle = useAnimatedStyle(() => ({
-    left: withTiming((matchesIdx.value / 4) * 100 + '%', { duration: 250 }),
-    width: '25%',
+    left: withTiming((matchesIdx.value / 2) * 100 + '%', { duration: 250 }),
+    width: '50%',
   }));
 
   const teamsPillStyle = useAnimatedStyle(() => ({
@@ -742,11 +742,13 @@ export default function CricketLayout() {
                 <View style={styles.avatarPlaceholder}>
                    <ActivityIndicator color="#FFFFFF" />
                 </View>
-              ) : (
+              ) : profile ? (
                 <Image 
-                  source={profile?.avatar_url ? { uri: profile.avatar_url } : require('../../../assets/avatar.png')} 
+                  source={profile.avatar_url ? { uri: profile.avatar_url } : require('../../../assets/avatar.png')} 
                   style={styles.headerAvatar} 
                 />
+              ) : (
+                <View style={styles.skeletonAvatar} />
               )}
               <View style={styles.avatarEditBadge}>
                 {profile?.avatar_url ? <Trash2 size={10} color="#FF4444" /> : <Plus size={10} color="#FFFFFF" />}
@@ -760,36 +762,49 @@ export default function CricketLayout() {
               )}
               
               <View style={styles.headerBadgeRow}>
-                <View style={styles.headerLocGroup}>
-                  <MapPin size={12} color="#FFFFFF90" />
-                  <Text style={styles.headerLocation}>{profile?.state || 'Global'}</Text>
-                </View>
-                <View style={styles.headerDot} />
-                <View style={styles.headerMetricGroup}>
-                   <Eye size={12} color="#FFFFFF90" />
-                   <Text style={styles.headerStat}>{profile?.views_count || 0} Views</Text>
-                </View>
-                <View style={styles.headerDot} />
-                <View style={styles.headerMetricGroup}>
-                   <Users size={12} color="#FFFFFF90" />
-                   <Text style={styles.headerStat}>{followerCount} Followers</Text>
-                </View>
+                {profile ? (
+                  <>
+                    <View style={styles.headerLocGroup}>
+                      <MapPin size={12} color="#FFFFFF90" />
+                      <Text style={styles.headerLocation}>{profile.state || 'Global'}</Text>
+                    </View>
+                    <View style={styles.headerDot} />
+                    <View style={styles.headerMetricGroup}>
+                      <Eye size={12} color="#FFFFFF90" />
+                      <Text style={styles.headerStat}>{profile.views_count || 0} Views</Text>
+                    </View>
+                    <View style={styles.headerDot} />
+                    <View style={styles.headerMetricGroup}>
+                      <Users size={12} color="#FFFFFF90" />
+                      <Text style={styles.headerStat}>{followerCount} Followers</Text>
+                    </View>
+                  </>
+                ) : (
+                  <View style={styles.skeletonMetrics} />
+                )}
               </View>
 
               <View style={styles.headerTagRow}>
-                {[
-                  profile?.player_type,
-                  profile?.batting_style?.includes('Right') ? 'RHB' : profile?.batting_style?.includes('Left') ? 'LHB' : null,
-                  profile?.bowling_style,
-                  ...dynamicTags.map(t => t.label)
-                ].filter(Boolean).map((tag, i) => (
-                  <View key={i} style={[
-                    styles.headerTag, 
-                    dynamicTags.some(dt => dt.label === tag) && { backgroundColor: '#15803d40', borderColor: '#15803d' }
-                  ]}>
-                    <Text style={styles.headerTagText}>{tag}</Text>
+                {profile ? (
+                  [
+                    profile.player_type,
+                    profile.batting_style?.includes('Right') ? 'RHB' : profile.batting_style?.includes('Left') ? 'LHB' : null,
+                    profile.bowling_style,
+                    ...dynamicTags.map(t => t.label)
+                  ].filter(Boolean).map((tag, i) => (
+                    <View key={i} style={[
+                      styles.headerTag, 
+                      dynamicTags.some(dt => dt.label === tag) && { backgroundColor: '#15803d40', borderColor: '#15803d' }
+                    ]}>
+                      <Text style={styles.headerTagText}>{tag}</Text>
+                    </View>
+                  ))
+                ) : (
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <View style={styles.skeletonTag} />
+                    <View style={styles.skeletonTag} />
                   </View>
-                ))}
+                )}
               </View>
 
               <View style={styles.headerMetricsRow}>
@@ -812,7 +827,15 @@ export default function CricketLayout() {
         <View style={[
           styles.topActionRow, 
           { paddingTop: insets.top + 5, height: 56 + insets.top },
-          Platform.OS === 'web' && styles.webResponsiveContent
+          Platform.OS === 'web' && { 
+            maxWidth: 650, 
+            left: 0, 
+            right: 0,
+            marginLeft: 'auto',
+            marginRight: 'auto',
+            width: '100%',
+            position: 'fixed'
+          }
         ]}>
           <TouchableOpacity onPress={() => router.back()} style={styles.actionCircleBtn}>
             <ChevronLeft size={22} color="#FFFFFF" />
@@ -895,9 +918,7 @@ export default function CricketLayout() {
                     <Animated.View style={[styles.subTabPill, matchesPillStyle]} />
                     {[
                       { id: 'all', label: 'All' },
-                      { id: 'live', label: 'Live' },
-                      { id: 'upcoming', label: 'Upcoming' },
-                      { id: 'result', label: 'Result' },
+                      { id: 'result', label: 'Played' },
                     ].map((chip) => (
                       <TouchableOpacity
                         key={chip.id}
@@ -1144,7 +1165,7 @@ const styles = StyleSheet.create({
   },
   headerPlayerName: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#FFFFFF',
     marginBottom: 4,
     fontFamily: 'Inter',
@@ -1261,7 +1282,7 @@ const styles = StyleSheet.create({
   },
   miniHeaderTitle: {
     fontSize: 17,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#FFFFFF',
     fontFamily: 'Inter',
   },
@@ -1280,22 +1301,24 @@ const styles = StyleSheet.create({
   },
   tabsContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     paddingRight: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
   tabsScroll: {
-    paddingTop: 10,
-    paddingHorizontal: 16,
-    gap: 20,
+    paddingTop: 8,
+    paddingHorizontal: 12,
+    gap: 12,
   },
   tab: {
-    paddingBottom: 10,
-    minWidth: 60,
+    paddingBottom: 8,
+    paddingHorizontal: 4,
     alignItems: 'center',
   },
   tabText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#94A3B8',
     fontFamily: 'Inter',
   },
@@ -1304,39 +1327,37 @@ const styles = StyleSheet.create({
   },
   mainTabIndicator: {
     position: 'absolute',
-    bottom: 0,
-    height: 2,
+    bottom: 0, // Sits exactly on the 1px border because parent aligns to bottom
+    height: 3,
     backgroundColor: '#01b854',
-    borderRadius: 2,
-    zIndex: 1,
+    borderRadius: 3,
+    zIndex: 2,
   },
   subBarInjection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
+    height: 36,
     backgroundColor: '#FFFFFF',
+    paddingHorizontal: 0, // Absolute edge-to-edge
+    justifyContent: 'center',
   },
   toggleGroup: {
     flex: 1,
     flexDirection: 'row',
     backgroundColor: '#F1F5F9',
-    borderRadius: 10,
-    padding: 3,
-    height: 36,
+    borderRadius: 8,
+    padding: 2,
+    height: 30,
     position: 'relative',
   },
   subTabPill: {
     position: 'absolute',
-    top: 3,
-    bottom: 3,
+    top: 2,
+    bottom: 2,
     backgroundColor: '#FFFFFF',
-    borderRadius: 8,
+    borderRadius: 6,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowRadius: 2,
     elevation: 2,
   },
   toggleBtn: {
@@ -1575,8 +1596,26 @@ const styles = StyleSheet.create({
   skeletonName: {
     height: 24,
     width: 140,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: 6,
     marginBottom: 8,
+  },
+  skeletonMetrics: {
+    height: 16,
+    width: 200,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 4,
+    marginBottom: 12,
+  },
+  skeletonTag: {
+    height: 22,
+    width: 60,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 6,
+  },
+  skeletonAvatar: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(255,255,255,0.1)',
   },
 });

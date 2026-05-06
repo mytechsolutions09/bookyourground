@@ -28,12 +28,10 @@ import {
   X,
   AlertCircle,
   QrCode,
-  Info,
   Crown,
   Check,
   Briefcase,
   ArrowRight,
-  Shield,
   Star,
   Users,
   Compass,
@@ -55,7 +53,6 @@ import {
   CircleCheck,
   ClipboardList,
   Play,
-  CheckCircle2,
 } from 'lucide-react-native';
 import { styles } from './scoring-styles';
 
@@ -211,30 +208,7 @@ export const TeamSelectionView = ({
         </View>
       </View>
 
-      <View style={styles.setupInfoBox}>
-        <View style={styles.setupInfoItem}>
-          <Shield size={20} color="#01b854" />
-          <Text style={styles.setupInfoText}>Official Player Stats Tracking</Text>
-        </View>
-        <View style={styles.setupInfoItem}>
-          <Zap size={20} color="#01b854" />
-          <Text style={styles.setupInfoText}>Real-time Score Updates</Text>
-        </View>
-      </View>
 
-      {!selectedTeamA || !selectedTeamB ? (
-        <View style={styles.hintCard}>
-          <Info size={20} color="#64748B" />
-          <Text style={styles.hintText}>
-            You need to select both teams to proceed with the match setup.
-          </Text>
-        </View>
-      ) : (
-        <View style={styles.successSetupBox}>
-          <CheckCircle2 size={20} color="#01b854" />
-          <Text style={styles.successSetupText}>Teams Ready for Action!</Text>
-        </View>
-      )}
     </ScrollView>
 
     <View style={styles.stickyFooterSelection}>
@@ -979,7 +953,7 @@ export const OpeningSelectionView = ({
 };
 
 // --- SCORING SETTINGS SIDE SHEET ---
-export const ScoringSettingsSheet = ({ isVisible, onClose, onAction }: any) => {
+export const ScoringSettingsSheet = React.memo(({ isVisible, onClose, onAction }: any) => {
   const sections = [
     {
       title: 'Match Settings',
@@ -1122,4 +1096,4 @@ export const ScoringSettingsSheet = ({ isVisible, onClose, onAction }: any) => {
       </View>
     </Modal>
   );
-};
+});

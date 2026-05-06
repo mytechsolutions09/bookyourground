@@ -705,7 +705,7 @@ export function useCricketScoring() {
     return next;
   }, [inn, matchId, matchConfig, handleOverEnd, logBall, pushLiveState, checkEnd, syncPartnershipInDB]);
 
-  const addExtra = useCallback(async (type: string, additionalRuns: number = 0) => {
+  const addExtra = useCallback(async (type: string, additionalRuns: number = 0, area?: string) => {
     if (!inn) return;
     snapshot(inn);
     let next = { ...inn, batters: inn.batters.map(b => ({ ...b })), bowlers: inn.bowlers.map(b => ({ ...b })) };
@@ -793,14 +793,14 @@ export function useCricketScoring() {
     }
 
     setInn(next);
-    await logBall(next, { runs: totalRuns, extras: totalRuns, extraType: type, type: ballType, label: ballLabel }, matchId!);
+    await logBall(next, { runs: totalRuns, extras: totalRuns, extraType: type, type: ballType, label: ballLabel, area }, matchId!);
     await syncPartnershipInDB(next, matchId!);
     await pushLiveState(next, matchConfig, matchId!, currentIdx + 1);
     await checkEnd(next, matchConfig, matchId!);
     return next;
   }, [inn, matchId, matchConfig, handleOverEnd, logBall, pushLiveState, checkEnd, syncPartnershipInDB]);
 
-  const addWicket = useCallback(async ({ dismissedName, dismissalType, fielder, newBatterName }: any) => {
+  const addWicket = useCallback(async ({ dismissedName, dismissalType, fielder, newBatterName, area }: any) => {
     if (!inn) return;
     snapshot(inn);
     let next = { ...inn, batters: inn.batters.map(b => ({ ...b })), bowlers: inn.bowlers.map(b => ({ ...b })) };
@@ -830,7 +830,7 @@ export function useCricketScoring() {
         label: 'W' 
       }];
       
-      await logBall(next, { isWicket: true, dismissalType, fielder, type: 'wicket', label: 'W', batter_name: dismissedName }, matchId!);
+      await logBall(next, { isWicket: true, dismissalType, fielder, type: 'wicket', label: 'W', batter_name: dismissedName, area }, matchId!);
       await syncPartnershipInDB(next, matchId!, true, dismissedName);
 
       if (next.legalBalls > 0 && next.legalBalls % 6 === 0) {

@@ -221,38 +221,50 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
         return;
       }
 
-      const matchesWithPricing = await Promise.all((data as any[]).map(async (m) => {
+      // 1. Get all ground IDs and days of week needed
+      const pricingNeeds = data.map(m => {
+        const parts = m.booking_date.split('-');
+        const dateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        const dow = getDayOfWeek(dateObj);
+        return { ground_id: m.ground_id, dow, start_time: m.start_time };
+      });
+
+      const groundIds = Array.from(new Set(pricingNeeds.map(n => n.ground_id)));
+      
+      // 2. Fetch all relevant slots in one or two queries if possible
+      // For simplicity and to handle the multiple criteria, we'll fetch for all grounds first
+      const { data: slotDataList } = await supabase
+        .from('time_slots')
+        .select('ground_id, day_of_week, start_time, custom_price')
+        .in('ground_id', groundIds)
+        .eq('is_available', true);
+
+      // 3. Map pricing back to matches
+      const matchesWithPricing = (data as any[]).map(m => {
         try {
           const parts = m.booking_date.split('-');
           const dateObj = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-          const dow = getDayOfWeek(dateObj) as any;
-
+          const dow = getDayOfWeek(dateObj);
+          
           const isBox = String(m.ground.pitch_type ?? '').toLowerCase().includes('box');
 
-          const { data: slotData } = await supabase
-            .from('time_slots')
-            .select('custom_price')
-            .eq('ground_id', m.ground_id)
-            .eq('day_of_week', dow)
-            .eq('start_time', m.start_time)
-            .eq('is_available', true)
-            .maybeSingle();
+          // Find matching slot in our pre-fetched list
+          const slotData = slotDataList?.find(s => 
+            s.ground_id === m.ground_id && 
+            s.day_of_week === dow && 
+            s.start_time === m.start_time
+          );
 
           let currentSlotPrice = slotData?.custom_price ?? m.ground.base_price_per_hour;
 
-          if (isBox) {
-            const hours = m.total_hours || 1;
-            const fullPrice = currentSlotPrice * hours;
-            return { ...m, total_amount: Math.round((fullPrice / 2) * 100) / 100 };
-          } else {
-            const fullPrice = currentSlotPrice;
-            return { ...m, total_amount: Math.round((fullPrice / 2) * 100) / 100 };
-          }
+          const hours = m.total_hours || 1;
+          const fullPrice = isBox ? currentSlotPrice * hours : currentSlotPrice;
+          return { ...m, total_amount: Math.round((fullPrice / 2) * 100) / 100 };
         } catch (e) {
-          console.warn('Error fetching current pricing for match:', m.id, e);
+          console.warn('Error processing pricing for match:', m.id, e);
+          return m;
         }
-        return m;
-      }));
+      });
 
       setMatches(matchesWithPricing);
     } catch (error) {

@@ -50,8 +50,27 @@ export const LiveScoringView = ({
   onAddBall, onUndo, onOpenMore, onOpenSettings, onStartSecondInnings,
   onOpenBowlerSelection, onOpenWicketConfig, onOpenExtraSelector, onSwapBatters
 }: any) => {
+  const [showWagonWheel, setShowWagonWheel] = useState(false);
+  const [pendingRuns, setPendingRuns] = useState<number | null>(null);
+
   if (!inn) return null;
   
+  const handleAddBallWithWagon = (runs: number) => {
+    if (matchConfig?.wagonWheel && runs > 0) {
+      setPendingRuns(runs);
+      setShowWagonWheel(true);
+    } else {
+      onAddBall(runs);
+    }
+  };
+
+  const selectArea = (area: string) => {
+    if (pendingRuns !== null) {
+      onAddBall(pendingRuns, area);
+      setPendingRuns(null);
+      setShowWagonWheel(false);
+    }
+  };
   const formatOvers = (legalBalls: number) => `${Math.floor(legalBalls / 6)}.${legalBalls % 6}`;
   const oversStr = formatOvers(inn.legalBalls);
   
@@ -159,17 +178,17 @@ export const LiveScoringView = ({
              
              <View style={styles.controlGridRow}>
                 {[0, 1, 2, 3].map(n => (
-                  <TouchableOpacity key={n} style={styles.runBtnPremium} onPress={() => onAddBall(n)}>
+                  <TouchableOpacity key={n} style={styles.runBtnPremium} onPress={() => handleAddBallWithWagon(n)}>
                      <Text style={styles.runBtnTextPremium}>{n}</Text>
                   </TouchableOpacity>
                 ))}
              </View>
 
              <View style={styles.controlGridRow}>
-                <TouchableOpacity style={[styles.runBtnPremium, styles.boundary4Btn]} onPress={() => onAddBall(4)}>
+                <TouchableOpacity style={[styles.runBtnPremium, styles.boundary4Btn]} onPress={() => handleAddBallWithWagon(4)}>
                    <Text style={styles.runBtnTextPremium}>4</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.runBtnPremium, styles.boundary6Btn]} onPress={() => onAddBall(6)}>
+                <TouchableOpacity style={[styles.runBtnPremium, styles.boundary6Btn]} onPress={() => handleAddBallWithWagon(6)}>
                    <Text style={styles.runBtnTextPremium}>6</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.runBtnPremium, styles.wicketBtnPremium]} onPress={onOpenWicketConfig}>
@@ -210,6 +229,57 @@ export const LiveScoringView = ({
              <Text style={styles.footerActionText}>Settings</Text>
           </TouchableOpacity>
        </View>
+        
+        {/* Wagon Wheel Selection Modal */}
+        <Modal
+          visible={showWagonWheel}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowWagonWheel(false)}
+        >
+          <Pressable 
+            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}
+            onPress={() => setShowWagonWheel(false)}
+          >
+            <View style={{ width: '90%', backgroundColor: '#FFFFFF', borderRadius: 20, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.2, shadowRadius: 20, elevation: 10 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <Text style={{ fontSize: 18, fontWeight: '800', color: '#111827' }}>Where was it hit?</Text>
+                <TouchableOpacity onPress={() => setShowWagonWheel(false)}>
+                  <Plus size={24} color="#9CA3AF" style={{ transform: [{ rotate: '45deg' }] }} />
+                </TouchableOpacity>
+              </View>
+              
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
+                {[
+                  'Straight', 'Mid-off', 'Cover', 'Point', 'Third Man', 
+                  'Fine Leg', 'Square Leg', 'Mid-wicket', 'Mid-on'
+                ].map((area) => (
+                  <TouchableOpacity 
+                    key={area}
+                    style={{ 
+                      paddingHorizontal: 16, 
+                      paddingVertical: 12, 
+                      borderRadius: 12, 
+                      backgroundColor: '#F3F4F6',
+                      minWidth: '30%',
+                      alignItems: 'center'
+                    }}
+                    onPress={() => selectArea(area)}
+                  >
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#374151' }}>{area}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              
+              <TouchableOpacity 
+                style={{ marginTop: 20, paddingVertical: 14, backgroundColor: '#E5E7EB', borderRadius: 12, alignItems: 'center' }}
+                onPress={() => selectArea('Unspecified')}
+              >
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#4B5563' }}>Skip Wagon Wheel</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Modal>
     </View>
   );
 };
@@ -414,18 +484,13 @@ export const ExtraRunsSelector = ({ isVisible, onClose, type, onSelect }: any) =
       visible={isVisible}
       onRequestClose={onClose}
     >
-      <Pressable style={styles.sheetOverlay} onPress={onClose}>
-        <Pressable style={[styles.sheetContent, { height: 'auto', paddingBottom: 40 }]} onPress={(e) => e.stopPropagation()}>
-          <View style={styles.sheetHandle} />
-          <View style={{ padding: 24 }}>
-             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#F0FDF4', alignItems: 'center', justifyContent: 'center' }}>
-                   <Plus size={20} color="#01b854" />
-                </View>
-                <View>
-                   <Text style={[styles.selectionTitle, { marginBottom: 0 }]}>{type?.toUpperCase()} Runs</Text>
-                   <Text style={styles.selectionSubTitleSmall}>Select additional runs scored</Text>
-                </View>
+      <View style={styles.modalOverlay}>
+        <View style={styles.extraRunsContent}>
+             <View style={styles.selectionHeader}>
+                <Text style={styles.selectionTitle}>{type?.toUpperCase()} RUNS</Text>
+                <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+                   <Plus size={24} color="#64748B" style={{ transform: [{ rotate: '45deg' }] }} />
+                </TouchableOpacity>
              </View>
 
              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 24, justifyContent: 'center' }}>
@@ -442,14 +507,13 @@ export const ExtraRunsSelector = ({ isVisible, onClose, type, onSelect }: any) =
              </View>
 
              <TouchableOpacity 
-                style={[styles.cancelExtraBtn, { marginTop: 32, backgroundColor: '#F1F5F9', borderWidth: 0 }]} 
-                onPress={onClose}
+               style={[styles.startMatchMainBtn, { marginTop: 32, backgroundColor: '#F1F5F9' }]}
+               onPress={onClose}
              >
-               <Text style={[styles.cancelExtraText, { color: '#64748B' }]}>Dismiss</Text>
+               <Text style={[styles.startMatchMainBtnText, { color: '#64748B' }]}>Cancel</Text>
              </TouchableOpacity>
-          </View>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 };

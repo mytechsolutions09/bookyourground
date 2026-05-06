@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
+import { Platform } from 'react-native';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { UserRole } from '@/types/database';
@@ -41,57 +42,70 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const initAuth = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.warn('Initial session retrieval error:', error.message);
-          // If the refresh token is invalid or not found, we must sign out 
-          // to clear the local storage and prevent future refresh loops
-          if (error.message.includes('Refresh Token')) {
-            await supabase.auth.signOut();
-            setSession(null);
-            setUser(null);
-            setLoading(false);
-            return;
-          }
-        }
+  const loadProfile = useCallback(async (userId: string) => {
+    try {
+      // Use a timeout for the profile fetch itself
+      const profilePromise = supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
 
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await loadProfile(session.user.id);
+      // Race against a 4-second timeout for the database call
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 4000)
+      );
+
+      const { data, error } = await Promise.race([profilePromise, timeoutPromise]) as any;
+
+      if (error) throw error;
+      
+      if (data) {
+        setProfile(prev => {
+          if (prev && prev.id === data.id && prev.role === data.role && prev.full_name === data.full_name) {
+            return prev;
+          }
+          return data;
+        });
+      }
+      
+      void scheduleMatchReminders(userId);
+    } catch (error) {
+      console.error('Error loading profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let profileTimeout: NodeJS.Timeout;
+
+    // Use onAuthStateChange for all auth state management, including initial session
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      // console.log('Auth event:', event, !!session);
+      
+      const newUser = session?.user ?? null;
+      
+      // Update session and user states
+      setSession(session);
+      setUser(newUser);
+
+      if (newUser) {
+        // Clear any existing timeout
+        if (profileTimeout) clearTimeout(profileTimeout);
+
+        // Set a safety timeout: don't block the app for more than 5 seconds on profile loading
+        profileTimeout = setTimeout(() => {
+          setLoading(false);
+        }, 5000);
+
+        // Load profile if needed
+        if (!profile || profile.id !== newUser.id) {
+          await loadProfile(newUser.id);
         } else {
           setLoading(false);
         }
-      } catch (err) {
-        console.error('Unexpected auth initialization error:', err);
-        setLoading(false);
-      }
-    };
-
-    initAuth();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // Only update if the session or user has actually changed to prevent re-render loops
-      setSession(prev => {
-        if (prev?.access_token === session?.access_token) return prev;
-        return session;
-      });
-
-      const newUser = session?.user ?? null;
-      setUser(prev => {
-        if (prev?.id === newUser?.id) return prev;
-        return newUser;
-      });
-      
-      if (newUser) {
-        // Only reload profile if user ID changed or profile is missing
-        if (!profile || profile.id !== newUser.id) {
-          await loadProfile(newUser.id);
-        }
+        
         // Schedule 6 AM reminders for today's matches
         void scheduleMatchReminders(newUser.id);
       } else {
@@ -100,36 +114,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
+    // Handle window focus on Web to ensure session is fresh after idleness
+    const handleFocus = async () => {
+      if (Platform.OS === 'web') {
+        try {
+          const { data: { session: currentSession } } = await supabase.auth.getSession();
+          if (currentSession) {
+            setSession(currentSession);
+            setUser(currentSession.user);
+          }
+        } catch (err) {
+          console.warn('Error refreshing session on focus:', err);
+        }
+      }
+    };
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.addEventListener('focus', handleFocus);
+    }
+
     return () => {
       subscription.unsubscribe();
+      if (profileTimeout) clearTimeout(profileTimeout);
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.removeEventListener('focus', handleFocus);
+      }
     };
-  }, []);
-
-  const loadProfile = useCallback(async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (error) throw error;
-      setProfile(prev => {
-        // Shallow check for stability
-        if (prev && data && prev.id === data.id && prev.role === data.role && prev.full_name === data.full_name) {
-          return prev;
-        }
-        return data;
-      });
-      
-      // Also schedule reminders here in case onAuthStateChange didn't catch it
-      void scheduleMatchReminders(userId);
-    } catch (error) {
-      console.error('Error loading profile:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  }, [profile?.id, loadProfile]);
 
   const signUp = useCallback(async (email: string, password: string, fullName: string, phone: string, role: UserRole = 'user', businessName?: string, address?: string, state?: string, teamName?: string, playerType?: string, captchaToken?: string) => {
     try {

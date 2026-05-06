@@ -413,7 +413,7 @@ const CricketMatches = React.memo(({
   );
 
   return (
-    <View style={{ flex: 1, paddingHorizontal: 16 }}>
+    <View style={{ flex: 1, paddingHorizontal: 0 }}>
       {/* Search & Secondary Filters Row */}
       <View style={styles.topFiltersRow}>
         <View style={styles.searchBox}>
@@ -426,7 +426,7 @@ const CricketMatches = React.memo(({
             onChangeText={setSearchQuery}
           />
         </View>
-        <View style={{ width: 100 }}>
+        <View style={{ width: 120 }}>
           <FilterDropdown 
             id="date" 
             label="Date" 
@@ -497,6 +497,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    marginTop: 12, // Added padding under subbar
     marginBottom: 16,
     zIndex: 110,
   },
@@ -603,11 +604,12 @@ const styles = StyleSheet.create({
   matchesList: {
     gap: 14,
     paddingBottom: 32,
+    paddingHorizontal: 0,
   },
   matchCard: {
     backgroundColor: '#FFFFFF',
-    padding: 12,
-    borderRadius: 18,
+    padding: 10,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     shadowColor: '#000',
@@ -625,12 +627,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 14,
+    marginBottom: 8,
   },
   matchType: {
     fontFamily: 'Inter',
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '600',
     color: '#334155',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -646,9 +648,9 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
   },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
@@ -658,8 +660,8 @@ const styles = StyleSheet.create({
   statusBadgeUpcoming: { backgroundColor: '#4f2c63' },
   statusBadgeText: { 
     fontFamily: 'Inter',
-    fontSize: 10, 
-    fontWeight: '800' 
+    fontSize: 9, 
+    fontWeight: '700' 
   },
   statusBadgeTextLive: { color: '#FFFFFF' },
   statusBadgeTextResult: { color: '#FFFFFF' },
@@ -670,7 +672,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     backgroundColor: '#FFFFFF',
   },
-  matchTeams: { gap: 8 },
+  matchTeams: { gap: 6 },
   matchTeamRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -683,28 +685,28 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   miniAvatar: {
-    width: 34,
-    height: 34,
+    width: 28,
+    height: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 10,
+    borderRadius: 8,
   },
   teamNameText: {
     fontFamily: 'Inter',
-    fontSize: 15,
-    fontWeight: '500',
+    fontSize: 14,
+    fontWeight: '400',
     color: '#1E293B',
     flex: 1,
   },
   teamScoreText: {
     fontFamily: 'Inter',
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '500',
     color: '#06392e',
   },
   teamOversText: {
     fontFamily: 'Inter',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
     color: '#94A3B8',
   },

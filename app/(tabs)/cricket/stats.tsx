@@ -357,6 +357,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    marginTop: 12, // Added padding under subbar
     marginBottom: 40,
   },
   statsSectionHeader: {
