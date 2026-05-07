@@ -909,6 +909,7 @@ export default function CheckoutScreen() {
         sideColumn: {
             flex: isLargeWebScreen ? 1 : 0,
             width: '100%',
+            padding: isLargeWebScreen ? 0 : 16,
         },
         heroTitle: {
             fontSize: width < 1000 ? 32 : 42,
@@ -1579,7 +1580,6 @@ const styles = StyleSheet.create({
     },
     sideColumn: {
         flex: 1,
-        padding: 24,
         backgroundColor: '#F8FAFC',
     },
     sideColumnMobile: {
