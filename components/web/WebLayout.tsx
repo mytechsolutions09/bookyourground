@@ -12,6 +12,7 @@ import {
   TextInput as TextInput,
   ScrollView,
   DeviceEventEmitter,
+  Pressable,
 } from 'react-native';
 import { router, usePathname, useSegments, useLocalSearchParams } from 'expo-router';
 import {
@@ -53,6 +54,8 @@ import {
   Bell,
   Sun,
   Info,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { useAuth } from '@/contexts/AuthContext';
@@ -522,6 +525,14 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
   // Navbar search: fetch ground suggestions as user types on landing pages.
 
   // Navbar search: fetch ground suggestions as user types on landing pages.
+  const adminEmail = 'invirtualcoin@gmail.com';
+  
+  const isSuperAdmin = useMemo(() => 
+    profile?.role === 'super_admin' ||
+    (user?.email?.toLowerCase() ?? '') === adminEmail.toLowerCase(),
+    [profile?.role, user?.email]
+  );
+
   const adminPathnames = [
     '/dashboard',
     '/bookings',
@@ -546,7 +557,9 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     '/cricketdata',
     '/(admin)/cricketdata',
   ];
+
   const isAdminRoute = useMemo(() => 
+    isSuperAdmin || 
     adminPathnames.includes(cleanPath) ||
     cleanPath.startsWith('/cricketdata') ||
     cleanPath.startsWith('/(admin)/') ||
@@ -555,18 +568,10 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     cleanPath === '/(owner)/add-ground' ||
     cleanPath === '/matches' ||
     cleanPath === '/find-an-opponent',
-    [cleanPath]
+    [cleanPath, isSuperAdmin]
   );
-  // On ground info (/grounds/[id]) and booking info (/bookings/[id]) pages,
-  // hide the left sidebar for all roles so the content can take full width.
+
   const isGroundInfoPage = isGroundDetails;
-  const adminEmail = 'invirtualcoin@gmail.com';
-  
-  const isSuperAdmin = useMemo(() => 
-    profile?.role === 'super_admin' ||
-    (user?.email?.toLowerCase() ?? '') === adminEmail.toLowerCase(),
-    [profile?.role, user?.email]
-  );
   
   const isGroundOwner = useMemo(() => profile?.role === 'ground_owner', [profile?.role]);
   
@@ -584,7 +589,9 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
   // On ground info (/grounds/[id]) and booking info (/bookings/[id]) pages,
   // hide the left sidebar for all roles so the content can take full width.
   const isPublicNoSidebar = useMemo(() => 
-    propIsPublicNoSidebar || isLanding || (isMarketing && !isSuperAdmin && !isOwnerGroundsDashboard) || isGroundInfoPage || isBookingDetails || isCheckoutPage || isLegalOrInfoPage || (cleanPath === '/find-an-opponent' && !isSuperAdmin) || cleanPath === '/(tabs)/grounds' || cleanPath === '/shop' || cleanPath.startsWith('/shop/') || cleanPath === '/search' || cleanPath.startsWith('/live/') || (cleanPath.startsWith('/cricket/') && !cleanPath.startsWith('/cricketdata')) || cleanPath.startsWith('/players/'),
+    !isSuperAdmin && (
+      propIsPublicNoSidebar || isLanding || (isMarketing && !isOwnerGroundsDashboard) || isGroundInfoPage || isBookingDetails || isCheckoutPage || isLegalOrInfoPage || (cleanPath === '/find-an-opponent') || cleanPath === '/(tabs)/grounds' || cleanPath === '/shop' || cleanPath.startsWith('/shop/') || cleanPath === '/search' || cleanPath.startsWith('/live/') || (cleanPath.startsWith('/cricket/') && !cleanPath.startsWith('/cricketdata')) || cleanPath.startsWith('/players/') || cleanPath.startsWith('/blog')
+    ),
     [propIsPublicNoSidebar, isLanding, isMarketing, isSuperAdmin, isOwnerGroundsDashboard, isGroundInfoPage, isBookingDetails, isCheckoutPage, isLegalOrInfoPage, cleanPath]
   );
 
@@ -596,7 +603,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
         '/profile', '/(tabs)/profile', '/owner-dashboard', '/(owner)/owner-dashboard',
         '/manage-grounds', '/(owner)/manage-grounds', '/inventory', '/(owner)/inventory',
         '/wallet', '/(owner)/wallet', '/ground-bookings', '/(owner)/ground-bookings',
-        '/profile/orders', '/earnings', '/(owner)/earnings', '/settings', '/(owner)/settings',
+        '/profile/orders', '/profile/order-details', '/earnings', '/(owner)/earnings', '/settings', '/(owner)/settings',
         '/support', '/(tabs)/support'
       ];
       return ownerRoutes.includes(cleanPath);
@@ -604,10 +611,22 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     
     if (!isGroundOwner && !isSuperAdmin) {
       const userRoutes = [
-        '/profile/orders', '/dashboard', '/(tabs)/dashboard', '/profile', '/(tabs)/profile',
+        '/profile/orders', '/profile/order-details', '/dashboard', '/(tabs)/dashboard', '/profile', '/(tabs)/profile',
         '/bookings', '/(tabs)/bookings', '/favorites', '/wallet', '/support', '/(tabs)/support'
       ];
       return userRoutes.includes(cleanPath);
+    }
+    
+    if (isSuperAdmin) {
+      const adminRoutes = [
+        '/dashboard', '/bookings', '/grounds', '/inventory', 
+        '/earnings', '/payouts', '/manage-ground-owners', '/manage-users',
+        '/messages', '/products', '/(admin)/products',
+        '/orders', '/(admin)/orders', '/returns', '/(admin)/returns',
+        '/categories', '/(admin)/categories'
+      ];
+      const isSettings = cleanPath.includes('/settings');
+      return cleanPath.startsWith('/cricketdata') || isSettings || adminRoutes.includes(cleanPath);
     }
     
     return false;
@@ -934,51 +953,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
               />
             </TouchableOpacity>
 
-            {(cleanPath.includes('/products') || cleanPath.includes('/orders')) && !isCompact && isSuperAdmin && (
-              <View style={{ flexDirection: 'row', gap: 24, marginLeft: 32, alignItems: 'center' }}>
-                <TouchableOpacity onPress={() => router.push('/(admin)/orders')}>
-                  <Text style={[styles.headerNavLink, cleanPath.includes('/orders') && !params.filter && styles.headerNavLinkActive]}>
-                    SHOP ORDERS
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => router.push('/(admin)/orders?filter=returns')}>
-                  <Text style={[styles.headerNavLink, cleanPath.includes('/orders') && params.filter === 'returns' && styles.headerNavLinkActive]}>
-                    RETURNS
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => {
-                  if (!cleanPath.includes('/products')) {
-                    router.push('/(admin)/products');
-                  }
-                  window.dispatchEvent(new CustomEvent('setShopView', { detail: 'products' }));
-                }}>
-                  <Text style={[styles.headerNavLink, viewMode === 'products' && !showAddForm && styles.headerNavLinkActive]}>
-                    PRODUCTS
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => {
-                  if (!cleanPath.includes('/products')) {
-                    router.push('/(admin)/products');
-                  }
-                  window.dispatchEvent(new CustomEvent('setShopView', { detail: 'categories' }));
-                }}>
-                  <Text style={[styles.headerNavLink, viewMode === 'categories' && styles.headerNavLinkActive]}>
-                    CATEGORIES
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={{ backgroundColor: '#00ea6b', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 }}
-                  onPress={() => {
-                    if (!cleanPath.includes('/products')) {
-                      router.push('/(admin)/products');
-                    }
-                    window.dispatchEvent(new Event('openAddProduct'));
-                  }}
-                >
-                  <Text style={{ color: '#043529', fontSize: 12, fontWeight: '700' }}>+ ADD PRODUCT</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+
 
             <View style={styles.headerRight}>
               {!isCompact && !isAdminLayout && (
@@ -1068,7 +1043,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                 isAdminRoute && { transition: 'width 0.3s ease-in-out' } as any,
               ]}
             >
-              {shouldHideAppHeader && (
+              {(shouldHideAppHeader || isGroundOwner) && (
                 <TouchableOpacity
                   onPress={() => router.replace('/')}
                   style={[styles.logo, { marginBottom: 32, paddingHorizontal: 4 }]}
@@ -1094,7 +1069,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                   <>
                     {isSuperAdmin && isAdminRoute ? (
                       <>
-                        <View style={styles.sidebarHeaderRow}>
+                        <View style={[styles.sidebarHeaderRow, sidebarCollapsed && { justifyContent: 'center', paddingHorizontal: 0 }]}>
                           {!sidebarCollapsed && (
                             <Text style={styles.sidebarSectionTitle}>Super admin</Text>
                           )}
@@ -1103,9 +1078,9 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                             onPress={() => setSidebarCollapsed((prev) => !prev)}
                           >
                             {sidebarCollapsed ? (
-                              <ChevronRight size={18} color="#9CA3AF" />
+                              <PanelLeftOpen size={16} color="#00ea6b" />
                             ) : (
-                              <ChevronLeft size={18} color="#9CA3AF" />
+                              <PanelLeftClose size={16} color="#9CA3AF" />
                             )}
                           </TouchableOpacity>
                         </View>
@@ -1209,7 +1184,11 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                       </>
                     ) : isGroundOwner ? (
                       <>
-                        <Text style={styles.sidebarSectionTitle}>Ground owner</Text>
+                        <View style={[styles.sidebarHeaderRow, sidebarCollapsed && { justifyContent: 'center', paddingHorizontal: 0 }]}>
+                          {!sidebarCollapsed && (
+                            <Text style={styles.sidebarSectionTitle}>Ground owner</Text>
+                          )}
+                        </View>
                         <NavLink href="/(owner)/owner-dashboard" icon={LayoutDashboard} label="Dashboard" />
                         
                         <View style={{ opacity: hasPayoutSetup === false ? 0.4 : 1 }}>
@@ -1328,7 +1307,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
             flex: 1
           },
           !isPublicNoSidebar && !isCompact && !noCard && styles.mainAppCard,
-          shouldHideAppHeader && { maxHeight: '100vh', paddingTop: 32 }
+          shouldHideAppHeader && { maxHeight: '100vh', paddingTop: 12 }
         ]}>
           {children}
         </View>
@@ -1704,7 +1683,7 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 10,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 0,
     marginBottom: 2,
     transition: 'all 0.3s ease-in-out',
   },
@@ -1767,7 +1746,7 @@ const styles = StyleSheet.create({
   },
   mainAppCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 32,
+    borderRadius: 0,
     shadowColor: '#000',
     shadowOpacity: 0.05,
     shadowRadius: 15,
@@ -1799,16 +1778,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
-    paddingHorizontal: 4,
+    marginBottom: 20,
+    paddingHorizontal: 10,
   },
   collapseButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 999,
+    width: 32,
+    height: 32,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   sidebarDivider: {
     height: 1,

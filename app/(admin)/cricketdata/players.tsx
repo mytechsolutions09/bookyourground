@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, ActivityIndicator, FlatList, RefreshControl, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, ActivityIndicator, FlatList, RefreshControl, Image, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { User, Search, Filter, ShieldCheck, Mail, Phone, Users, ChevronRight } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
@@ -13,6 +13,7 @@ export default function AdminCricketPlayers() {
   const [loading, setLoading] = useState(true);
   const [players, setPlayers] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'all' | 'captains' | 'pending'>('all');
   const isWeb = Platform.OS === 'web';
 
   useEffect(() => {
@@ -45,36 +46,71 @@ export default function AdminCricketPlayers() {
   };
 
   const filteredPlayers = useMemo(() => {
-    if (!searchQuery) return players;
-    const lowerQuery = searchQuery.toLowerCase();
-    return players.filter(p => {
-      const playerName = (p.player_name || p.profile?.full_name || '').toLowerCase();
-      const teamName = (p.team?.name || '').toLowerCase();
-      const adminName = (p.team?.owner?.full_name || '').toLowerCase();
-      return playerName.includes(lowerQuery) || teamName.includes(lowerQuery) || adminName.includes(lowerQuery);
-    });
-  }, [players, searchQuery]);
+    let filtered = players;
+
+    // 1. Tab Filter
+    if (activeTab === 'captains') {
+      filtered = filtered.filter(p => p.role === 'captain');
+    } else if (activeTab === 'pending') {
+      filtered = filtered.filter(p => p.status === 'pending');
+    }
+
+    // 2. Search Filter
+    if (searchQuery) {
+      const lowerQuery = searchQuery.toLowerCase();
+      filtered = filtered.filter(p => {
+        const playerName = (p.player_name || p.profile?.full_name || '').toLowerCase();
+        const teamName = (p.team?.name || '').toLowerCase();
+        const adminName = (p.team?.owner?.full_name || '').toLowerCase();
+        return playerName.includes(lowerQuery) || 
+               teamName.includes(lowerQuery) || 
+               adminName.includes(lowerQuery) ||
+               p.id.toLowerCase().includes(lowerQuery);
+      });
+    }
+
+    return filtered;
+  }, [players, searchQuery, activeTab]);
 
   const content = (
     <CricketSubbar>
       <View style={styles.container}>
         <View style={styles.headerCompact}>
           <View style={styles.headerLeft}>
-            <View style={styles.searchContainer}>
-              <Search size={16} color="#9CA3AF" />
-              <input
-                type="text"
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabScrollWrap}>
+              <View style={styles.tabRow}>
+                {[
+                  { id: 'all', label: `All Players (${players.length})` },
+                  { id: 'captains', label: 'Captains' },
+                  { id: 'pending', label: 'Pending' }
+                ].map((tab) => (
+                  <TouchableOpacity
+                    key={tab.id}
+                    onPress={() => setActiveTab(tab.id as any)}
+                    style={[
+                      styles.tabChip,
+                      activeTab === tab.id && styles.tabChipActive
+                    ]}
+                  >
+                    <Text style={[
+                      styles.tabChipText,
+                      activeTab === tab.id && styles.tabChipTextActive
+                    ]}>
+                      {tab.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+
+            <View style={styles.searchWrap}>
+              <Search size={14} color="#6B7280" style={styles.searchIcon} />
+              <TextInput
                 placeholder="Search players, teams, or admins..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={{
-                  borderWidth: 0,
-                  outline: 'none',
-                  fontSize: 14,
-                  padding: 8,
-                  width: 320,
-                  backgroundColor: 'transparent',
-                } as any}
+                onChangeText={setSearchQuery}
+                style={styles.searchInput}
+                placeholderTextColor="#9CA3AF"
               />
             </View>
           </View>
@@ -119,8 +155,8 @@ export default function AdminCricketPlayers() {
                             />
                         </View>
                         <View>
-                            <Text style={styles.cellMainText}>{playerName}</Text>
-                            <Text style={styles.cellSubText}>ID: {item.id.slice(0, 8)}</Text>
+                             <Text style={styles.cellMainText}>{playerName}</Text>
+                             <Text style={styles.cellSubText}>ID: {item.id.slice(0, 8).toUpperCase()}</Text>
                         </View>
                      </View>
                    </View>
@@ -201,62 +237,98 @@ export default function AdminCricketPlayers() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Platform.OS === 'web' ? '#F5F5F5' : '#F9FAFB',
+    backgroundColor: '#FFFFFF',
   },
   headerCompact: {
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
     flexDirection: 'row',
     alignItems: 'center',
   },
   headerLeft: {
-    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  searchContainer: {
+  tabScrollWrap: {
+    marginRight: 16,
+  },
+  tabRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  tabChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 100,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  tabChipActive: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#10b981',
+    borderWidth: 1,
+  },
+  tabChipText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#6B7280',
+    fontFamily: 'Inter',
+  },
+  tabChipTextActive: {
+    color: '#10b981',
+  },
+  searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F9FAFB',
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
+    width: 300,
+    height: 32,
+    borderRadius: 16,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 12,
+    color: '#111827',
+    fontFamily: 'Inter',
+    outlineStyle: 'none' as any,
   },
   tableHeaderContainer: {
-    marginHorizontal: 24,
-    marginTop: 20,
-    marginBottom: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
     backgroundColor: '#F9FAFB',
-    borderRadius: 10,
-    borderWidth: 1,
+    borderBottomWidth: 1,
     borderColor: '#E5E7EB',
   },
   tableHeaderRow: {
     flexDirection: 'row',
+    alignItems: 'center',
   },
   tableHeaderCell: {
-    fontSize: 11,
-    fontWeight: '800',
+    fontSize: 10,
+    fontWeight: '700',
     color: '#6B7280',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    fontFamily: 'Inter',
   },
   list: {
-    padding: 24,
-    paddingTop: 8,
+    flexGrow: 1,
   },
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 24,
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginBottom: 10,
-    borderWidth: 1,
+    borderBottomWidth: 1,
     borderColor: '#F3F4F6',
   },
   tableCell: {
@@ -297,20 +369,22 @@ const styles = StyleSheet.create({
     color: '#4B5563',
   },
   cellMainText: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
     color: '#111827',
+    fontFamily: 'Inter',
   },
   cellSubText: {
-    fontSize: 11,
+    fontSize: 9.5,
     color: '#9CA3AF',
     marginTop: 2,
+    fontFamily: 'Inter',
   },
   roleBadge: {
     backgroundColor: '#F3F4F6',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 6,
+    borderRadius: 100,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
@@ -319,21 +393,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#ECFDF5',
   },
   roleText: {
-    fontSize: 10,
-    fontWeight: '800',
+    fontSize: 9,
+    fontWeight: '700',
     color: '#4B5563',
+    fontFamily: 'Inter',
   },
   roleTextCaptain: {
     color: '#065f46',
   },
   statusTag: {
-    fontSize: 10,
-    fontWeight: '800',
+    fontSize: 9,
+    fontWeight: '700',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 6,
+    borderRadius: 100,
     textAlign: 'center',
     overflow: 'hidden',
+    fontFamily: 'Inter',
   },
   statusAccepted: {
     backgroundColor: '#F0FDF4',

@@ -10,11 +10,13 @@ import {
   Platform,
   Pressable,
   Alert,
+  Modal,
+  TouchableOpacity,
+  ScrollView,
 } from 'react-native';
-import { Tag, Trash2, Pencil } from 'lucide-react-native';
+import { Tag, Trash2, Pencil, Plus, X } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { GroundType } from '@/types';
-import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 
 const emptyDraft = () => ({
@@ -32,6 +34,7 @@ export default function AdminGroundTypesManage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [edit, setEdit] = useState(emptyDraft);
   const [editLoading, setEditLoading] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   useEffect(() => {
     loadRows();
@@ -97,6 +100,7 @@ export default function AdminGroundTypesManage() {
       });
       if (error) throw error;
       setCreate(emptyDraft());
+      setShowAddModal(false);
       loadRows();
     } catch (e: any) {
       if (Platform.OS === 'web') alert(e?.message ?? 'Could not add type');
@@ -148,57 +152,33 @@ export default function AdminGroundTypesManage() {
     }
   };
 
-  const listHeader = (
-    <>
-      {Platform.OS === 'web' && (
-        <View style={[styles.header, styles.webHeader]}>
-          <Text style={styles.title}>Ground types</Text>
+  const renderListHeader = () => (
+    <View style={[styles.header, styles.webHeader]}>
+      <View style={styles.headerTop}>
+        <View>
+          <Text style={styles.title}>Ground Types</Text>
           <Text style={styles.subtitle}>
             Pitch / ground categories for filters and booking. {rows.length} total
           </Text>
         </View>
-      )}
-
-      <Card style={styles.formCard}>
-        <Text style={styles.formTitle}>Add ground type</Text>
-        <Text style={styles.label}>Name (must match grounds pitch_type when used)</Text>
-        <TextInput
-          style={styles.input}
-          value={create.name}
-          onChangeText={(t) => setCreate({ ...create, name: t })}
-          placeholder="e.g. Cricket Ground"
-        />
-        <Text style={styles.label}>Display label (optional)</Text>
-        <TextInput
-          style={styles.input}
-          value={create.label}
-          onChangeText={(t) => setCreate({ ...create, label: t })}
-          placeholder="Shown in dropdowns"
-        />
-        <View style={styles.formRow2}>
-          <View style={styles.formHalf}>
-            <Text style={styles.label}>Sort order</Text>
-            <TextInput
-              style={styles.input}
-              value={create.sort_order}
-              onChangeText={(t) => setCreate({ ...create, sort_order: t })}
-              keyboardType="numeric"
-              placeholder="0"
-            />
-          </View>
-          <View style={[styles.formHalf, styles.switchRow]}>
-            <Text style={styles.label}>Active</Text>
-            <Switch value={create.active} onValueChange={(v) => setCreate({ ...create, active: v })} />
-          </View>
-        </View>
         <Button
-          title={createLoading ? 'Adding...' : 'Add type'}
-          onPress={handleCreate}
-          loading={createLoading}
-          disabled={createLoading}
+          title="Add Ground Type"
+          icon={Plus}
+          size="small"
+          onPress={() => setShowAddModal(true)}
         />
-      </Card>
-    </>
+      </View>
+    </View>
+  );
+
+  const renderTableHeader = () => (
+    <View style={styles.tableHeader}>
+      <Text style={[styles.columnHeader, { flex: 3 }]}>Name</Text>
+      <Text style={[styles.columnHeader, { flex: 3 }]}>Display Label</Text>
+      <Text style={[styles.columnHeader, { flex: 1, textAlign: 'center' }]}>Order</Text>
+      <Text style={[styles.columnHeader, { flex: 1.5, textAlign: 'center' }]}>Status</Text>
+      <Text style={[styles.columnHeader, { flex: 1.5, textAlign: 'right' }]}>Actions</Text>
+    </View>
   );
 
   return (
@@ -208,51 +188,27 @@ export default function AdminGroundTypesManage() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         keyboardShouldPersistTaps="handled"
-        ListHeaderComponent={listHeader}
+        ListHeaderComponent={() => (
+          <View>
+            {renderListHeader()}
+            {rows.length > 0 && renderTableHeader()}
+          </View>
+        )}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadRows} />}
         ListEmptyComponent={
           !loading ? (
             <View style={styles.emptyBox}>
-              <Text style={styles.emptyText}>No types yet — add one above</Text>
+              <Text style={styles.emptyText}>No ground types yet — add one above</Text>
             </View>
           ) : null
         }
         renderItem={({ item }) => {
-          const display = item.label?.trim() || item.name;
           const isEditing = editingId === item.id;
 
-          return (
-            <Card style={styles.rowCard}>
-              <View style={styles.rowHeader}>
-                <View style={styles.iconPill}>
-                  <Tag size={18} color={Platform.OS === 'web' ? '#10b981' : '#2196F3'} />
-                </View>
-                <View style={styles.rowMain}>
-                  <Text style={styles.rowTitle}>{display}</Text>
-                  <Text style={styles.rowSub}>
-                    {item.name} · order {item.sort_order}
-                  </Text>
-                </View>
-                <View style={styles.badges}>
-                  <Text style={[styles.badge, item.active ? styles.badgeOn : styles.badgeOff]}>
-                    {item.active ? 'Active' : 'Off'}
-                  </Text>
-                </View>
-              </View>
-
-              {!isEditing ? (
-                <View style={styles.rowActions}>
-                  <Pressable style={styles.iconBtn} onPress={() => startEdit(item)}>
-                    <Pencil size={18} color="#374151" />
-                    <Text style={styles.iconBtnText}>Edit</Text>
-                  </Pressable>
-                  <Pressable style={styles.iconBtn} onPress={() => confirmDelete(item.id, display)}>
-                    <Trash2 size={18} color="#B91C1C" />
-                    <Text style={[styles.iconBtnText, { color: '#B91C1C' }]}>Delete</Text>
-                  </Pressable>
-                </View>
-              ) : (
-                <View style={styles.editBox}>
+          if (isEditing) {
+            return (
+              <View style={styles.editRow}>
+                <View style={styles.editForm}>
                   <Text style={styles.label}>Name</Text>
                   <TextInput
                     style={styles.input}
@@ -286,6 +242,7 @@ export default function AdminGroundTypesManage() {
                       onPress={handleSaveEdit}
                       loading={editLoading}
                       disabled={editLoading}
+                      size="small"
                       style={{ flex: 1 }}
                     />
                     <Button
@@ -293,15 +250,111 @@ export default function AdminGroundTypesManage() {
                       onPress={() => setEditingId(null)}
                       variant="outline"
                       disabled={editLoading}
+                      size="small"
                       style={{ flex: 1 }}
                     />
                   </View>
                 </View>
-              )}
-            </Card>
+              </View>
+            );
+          }
+
+          return (
+            <View style={styles.tableRow}>
+              <Text numberOfLines={1} style={[styles.cellText, { flex: 3 }]}>{item.name}</Text>
+              <Text numberOfLines={1} style={[styles.cellText, { flex: 3, color: item.label ? '#111827' : '#9CA3AF' }]}>
+                {item.label || 'None'}
+              </Text>
+              <Text style={[styles.cellText, { flex: 1, textAlign: 'center' }]}>{item.sort_order}</Text>
+              <View style={[styles.cell, { flex: 1.5, alignItems: 'center' }]}>
+                <Text style={[styles.tableBadge, item.active ? styles.badgeOn : styles.badgeOff]}>
+                  {item.active ? 'Active' : 'Off'}
+                </Text>
+              </View>
+              <View style={[styles.cell, { flex: 1.5, flexDirection: 'row', justifyContent: 'flex-end', gap: 12 }]}>
+                <TouchableOpacity onPress={() => startEdit(item)}>
+                  <Pencil size={14} color="#6B7280" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => confirmDelete(item.id, item.label || item.name)}>
+                  <Trash2 size={14} color="#EF4444" />
+                </TouchableOpacity>
+              </View>
+            </View>
           );
         }}
       />
+
+      <Modal
+        visible={showAddModal}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowAddModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity 
+            style={styles.modalBlur} 
+            activeOpacity={1} 
+            onPress={() => setShowAddModal(false)} 
+          />
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add Ground Type</Text>
+              <TouchableOpacity onPress={() => setShowAddModal(false)}>
+                <X size={20} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView bounces={false}>
+              <Text style={styles.label}>Name (internal)</Text>
+              <TextInput
+                style={styles.input}
+                value={create.name}
+                onChangeText={(t) => setCreate({ ...create, name: t })}
+                placeholder="e.g. Cricket Ground"
+              />
+
+              <Text style={styles.label}>Display label (optional)</Text>
+              <TextInput
+                style={styles.input}
+                value={create.label}
+                onChangeText={(t) => setCreate({ ...create, label: t })}
+                placeholder="Shown in dropdowns"
+              />
+
+              <View style={styles.formRow2}>
+                <View style={styles.formHalf}>
+                  <Text style={styles.label}>Sort order</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={create.sort_order}
+                    onChangeText={(t) => setCreate({ ...create, sort_order: t })}
+                    keyboardType="numeric"
+                    placeholder="0"
+                  />
+                </View>
+                <View style={[styles.formHalf, styles.switchRow]}>
+                  <Text style={styles.label}>Active</Text>
+                  <Switch 
+                    value={create.active} 
+                    onValueChange={(v) => setCreate({ ...create, active: v })}
+                    trackColor={{ false: '#E5E7EB', true: '#D1FAE5' }}
+                    thumbColor={create.active ? '#10b981' : '#9CA3AF'}
+                  />
+                </View>
+              </View>
+
+              <Button
+                title={createLoading ? 'Adding...' : 'Create Type'}
+                onPress={handleCreate}
+                loading={createLoading}
+                disabled={createLoading}
+                fullWidth
+                style={{ marginTop: 24 }}
+              />
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -309,57 +362,100 @@ export default function AdminGroundTypesManage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#FFFFFF',
   },
   header: {
     backgroundColor: '#FFFFFF',
-    padding: 16,
-    paddingTop: 48,
+    padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: '#F3F4F6',
   },
   webHeader: {
-    paddingTop: 16,
+    paddingTop: 20,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   title: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#212121',
+    color: '#111827',
+    fontFamily: 'Inter',
   },
   subtitle: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 13,
+    color: '#6B7280',
     marginTop: 4,
+    fontFamily: 'Inter',
   },
   listContent: {
-    padding: 16,
-    paddingBottom: 32,
+    padding: 20,
+    paddingBottom: 40,
   },
-  formCard: {
-    marginBottom: 16,
-    padding: 14,
+  tableHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    marginBottom: 8,
   },
-  formTitle: {
-    fontSize: 16,
-    fontWeight: '800',
+  columnHeader: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B7280',
+    fontFamily: 'Inter',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  cell: {
+    justifyContent: 'center',
+  },
+  cellText: {
+    fontSize: 12,
+    fontWeight: '400',
     color: '#111827',
-    marginBottom: 12,
+    fontFamily: 'Inter',
+  },
+  tableBadge: {
+    fontSize: 10,
+    fontWeight: '600',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    overflow: 'hidden',
+    fontFamily: 'Inter',
   },
   label: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '600',
     color: '#374151',
     marginBottom: 6,
+    fontFamily: 'Inter',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   input: {
     borderWidth: 1,
     borderColor: '#E5E7EB',
     borderRadius: 10,
-    paddingVertical: 10,
+    paddingVertical: 8,
     paddingHorizontal: 12,
-    fontSize: 14,
-    backgroundColor: '#FFF',
-    marginBottom: 10,
+    fontSize: 12,
+    backgroundColor: '#F9FAFB',
+    marginBottom: 16,
+    fontFamily: 'Inter',
   },
   formRow2: {
     flexDirection: 'row',
@@ -372,80 +468,24 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     flexDirection: 'row',
-  },
-  rowCard: {
-    marginBottom: 12,
-    padding: 14,
-  },
-  rowHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  iconPill: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: 'rgba(220,141,60,0.12)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rowMain: {
-    flex: 1,
-    minWidth: 0,
-  },
-  rowTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#111827',
-  },
-  rowSub: {
-    marginTop: 4,
-    fontSize: 13,
-    color: '#6B7280',
-  },
-  badges: {
-    alignItems: 'flex-end',
-  },
-  badge: {
-    fontSize: 12,
-    fontWeight: '800',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    overflow: 'hidden',
+    marginBottom: 16,
   },
   badgeOn: {
     color: '#15803D',
-    backgroundColor: 'rgba(34,197,94,0.15)',
+    backgroundColor: 'rgba(34,197,94,0.1)',
   },
   badgeOff: {
     color: '#6B7280',
     backgroundColor: '#F3F4F6',
   },
-  rowActions: {
-    flexDirection: 'row',
-    gap: 16,
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+  editRow: {
+    padding: 16,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 16,
+    marginVertical: 8,
   },
-  iconBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  iconBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#374151',
-  },
-  editBox: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+  editForm: {
+    width: '100%',
   },
   editActions: {
     flexDirection: 'row',
@@ -453,11 +493,46 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   emptyBox: {
-    padding: 24,
+    padding: 40,
     alignItems: 'center',
   },
   emptyText: {
     color: '#6B7280',
-    fontSize: 15,
+    fontSize: 14,
+    fontFamily: 'Inter',
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    padding: 20,
+  },
+  modalBlur: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 500,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 5,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    fontFamily: 'Inter',
   },
 });

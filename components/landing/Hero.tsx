@@ -217,11 +217,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#043529',
     paddingVertical: 40,
     paddingHorizontal: 24,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 140,
     alignItems: 'center',
     ...Platform.select({
       web: {
-        minHeight: '110vh' as any,
+        minHeight: '80vh' as any,
       },
     }),
   },
@@ -274,11 +275,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: Platform.OS === 'web' ? 52 : 36,
     lineHeight: Platform.OS === 'web' ? 60 : 44,
-    fontWeight: '800',
     color: '#FFFFFF',
     marginBottom: 16,
     letterSpacing: -1.2,
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
   },
   titleAccent: {
     color: '#00ea6b',
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.7)',
     maxWidth: 520,
     marginBottom: 28,
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Regular',
   },
   actionsRow: {
     flexDirection: Platform.OS === 'web' ? 'row' : 'column',
@@ -316,9 +316,8 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     fontSize: 15,
-    fontWeight: '700',
     color: '#FFFFFF',
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
   },
   secondaryButton: {
     paddingHorizontal: 26,
@@ -335,8 +334,8 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     fontSize: 15,
-    fontWeight: '700',
     color: '#FFFFFF',
+    fontFamily: 'Inter-Bold',
   },
   metaRow: {
     flexDirection: 'row',
@@ -349,10 +348,9 @@ const styles = StyleSheet.create({
   },
   metaNumber: {
     fontSize: 18,
-    fontWeight: '800',
     color: '#FFFFFF',
     marginBottom: 2,
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-ExtraBold',
   },
   metaLabel: {
     fontSize: 13,

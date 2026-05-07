@@ -188,7 +188,8 @@ const CricketMatches = React.memo(({
           team2Score,
           team2Overs,
           result: matchResult,
-          batting_team: live?.batting_team
+          batting_team: live?.batting_team,
+          is_under_review: !!m.is_under_review
         };
       });
       setFetchedMatches(dbMatches);
@@ -345,6 +346,11 @@ const CricketMatches = React.memo(({
             match.status === 'Live' ? styles.statusBadgeTextLive : styles.statusBadgeTextUpcoming
           ]}>{match.status === 'Live' ? 'LIVE' : match.status.toUpperCase()}</Text>
         </View>
+        {match.is_under_review && (
+          <View style={[styles.statusBadge, { backgroundColor: '#EA580C', marginLeft: 8 }]}>
+            <Text style={[styles.statusBadgeText, { color: '#FFFFFF' }]}>UNDER REVIEW</Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.matchTeams}>

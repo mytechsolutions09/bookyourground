@@ -168,6 +168,7 @@ export default function ScoringScreen() {
     setOpeners,
     startSecondInnings,
     endMatch,
+    isUnderReview,
     isScoring: hookIsScoring
   } = useCricketScoring(urlMatchId as string);
 
@@ -614,6 +615,16 @@ export default function ScoringScreen() {
   return (
     <View style={[styles.container, { flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom, backgroundColor: '#FFFFFF' }]}>
       <Stack.Screen options={{ headerShown: false }} />
+      
+      {isUnderReview && (
+        <View style={{ backgroundColor: '#FEF2F2', padding: 12, borderBottomWidth: 1, borderBottomColor: '#FEE2E2', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Crown size={18} color="#EF4444" />
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: '#B91C1C' }}>MATCH UNDER REVIEW</Text>
+            <Text style={{ fontSize: 11, color: '#EF4444' }}>Admin is reviewing this match. Continue scoring with care.</Text>
+          </View>
+        </View>
+      )}
       
       {(isScoring || hookIsScoring) ? (
         isSelectingNewBatter ? (

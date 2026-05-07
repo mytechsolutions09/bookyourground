@@ -602,6 +602,11 @@ export default function PlayerProfile() {
           <View style={[styles.resultBadge, getBadgeStyle()]}>
             <Text style={styles.resultBadgeText}>{statusDisplay}</Text>
           </View>
+          {match.is_under_review && (
+            <View style={[styles.resultBadge, { backgroundColor: '#EA580C', marginLeft: 8 }]}>
+              <Text style={styles.resultBadgeText}>UNDER REVIEW</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.matchScoreRow}>

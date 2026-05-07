@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, ActivityIndicator, FlatList, RefreshControl, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, ActivityIndicator, FlatList, RefreshControl, Image, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BarChart, TrendingUp, Award, Zap, Search, ChevronRight, Swords, ShieldCheck, Target, Crown } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
@@ -9,14 +9,14 @@ import CricketSubbar from '@/components/admin/CricketSubbar';
 import WebLayout from '@/components/web/WebLayout';
 
 type StatCategory = 'batting' | 'bowling' | 'fielding' | 'captaincy';
-type BallType = 'leather' | 'tennis' | 'other';
+type BallType = 'all' | 'leather' | 'tennis' | 'other';
 
 export default function AdminCricketLeaderboard() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<StatCategory>('batting');
-  const [activeBallType, setActiveBallType] = useState<BallType>('leather');
+  const [activeBallType, setActiveBallType] = useState<BallType>('all');
   const isWeb = Platform.OS === 'web';
 
   useEffect(() => {
@@ -26,25 +26,21 @@ export default function AdminCricketLeaderboard() {
   const fetchStats = async () => {
     try {
       setLoading(true);
-      // Fetch stats from player_ball_stats joined with team_members, profiles, and teams
-      const { data, error } = await supabase
-        .from('player_ball_stats')
-        .select(`
-          *,
-          member:team_members(
-            id,
-            player_name,
-            role,
-            profile:profiles(full_name, avatar_url),
-            team:teams(name)
-          )
-        `)
-        .eq('ball_type', activeBallType);
+      // Fetch stats from the optimized leaderboard view
+      let query = supabase
+        .from('leaderboard')
+        .select('*');
+
+      if (activeBallType !== 'all') {
+        query = query.eq('ball_type', activeBallType);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
       if (data) setStats(data);
     } catch (err) {
-      console.error('Error fetching cricket ball stats:', err);
+      console.error('Error fetching cricket leaderboard:', err);
     } finally {
       setLoading(false);
     }
@@ -62,9 +58,9 @@ export default function AdminCricketLeaderboard() {
     if (searchQuery) {
       const lowerQuery = searchQuery.toLowerCase();
       filtered = filtered.filter(s => {
-        const name = (s.member?.player_name || s.member?.profile?.full_name || '').toLowerCase();
-        const team = (s.member?.team?.name || '').toLowerCase();
-        return name.includes(lowerQuery) || team.includes(lowerQuery);
+        const name = (s.full_name || '').toLowerCase();
+        const city = (s.city || '').toLowerCase();
+        return name.includes(lowerQuery) || city.includes(lowerQuery);
       });
     }
 
@@ -85,84 +81,73 @@ export default function AdminCricketLeaderboard() {
   const renderTableHeader = () => {
     if (!isWeb) return null;
 
+    let columns = [];
     if (activeCategory === 'batting') {
-      return (
-        <View style={[styles.tableHeaderContainer, { backgroundColor: '#065F46' }]}>
-          <View style={styles.tableHeaderRow}>
-            <Text style={[styles.tableHeaderCell, styles.colPlayer]}>Player</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStat]}>Mat</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStat]}>Inns</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStat]}>NO</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStat]}>Runs</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStat]}>HS</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStat]}>Avg</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStat]}>SR</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStat]}>100s</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStat]}>50s</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStatSmall]}>Duck</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStatSmall]}>Won</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStatSmall]}>Lost</Text>
-          </View>
-        </View>
-      );
+      columns = [
+        { label: 'Player', style: styles.colPlayer },
+        { label: 'Mat', style: styles.colStat },
+        { label: 'Inns', style: styles.colStat },
+        { label: 'NO', style: styles.colStat },
+        { label: 'Runs', style: styles.colStat },
+        { label: 'HS', style: styles.colStat },
+        { label: 'Avg', style: styles.colStat },
+        { label: 'SR', style: styles.colStat },
+        { label: '100s', style: styles.colStat },
+        { label: '50s', style: styles.colStat },
+        { label: 'Duck', style: styles.colStatSmall },
+        { label: 'Won', style: styles.colStatSmall },
+        { label: 'Lost', style: styles.colStatSmall },
+      ];
+    } else if (activeCategory === 'bowling') {
+      columns = [
+        { label: 'Player', style: styles.colPlayer },
+        { label: 'Mat', style: styles.colStat },
+        { label: 'Inns', style: styles.colStat },
+        { label: 'Overs', style: styles.colStat },
+        { label: 'Wkts', style: styles.colStat },
+        { label: 'BB', style: styles.colStat },
+        { label: '3w', style: styles.colStatSmall },
+        { label: '5w', style: styles.colStatSmall },
+        { label: 'Dots', style: styles.colStatSmall },
+        { label: 'WD', style: styles.colStatSmall },
+        { label: 'NB', style: styles.colStatSmall },
+        { label: 'Econ', style: styles.colStat },
+      ];
+    } else if (activeCategory === 'fielding') {
+      columns = [
+        { label: 'Player', style: styles.colPlayer },
+        { label: 'Catches', style: styles.colStatFull },
+        { label: 'C.B', style: styles.colStat },
+        { label: 'Run Outs', style: styles.colStatFull },
+        { label: 'Stumpings', style: styles.colStatFull },
+        { label: 'Matches', style: styles.colStatFull },
+      ];
+    } else if (activeCategory === 'captaincy') {
+      columns = [
+        { label: 'Captain', style: styles.colPlayer },
+        { label: 'Mat (Capt)', style: styles.colStatFull },
+        { label: 'Won', style: styles.colStatFull },
+        { label: 'Lost', style: styles.colStatFull },
+        { label: 'Tied', style: styles.colStatFull },
+        { label: 'A/NR', style: styles.colStatFull },
+        { label: 'Win %', style: styles.colStatFull },
+      ];
     }
 
-    if (activeCategory === 'bowling') {
-      return (
-        <View style={[styles.tableHeaderContainer, { backgroundColor: '#1E3A8A' }]}>
-          <View style={styles.tableHeaderRow}>
-            <Text style={[styles.tableHeaderCell, styles.colPlayer]}>Player</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStat]}>Mat</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStat]}>Inns</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStat]}>Overs</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStat]}>Wkts</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStat]}>BB</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStatSmall]}>3w</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStatSmall]}>5w</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStatSmall]}>Dots</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStatSmall]}>WD</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStatSmall]}>NB</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStat]}>Econ</Text>
-          </View>
+    return (
+      <View style={styles.tableHeaderContainer}>
+        <View style={styles.tableHeaderRow}>
+          {columns.map((col, idx) => (
+            <Text key={idx} style={[styles.tableHeaderCell, col.style]}>{col.label}</Text>
+          ))}
         </View>
-      );
-    }
-
-    if (activeCategory === 'fielding') {
-      return (
-        <View style={[styles.tableHeaderContainer, { backgroundColor: '#374151' }]}>
-          <View style={styles.tableHeaderRow}>
-            <Text style={[styles.tableHeaderCell, styles.colPlayer]}>Player</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStatFull]}>Catches</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStat]}>C.B</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStatFull]}>Run Outs</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStatFull]}>Stumpings</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStatFull]}>Matches</Text>
-          </View>
-        </View>
-      );
-    }
-
-    if (activeCategory === 'captaincy') {
-      return (
-        <View style={[styles.tableHeaderContainer, { backgroundColor: '#92400E' }]}>
-          <View style={styles.tableHeaderRow}>
-            <Text style={[styles.tableHeaderCell, styles.colPlayer]}>Captain</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStatFull]}>Mat (Capt)</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStatFull]}>Won</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStatFull]}>Lost</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStatFull]}>Tied</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStatFull]}>A/NR</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStatFull]}>Win %</Text>
-          </View>
-        </View>
-      );
-    }
+      </View>
+    );
   };
 
   const renderItem = ({ item }: { item: any }) => {
-    const playerName = item.member?.player_name || item.member?.profile?.full_name || 'Unknown';
-    const teamName = item.member?.team?.name || 'No Team';
+    const playerName = item.full_name || 'Unknown Player';
+    const teamName = item.city || 'Independent';
 
     if (isWeb) {
       if (activeCategory === 'batting') {
@@ -173,8 +158,16 @@ export default function AdminCricketLeaderboard() {
         return (
           <View style={styles.tableRow}>
             <View style={[styles.tableCell, styles.colPlayer]}>
-              <Text style={styles.cellMainText}>{playerName}</Text>
-              <Text style={styles.cellSubText}>{teamName}</Text>
+              <View style={styles.playerProfile}>
+                <View>
+                  <Text style={styles.cellMainText}>{playerName}</Text>
+                  <View style={styles.idContainer}>
+                    <Text style={styles.idText}>{(item.display_id || 'ID: UNKNOWN').toUpperCase()}</Text>
+                    <Text style={styles.dotSeparator}>•</Text>
+                    <Text style={styles.cellSubText}>{teamName}</Text>
+                  </View>
+                </View>
+              </View>
             </View>
             <Text style={[styles.tableCell, styles.colStat, styles.centerText]}>{item.matches_played}</Text>
             <Text style={[styles.tableCell, styles.colStat, styles.centerText]}>{item.innings_batted}</Text>
@@ -197,8 +190,16 @@ export default function AdminCricketLeaderboard() {
         return (
           <View style={styles.tableRow}>
             <View style={[styles.tableCell, styles.colPlayer]}>
-              <Text style={styles.cellMainText}>{playerName}</Text>
-              <Text style={styles.cellSubText}>{teamName}</Text>
+              <View style={styles.playerProfile}>
+                <View>
+                  <Text style={styles.cellMainText}>{playerName}</Text>
+                  <View style={styles.idContainer}>
+                    <Text style={styles.idText}>{(item.display_id || 'ID: UNKNOWN').toUpperCase()}</Text>
+                    <Text style={styles.dotSeparator}>•</Text>
+                    <Text style={styles.cellSubText}>{teamName}</Text>
+                  </View>
+                </View>
+              </View>
             </View>
             <Text style={[styles.tableCell, styles.colStat, styles.centerText]}>{item.matches_played}</Text>
             <Text style={[styles.tableCell, styles.colStat, styles.centerText]}>{item.innings_bowled}</Text>
@@ -219,8 +220,16 @@ export default function AdminCricketLeaderboard() {
         return (
           <View style={styles.tableRow}>
             <View style={[styles.tableCell, styles.colPlayer]}>
-              <Text style={styles.cellMainText}>{playerName}</Text>
-              <Text style={styles.cellSubText}>{teamName}</Text>
+              <View style={styles.playerProfile}>
+                <View>
+                  <Text style={styles.cellMainText}>{playerName}</Text>
+                  <View style={styles.idContainer}>
+                    <Text style={styles.idText}>{(item.display_id || 'ID: UNKNOWN').toUpperCase()}</Text>
+                    <Text style={styles.dotSeparator}>•</Text>
+                    <Text style={styles.cellSubText}>{teamName}</Text>
+                  </View>
+                </View>
+              </View>
             </View>
             <Text style={[styles.tableCell, styles.colStatFull, styles.centerText, styles.boldText]}>{item.total_catches}</Text>
             <Text style={[styles.tableCell, styles.colStat, styles.centerText]}>{item.caught_and_bowled || 0}</Text>
@@ -239,8 +248,16 @@ export default function AdminCricketLeaderboard() {
         return (
           <View style={styles.tableRow}>
             <View style={[styles.tableCell, styles.colPlayer]}>
-              <Text style={styles.cellMainText}>{playerName}</Text>
-              <Text style={styles.cellSubText}>{teamName}</Text>
+              <View style={styles.playerProfile}>
+                <View>
+                  <Text style={styles.cellMainText}>{playerName}</Text>
+                  <View style={styles.idContainer}>
+                    <Text style={styles.idText}>{(item.display_id || 'BYG-XXXX-XXXX').toUpperCase()}</Text>
+                    <Text style={styles.dotSeparator}>•</Text>
+                    <Text style={styles.cellSubText}>{teamName}</Text>
+                  </View>
+                </View>
+              </View>
             </View>
             <Text style={[styles.tableCell, styles.colStatFull, styles.centerText]}>{item.matches_captained}</Text>
             <Text style={[styles.tableCell, styles.colStatFull, styles.centerText, styles.boldText, { color: '#B45309' }]}>{item.matches_won_as_captain}</Text>
@@ -276,7 +293,7 @@ export default function AdminCricketLeaderboard() {
                 onPress={() => setActiveCategory('batting')}
                 style={[styles.categoryChip, activeCategory === 'batting' && styles.categoryChipActive]}
                 >
-                <Swords size={14} color={activeCategory === 'batting' ? '#FFFFFF' : '#6B7280'} />
+                <Swords size={14} color={activeCategory === 'batting' ? '#10B981' : '#6B7280'} />
                 <Text style={[styles.categoryText, activeCategory === 'batting' && styles.categoryTextActive]}>Batting</Text>
                 </TouchableOpacity>
 
@@ -284,7 +301,7 @@ export default function AdminCricketLeaderboard() {
                 onPress={() => setActiveCategory('bowling')}
                 style={[styles.categoryChip, activeCategory === 'bowling' && styles.categoryChipActive]}
                 >
-                <Zap size={14} color={activeCategory === 'bowling' ? '#FFFFFF' : '#6B7280'} />
+                <Zap size={14} color={activeCategory === 'bowling' ? '#10B981' : '#6B7280'} />
                 <Text style={[styles.categoryText, activeCategory === 'bowling' && styles.categoryTextActive]}>Bowling</Text>
                 </TouchableOpacity>
 
@@ -292,7 +309,7 @@ export default function AdminCricketLeaderboard() {
                 onPress={() => setActiveCategory('fielding')}
                 style={[styles.categoryChip, activeCategory === 'fielding' && styles.categoryChipActive]}
                 >
-                <Target size={14} color={activeCategory === 'fielding' ? '#FFFFFF' : '#6B7280'} />
+                <Target size={14} color={activeCategory === 'fielding' ? '#10B981' : '#6B7280'} />
                 <Text style={[styles.categoryText, activeCategory === 'fielding' && styles.categoryTextActive]}>Fielding</Text>
                 </TouchableOpacity>
 
@@ -300,7 +317,7 @@ export default function AdminCricketLeaderboard() {
                 onPress={() => setActiveCategory('captaincy')}
                 style={[styles.categoryChip, activeCategory === 'captaincy' && styles.categoryChipActive]}
                 >
-                <Crown size={14} color={activeCategory === 'captaincy' ? '#FFFFFF' : '#6B7280'} />
+                <Crown size={14} color={activeCategory === 'captaincy' ? '#10B981' : '#6B7280'} />
                 <Text style={[styles.categoryText, activeCategory === 'captaincy' && styles.categoryTextActive]}>Captaincy</Text>
                 </TouchableOpacity>
             </ScrollView>
@@ -308,7 +325,7 @@ export default function AdminCricketLeaderboard() {
             <View style={styles.divider} />
 
             <View style={styles.ballTypeRow}>
-                {(['leather', 'tennis', 'other'] as BallType[]).map((type) => (
+                {(['all', 'leather', 'tennis', 'other'] as BallType[]).map((type) => (
                     <TouchableOpacity 
                         key={type}
                         onPress={() => setActiveBallType(type)}
@@ -322,43 +339,44 @@ export default function AdminCricketLeaderboard() {
             </View>
           </View>
 
-          <View style={styles.searchContainer}>
-            <Search size={16} color="#9CA3AF" />
-            <input
-              type="text"
+          <View style={styles.searchWrap}>
+            <Search size={14} color="#6B7280" style={styles.searchIcon} />
+            <TextInput
               placeholder="Search by player or team..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                borderWidth: 0,
-                outline: 'none',
-                fontSize: 14,
-                padding: 8,
-                width: 200,
-                backgroundColor: 'transparent',
-              } as any}
+              onChangeText={setSearchQuery}
+              style={styles.searchInput}
+              placeholderTextColor="#9CA3AF"
             />
           </View>
         </View>
 
-        {renderTableHeader()}
-
-        <FlatList
-          data={filteredStats}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
-          refreshControl={
-            <RefreshControl refreshing={loading} onRefresh={fetchStats} color="#10b981" />
-          }
-          renderItem={renderItem}
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <BarChart size={48} color="#E5E7EB" style={{ marginBottom: 16 }} />
-              <Text style={styles.emptyText}>No statistics found for {activeBallType} ball {activeCategory}</Text>
-              <Text style={styles.emptySubText}>Players must play matches of this type to appear here.</Text>
-            </View>
-          }
-        />
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={true} 
+          style={{ flex: 1 }}
+          contentContainerStyle={{ flexGrow: 1 }}
+        >
+          <View style={{ minWidth: isWeb ? 1100 : '100%', flex: 1 }}>
+            {renderTableHeader()}
+            <FlatList
+              data={filteredStats}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={[styles.list, { flexGrow: 1 }]}
+              refreshControl={
+                <RefreshControl refreshing={loading} onRefresh={fetchStats} color="#10b981" />
+              }
+              renderItem={renderItem}
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <BarChart size={48} color="#E5E7EB" style={{ marginBottom: 16 }} />
+                  <Text style={styles.emptyText}>No statistics found for {activeBallType} ball {activeCategory}</Text>
+                  <Text style={styles.emptySubText}>Players must play matches of this type to appear here.</Text>
+                </View>
+              }
+            />
+          </View>
+        </ScrollView>
       </View>
     </CricketSubbar>
   );
@@ -371,7 +389,7 @@ export default function AdminCricketLeaderboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Platform.OS === 'web' ? '#F5F5F5' : '#F9FAFB',
+    backgroundColor: '#FFFFFF',
   },
   headerCompact: {
     backgroundColor: '#FFFFFF',
@@ -402,29 +420,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 100,
+    backgroundColor: '#F9FAFB',
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
   categoryChipActive: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#FFFFFF',
     borderColor: '#10B981',
   },
   categoryText: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 11.5,
+    fontWeight: '600',
     color: '#6B7280',
+    fontFamily: 'Inter',
   },
   categoryTextActive: {
-    color: '#FFFFFF',
+    color: '#10B981',
   },
   ballTypeRow: {
     flexDirection: 'row',
     backgroundColor: '#F9FAFB',
-    borderRadius: 8,
+    borderRadius: 100,
     borderWidth: 1,
     borderColor: '#E5E7EB',
     padding: 2,
@@ -442,66 +461,110 @@ const styles = StyleSheet.create({
   },
   ballText: {
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#9CA3AF',
+    fontFamily: 'Inter',
   },
   ballTextActive: {
     color: '#111827',
   },
-  searchContainer: {
+  searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F9FAFB',
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    borderRadius: 8,
-    paddingHorizontal: 10,
+    paddingHorizontal: 14,
+    width: 240,
+    height: 32,
+    borderRadius: 16,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 12,
+    color: '#111827',
+    fontFamily: 'Inter',
+    outlineStyle: 'none' as any,
   },
   tableHeaderContainer: {
-    marginHorizontal: 24,
-    marginTop: 20,
-    marginBottom: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: '#065F46',
-    borderRadius: 8,
+    marginHorizontal: 0,
+    marginTop: 0,
+    marginBottom: 0,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 0,
+    borderBottomWidth: 1,
+    borderColor: '#E5E7EB',
   },
   tableHeaderRow: {
     flexDirection: 'row',
+    alignItems: 'center',
   },
   tableHeaderCell: {
     fontSize: 10,
-    fontWeight: '800',
-    color: '#FFFFFF',
+    fontWeight: '700',
+    color: '#6B7280',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    fontFamily: 'Inter',
   },
   list: {
-    padding: 24,
-    paddingTop: 8,
+    flexGrow: 1,
   },
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
     backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    marginBottom: 6,
-    borderWidth: 1,
+    borderRadius: 0,
+    marginBottom: 0,
+    borderBottomWidth: 1,
     borderColor: '#F3F4F6',
   },
   tableCell: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#374151',
+    fontFamily: 'Inter',
   },
   colPlayer: { flex: 2 },
-  colStat: { width: 50 },
-  colStatSmall: { width: 40 },
+  colStat: { width: 55 },
+  colStatSmall: { width: 45 },
   colStatFull: { flex: 1 },
   centerText: { textAlign: 'center' },
-  boldText: { fontWeight: '800', color: '#111827' },
-  cellMainText: { fontSize: 13, fontWeight: '700', color: '#111827' },
-  cellSubText: { fontSize: 11, color: '#9CA3AF', marginTop: 1 },
+  boldText: { fontWeight: '600', color: '#111827' },
+  cellMainText: { 
+    fontSize: 12, 
+    fontWeight: '600', 
+    color: '#111827', 
+    fontFamily: 'Inter' 
+  },
+  idContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 1,
+  },
+  idText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#6B7280',
+    letterSpacing: 0.3,
+    fontFamily: 'Inter',
+  },
+  dotSeparator: {
+    fontSize: 8,
+    color: '#D1D5DB',
+  },
+  cellSubText: { 
+    fontSize: 9.5, 
+    color: '#9CA3AF', 
+    fontFamily: 'Inter' 
+  },
   emptyContainer: { padding: 80, alignItems: 'center' },
   emptyText: { fontSize: 16, color: '#9CA3AF', marginBottom: 4 },
   emptySubText: { fontSize: 12, color: '#9CA3AF' },

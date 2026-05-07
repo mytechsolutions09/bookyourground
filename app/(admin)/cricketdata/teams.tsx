@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, ActivityIndicator, FlatList, RefreshControl, Image, Modal } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, ActivityIndicator, FlatList, RefreshControl, Image, Modal, TextInput } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ChevronRight, Plus, RefreshCcw, Search, Filter, Calendar, Users, MapPin, User as UserIcon, X, Phone, ShieldCheck } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
@@ -13,6 +13,8 @@ export default function AdminCricketTeams() {
   const [loading, setLoading] = useState(true);
   const [teams, setTeams] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'all' | 'verified' | 'recent'>('all');
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   
   // Member Modal State
   const [selectedTeam, setSelectedTeam] = useState<any | null>(null);
@@ -71,36 +73,76 @@ export default function AdminCricketTeams() {
   };
 
   const filteredTeams = useMemo(() => {
-    if (!searchQuery) return teams;
-    return teams.filter(team => 
-      team.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      team.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      team.captain.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      team.owner?.full_name?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [teams, searchQuery]);
+    let filtered = teams;
+
+    // 1. Tab Filter
+    if (activeTab === 'verified') filtered = filtered.filter(t => t.is_verified);
+    else if (activeTab === 'recent') {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      filtered = filtered.filter(t => new Date(t.created_at) > thirtyDaysAgo);
+    }
+
+    // 2. Search Filter
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(team => 
+        team.name.toLowerCase().includes(q) ||
+        (team.location && team.location.toLowerCase().includes(q)) ||
+        (team.captain && team.captain.toLowerCase().includes(q)) ||
+        (team.owner?.full_name?.toLowerCase().includes(q)) ||
+        team.id.toLowerCase().includes(q)
+      );
+    }
+
+    return filtered;
+  }, [teams, searchQuery, activeTab]);
 
   const content = (
     <CricketSubbar>
       <View style={styles.container}>
         <View style={styles.headerCompact}>
           <View style={styles.headerLeft}>
-            <View style={styles.searchContainer}>
-              <Search size={16} color="#9CA3AF" />
-              <input
-                type="text"
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabScrollWrap}>
+              <View style={styles.tabRow}>
+                {[
+                  { id: 'all', label: `All Teams (${teams.length})` },
+                  { id: 'verified', label: 'Verified' },
+                  { id: 'recent', label: 'Recent' }
+                ].map((tab) => (
+                  <TouchableOpacity
+                    key={tab.id}
+                    onPress={() => setActiveTab(tab.id as any)}
+                    style={[
+                      styles.tabChip,
+                      activeTab === tab.id && styles.tabChipActive
+                    ]}
+                  >
+                    <Text style={[
+                      styles.tabChipText,
+                      activeTab === tab.id && styles.tabChipTextActive
+                    ]}>
+                      {tab.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </ScrollView>
+
+            <View style={styles.searchWrap}>
+              <Search size={14} color="#6B7280" style={styles.searchIcon} />
+              <TextInput
                 placeholder="Search teams, captains, admin..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                style={{
-                  borderWidth: 0,
-                  outline: 'none',
-                  fontSize: 14,
-                  padding: 8,
-                  width: 300,
-                  backgroundColor: 'transparent',
-                } as any}
+                onChangeText={setSearchQuery}
+                style={styles.searchInput}
+                placeholderTextColor="#9CA3AF"
               />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearSearch}>
+                  <X size={14} color="#9CA3AF" />
+                </TouchableOpacity>
+              )}
             </View>
           </View>
 
@@ -113,27 +155,36 @@ export default function AdminCricketTeams() {
           />
         </View>
 
-        {isWeb && (
-          <View style={styles.tableHeaderContainer}>
-            <View style={styles.tableHeaderRow}>
-              <Text style={[styles.tableHeaderCell, styles.colName]}>Team Name</Text>
-              <Text style={[styles.tableHeaderCell, styles.colLocation]}>Location</Text>
-              <Text style={[styles.tableHeaderCell, styles.colCaptain]}>Captain</Text>
-              <Text style={[styles.tableHeaderCell, styles.colOwner]}>Team Admin (Owner)</Text>
-              <Text style={[styles.tableHeaderCell, styles.colCreated]}>Registered On</Text>
-              <Text style={[styles.tableHeaderCell, styles.colActions]}>Actions</Text>
-            </View>
-          </View>
-        )}
+
 
         <FlatList
-          data={filteredTeams}
-          keyExtractor={(item) => item.id}
+          data={[
+            { type: 'header' },
+            ...filteredTeams.map(t => ({ ...t, type: 'team' }))
+          ]}
+          keyExtractor={(item, index) => item.id || `extra-team-${index}`}
           contentContainerStyle={styles.list}
+          stickyHeaderIndices={isWeb ? [0] : []}
           refreshControl={
             <RefreshControl refreshing={loading} onRefresh={fetchTeams} color="#10b981" />
           }
           renderItem={({ item }) => {
+            if (item.type === 'header') {
+              if (!isWeb) return null;
+              return (
+                <View style={styles.tableHeaderContainer}>
+                  <View style={styles.tableHeaderRow}>
+                    <Text style={[styles.tableHeaderCell, styles.colName]}>Team Name</Text>
+                    <Text style={[styles.tableHeaderCell, styles.colLocation]}>Location</Text>
+                    <Text style={[styles.tableHeaderCell, styles.colCaptain]}>Captain</Text>
+                    <Text style={[styles.tableHeaderCell, styles.colOwner]}>Team Admin (Owner)</Text>
+                    <Text style={[styles.tableHeaderCell, styles.colCreated]}>Registered On</Text>
+                    <Text style={[styles.tableHeaderCell, styles.colActions]}>Actions</Text>
+                  </View>
+                </View>
+              );
+            }
+
             if (isWeb) {
                return (
                  <TouchableOpacity 
@@ -151,7 +202,7 @@ export default function AdminCricketTeams() {
                        )}
                        <View>
                         <Text style={styles.cellMainText}>{item.name}</Text>
-                        <Text style={styles.cellSubText}>ID: {item.id.slice(0, 8)}</Text>
+                        <Text style={styles.cellSubText}>ID: {item.id.slice(0, 8).toUpperCase()}</Text>
                        </View>
                      </View>
                    </View>
@@ -309,14 +360,12 @@ export default function AdminCricketTeams() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Platform.OS === 'web' ? '#F5F5F5' : '#F9FAFB',
+    backgroundColor: '#FFFFFF',
   },
   headerCompact: {
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -325,28 +374,68 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  searchContainer: {
+  compactBtn: {
+    minWidth: 140,
+    borderRadius: 16,
+  },
+  tabScrollWrap: {
+    marginRight: 16,
+  },
+  tabRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  tabChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 100,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  tabChipActive: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#10b981',
+    borderWidth: 1,
+  },
+  tabChipText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#6B7280',
+    fontFamily: 'Inter',
+  },
+  tabChipTextActive: {
+    color: '#10b981',
+  },
+  searchWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F9FAFB',
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    marginLeft: 0,
+    paddingHorizontal: 14,
+    width: 240,
+    height: 32,
+    borderRadius: 16,
   },
-  compactBtn: {
-    minWidth: 140,
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 12,
+    color: '#111827',
+    fontFamily: 'Inter',
+    outlineStyle: 'none' as any,
+  },
+  clearSearch: {
+    padding: 4,
   },
   tableHeaderContainer: {
-    marginHorizontal: 24,
-    marginTop: 20,
-    marginBottom: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
     backgroundColor: '#F9FAFB',
-    borderRadius: 10,
-    borderWidth: 1,
+    borderBottomWidth: 1,
     borderColor: '#E5E7EB',
   },
   tableHeaderRow: {
@@ -354,29 +443,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tableHeaderCell: {
-    fontSize: 11,
-    fontWeight: '800',
+    fontSize: 10,
+    fontWeight: '700',
     color: '#6B7280',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    fontFamily: 'Inter',
   },
   list: {
-    padding: 24,
-    paddingTop: 8,
+    flex: 1,
   },
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 24,
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginBottom: 10,
-    borderWidth: 1,
+    borderBottomWidth: 1,
     borderColor: '#F3F4F6',
     ...Platform.select({
       web: {
         transition: 'all 0.2s ease',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
       }
     })
   },
@@ -409,19 +496,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoInitial: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '700',
     color: '#111827',
+    fontFamily: 'Inter',
   },
   cellMainText: { 
-    fontSize: 14, 
-    fontWeight: '700', 
-    color: '#111827' 
+    fontSize: 12, 
+    fontWeight: '600', 
+    color: '#111827',
+    fontFamily: 'Inter',
   },
   cellSubText: { 
-    fontSize: 11, 
+    fontSize: 9.5, 
     color: '#9CA3AF', 
-    marginTop: 2 
+    marginTop: 2,
+    fontFamily: 'Inter',
   },
   iconInfo: {
     flexDirection: 'row',
@@ -434,9 +524,10 @@ const styles = StyleSheet.create({
     gap: 4 
   },
   actionBtnText: { 
-    fontSize: 12, 
-    fontWeight: '800', 
-    color: '#10b981' 
+    fontSize: 11, 
+    fontWeight: '700', 
+    color: '#10b981',
+    fontFamily: 'Inter',
   },
   emptyContainer: { 
     padding: 80, 
@@ -454,16 +545,18 @@ const styles = StyleSheet.create({
     marginBottom: 12 
   },
   mobileTeamName: { 
-    fontSize: 18, 
-    fontWeight: '800', 
-    color: '#111827' 
+    fontSize: 16, 
+    fontWeight: '700', 
+    color: '#111827',
+    fontFamily: 'Inter',
   },
   mobileDetails: { 
     gap: 8 
   },
   mobileSubText: { 
-    fontSize: 14, 
-    color: '#6B7280' 
+    fontSize: 13, 
+    color: '#6B7280',
+    fontFamily: 'Inter',
   },
   
   // Modal Styles
@@ -491,14 +584,16 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '700',
     color: '#111827',
+    fontFamily: 'Inter',
   },
   modalSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#6B7280',
     marginTop: 2,
+    fontFamily: 'Inter',
   },
   closeBtn: {
     padding: 4,
@@ -554,9 +649,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   memberName: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
     color: '#111827',
+    fontFamily: 'Inter',
   },
   captainBadge: {
     flexDirection: 'row',
@@ -565,27 +661,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#ECFDF5',
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: 0,
   },
   captainText: {
-    fontSize: 9,
-    fontWeight: '800',
+    fontSize: 8.5,
+    fontWeight: '700',
     color: '#065f46',
+    fontFamily: 'Inter',
   },
   memberRole: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#6B7280',
     marginTop: 1,
+    fontFamily: 'Inter',
   },
   memberStatus: {
     alignItems: 'flex-end',
   },
   statusTag: {
-    fontSize: 10,
-    fontWeight: '800',
+    fontSize: 9.5,
+    fontWeight: '700',
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 6,
+    borderRadius: 100,
+    fontFamily: 'Inter',
   },
   statusAccepted: {
     backgroundColor: '#F0FDF4',

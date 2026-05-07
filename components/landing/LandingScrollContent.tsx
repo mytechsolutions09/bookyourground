@@ -76,9 +76,10 @@ export default function LandingScrollContent({
           */}
           <View
             style={{
-              position: 'relative',
+              position: Platform.OS === 'web' ? 'sticky' : 'relative' as any,
+              top: 0,
               zIndex: 0,
-              minHeight: isCompact ? 600 : undefined,
+              height: isCompact ? 600 : 850,
               width: '100%',
               overflow: 'visible',
             }}
@@ -87,7 +88,7 @@ export default function LandingScrollContent({
           </View>
 
           {isCompact ? (
-            <View style={{ backgroundColor: '#FFFFFF' }}>
+            <View style={{ backgroundColor: '#FFFFFF', zIndex: 10, position: 'relative' }}>
               {/* Quick Actions from Mobile */}
               <View style={styles.mobileQuickActions}>
                 <ScrollView
@@ -130,9 +131,10 @@ export default function LandingScrollContent({
               */}
               <View
                 style={{
-                  zIndex: 5,
+                  zIndex: 10,
                   backgroundColor: '#FFFFFF',
                   position: 'relative',
+                  marginTop: 0,
                 }}
               >
                 <FindOpposition />

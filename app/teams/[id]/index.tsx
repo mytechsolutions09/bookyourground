@@ -682,6 +682,13 @@ export default function TeamDetailsPage() {
                                   {isWon ? 'WON' : 'LOST'}
                                 </RNText>
                               </View>
+                              {match.is_under_review && (
+                                <View style={[styles.matchResultBadge, { backgroundColor: '#EA580C', marginLeft: 8 }]}>
+                                  <RNText style={[styles.matchResultBadgeText, { color: '#FFFFFF' }]}>
+                                    UNDER REVIEW
+                                  </RNText>
+                                </View>
+                              )}
                             </View>
                             <View style={styles.matchHistoryTeams}>
                               <View style={styles.matchHistoryTeamRow}>

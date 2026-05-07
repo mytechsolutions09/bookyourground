@@ -138,8 +138,9 @@ const styles = StyleSheet.create({
   },
   subLinkText: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#6B7280',
+    fontFamily: 'Inter',
   },
   subLinkTextActive: {
     color: '#FFFFFF',

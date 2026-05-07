@@ -67,6 +67,11 @@ export default function MatchCard({
             <Users size={12} color="#FFFFFF" />
             <Text style={styles.statusTextGlass}>{teamsCount}</Text>
           </View>
+          {(match as any).is_under_review && (
+            <View style={[styles.statusBadgeGlass, { backgroundColor: '#EA580C', marginLeft: 8 }]}>
+              <Text style={styles.statusTextGlass}>UNDER REVIEW</Text>
+            </View>
+          )}
         </View>
 
         {/* The "Film" (Glass Panel) */}

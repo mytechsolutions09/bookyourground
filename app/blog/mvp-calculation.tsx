@@ -10,7 +10,7 @@ export default function MVPCalculationBlog() {
       <Stack.Screen options={{ title: 'How MVP is Calculated - Blog' }} />
       <ScrollView style={styles.container}>
         <View style={styles.hero}>
-           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+           <TouchableOpacity style={styles.backBtn} onPress={() => router.push('/blog' as any)}>
               <ChevronLeft size={20} color="#6B7280" />
               <Text style={styles.backText}>Back to Blog</Text>
            </TouchableOpacity>
@@ -33,49 +33,49 @@ export default function MVPCalculationBlog() {
               In the heat of a live cricket match, every run scored, every wicket taken, and every catch held contributes to the final outcome. But who truly made the biggest difference? At Book your ground, we use a sophisticated MVP (Most Valuable Player) algorithm inspired by professional broadcasting standards to answer that very question.
            </Text>
 
-           <View style={styles.section}>
+            <View style={styles.section}>
               <View style={styles.sectionHeader}>
                  <Swords size={24} color="#0D9488" />
                  <Text style={styles.sectionTitle}>Batting: Impact Over Quantity</Text>
               </View>
               <Text style={styles.paragraph}>
-                 Runs are the lifeblood of cricket, but not all runs are equal. Our system rewards the aggressive intent and consistency:
+                 Runs are the lifeblood of cricket, but we reward the quality and intent behind them using the "10 Runs = 1 MVP Point" convention:
               </Text>
               <View style={styles.bulletList}>
-                 <Text style={styles.bullet}>• <Text style={styles.bold}>Base Points:</Text> 1.0 point per run scored.</Text>
-                 <Text style={styles.bullet}>• <Text style={styles.bold}>Boundary Bonus:</Text> +1.0 for every 4, and +2.0 for every 6.</Text>
-                 <Text style={styles.bullet}>• <Text style={styles.bold}>Strike Rate Bonus:</Text> Bonus points awarded for scoring faster than the match average.</Text>
-                 <Text style={styles.bullet}>• <Text style={styles.bold}>Milestones:</Text> +5 for 50 runs, +10 for 100 runs.</Text>
+                 <Text style={styles.bullet}>• <Text style={styles.bold}>Base Points:</Text> 0.1 point per run scored.</Text>
+                 <Text style={styles.bullet}>• <Text style={styles.bold}>Strike Rate Bonus:</Text> Extra points if your Strike Rate is higher than the team's average.</Text>
+                 <Text style={styles.bullet}>• <Text style={styles.bold}>Par Score Bonus:</Text> A 10% bonus for every run scored beyond your position's expected par.</Text>
+                 <Text style={styles.bullet}>• <Text style={styles.bold}>Milestones:</Text> +0.5 for a 50, and +1.0 for a century.</Text>
               </View>
            </View>
 
-           <View style={styles.section}>
+            <View style={styles.section}>
               <View style={styles.sectionHeader}>
                  <Target size={24} color="#0D9488" />
                  <Text style={styles.sectionTitle}>Bowling: Precision & Pressure</Text>
               </View>
               <Text style={styles.paragraph}>
-                 A bowler's value is measured by their ability to take wickets and maintain pressure through dot balls:
+                 Wicket values are dynamic and depend on the format and the specific batter dismissed:
               </Text>
               <View style={styles.bulletList}>
-                 <Text style={styles.bullet}>• <Text style={styles.bold}>Wickets:</Text> 20 points per wicket (the single largest point gain!).</Text>
-                 <Text style={styles.bullet}>• <Text style={styles.bold}>Pressure Points:</Text> +1.0 point for every dot ball bowled.</Text>
-                 <Text style={styles.bullet}>• <Text style={styles.bold}>Economy Bonus:</Text> Rewarded for preventing runs compared to the team average.</Text>
-                 <Text style={styles.bullet}>• <Text style={styles.bold}>Multi-Wicket:</Text> +10 for 3 wickets, +20 for 5 wickets.</Text>
+                 <Text style={styles.bullet}>• <Text style={styles.bold}>Dynamic Wickets:</Text> Base points (e.g., 1.8 for T20) adjusted by the batter's position (1-11).</Text>
+                 <Text style={styles.bullet}>• <Text style={styles.bold}>The Par Bonus:</Text> Huge rewards for dismissing a top batter before they reach their expected score.</Text>
+                 <Text style={styles.bullet}>• <Text style={styles.bold}>Format Scaling:</Text> Wickets are worth more in shorter matches where they are harder to get.</Text>
+                 <Text style={styles.bullet}>• <Text style={styles.bold}>Multi-Wicket:</Text> +0.5 for 3 wickets, +1.0 for 5 wickets, and +1.5 for a 10-fer.</Text>
               </View>
            </View>
 
-           <View style={styles.section}>
+            <View style={styles.section}>
               <View style={styles.sectionHeader}>
                  <Shield size={24} color="#0D9488" />
                  <Text style={styles.sectionTitle}>Fielding: The Game Changer</Text>
               </View>
               <Text style={styles.paragraph}>
-                 Fielding often goes unnoticed, but not in our MVP system. We reward the athletes who save runs and create dismissal opportunities:
+                 Fielding points are tied to the impact of the wicket you helped create:
               </Text>
               <View style={styles.bulletList}>
-                 <Text style={styles.bullet}>• <Text style={styles.bold}>Catches & Stumpings:</Text> 10 points per contribution.</Text>
-                 <Text style={styles.bullet}>• <Text style={styles.bold}>Run Outs:</Text> 15 points per direct or assisted run-out.</Text>
+                 <Text style={styles.bullet}>• <Text style={styles.bold}>Assisted (Catch/Stump):</Text> Fielder gets 20% of the total points for that wicket.</Text>
+                 <Text style={styles.bullet}>• <Text style={styles.bold}>Unassisted (Direct Hit):</Text> Fielder gets 100% of the wicket points—just like a bowler!</Text>
               </View>
            </View>
 

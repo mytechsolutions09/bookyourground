@@ -18,6 +18,13 @@ import { supabase } from '@/lib/supabase';
 import { getPlayerSlug } from '@/lib/utils';
 import { useUI } from '@/contexts/UIContext';
 import WebLayout from '@/components/web/WebLayout';
+import { 
+  calcBattingMVP, 
+  calcBowlingMVP, 
+  calcFieldingMVP, 
+  WicketInfo, 
+  FieldingEvent 
+} from '@/utils/mvp';
 import { ChevronRight, ChevronLeft, ChevronDown, Award, MessageCircle, Share2, Trophy, BarChart3, Settings, Sliders, HelpCircle, ImagePlus, Camera, Zap, Flame, Star, Activity, Target, Shield } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -610,21 +617,20 @@ export default function LiveScorecard() {
         players[name] = { 
           name, points: 0, 
           batting: 0, bowling: 0, fielding: 0,
-          runs: 0, balls: 0, wickets: 0, dots: 0, catches: 0, fours: 0, sixes: 0, team: '' 
+          runs: 0, balls: 0, wickets: [] as WicketInfo[], fieldingEvents: [] as FieldingEvent[], team: '' 
         };
       }
     };
 
-    // 1. Get team-level context and batting orders
-    // Ball logs are sorted by over DESC, so reverse for chronological order
+    // 1. Initial pass: Get team-level context
     const chronoLogs = [...ballLogs].reverse();
     const teamContext: Record<string, { runs: number, balls: number, battingOrder: string[] }> = {};
+    const batterRunningScore: Record<string, number> = {};
     
     chronoLogs.forEach(ball => {
       const innId = ball.innings_id || 'default';
       if (!teamContext[innId]) teamContext[innId] = { runs: 0, balls: 0, battingOrder: [] };
       
-      // Update team score (CricHeroes style: only runs that count towards team total)
       teamContext[innId].runs += (ball.runs || 0) + (ball.extras || 0);
       if (!['wide', 'penalty'].includes(ball.extra_type)) {
         teamContext[innId].balls += 1;
@@ -635,76 +641,59 @@ export default function LiveScorecard() {
       }
     });
 
-    // 2. Constants for calculation
-    const matchOvers = match.overs || 20;
-    const baseRunsPerWicket = matchOvers <= 7 ? 12 : matchOvers <= 12 ? 14 : matchOvers <= 16 ? 16 : matchOvers <= 20 ? 18 : 22;
-    const strengthMap = [1, 1, 1, 1, 0.8, 0.8, 0.8, 0.8, 0.6, 0.6, 0.6]; // Batting position weight
-
-    // 3. Process Ball-by-Ball Contributions
-    ballLogs.forEach(ball => {
+    // 2. Second pass: Aggregate player stats and record events
+    chronoLogs.forEach(ball => {
       const innId = ball.innings_id || 'default';
-      const context = teamContext[innId];
       
-      // BATTING
       if (ball.batter_name) {
         ensurePlayer(ball.batter_name);
-        players[ball.batter_name].runs += (ball.runs || 0);
+        batterRunningScore[ball.batter_name] = (batterRunningScore[ball.batter_name] || 0) + (ball.runs || 0);
         if (!['wide', 'penalty'].includes(ball.extra_type)) {
           players[ball.batter_name].balls += 1;
         }
       }
 
-      // BOWLING & FIELDING
-      if (ball.bowler_name) {
-        ensurePlayer(ball.bowler_name);
-        if (ball.is_wicket) {
-          players[ball.bowler_name].wickets += 1;
-          
-          // Get batter's position in this innings
-          const batterPos = context.battingOrder.indexOf(ball.batter_name) + 1 || 11;
-          const wktWeight = strengthMap[Math.min(batterPos - 1, 10)];
-          const wktPts = (baseRunsPerWicket * wktWeight) / 10;
-          
-          players[ball.bowler_name].bowling += wktPts;
-          players[ball.bowler_name].points += wktPts;
+      if (ball.is_wicket && ball.batter_name) {
+        const batterPos = teamContext[innId].battingOrder.indexOf(ball.batter_name) + 1 || 11;
+        const batterRuns = batterRunningScore[ball.batter_name] || 0;
 
-          // FIELDING (Catch/Stumping)
-          if (ball.fielder_name && ['caught', 'stumped'].includes(ball.dismissal_type)) {
-            ensurePlayer(ball.fielder_name);
-            const fieldingPts = wktPts * 0.2; // 20% of the wicket's points
-            players[ball.fielder_name].fielding += fieldingPts;
-            players[ball.fielder_name].points += fieldingPts;
-          }
+        if (ball.bowler_name) {
+          ensurePlayer(ball.bowler_name);
+          players[ball.bowler_name].wickets.push({ batterPosition: batterPos, batterRuns });
+        }
+
+        if (ball.fielder_name) {
+          ensurePlayer(ball.fielder_name);
+          const type = ['caught', 'stumped'].includes(ball.dismissal_type) ? "ASSISTED" : "UNASSISTED";
+          players[ball.fielder_name].fieldingEvents.push({ batterPosition: batterPos, batterRuns, type });
         }
       }
     });
 
-    // 4. Post-processing (Bonuses & Final Totals)
+    // 3. Final Aggregation
+    const matchOvers = match.overs || 20;
     Object.values(players).forEach(p => {
-      // Find team context for this player
-      // We look for which innings they batted in
       const playerInnId = Object.keys(teamContext).find(id => teamContext[id].battingOrder.includes(p.name));
       const context = playerInnId ? teamContext[playerInnId] : null;
-
-      // Batting MVP = Basic (Runs/10) + SR Bonus
-      const basicBattingMVP = p.runs / 10;
-      let srBonus = 0;
-      if (context && context.balls > 0 && p.balls > 0) {
-        const teamSR = (context.runs / context.balls) * 100;
-        const playerSR = (p.runs / p.balls) * 100;
-        if (playerSR > teamSR) {
-          srBonus = (playerSR / teamSR) * 0.08 * basicBattingMVP;
-        }
+      
+      if (context) {
+        const batterPos = context.battingOrder.indexOf(p.name) + 1 || 11;
+        p.batting = calcBattingMVP(
+          batterRunningScore[p.name] || 0,
+          batterPos,
+          context.runs,
+          p.balls,
+          context.runs,
+          context.balls
+        );
       }
-      p.batting = basicBattingMVP + srBonus;
-      p.points += p.batting;
 
-      // Bowling Milestones
-      let bowlingBonus = 0;
-      if (p.wickets >= 3) bowlingBonus += 0.5;
-      if (p.wickets >= 5) bowlingBonus += 0.5; // Total 1.0 for 5 wickets
-      p.bowling += bowlingBonus;
-      p.points += bowlingBonus;
+      const bowlInnId = Object.keys(teamContext).find(id => !teamContext[id].battingOrder.includes(p.name));
+      const bowlContext = bowlInnId ? teamContext[bowlInnId] : (context || Object.values(teamContext)[0]);
+
+      p.bowling = calcBowlingMVP(p.wickets, matchOvers, bowlContext?.runs || 0);
+      p.fielding = calcFieldingMVP(p.fieldingEvents, matchOvers, bowlContext?.runs || 0);
+      p.points = p.batting + p.bowling + p.fielding;
     });
 
     return Object.values(players).sort((a, b) => b.points - a.points);
@@ -1153,8 +1142,17 @@ export default function LiveScorecard() {
             style={{ flex: 1, backgroundColor: '#F6F4F0' }} 
             contentContainerStyle={{ paddingTop: paddingTop + 12, paddingHorizontal: 12, paddingBottom: 100 }}>
             {/* Main Score Display in Scoreboard Tab */}
+            {match?.is_under_review && (
+              <View style={styles.reviewBanner}>
+                <HelpCircle size={20} color="#EA580C" />
+                <View style={{ flex: 1, marginLeft: 10 }}>
+                  <Text style={styles.reviewBannerTitle}>Match Under Review</Text>
+                  <Text style={styles.reviewBannerDesc}>This match is currently under review by our moderation team. Scores and stats may change.</Text>
+                </View>
+              </View>
+            )}
             <View style={[styles.scoreCard, { backgroundColor: '#043529', margin: 12, borderRadius: 12 }]}>
-              <View style={styles.scoreRow}>
+               <View style={styles.scoreRow}>
                  <View>
                     <Text style={styles.battingTeamName}>{live.batting_team}</Text>
                     <Text style={[styles.bigScore, blink && { transform: [{ scale: 1.05 }] }]}>
@@ -1208,6 +1206,15 @@ export default function LiveScorecard() {
               </TouchableOpacity>
 
               <View style={{ padding: 16 }}>
+                {match?.is_under_review && (
+                  <View style={[styles.reviewBanner, { marginBottom: 20, marginHorizontal: 0 }]}>
+                    <HelpCircle size={20} color="#EA580C" />
+                    <View style={{ flex: 1, marginLeft: 10 }}>
+                      <Text style={styles.reviewBannerTitle}>Match Under Review</Text>
+                      <Text style={styles.reviewBannerDesc}>This match is currently under review by our moderation team.</Text>
+                    </View>
+                  </View>
+                )}
                 <Text style={styles.infoHeading}>Info</Text>
                 
                 <View style={styles.infoRow}><Text style={styles.infoLabel}>Teams</Text><Text style={styles.infoValue}>{match.team_a} vs {match.team_b}</Text></View>
@@ -2604,6 +2611,18 @@ const styles = StyleSheet.create({
   resultBadgeMini: { backgroundColor: '#005b80', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
   resultBadgeMiniText: { color: '#FFFFFF', fontSize: 10, fontWeight: 'bold' },
   summaryResultText: { fontSize: 13, color: '#005b80', fontWeight: 'bold', marginTop: 12 },
+  reviewBanner: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    backgroundColor: '#FFF7ED', 
+    padding: 16, 
+    borderRadius: 12, 
+    margin: 12, 
+    borderWidth: 1, 
+    borderColor: '#FFEDD5' 
+  },
+  reviewBannerTitle: { fontSize: 14, fontWeight: '700', color: '#9A3412', marginBottom: 2 },
+  reviewBannerDesc: { fontSize: 12, color: '#EA580C', lineHeight: 16 },
   summaryActions: { flexDirection: 'row', gap: 12, marginTop: 20 },
   summaryActionBtn: { flex: 1, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: '#D1D5DB', alignItems: 'center', backgroundColor: '#F9FAFB' },
   summaryActionBtnText: { fontSize: 13, fontWeight: '600', color: '#4B5563' },

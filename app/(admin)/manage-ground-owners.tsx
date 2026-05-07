@@ -5,7 +5,7 @@ import { Profile } from '@/types';
 import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
 import { router } from 'expo-router';
-import { Building2, Search, Users, ExternalLink, Mail, Phone, ChevronRight } from 'lucide-react-native';
+import { Building2, Search, Users, ExternalLink, Mail, Phone, ChevronRight, Check, Clock } from 'lucide-react-native';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 
 type OwnerRow = Profile & {
@@ -17,6 +17,7 @@ type OwnerRow = Profile & {
     account_number: string;
     ifsc: string;
     upi_id: string;
+    is_approved?: boolean;
   };
 };
 
@@ -85,6 +86,27 @@ export default function ManageGroundOwnersScreen() {
     } catch (e: any) {
       console.error('Error toggling platform fee:', e);
       Alert.alert('Error', 'Could not update platform fee setting: ' + e.message);
+    }
+  };
+
+  const approveBankDetails = async (ownerId: string) => {
+    try {
+      const { error } = await supabase
+        .from('owner_bank_details')
+        .update({ 
+          is_approved: true,
+          approved_at: new Date().toISOString(),
+          approved_by: (await supabase.auth.getUser()).data.user?.id
+        })
+        .eq('owner_id', ownerId);
+      
+      if (error) throw error;
+      
+      Alert.alert('Success', 'Bank details approved successfully');
+      loadOwners();
+    } catch (e: any) {
+      console.error('Error approving bank details:', e);
+      Alert.alert('Error', 'Could not approve bank details: ' + e.message);
     }
   };
 
@@ -168,8 +190,17 @@ export default function ManageGroundOwnersScreen() {
           {expandedId === item.id && (
             <View style={styles.expandedContent}>
               <View style={styles.expandedGrid}>
-                <View style={styles.expandedCol}>
-                  <Text style={styles.expandedLabel}>Banking Information</Text>
+                  <View style={styles.bankHeaderRow}>
+                    <Text style={styles.expandedLabel}>Banking Information</Text>
+                    {item.bankDetails && (
+                      <View style={[styles.statusBadge, item.bankDetails.is_approved ? styles.approvedBadge : styles.pendingBadge]}>
+                        {item.bankDetails.is_approved ? <Check size={10} color="#059669" /> : <Clock size={10} color="#D97706" />}
+                        <Text style={[styles.statusBadgeText, item.bankDetails.is_approved ? styles.approvedText : styles.pendingText]}>
+                          {item.bankDetails.is_approved ? 'VERIFIED' : 'PENDING'}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                   {item.bankDetails ? (
                     <View style={styles.bankInfoGrid}>
                       <View style={styles.infoBlock}>
@@ -186,13 +217,22 @@ export default function ManageGroundOwnersScreen() {
                       </View>
                       <View style={styles.infoBlock}>
                         <Text style={styles.infoLabel}>UPI ID</Text>
-                        <Text style={[styles.infoValue, { color: '#10b981' }]}>{item.bankDetails.upi_id}</Text>
+                        <Text style={[styles.infoValue, { color: '#10b981' }]}>{item.bankDetails.upi_id || '—'}</Text>
                       </View>
+                      
+                      {!item.bankDetails.is_approved && (
+                        <TouchableOpacity 
+                          style={styles.approveButton}
+                          onPress={() => approveBankDetails(item.id)}
+                        >
+                          <Check size={14} color="#FFF" />
+                          <Text style={styles.approveButtonText}>Approve Bank Details</Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
                   ) : (
                     <Text style={styles.noInfoText}>No banking details provided yet.</Text>
                   )}
-                </View>
 
                 <View style={styles.expandedActions}>
                   <Text style={styles.expandedLabel}>Quick Actions</Text>
@@ -701,5 +741,55 @@ const styles = StyleSheet.create({
   },
   feeDisabledText: {
     color: '#C2410C',
+  },
+  bankHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  approvedBadge: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
+  },
+  pendingBadge: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FDE68A',
+  },
+  statusBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  approvedText: {
+    color: '#059669',
+  },
+  pendingText: {
+    color: '#D97706',
+  },
+  approveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#059669',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginTop: 12,
+  },
+  approveButtonText: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

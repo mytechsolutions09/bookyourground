@@ -24,23 +24,38 @@ export const formatDateDDMMYYYY = (date: string | null | undefined): string => {
   return `${day}-${month}-${year}`;
 };
 
-export const formatDate = (date: string): string => {
+export const formatDate = (date: string | Date | null | undefined): string => {
   if (!date) return '';
-  // Split YYYY-MM-DD to avoid timezone shift on Web
-  const parts = date.split('-');
-  if (parts.length === 3) {
-    const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  
+  if (date instanceof Date) {
+    return date.toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  }
+
+  if (typeof date === 'string') {
+    // Split YYYY-MM-DD to avoid timezone shift on Web
+    // Only apply if it's exactly YYYY-MM-DD format (10 chars)
+    const parts = date.split('-');
+    if (parts.length === 3 && parts[0].length === 4 && date.length === 10) {
+      const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+      return d.toLocaleDateString('en-IN', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    }
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '';
     return d.toLocaleDateString('en-IN', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
     });
   }
-  return new Date(date).toLocaleDateString('en-IN', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
+  return '';
 };
 
 export const formatTime = (time: string): string => {

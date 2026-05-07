@@ -378,7 +378,7 @@ export default function OwnerInventoryScreen() {
             )}
           </View>
           
-          <Card style={[
+          <View style={[
             styles.filterCard,
             isSmall && { marginTop: -8 }
           ]}>
@@ -469,7 +469,7 @@ export default function OwnerInventoryScreen() {
                  </View>
               </View>
             )}
-          </Card>
+          </View>
         </View>
       </View>
 
@@ -479,7 +479,7 @@ export default function OwnerInventoryScreen() {
           styles.mainScrollContent,
           { 
             paddingTop: (isWeb && isSmall) ? 50 : 0,
-            paddingBottom: isSmall ? 0 : 80
+            paddingBottom: isSmall ? 100 : 80
           }
         ]}
         onScroll={handleScroll}
@@ -756,22 +756,21 @@ export default function OwnerInventoryScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFFFFF',
   },
   content: {
     flex: 1,
   },
   pageHeader: {
     backgroundColor: '#FFFFFF',
-    padding: 16,
+    padding: 24,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: '#F3F4F6',
   },
   webPageHeader: {
-    paddingTop: 8,
-    paddingBottom: 0,
+    paddingTop: 24,
+    paddingBottom: 24,
     backgroundColor: 'transparent',
-    borderBottomWidth: 0,
     width: '100%',
   },
   title: {
@@ -814,13 +813,7 @@ const styles = StyleSheet.create({
   },
   filterCard: {
     padding: 8,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    ...Platform.select({
-       web: {
-         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
-       } as any
-    })
+    backgroundColor: 'transparent',
   },
   filtersContainer: {
     flexDirection: 'row',
@@ -918,10 +911,8 @@ const styles = StyleSheet.create({
     // base padding
   },
   selectionTabs: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'transparent',
     paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
   },
   tabsScroll: {
     paddingHorizontal: 16,
@@ -970,15 +961,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   inventoryContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    backgroundColor: 'transparent',
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#F0F0F0',
   },
   inventoryContainerExpanded: {
-    borderRadius: 0,
-    borderWidth: 0,
     padding: 12,
     backgroundColor: 'transparent',
   },

@@ -1,3 +1,4 @@
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Platform, ActivityIndicator, Modal, TextInput } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { ChevronLeft, Package, Calendar, Clock, MapPin, CreditCard, ShieldCheck, Mail, Phone, ShoppingBag, RotateCcw, AlertCircle, CheckCircle2, XCircle, IndianRupee } from 'lucide-react-native';
@@ -124,129 +125,8 @@ export default function OrderDetailsScreen() {
     );
   }
 
-  const content = (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
-      {/* Header Info */}
-      <View style={styles.header}>
-        <View style={styles.orderMeta}>
-          <Text style={styles.orderId}>Order no : {order.id.slice(0, 8).toUpperCase()}</Text>
-          <Text style={styles.orderDate}>{formatDateTime(order.created_at)}</Text>
-        </View>
-        <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(order.status)}20` }]}>
-          <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>
-            {order.status.toUpperCase()}
-          </Text>
-        </View>
-      </View>
-
-      {/* Items Section */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Items Ordered</Text>
-        <View style={styles.card}>
-          {order.items?.map((item: any, index: number) => {
-            const returnInfo = getReturnStatusInfo(item.return_status);
-            return (
-              <TouchableOpacity 
-                key={item.id} 
-                style={[styles.itemRow, index === order.items.length - 1 && { borderBottomWidth: 0 }]}
-                onPress={() => {
-                  if (item.product?.name) {
-                    router.push(`/shop/${slugify(item.product.name)}`);
-                  }
-                }}
-              >
-                <Image 
-                  source={{ uri: item.product?.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200&q=80' }} 
-                  style={styles.itemImage} 
-                />
-                <View style={{ flex: 1 }}>
-                  <View style={styles.itemInfo}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.itemName} numberOfLines={2}>{item.product?.name}</Text>
-                      <Text style={styles.itemQty}>Qty: {item.quantity} × ₹{Number(item.price_at_purchase).toLocaleString('en-IN')}</Text>
-                    </View>
-                    <Text style={styles.itemTotal}>₹{Number(item.quantity * item.price_at_purchase).toLocaleString('en-IN')}</Text>
-                  </View>
-
-                  {/* Return Status or Button */}
-                  {item.return_status ? (
-                    <View style={[styles.returnStatusBadge, { borderColor: returnInfo?.color }]}>
-                      {returnInfo?.icon}
-                      <Text style={[styles.returnStatusText, { color: returnInfo?.color }]}>{returnInfo?.label}</Text>
-                    </View>
-                  ) : (
-                    (() => {
-                      const isDelivered = order.status === 'delivered';
-                      const deliveredAt = order.delivered_at || order.updated_at; // Fallback to updated_at if delivered_at is not set yet
-                      const returnPeriodDays = item.product?.return_period_days || 7;
-                      
-                      const isWithinReturnPeriod = isDelivered && deliveredAt && (() => {
-                        const deliveryDate = new Date(deliveredAt);
-                        const now = new Date();
-                        const diffInDays = (now.getTime() - deliveryDate.getTime()) / (1000 * 3600 * 24);
-                        return diffInDays <= returnPeriodDays;
-                      })();
-
-                      if (isDelivered && isWithinReturnPeriod) {
-                        return (
-                          <TouchableOpacity 
-                            style={styles.returnBtn}
-                            onPress={(e) => {
-                              e.stopPropagation(); // Prevent going to product page
-                              setSelectedItem(item);
-                              setReturnModalVisible(true);
-                            }}
-                          >
-                            <RotateCcw size={14} color="#dc8d3c" />
-                            <Text style={styles.returnBtnText}>Return Item</Text>
-                          </TouchableOpacity>
-                        );
-                      } else if (isDelivered && !isWithinReturnPeriod) {
-                        return (
-                          <View style={styles.expiredBadge}>
-                            <AlertCircle size={12} color="#94A3B8" />
-                            <Text style={styles.expiredText}>Return period expired</Text>
-                          </View>
-                        );
-                      }
-                      return null;
-                    })()
-                  )}
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-
-      {/* Shipping & Payment Grid */}
-      <View style={styles.grid}>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Delivery Address</Text>
-          <View style={styles.card}>
-            <View style={styles.infoRow}>
-              <MapPin size={18} color="#64748B" />
-              <Text style={styles.infoText}>{order.shipping_address || 'No address provided'}</Text>
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Billing Details</Text>
-          <View style={styles.card}>
-             <View style={[styles.infoRow, { marginBottom: 12 }]}>
-               <CreditCard size={18} color="#64748B" />
-               <Text style={styles.infoText}>Payment: {order.payment_method?.toUpperCase() || 'RAZORPAY'}</Text>
-             </View>
-             <View style={styles.infoRow}>
-               <ShieldCheck size={18} color="#10B981" />
-               <Text style={[styles.infoText, { color: '#10B981', fontWeight: '700' }]}>Status: {order.payment_status?.toUpperCase() || 'PAID'}</Text>
-             </View>
-          </View>
-        </View>
-      </View>
-
-      {/* Summary Section */}
+  const renderRightPanel = () => (
+    <View style={styles.rightPanel}>
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Order Summary</Text>
         <View style={styles.summaryCard}>
@@ -264,6 +144,182 @@ export default function OrderDetailsScreen() {
             <Text style={styles.totalValue}>₹{Number(order.total_amount).toLocaleString('en-IN')}</Text>
           </View>
         </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Delivery Address</Text>
+        <View style={styles.card}>
+          <View style={styles.infoRow}>
+            <MapPin size={18} color="#64748B" />
+            <Text style={styles.infoText}>{order.shipping_address || 'No address provided'}</Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Billing Details</Text>
+        <View style={styles.card}>
+           <View style={[styles.infoRow, { marginBottom: 12 }]}>
+             <CreditCard size={18} color="#64748B" />
+             <Text style={styles.infoText}>Payment: {order.payment_method?.toUpperCase() || 'RAZORPAY'}</Text>
+           </View>
+           <View style={styles.infoRow}>
+             <ShieldCheck size={18} color="#10B981" />
+             <Text style={[styles.infoText, { color: '#10B981', fontWeight: '700' }]}>Status: {order.payment_status?.toUpperCase() || 'PAID'}</Text>
+           </View>
+        </View>
+      </View>
+    </View>
+  );
+
+  const content = (
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
+      <View style={styles.mainLayout}>
+        <View style={styles.centerContent}>
+          {/* Header Info */}
+          <View style={styles.header}>
+            <View style={styles.orderMeta}>
+              <Text style={styles.orderId}>Order no : {order.id.slice(0, 8).toUpperCase()}</Text>
+              <Text style={styles.orderDate}>{formatDateTime(order.created_at)}</Text>
+            </View>
+            <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(order.status)}20` }]}>
+              <Text style={[styles.statusText, { color: getStatusColor(order.status) }]}>
+                {order.status.toUpperCase()}
+              </Text>
+            </View>
+          </View>
+
+          {/* Items Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Items Ordered</Text>
+            <View style={styles.card}>
+              {order.items?.map((item: any, index: number) => {
+                const returnInfo = getReturnStatusInfo(item.return_status);
+                return (
+                  <TouchableOpacity 
+                    key={item.id} 
+                    style={[styles.itemRow, index === order.items.length - 1 && { borderBottomWidth: 0 }]}
+                    onPress={() => {
+                      if (item.product?.name) {
+                        router.push(`/shop/${slugify(item.product.name)}`);
+                      }
+                    }}
+                  >
+                    <Image 
+                      source={{ uri: item.product?.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200&q=80' }} 
+                      style={styles.itemImage} 
+                    />
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.itemInfo}>
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.itemName} numberOfLines={2}>{item.product?.name}</Text>
+                          <Text style={styles.itemQty}>Qty: {item.quantity} × ₹{Number(item.price_at_purchase).toLocaleString('en-IN')}</Text>
+                        </View>
+                        <Text style={styles.itemTotal}>₹{Number(item.quantity * item.price_at_purchase).toLocaleString('en-IN')}</Text>
+                      </View>
+
+                      {/* Return Status or Button */}
+                      {item.return_status ? (
+                        <View style={[styles.returnStatusBadge, { borderColor: returnInfo?.color }]}>
+                          {returnInfo?.icon}
+                          <Text style={[styles.returnStatusText, { color: returnInfo?.color }]}>{returnInfo?.label}</Text>
+                        </View>
+                      ) : (
+                        (() => {
+                          const isDelivered = order.status === 'delivered';
+                          const deliveredAt = order.delivered_at || order.updated_at;
+                          const returnPeriodDays = item.product?.return_period_days || 7;
+                          
+                          const isWithinReturnPeriod = isDelivered && deliveredAt && (() => {
+                            const deliveryDate = new Date(deliveredAt);
+                            const now = new Date();
+                            const diffInDays = (now.getTime() - deliveryDate.getTime()) / (1000 * 3600 * 24);
+                            return diffInDays <= returnPeriodDays;
+                          })();
+
+                          if (isDelivered && isWithinReturnPeriod) {
+                            return (
+                              <TouchableOpacity 
+                                style={styles.returnBtn}
+                                onPress={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedItem(item);
+                                  setReturnModalVisible(true);
+                                }}
+                              >
+                                <RotateCcw size={14} color="#dc8d3c" />
+                                <Text style={styles.returnBtnText}>Return Item</Text>
+                              </TouchableOpacity>
+                            );
+                          } else if (isDelivered && !isWithinReturnPeriod) {
+                            return (
+                              <View style={styles.expiredBadge}>
+                                <AlertCircle size={12} color="#94A3B8" />
+                                <Text style={styles.expiredText}>Return period expired</Text>
+                              </View>
+                            );
+                          }
+                          return null;
+                        })()
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* On Mobile, show summary & details here */}
+          {!IS_WEB && (
+            <>
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Delivery Address</Text>
+                <View style={styles.card}>
+                  <View style={styles.infoRow}>
+                    <MapPin size={18} color="#64748B" />
+                    <Text style={styles.infoText}>{order.shipping_address || 'No address provided'}</Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Billing Details</Text>
+                <View style={styles.card}>
+                   <View style={[styles.infoRow, { marginBottom: 12 }]}>
+                     <CreditCard size={18} color="#64748B" />
+                     <Text style={styles.infoText}>Payment: {order.payment_method?.toUpperCase() || 'RAZORPAY'}</Text>
+                   </View>
+                   <View style={styles.infoRow}>
+                     <ShieldCheck size={18} color="#10B981" />
+                     <Text style={[styles.infoText, { color: '#10B981', fontWeight: '700' }]}>Status: {order.payment_status?.toUpperCase() || 'PAID'}</Text>
+                   </View>
+                </View>
+              </View>
+
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Order Summary</Text>
+                <View style={styles.summaryCard}>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>Subtotal</Text>
+                    <Text style={styles.summaryValue}>₹{Number(order.total_amount).toLocaleString('en-IN')}</Text>
+                  </View>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>Shipping</Text>
+                    <Text style={[styles.summaryValue, { color: '#10B981' }]}>FREE</Text>
+                  </View>
+                  <View style={styles.divider} />
+                  <View style={styles.totalRow}>
+                    <Text style={styles.totalLabel}>Total Paid</Text>
+                    <Text style={styles.totalValue}>₹{Number(order.total_amount).toLocaleString('en-IN')}</Text>
+                  </View>
+                </View>
+              </View>
+            </>
+          )}
+        </View>
+
+        {/* Right Panel for Web */}
+        {IS_WEB && renderRightPanel()}
       </View>
 
       <View style={{ height: 40 }} />
@@ -330,7 +386,7 @@ export default function OrderDetailsScreen() {
     return (
       <WebLayout>
         <View style={styles.webContainer}>
-          <TouchableOpacity style={styles.backBtnWeb} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backBtnWeb} onPress={() => router.push('/profile/orders')}>
             <ChevronLeft size={20} color="#64748B" />
             <Text style={styles.backTextWeb}>Back to My Orders</Text>
           </TouchableOpacity>
@@ -373,10 +429,22 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   webContainer: {
-    maxWidth: 900,
+    maxWidth: 1200,
     alignSelf: 'center',
     width: '100%',
     padding: 20,
+    flex: 1,
+  },
+  mainLayout: {
+    flexDirection: Platform.OS === 'web' ? 'row' : 'column',
+    gap: 32,
+  },
+  centerContent: {
+    flex: 2,
+  },
+  rightPanel: {
+    flex: 1,
+    gap: 0,
   },
   header: {
     flexDirection: 'row',

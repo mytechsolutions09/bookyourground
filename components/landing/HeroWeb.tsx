@@ -173,7 +173,7 @@ export default function HeroWeb() {
     >
       <View style={styles.overlay} />
       
-      <View style={[styles.container, !isMobile && { marginTop: -80 }]}>
+      <View style={[styles.container, !isMobile && { marginTop: 0 }]}>
         <View style={styles.content}>
           <Text style={[
             styles.title,
@@ -447,7 +447,8 @@ export default function HeroWeb() {
 const styles = StyleSheet.create({
   root: {
     width: '100%',
-    justifyContent: Platform.OS === 'web' ? 'center' : 'flex-start',
+    justifyContent: 'flex-start',
+    paddingTop: Platform.OS === 'web' ? 180 : 140,
     alignItems: 'center',
   },
   overlay: {
@@ -469,20 +470,18 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 64,
-    fontWeight: '800',
     color: '#FFFFFF',
     marginBottom: 16,
     letterSpacing: -1.5,
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     textAlign: 'center',
     lineHeight: 72,
   },
   subtitle: {
     fontSize: 16,
     color: '#FFFFFF',
-    fontWeight: '500',
     marginBottom: 32,
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Medium',
     opacity: 0.95,
     letterSpacing: -0.2,
     lineHeight: 26,
@@ -493,7 +492,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
-    marginBottom: 50,
+    marginBottom: 40,
     flexWrap: 'wrap',
     justifyContent: 'center',
   },
@@ -518,9 +517,8 @@ const styles = StyleSheet.create({
   },
   chipText: {
     fontSize: 14,
-    fontWeight: '600',
     color: '#FFFFFF',
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
   },
   searchFormContainer: {
     width: '100%',
@@ -597,8 +595,7 @@ const styles = StyleSheet.create({
   fieldText: {
     fontSize: 16,
     color: '#FFFFFF',
-    fontWeight: '600',
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-SemiBold',
     letterSpacing: -0.3,
   },
   placeholderText: {
@@ -639,8 +636,7 @@ const styles = StyleSheet.create({
   searchButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '700',
-    fontFamily: 'Inter',
+    fontFamily: 'Inter-Bold',
     letterSpacing: -0.2,
   },
   dropdown: {

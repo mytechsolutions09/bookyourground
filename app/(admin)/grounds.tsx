@@ -119,6 +119,7 @@ export default function GroundsAdminScreen() {
   const [loading, setLoading] = useState(true);
   const [occupancyRates, setOccupancyRates] = useState<Record<string, number>>({});
   const [selectedGround, setSelectedGround] = useState<GroundWithImages | null>(null);
+  const [isActionsModalOpen, setIsActionsModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'tiles' | 'list'>('tiles');
   const [locationFilter, setLocationFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
@@ -269,6 +270,7 @@ export default function GroundsAdminScreen() {
 
       loadGrounds();
       setSelectedGround(null);
+      setIsActionsModalOpen(false);
     } catch (error: any) {
       if (Platform.OS === 'web') {
         alert('Error: ' + error?.message);
@@ -461,6 +463,7 @@ export default function GroundsAdminScreen() {
         setEditOpen(false);
         setEditForm(null);
         setSelectedGround(null);
+        setIsActionsModalOpen(false);
         loadGrounds();
       } catch (e: any) {
         console.error('Error deleting ground:', e);
@@ -738,6 +741,7 @@ export default function GroundsAdminScreen() {
       else Alert.alert('Success', 'Ground duplicated successfully!');
       
       loadGrounds();
+      setIsActionsModalOpen(false);
     } catch (e: any) {
       console.error('Error duplicating ground:', e);
       if (Platform.OS === 'web') alert(e?.message ?? 'Failed to duplicate ground');
@@ -1017,88 +1021,45 @@ export default function GroundsAdminScreen() {
     <View style={styles.container}>
       {Platform.OS === 'web' && (
         <View style={[styles.header, styles.webHeader]}>
-          <View style={styles.headerTopRow}>
-            <View style={styles.headerTitleBlock}>
+          <View style={styles.compactHeaderRow}>
+            <View style={styles.titleSection}>
               <Text style={styles.title}>Grounds</Text>
-              <Text style={styles.subtitle}>{headerSubtitle}</Text>
             </View>
-          </View>
 
-          <View style={styles.controlsRow}>
-            <View style={styles.searchBox}>
+            <View style={styles.searchSection}>
               <TextInput
-                style={styles.searchInput}
-                placeholder="Search by name, city or owner..."
+                style={styles.searchInputFlat}
+                placeholder="Search grounds..."
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
             </View>
-            <View style={styles.filtersWrap}>
-              <View style={[styles.filtersGroup, { zIndex: 60 }]}>
-                <Text style={styles.filtersLabel}>Location</Text>
-                <FilterDropdown
-                  options={locationOptions}
-                  value={locationFilter}
-                  onChange={setLocationFilter}
-                />
-              </View>
 
-              <View style={[styles.filtersGroup, { zIndex: 50 }]}>
-                <Text style={styles.filtersLabel}>Type</Text>
-                <FilterDropdown
-                  options={typeOptions}
-                  value={typeFilter}
-                  onChange={setTypeFilter}
-                />
-              </View>
+            <View style={styles.filtersSection}>
+              <FilterDropdown
+                options={locationOptions}
+                value={locationFilter}
+                onChange={setLocationFilter}
+              />
+              <FilterDropdown
+                options={typeOptions}
+                value={typeFilter}
+                onChange={setTypeFilter}
+              />
             </View>
-          </View>
 
-          <View style={styles.viewToggle}>
             <TouchableOpacity
               onPress={handleImportGround}
-              style={[styles.viewToggleOption, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' }]}
+              style={styles.importButtonFlat}
             >
-              <Text style={[styles.viewToggleText, { color: '#16A34A', fontWeight: '700' }]}>Import</Text>
+              <Text style={styles.importButtonText}>Import JSON</Text>
             </TouchableOpacity>
-
-            <Pressable
-              onPress={() => setViewMode('tiles')}
-              style={[
-                styles.viewToggleOption,
-                viewMode === 'tiles' && styles.viewToggleOptionActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.viewToggleText,
-                  viewMode === 'tiles' && styles.viewToggleTextActive,
-                ]}
-              >
-                Tiles
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => setViewMode('list')}
-              style={[
-                styles.viewToggleOption,
-                viewMode === 'list' && styles.viewToggleOptionActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.viewToggleText,
-                  viewMode === 'list' && styles.viewToggleTextActive,
-                ]}
-              >
-                List
-              </Text>
-            </Pressable>
           </View>
+
         </View>
       )}
 
-      {Platform.OS === 'web' && viewMode === 'list' && filteredGrounds.length > 0 && (
+      {Platform.OS === 'web' && filteredGrounds.length > 0 && (
         <View style={styles.tableHeaderContainer}>
           <View style={styles.tableHeaderRow}>
             <Text style={[styles.tableHeaderCell, styles.colGround]}>Ground</Text>
@@ -1113,7 +1074,7 @@ export default function GroundsAdminScreen() {
 
       {createOpen ? (
         <View style={styles.createFormSection}>
-          <Card style={styles.listDetailsCard}>
+          <View style={styles.tableDetailsSection}>
             <Text style={styles.formTitle}>Add Ground</Text>
 
             <ScrollView style={styles.formWrap}>
@@ -1273,14 +1234,13 @@ export default function GroundsAdminScreen() {
                   />
                 </View>
             </ScrollView>
-          </Card>
+          </View>
         </View>
       ) : null}
 
       <FlatList
         data={filteredGrounds}
         renderItem={({ item }) => {
-          const isSelected = selectedGround?.id === item.id;
           const latestGround =
             grounds.find((g) => g.id === item.id) ?? item;
           const isApproved = groundIsApproved(latestGround);
@@ -1298,13 +1258,16 @@ export default function GroundsAdminScreen() {
 
           const ownerPhone = (latestGround as any).owner?.phone || '—';
 
-          if (Platform.OS === 'web' && viewMode === 'list') {
+          if (Platform.OS === 'web') {
             return (
-              <View style={styles.listRowOuter}>
+              <View style={styles.tableRowContainer}>
                 <TouchableOpacity
-                  onPress={() => setSelectedGround(isSelected ? null : latestGround)}
+                  onPress={() => {
+                    setSelectedGround(latestGround);
+                    setIsActionsModalOpen(true);
+                  }}
                   activeOpacity={0.8}
-                  style={[styles.tableRow, isSelected && styles.tableRowSelected]}
+                  style={styles.tableRow}
                 >
                   <View style={[styles.tableCell, styles.colGround]}>
                     <View style={styles.tableGroundInfo}>
@@ -1345,102 +1308,11 @@ export default function GroundsAdminScreen() {
                   </View>
 
                   <View style={[styles.tableCell, styles.colActions]}>
-                    <View style={styles.tableRowActions}>
-                        {!isApproved && (
-                            <TouchableOpacity 
-                                style={[styles.iconButton, { backgroundColor: '#dcfce7' }]}
-                                onPress={() => updateGroundStatus(latestGround.id, true)}
-                            >
-                                <Text style={{ color: '#16a34a', fontWeight: '800', fontSize: 10 }}>APPROVE</Text>
-                            </TouchableOpacity>
-                        )}
-                        <TouchableOpacity 
-                            style={[styles.iconButton, { backgroundColor: '#f3f4f6' }]}
-                            onPress={() => startEditGround(latestGround)}
-                        >
-                            <Text style={{ color: '#4b5563', fontWeight: '800', fontSize: 10 }}>EDIT</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity 
-                            style={[styles.iconButton, { backgroundColor: '#e0f2fe' }]}
-                            onPress={() => handleDuplicateGround(latestGround)}
-                            disabled={duplicatingId != null}
-                        >
-                            <Text style={{ color: '#0ea5e9', fontWeight: '800', fontSize: 10 }}>
-                              {duplicatingId === latestGround.id ? '...' : 'DUPLICATE'}
-                            </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity 
-                            style={[styles.iconButton, { backgroundColor: '#fef3c7' }]}
-                            onPress={() => handleExportGround(latestGround)}
-                        >
-                            <Text style={{ color: '#d97706', fontWeight: '800', fontSize: 10 }}>EXPORT</Text>
-                        </TouchableOpacity>
-                    </View>
+                    <Text style={{ fontSize: 12, color: '#6b7280' }}>Click to manage</Text>
                   </View>
                 </TouchableOpacity>
 
-                {isSelected ? (
-                  <Card style={styles.listDetailsCard}>
-                    <View style={styles.detailsHeader}>
-                        <Text style={styles.detailsTitle}>Ground Management Details</Text>
-                        <TouchableOpacity onPress={() => setSelectedGround(null)}>
-                            <Text style={{ color: '#ef4444', fontWeight: '700', fontSize: 12 }}>Close Overview</Text>
-                        </TouchableOpacity>
-                    </View>
-                    <View style={styles.detailsTableContent}>
-                        <View style={styles.detailsCol}>
-                            <Text style={styles.detailsGridLabel}>Full Address</Text>
-                            <Text style={styles.detailsGridValue}>{latestGround.address}, {latestGround.pincode}</Text>
-                            
-                            <Text style={[styles.detailsGridLabel, { marginTop: 12 }]}>Description</Text>
-                            <Text style={styles.detailsGridValue}>{latestGround.description || 'No description provided.'}</Text>
-                        </View>
-                        <View style={styles.detailsCol}>
-                            <Text style={styles.detailsGridLabel}>Amenities</Text>
-                            <View style={styles.amenitiesWrap}>
-                                {latestGround.has_floodlights && <Text style={styles.amenityTag}>Floodlights</Text>}
-                                {latestGround.has_parking && <Text style={styles.amenityTag}>Parking</Text>}
-                                {latestGround.has_changing_rooms && <Text style={styles.amenityTag}>Changing Rooms</Text>}
-                                {latestGround.has_pavilion && <Text style={styles.amenityTag}>Pavilion</Text>}
-                            </View>
-
-                            <Text style={[styles.detailsGridLabel, { marginTop: 12 }]}>Schedule Overview</Text>
-                            <Text style={styles.detailsGridValue}>{schedule.datesLine}</Text>
-                            <Text style={styles.detailsGridValue}>{schedule.slotsLine}</Text>
-                        </View>
-                        <View style={styles.detailsColActions}>
-                            <Button
-                                title="Full Edit"
-                                onPress={() => startEditGround(latestGround)}
-                                variant="primary"
-                                size="small"
-                                style={{ marginBottom: 8 }}
-                            />
-                            <Button
-                                title={duplicatingId === latestGround.id ? "Duplicating..." : "Duplicate Ground"}
-                                onPress={() => handleDuplicateGround(latestGround)}
-                                variant="outline"
-                                size="small"
-                                style={{ marginBottom: 8 }}
-                                disabled={duplicatingId != null}
-                            />
-                            <Button
-                                title="Delete Ground"
-                                onPress={() => handleDeleteGround(latestGround.id)}
-                                variant="danger"
-                                size="small"
-                                style={{ marginBottom: 8 }}
-                            />
-                            <Button
-                                title="Export Info"
-                                onPress={() => handleExportGround(latestGround)}
-                                variant="outline"
-                                size="small"
-                            />
-                        </View>
-                    </View>
-                  </Card>
-                ) : null}
+                {/* Modal actions replaced inline expansion */}
               </View>
             );
           }
@@ -1603,8 +1475,8 @@ export default function GroundsAdminScreen() {
         extraData={{ grounds, selectedGround, viewMode, searchQuery }}
         contentContainerStyle={styles.list}
         key={`grounds-${viewMode}-${numColumns}`}
-        numColumns={numColumns}
-        columnWrapperStyle={tilesColumnWrapperStyle}
+        numColumns={Platform.OS === 'web' ? 1 : numColumns}
+        columnWrapperStyle={Platform.OS === 'web' ? undefined : tilesColumnWrapperStyle}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadGrounds} />}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
@@ -1612,6 +1484,94 @@ export default function GroundsAdminScreen() {
           </View>
         }
       />
+
+      {/* Actions Modal */}
+      <Modal
+        transparent
+        visible={isActionsModalOpen && !!selectedGround}
+        animationType="fade"
+        onRequestClose={() => setIsActionsModalOpen(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setIsActionsModalOpen(false)} />
+        <View style={styles.actionsModalWrap}>
+          <View style={styles.actionsModalHeader}>
+            <View>
+              <Text style={styles.actionsModalTitle}>{selectedGround?.name}</Text>
+              <Text style={styles.actionsModalSubtitle}>Management Options</Text>
+            </View>
+            <TouchableOpacity onPress={() => setIsActionsModalOpen(false)}>
+              <Text style={styles.closeActionsText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.actionsModalBody}>
+            <TouchableOpacity 
+              style={styles.actionModalItem}
+              onPress={() => {
+                setIsActionsModalOpen(false);
+                startEditGround(selectedGround!);
+              }}
+            >
+              <View style={[styles.actionIconBox, { backgroundColor: '#DBEAFE' }]}>
+                <Text style={{ color: '#2563EB', fontWeight: '800' }}>E</Text>
+              </View>
+              <View>
+                <Text style={styles.actionItemTitle}>Full Edit</Text>
+                <Text style={styles.actionItemDesc}>Modify ground details, pricing, and images</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.actionModalItem}
+              onPress={() => {
+                setIsActionsModalOpen(false);
+                handleDuplicateGround(selectedGround!);
+              }}
+              disabled={duplicatingId != null}
+            >
+              <View style={[styles.actionIconBox, { backgroundColor: '#F0F9FF' }]}>
+                <Text style={{ color: '#0EA5E9', fontWeight: '800' }}>D</Text>
+              </View>
+              <View>
+                <Text style={styles.actionItemTitle}>{duplicatingId === selectedGround?.id ? 'Duplicating...' : 'Duplicate'}</Text>
+                <Text style={styles.actionItemDesc}>Create a copy of this ground</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.actionModalItem}
+              onPress={() => {
+                setIsActionsModalOpen(false);
+                handleExportGround(selectedGround!);
+              }}
+            >
+              <View style={[styles.actionIconBox, { backgroundColor: '#FEF3C7' }]}>
+                <Text style={{ color: '#D97706', fontWeight: '800' }}>X</Text>
+              </View>
+              <View>
+                <Text style={styles.actionItemTitle}>Export Info</Text>
+                <Text style={styles.actionItemDesc}>Download ground data as JSON</Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.actionModalItem, { borderBottomWidth: 0 }]}
+              onPress={() => {
+                setIsActionsModalOpen(false);
+                handleDeleteGround(selectedGround!.id);
+              }}
+            >
+              <View style={[styles.actionIconBox, { backgroundColor: '#FEE2E2' }]}>
+                <Text style={{ color: '#DC2626', fontWeight: '800' }}>R</Text>
+              </View>
+              <View>
+                <Text style={styles.actionItemTitle}>Remove Ground</Text>
+                <Text style={styles.actionItemDesc}>Permanently delete this ground</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       <Modal
         transparent
@@ -1882,43 +1842,64 @@ export default function GroundsAdminScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#FFFFFF',
   },
   header: {
-    backgroundColor: '#FFFFFF',
-    padding: 12,
-    paddingTop: 48,
+    padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-    overflow: 'visible' as any,
-    zIndex: 50,
+    borderBottomColor: '#F3F4F6',
   },
   webHeader: {
-    paddingTop: 12,
+    paddingTop: 16,
+    paddingBottom: 16,
   },
-  headerTopRow: {
+  compactHeaderRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 12,
+    alignItems: 'center',
+    gap: 16,
   },
-  headerTitleBlock: {
-    flex: 1,
-    minWidth: 0,
-    paddingRight: 8,
-  },
-  headerAddButton: {
-    flexShrink: 0,
+  titleSection: {
+    marginRight: 8,
   },
   title: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#212121',
+    color: '#111827',
+    fontFamily: 'Inter',
   },
-  subtitle: {
+  searchSection: {
+    flex: 1,
+    maxWidth: 400,
+  },
+  searchInputFlat: {
+    height: 36,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 13,
+    color: '#111827',
+    fontFamily: 'Inter',
+  },
+  filtersSection: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  importButtonFlat: {
+    height: 36,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  importButtonText: {
+    color: '#16A34A',
     fontSize: 12,
-    color: '#666',
-    marginTop: 2,
+    fontWeight: '700',
+    fontFamily: 'Inter',
   },
   list: {
     padding: 16,
@@ -1948,15 +1929,10 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   tableHeaderContainer: {
-    marginHorizontal: 12,
-    marginTop: 12,
-    marginBottom: 4,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
   tableHeaderRow: {
     flexDirection: 'row',
@@ -1967,27 +1943,20 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    fontFamily: 'Inter',
   },
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    marginHorizontal: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.02,
-    shadowRadius: 2,
-    elevation: 1,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    width: '100%',
   },
   tableRowSelected: {
-    borderColor: '#10b981',
-    backgroundColor: '#f0fdf4',
+    backgroundColor: '#F9FAFB',
   },
   tableCell: {
     paddingRight: 12,
@@ -2011,32 +1980,38 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5E7EB',
   },
   groundName: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
     color: '#111827',
+    fontFamily: 'Inter',
   },
   groundType: {
     fontSize: 11,
     color: '#6B7280',
     marginTop: 1,
+    fontFamily: 'Inter',
   },
   ownerName: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: '#374151',
+    fontFamily: 'Inter',
   },
   ownerPhone: {
     fontSize: 11,
     color: '#6B7280',
+    fontFamily: 'Inter',
   },
   locationText: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#4B5563',
+    fontFamily: 'Inter',
   },
   priceText: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
     color: '#111827',
+    fontFamily: 'Inter',
   },
   statusBadges: {
     flexDirection: 'row',
@@ -2162,10 +2137,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    minWidth: 160,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 0,
+    height: 36,
+    justifyContent: 'center',
+    minWidth: 140,
   },
   dropdownButtonOpen: {
     borderColor: '#10b981',
@@ -2355,11 +2332,11 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     backgroundColor: 'rgba(156,163,175,0.10)',
   },
-  listDetailsCard: {
-    marginTop: 10,
-    padding: 14,
-    backgroundColor: '#FFF9E6',
-    borderRadius: 12,
+  tableDetailsSection: {
+    padding: 24,
+    backgroundColor: '#F9FAFB',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
   detailsTitle: {
     fontSize: 14,
@@ -2586,6 +2563,79 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 4,
+  },
+  // Actions Modal Styles
+  actionsModalWrap: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    width: '90%',
+    maxWidth: 440,
+    alignSelf: 'center',
+    marginTop: '10%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 5,
+    overflow: 'hidden',
+    zIndex: 1000,
+  },
+  actionsModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  actionsModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    fontFamily: 'Inter',
+  },
+  actionsModalSubtitle: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+    fontFamily: 'Inter',
+  },
+  closeActionsText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B7280',
+    fontFamily: 'Inter',
+  },
+  actionsModalBody: {
+    padding: 8,
+  },
+  actionModalItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    gap: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F9FAFB',
+    borderRadius: 12,
+  },
+  actionIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionItemTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+    fontFamily: 'Inter',
+  },
+  actionItemDesc: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+    fontFamily: 'Inter',
   },
 });
 

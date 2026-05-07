@@ -62,8 +62,19 @@ function DashboardContent() {
   const isCompact = width < 900;
   const isUltraNarrow = width < 350;
   const isTablet = width >= 600 && width < 900;
-  const { profile, user } = useAuth();
+  const { profile, user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
+
+  // Redirect ground owners to owner dashboard on web
+  useEffect(() => {
+    if (!authLoading && Platform.OS === 'web' && profile?.role === 'ground_owner') {
+      router.replace('/(owner)/owner-dashboard');
+    }
+  }, [profile, authLoading]);
+
+  if (Platform.OS === 'web' && profile?.role === 'ground_owner') {
+    return null;
+  }
   const [bookings, setBookings] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [popularSlots, setPopularSlots] = useState<any[]>([]);

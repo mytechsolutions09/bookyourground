@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert, TextInput } from 'react-native';
 import { supabase } from '@/lib/supabase';
-import { ShoppingBag, Plus, Search, Edit2, Trash2, Package, ClipboardList, X, Image as ImageIcon, Upload } from 'lucide-react-native';
+import { ShoppingBag, Plus, Search, Edit2, Trash2, Package, ClipboardList, X, Image as ImageIcon, Upload, Bold, Italic, List, Eye, Code, Type, Link, Quote, Smile, Undo, Trash, FileText } from 'lucide-react-native';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import WebLayout from '@/components/web/WebLayout';
 import { Platform, Modal, DeviceEventEmitter } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { decode } from 'base64-arraybuffer';
-import MobileAppNavbar from '@/components/MobileAppNavbar';
+import ShopSubbar from '@/components/admin/ShopSubbar';
 
 export default function AdminProductsScreen() {
   const [products, setProducts] = useState<any[]>([]);
@@ -35,9 +35,75 @@ export default function AdminProductsScreen() {
     specifications: {} as any
   });
 
+  const params = useLocalSearchParams();
+
+  const [previewMode, setPreviewMode] = useState(false);
+  const [selection, setSelection] = useState({ start: 0, end: 0 });
+
+  const applyFormatting = (type: 'bold' | 'italic' | 'list' | 'heading' | 'link' | 'quote' | 'clear') => {
+    const text = editingProduct ? editingProduct.description : newProduct.description;
+    const currentText = text || '';
+    let formattedText = currentText;
+
+    const selectedText = currentText.substring(selection.start, selection.end);
+    const beforeSelection = currentText.substring(0, selection.start);
+    const afterSelection = currentText.substring(selection.end);
+
+    switch (type) {
+      case 'bold':
+        formattedText = beforeSelection + `**${selectedText || 'Bold Text'}**` + afterSelection;
+        break;
+      case 'italic':
+        formattedText = beforeSelection + `_${selectedText || 'Italic Text'}_` + afterSelection;
+        break;
+      case 'list':
+        formattedText = beforeSelection + `\n- ${selectedText || 'List Item'}` + afterSelection;
+        break;
+      case 'heading':
+        formattedText = beforeSelection + `\n### ${selectedText || 'Heading'}` + afterSelection;
+        break;
+      case 'link':
+        formattedText = beforeSelection + `[${selectedText || 'Link Title'}](url)` + afterSelection;
+        break;
+      case 'quote':
+        formattedText = beforeSelection + `\n> ${selectedText || 'Quote'}` + afterSelection;
+        break;
+      case 'clear':
+        formattedText = '';
+        break;
+    }
+
+    if (editingProduct) {
+      setEditingProduct({ ...editingProduct, description: formattedText });
+    } else {
+      setNewProduct({ ...newProduct, description: formattedText });
+    }
+  };
+
+  const insertEmoji = (emoji: string) => {
+    const text = editingProduct ? editingProduct.description : newProduct.description;
+    const currentText = text || '';
+    const beforeSelection = currentText.substring(0, selection.start);
+    const afterSelection = currentText.substring(selection.end);
+    const formattedText = beforeSelection + emoji + afterSelection;
+
+    if (editingProduct) {
+      setEditingProduct({ ...editingProduct, description: formattedText });
+    } else {
+      setNewProduct({ ...newProduct, description: formattedText });
+    }
+  };
+
+  const charCount = (editingProduct ? editingProduct.description : newProduct.description)?.length || 0;
+
   useEffect(() => {
     fetchProducts();
     fetchCategories();
+
+    // Check for view param from ShopSubbar
+    if (params.view === 'categories') {
+      setViewMode('categories');
+    }
 
     const handleOpenForm = () => setShowAddForm(true);
     const handleSetView = (e: any) => {
@@ -73,7 +139,7 @@ export default function AdminProductsScreen() {
     if (data) setCategories(data);
   };
 
-  const pickImage = async () => {
+  const handleImageUpload = async () => {
     if (newProduct.images.length >= 5) {
       const msg = 'You can only add up to 5 images per product.';
       if (Platform.OS === 'web') window.alert(msg);
@@ -82,6 +148,7 @@ export default function AdminProductsScreen() {
     }
 
     try {
+      setIsSubmitting(true);
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -93,7 +160,6 @@ export default function AdminProductsScreen() {
       if (result.canceled) return;
 
       if (result.assets && result.assets[0].base64) {
-        setIsUploadingImage(true);
         const asset = result.assets[0];
         const ext = asset.uri.split('.').pop() || 'jpg';
         const fileName = `${Date.now()}.${ext}`;
@@ -112,10 +178,18 @@ export default function AdminProductsScreen() {
           .from('shop')
           .getPublicUrl(filePath);
 
+        const updatedImages = [...newProduct.images, publicUrl];
         setNewProduct(prev => ({
           ...prev,
-          images: [...prev.images, publicUrl]
+          images: updatedImages
         }));
+        
+        if (editingProduct) {
+          setEditingProduct((prev: any) => ({
+            ...prev,
+            images: updatedImages
+          }));
+        }
       }
     } catch (err: any) {
       console.error('Pick image error:', err);
@@ -123,7 +197,7 @@ export default function AdminProductsScreen() {
       if (Platform.OS === 'web') window.alert('Upload Error: ' + msg);
       else Alert.alert('Upload Error', msg);
     } finally {
-      setIsUploadingImage(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -335,10 +409,14 @@ export default function AdminProductsScreen() {
     }
   };
 
-  const filteredProducts = products.filter(p => 
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.category?.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const [selectedCategory, setSelectedCategory] = useState('all');
+
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         p.category?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === 'all' || p.category_id === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   const filteredCategories = categories.filter(c => 
     c.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -376,42 +454,38 @@ export default function AdminProductsScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {Platform.OS === 'web' && (
         <View style={styles.header}>
-          <View>
-            <Text style={styles.title}>{viewMode === 'products' ? 'Shop Products' : 'Shop Categories'}</Text>
-            <Text style={styles.subtitle}>
-              {viewMode === 'products' ? 'Manage your sports equipment inventory' : 'Organize your shop collections'}
-            </Text>
-          </View>
-
+          <View />
         </View>
       )}
 
-      <View style={styles.searchBar}>
-        <Search size={20} color="#9CA3AF" />
-        <TextInput
-          style={styles.searchInput}
-          placeholder={viewMode === 'products' ? "Search products..." : "Search categories..."}
-          placeholderTextColor="#9CA3AF"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
-
       {viewMode === 'categories' ? (
         <View style={styles.categoriesContainer}>
-          <View style={styles.addCategorySection}>
-            <TextInput 
-              style={[styles.input, { flex: 1, marginBottom: 0 }]}
-              placeholder="New Category Name..."
-              value={newCategoryName}
-              onChangeText={setNewCategoryName}
-            />
-            <Button 
-              title={isSubmitting ? "..." : "Add Category"} 
-              onPress={handleAddCategory}
-              disabled={isSubmitting}
-              style={{ width: 150 }}
-            />
+          <View style={styles.combinedCategoryHeader}>
+            <View style={styles.searchBarCategories}>
+              <Search size={18} color="#9CA3AF" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search categories..."
+                placeholderTextColor="#9CA3AF"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+            </View>
+
+            <View style={styles.addCategorySection}>
+              <TextInput 
+                style={[styles.input, { flex: 1, marginBottom: 0, height: 44 }]}
+                placeholder="New Category Name..."
+                value={newCategoryName}
+                onChangeText={setNewCategoryName}
+              />
+              <Button 
+                title={isSubmitting ? "..." : "Add Category"} 
+                onPress={handleAddCategory}
+                disabled={isSubmitting}
+                style={{ width: 140, height: 44 }}
+              />
+            </View>
           </View>
 
           <View style={styles.categoriesGrid}>
@@ -431,284 +505,341 @@ export default function AdminProductsScreen() {
             ))}
           </View>
         </View>
-      ) : showAddForm ? (
-        <View style={styles.addFormContainer}>
-          <View style={styles.formHeader}>
-            <Text style={styles.formTitle}>{editingProduct ? 'Edit Product' : 'Add New Product'}</Text>
-            <TouchableOpacity onPress={() => { setShowAddForm(false); setEditingProduct(null); }}>
-              <Text style={styles.cancelText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.formBody}>
-            <View style={styles.formGrid}>
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Product Name</Text>
-              <TextInput 
-                style={styles.input}
-                placeholder="e.g. Premium Cricket Bat"
-                value={newProduct.name}
-                onChangeText={(val) => setNewProduct({...newProduct, name: val})}
-              />
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Category</Text>
-              <View style={styles.categoryPicker}>
+      ) : (
+        <>
+          <View style={styles.combinedRow}>
+            <View style={styles.filterRow}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <TouchableOpacity 
+                  style={[styles.filterChip, selectedCategory === 'all' && styles.filterChipActive]}
+                  onPress={() => setSelectedCategory('all')}
+                >
+                  <Text style={[styles.filterChipText, selectedCategory === 'all' && styles.filterChipTextActive]}>
+                    All
+                  </Text>
+                </TouchableOpacity>
                 {categories.map(cat => (
                   <TouchableOpacity 
                     key={cat.id}
-                    style={[styles.catChip, newProduct.category_id === cat.id && styles.catChipActive]}
-                    onPress={() => setNewProduct({...newProduct, category_id: cat.id})}
+                    style={[styles.filterChip, selectedCategory === cat.id && styles.filterChipActive]}
+                    onPress={() => setSelectedCategory(cat.id)}
                   >
-                    <Text style={[styles.catChipText, newProduct.category_id === cat.id && styles.catChipTextActive]}>
+                    <Text style={[styles.filterChipText, selectedCategory === cat.id && styles.filterChipTextActive]}>
                       {cat.name}
                     </Text>
                   </TouchableOpacity>
                 ))}
-              </View>
-            </View>
-
-            <View style={styles.formRow}>
-              <View style={[styles.formGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Price (₹)</Text>
-                <TextInput 
-                  style={styles.input}
-                  placeholder="0.00"
-                  keyboardType="numeric"
-                  value={newProduct.price}
-                  onChangeText={(val) => setNewProduct({...newProduct, price: val})}
-                />
-              </View>
-              <View style={[styles.formGroup, { flex: 1 }]}>
-                <Text style={styles.label}>Stock Quantity</Text>
-                <TextInput 
-                  style={styles.input}
-                  placeholder="0"
-                  keyboardType="numeric"
-                  value={newProduct.stock_quantity}
-                  onChangeText={(val) => setNewProduct({...newProduct, stock_quantity: val})}
-                />
-              </View>
-            </View>
-
- 
-            {categories.find(c => c.id === newProduct.category_id)?.name === 'Shoes' && (
-              <View style={styles.formGroup}>
-                <Text style={styles.label}>Available Sizes (comma separated)</Text>
-                <TextInput 
-                  style={styles.input}
-                  placeholder="e.g. 6, 7, 8, 9, 10, 11"
-                  value={Array.isArray(newProduct.specifications?.sizes) ? newProduct.specifications.sizes.join(', ') : (newProduct.specifications?.sizes || '')}
-                  onChangeText={(val) => {
-                    setNewProduct({
-                      ...newProduct, 
-                      specifications: { ...newProduct.specifications, sizes: val }
-                    });
-                  }}
-                />
-                
-                <Text style={[styles.label, { marginTop: 12 }]}>Color Variations (Color Rush)</Text>
-                <View style={styles.colorBuilder}>
-                  <View style={styles.colorBuilderInputs}>
-                    <TextInput 
-                      style={[styles.input, { flex: 2, marginBottom: 0 }]}
-                      placeholder="Color Name (e.g. Coral Rush)"
-                      value={newColorVariant.name}
-                      onChangeText={(val) => setNewColorVariant({...newColorVariant, name: val})}
-                    />
-                    <View style={styles.pickerRow}>
-                      <TouchableOpacity 
-                        style={[styles.colorSquare, { backgroundColor: newColorVariant.hex }]}
-                        onPress={() => {
-                          if (Platform.OS === 'web') {
-                            const input = document.createElement('input');
-                            input.type = 'color';
-                            input.value = newColorVariant.hex;
-                            input.onchange = (e: any) => setNewColorVariant({...newColorVariant, hex: e.target.value});
-                            input.click();
-                          }
-                        }}
-                      >
-                        <Text style={styles.colorSquareLabel}>Pick</Text>
-                      </TouchableOpacity>
-                    </View>
-                    <TouchableOpacity 
-                      style={styles.addColorBtn}
-                      onPress={() => {
-                        if (!newColorVariant.name) return;
-                        const currentColors = Array.isArray(newProduct.specifications.colors) ? newProduct.specifications.colors : [];
-                        setNewProduct({
-                          ...newProduct,
-                          specifications: {
-                            ...newProduct.specifications,
-                            colors: [...currentColors, { ...newColorVariant }]
-                          }
-                        });
-                        setNewColorVariant({ name: '', hex: '#f8688a' });
-                      }}
-                    >
-                      <Plus size={20} color="#FFFFFF" />
-                    </TouchableOpacity>
-                  </View>
-                  
-                  {Array.isArray(newProduct.specifications?.colors) && newProduct.specifications.colors.length > 0 && (
-                    <View style={styles.addedColorsList}>
-                      {newProduct.specifications.colors.map((c: any, idx: number) => (
-                        <View key={idx} style={styles.addedColorItem}>
-                          <View style={[styles.addedColorPreview, { backgroundColor: c.hex || c.hex1 }]} />
-                          <Text style={styles.addedColorName}>{c.name}</Text>
-                          <TouchableOpacity 
-                            onPress={() => {
-                              setNewProduct({
-                                ...newProduct,
-                                specifications: {
-                                  ...newProduct.specifications,
-                                  colors: newProduct.specifications.colors.filter((_: any, i: number) => i !== idx)
-                                }
-                              });
-                            }}
-                          >
-                            <X size={14} color="#EF4444" />
-                          </TouchableOpacity>
-                        </View>
-                      ))}
-                    </View>
-                  )}
-                </View>
-
-                <Text style={[styles.label, { marginTop: 12 }]}>Short Tagline</Text>
-                <TextInput 
-                  style={styles.input}
-                  placeholder="e.g. Engineered for speed. Built for distance."
-                  value={newProduct.specifications?.tagline || ''}
-                  onChangeText={(val) => {
-                    setNewProduct({
-                      ...newProduct, 
-                      specifications: { ...newProduct.specifications, tagline: val }
-                    });
-                  }}
-                />
-              </View>
-            )}
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Product Description</Text>
-              <TextInput 
-                style={[styles.input, styles.textArea]}
-                placeholder="Enter detailed product description..."
-                multiline
-                numberOfLines={4}
-                value={newProduct.description}
-                onChangeText={(val) => setNewProduct({...newProduct, description: val})}
-              />
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Product Images ({newProduct.images.length}/5)</Text>
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false} 
-                style={styles.imageGrid}
-                contentContainerStyle={{ gap: 12, paddingRight: 20 }}
-              >
-                {newProduct.images.map((img, idx) => (
-                  <View key={idx} style={styles.imageSlot}>
-                    <Image source={{ uri: img }} style={styles.slotImage} />
-                    <TouchableOpacity 
-                      style={styles.removeImageBtn} 
-                      onPress={() => removeImage(idx)}
-                    >
-                      <X size={14} color="#FFFFFF" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-                
-                {newProduct.images.length < 5 && (
-                  <TouchableOpacity 
-                    style={[styles.imageSlot, styles.addSlot]} 
-                    onPress={pickImage}
-                    disabled={isUploadingImage}
-                  >
-                    {isUploadingImage ? (
-                      <ActivityIndicator color="#f8688a" />
-                    ) : (
-                      <>
-                        <Plus size={24} color="#9CA3AF" />
-                        <Text style={styles.addSlotText}>Add</Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                )}
               </ScrollView>
-              <Text style={styles.helperText}>Recommended size: 800x600px. First image is used as main cover.</Text>
             </View>
 
-            <View style={styles.formFooter}>
-              <Button 
-                title="Discard" 
-                variant="outline" 
-                onPress={() => { setShowAddForm(false); setEditingProduct(null); }}
-                style={{ width: 120, marginRight: 12 }}
-              />
-              <Button 
-                title={isSubmitting ? "Saving..." : (editingProduct ? "Update Product" : "Save Product")} 
-                onPress={handleAddProduct}
-                loading={isSubmitting}
-                style={{ width: 200 }}
+            <View style={styles.searchBarProducts}>
+              <Search size={18} color="#9CA3AF" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search products..."
+                placeholderTextColor="#9CA3AF"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
               />
             </View>
           </View>
-        </View>
-      </View>
-      ) : (
-        <>
-          {loading ? (
-            <ActivityIndicator size="large" color="#00ea6b" style={{ marginTop: 40 }} />
-          ) : (
-            <View style={styles.grid}>
-              {filteredProducts.map((product) => (
-                <Card key={product.id} style={styles.productCard}>
-                  <View style={styles.productImageContainer}>
-                    {(product.images && product.images[0]) ? (
-                      <Image source={{ uri: product.images[0] }} style={styles.productImage} />
-                    ) : (
-                      <View style={styles.imagePlaceholder}>
-                        <Package size={32} color="#E5E7EB" />
-                      </View>
-                    )}
-                    <View style={styles.stockBadge}>
-                      <Text style={styles.stockText}>{product.stock_quantity || 0} in stock</Text>
+
+          {showAddForm ? (
+            <View style={styles.addFormContainer}>
+              <View style={styles.formHeader}>
+                <Text style={styles.formTitle}>{editingProduct ? 'Edit Product' : 'Add New Product'}</Text>
+                <TouchableOpacity onPress={() => { setShowAddForm(false); setEditingProduct(null); }}>
+                  <Text style={styles.cancelText}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.formBody}>
+                <View style={styles.formGrid}>
+                  <View style={styles.formGroup}>
+                    <Text style={styles.label}>Product Name</Text>
+                    <TextInput 
+                      style={styles.input}
+                      placeholder="e.g. Premium Cricket Bat"
+                      value={editingProduct ? editingProduct.name : newProduct.name}
+                      onChangeText={(val) => editingProduct ? setEditingProduct({...editingProduct, name: val}) : setNewProduct({...newProduct, name: val})}
+                    />
+                  </View>
+
+                  <View style={styles.formGroup}>
+                    <Text style={styles.label}>Price (₹)</Text>
+                    <TextInput 
+                      style={styles.input}
+                      placeholder="0.00"
+                      keyboardType="numeric"
+                      value={editingProduct ? String(editingProduct.price) : newProduct.price}
+                      onChangeText={(val) => editingProduct ? setEditingProduct({...editingProduct, price: val}) : setNewProduct({...newProduct, price: val})}
+                    />
+                  </View>
+
+                  <View style={styles.formGroup}>
+                    <Text style={styles.label}>Category</Text>
+                    <View style={styles.pickerContainer}>
+                      <select 
+                        style={{ 
+                          width: '100%', 
+                          height: 38, 
+                          border: 'none', 
+                          outline: 'none', 
+                          backgroundColor: 'transparent',
+                          fontSize: 13,
+                          color: '#111827',
+                          fontFamily: 'Inter'
+                        }}
+                        value={editingProduct ? editingProduct.category_id : newProduct.category_id}
+                        onChange={(e) => editingProduct ? setEditingProduct({...editingProduct, category_id: e.target.value}) : setNewProduct({...newProduct, category_id: e.target.value})}
+                      >
+                        <option value="">Select Category</option>
+                        {categories.map(cat => (
+                          <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                      </select>
                     </View>
                   </View>
-                  
-                  <View style={styles.productInfo}>
-                    <Text style={styles.categoryName}>{product.category?.name}</Text>
-                    <Text style={styles.productName} numberOfLines={1}>{product.name}</Text>
-                    <Text style={styles.productPrice}>₹{product.price.toLocaleString('en-IN')}</Text>
+
+                  <View style={styles.formGroup}>
+                    <Text style={styles.label}>Stock Quantity</Text>
+                    <TextInput 
+                      style={styles.input}
+                      placeholder="0"
+                      keyboardType="numeric"
+                      value={editingProduct ? String(editingProduct.stock_quantity) : newProduct.stock_quantity}
+                      onChangeText={(val) => editingProduct ? setEditingProduct({...editingProduct, stock_quantity: val}) : setNewProduct({...newProduct, stock_quantity: val})}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.formGroup}>
+                  <View style={styles.editorHeader}>
+                    <Text style={styles.label}>Description</Text>
+                    <View style={styles.charCountContainer}>
+                      <FileText size={12} color="#9CA3AF" />
+                      <Text style={styles.charCountText}>{charCount} chars</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.editorToolbar}>
+                    <View style={styles.toolbarGroup}>
+                      <TouchableOpacity style={styles.toolbarBtn} onPress={() => applyFormatting('bold')}>
+                        <Bold size={14} color="#4B5563" />
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.toolbarBtn} onPress={() => applyFormatting('italic')}>
+                        <Italic size={14} color="#4B5563" />
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.toolbarBtn} onPress={() => applyFormatting('heading')}>
+                        <Type size={14} color="#4B5563" />
+                      </TouchableOpacity>
+                    </View>
                     
-                    <View style={styles.actions}>
-                      <TouchableOpacity 
-                        style={styles.actionBtn}
-                        onPress={() => handleEditProduct(product)}
-                        disabled={isSubmitting}
-                      >
-                        <Edit2 size={16} color="#4B5563" />
+                    <View style={styles.toolbarDivider} />
+                    
+                    <View style={styles.toolbarGroup}>
+                      <TouchableOpacity style={styles.toolbarBtn} onPress={() => applyFormatting('list')}>
+                        <List size={14} color="#4B5563" />
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.toolbarBtn} onPress={() => applyFormatting('quote')}>
+                        <Quote size={14} color="#4B5563" />
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.toolbarBtn} onPress={() => applyFormatting('link')}>
+                        <Link size={14} color="#4B5563" />
+                      </TouchableOpacity>
+                    </View>
+
+                    <View style={styles.toolbarDivider} />
+
+                    <View style={styles.toolbarGroup}>
+                      <TouchableOpacity style={styles.toolbarBtn} onPress={() => applyFormatting('clear')}>
+                        <Trash size={14} color="#EF4444" />
                       </TouchableOpacity>
                       <TouchableOpacity 
-                        style={[styles.actionBtn, styles.deleteBtn]}
-                        onPress={() => handleDeleteProduct(product.id)}
+                        style={[styles.toolbarBtn, previewMode && styles.toolbarBtnActive]} 
+                        onPress={() => setPreviewMode(!previewMode)}
+                      >
+                        {previewMode ? <Code size={14} color="#00ea6b" /> : <Eye size={14} color="#4B5563" />}
+                        <Text style={[styles.toolbarBtnText, previewMode && { color: '#00ea6b' }]}>
+                          {previewMode ? 'Edit' : 'Preview'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  <View style={styles.emojiRow}>
+                    {['🔥', '✨', '⚽', '🏏', '👟', '👕', '⭐', '💯'].map(emoji => (
+                      <TouchableOpacity key={emoji} style={styles.emojiBtn} onPress={() => insertEmoji(emoji)}>
+                        <Text style={styles.emojiText}>{emoji}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  
+                  {previewMode ? (
+                    <View style={[styles.input, styles.previewContainer]}>
+                      <ScrollView showsVerticalScrollIndicator={false}>
+                        <Text style={styles.previewText}>
+                          {editingProduct ? editingProduct.description : newProduct.description}
+                        </Text>
+                      </ScrollView>
+                    </View>
+                  ) : (
+                    <TextInput 
+                      style={[styles.input, { height: 180, textAlignVertical: 'top', paddingTop: 12 }]}
+                      placeholder="Product description..."
+                      multiline
+                      value={editingProduct ? editingProduct.description : newProduct.description}
+                      onChangeText={(val) => editingProduct ? setEditingProduct({...editingProduct, description: val}) : setNewProduct({...newProduct, description: val})}
+                      onSelectionChange={(e) => setSelection(e.nativeEvent.selection)}
+                    />
+                  )}
+                </View>
+
+                <View style={styles.formGroup}>
+                  <Text style={styles.label}>Product Images</Text>
+                  <ScrollView horizontal style={styles.imageSlots} showsHorizontalScrollIndicator={false}>
+                    {(editingProduct ? editingProduct.images : newProduct.images).map((img: string, idx: number) => (
+                      <View key={idx} style={styles.imageSlot}>
+                        <Image source={{ uri: img }} style={styles.slotImage} />
+                        <TouchableOpacity 
+                          style={styles.removeImgBtn}
+                          onPress={() => {
+                            const currentImages = editingProduct ? [...editingProduct.images] : [...newProduct.images];
+                            currentImages.splice(idx, 1);
+                            editingProduct ? setEditingProduct({...editingProduct, images: currentImages}) : setNewProduct({...newProduct, images: currentImages});
+                          }}
+                        >
+                          <X size={14} color="#FFFFFF" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                    {(editingProduct ? editingProduct.images.length : newProduct.images.length) < 5 && (
+                      <TouchableOpacity 
+                        style={styles.addSlotBtn}
+                        onPress={handleImageUpload}
                         disabled={isSubmitting}
                       >
                         {isSubmitting ? (
-                          <ActivityIndicator size="small" color="#EF4444" />
+                          <ActivityIndicator size="small" color="#9CA3AF" />
                         ) : (
-                          <Trash2 size={16} color="#EF4444" />
+                          <>
+                            <Plus size={24} color="#9CA3AF" />
+                            <Text style={styles.addSlotText}>Add</Text>
+                          </>
                         )}
                       </TouchableOpacity>
-                    </View>
+                    )}
+                  </ScrollView>
+                  <Text style={styles.helperText}>Recommended size: 800x600px. First image is used as main cover.</Text>
+                </View>
+
+                <View style={styles.formFooter}>
+                  <Button 
+                    title="Discard" 
+                    variant="outline" 
+                    onPress={() => { setShowAddForm(false); setEditingProduct(null); }}
+                    style={{ height: 36, paddingHorizontal: 16 }}
+                    textStyle={{ fontSize: 13, fontWeight: '600', fontFamily: 'Inter' }}
+                  />
+                  <Button 
+                    title={isSubmitting ? "Saving..." : (editingProduct ? "Update Product" : "Save Product")} 
+                    onPress={handleAddProduct}
+                    loading={isSubmitting}
+                    style={{ height: 36, paddingHorizontal: 24, marginLeft: 12 }}
+                    textStyle={{ fontSize: 13, fontWeight: '600', fontFamily: 'Inter' }}
+                  />
+                </View>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.tableContainer}>
+              <View style={styles.tableHeader}>
+                <View style={[styles.headerCell, { flex: 0.8 }]}>
+                  <Text style={styles.headerLabel}>Image</Text>
+                </View>
+                <View style={[styles.headerCell, { flex: 2 }]}>
+                  <Text style={styles.headerLabel}>Product Name</Text>
+                </View>
+                <View style={[styles.headerCell, { flex: 1.2 }]}>
+                  <Text style={styles.headerLabel}>Category</Text>
+                </View>
+                <View style={[styles.headerCell, { flex: 1 }]}>
+                  <Text style={styles.headerLabel}>Price</Text>
+                </View>
+                <View style={[styles.headerCell, { flex: 1 }]}>
+                  <Text style={styles.headerLabel}>Stock</Text>
+                </View>
+                <View style={[styles.headerCell, { flex: 0.5, alignItems: 'flex-end' }]}>
+                  <Text style={styles.headerLabel}>Action</Text>
+                </View>
+              </View>
+
+              <View style={styles.tableBody}>
+                {loading ? (
+                  <ActivityIndicator size="large" color="#00ea6b" style={{ marginTop: 40 }} />
+                ) : filteredProducts.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <Package size={48} color="#E5E7EB" />
+                    <Text style={styles.emptyText}>No products found</Text>
                   </View>
-                </Card>
-              ))}
+                ) : filteredProducts.map((product) => (
+                  <TouchableOpacity 
+                    key={product.id} 
+                    style={styles.productRow}
+                    onPress={() => handleEditProduct(product)}
+                  >
+                    <View style={[styles.tableCell, { flex: 0.8 }]}>
+                      <View style={styles.tableImageContainer}>
+                        {(product.images && product.images[0]) ? (
+                          <Image source={{ uri: product.images[0] }} style={styles.tableImage} />
+                        ) : (
+                          <Package size={20} color="#E5E7EB" />
+                        )}
+                      </View>
+                    </View>
+                    <View style={[styles.tableCell, { flex: 2 }]}>
+                      <Text style={styles.tableProductName}>{product.name}</Text>
+                      {product.description && (
+                        <Text style={styles.tableDescription} numberOfLines={1}>{product.description}</Text>
+                      )}
+                    </View>
+                    <View style={[styles.tableCell, { flex: 1.2 }]}>
+                      <View style={styles.categoryBadge}>
+                        <Text style={styles.categoryBadgeText}>{product.category?.name || 'Uncategorized'}</Text>
+                      </View>
+                    </View>
+                    <View style={[styles.tableCell, { flex: 1 }]}>
+                      <Text style={styles.tablePrice}>₹{Number(product.price).toLocaleString('en-IN')}</Text>
+                    </View>
+                    <View style={[styles.tableCell, { flex: 1 }]}>
+                      <View style={[
+                        styles.stockIndicator, 
+                        (product.stock_quantity || 0) <= 5 && styles.stockLow,
+                        (product.stock_quantity || 0) === 0 && styles.stockOut
+                      ]}>
+                        <Text style={[
+                          styles.stockIndicatorText,
+                          (product.stock_quantity || 0) <= 5 && styles.stockLowText,
+                          (product.stock_quantity || 0) === 0 && styles.stockOutText
+                        ]}>
+                          {product.stock_quantity || 0}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={[styles.tableCell, { flex: 0.5, alignItems: 'flex-end' }]}>
+                      <TouchableOpacity 
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleDeleteProduct(product.id);
+                        }}
+                        style={styles.deleteActionBtn}
+                      >
+                        <Trash2 size={16} color="#EF4444" />
+                      </TouchableOpacity>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
           )}
         </>
@@ -719,10 +850,13 @@ export default function AdminProductsScreen() {
   return (
     <>
       {Platform.OS === 'web' ? (
-        <WebLayout viewMode={viewMode} showAddForm={showAddForm}>{content}</WebLayout>
+        <WebLayout viewMode={viewMode} showAddForm={showAddForm}>
+          <ShopSubbar onAddProduct={() => setShowAddForm(true)}>
+            {content}
+          </ShopSubbar>
+        </WebLayout>
       ) : (
         <View style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
-          <MobileAppNavbar title="SHOP PRODUCTS" titleColor="#10b981" />
           {content}
         </View>
       )}
@@ -733,10 +867,11 @@ export default function AdminProductsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFFFFF',
   },
   content: {
     padding: 24,
+    paddingTop: 0,
   },
   header: {
     flexDirection: 'row',
@@ -789,43 +924,186 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     marginLeft: 12,
-    fontSize: 15,
+    fontSize: 14,
     color: '#111827',
+    fontFamily: 'Inter',
   },
-  grid: {
+  tableContainer: {
+    backgroundColor: '#FFFFFF',
+    marginTop: 8,
+  },
+  tableHeader: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: '#F9FAFB',
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
-  productCard: {
-    width: '31%', // 3 column grid on web
-    padding: 0,
-    overflow: 'hidden',
-    borderRadius: 16,
+  headerCell: {
+    justifyContent: 'center',
   },
-  productImageContainer: {
-    height: 160,
+  headerLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontFamily: 'Inter',
+  },
+  tableBody: {
+    backgroundColor: '#FFFFFF',
+  },
+  productRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    backgroundColor: '#FFFFFF',
+  },
+  tableCell: {
+    justifyContent: 'center',
+    paddingRight: 16,
+  },
+  tableImageContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
     backgroundColor: '#F3F4F6',
-    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
-  productImage: {
+  tableImage: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+  },
+  tableProductName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#111827',
+    fontFamily: 'Inter',
+  },
+  tableDescription: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 2,
+    fontFamily: 'Inter',
+  },
+  categoryBadge: {
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  categoryBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#4B5563',
+    fontFamily: 'Inter',
+  },
+  tablePrice: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#10b981',
+    fontFamily: 'Inter',
+  },
+  stockIndicator: {
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  stockIndicatorText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#059669',
+    fontFamily: 'Inter',
+  },
+  stockLow: {
+    backgroundColor: '#FFFBEB',
+  },
+  stockLowText: {
+    color: '#D97706',
+  },
+  stockOut: {
+    backgroundColor: '#FEF2F2',
+  },
+  stockOutText: {
+    color: '#DC2626',
+  },
+  deleteActionBtn: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#FEF2F2',
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    gap: 16,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    fontFamily: 'Inter',
+  },
+  combinedRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+    gap: 16,
+  },
+  filterRow: {
+    flex: 1,
+    marginRight: 16,
+  },
+  searchBarProducts: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 44,
+    width: 280,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 12,
+  },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 99,
+    backgroundColor: '#FFFFFF',
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  filterChipActive: {
+    backgroundColor: '#111827',
+    borderColor: '#111827',
+  },
+  filterChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6B7280',
+    fontFamily: 'Inter',
+  },
+  filterChipTextActive: {
+    color: '#FFFFFF',
   },
   imagePlaceholder: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  stockBadge: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
   },
   stockText: {
     color: '#FFFFFF',
@@ -836,23 +1114,26 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   categoryName: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#00ea6b',
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#9CA3AF',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 4,
+    fontFamily: 'Inter',
   },
   productName: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
     color: '#111827',
-    marginBottom: 4,
+    marginBottom: 2,
+    fontFamily: 'Inter',
   },
   productPrice: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#00ea6b',
+    fontFamily: 'Inter',
   },
   actions: {
     flexDirection: 'row',
@@ -895,41 +1176,51 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F3F4F6',
   },
   formTitle: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '700',
     color: '#111827',
+    fontFamily: 'Inter',
+  },
+  cancelText: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '500',
+    fontFamily: 'Inter',
   },
   formBody: {
-    padding: 32,
+    padding: 24,
   },
   formGrid: {
-    gap: 20,
+    gap: 16,
   },
   formGroup: {
     marginBottom: 0,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
     color: '#374151',
-    marginBottom: 8,
+    marginBottom: 6,
+    fontFamily: 'Inter',
   },
   inputLabel: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
     color: '#4B5563',
-    marginBottom: 6,
+    marginBottom: 4,
+    fontFamily: 'Inter',
   },
   input: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E5E7EB',
     borderRadius: 8,
-    paddingHorizontal: 12,
-    height: 40,
-    fontSize: 14,
+    paddingHorizontal: 10,
+    height: 38,
+    fontSize: 13,
     color: '#111827',
-    marginBottom: 16,
+    marginBottom: 12,
+    fontFamily: 'Inter',
   },
   formRow: {
     flexDirection: 'row',
@@ -954,9 +1245,10 @@ const styles = StyleSheet.create({
     borderColor: '#00ea6b',
   },
   catChipText: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
     color: '#4B5563',
+    fontFamily: 'Inter',
   },
   catChipTextActive: {
     color: '#FFFFFF',
@@ -993,45 +1285,61 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   categoriesContainer: {
+    marginTop: 8,
+  },
+  combinedCategoryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 24,
+    marginBottom: 24,
+    paddingBottom: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  searchBarCategories: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 44,
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
   addCategorySection: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 24,
-    paddingBottom: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    alignItems: 'center',
+    width: '50%',
   },
   categoriesGrid: {
-    gap: 12,
+    gap: 0,
   },
   categoryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
   categoryInfo: {
     flex: 1,
   },
   categoryMainName: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
     color: '#111827',
+    fontFamily: 'Inter',
   },
   categoryStats: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#6B7280',
     marginTop: 2,
+    fontFamily: 'Inter',
   },
   deleteCategoryBtn: {
     width: 40,
@@ -1086,9 +1394,10 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   addSlotText: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '600',
     color: '#9CA3AF',
+    fontFamily: 'Inter',
   },
   helperText: {
     fontSize: 12,
@@ -1176,5 +1485,98 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#374151',
+  },
+  editorHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  charCountContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  charCountText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#6B7280',
+    fontFamily: 'Inter',
+  },
+  editorToolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    padding: 4,
+    borderRadius: 8,
+    gap: 0,
+    marginBottom: 8,
+  },
+  toolbarGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 4,
+  },
+  toolbarBtn: {
+    padding: 6,
+    borderRadius: 6,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  emojiRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 8,
+  },
+  emojiBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 6,
+    backgroundColor: '#F9FAFB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  emojiText: {
+    fontSize: 16,
+  },
+  toolbarBtnActive: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#10B981',
+  },
+  toolbarBtnText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#4B5563',
+    fontFamily: 'Inter',
+  },
+  toolbarDivider: {
+    width: 1,
+    height: 16,
+    backgroundColor: '#E5E7EB',
+    marginHorizontal: 4,
+  },
+  previewContainer: {
+    height: 180,
+    backgroundColor: '#F9FAFB',
+    padding: 12,
+    borderColor: '#E5E7EB',
+  },
+  previewText: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: '#374151',
+    fontFamily: 'Inter',
   },
 });

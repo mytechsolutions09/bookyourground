@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Platform, ScrollView, ActivityIndicator, RefreshControl } from 'react-native';
-import { LifeBuoy } from 'lucide-react-native';
-import Card from '@/components/ui/Card';
+import { View, Text, StyleSheet, Platform, ActivityIndicator, RefreshControl, FlatList, TouchableOpacity } from 'react-native';
+import { LifeBuoy, Mail, User, Shield, CheckCircle2, Clock } from 'lucide-react-native';
 import WebLayout from '@/components/web/WebLayout';
 import SettingsSubbar from '@/components/admin/SettingsSubbar';
 import { supabase } from '@/lib/supabase';
@@ -46,170 +45,278 @@ export default function AdminSupportSettings() {
     setRefreshing(false);
   };
 
+  const renderListHeader = () => (
+    <View style={styles.header}>
+      <View style={styles.headerTop}>
+        <View>
+          <Text style={styles.title}>Support Queries</Text>
+          <Text style={styles.subtitle}>
+            Review and manage incoming support requests from users and owners.
+          </Text>
+        </View>
+      </View>
+      
+      <View style={styles.infoBanner}>
+        <LifeBuoy size={16} color="#059669" />
+        <Text style={styles.infoText}>
+          Messages from the public contact form are stored here and also forwarded to the admin email.
+        </Text>
+      </View>
+    </View>
+  );
+
+  const renderTableHeader = () => (
+    <View style={styles.tableHeader}>
+      <Text style={[styles.columnHeader, { flex: 2.5 }]}>Sender</Text>
+      <Text style={[styles.columnHeader, { flex: 1.5 }]}>Role</Text>
+      <Text style={[styles.columnHeader, { flex: 4 }]}>Message</Text>
+      <Text style={[styles.columnHeader, { flex: 1.5, textAlign: 'center' }]}>Status</Text>
+      <Text style={[styles.columnHeader, { flex: 2, textAlign: 'right' }]}>Date</Text>
+    </View>
+  );
+
   const inner = (
-    <SettingsSubbar>
-      <ScrollView
-        style={styles.page}
-        contentContainerStyle={styles.pageContent}
+    <View style={styles.container}>
+      <FlatList
+        data={queries}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
+        keyboardShouldPersistTaps="handled"
+        ListHeaderComponent={() => (
+          <View>
+            {renderListHeader()}
+            {queries.length > 0 && renderTableHeader()}
+          </View>
+        )}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
-      >
-        <View style={styles.header}>
-          <Text style={styles.title}>Support</Text>
-          <Text style={styles.subtitle}>
-            View how users can reach the super admin and review incoming support queries.
-          </Text>
-        </View>
-
-        <Card style={styles.card}>
-          <View style={styles.row}>
-            <LifeBuoy size={20} color="#6B7280" />
-            <Text style={styles.cardTitle}>Contact form</Text>
-          </View>
-          <Text style={styles.cardText}>
-            The public Contact page includes a support form that stores each message in
-            the database and also opens an email to the super admin address.
-          </Text>
-        </Card>
-
-        <Card style={styles.card}>
-          <View style={styles.row}>
-            <Text style={styles.cardTitle}>Recent contact queries</Text>
-          </View>
-          {loading ? (
-            <View style={styles.loadingRow}>
-              <ActivityIndicator size="small" color="#6B7280" />
-              <Text style={styles.loadingText}>Loading queries…</Text>
+        ListEmptyComponent={
+          !loading ? (
+            <View style={styles.emptyBox}>
+              <Text style={styles.emptyText}>No support queries yet</Text>
             </View>
-          ) : queries.length === 0 ? (
-            <Text style={styles.cardText}>No contact queries have been received yet.</Text>
           ) : (
-            queries.map((q) => (
-              <View key={q.id} style={styles.queryItem}>
-                <View style={styles.queryHeader}>
-                  <Text style={styles.queryName}>
-                    {q.name} <Text style={styles.queryEmail}>{`<${q.email}>`}</Text>
-                  </Text>
-                  <Text style={styles.queryMeta}>
-                    {q.role === 'ground_owner' ? 'Ground owner' : 'User'} ·{' '}
-                    {new Date(q.created_at).toLocaleString()}
-                  </Text>
-                </View>
-                {!!q.subject && <Text style={styles.querySubject}>{q.subject}</Text>}
-                <Text style={styles.queryMessage}>{q.message}</Text>
-                {q.resolved && <Text style={styles.queryResolved}>Resolved</Text>}
+            <ActivityIndicator style={{ marginTop: 40 }} color="#10b981" />
+          )
+        }
+        renderItem={({ item }) => (
+          <View style={styles.tableRow}>
+            <View style={[styles.cell, { flex: 2.5 }]}>
+              <Text style={styles.cellTextBold} numberOfLines={1}>{item.name}</Text>
+              <Text style={styles.cellTextSub} numberOfLines={1}>{item.email}</Text>
+            </View>
+            
+            <View style={[styles.cell, { flex: 1.5 }]}>
+              <View style={styles.roleBadge}>
+                {item.role === 'ground_owner' ? (
+                  <Shield size={10} color="#6B7280" />
+                ) : (
+                  <User size={10} color="#6B7280" />
+                )}
+                <Text style={styles.roleText}>
+                  {item.role === 'ground_owner' ? 'Owner' : 'User'}
+                </Text>
               </View>
-            ))
-          )}
-        </Card>
-      </ScrollView>
-    </SettingsSubbar>
+            </View>
+
+            <View style={[styles.cell, { flex: 4 }]}>
+              {!!item.subject && (
+                <Text style={styles.cellTextBold} numberOfLines={1}>{item.subject}</Text>
+              )}
+              <Text style={styles.cellText} numberOfLines={2}>{item.message}</Text>
+            </View>
+
+            <View style={[styles.cell, { flex: 1.5, alignItems: 'center' }]}>
+              {item.resolved ? (
+                <View style={[styles.statusBadge, styles.resolvedBadge]}>
+                  <CheckCircle2 size={10} color="#059669" />
+                  <Text style={[styles.statusText, styles.resolvedText]}>Done</Text>
+                </View>
+              ) : (
+                <View style={[styles.statusBadge, styles.pendingBadge]}>
+                  <Clock size={10} color="#D97706" />
+                  <Text style={[styles.statusText, styles.pendingText]}>New</Text>
+                </View>
+              )}
+            </View>
+
+            <View style={[styles.cell, { flex: 2, alignItems: 'flex-end' }]}>
+              <Text style={styles.cellTextSub}>
+                {new Date(item.created_at).toLocaleDateString()}
+              </Text>
+              <Text style={styles.cellTextSub}>
+                {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </Text>
+            </View>
+          </View>
+        )}
+      />
+    </View>
   );
 
-  return Platform.OS === 'web' ? (
-    <WebLayout>{inner}</WebLayout>
-  ) : inner;
+  if (Platform.OS === 'web') {
+    return (
+      <WebLayout noCard>
+        <SettingsSubbar>
+          {inner}
+        </SettingsSubbar>
+      </WebLayout>
+    );
+  }
+
+  return (
+    <SettingsSubbar>
+      <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+        {inner}
+      </View>
+    </SettingsSubbar>
+  );
 }
 
 const styles = StyleSheet.create({
-  page: {
+  container: {
     flex: 1,
-  },
-  pageContent: {
-    paddingTop: 12,
-    paddingBottom: 32,
+    backgroundColor: '#FFFFFF',
   },
   header: {
     backgroundColor: '#FFFFFF',
-    padding: 16,
-    paddingTop: 48,
+    padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-    ...(Platform.OS === 'web' ? ({ paddingTop: 16 } as any) : null),
+    borderBottomColor: '#F3F4F6',
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   title: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#212121',
+    color: '#111827',
+    fontFamily: 'Inter',
   },
   subtitle: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 13,
+    color: '#6B7280',
     marginTop: 4,
+    fontFamily: 'Inter',
   },
-  card: {
-    marginHorizontal: 16,
-    marginBottom: 12,
-    padding: 16,
-  },
-  row: {
+  infoBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 8,
+    gap: 10,
+    backgroundColor: 'rgba(16, 185, 129, 0.06)',
+    padding: 12,
+    borderRadius: 12,
+    marginTop: 16,
   },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#111827',
-  },
-  cardText: {
-    fontSize: 13,
-    lineHeight: 18,
-    color: '#6B7280',
-  },
-  loadingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 8,
-  },
-  loadingText: {
-    fontSize: 13,
-    color: '#6B7280',
-  },
-  queryItem: {
-    marginTop: 12,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-  },
-  queryHeader: {
-    marginBottom: 4,
-  },
-  queryName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  queryEmail: {
-    fontSize: 13,
-    fontWeight: '400',
-    color: '#6B7280',
-  },
-  queryMeta: {
+  infoText: {
     fontSize: 12,
-    color: '#9CA3AF',
-    marginTop: 2,
+    color: '#059669',
+    flex: 1,
+    fontFamily: 'Inter',
+    lineHeight: 16,
   },
-  querySubject: {
-    fontSize: 13,
+  listContent: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    marginBottom: 8,
+    marginTop: 20,
+  },
+  columnHeader: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B7280',
+    fontFamily: 'Inter',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  cell: {
+    justifyContent: 'center',
+  },
+  cellText: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: '#374151',
+    fontFamily: 'Inter',
+    lineHeight: 16,
+  },
+  cellTextBold: {
+    fontSize: 12,
     fontWeight: '600',
     color: '#111827',
-    marginTop: 4,
+    fontFamily: 'Inter',
   },
-  queryMessage: {
-    fontSize: 13,
-    color: '#4B5563',
-    marginTop: 4,
-  },
-  queryResolved: {
-    marginTop: 4,
+  cellTextSub: {
     fontSize: 11,
+    color: '#9CA3AF',
+    fontFamily: 'Inter',
+  },
+  roleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  roleText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#6B7280',
+    fontFamily: 'Inter',
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  resolvedBadge: {
+    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+  },
+  pendingBadge: {
+    backgroundColor: 'rgba(217, 119, 6, 0.08)',
+  },
+  statusText: {
+    fontSize: 10,
     fontWeight: '700',
-    textTransform: 'uppercase',
+    fontFamily: 'Inter',
+  },
+  resolvedText: {
     color: '#059669',
   },
+  pendingText: {
+    color: '#D97706',
+  },
+  emptyBox: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: '#6B7280',
+    fontSize: 14,
+    fontFamily: 'Inter',
+  },
 });
-

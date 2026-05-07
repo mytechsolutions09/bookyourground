@@ -48,8 +48,13 @@ function getActiveTab(
   if (tab === 'find-an-opponent' || tab === 'search') return 'find-opponent';
   if (tab === 'profile') return 'profile';
   if (tab === 'shop') return 'shop';
-  if (tab === 'inventory') return 'inventory';
+  if (tab === 'inventory' || segments.includes('inventory')) return 'inventory';
   if (tab === 'select-sport') return 'find';
+  
+  // Also check if we are in (owner) or (admin) inventory
+  if (segments.includes('(owner)') && segments.includes('inventory')) return 'inventory';
+  if (segments.includes('(admin)') && segments.includes('inventory')) return 'inventory';
+  
   return 'home';
 }
 
@@ -138,7 +143,10 @@ export default function MobileTabBar() {
   const { setTabAnimation } = useUI();
   const size = 24;
 
-  const TAB_ORDER = ['home', 'grounds', 'find', 'shop', 'stats'];
+  const isSuperAdmin = profile?.role === 'super_admin' || (user?.email?.toLowerCase() === 'invirtualcoin@gmail.com');
+  const showInventoryTab = isOwner || isSuperAdmin;
+  
+  const TAB_ORDER = ['home', showInventoryTab ? 'inventory' : 'grounds', 'find', 'shop', 'stats'];
 
   const go = (href: string, tabName: string) => {
     const currentIndex = TAB_ORDER.indexOf(activeTab);
@@ -172,13 +180,23 @@ export default function MobileTabBar() {
         <Text style={[styles.label, { color: activeTab === 'home' ? ACTIVE : INACTIVE }]}>Home</Text>
       </Pressable>
 
-      <Pressable
-        style={styles.item}
-        onPress={() => go('/book-my-ground', 'grounds')}
-      >
-        <LandPlot size={size} color={activeTab === 'grounds' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'grounds' ? 2.5 : 2} />
-        <Text style={[styles.label, { color: activeTab === 'grounds' ? ACTIVE : INACTIVE }]}>Grounds</Text>
-      </Pressable>
+      {showInventoryTab ? (
+        <Pressable
+          style={styles.item}
+          onPress={() => go(isSuperAdmin ? '/(admin)/inventory' : '/(owner)/inventory', 'inventory')}
+        >
+          <CalendarClock size={size} color={activeTab === 'inventory' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'inventory' ? 2.5 : 2} />
+          <Text style={[styles.label, { color: activeTab === 'inventory' ? ACTIVE : INACTIVE }]}>Inventory</Text>
+        </Pressable>
+      ) : (
+        <Pressable
+          style={styles.item}
+          onPress={() => go('/book-my-ground', 'grounds')}
+        >
+          <LandPlot size={size} color={activeTab === 'grounds' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'grounds' ? 2.5 : 2} />
+          <Text style={[styles.label, { color: activeTab === 'grounds' ? ACTIVE : INACTIVE }]}>Grounds</Text>
+        </Pressable>
+      )}
       
       <Pressable
         style={styles.item}

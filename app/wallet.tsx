@@ -1,8 +1,8 @@
-import { View, Text, StyleSheet, Platform, TouchableOpacity, useWindowDimensions, ScrollView, ActivityIndicator, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, Platform, TouchableOpacity, useWindowDimensions, ScrollView, ActivityIndicator, Modal, TextInput, Pressable } from 'react-native';
 import React, { useState, useEffect, useRef } from 'react';
 import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
-import { ArrowUp, ArrowDown, CreditCard, Calendar, Filter, X } from 'lucide-react-native';
+import { ArrowUp, ArrowDown, CreditCard, Calendar, Filter, X, Download } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency } from '@/utils/helpers';
@@ -32,6 +32,9 @@ export default function WalletScreen() {
   const [toDate, setToDate] = useState<string | null>(null);
   const [activeMainTab, setActiveMainTab] = useState<'transactions' | 'summary'>('transactions');
   const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
+  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
+  const [tempFromDate, setTempFromDate] = useState<string | null>(null);
+  const [tempToDate, setTempToDate] = useState<string | null>(null);
   const [activeFilterType, setActiveFilterType] = useState<'from' | 'to' | null>(null);
 
   const { setTabBarVisible } = useUI();
@@ -165,6 +168,167 @@ export default function WalletScreen() {
     loadWalletData(newLimit);
   };
 
+  const setQuickRange = (range: string) => {
+    const today = new Date();
+    let start = new Date();
+    let end = new Date();
+
+    switch (range) {
+      case 'all':
+        setTempFromDate(null);
+        setTempToDate(null);
+        return;
+      case 'today':
+        start = today;
+        end = today;
+        break;
+      case 'yesterday':
+        start.setDate(today.getDate() - 1);
+        end.setDate(today.getDate() - 1);
+        break;
+      case 'this_week':
+        const day = today.getDay();
+        start.setDate(today.getDate() - day);
+        end.setDate(today.getDate() + (6 - day));
+        break;
+      case 'last_week':
+        const lastWeekDay = today.getDay();
+        start.setDate(today.getDate() - lastWeekDay - 7);
+        end.setDate(today.getDate() - lastWeekDay - 1);
+        break;
+      case 'this_month':
+        start = new Date(today.getFullYear(), today.getMonth(), 1);
+        end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        break;
+      case 'last_month':
+        start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        end = new Date(today.getFullYear(), today.getMonth(), 0);
+        break;
+    }
+    setTempFromDate(start.toISOString().split('T')[0]);
+    setTempToDate(end.toISOString().split('T')[0]);
+  };
+
+  const handleExport = () => {
+    if (transactions.length === 0) {
+      alert('No transactions to export');
+      return;
+    }
+
+    // CSV Headers
+    let csvContent = "Date,Description,Category,Type,Amount\n";
+    
+    // Add transaction rows
+    transactions.forEach(tx => {
+      const amount = tx.isPositive ? tx.amount : -tx.amount;
+      const row = [
+        tx.date,
+        `"${tx.title.replace(/"/g, '""')}"`,
+        `"${tx.sub.replace(/"/g, '""')}"`,
+        tx.type,
+        amount
+      ].join(",");
+      csvContent += row + "\n";
+    });
+
+    if (Platform.OS === 'web') {
+      try {
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `wallet_history_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error('Export error:', err);
+        alert('Failed to export CSV. Please try again.');
+      }
+    } else {
+      alert('Export feature is being optimized for mobile. Please try on web for instant download.');
+    }
+  };
+  const handleDateClick = (dateStr: string) => {
+    if (!tempFromDate || (tempFromDate && tempToDate)) {
+      setTempFromDate(dateStr);
+      setTempToDate(null);
+    } else {
+      if (dateStr < tempFromDate) {
+        setTempToDate(tempFromDate);
+        setTempFromDate(dateStr);
+      } else {
+        setTempToDate(dateStr);
+      }
+    }
+  };
+
+  const renderCalendar = (monthOffset: number) => {
+    const today = new Date();
+    const date = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
+    const month = date.getMonth();
+    const year = date.getFullYear();
+    const monthName = date.toLocaleString('default', { month: 'long' });
+    
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDay = new Date(year, month, 1).getDay();
+    
+    const days = [];
+    for (let i = 0; i < firstDay; i++) days.push(null);
+    for (let i = 1; i <= daysInMonth; i++) days.push(new Date(year, month, i));
+    
+    const weeks = [];
+    for (let i = 0; i < days.length; i += 7) weeks.push(days.slice(i, i + 7));
+    
+    return (
+      <View style={styles.calMonth}>
+        <Text style={styles.calMonthTitle}>{monthName} {year}</Text>
+        <View style={styles.calGrid}>
+           <View style={styles.calHeaderRow}>
+             {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
+               <Text key={d} style={styles.calHeaderCell}>{d}</Text>
+             ))}
+           </View>
+           {weeks.map((week, wi) => (
+             <View key={wi} style={styles.calRow}>
+               {week.map((day, di) => {
+                 if (!day) return <View key={di} style={styles.calCell} />;
+                 
+                 const dateStr = day.toISOString().split('T')[0];
+                 const isSelected = tempFromDate === dateStr || tempToDate === dateStr;
+                 const isInRange = tempFromDate && tempToDate && dateStr > tempFromDate && dateStr < tempToDate;
+                 const isStart = tempFromDate === dateStr;
+                 const isEnd = tempToDate === dateStr;
+                 
+                 return (
+                   <TouchableOpacity 
+                     key={di} 
+                     style={[
+                       styles.calCell,
+                       isInRange && styles.calCellInRange,
+                       isStart && styles.calCellStart,
+                       isEnd && styles.calCellEnd,
+                       isSelected && styles.calCellSelected
+                     ]}
+                     onPress={() => handleDateClick(dateStr)}
+                   >
+                     <Text style={[
+                       styles.calDayText,
+                       isInRange && styles.calDayTextInRange,
+                       isSelected && styles.calDayTextSelected
+                     ]}>
+                       {day.getDate()}
+                     </Text>
+                   </TouchableOpacity>
+                 );
+               })}
+             </View>
+           ))}
+        </View>
+      </View>
+    );
+  };
   const renderRightPanel = () => (
     <View style={styles.rightPanel}>
       <View style={styles.panelCard}>
@@ -250,132 +414,66 @@ export default function WalletScreen() {
 
           {(!isCompact || activeMainTab === 'transactions') && (
             <>
-              <View style={styles.historyHeader}>
-                <Text style={styles.sectionTitle}>Transaction History</Text>
-                
-                <View style={styles.filterContainer}>
-                  <View style={styles.dateFilterGroup}>
-                    <View style={styles.datePickerInput}>
-                       <Calendar size={14} color="#64748B" />
-                       <Text style={[styles.dateTextLabel, fromDate && styles.dateTextActive]}>
-                         {fromDate ? new Date(fromDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'From Date'}
-                       </Text>
-                       {Platform.OS === 'web' && (
-                         <input
-                           type="date"
-                           value={fromDate || ''}
-                           onChange={(e: any) => setFromDate(e.target.value || null)}
-                           style={{
-                             position: 'absolute',
-                             top: 0,
-                             left: 0,
-                             right: 0,
-                             bottom: 0,
-                             opacity: 0,
-                             width: '100%',
-                             height: '100%',
-                             cursor: 'pointer',
-                             zIndex: 2,
-                             border: 'none',
-                             appearance: 'none',
-                             WebkitAppearance: 'none'
-                           }}
-                         />
-                       )}
-                       {Platform.OS !== 'web' && (
-                         <TouchableOpacity 
-                           style={StyleSheet.absoluteFill} 
-                           onPress={() => {
-                             setActiveFilterType('from');
-                             setIsFilterModalVisible(true);
-                           }} 
-                         />
-                       )}
-                    </View>
-
-                    <Text style={styles.dateSeparator}>TO</Text>
-
-                    <View style={styles.datePickerInput}>
-                       <Calendar size={14} color="#64748B" />
-                       <Text style={[styles.dateTextLabel, toDate && styles.dateTextActive]}>
-                         {toDate ? new Date(toDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'To Date'}
-                       </Text>
-                       {Platform.OS === 'web' && (
-                         <input
-                           type="date"
-                           value={toDate || ''}
-                           onChange={(e: any) => setToDate(e.target.value || null)}
-                           style={{
-                             position: 'absolute',
-                             top: 0,
-                             left: 0,
-                             right: 0,
-                             bottom: 0,
-                             opacity: 0,
-                             width: '100%',
-                             height: '100%',
-                             cursor: 'pointer',
-                             zIndex: 2,
-                             border: 'none',
-                             appearance: 'none',
-                             WebkitAppearance: 'none'
-                           }}
-                         />
-                       )}
-                       {Platform.OS !== 'web' && (
-                         <TouchableOpacity 
-                           style={StyleSheet.absoluteFill} 
-                           onPress={() => {
-                             setActiveFilterType('to');
-                             setIsFilterModalVisible(true);
-                           }} 
-                         />
-                       )}
-                    </View>
-
-                    {(fromDate || toDate) && (
-                      <TouchableOpacity 
-                        onPress={() => { setFromDate(null); setToDate(null); }} 
-                        style={styles.clearBtn}
-                      >
-                        <X size={14} color="#dc2626" />
-                      </TouchableOpacity>
-                    )}
-                  </View>
+              {loading && transactions.length === 0 ? (
+                <View style={[styles.transactionsList, { padding: 40, alignItems: 'center' }]}>
+                  <ActivityIndicator color={THEME_BG} size="large" />
                 </View>
-              </View>
-
-              <View style={styles.transactionsList}>
-                {loading && transactions.length === 0 ? (
-                  <ActivityIndicator color={THEME_BG} size="large" style={{ marginTop: 20 }} />
-                ) : transactions.map(tx => {
-                   const isPos = tx.isPositive;
-                   return (
-                     <View key={tx.id} style={styles.txCard}>
-                        <View style={[styles.txIconBox, isPos ? styles.txIconBoxPos : styles.txIconBoxNeg]}>
-                           {isPos ? <ArrowUp size={20} color="#15803d" /> : <ArrowDown size={20} color="#dc2626" />}
-                        </View>
-                        <View style={styles.txInfo}>
-                           <Text style={styles.txTitle} numberOfLines={1}>{tx.title}</Text>
-                           <Text style={styles.txSub} numberOfLines={1}>{tx.sub}</Text>
-                        </View>
-                        <View style={styles.txValues}>
-                           <Text style={[styles.txAmount, isPos ? styles.txAmountPos : styles.txAmountNeg]}>
-                             {isPos ? '+' : '-'}{formatCurrency(tx.amount)}
-                           </Text>
-                           <Text style={styles.txDate}>{tx.date}</Text>
-                        </View>
+              ) : (
+                <View style={styles.transactionsList}>
+                  <View style={styles.listHeader}>
+                     <Text style={styles.sectionTitleInside}>Transaction History</Text>
+                     <View style={{ flexDirection: 'row', gap: 10 }}>
+                       <TouchableOpacity 
+                         style={styles.exportBtn}
+                         onPress={handleExport}
+                       >
+                         <Download size={18} color="#64748B" />
+                         <Text style={styles.exportBtnText}>Export</Text>
+                       </TouchableOpacity>
+                       <TouchableOpacity 
+                         style={styles.filterByDateBtn}
+                         onPress={() => {
+                           setTempFromDate(fromDate);
+                           setTempToDate(toDate);
+                           setIsDatePickerVisible(true);
+                         }}
+                       >
+                         <Calendar size={18} color="#059669" />
+                         <Text style={styles.filterByDateText}>Filter by Date</Text>
+                         <Filter size={14} color="#64748B" />
+                       </TouchableOpacity>
                      </View>
-                   );
-                })}
-                
-                {transactions.length === 0 && !loading && (
-                  <View style={styles.emptyState}>
-                    <Text style={styles.emptyStateText}>No transactions yet</Text>
-                    <Text style={styles.emptyStateSub}>Refunds and rewards will appear here</Text>
                   </View>
-                )}
-              </View>
+
+                  {transactions.map((tx, index) => {
+                     const isPos = tx.isPositive;
+                     const isLast = index === transactions.length - 1;
+                     return (
+                       <View key={tx.id} style={[styles.txCard, isLast && { borderBottomWidth: 0 }]}>
+                          <View style={[styles.txIconBox, isPos ? styles.txIconBoxPos : styles.txIconBoxNeg]}>
+                             {isPos ? <ArrowUp size={20} color="#059669" /> : <ArrowDown size={20} color="#dc2626" />}
+                          </View>
+                          <View style={styles.txInfo}>
+                             <Text style={styles.txTitle}>{tx.title}</Text>
+                             <Text style={styles.txSub}>{tx.sub}</Text>
+                          </View>
+                          <View style={styles.txValues}>
+                             <Text style={[styles.txAmount, isPos ? styles.txAmountPos : styles.txAmountNeg]}>
+                               {isPos ? '+' : '-'}{formatCurrency(tx.amount)}
+                             </Text>
+                             <Text style={styles.txDate}>{tx.date}</Text>
+                          </View>
+                       </View>
+                     );
+                  })}
+                  {transactions.length === 0 && !loading && (
+                    <View style={styles.emptyState}>
+                      <Text style={styles.emptyStateText}>No transactions yet</Text>
+                      <Text style={styles.emptyStateSub}>Refunds and rewards will appear here</Text>
+                    </View>
+                  )}
+                </View>
+              )}
 
               <View style={styles.viewAllWrapper}>
                  {hasMore ? (
@@ -401,16 +499,120 @@ export default function WalletScreen() {
     </ScrollView>
   );
 
+  const datePickerModal = (
+      <Modal
+        visible={isDatePickerVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsDatePickerVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setIsDatePickerVisible(false)} />
+          <View style={styles.datePickerModalWrap}>
+            <View style={styles.dpMain}>
+              {/* Sidebar Quick Range */}
+              <View style={styles.dpSidebar}>
+                <Text style={styles.dpSidebarTitle}>Quick Range</Text>
+                {[
+                  { id: 'all', label: 'All Time' },
+                  { id: 'today', label: 'Today' },
+                  { id: 'yesterday', label: 'Yesterday' },
+                  { id: 'this_week', label: 'This Week' },
+                  { id: 'last_week', label: 'Last Week' },
+                  { id: 'this_month', label: 'This Month' },
+                  { id: 'last_month', label: 'Last Month' },
+                  { id: 'custom', label: 'Custom Range' },
+                ].map((range) => (
+                  <TouchableOpacity 
+                    key={range.id} 
+                    style={[styles.quickRangeItem, range.id === 'custom' && styles.quickRangeItemActive]}
+                    onPress={() => setQuickRange(range.id)}
+                  >
+                    <Calendar size={14} color={range.id === 'custom' ? '#059669' : '#64748B'} />
+                    <Text style={[styles.quickRangeText, range.id === 'custom' && styles.quickRangeTextActive]}>
+                      {range.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Main Selection Area */}
+              <View style={styles.dpSelectionArea}>
+                <View style={styles.dpInputsRow}>
+                  <View style={styles.dpInputBox}>
+                    <Text style={styles.dpInputLabel}>Start Date</Text>
+                    <View style={styles.dpInput}>
+                      <Calendar size={16} color="#64748B" />
+                      <Text style={styles.dpInputText}>
+                        {tempFromDate ? new Date(tempFromDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Select Date'}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={styles.dpArrow}>
+                    <Text style={{ color: '#94A3B8', fontSize: 20 }}>→</Text>
+                  </View>
+                  <View style={styles.dpInputBox}>
+                    <Text style={styles.dpInputLabel}>End Date</Text>
+                    <View style={styles.dpInput}>
+                      <Calendar size={16} color="#64748B" />
+                      <Text style={styles.dpInputText}>
+                        {tempToDate ? new Date(tempToDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Select Date'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Calendar View */}
+                <View style={styles.calendarPlaceholder}>
+                   {renderCalendar(0)}
+                   {renderCalendar(1)}
+                </View>
+                
+                <Text style={styles.calHint}>Select range from the sidebar or click a date to begin</Text>
+              </View>
+            </View>
+
+            {/* Footer */}
+            <View style={styles.dpFooter}>
+              <TouchableOpacity onPress={() => { setTempFromDate(null); setTempToDate(null); }}>
+                <Text style={styles.dpClearBtn}>Clear</Text>
+              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <TouchableOpacity style={styles.dpCancelBtn} onPress={() => setIsDatePickerVisible(false)}>
+                  <Text style={styles.dpCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.dpApplyBtn} 
+                  onPress={() => {
+                    setFromDate(tempFromDate);
+                    setToDate(tempToDate);
+                    setIsDatePickerVisible(false);
+                  }}
+                >
+                  <Text style={styles.dpApplyText}>Apply</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+  );
+
   if (Platform.OS === 'web' && !isCompact) {
-    return <WebLayout>{content}</WebLayout>;
+    return (
+      <WebLayout>
+        {content}
+        {datePickerModal}
+      </WebLayout>
+    );
   }
 
   return (
     <View style={styles.nativeWrapper}>
       <MobileAppNavbar title="Wallet" titleColor="#043529" lightBg />
       {content}
+      {datePickerModal}
 
-      {/* Mobile Date Filter Modal */}
       {Platform.OS !== 'web' && (
         <Modal
           visible={isFilterModalVisible}
@@ -489,11 +691,11 @@ export default function WalletScreen() {
 const styles = StyleSheet.create({
   nativeWrapper: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
   },
   root: {
     flex: 1,
-    backgroundColor: '#F8FAFC', 
+    backgroundColor: '#FFFFFF', 
   },
   scrollContent: {
     flexGrow: 1,
@@ -576,27 +778,50 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   transactionsList: {
-    gap: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    overflow: 'hidden',
+    marginTop: 24,
+  },
+  listHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    backgroundColor: '#FAFAFA',
+  },
+  sectionTitleInside: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0F172A',
+    fontFamily: 'Inter',
   },
   txCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 16,
+    backgroundColor: 'transparent',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
-    elevation: 2,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
   txIconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   txIconBoxPos: {
     backgroundColor: '#DCFCE7',
@@ -608,26 +833,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   txTitle: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '500',
     color: '#0F172A',
     fontFamily: 'Inter',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   txSub: {
     fontSize: 12,
     color: '#64748B',
     fontFamily: 'Inter',
-    fontWeight: '500',
+    fontWeight: '400',
   },
   txValues: {
     alignItems: 'flex-end',
   },
   txAmount: {
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '600',
     fontFamily: 'Inter',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   txAmountPos: {
     color: '#15803d',
@@ -639,7 +864,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#94A3B8',
     fontFamily: 'Inter',
-    fontWeight: '600',
+    fontWeight: '400',
   },
   viewAllWrapper: {
     alignItems: 'center',
@@ -664,10 +889,12 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 12,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 15 },
+    shadowOpacity: 0.07,
+    shadowRadius: 25,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#F8FAFC',
   },
   panelTitle: {
     fontSize: 16,
@@ -757,58 +984,245 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  dateFilterGroup: {
+  exportBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    overflow: 'hidden',
-    minWidth: Platform.OS === 'web' ? 320 : '100%',
-  },
-  datePickerInput: {
-    flex: 1,
-    position: 'relative',
-    flexDirection: 'row',
-    alignItems: 'center',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: '#F1F5F9',
   },
-  dateTextLabel: {
-    fontSize: 12,
+  exportBtnText: {
+    fontSize: 14,
     fontWeight: '600',
     color: '#64748B',
     fontFamily: 'Inter',
   },
-  dateTextActive: {
-    color: '#0F172A',
+  filterByDateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
   },
-  dateSeparator: {
-    fontSize: 10,
-    fontWeight: '800',
+  filterByDateText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  datePickerModalWrap: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    width: '95%',
+    maxWidth: 800,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.15,
+    shadowRadius: 30,
+    elevation: 10,
+    alignSelf: 'center',
+    marginTop: '5%',
+  },
+  dpMain: {
+    flexDirection: Platform.OS === 'web' ? 'row' : 'column',
+    minHeight: 400,
+  },
+  dpSidebar: {
+    width: Platform.OS === 'web' ? 200 : '100%',
+    borderRightWidth: Platform.OS === 'web' ? 1 : 0,
+    borderRightColor: '#F1F5F9',
+    borderBottomWidth: Platform.OS === 'web' ? 0 : 1,
+    borderBottomColor: '#F1F5F9',
+    padding: 16,
+    gap: 4,
+  },
+  dpSidebarTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 12,
+    paddingHorizontal: 12,
+  },
+  quickRangeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 10,
+  },
+  quickRangeItemActive: {
+    backgroundColor: '#F0FDF4',
+  },
+  quickRangeText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  quickRangeTextActive: {
+    color: '#059669',
+  },
+  dpSelectionArea: {
+    flex: 1,
+    padding: 24,
+  },
+  dpInputsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginBottom: 24,
+  },
+  dpInputBox: {
+    flex: 1,
+  },
+  dpInputLabel: {
+    fontSize: 11,
+    fontWeight: '700',
     color: '#94A3B8',
     textTransform: 'uppercase',
-    width: 32,
-    textAlign: 'center',
+    marginBottom: 6,
     letterSpacing: 0.5,
+  },
+  dpInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#059669',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
     backgroundColor: '#FFFFFF',
-    height: '100%',
-    textAlignVertical: 'center',
-    display: Platform.OS === 'web' ? 'flex' : undefined,
-    alignItems: 'center',
+  },
+  dpInputText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  dpArrow: {
+    paddingTop: 18,
+  },
+  calendarPlaceholder: {
+    flexDirection: 'row',
+    gap: 24,
+    marginTop: 12,
+  },
+  calMonth: {
+    flex: 1,
+  },
+  calMonthTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  calGrid: {
+    width: '100%',
+  },
+  calHeaderRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  calHeaderCell: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  calRow: {
+    flexDirection: 'row',
+    marginBottom: 2,
+  },
+  calCell: {
+    flex: 1,
+    height: 36,
     justifyContent: 'center',
-  } as any,
-  clearBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#FEE2E2',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 4,
+    borderRadius: 8,
+  },
+  calCellSelected: {
+    backgroundColor: '#059669',
+  },
+  calCellInRange: {
+    backgroundColor: '#ECFDF5',
+    borderRadius: 0,
+  },
+  calCellStart: {
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
+  },
+  calCellEnd: {
+    borderTopRightRadius: 8,
+    borderBottomRightRadius: 8,
+  },
+  calDayText: {
+    fontSize: 14,
+    color: '#334155',
+  },
+  calDayTextSelected: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  calDayTextInRange: {
+    color: '#065F46',
+    fontWeight: '600',
+  },
+  calHint: {
+    fontSize: 12,
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: 20,
+    fontStyle: 'italic',
+  },
+  dpFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    backgroundColor: '#F8FAFC',
+  },
+  dpClearBtn: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#64748B',
+    marginLeft: 8,
+  },
+  dpCancelBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+  },
+  dpCancelText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  dpApplyBtn: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: '#059669',
+  },
+  dpApplyText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   mobileTabs: {
     flexDirection: 'row',
@@ -840,7 +1254,7 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
+    justifyContent: Platform.OS === 'web' ? 'center' : 'flex-end',
   },
   modalContent: {
     backgroundColor: '#FFFFFF',

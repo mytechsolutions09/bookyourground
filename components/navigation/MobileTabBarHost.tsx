@@ -16,12 +16,13 @@ export function MobileTabBarHost() {
 
   const root = segments[0];
   const sub = segments[1];
+  const isInventory = segments.includes('inventory');
   
   if (
     root === 'welcome' ||
     root === '(auth)' ||
-    root === '(owner)' ||
-    root === '(admin)' ||
+    (root === '(owner)' && !isInventory) ||
+    (root === '(admin)' && !isInventory) ||
     root === 'players' ||
     root === 'search' ||
     root === 'ground' ||

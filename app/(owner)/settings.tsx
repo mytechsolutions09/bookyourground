@@ -6,7 +6,7 @@ import Button from '@/components/ui/Button';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
-import { Tag, Percent, Scissors, Trash2 } from 'lucide-react-native';
+import { Tag, Percent, Scissors, Trash2, CheckCircle2, AlertCircle } from 'lucide-react-native';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -79,7 +79,10 @@ function OwnerSettingsInner() {
   const [accountNumber, setAccountNumber] = useState('');
   const [ifsc, setIfsc] = useState('');
   const [upiId, setUpiId] = useState('');
+  const [isApproved, setIsApproved] = useState(false);
   const [savingBank, setSavingBank] = useState(false);
+  const [loadingBank, setLoadingBank] = useState(false);
+  const [hasJustSavedBank, setHasJustSavedBank] = useState(false);
 
   // Coupon management state
   const [grounds, setGrounds] = useState<any[]>([]);
@@ -93,10 +96,35 @@ function OwnerSettingsInner() {
   const [loadingCoupons, setLoadingCoupons] = useState(false);
 
   useEffect(() => {
-    if (user && activeTab === 'coupons') {
-      loadOwnerData();
+    if (user) {
+      if (activeTab === 'coupons') loadOwnerData();
+      if (activeTab === 'bank') loadBankDetails();
     }
   }, [user, activeTab]);
+
+  const loadBankDetails = async () => {
+    if (!user) return;
+    try {
+      setLoadingBank(true);
+      const { data, error } = await supabase
+        .from('owner_bank_details')
+        .select('*')
+        .eq('owner_id', user.id)
+        .maybeSingle();
+
+      if (data) {
+        setBankName(data.bank_name || '');
+        setAccountNumber(data.account_number || '');
+        setIfsc(data.ifsc || '');
+        setUpiId(data.upi_id || '');
+        setIsApproved(data.is_approved || false);
+      }
+    } catch (e) {
+      console.error('Error loading bank details', e);
+    } finally {
+      setLoadingBank(false);
+    }
+  };
 
   const loadOwnerData = async () => {
     if (!user) return;
@@ -216,108 +244,163 @@ function OwnerSettingsInner() {
     </Card>
   );
 
-  const renderBank = () => (
-    <Card style={[styles.panel, { marginTop: IS_WEB ? 0 : 16 }]}>
-      <Text style={styles.sectionTitle}>Add bank details</Text>
-      <Text style={styles.sectionSubtitle}>
-        Save your payout account details so we can use them for future withdrawals.
-      </Text>
+  const renderBank = () => {
+    if (loadingBank) {
+      return (
+        <Card style={styles.panel}>
+          <ActivityIndicator size="small" color="#01b854" />
+        </Card>
+      );
+    }
 
-    <View style={[styles.formRowHorizontal, (IS_WEB && width >= 768) && { flexDirection: 'row' }]}>
-      <View style={styles.formCol}>
-        <Text style={styles.label}>Bank name</Text>
-        <TextInput
-          value={bankName}
-          onChangeText={setBankName}
-          placeholder="Enter bank name"
-          style={styles.input}
-        />
-      </View>
-      <View style={styles.formCol}>
-        <Text style={styles.label}>Account number</Text>
-        <TextInput
-          value={accountNumber}
-          onChangeText={setAccountNumber}
-          placeholder="Enter account number"
-          style={styles.input}
-          keyboardType="number-pad"
-        />
-      </View>
-    </View>
+    if (isApproved) {
+      return (
+        <Card style={[styles.panel, styles.verifiedPanel]}>
+          <View style={styles.verifiedHeader}>
+            <View style={styles.verifiedBadge}>
+              <CheckCircle2 size={16} color="#059669" />
+              <Text style={styles.verifiedBadgeText}>VERIFIED BY ADMIN</Text>
+            </View>
+            <Text style={styles.verifiedTitle}>Bank Details Locked</Text>
+            <Text style={styles.verifiedSubtitle}>Your bank details are approved for payouts. To change them, please contact support.</Text>
+          </View>
 
-    <View style={[styles.formRowHorizontal, (IS_WEB && width >= 768) && { flexDirection: 'row' }]}>
-      <View style={styles.formCol}>
-        <Text style={styles.label}>IFSC code</Text>
-        <TextInput
-          value={ifsc}
-          onChangeText={setIfsc}
-          placeholder="Enter IFSC"
-          style={styles.input}
-          autoCapitalize="characters"
-        />
-      </View>
-      <View style={styles.formCol}>
-        <Text style={styles.label}>UPI ID (optional)</Text>
-        <TextInput
-          value={upiId}
-          onChangeText={setUpiId}
-          placeholder="Enter UPI ID"
-          style={styles.input}
-          autoCapitalize="none"
-        />
-      </View>
-    </View>
+          <View style={styles.verifiedGrid}>
+            <View style={styles.verifiedItem}>
+              <Text style={styles.verifiedLabel}>BANK NAME</Text>
+              <Text style={styles.verifiedValue}>{bankName}</Text>
+            </View>
+            <View style={styles.verifiedItem}>
+              <Text style={styles.verifiedLabel}>ACCOUNT NUMBER</Text>
+              <Text style={styles.verifiedValue}>••••••••{accountNumber.slice(-4)}</Text>
+            </View>
+            <View style={styles.verifiedItem}>
+              <Text style={styles.verifiedLabel}>IFSC CODE</Text>
+              <Text style={styles.verifiedValue}>{ifsc}</Text>
+            </View>
+            {upiId ? (
+              <View style={styles.verifiedItem}>
+                <Text style={styles.verifiedLabel}>UPI ID</Text>
+                <Text style={styles.verifiedValue}>{upiId}</Text>
+              </View>
+            ) : null}
+          </View>
+        </Card>
+      );
+    }
 
-    <View style={styles.actionsRow}>
-      <Button
-        title={savingBank ? 'Saving...' : 'Save bank details'}
-        onPress={async () => {
-          if (!user) {
-            Alert.alert('Not signed in', 'Please sign in to save bank details.');
-            return;
-          }
+    return (
+      <Card style={[styles.panel, { marginTop: IS_WEB ? 0 : 16 }]}>
+        <View style={styles.rowBetween}>
+          <View>
+            <Text style={styles.sectionTitle}>Bank Account Details</Text>
+            <Text style={styles.sectionSubtitle}>Save your payout account details for automated settlements.</Text>
+          </View>
+          <AlertCircle size={24} color="#6366F1" />
+        </View>
 
-          if (!bankName.trim() || !accountNumber.trim() || !ifsc.trim()) {
-            Alert.alert('Missing details', 'Bank name, account number and IFSC are required.');
-            return;
-          }
+        <View style={[styles.formRowHorizontal, (IS_WEB && width >= 768) && { flexDirection: 'row' }]}>
+          <View style={styles.formCol}>
+            <Text style={styles.label}>Bank name</Text>
+            <TextInput
+              value={bankName}
+              onChangeText={setBankName}
+              placeholder="Enter bank name"
+              style={styles.input}
+            />
+          </View>
+          <View style={styles.formCol}>
+            <Text style={styles.label}>Account number</Text>
+            <TextInput
+              value={accountNumber}
+              onChangeText={setAccountNumber}
+              placeholder="Enter account number"
+              style={styles.input}
+              keyboardType="number-pad"
+            />
+          </View>
+        </View>
 
-          try {
-            setSavingBank(true);
-            const { error } = await supabase
-              .from('owner_bank_details')
-              .upsert(
-                {
-                  owner_id: user.id,
-                  bank_name: bankName.trim(),
-                  account_number: accountNumber.trim(),
-                  ifsc: ifsc.trim(),
-                  upi_id: upiId.trim() || null,
-                },
-                { onConflict: 'owner_id' },
-              );
+        <View style={[styles.formRowHorizontal, (IS_WEB && width >= 768) && { flexDirection: 'row' }]}>
+          <View style={styles.formCol}>
+            <Text style={styles.label}>IFSC code</Text>
+            <TextInput
+              value={ifsc}
+              onChangeText={setIfsc}
+              placeholder="Enter IFSC"
+              style={styles.input}
+              autoCapitalize="characters"
+            />
+          </View>
+          <View style={styles.formCol}>
+            <Text style={styles.label}>UPI ID (optional)</Text>
+            <TextInput
+              value={upiId}
+              onChangeText={setUpiId}
+              placeholder="Enter UPI ID"
+              style={styles.input}
+              autoCapitalize="none"
+            />
+          </View>
+        </View>
 
-            if (error) {
-              console.error('Error saving bank details', error);
-              Alert.alert('Error', 'Could not save bank details. Please try again later.');
-              return;
-            }
+        <View style={styles.actionsRow}>
+          <Button
+            title={savingBank ? 'Saving...' : hasJustSavedBank ? 'Saved' : 'Save details for verification'}
+            onPress={async () => {
+              if (!user) {
+                Alert.alert('Not signed in', 'Please sign in to save bank details.');
+                return;
+              }
 
-            Alert.alert('Saved', 'Your bank details have been saved.');
-          } catch (e) {
-            console.error('Unexpected bank details error', e);
-            Alert.alert('Error', 'Something went wrong. Please try again.');
-          } finally {
-            setSavingBank(false);
-          }
-        }}
-        loading={savingBank}
-        disabled={savingBank}
-        style={styles.submitButton}
-      />
-    </View>
-  </Card>
-  );
+              if (!bankName.trim() || !accountNumber.trim() || !ifsc.trim()) {
+                Alert.alert('Missing details', 'Bank name, account number and IFSC are required.');
+                return;
+              }
+
+              try {
+                setSavingBank(true);
+                const { error } = await supabase
+                  .from('owner_bank_details')
+                  .upsert(
+                    {
+                      owner_id: user.id,
+                      bank_name: bankName.trim(),
+                      account_number: accountNumber.trim(),
+                      ifsc: ifsc.trim(),
+                      upi_id: upiId.trim() || null,
+                      is_approved: false // Reset approval on update
+                    },
+                    { onConflict: 'owner_id' },
+                  );
+
+                if (error) {
+                  console.error('Error saving bank details', error);
+                  Alert.alert('Error', 'Could not save bank details. Please try again later.');
+                  return;
+                }
+
+                setHasJustSavedBank(true);
+                Alert.alert('Details Submitted', 'Your bank details have been saved and are pending verification.');
+                loadBankDetails();
+                
+                // Reset "Saved" text after 3 seconds
+                setTimeout(() => setHasJustSavedBank(false), 3000);
+              } catch (e) {
+                console.error('Unexpected bank details error', e);
+                Alert.alert('Error', 'Something went wrong. Please try again.');
+              } finally {
+                setSavingBank(false);
+              }
+            }}
+            loading={savingBank}
+            disabled={savingBank}
+            style={[styles.submitButton, hasJustSavedBank && { backgroundColor: '#059669' }]}
+          />
+        </View>
+      </Card>
+    );
+  };
 
   const renderCoupons = () => (
     <View style={styles.tabContentGap}>
@@ -969,6 +1052,72 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#64748B',
     lineHeight: 18,
+  },
+  verifiedPanel: {
+    borderColor: '#10b981',
+    backgroundColor: '#F0FDF4',
+  },
+  verifiedHeader: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+  },
+  verifiedBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#166534',
+    letterSpacing: 0.5,
+  },
+  verifiedTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 4,
+    fontFamily: 'Inter',
+  },
+  verifiedSubtitle: {
+    fontSize: 13,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 18,
+    fontFamily: 'Inter',
+  },
+  verifiedGrid: {
+    gap: 16,
+    backgroundColor: '#FFFFFF',
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  verifiedItem: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    paddingBottom: 12,
+  },
+  verifiedLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#94a3b8',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  verifiedValue: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#0F172A',
+    fontFamily: 'Inter',
   },
 });
 

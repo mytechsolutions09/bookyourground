@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, TouchableOpacity, Platform, TextInput, Switch } from 'react-native';
-import { User, Shield, Search, X, Mail, Phone, Calendar, ChevronRight, UserCircle2, Trash2 } from 'lucide-react-native';
+import { User, Shield, Search, X, Mail, Phone, Calendar, ChevronRight, UserCircle2, Trash2, MapPin } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { Profile } from '@/types';
 import { UserRole } from '@/types/database';
@@ -24,6 +24,8 @@ export default function ManageUsersScreen() {
   const [creditAmount, setCreditAmount] = useState('');
   const [isCrediting, setIsCrediting] = useState(false);
   const [roleFilter, setRoleFilter] = useState<'all' | UserRole>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [walletFilter, setWalletFilter] = useState<'all' | 'has_balance' | 'zero_balance'>('all');
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [selectedBankUser, setSelectedBankUser] = useState<any | null>(null);
 
@@ -99,10 +101,13 @@ export default function ManageUsersScreen() {
              uuid.includes(query);
              
       const matchesRole = roleFilter === 'all' || u.role === roleFilter;
+      const matchesStatus = statusFilter === 'all' || (statusFilter === 'active' ? u.is_active : !u.is_active);
+      const balance = u.wallets?.[0]?.balance || 0;
+      const matchesWallet = walletFilter === 'all' || (walletFilter === 'has_balance' ? balance > 0 : balance === 0);
       
-      return matchesSearch && matchesRole;
+      return matchesSearch && matchesRole && matchesStatus && matchesWallet;
     });
-  }, [users, searchQuery, roleFilter]);
+  }, [users, searchQuery, roleFilter, statusFilter, walletFilter]);
 
   const FilterDropdown = ({ id, label, value, options, onSelect }: any) => {
     const isOpen = activeDropdown === id;
@@ -310,6 +315,12 @@ export default function ManageUsersScreen() {
                <View>
                   <Text style={styles.userNameText}>{item.full_name}</Text>
                   <Text style={styles.userIdText}>{item.serial_id || item.id}</Text>
+                  {item.city && (
+                    <View style={styles.locationRow}>
+                      <MapPin size={10} color="#9CA3AF" />
+                      <Text style={styles.userLocationText}>{item.city}</Text>
+                    </View>
+                  )}
                   {item.business_name && <Text style={styles.userBusinessText}>{item.business_name}</Text>}
                </View>
             </View>
@@ -576,12 +587,36 @@ export default function ManageUsersScreen() {
               ]}
               onSelect={setRoleFilter}
             />
+
+            <FilterDropdown 
+              id="status" 
+              label="Account Status" 
+              value={statusFilter}
+              options={[
+                { key: 'all', label: 'All Status' },
+                { key: 'active', label: 'Active Only' },
+                { key: 'inactive', label: 'Inactive Only' },
+              ]}
+              onSelect={setStatusFilter}
+            />
+
+            <FilterDropdown 
+              id="wallet" 
+              label="Wallet Balance" 
+              value={walletFilter}
+              options={[
+                { key: 'all', label: 'All Balance' },
+                { key: 'has_balance', label: 'Positive Balance' },
+                { key: 'zero_balance', label: 'Zero Balance' },
+              ]}
+              onSelect={setWalletFilter}
+            />
           </View>
         </View>
       )}
 
       {Platform.OS === 'web' && (
-        <View style={styles.tableHeader}>
+        <View style={styles.webTableHeader}>
            <Text style={[styles.headerLabel, styles.colUser]}>User Profile</Text>
            <Text style={[styles.headerLabel, styles.colContact]}>Contact info</Text>
            <Text style={[styles.headerLabel, styles.colTeam]}>Team</Text>
@@ -798,10 +833,11 @@ const styles = StyleSheet.create({
   },
   headerLabel: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#6B7280',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    fontFamily: 'Inter',
   },
   colUser: { flex: 2 },
   colContact: { flex: 1.5 },
@@ -812,25 +848,28 @@ const styles = StyleSheet.create({
   colActions: { flex: 1 },
   
   list: {
-    padding: 16,
+    padding: 0,
+  },
+  webTableHeader: {
+    flexDirection: 'row',
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    backgroundColor: '#F9FAFB',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
   webRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 32,
+    paddingVertical: 14,
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
   rowExpanded: {
     borderColor: '#10b981',
     backgroundColor: '#F0FDF4',
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-    marginBottom: 0,
     borderBottomWidth: 0,
   },
   cell: {
@@ -851,14 +890,27 @@ const styles = StyleSheet.create({
   },
   userNameText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#111827',
+    fontFamily: 'Inter',
   },
   userIdText: {
     fontSize: 9,
     color: '#9CA3AF',
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     marginTop: 1,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  userLocationText: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: '#9CA3AF',
+    fontFamily: 'Inter',
   },
   userBusinessText: {
     fontSize: 11,
@@ -914,7 +966,7 @@ const styles = StyleSheet.create({
   },
   modalUserName: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#111827',
   },
   modalUserRole: {
@@ -999,16 +1051,10 @@ const styles = StyleSheet.create({
   },
   expandedContent: {
     backgroundColor: '#F0FDF4',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderLeftWidth: 1,
-    borderRightWidth: 1,
+    paddingHorizontal: 32,
+    paddingVertical: 24,
     borderBottomWidth: 1,
     borderColor: '#10b981',
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
-    marginBottom: 10,
-    marginTop: -1,
   },
   expandedTitle: {
     fontSize: 11,
@@ -1165,7 +1211,7 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
   },
   userIdTextMobile: {
     fontSize: 10,

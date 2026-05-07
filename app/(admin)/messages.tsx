@@ -12,8 +12,9 @@ import {
   ScrollView,
   TextStyle,
   ViewStyle,
+  Modal,
 } from 'react-native';
-import { LifeBuoy, CheckCircle2, Circle, Search, Filter, ChevronRight, User, Calendar } from 'lucide-react-native';
+import { LifeBuoy, CheckCircle2, Circle, Search, Filter, ChevronRight, User, Calendar, X, ChevronDown } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
@@ -30,6 +31,7 @@ interface ContactQuery {
   role: string | null;
   admin_reply: string | null;
   replied_at: string | null;
+  ticket_number: string | null;
 }
 
 export default function AdminMessagesScreen() {
@@ -37,14 +39,56 @@ export default function AdminMessagesScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filter, setFilter] = useState<'all' | 'pending' | 'resolved'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'resolved'>('all');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'ground_owner' | 'user'>('all');
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [showDateModal, setShowDateModal] = useState(false);
+  const [dateRange, setDateRange] = useState<{start: Date | null, end: Date | null}>({start: null, end: null});
   const [selectedMessage, setSelectedMessage] = useState<ContactQuery | null>(null);
   const [replyText, setReplyText] = useState('');
   const [sendingReply, setSendingReply] = useState(false);
 
+  const FilterDropdown = ({ id, label, value, options, onSelect }: any) => {
+    const isOpen = activeDropdown === id;
+    const selectedOption = options.find((o: any) => o.key === value);
+
+    return (
+      <View style={[styles.dropdownContainer, isOpen && { zIndex: 2000 }]}>
+        <TouchableOpacity 
+          style={[styles.dropdownTrigger, isOpen && styles.dropdownTriggerActive]} 
+          onPress={() => setActiveDropdown(isOpen ? null : id)}
+        >
+          <Text style={styles.dropdownLabel}>{label}:</Text>
+          <Text style={styles.dropdownValue}>{selectedOption?.label || 'Select'}</Text>
+          <ChevronDown size={14} color="#6B7280" />
+        </TouchableOpacity>
+
+        {isOpen && (
+          <View style={styles.dropdownMenu}>
+            {options.map((opt: any) => (
+              <TouchableOpacity 
+                key={opt.key} 
+                style={[styles.dropdownItem, value === opt.key && styles.dropdownItemActive]}
+                onPress={() => {
+                  onSelect(opt.key);
+                  setActiveDropdown(null);
+                }}
+              >
+                <Text style={[styles.dropdownItemText, value === opt.key && styles.dropdownItemTextActive]}>
+                  {opt.label}
+                </Text>
+                {value === opt.key && <CheckCircle2 size={14} color="#10b981" />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </View>
+    );
+  };
+
   useEffect(() => {
     loadMessages();
-  }, [filter]);
+  }, [statusFilter, roleFilter, dateRange]);
 
   const loadMessages = async () => {
     try {
@@ -54,10 +98,24 @@ export default function AdminMessagesScreen() {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (filter === 'pending') {
+      if (statusFilter === 'pending') {
         query = query.eq('resolved', false);
-      } else if (filter === 'resolved') {
+      } else if (statusFilter === 'resolved') {
         query = query.eq('resolved', true);
+      }
+
+      if (roleFilter !== 'all') {
+        query = query.eq('role', roleFilter);
+      }
+
+      if (dateRange.start) {
+        query = query.gte('created_at', dateRange.start.toISOString());
+      }
+      if (dateRange.end) {
+        // Set end of day for end date
+        const endOfDay = new Date(dateRange.end);
+        endOfDay.setHours(23, 59, 59, 999);
+        query = query.lte('created_at', endOfDay.toISOString());
       }
 
       const { data, error } = await query;
@@ -129,8 +187,69 @@ export default function AdminMessagesScreen() {
   const filteredMessages = messages.filter(m => 
     m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     m.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (m.subject || '').toLowerCase().includes(searchQuery.toLowerCase())
+    (m.subject || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (m.ticket_number || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const DateRangeModal = () => {
+    const quickRanges = [
+      { label: 'All Time', start: null, end: null },
+      { label: 'Today', start: new Date(), end: new Date() },
+      { label: 'Yesterday', start: new Date(Date.now() - 86400000), end: new Date(Date.now() - 86400000) },
+      { label: 'This Week', start: new Date(Date.now() - new Date().getDay() * 86400000), end: new Date() },
+      { label: 'Last Week', start: new Date(Date.now() - (new Date().getDay() + 7) * 86400000), end: new Date(Date.now() - (new Date().getDay() + 1) * 86400000) },
+      { label: 'This Month', start: new Date(new Date().getFullYear(), new Date().getMonth(), 1), end: new Date() },
+      { label: 'Last Month', start: new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1), end: new Date(new Date().getFullYear(), new Date().getMonth(), 0) },
+    ];
+
+    return (
+      <Modal visible={showDateModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.dateModalContent}>
+            <View style={styles.dateModalHeader}>
+              <Text style={styles.dateModalTitle}>Filter by Date</Text>
+              <TouchableOpacity onPress={() => setShowDateModal(false)}>
+                <X size={20} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.dateModalBody}>
+              <View style={styles.quickRangeList}>
+                <Text style={styles.sectionLabel}>Quick Range</Text>
+                {quickRanges.map((range) => (
+                  <TouchableOpacity 
+                    key={range.label} 
+                    style={styles.quickRangeItem}
+                    onPress={() => {
+                      setDateRange({ start: range.start, end: range.end });
+                      setShowDateModal(false);
+                    }}
+                  >
+                    <Calendar size={14} color="#9CA3AF" />
+                    <Text style={styles.quickRangeLabel}>{range.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              
+              {/* Note: Custom calendar picker would go here for 'Custom Range' */}
+            </View>
+
+            <View style={styles.dateModalFooter}>
+               <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setShowDateModal(false)}>
+                 <Text style={styles.modalCancelBtnText}>Cancel</Text>
+               </TouchableOpacity>
+               <TouchableOpacity 
+                 style={styles.modalApplyBtn} 
+                 onPress={() => setShowDateModal(false)}
+               >
+                 <Text style={styles.modalApplyBtnText}>Apply Filter</Text>
+               </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
 
   const renderMessageItem = ({ item }: { item: ContactQuery }) => (
     <TouchableOpacity 
@@ -139,14 +258,15 @@ export default function AdminMessagesScreen() {
     >
       <View style={styles.messageItemHeader}>
         <View style={styles.senderInfo}>
+          <Text style={styles.senderTicketNumber}>{item.ticket_number || 'TKT-PENDING'}</Text>
           <Text style={styles.senderName}>{item.name}</Text>
           <Text style={styles.senderEmail}>{item.email}</Text>
         </View>
         <TouchableOpacity onPress={() => toggleResolved(item.id, item.resolved)}>
           {item.resolved ? (
-            <CheckCircle2 size={24} color="#10b981" />
+            <CheckCircle2 size={18} color="#10b981" />
           ) : (
-            <Circle size={24} color="#9CA3AF" />
+            <Circle size={18} color="#D1D5DB" />
           )}
         </TouchableOpacity>
       </View>
@@ -171,30 +291,57 @@ export default function AdminMessagesScreen() {
 
   const mainContent = (
     <View style={styles.container}>
+      <DateRangeModal />
       <View style={styles.sidebar}>
         <View style={styles.header}>
           {Platform.OS === 'web' && <Text style={styles.title}>Support Tickets</Text>}
-          <View style={styles.filterRow}>
-            {(['all', 'pending', 'resolved'] as const).map((f) => (
-              <TouchableOpacity
-                key={f}
-                style={[styles.filterBtn, filter === f && styles.filterBtnActive] as ViewStyle[]}
-                onPress={() => setFilter(f)}
-              >
-                <Text style={[styles.filterBtnText, filter === f && styles.filterBtnTextActive] as TextStyle[]}>
-                  {f.charAt(0).toUpperCase() + f.slice(1)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          <View style={styles.searchBox}>
-            <Search size={18} color="#6B7280" />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search tickets..."
-              value={searchQuery}
-              onChangeText={setSearchQuery}
+          <View style={styles.headerFiltersRow}>
+            <FilterDropdown 
+              id="status" 
+              label="Status" 
+              value={statusFilter}
+              options={[
+                { key: 'all', label: 'All Tickets' },
+                { key: 'pending', label: 'Pending' },
+                { key: 'resolved', label: 'Resolved' },
+              ]}
+              onSelect={setStatusFilter}
             />
+
+            <FilterDropdown 
+              id="role" 
+              label="From" 
+              value={roleFilter}
+              options={[
+                { key: 'all', label: 'Everyone' },
+                { key: 'ground_owner', label: 'Owners' },
+                { key: 'user', label: 'Players' },
+              ]}
+              onSelect={setRoleFilter}
+            />
+
+            <TouchableOpacity 
+              style={[styles.dateFilterBtn, (dateRange.start || dateRange.end) && styles.dateFilterBtnActive]}
+              onPress={() => setShowDateModal(true)}
+            >
+              <Calendar size={14} color={(dateRange.start || dateRange.end) ? "#10b981" : "#6B7280"} />
+              <Text style={[styles.dateFilterText, (dateRange.start || dateRange.end) && styles.dateFilterTextActive]}>
+                {dateRange.start ? (
+                   `${dateRange.start.toLocaleDateString()} - ${dateRange.end ? dateRange.end.toLocaleDateString() : 'Now'}`
+                ) : 'Date'}
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.searchBox}>
+              <Search size={14} color="#6B7280" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
           </View>
         </View>
 
@@ -344,12 +491,196 @@ const styles = StyleSheet.create({
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
+    zIndex: 1000,
   },
   title: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: '800',
     color: '#111827',
+    marginBottom: 12,
+    fontFamily: 'Inter',
+  },
+  headerFiltersRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
     marginBottom: 16,
+  },
+  dropdownContainer: {
+    position: 'relative',
+    zIndex: 100,
+  },
+  dropdownTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 6,
+  },
+  dropdownTriggerActive: {
+    borderColor: '#10b981',
+    backgroundColor: '#F0FDF4',
+  },
+  dropdownLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B7280',
+    fontFamily: 'Inter',
+  },
+  dropdownValue: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#111827',
+    fontFamily: 'Inter',
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    marginTop: 4,
+    minWidth: 160,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+    zIndex: 2000,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  dropdownItemActive: {
+    backgroundColor: '#F0FDF4',
+  },
+  dropdownItemText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#374151',
+    fontFamily: 'Inter',
+  },
+  dropdownItemTextActive: {
+    color: '#059669',
+    fontWeight: '700',
+  },
+  dateFilterBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 8,
+  },
+  dateFilterBtnActive: {
+    borderColor: '#10b981',
+    backgroundColor: '#F0FDF4',
+  },
+  dateFilterText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B7280',
+    fontFamily: 'Inter',
+  },
+  dateFilterTextActive: {
+    color: '#059669',
+    fontWeight: '700',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  dateModalContent: {
+    width: '100%',
+    maxWidth: 400,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  dateModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  dateModalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    fontFamily: 'Inter',
+  },
+  dateModalBody: {
+    padding: 20,
+  },
+  quickRangeList: {
+    gap: 8,
+  },
+  quickRangeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    gap: 10,
+  },
+  quickRangeLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#4B5563',
+    fontFamily: 'Inter',
+  },
+  dateModalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    padding: 16,
+    backgroundColor: '#F9FAFB',
+    gap: 12,
+  },
+  modalCancelBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  modalCancelBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  modalApplyBtn: {
+    backgroundColor: '#10b981',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  modalApplyBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   filterRow: {
     flexDirection: 'row',
@@ -358,7 +689,7 @@ const styles = StyleSheet.create({
   },
   filterBtn: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 4,
     borderRadius: 20,
     backgroundColor: '#F3F4F6',
   },
@@ -374,61 +705,80 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   searchBox: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F9FAFB',
     borderRadius: 8,
-    paddingHorizontal: 12,
-    height: 40,
+    paddingHorizontal: 10,
+    height: 32,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    minWidth: 120,
   },
   searchInput: {
     flex: 1,
-    marginLeft: 8,
-    fontSize: 14,
+    marginLeft: 6,
+    fontSize: 12,
     color: '#111827',
+    fontFamily: 'Inter',
+    // @ts-ignore
+    outlineStyle: 'none',
   },
   listContent: {
     paddingBottom: 20,
   },
   messageItem: {
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
   },
   messageItemActive: {
-    backgroundColor: '#F0FDFA',
+    backgroundColor: '#F9FAFB',
     borderRightWidth: 3,
     borderRightColor: '#10b981',
   },
   messageItemHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
+    alignItems: 'center',
+    marginBottom: 4,
   },
   senderInfo: {
     flex: 1,
   },
+  senderTicketNumber: {
+    fontSize: 9,
+    color: '#9CA3AF',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    fontWeight: '700',
+    marginBottom: 2,
+  },
   senderName: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '700',
     color: '#111827',
+    fontFamily: 'Inter',
   },
   senderEmail: {
-    fontSize: 13,
+    fontSize: 11,
     color: '#6B7280',
+    fontFamily: 'Inter',
   },
   messageSubject: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     color: '#374151',
-    marginBottom: 4,
+    marginBottom: 2,
+    fontFamily: 'Inter',
   },
   messageSnippet: {
-    fontSize: 13,
-    color: '#6B7280',
-    lineHeight: 18,
-    marginBottom: 12,
+    fontSize: 12,
+    color: '#9CA3AF',
+    lineHeight: 16,
+    marginBottom: 8,
+    fontFamily: 'Inter',
   },
   messageFooter: {
     flexDirection: 'row',

@@ -6,6 +6,7 @@ import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import Modal from '@/components/ui/Modal';
+import ShopSubbar from '@/components/admin/ShopSubbar';
 import { formatDate, formatDateTime } from '@/utils/helpers';
 import { useLocalSearchParams, router } from 'expo-router';
 
@@ -176,41 +177,34 @@ export default function AdminOrdersScreen() {
   const content = (
     <View style={styles.container}>
       {Platform.OS === 'web' && (
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.title}>Shop Orders</Text>
-            <Text style={styles.subtitle}>Manage customer orders and fulfillment</Text>
+        <View style={styles.combinedRow}>
+          <View style={styles.filterRow}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {['all', 'pending', 'processing', 'shipped', 'delivered', 'cancelled', 'returns'].map(status => (
+                <TouchableOpacity 
+                  key={status}
+                  style={[styles.filterChip, activeStatus === status && styles.filterChipActive]}
+                  onPress={() => setActiveStatus(status)}
+                >
+                  <Text style={[styles.filterChipText, activeStatus === status && styles.filterChipTextActive]}>
+                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
           
-          <View style={styles.headerActions}>
-            <View style={styles.searchBar}>
-              <Search size={18} color="#94A3B8" />
-              <TextInput 
-                style={styles.searchInput}
-                placeholder="Search by ID or customer..."
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-            </View>
+          <View style={styles.searchBar}>
+            <Search size={18} color="#94A3B8" />
+            <TextInput 
+              style={styles.searchInput}
+              placeholder="Search ID or customer..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
           </View>
         </View>
       )}
-
-      <View style={styles.filterRow}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          {['all', 'pending', 'processing', 'shipped', 'delivered', 'cancelled', 'returns'].map(status => (
-            <TouchableOpacity 
-              key={status}
-              style={[styles.filterChip, activeStatus === status && styles.filterChipActive]}
-              onPress={() => setActiveStatus(status)}
-            >
-              <Text style={[styles.filterChipText, activeStatus === status && styles.filterChipTextActive]}>
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
 
       {Platform.OS === 'web' && (
         <View style={styles.tableHeader}>
@@ -382,10 +376,13 @@ export default function AdminOrdersScreen() {
   return (
     <>
       {Platform.OS === 'web' ? (
-        <WebLayout>{content}</WebLayout>
+        <WebLayout>
+          <ShopSubbar>
+            {content}
+          </ShopSubbar>
+        </WebLayout>
       ) : (
         <View style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
-          <MobileAppNavbar title="SHOP ORDERS" titleColor="#10b981" />
           {content}
         </View>
       )}
@@ -396,8 +393,9 @@ export default function AdminOrdersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFFFFF',
     padding: 24,
+    paddingTop: 0,
   },
   header: {
     flexDirection: 'row',
@@ -420,6 +418,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 16,
   },
+  combinedRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+    gap: 16,
+  },
+  filterRow: {
+    flex: 1,
+    marginRight: 16,
+  },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -427,7 +436,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 16,
     height: 44,
-    width: 300,
+    width: 280,
     borderWidth: 1,
     borderColor: '#E5E7EB',
     gap: 12,
@@ -438,9 +447,6 @@ const styles = StyleSheet.create({
     color: '#111827',
     outlineStyle: 'none',
   } as any,
-  filterRow: {
-    marginBottom: 24,
-  },
   filterChip: {
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -455,9 +461,10 @@ const styles = StyleSheet.create({
     borderColor: '#111827',
   },
   filterChipText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: '#6B7280',
+    fontFamily: 'Inter',
   },
   filterChipTextActive: {
     color: '#FFFFFF',
@@ -471,42 +478,45 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   headerLabel: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '600',
     color: '#6B7280',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    fontFamily: 'Inter',
   },
   list: {
-    gap: 8,
+    gap: 0,
   },
   orderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
   cell: {
     justifyContent: 'center',
   },
   orderIdText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#111827',
-  },
-  dateText: {
-    fontSize: 12,
-    color: '#94A3B8',
-    marginTop: 2,
-  },
-  userName: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: '#111827',
+    fontFamily: 'Inter',
+  },
+  dateText: {
+    fontSize: 11,
+    color: '#94A3B8',
+    marginTop: 2,
+    fontFamily: 'Inter',
+  },
+  userName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#111827',
+    fontFamily: 'Inter',
   },
   userCellContent: {
     flexDirection: 'row',
@@ -531,23 +541,27 @@ const styles = StyleSheet.create({
     color: '#059669',
   },
   userEmail: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#6B7280',
+    fontFamily: 'Inter',
   },
   addressText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#64748B',
     fontWeight: '500',
+    fontFamily: 'Inter',
   },
   itemCount: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
     color: '#4B5563',
+    fontFamily: 'Inter',
   },
   amountText: {
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '700',
     color: '#01b854',
+    fontFamily: 'Inter',
   },
   badge: {
     paddingHorizontal: 10,
@@ -556,8 +570,9 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   badgeText: {
-    fontSize: 10,
-    fontWeight: '800',
+    fontSize: 9,
+    fontWeight: '700',
+    fontFamily: 'Inter',
   },
   miniReturnBadge: {
     flexDirection: 'row',

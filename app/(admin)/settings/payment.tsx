@@ -1,9 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Platform, ScrollView, Switch, Alert, TouchableOpacity } from 'react-native';
-import { CreditCard, CheckCircle, XCircle, Settings2 } from 'lucide-react-native';
+import { View, Text, StyleSheet, Platform, ScrollView, Switch, Alert, TouchableOpacity, FlatList, RefreshControl } from 'react-native';
+import { CreditCard, CheckCircle, XCircle, Settings2, Info } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
-import Card from '@/components/ui/Card';
-import Button from '@/components/ui/Button';
 import WebLayout from '@/components/web/WebLayout';
 import SettingsSubbar from '@/components/admin/SettingsSubbar';
 
@@ -35,7 +33,8 @@ export default function AdminPaymentSettings() {
       setGateways(data || []);
     } catch (error) {
       console.error('Error loading gateways:', error);
-      Alert.alert('Error', 'Failed to load payment gateways');
+      if (Platform.OS === 'web') alert('Failed to load payment gateways');
+      else Alert.alert('Error', 'Failed to load payment gateways');
     } finally {
       setLoading(false);
     }
@@ -55,204 +54,268 @@ export default function AdminPaymentSettings() {
       );
     } catch (error) {
       console.error('Error toggling gateway:', error);
-      Alert.alert('Error', 'Failed to update gateway status');
+      if (Platform.OS === 'web') alert('Failed to update gateway status');
+      else Alert.alert('Error', 'Failed to update gateway status');
     }
   };
 
-  const inner = (
-    <SettingsSubbar>
-      <ScrollView style={styles.page} contentContainerStyle={styles.pageContent}>
-        <View style={styles.header}>
+  const renderListHeader = () => (
+    <View style={styles.header}>
+      <View style={styles.headerTop}>
+        <View>
           <Text style={styles.title}>Payment Gateways</Text>
-          <Text style={styles.subtitle}>Enable or disable platform payment methods</Text>
+          <Text style={styles.subtitle}>Configure and manage platform payment methods.</Text>
         </View>
-
-        <View style={styles.gatewayList}>
-          {gateways.map((gateway) => (
-            <Card key={gateway.id} style={styles.gatewayCard}>
-              <View style={styles.gatewayHeader}>
-                <View style={[styles.iconBox, gateway.is_active ? styles.iconBoxActive : null]}>
-                  <CreditCard size={20} color={gateway.is_active ? '#10b981' : '#6B7280'} />
-                </View>
-                <View style={styles.gatewayInfo}>
-                  <Text style={styles.gatewayLabel}>{gateway.label}</Text>
-                  <Text style={styles.gatewayName}>{gateway.name.toUpperCase()}</Text>
-                </View>
-                <Switch
-                  value={gateway.is_active}
-                  onValueChange={() => toggleGateway(gateway.name, gateway.is_active)}
-                  trackColor={{ false: '#E5E7EB', true: '#D1FAE5' }}
-                  thumbColor={gateway.is_active ? '#10b981' : '#9CA3AF'}
-                />
-              </View>
-
-              <View style={styles.gatewayFooter}>
-                <View style={styles.statusBadge}>
-                  {gateway.is_active ? (
-                    <>
-                      <CheckCircle size={14} color="#10b981" />
-                      <Text style={[styles.statusText, styles.statusActive]}>Active</Text>
-                    </>
-                  ) : (
-                    <>
-                      <XCircle size={14} color="#EF4444" />
-                      <Text style={[styles.statusText, styles.statusInactive]}>Inactive</Text>
-                    </>
-                  )}
-                </View>
-                
-                {gateway.name !== 'cash' && (
-                  <View style={styles.configBtn}>
-                    <Settings2 size={14} color="#6B7280" />
-                    <Text style={styles.configBtnText}>Managed via Secrets</Text>
-                  </View>
-                )}
-              </View>
-            </Card>
-          ))}
-        </View>
-
-        <View style={styles.infoBox}>
-          <Text style={styles.infoTitle}>Note on Secrets</Text>
-          <Text style={styles.infoText}>
-            For security reasons, API Keys and Secrets (like Razorpay Key ID or PayU Salt) must be set via Supabase Dashboard Secrets for the Edge Function.
-            The toggles above control platform visibility for users.
-          </Text>
-        </View>
-      </ScrollView>
-    </SettingsSubbar>
+      </View>
+      
+      <View style={styles.infoBanner}>
+        <Info size={16} color="#1E40AF" />
+        <Text style={styles.infoText}>
+          API Keys and Secrets must be configured via Supabase Secrets for security. Toggles below control user visibility.
+        </Text>
+      </View>
+    </View>
   );
 
-  return Platform.OS === 'web' ? (
-    <WebLayout noCard>{inner}</WebLayout>
-  ) : inner;
+  const renderTableHeader = () => (
+    <View style={styles.tableHeader}>
+      <Text style={[styles.columnHeader, { flex: 3 }]}>Provider</Text>
+      <Text style={[styles.columnHeader, { flex: 2 }]}>Internal ID</Text>
+      <Text style={[styles.columnHeader, { flex: 2, textAlign: 'center' }]}>Visibility</Text>
+      <Text style={[styles.columnHeader, { flex: 2, textAlign: 'center' }]}>Status</Text>
+      <Text style={[styles.columnHeader, { flex: 3, textAlign: 'right' }]}>Configuration</Text>
+    </View>
+  );
+
+  const inner = (
+    <View style={styles.container}>
+      <FlatList
+        data={gateways}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
+        keyboardShouldPersistTaps="handled"
+        ListHeaderComponent={() => (
+          <View>
+            {renderListHeader()}
+            {gateways.length > 0 && renderTableHeader()}
+          </View>
+        )}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={loadGateways} />}
+        renderItem={({ item }) => (
+          <View style={styles.tableRow}>
+            <View style={[styles.cell, { flex: 3, flexDirection: 'row', alignItems: 'center', gap: 10 }]}>
+              <View style={[styles.iconBox, item.is_active ? styles.iconBoxActive : null]}>
+                <CreditCard size={14} color={item.is_active ? '#10b981' : '#6B7280'} />
+              </View>
+              <Text style={styles.cellTextBold}>{item.label}</Text>
+            </View>
+            
+            <Text style={[styles.cellText, { flex: 2 }]}>{item.name.toUpperCase()}</Text>
+
+            <View style={[styles.cell, { flex: 2, alignItems: 'center' }]}>
+              <Switch
+                value={item.is_active}
+                onValueChange={() => toggleGateway(item.name, item.is_active)}
+                trackColor={{ false: '#E5E7EB', true: '#D1FAE5' }}
+                thumbColor={item.is_active ? '#10b981' : '#9CA3AF'}
+                style={{ transform: [{ scale: 0.8 }] }}
+              />
+            </View>
+
+            <View style={[styles.cell, { flex: 2, alignItems: 'center' }]}>
+              {item.is_active ? (
+                <View style={[styles.statusBadge, styles.activeBadge]}>
+                  <CheckCircle size={10} color="#059669" />
+                  <Text style={[styles.statusText, styles.activeText]}>Active</Text>
+                </View>
+              ) : (
+                <View style={[styles.statusBadge, styles.inactiveBadge]}>
+                  <XCircle size={10} color="#6B7280" />
+                  <Text style={[styles.statusText, styles.inactiveText]}>Disabled</Text>
+                </View>
+              )}
+            </View>
+
+            <View style={[styles.cell, { flex: 3, alignItems: 'flex-end' }]}>
+              {item.name === 'cash' ? (
+                <Text style={styles.cellTextSub}>Built-in</Text>
+              ) : (
+                <View style={styles.configInfo}>
+                  <Settings2 size={12} color="#9CA3AF" />
+                  <Text style={styles.cellTextSub}>Secrets Managed</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+      />
+    </View>
+  );
+
+  if (Platform.OS === 'web') {
+    return (
+      <WebLayout noCard>
+        <SettingsSubbar>
+          {inner}
+        </SettingsSubbar>
+      </WebLayout>
+    );
+  }
+
+  return (
+    <SettingsSubbar>
+      <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+        {inner}
+      </View>
+    </SettingsSubbar>
+  );
 }
 
 const styles = StyleSheet.create({
-  page: {
+  container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
-  pageContent: {
-    paddingBottom: 40,
+    backgroundColor: '#FFFFFF',
   },
   header: {
     backgroundColor: '#FFFFFF',
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
-    marginBottom: 20,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   title: {
-    fontSize: 22,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '700',
     color: '#111827',
+    fontFamily: 'Inter',
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#6B7280',
     marginTop: 4,
+    fontFamily: 'Inter',
   },
-  gatewayList: {
-    paddingHorizontal: 20,
-    gap: 16,
-  },
-  gatewayCard: {
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
-  },
-  gatewayHeader: {
+  infoBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
-    marginBottom: 16,
+    gap: 10,
+    backgroundColor: '#EFF6FF',
+    padding: 12,
+    borderRadius: 12,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+  },
+  infoText: {
+    fontSize: 12,
+    color: '#1E40AF',
+    flex: 1,
+    fontFamily: 'Inter',
+    lineHeight: 16,
+    opacity: 0.9,
+  },
+  listContent: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    marginBottom: 8,
+    marginTop: 20,
+  },
+  columnHeader: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B7280',
+    fontFamily: 'Inter',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  cell: {
+    justifyContent: 'center',
+  },
+  cellText: {
+    fontSize: 12,
+    fontWeight: '400',
+    color: '#374151',
+    fontFamily: 'Inter',
+  },
+  cellTextBold: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#111827',
+    fontFamily: 'Inter',
+  },
+  cellTextSub: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    fontFamily: 'Inter',
   },
   iconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
     backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconBoxActive: {
-    backgroundColor: '#ECFDF5',
-  },
-  gatewayInfo: {
-    flex: 1,
-  },
-  gatewayLabel: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
-  },
-  gatewayName: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#9CA3AF',
-    marginTop: 2,
-    letterSpacing: 0.5,
-  },
-  gatewayFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
+    backgroundColor: 'rgba(16, 185, 129, 0.08)',
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  activeBadge: {
+    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+  },
+  inactiveBadge: {
+    backgroundColor: '#F3F4F6',
   },
   statusText: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 10,
+    fontWeight: '700',
+    fontFamily: 'Inter',
   },
-  statusActive: {
-    color: '#10b981',
+  activeText: {
+    color: '#059669',
   },
-  statusInactive: {
-    color: '#EF4444',
+  inactiveText: {
+    color: '#6B7280',
   },
-  configBtn: {
+  configInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
   },
-  configBtnText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#4B5563',
+  emptyBox: {
+    padding: 40,
+    alignItems: 'center',
   },
-  infoBox: {
-    marginTop: 32,
-    marginHorizontal: 20,
-    padding: 16,
-    backgroundColor: '#EFF6FF',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#DBEAFE',
-  },
-  infoTitle: {
+  emptyText: {
+    color: '#6B7280',
     fontSize: 14,
-    fontWeight: '700',
-    color: '#1E40AF',
-    marginBottom: 4,
-  },
-  infoText: {
-    fontSize: 13,
-    color: '#1E40AF',
-    lineHeight: 18,
-    opacity: 0.8,
+    fontFamily: 'Inter',
   },
 });

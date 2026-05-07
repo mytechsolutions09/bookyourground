@@ -71,41 +71,6 @@ export default function ApproveGroundsScreen() {
     }
   };
 
-  const renderGroundActions = (ground: GroundWithImages) => {
-    return (
-      <Card style={styles.actionsCard}>
-        <Text style={styles.actionsTitle}>Review Ground</Text>
-        {ground.owner && (
-          <View style={styles.ownerInfo}>
-            <Text style={styles.ownerLabel}>Owner</Text>
-            <Text style={styles.ownerText}>
-              {ground.owner.business_name || ground.owner.full_name}
-            </Text>
-            {ground.owner.phone && (
-              <Text style={styles.ownerContact}>{ground.owner.phone}</Text>
-            )}
-          </View>
-        )}
-        <View style={styles.actionsButtons}>
-          <Button
-            title="Approve"
-            onPress={() => updateGroundStatus(ground.id, true)}
-            variant="secondary"
-            size="small"
-            style={{ flex: 1 }}
-          />
-          <Button
-            title="Reject"
-            onPress={() => updateGroundStatus(ground.id, false)}
-            variant="danger"
-            size="small"
-            style={{ flex: 1 }}
-          />
-        </View>
-      </Card>
-    );
-  };
-
   const content = (
     <View style={styles.container}>
       {Platform.OS === 'web' && (
@@ -117,18 +82,123 @@ export default function ApproveGroundsScreen() {
         </View>
       )}
 
+      {Platform.OS === 'web' && grounds.length > 0 && (
+        <View style={styles.tableHeaderContainer}>
+          <View style={styles.tableHeaderRow}>
+            <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Ground</Text>
+            <Text style={[styles.tableHeaderCell, { flex: 1.5 }]}>Owner</Text>
+            <Text style={[styles.tableHeaderCell, { flex: 1.5 }]}>Location</Text>
+            <Text style={[styles.tableHeaderCell, { flex: 1.2 }]}>Actions</Text>
+          </View>
+        </View>
+      )}
+
       <FlatList
         data={grounds}
-        renderItem={({ item }) => (
-          <View>
-            <GroundCard
-              ground={item}
-              showBookingSchedule
-              onPress={() => setSelectedGround(selectedGround?.id === item.id ? null : item)}
-            />
-            {selectedGround?.id === item.id && renderGroundActions(item)}
-          </View>
-        )}
+        renderItem={({ item }) => {
+          const isSelected = selectedGround?.id === item.id;
+          const primaryImage =
+            item.ground_images?.find((img: any) => img.is_primary)?.image_url ||
+            item.ground_images?.[0]?.image_url ||
+            'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg';
+
+          if (Platform.OS === 'web') {
+            return (
+              <View>
+                <TouchableOpacity
+                  onPress={() => setSelectedGround(isSelected ? null : item)}
+                  style={[styles.tableRow, isSelected && styles.tableRowSelected]}
+                >
+                  <View style={[styles.tableCell, { flex: 2 }]}>
+                    <View style={styles.tableGroundInfo}>
+                      <Image source={{ uri: primaryImage }} style={styles.tableThumb} />
+                      <View>
+                        <Text style={styles.groundName}>{item.name}</Text>
+                        <Text style={styles.groundType}>{item.pitch_type}</Text>
+                      </View>
+                    </View>
+                  </View>
+
+                  <View style={[styles.tableCell, { flex: 1.5 }]}>
+                    <Text style={styles.ownerName}>{item.owner?.business_name || item.owner?.full_name || '—'}</Text>
+                    <Text style={styles.ownerPhone}>{item.owner?.phone || '—'}</Text>
+                  </View>
+
+                  <View style={[styles.tableCell, { flex: 1.5 }]}>
+                    <Text style={styles.locationText}>{item.city}, {item.state}</Text>
+                  </View>
+
+                  <View style={[styles.tableCell, { flex: 1.2 }]}>
+                    <View style={styles.tableRowActions}>
+                      <TouchableOpacity
+                        style={[styles.iconButton, { backgroundColor: '#dcfce7' }]}
+                        onPress={() => updateGroundStatus(item.id, true)}
+                      >
+                        <Text style={{ color: '#16a34a', fontWeight: '800', fontSize: 10, fontFamily: 'Inter' }}>APPROVE</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.iconButton, { backgroundColor: '#fee2e2' }]}
+                        onPress={() => updateGroundStatus(item.id, false)}
+                      >
+                        <Text style={{ color: '#ef4444', fontWeight: '800', fontSize: 10, fontFamily: 'Inter' }}>REJECT</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+
+                {isSelected && (
+                  <View style={styles.tableDetailsSection}>
+                    <Text style={styles.detailsTitle}>Pending Review Details</Text>
+                    <Text style={styles.detailsText}>Address: {item.address}, {item.pincode}</Text>
+                    <Text style={styles.detailsText}>Description: {item.description || 'No description provided.'}</Text>
+                  </View>
+                )}
+              </View>
+            );
+          }
+
+          return (
+            <View>
+              <GroundCard
+                ground={item}
+                showBookingSchedule
+                onPress={() => setSelectedGround(isSelected ? null : item)}
+              />
+              {isSelected && (
+                <Card style={styles.actionsCard}>
+                  <Text style={styles.actionsTitle}>Review Ground</Text>
+                  {item.owner && (
+                    <View style={styles.ownerInfo}>
+                      <Text style={styles.ownerLabel}>Owner</Text>
+                      <Text style={styles.ownerText}>
+                        {item.owner.business_name || item.owner.full_name}
+                      </Text>
+                      {item.owner.phone && (
+                        <Text style={styles.ownerContact}>{item.owner.phone}</Text>
+                      )}
+                    </View>
+                  )}
+                  <View style={styles.actionsButtons}>
+                    <Button
+                      title="Approve"
+                      onPress={() => updateGroundStatus(item.id, true)}
+                      variant="secondary"
+                      size="small"
+                      style={{ flex: 1 }}
+                    />
+                    <Button
+                      title="Reject"
+                      onPress={() => updateGroundStatus(item.id, false)}
+                      variant="danger"
+                      size="small"
+                      style={{ flex: 1 }}
+                    />
+                  </View>
+                </Card>
+              )}
+            </View>
+          );
+        }}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
         refreshControl={
@@ -160,29 +230,31 @@ export default function ApproveGroundsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#FFFFFF',
   },
   header: {
     backgroundColor: '#FFFFFF',
-    padding: 16,
+    padding: 24,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: '#F3F4F6',
   },
   webHeader: {
-    paddingTop: 16,
+    paddingTop: 24,
   },
   title: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '700',
-    color: '#212121',
+    color: '#111827',
+    fontFamily: 'Inter',
   },
   subtitle: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 13,
+    color: '#6B7280',
     marginTop: 4,
+    fontFamily: 'Inter',
   },
   list: {
-    padding: 16,
+    padding: 0,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -190,9 +262,111 @@ const styles = StyleSheet.create({
     paddingVertical: 48,
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#666',
+    fontFamily: 'Inter',
   },
+  tableHeaderContainer: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: '#F9FAFB',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  tableHeaderRow: {
+    flexDirection: 'row',
+  },
+  tableHeaderCell: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontFamily: 'Inter',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  tableRowSelected: {
+    backgroundColor: '#F9FAFB',
+  },
+  tableCell: {
+    paddingRight: 12,
+  },
+  tableGroundInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  tableThumb: {
+    width: 44,
+    height: 36,
+    borderRadius: 6,
+    backgroundColor: '#E5E7EB',
+  },
+  groundName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#111827',
+    fontFamily: 'Inter',
+  },
+  groundType: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 1,
+    fontFamily: 'Inter',
+  },
+  ownerName: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#374151',
+    fontFamily: 'Inter',
+  },
+  ownerPhone: {
+    fontSize: 11,
+    color: '#6B7280',
+    fontFamily: 'Inter',
+  },
+  locationText: {
+    fontSize: 12,
+    color: '#4B5563',
+    fontFamily: 'Inter',
+  },
+  tableRowActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  iconButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  tableDetailsSection: {
+    padding: 24,
+    backgroundColor: '#F9FAFB',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  detailsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+    fontFamily: 'Inter',
+    marginBottom: 8,
+  },
+  detailsText: {
+    fontSize: 13,
+    color: '#374151',
+    fontFamily: 'Inter',
+    marginBottom: 6,
+  },
+  // Mobile styles
   actionsCard: {
     marginTop: -4,
     marginBottom: 12,

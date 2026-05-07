@@ -125,6 +125,7 @@ export function useCricketScoring() {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [phase, setPhase] = useState<'setup' | 'toss' | 'live' | 'innings_break' | 'completed'>('setup');
   const [result, setResult] = useState<string | null>(null);
+  const [isUnderReview, setIsUnderReview] = useState(false);
   const historyRef = useRef<InningState[]>([]);
 
   const inn = inningsList[currentIdx];
@@ -438,7 +439,12 @@ export function useCricketScoring() {
     setInningsList([innObj, null]);
     setCurrentIdx(0);
     await pushLiveState(innObj, config, mid, 1);
-      setPhase('live');
+    setPhase('live');
+    
+    // Fetch fresh match data for review status
+    const { data: freshMatch } = await supabase.from('matches').select('is_under_review').eq('id', mid).single();
+    if (freshMatch) setIsUnderReview(!!freshMatch.is_under_review);
+
     return {
     matchId: mid, inn: innObj };
   }, [createMatch, createInningsRow]);
@@ -1026,20 +1032,15 @@ export function useCricketScoring() {
     }
   }, [inn, currentIdx, matchConfig, matchId, pushLiveState]);
 
-    const resumeMatch = useCallback(async (mid: string, isRecovery = false) => {
+    const resumeMatch = useCallback(async (mid: string) => {
+    console.log('[useCricketScoring] Attempting to resume match:', mid);
     try {
-      console.log('[useCricketScoring] Attempting resume for:', mid);
-      
-      const { data: m, error: mErr } = await supabase.from('matches').select('*').eq('id', mid).maybeSingle();
-      if (mErr) {
-        console.error('[useCricketScoring] Error fetching match:', mErr);
-        return false;
-      }
-      if (!m) {
-        console.warn('[useCricketScoring] No match found for ID:', mid);
-        return false;
-      }
-      console.log('[useCricketScoring] Match data loaded:', m.title);
+      const { data: m, error: mErr } = await supabase.from('matches').select('*').eq('id', mid).single();
+      if (mErr || !m) throw new Error('Match not found');
+      setMatchId(m.id);
+      setPhase(m.status as any);
+      setResult(m.result_text);
+      setIsUnderReview(!!m.is_under_review);
 
       const { data: live, error: liveErr } = await supabase.from('match_live_state').select('*').eq('match_id', mid).maybeSingle();
       if (liveErr) console.error('[useCricketScoring] Error fetching live state (non-fatal):', liveErr);
@@ -1087,11 +1088,7 @@ export function useCricketScoring() {
            // Create a default inning row to avoid setup loop
            const recoveryInnId = await createInningsRow(mid, 1, m.team_a, m.team_b, config.teamAPlayers, config.teamBPlayers);
            // Re-trigger resume would be complex, so let's just proceed with this fake row for now
-           if (isRecovery) {
-               console.error('[useCricketScoring] Recovery failed to create innings, aborting to avoid loop');
-               return { status: 'error' };
-           }
-           return resumeMatch(mid, true);
+           return resumeMatch(mid);
         }
         console.warn('[useCricketScoring] No innings found and match not live, returning needs_setup');
         setMatchId(mid);
@@ -1446,7 +1443,11 @@ return {
     formatOvers,
     swapBatters, markRetiredHurt, reviseTarget, updateMatchConfig, changeSquad, declareInnings,
     startMatch, resumeMatch, addBall, addExtra, addWicket,
-    changeBowler, addNewBowler, undoLastBall, startSecondInnings, setOpeners, endMatch,
+    changeBowler, addNewBowler, undoLastBall, setOpeners,
+    startSecondInnings,
+    endMatch,
+    isUnderReview,
+    setIsUnderReview,
     isScoring: !!matchId && !!inn,
     balls: inn?.overBalls || []
   };

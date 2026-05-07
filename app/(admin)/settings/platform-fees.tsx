@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Platform, ScrollView, Alert, TextInput } from 'react-native';
-import { CreditCard, Save, Percent, IndianRupee, Info } from 'lucide-react-native';
+import { View, Text, StyleSheet, Platform, ScrollView, Alert, TextInput, FlatList, ActivityIndicator } from 'react-native';
+import { Save, Percent, IndianRupee, Info } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
-import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import WebLayout from '@/components/web/WebLayout';
 import SettingsSubbar from '@/components/admin/SettingsSubbar';
-import MobileAppNavbar from '@/components/MobileAppNavbar';
 
 interface PlatformSetting {
   key: string;
@@ -43,7 +41,8 @@ export default function PlatformFeesSettings() {
       setLocalValues(values);
     } catch (error) {
       console.error('Error loading settings:', error);
-      Alert.alert('Error', 'Failed to load platform settings');
+      if (Platform.OS === 'web') alert('Failed to load platform settings');
+      else Alert.alert('Error', 'Failed to load platform settings');
     } finally {
       setLoading(false);
     }
@@ -68,210 +67,263 @@ export default function PlatformFeesSettings() {
         if (error) throw error;
       }
 
-      Alert.alert('Success', 'Platform fees updated successfully');
+      if (Platform.OS === 'web') alert('Platform fees updated successfully');
+      else Alert.alert('Success', 'Platform fees updated successfully');
       loadSettings();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving settings:', error);
-      Alert.alert('Error', 'Failed to update platform fees');
+      if (Platform.OS === 'web') alert(error.message || 'Failed to update platform fees');
+      else Alert.alert('Error', 'Failed to update platform fees');
     } finally {
       setSaving(false);
     }
   };
 
-  const inner = (
-    <SettingsSubbar>
-      <ScrollView style={styles.page} contentContainerStyle={styles.pageContent}>
-        {Platform.OS === 'web' && (
-          <View style={styles.header}>
-            <Text style={styles.title}>Platform Fees</Text>
-            <Text style={styles.subtitle}>Configure service charges and tax rates</Text>
-          </View>
-        )}
-
-        <View style={styles.form}>
-          <Card style={styles.card}>
-            <View style={styles.cardHeader}>
-              <IndianRupee size={20} color="#10b981" />
-              <Text style={styles.cardTitle}>Cricket Ground Fees (Owner)</Text>
-            </View>
-            <Text style={styles.description}>
-              Fixed fee charged to the ground owner per booking per team.
-            </Text>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Fee Amount (₹)</Text>
-              <TextInput
-                style={styles.input}
-                value={localValues['cricket_owner_fee_fixed']}
-                onChangeText={(text) => setLocalValues(prev => ({ ...prev, cricket_owner_fee_fixed: text }))}
-                keyboardType="numeric"
-                placeholder="100"
-              />
-            </View>
-          </Card>
-
-          <Card style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Percent size={20} color="#3B82F6" />
-              <Text style={styles.cardTitle}>User Platform Fee</Text>
-            </View>
-            <Text style={styles.description}>
-              Percentage fee charged to users on the net booking amount.
-            </Text>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Fee Rate (Decimal, e.g. 0.05 for 5%)</Text>
-              <TextInput
-                style={styles.input}
-                value={localValues['user_platform_fee_rate']}
-                onChangeText={(text) => setLocalValues(prev => ({ ...prev, user_platform_fee_rate: text }))}
-                keyboardType="numeric"
-                placeholder="0.05"
-              />
-            </View>
-          </Card>
-
-          <Card style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Info size={20} color="#8B5CF6" />
-              <Text style={styles.cardTitle}>Tax Settings</Text>
-            </View>
-            <Text style={styles.description}>
-              GST rate applied to platform fees for both users and owners.
-            </Text>
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>GST Rate (Decimal, e.g. 0.18 for 18%)</Text>
-              <TextInput
-                style={styles.input}
-                value={localValues['gst_rate']}
-                onChangeText={(text) => setLocalValues(prev => ({ ...prev, gst_rate: text }))}
-                keyboardType="numeric"
-                placeholder="0.18"
-              />
-            </View>
-          </Card>
-
-          <Button
-            title={saving ? "Saving..." : "Save Changes"}
-            onPress={handleSave}
-            disabled={saving}
-            loading={saving}
-            style={styles.saveBtn}
-          />
+  const renderListHeader = () => (
+    <View style={styles.header}>
+      <View style={styles.headerTop}>
+        <View>
+          <Text style={styles.title}>Platform Fees</Text>
+          <Text style={styles.subtitle}>Configure global service charges and tax rates.</Text>
         </View>
-
-        <View style={styles.infoBox}>
-          <Text style={styles.infoTitle}>Calculation Notice</Text>
-          <Text style={styles.infoText}>
-            These settings are authoritatively used by the backend Edge Functions for all new transactions. 
-            Changes will not affect past bookings.
-          </Text>
-        </View>
-      </ScrollView>
-    </SettingsSubbar>
+        <Button
+          title={saving ? "Saving..." : "Save Changes"}
+          onPress={handleSave}
+          disabled={saving || loading}
+          loading={saving}
+          size="small"
+          icon={Save}
+        />
+      </View>
+      
+      <View style={styles.infoBanner}>
+        <Info size={16} color="#1E40AF" />
+        <Text style={styles.infoText}>
+          These rates are used by backend functions for all new transactions. Changes do not affect past bookings.
+        </Text>
+      </View>
+    </View>
   );
 
-  return Platform.OS === 'web' ? (
-    <WebLayout noCard>{inner}</WebLayout>
-  ) : (
-    <View style={{ flex: 1, backgroundColor: '#F5F5F5' }}>
-      <MobileAppNavbar title="PLATFORM FEES" titleColor="#10b981" />
-      {inner}
+  const renderTableHeader = () => (
+    <View style={styles.tableHeader}>
+      <Text style={[styles.columnHeader, { flex: 4 }]}>Setting / Description</Text>
+      <Text style={[styles.columnHeader, { flex: 2, textAlign: 'right' }]}>Current Value</Text>
+      <Text style={[styles.columnHeader, { flex: 2.5, textAlign: 'right' }]}>Edit Value</Text>
     </View>
+  );
+
+  const getLabel = (key: string) => {
+    switch (key) {
+      case 'cricket_owner_fee_fixed': return 'Cricket Owner Fee';
+      case 'user_platform_fee_rate': return 'User Platform Fee Rate';
+      case 'gst_rate': return 'GST Rate';
+      default: return key;
+    }
+  };
+
+  const getIcon = (key: string) => {
+    if (key.includes('fee')) return <IndianRupee size={14} color="#10b981" />;
+    if (key.includes('rate')) return <Percent size={14} color="#3B82F6" />;
+    return <SettingsSubbar size={14} color="#6B7280" />;
+  };
+
+  const inner = (
+    <View style={styles.container}>
+      <FlatList
+        data={settings}
+        keyExtractor={(item) => item.key}
+        contentContainerStyle={styles.listContent}
+        keyboardShouldPersistTaps="handled"
+        ListHeaderComponent={() => (
+          <View>
+            {renderListHeader()}
+            {settings.length > 0 && renderTableHeader()}
+          </View>
+        )}
+        renderItem={({ item }) => (
+          <View style={styles.tableRow}>
+            <View style={[styles.cell, { flex: 4 }]}>
+              <View style={styles.labelRow}>
+                {getIcon(item.key)}
+                <Text style={styles.cellTextBold}>{getLabel(item.key)}</Text>
+              </View>
+              <Text style={styles.cellTextSub}>{item.description || 'Global platform constant'}</Text>
+            </View>
+            
+            <View style={[styles.cell, { flex: 2, alignItems: 'flex-end' }]}>
+              <Text style={styles.cellText}>
+                {item.key === 'cricket_owner_fee_fixed' ? `₹${item.value}` : `${(item.value * 100).toFixed(0)}%`}
+              </Text>
+            </View>
+
+            <View style={[styles.cell, { flex: 2.5, alignItems: 'flex-end' }]}>
+              <TextInput
+                style={styles.tableInput}
+                value={localValues[item.key]}
+                onChangeText={(text) => setLocalValues(prev => ({ ...prev, [item.key]: text }))}
+                keyboardType="numeric"
+                placeholder="0"
+              />
+            </View>
+          </View>
+        )}
+        ListEmptyComponent={
+          loading ? (
+            <ActivityIndicator style={{ marginTop: 40 }} color="#10b981" />
+          ) : (
+            <View style={styles.emptyBox}>
+              <Text style={styles.emptyText}>No settings found</Text>
+            </View>
+          )
+        }
+      />
+    </View>
+  );
+
+  if (Platform.OS === 'web') {
+    return (
+      <WebLayout noCard>
+        <SettingsSubbar>
+          {inner}
+        </SettingsSubbar>
+      </WebLayout>
+    );
+  }
+
+  return (
+    <SettingsSubbar>
+      <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+        {inner}
+      </View>
+    </SettingsSubbar>
   );
 }
 
 const styles = StyleSheet.create({
-  page: {
+  container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
-  },
-  pageContent: {
-    paddingBottom: 40,
+    backgroundColor: '#FFFFFF',
   },
   header: {
     backgroundColor: '#FFFFFF',
     padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
-    marginBottom: 20,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   title: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: '#111827',
-  },
-  subtitle: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 4,
-  },
-  form: {
-    paddingHorizontal: 20,
-    gap: 16,
-  },
-  card: {
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 8,
-  },
-  cardTitle: {
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: '700',
     color: '#111827',
+    fontFamily: 'Inter',
   },
-  description: {
+  subtitle: {
     fontSize: 13,
     color: '#6B7280',
-    marginBottom: 16,
-    lineHeight: 18,
+    marginTop: 4,
+    fontFamily: 'Inter',
   },
-  inputGroup: {
-    gap: 8,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#374151',
-  },
-  input: {
-    height: 44,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: 15,
-    backgroundColor: '#FFFFFF',
-    color: '#111827',
-  },
-  saveBtn: {
-    marginTop: 12,
-    height: 50,
-  },
-  infoBox: {
-    marginTop: 32,
-    marginHorizontal: 20,
-    padding: 16,
+  infoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     backgroundColor: '#EFF6FF',
+    padding: 12,
     borderRadius: 12,
+    marginTop: 16,
     borderWidth: 1,
     borderColor: '#DBEAFE',
   },
-  infoTitle: {
-    fontSize: 14,
-    fontWeight: '700',
+  infoText: {
+    fontSize: 12,
     color: '#1E40AF',
+    flex: 1,
+    fontFamily: 'Inter',
+    lineHeight: 16,
+    opacity: 0.9,
+  },
+  listContent: {
+    padding: 20,
+    paddingBottom: 40,
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    marginBottom: 8,
+    marginTop: 20,
+  },
+  columnHeader: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B7280',
+    fontFamily: 'Inter',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  cell: {
+    justifyContent: 'center',
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     marginBottom: 4,
   },
-  infoText: {
-    fontSize: 13,
-    color: '#1E40AF',
-    lineHeight: 18,
-    opacity: 0.8,
+  cellText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#111827',
+    fontFamily: 'Inter',
+  },
+  cellTextBold: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#111827',
+    fontFamily: 'Inter',
+  },
+  cellTextSub: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    fontFamily: 'Inter',
+    lineHeight: 14,
+  },
+  tableInput: {
+    width: 80,
+    height: 32,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    fontSize: 12,
+    backgroundColor: '#F9FAFB',
+    textAlign: 'right',
+    fontFamily: 'Inter',
+    color: '#111827',
+  },
+  emptyBox: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: '#6B7280',
+    fontSize: 14,
+    fontFamily: 'Inter',
   },
 });

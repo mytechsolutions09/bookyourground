@@ -455,6 +455,20 @@ export default function OwnerDashboardScreen() {
 
       <TouchableOpacity 
         style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]} 
+        onPress={() => router.push('/(owner)/inventory' as any)}
+      >
+        <View style={[styles.statBox, isUltraNarrow && { paddingVertical: 16, paddingHorizontal: 12, borderRadius: 20 }]}>
+          <View style={styles.iconCircle}>
+            <CalendarClock size={20} color="#01b854" />
+          </View>
+          <Text style={styles.statsLabel}>Inventory</Text>
+          <Text style={styles.statsValueSmall}>Manage</Text>
+          <Text style={styles.statsCaption}>Slots & availability</Text>
+        </View>
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]} 
         onPress={() => router.push('/(owner)/add-ground' as any)}
       >
         <View style={[styles.statBox, isUltraNarrow && { paddingVertical: 16, paddingHorizontal: 12, borderRadius: 20 }]}>
