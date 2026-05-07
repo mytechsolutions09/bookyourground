@@ -1,4 +1,5 @@
 import { View, Text as RNText, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, useWindowDimensions, Pressable, Image, ActivityIndicator } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { ExpoImage } from 'expo-image';
 import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
@@ -55,7 +56,13 @@ const LIGHT_CARD = '#ffffff';
 const LIGHT_BORDER = '#f1f5f9';
 const LIGHT_MUTED = '#64748b';
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ 
+  isModal, 
+  onClose 
+}: { 
+  isModal?: boolean; 
+  onClose?: () => void;
+} = {}) {
   const { user, profile, signOut } = useAuth();
   const { width } = useWindowDimensions();
   const isCompact = width < 900;
@@ -218,7 +225,7 @@ export default function ProfileScreen() {
       )}
 
       {/* 1. PROFILE CARD */}
-      <View style={[styles.profileCardNew, isUltraNarrow && { padding: 16, marginBottom: 20 }]}>
+      <View style={[styles.profileCardNew, isModal && styles.noContainer, isUltraNarrow && { padding: 16, marginBottom: 20 }]}>
         <View style={styles.profileCardContent}>
           <TouchableOpacity 
             activeOpacity={0.8} 
@@ -246,12 +253,6 @@ export default function ProfileScreen() {
               {profile?.role === 'ground_owner' ? 'Ground Owner & Player' : 'Player'}
             </RNText>
             
-            <View style={styles.emailContainerNew}>
-              <Mail size={12} color={themeAccent} />
-              <RNText style={styles.emailTextNew}>{user?.email}</RNText>
-            </View>
-            
-
           </View>
         </View>
       </View>
@@ -262,7 +263,7 @@ export default function ProfileScreen() {
           <RNText style={styles.sectionTitle}>SUPER ADMIN HUB</RNText>
           <View style={styles.hubGrid}>
             <TouchableOpacity 
-              style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
+              style={[styles.hubCard, isModal && styles.noContainer, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
               onPress={() => router.push('/(admin)/dashboard' as any)}
             >
               <View style={styles.hubIconCircle}>
@@ -390,7 +391,7 @@ export default function ProfileScreen() {
           <RNText style={styles.sectionTitle}>GROUND OWNER HUB</RNText>
           <View style={styles.hubGrid}>
             <TouchableOpacity 
-              style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
+              style={[styles.hubCard, isModal && styles.noContainer, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
               onPress={() => router.push('/(owner)/owner-dashboard' as any)}
             >
               <View style={styles.hubIconCircle}>
@@ -455,7 +456,7 @@ export default function ProfileScreen() {
       {/* 3. PLAYER DASHBOARD (Rows) */}
       <View style={styles.sectionContainer}>
         <RNText style={styles.sectionTitle}>QUICK ACCESS</RNText>
-        <View style={styles.rowList}>
+        <View style={[styles.rowList, isModal && styles.noContainer]}>
           <TouchableOpacity 
             style={styles.rowItem}
             onPress={() => router.push('/(tabs)/dashboard' as any)}
@@ -464,7 +465,6 @@ export default function ProfileScreen() {
               <LayoutDashboard size={20} color="#10b981" />
               <RNText style={styles.rowText}>My Dashboard</RNText>
             </View>
-            <ChevronRight size={20} color="#94a3b8" />
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -475,7 +475,6 @@ export default function ProfileScreen() {
               <Trophy size={20} color="#10b981" />
               <RNText style={styles.rowText}>My Bookings</RNText>
             </View>
-            <ChevronRight size={20} color="#94a3b8" />
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -486,7 +485,6 @@ export default function ProfileScreen() {
               <Star size={20} color="#10b981" />
               <RNText style={styles.rowText}>My Favourites</RNText>
             </View>
-            <ChevronRight size={20} color="#94a3b8" />
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -497,7 +495,6 @@ export default function ProfileScreen() {
               <ShoppingBag size={20} color="#10b981" />
               <RNText style={styles.rowText}>My Orders</RNText>
             </View>
-            <ChevronRight size={20} color="#94a3b8" />
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -508,7 +505,6 @@ export default function ProfileScreen() {
               <Settings size={20} color="#10b981" />
               <RNText style={styles.rowText}>Settings</RNText>
             </View>
-            <ChevronRight size={20} color="#94a3b8" />
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -519,7 +515,6 @@ export default function ProfileScreen() {
               <IndianRupee size={20} color="#10b981" />
               <RNText style={styles.rowText}>My Wallet</RNText>
             </View>
-            <ChevronRight size={20} color="#94a3b8" />
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -530,18 +525,19 @@ export default function ProfileScreen() {
               <LifeBuoy size={20} color="#10b981" />
               <RNText style={styles.rowText}>Contact Us</RNText>
             </View>
-            <ChevronRight size={20} color="#94a3b8" />
           </TouchableOpacity>
         </View>
       </View>
 
-      <Button
-        title="Sign Out"
+      <TouchableOpacity
         onPress={handleSignOut}
-        variant="danger"
-        fullWidth
-        style={styles.signOutButtonNew}
-      />
+        activeOpacity={0.8}
+        style={styles.signOutGlassContainer}
+      >
+        <BlurView intensity={20} tint="light" style={styles.signOutGlass}>
+          <RNText style={styles.signOutText}>Sign Out</RNText>
+        </BlurView>
+      </TouchableOpacity>
     </View>
   );
 
@@ -613,9 +609,10 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '500',
     color: '#212121',
+    fontFamily: 'Inter',
   },
   pageTitle: {
     fontSize: 20,
@@ -828,6 +825,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(16, 185, 129, 0.05)',
   },
+  noContainer: {
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    shadowOpacity: 0,
+    elevation: 0,
+    paddingHorizontal: 0,
+  },
   profileCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -861,18 +865,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   nameNew: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '500',
     color: '#0F172A',
-    marginBottom: 4,
-    letterSpacing: -0.3,
+    marginBottom: 2,
+    letterSpacing: -0.2,
     fontFamily: 'Inter',
   },
   roleNew: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '400',
     color: '#64748B',
-    marginBottom: 12,
+    marginBottom: 10,
     fontFamily: 'Inter',
   },
   levelContainer: {
@@ -910,13 +914,12 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '500',
     color: '#0F172A',
-    marginBottom: 12,
-    letterSpacing: 0.5,
+    marginBottom: 10,
+    letterSpacing: 0.3,
     fontFamily: 'Inter',
-    textTransform: 'uppercase',
   },
   hubGrid: {
     flexDirection: 'row',
@@ -950,8 +953,8 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   hubCardText: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '400',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
@@ -981,8 +984,8 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   rowText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '400',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
@@ -994,9 +997,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  signOutButtonNew: {
+  signOutGlassContainer: {
     marginBottom: 40,
-    borderRadius: 16,
-    height: 56,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(239, 68, 68, 0.1)',
+  },
+  signOutGlass: {
+    height: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(239, 68, 68, 0.05)',
+  },
+  signOutText: {
+    color: '#EF4444',
+    fontSize: 14,
+    fontWeight: '500',
+    fontFamily: 'Inter',
   },
 });

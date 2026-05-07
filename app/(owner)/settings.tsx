@@ -804,18 +804,18 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontFamily: 'Inter',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '500',
     color: '#0F172A',
     marginBottom: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.2,
   },
   sectionSubtitle: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#64748B',
     marginBottom: 20,
     fontFamily: 'Inter',
+    fontWeight: '400',
   },
   formRow: {
     marginBottom: 12,
@@ -829,12 +829,11 @@ const styles = StyleSheet.create({
   },
   label: {
     fontFamily: 'Inter',
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 10,
+    fontWeight: '500',
     color: '#64748B',
     marginBottom: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   input: {
     fontFamily: 'Inter',
@@ -859,6 +858,9 @@ const styles = StyleSheet.create({
   submitButton: {
     backgroundColor: '#01b854',
     borderWidth: 0,
+    height: 46,
+    paddingHorizontal: 24,
+    borderRadius: 12,
   },
   tabContainer: {
     flexDirection: 'row',
@@ -887,13 +889,13 @@ const styles = StyleSheet.create({
 
   tabText: {
     fontFamily: 'Inter',
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '500',
     color: '#64748B',
   },
   activeTabText: {
     color: '#01b854',
-    fontWeight: '700',
+    fontWeight: '500',
   },
   tabContentGap: {
     gap: 16,
@@ -979,10 +981,10 @@ const styles = StyleSheet.create({
   },
 
   couponCodeText: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '500',
     color: '#0F172A',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
     fontFamily: 'Inter',
   },
   couponDetsText: {
@@ -1030,11 +1032,10 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   helpHeader: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '500',
     color: '#01b854',
     marginBottom: 4,
-    textTransform: 'uppercase',
     fontFamily: 'Inter',
   },
   helpItem: {
@@ -1043,10 +1044,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   helpTitle: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '500',
     color: '#0F172A',
     marginBottom: 4,
+    fontFamily: 'Inter',
   },
   helpText: {
     fontSize: 13,
@@ -1080,8 +1082,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   verifiedTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '500',
     color: '#0F172A',
     marginBottom: 4,
     fontFamily: 'Inter',

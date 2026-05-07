@@ -51,9 +51,12 @@ function getActiveTab(
   if (tab === 'inventory' || segments.includes('inventory')) return 'inventory';
   if (tab === 'select-sport') return 'find';
   
-  // Also check if we are in (owner) or (admin) inventory
+  // Also check if we are in (owner) or (admin) inventory / bookings
   if (segments.includes('(owner)') && segments.includes('inventory')) return 'inventory';
   if (segments.includes('(admin)') && segments.includes('inventory')) return 'inventory';
+  if (segments.includes('(owner)') && segments.includes('ground-bookings')) return 'bookings';
+  if (segments.includes('(admin)') && segments.includes('ground-bookings')) return 'bookings';
+  if (segments.includes('ground-bookings')) return 'bookings';
   
   return 'home';
 }
@@ -145,8 +148,9 @@ export default function MobileTabBar() {
 
   const isSuperAdmin = profile?.role === 'super_admin' || (user?.email?.toLowerCase() === 'invirtualcoin@gmail.com');
   const showInventoryTab = isOwner || isSuperAdmin;
+  const showOwnerBookings = isOwner || isSuperAdmin;
   
-  const TAB_ORDER = ['home', showInventoryTab ? 'inventory' : 'grounds', 'find', 'shop', 'stats'];
+  const TAB_ORDER = ['home', showInventoryTab ? 'inventory' : 'grounds', showOwnerBookings ? 'bookings' : 'find', 'shop', 'stats'];
 
   const go = (href: string, tabName: string) => {
     const currentIndex = TAB_ORDER.indexOf(activeTab);
@@ -200,7 +204,15 @@ export default function MobileTabBar() {
       
       <Pressable
         style={styles.item}
-        onPress={() => activeTab === 'shop' ? go('/shop/cart', 'cart') : go(Platform.OS === 'web' ? '/search' : '/select-sport', 'find')}
+        onPress={() => {
+          if (activeTab === 'shop') {
+            go('/shop/cart', 'cart');
+          } else if (showOwnerBookings) {
+            go(isSuperAdmin ? '/(admin)/bookings' : '/(owner)/ground-bookings', 'bookings');
+          } else {
+            go(Platform.OS === 'web' ? '/search' : '/select-sport', 'find');
+          }
+        }}
       >
         {activeTab === 'shop' ? (
           <View style={{ position: 'relative' }}>
@@ -214,9 +226,13 @@ export default function MobileTabBar() {
           </View>
         ) : (
           <>
-            <Search size={size} color={(activeTab === 'find' || activeTab === 'find-opponent') ? ACTIVE : INACTIVE} strokeWidth={(activeTab === 'find' || activeTab === 'find-opponent') ? 2.5 : 2} />
-            <Text style={[styles.label, { color: (activeTab === 'find' || activeTab === 'find-opponent') ? ACTIVE : INACTIVE }]}>
-              {Platform.OS === 'web' ? 'Search' : 'Find'}
+            {showOwnerBookings ? (
+              <CalendarCheck2 size={size} color={activeTab === 'bookings' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'bookings' ? 2.5 : 2} />
+            ) : (
+              <Search size={size} color={(activeTab === 'find' || activeTab === 'find-opponent') ? ACTIVE : INACTIVE} strokeWidth={(activeTab === 'find' || activeTab === 'find-opponent') ? 2.5 : 2} />
+            )}
+            <Text style={[styles.label, { color: (activeTab === 'find' || activeTab === 'find-opponent' || activeTab === 'bookings') ? ACTIVE : INACTIVE }]}>
+              {showOwnerBookings ? 'Bookings' : (Platform.OS === 'web' ? 'Search' : 'Find')}
             </Text>
           </>
         )}

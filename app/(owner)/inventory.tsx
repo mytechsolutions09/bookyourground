@@ -125,8 +125,6 @@ export default function OwnerInventoryScreen() {
         .from('grounds')
         .select(`*, ground_images(*), time_slots(*)`)
         .eq('owner_id', user.id)
-        .eq('active', true)
-        .eq('approved', true)
         .order('name');
 
       if (groundsError) throw groundsError;
@@ -169,10 +167,12 @@ export default function OwnerInventoryScreen() {
       if (!selectedGroundId && groundsData && groundsData.length > 0) {
         setSelectedGroundId(groundsData[0].id);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading inventory data:', error);
+      alert('Error loading inventory: ' + (error.message || 'Unknown error'));
     } finally {
       setLoading(false);
+      console.log('Inventory load complete. Grounds:', grounds.length, 'User:', user?.id);
     }
   };
 
@@ -478,7 +478,6 @@ export default function OwnerInventoryScreen() {
         contentContainerStyle={[
           styles.mainScrollContent,
           { 
-            paddingTop: (isWeb && isSmall) ? 50 : 0,
             paddingBottom: isSmall ? 100 : 80
           }
         ]}
@@ -489,6 +488,12 @@ export default function OwnerInventoryScreen() {
         bounces={false}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
       >
+        {loading && grounds.length === 0 && (
+          <View style={{ padding: 40, alignItems: 'center' }}>
+            <ActivityIndicator size="large" color="#00ea6b" />
+            <Text style={{ marginTop: 12, color: '#6B7280', fontSize: 14 }}>Loading inventory...</Text>
+          </View>
+        )}
         {!isScrolled && !isSmall && grounds.length > 0 && (
           <View style={styles.selectionTabs}>
             <ScrollView 
@@ -566,7 +571,14 @@ export default function OwnerInventoryScreen() {
               </View>
             ) : (
               <View style={styles.noGroundSelected}>
-                 <Text style={styles.emptyText}>No grounds found in your inventory</Text>
+                 <Building2 size={48} color="#D1D5DB" />
+                 <Text style={styles.emptyText}>No grounds found in your inventory.</Text>
+                 <TouchableOpacity 
+                   style={styles.addGroundBtn}
+                   onPress={() => router.push('/(owner)/grounds')}
+                 >
+                   <Text style={styles.addGroundBtnText}>Manage Grounds</Text>
+                 </TouchableOpacity>
               </View>
             )}
           </View>
@@ -733,23 +745,203 @@ export default function OwnerInventoryScreen() {
   );
 
   return (
-    <>
-      {isWeb ? (
-        <WebLayout hideHeader={isSmall} isPublicNoSidebar={isSmall}>
-          {isSmall && (
-            <Animated.View style={[headerAnimatedStyle, { paddingTop: insets.top, backgroundColor: '#FFFFFF' }]}>
-              <MobileAppNavbar title="Inventory" titleColor="#00ea6b" />
-            </Animated.View>
-          )}
-          <View style={styles.screen}>{content}</View>
+    <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+      {isWeb && !isSmall ? (
+        <WebLayout>
+          <View style={styles.screen}>
+            {/* Direct Header */}
+            <View style={[styles.pageHeader, styles.webPageHeader]}>
+               <View style={[styles.headerTop, { flexDirection: 'row', alignItems: 'center' }]}>
+                 <View>
+                   <Text style={styles.title}>Inventory Management</Text>
+                   <Text style={styles.subtitle}>Owner Dashboard</Text>
+                 </View>
+                 <View style={styles.filterCard}>
+                    <View style={styles.filtersContainer}>
+                      {/* Web Filters Here - Simplified for now to ensure rendering */}
+                      <View style={styles.statusFilters}>
+                        {['ALL', 'EMPTY', 'PARTIAL', 'FULL'].map(status => (
+                          <TouchableOpacity key={status} onPress={() => setStatusFilter(status)} style={[styles.filterTag, statusFilter === status && styles.tagAll]}>
+                            <Text style={[styles.filterTagText, statusFilter === status && { color: '#043529' }]}>{status}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                 </View>
+               </View>
+            </View>
+
+            <ScrollView 
+              style={styles.mainScroll} 
+              contentContainerStyle={styles.mainScrollContent}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
+              refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
+            >
+              {loading && grounds.length === 0 ? (
+                <ActivityIndicator size="large" color="#00ea6b" style={{ marginTop: 50 }} />
+              ) : (
+                <View style={styles.hierarchyContainer}>
+                  {currentGround ? (
+                    <View style={styles.inventoryContainer}>
+                      <View style={styles.inventoryStaticList}>
+                        {Array.from({ length: daysToShow === 'L30' ? 30 : daysToShow }).map((_, i) => {
+                          const d = new Date();
+                          if (daysToShow === 'L30') d.setDate(d.getDate() - 29 + i);
+                          else if (selectedDateFilter) {
+                             const [y, m, day] = selectedDateFilter.split('-').map(Number);
+                             d.setFullYear(y, m - 1, day);
+                             d.setDate(d.getDate() + i);
+                          }
+                          const dateStr = toLocalIsoDate(d);
+                          return (
+                            <View key={dateStr} style={styles.compactDateRow}>
+                              <View style={styles.compactDateLabel}>
+                                <Text style={styles.dateDay}>{d.toLocaleDateString('en-IN', { weekday: 'short' })}</Text>
+                                <Text style={styles.dateNum}>{d.getDate()} {d.toLocaleDateString('en-IN', { month: 'short' })}</Text>
+                              </View>
+                              <View style={styles.slotsWrapper}>
+                                {renderSlotsForDate(currentGround, dateStr)}
+                              </View>
+                            </View>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={styles.noGroundSelected}>
+                      <Building2 size={48} color="#D1D5DB" />
+                      <Text style={styles.emptyText}>No ground selected or found.</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+            </ScrollView>
+          </View>
         </WebLayout>
       ) : (
-        <>
+        <View style={{ flex: 1 }}>
           <MobileAppNavbar title="Inventory" titleColor="#00ea6b" />
-          <View style={styles.screen}>{content}</View>
-        </>
+          
+          <View style={styles.pageHeader}>
+             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mobileFiltersRow}>
+                <TouchableOpacity style={styles.mobileDropdown} onPress={() => setActivePicker('ground')}>
+                  <Building2 size={14} color="#00ea6b" />
+                  <Text style={styles.mobileDropdownText} numberOfLines={1}>{currentGround?.name || 'Ground'}</Text>
+                  <ChevronDown size={14} color="#6B7280" />
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.mobileDropdown} onPress={() => setActivePicker('status')}>
+                  <Filter size={14} color="#00ea6b" />
+                  <Text style={styles.mobileDropdownText}>{statusFilter}</Text>
+                  <ChevronDown size={14} color="#6B7280" />
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.mobileDropdown} onPress={() => setActivePicker('range')}>
+                  <Clock size={14} color="#00ea6b" />
+                  <Text style={styles.mobileDropdownText}>{daysToShow}D</Text>
+                  <ChevronDown size={14} color="#6B7280" />
+                </TouchableOpacity>
+             </ScrollView>
+          </View>
+
+          <ScrollView 
+            style={styles.mainScroll} 
+            contentContainerStyle={styles.mainScrollContent}
+            refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
+          >
+            {loading && grounds.length === 0 ? (
+              <View style={{ padding: 40, alignItems: 'center' }}>
+                <ActivityIndicator size="large" color="#00ea6b" />
+                <Text style={{ marginTop: 12, color: '#6B7280' }}>Loading inventory...</Text>
+              </View>
+            ) : (
+              <View style={styles.hierarchyContainer}>
+                {currentGround ? (
+                  <View style={styles.inventoryContainer}>
+                    {Array.from({ length: daysToShow === 'L30' ? 30 : daysToShow }).map((_, i) => {
+                      const d = new Date();
+                      if (daysToShow === 'L30') d.setDate(d.getDate() - 29 + i);
+                      else if (selectedDateFilter) {
+                         const [y, m, day] = selectedDateFilter.split('-').map(Number);
+                         d.setFullYear(y, m - 1, day);
+                         d.setDate(d.getDate() + i);
+                      }
+                      const dateStr = toLocalIsoDate(d);
+                      return (
+                        <View key={dateStr} style={styles.compactDateRow}>
+                          <View style={styles.compactDateLabel}>
+                            <Text style={styles.dateDay}>{d.toLocaleDateString('en-IN', { weekday: 'short' })}</Text>
+                            <Text style={styles.dateNum}>{d.getDate()} {d.toLocaleDateString('en-IN', { month: 'short' })}</Text>
+                          </View>
+                          <View style={styles.slotsWrapper}>
+                            {renderSlotsForDate(currentGround, dateStr)}
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  <View style={styles.noGroundSelected}>
+                    <Building2 size={48} color="#D1D5DB" />
+                    <Text style={styles.emptyText}>No ground selected.</Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </ScrollView>
+        </View>
       )}
-    </>
+
+      {/* Choice Modal */}
+      <Modal visible={!!bookingChoice} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <Card style={styles.choiceCard}>
+            <Text style={styles.choiceTitle}>Select Booking Type</Text>
+            <View style={styles.choiceButtons}>
+               <TouchableOpacity style={styles.choiceBtn} onPress={() => {/* Book 1 Team Logic */}}>
+                 <Text style={styles.choiceBtnText}>Book 1 Team</Text>
+               </TouchableOpacity>
+               <TouchableOpacity style={[styles.choiceBtn, styles.choiceBtnPrimary]} onPress={() => {/* Full Ground Logic */}}>
+                 <Text style={[styles.choiceBtnText, { color: '#FFF' }]}>Full Ground</Text>
+               </TouchableOpacity>
+            </View>
+            <TouchableOpacity style={styles.choiceCancel} onPress={() => setBookingChoice(null)}>
+              <Text style={styles.choiceCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </Card>
+        </View>
+      </Modal>
+
+      {/* Picker Modal */}
+      <Modal visible={!!activePicker} transparent animationType="fade">
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setActivePicker(null)}>
+          <Card style={styles.pickerCard}>
+            <View style={styles.pickerHeader}>
+              <Text style={styles.pickerTitle}>Select Option</Text>
+              <TouchableOpacity onPress={() => setActivePicker(null)}><X size={20} color="#6B7280" /></TouchableOpacity>
+            </View>
+            <ScrollView style={styles.pickerOptions}>
+               {activePicker === 'ground' && grounds.map(g => (
+                 <TouchableOpacity key={g.id} style={styles.pickerOption} onPress={() => { setSelectedGroundId(g.id); setActivePicker(null); }}>
+                   <Text style={styles.pickerOptionText}>{g.name}</Text>
+                 </TouchableOpacity>
+               ))}
+               {activePicker === 'status' && ['ALL', 'EMPTY', 'PARTIAL', 'FULL'].map(s => (
+                 <TouchableOpacity key={s} style={styles.pickerOption} onPress={() => { setStatusFilter(s); setActivePicker(null); }}>
+                   <Text style={styles.pickerOptionText}>{s}</Text>
+                 </TouchableOpacity>
+               ))}
+               {activePicker === 'range' && [7, 14, 30, 90, 'L30'].map(r => (
+                 <TouchableOpacity key={r.toString()} style={styles.pickerOption} onPress={() => { setDaysToShow(r as any); setActivePicker(null); }}>
+                   <Text style={styles.pickerOptionText}>{r === 'L30' ? 'Past 30D' : `${r} Days`}</Text>
+                 </TouchableOpacity>
+               ))}
+            </ScrollView>
+          </Card>
+        </TouchableOpacity>
+      </Modal>
+    </View>
   );
 }
 
@@ -763,7 +955,7 @@ const styles = StyleSheet.create({
   },
   pageHeader: {
     backgroundColor: '#FFFFFF',
-    padding: 24,
+    padding: IS_WEB ? 24 : 16,
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
   },
@@ -906,9 +1098,10 @@ const styles = StyleSheet.create({
   } as any,
   mainScroll: {
     flex: 1,
+    minHeight: 400,
   },
   mainScrollContent: {
-    // base padding
+    flexGrow: 1,
   },
   selectionTabs: {
     backgroundColor: 'transparent',
@@ -1035,6 +1228,20 @@ const styles = StyleSheet.create({
   emptyText: {
     color: '#6B7280',
     fontSize: 14,
+    marginTop: 8,
+  },
+  addGroundBtn: {
+    marginTop: 16,
+    backgroundColor: '#00ea6b',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  addGroundBtnText: {
+    color: '#05291f',
+    fontSize: 14,
+    fontWeight: '700',
+    fontFamily: 'Inter',
   },
   modalOverlay: {
     flex: 1,

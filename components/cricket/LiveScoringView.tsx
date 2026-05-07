@@ -52,11 +52,12 @@ export const LiveScoringView = ({
 }: any) => {
   const [showWagonWheel, setShowWagonWheel] = useState(false);
   const [pendingRuns, setPendingRuns] = useState<number | null>(null);
+  const [isWagonWheelSuppressed, setIsWagonWheelSuppressed] = useState(false);
 
   if (!inn) return null;
   
   const handleAddBallWithWagon = (runs: number) => {
-    if (matchConfig?.wagonWheel && runs > 0) {
+    if (matchConfig?.wagonWheel && runs > 0 && !isWagonWheelSuppressed) {
       setPendingRuns(runs);
       setShowWagonWheel(true);
     } else {
@@ -275,7 +276,17 @@ export const LiveScoringView = ({
                 style={{ marginTop: 20, paddingVertical: 14, backgroundColor: '#E5E7EB', borderRadius: 12, alignItems: 'center' }}
                 onPress={() => selectArea('Unspecified')}
               >
-                <Text style={{ fontSize: 14, fontWeight: '700', color: '#4B5563' }}>Skip Wagon Wheel</Text>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#4B5563' }}>Skip Once</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={{ marginTop: 10, paddingVertical: 14, backgroundColor: '#FEE2E2', borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#FECACA' }}
+                onPress={() => {
+                   setIsWagonWheelSuppressed(true);
+                   selectArea('Unspecified');
+                }}
+              >
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#B91C1C' }}>Skip for this Innings</Text>
               </TouchableOpacity>
             </View>
           </Pressable>
@@ -286,13 +297,16 @@ export const LiveScoringView = ({
 
 // --- BOWLER SELECTION VIEW ---
 export const BowlerSelectionView = ({ 
-  isVisible, inn, selectedTeamA, selectedTeamB, playingXiA, playingXiB, tossResult, onSelectBowler 
+  isVisible, inn, selectedTeamA, selectedTeamB, playingXiA, playingXiB, tossResult, onSelectBowler, currentBowler 
 }: any) => {
   if (!isVisible || !inn) return null;
 
   const battingTeam = tossResult?.decision === 'bat' ? tossResult?.winner : (tossResult?.winner?.id === selectedTeamA?.id ? selectedTeamB : selectedTeamA);
   const bowlingTeam = battingTeam?.id === selectedTeamA?.id ? selectedTeamB : selectedTeamA;
-  const bowlingPlayers = (bowlingTeam?.id === selectedTeamA?.id ? playingXiA : playingXiB) || [];
+  const allBowlingPlayers = (bowlingTeam?.id === selectedTeamA?.id ? playingXiA : playingXiB) || [];
+
+  // Filter out the current bowler (consecutive overs rule)
+  const bowlingPlayers = allBowlingPlayers.filter((p: any) => p.player_name !== currentBowler?.name);
 
   return (
     <Modal

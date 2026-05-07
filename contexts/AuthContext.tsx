@@ -51,9 +51,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', userId)
         .maybeSingle();
 
-      // Race against a 4-second timeout for the database call
+      // Race against a 10-second timeout for the database call
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 4000)
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 10000)
       );
 
       const { data, error } = await Promise.race([profilePromise, timeoutPromise]) as any;
@@ -94,10 +94,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Clear any existing timeout
         if (profileTimeout) clearTimeout(profileTimeout);
 
-        // Set a safety timeout: don't block the app for more than 5 seconds on profile loading
+        // Set a safety timeout: don't block the app for more than 12 seconds on profile loading
         profileTimeout = setTimeout(() => {
           setLoading(false);
-        }, 5000);
+        }, 12000);
 
         // Load profile if needed
         if (!profile || profile.id !== newUser.id) {

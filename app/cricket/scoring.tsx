@@ -44,6 +44,7 @@ import {
   DashboardView,
   TeamSelectionView,
   PlayerSelectionView,
+  MatchConfigurationView,
   TossConfigurationView, 
   OpeningSelectionView,
   ScoringSettingsSheet
@@ -772,6 +773,7 @@ export default function ScoringScreen() {
         playingXiA={playingXiA}
         playingXiB={playingXiB}
         tossResult={tossResult}
+        currentBowler={bowler}
         onSelectBowler={handleSelectBowler}
       />
       <MoreActionsModal 

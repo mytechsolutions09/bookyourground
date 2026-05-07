@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, ScrollView, TouchableOpacity } from 'react-native';
-import { router, usePathname } from 'expo-router';
+import { router, usePathname, useLocalSearchParams } from 'expo-router';
 import { 
   ShoppingBag, 
   RotateCcw, 
@@ -13,11 +13,12 @@ const BASE = '/(admin)';
 
 export default function ShopSubbar({ children, onAddProduct }: { children: React.ReactNode, onAddProduct?: () => void }) {
   const pathname = usePathname();
-
+  const params = useLocalSearchParams();
   const isOrders = pathname.includes('/orders');
   const isReturns = pathname.includes('/returns');
-  const isProducts = pathname.includes('/products');
-  const isCategories = pathname.includes('/categories');
+  const isProducts = pathname.includes('/products') && !params.view;
+  const isCategories = pathname.includes('/categories') || params.view === 'categories';
+  const isReviews = pathname.includes('/reviews') || params.view === 'reviews';
 
   return (
     <View style={styles.shell}>
@@ -57,6 +58,11 @@ export default function ShopSubbar({ children, onAddProduct }: { children: React
               onPress={() => router.push((BASE + '/categories') as any)}
               isActive={isCategories}
               label="CATEGORIES"
+            />
+            <NavButton 
+              onPress={() => router.push((BASE + '/reviews') as any)}
+              isActive={isReviews}
+              label="REVIEWS"
             />
           </ScrollView>
         </View>

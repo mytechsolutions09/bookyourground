@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert, TextInput } from 'react-native';
 import { supabase } from '@/lib/supabase';
-import { ShoppingBag, Plus, Search, Edit2, Trash2, Package, ClipboardList, X, Image as ImageIcon, Upload, Bold, Italic, List, Eye, Code, Type, Link, Quote, Smile, Undo, Trash, FileText } from 'lucide-react-native';
+import { ShoppingBag, Plus, Search, Edit2, Trash2, Package, ClipboardList, X, Image as ImageIcon, Upload, Bold, Italic, List, Eye, Code, Type, Link, Quote, Smile, Undo, Trash, FileText, Star, MessageSquare, CheckCircle } from 'lucide-react-native';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import WebLayout from '@/components/web/WebLayout';
@@ -16,12 +16,13 @@ export default function AdminProductsScreen() {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'products' | 'categories'>('products');
+  const [viewMode, setViewMode] = useState<'products' | 'categories' | 'reviews'>('products');
   const [showAddForm, setShowAddForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [reviews, setReviews] = useState<any[]>([]);
   const [newColorVariant, setNewColorVariant] = useState({ name: '', hex: '#f8688a' });
 
   // Form State
@@ -99,16 +100,12 @@ export default function AdminProductsScreen() {
   useEffect(() => {
     fetchProducts();
     fetchCategories();
-
-    // Check for view param from ShopSubbar
-    if (params.view === 'categories') {
-      setViewMode('categories');
-    }
+    fetchReviews();
 
     const handleOpenForm = () => setShowAddForm(true);
     const handleSetView = (e: any) => {
       const mode = Platform.OS === 'web' ? e.detail : e;
-      if (mode === 'products' || mode === 'categories') {
+      if (mode === 'products' || mode === 'categories' || mode === 'reviews') {
         setViewMode(mode);
         setShowAddForm(false);
       }
@@ -133,6 +130,16 @@ export default function AdminProductsScreen() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (params.view === 'categories') {
+      setViewMode('categories');
+    } else if (params.view === 'reviews') {
+      setViewMode('reviews');
+    } else if (params.view === 'products') {
+      setViewMode('products');
+    }
+  }, [params.view]);
 
   const fetchCategories = async () => {
     const { data } = await supabase.from('shop_categories').select('*').order('name');
@@ -206,6 +213,45 @@ export default function AdminProductsScreen() {
       ...prev,
       images: prev.images.filter((_, i) => i !== index)
     }));
+  };
+
+  const fetchReviews = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('shop_product_reviews')
+        .select(`
+          *,
+          product:shop_products(name, images)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setReviews(data || []);
+    } catch (err: any) {
+      console.error('Error fetching reviews:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteReview = async (reviewId: string) => {
+    if (Platform.OS === 'web' && !window.confirm('Are you sure you want to delete this review?')) return;
+    
+    try {
+      setIsSubmitting(true);
+      const { error } = await supabase
+        .from('shop_product_reviews')
+        .delete()
+        .eq('id', reviewId);
+      
+      if (error) throw error;
+      fetchReviews();
+    } catch (err: any) {
+      Alert.alert('Error', err.message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const fetchProducts = async () => {
@@ -749,6 +795,85 @@ export default function AdminProductsScreen() {
                     textStyle={{ fontSize: 13, fontWeight: '600', fontFamily: 'Inter' }}
                   />
                 </View>
+              </View>
+            </View>
+          ) : viewMode === 'reviews' ? (
+            <View style={styles.reviewsContainer}>
+              <View style={styles.reviewsHeader}>
+                <View style={styles.searchBarReviews}>
+                  <Search size={18} color="#9CA3AF" />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Search reviews or products..."
+                    placeholderTextColor="#9CA3AF"
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.reviewsGrid}>
+                {loading ? (
+                  <ActivityIndicator size="large" color="#00ea6b" style={{ marginTop: 40 }} />
+                ) : reviews.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <MessageSquare size={48} color="#E5E7EB" />
+                    <Text style={styles.emptyText}>No reviews found</Text>
+                  </View>
+                ) : reviews
+                  .filter(r => 
+                    r.comment?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                    r.product?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    r.user_name?.toLowerCase().includes(searchQuery.toLowerCase())
+                  )
+                  .map(review => (
+                    <View key={review.id} style={styles.reviewCard}>
+                      <View style={styles.reviewMain}>
+                        <View style={styles.reviewUserRow}>
+                          <View style={styles.userInfo}>
+                            <Text style={styles.reviewUserName}>{review.user_name || 'Anonymous User'}</Text>
+                            <View style={styles.reviewMeta}>
+                              <Text style={styles.reviewDate}>
+                                {new Date(review.created_at).toLocaleDateString()}
+                              </Text>
+                              {review.is_verified_purchase && (
+                                <View style={styles.verifiedBadge}>
+                                  <CheckCircle size={10} color="#10b981" />
+                                  <Text style={styles.verifiedText}>Verified Purchase</Text>
+                                </View>
+                              )}
+                            </View>
+                          </View>
+                          <View style={styles.ratingBadge}>
+                            <Star size={12} color="#F59E0B" fill="#F59E0B" />
+                            <Text style={styles.ratingValue}>{review.rating}.0</Text>
+                          </View>
+                        </View>
+
+                        <Text style={styles.reviewComment}>{review.comment}</Text>
+
+                        <View style={styles.reviewProductInfo}>
+                          <View style={styles.productMiniThumb}>
+                            {review.product?.images?.[0] ? (
+                              <Image source={{ uri: review.product.images[0] }} style={styles.miniThumbImg} />
+                            ) : (
+                              <Package size={14} color="#9CA3AF" />
+                            )}
+                          </View>
+                          <Text style={styles.productMiniName} numberOfLines={1}>
+                            {review.product?.name || 'Deleted Product'}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <TouchableOpacity 
+                        style={styles.reviewDeleteBtn}
+                        onPress={() => handleDeleteReview(review.id)}
+                      >
+                        <Trash2 size={18} color="#EF4444" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
               </View>
             </View>
           ) : (
@@ -1578,5 +1703,139 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     color: '#374151',
     fontFamily: 'Inter',
+  },
+  reviewsContainer: {
+    marginTop: 8,
+  },
+  reviewsHeader: {
+    marginBottom: 20,
+  },
+  searchBarReviews: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    height: 44,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 12,
+  },
+  reviewsGrid: {
+    gap: 16,
+  },
+  reviewCard: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    gap: 20,
+  },
+  reviewMain: {
+    flex: 1,
+  },
+  reviewUserRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  userInfo: {
+    gap: 4,
+  },
+  reviewUserName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+    fontFamily: 'Inter',
+  },
+  reviewMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  reviewDate: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontFamily: 'Inter',
+  },
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  verifiedText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#059669',
+    fontFamily: 'Inter',
+  },
+  ratingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FFFBEB',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FEF3C7',
+  },
+  ratingValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#D97706',
+    fontFamily: 'Inter',
+  },
+  reviewComment: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: '#4B5563',
+    marginBottom: 16,
+    fontFamily: 'Inter',
+  },
+  reviewProductInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#F9FAFB',
+    padding: 8,
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+  },
+  productMiniThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    backgroundColor: '#E5E7EB',
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  miniThumbImg: {
+    width: '100%',
+    height: '100%',
+  },
+  productMiniName: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#4B5563',
+    maxWidth: 200,
+    fontFamily: 'Inter',
+  },
+  reviewDeleteBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FEF2F2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
   },
 });

@@ -156,13 +156,9 @@ export default function LoginScreen() {
     if (profile.role === 'super_admin') {
       router.replace('/(admin)/dashboard');
     } else {
-      // For all other users (players & ground owners), take to home screen
-      // If we can go back, go back to where they were intended to go
-      if (router.canGoBack()) {
-        router.back();
-      } else {
-        router.replace('/(tabs)/home_tab');
-      }
+      // For both players and ground owners, land on the home discovery screen
+      // This ensures a consistent entry point as requested
+      router.replace('/(tabs)/home_tab');
     }
   }, [user, profile, redirect, date, time, teams]);
 

@@ -304,8 +304,8 @@ const styles = StyleSheet.create({
   },
   pageTitle: {
     fontFamily: 'Inter',
-    fontSize: 20,
-    fontWeight: '900',
+    fontSize: 18,
+    fontWeight: '500',
     color: '#0F172A',
     marginBottom: 2,
   },
@@ -329,30 +329,30 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontFamily: 'Inter',
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '500',
     color: '#0F172A',
     marginBottom: 6,
-    letterSpacing: -0.5,
+    letterSpacing: -0.2,
   },
   sectionSubtitle: {
     fontFamily: 'Inter',
-    fontSize: 13,
+    fontSize: 12,
     color: '#64748B',
     marginBottom: 24,
-    lineHeight: 18,
+    lineHeight: 16,
+    fontWeight: '400',
   },
   formRow: {
     marginBottom: 20,
   },
   label: {
     fontFamily: 'Inter',
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '500',
     color: '#64748B',
     marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   input: {
     fontFamily: 'Inter',
@@ -374,9 +374,9 @@ const styles = StyleSheet.create({
   submitButton: {
     backgroundColor: '#01b854',
     borderWidth: 0,
-    paddingHorizontal: 32,
-    borderRadius: 16,
-    height: 52,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    height: 46,
   },
   infoMuted: {
     fontFamily: 'Inter',
@@ -399,15 +399,16 @@ const styles = StyleSheet.create({
   },
   menuItemTitle: {
     fontFamily: 'Inter',
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '500',
     color: '#0F172A',
     marginBottom: 2,
   },
   menuItemSubtitle: {
     fontFamily: 'Inter',
-    fontSize: 13,
+    fontSize: 11,
     color: '#64748B',
+    fontWeight: '400',
   },
 });
 
@@ -474,10 +475,9 @@ const modalStyles = StyleSheet.create({
   },
   buttonText: {
     fontFamily: 'Inter',
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '500',
     color: '#FFFFFF',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });

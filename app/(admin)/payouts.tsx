@@ -250,8 +250,8 @@ function AdminPayoutsInner() {
   );
 
   return isWeb ? <WebLayout>{content}</WebLayout> : (
-    <View style={{ flex: 1, backgroundColor: '#F5F5F5' }}>
-      <MobileAppNavbar title="PAYOUTS" titleColor="#10b981" />
+    <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+      <MobileAppNavbar title="PAYOUTS" titleColor="#00ea6b" />
       {content}
     </View>
   );
@@ -262,7 +262,7 @@ export default AdminPayoutsInner;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#FFFFFF',
   },
   header: {
     backgroundColor: '#FFFFFF',
@@ -278,10 +278,11 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   title: {
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '700',
     color: '#111827',
     fontFamily: 'Inter',
+    letterSpacing: -0.5,
   },
   searchContainer: {
     flex: 1,
@@ -300,30 +301,30 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     marginLeft: 10,
-    fontSize: 14,
+    fontSize: 13,
     color: '#111827',
     fontFamily: 'Inter',
+    fontWeight: '500',
   },
   tableHeaderContainer: {
     marginHorizontal: 16,
     marginTop: 16,
-    marginBottom: 4,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
   tableHeaderRow: {
     flexDirection: 'row',
   },
   tableHeaderCell: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '600',
     color: '#6B7280',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    fontFamily: 'Inter',
   },
   list: {
     padding: 16,
@@ -331,13 +332,11 @@ const styles = StyleSheet.create({
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginBottom: 8,
+    paddingHorizontal: 0,
+    paddingVertical: 10,
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
     ...Platform.select({
       web: {
         transition: 'all 0.2s',
@@ -368,14 +367,16 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   dateText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#374151',
     fontWeight: '600',
+    fontFamily: 'Inter',
   },
   ownerName: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
     color: '#111827',
+    fontFamily: 'Inter',
   },
   groundInfo: {
     flexDirection: 'row',
@@ -384,8 +385,9 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   groundName: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#6B7280',
+    fontFamily: 'Inter',
   },
   matchBadge: {
     backgroundColor: '#EEF2FF',
@@ -424,9 +426,10 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   statusText: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#059669',
     fontWeight: '800',
+    fontFamily: 'Inter',
   },
   debtBadge: {
     backgroundColor: '#FEE2E2',

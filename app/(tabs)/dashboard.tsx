@@ -324,7 +324,7 @@ function DashboardContent() {
 
   const renderRightPanel = () => (
     <View style={[styles.rightPanel, isCompact && { width: '100%', paddingLeft: 24 }, isUltraNarrow && { paddingLeft: 12, paddingRight: 12 }]}>
-      <View style={styles.panelCard}>
+      <View style={[styles.panelCard, styles.noContainer]}>
         <View style={styles.panelHeader}>
           <Text style={styles.panelTitle}>Quick Book</Text>
           <View style={styles.calendarNav}>
@@ -407,7 +407,7 @@ function DashboardContent() {
         )}
       </View>
 
-      <View style={styles.panelCard}>
+      <View style={[styles.panelCard, styles.noContainer]}>
         <Text style={styles.panelTitle}>Balance & Stats</Text>
         <View style={styles.statsDonutContainer}>
           <View style={[styles.donutPlaceholder, { 
@@ -601,7 +601,7 @@ function DashboardContent() {
           >
             <View style={[styles.centerContentNative, width > 768 && styles.centerContentWide, isUltraNarrow && { padding: 12 }]}>
                {/* Compact Greeting */}
-               <View style={[styles.greetingRowCompact, isUltraNarrow && { paddingHorizontal: 12, paddingVertical: 10 }]}>
+               <View style={[styles.greetingRowCompact, styles.noContainer, isUltraNarrow && { paddingHorizontal: 12, paddingVertical: 10 }]}>
                 <View style={styles.greetingTextGroup}>
                   <Text style={styles.greetingTextSmall}>
                     Hi, {profile?.full_name?.split(' ')[0] || 'Player'} 👋
@@ -619,7 +619,7 @@ function DashboardContent() {
                 </View>
 
                 {/* Upcoming Booking */}
-                <View style={[styles.contentCardLarge, width > 768 && styles.contentCardWide]}>
+                <View style={[styles.contentCardLarge, styles.noContainer, width > 768 && styles.contentCardWide]}>
                   <View style={styles.cardHeader}>
                     <Text style={styles.cardHeaderTitle}>Upcoming Booking</Text>
                   </View>
@@ -696,7 +696,7 @@ const styles = StyleSheet.create({
   },
   root: {
     flex: 1,
-    backgroundColor: Platform.OS === 'web' ? 'transparent' : '#F5F5F7',
+    backgroundColor: Platform.OS === 'web' ? 'transparent' : '#F8FAFC',
   },
   rootDark: {
     backgroundColor: '#F5F5F7',
@@ -763,6 +763,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontFamily: 'Inter',
   },
+  noContainer: {
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    shadowOpacity: 0,
+    elevation: 0,
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+    marginBottom: 24,
+  },
   centerContentNative: {
     padding: 16,
   },
@@ -799,7 +808,7 @@ const styles = StyleSheet.create({
   },
   greetingTextSmall: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
@@ -807,7 +816,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#64748B',
     fontFamily: 'Inter',
-    fontWeight: '500',
+    fontWeight: '400',
   },
   weatherBadgeSmall: {
     flexDirection: 'row',
@@ -953,8 +962,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   cardHeaderTitle: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '500',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
@@ -1077,8 +1086,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   panelTitle: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '500',
     color: '#0F172A',
     fontFamily: 'Inter',
   },

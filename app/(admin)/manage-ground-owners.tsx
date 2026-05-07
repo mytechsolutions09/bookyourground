@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Platform, TextInput, Switch, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Platform, TextInput, Switch, Alert, Modal, ScrollView as RNScrollView } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { Profile } from '@/types';
 import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
 import { router } from 'expo-router';
-import { Building2, Search, Users, ExternalLink, Mail, Phone, ChevronRight, Check, Clock } from 'lucide-react-native';
+import { Building2, Search, Users, ExternalLink, Mail, Phone, ChevronRight, Check, Clock, X } from 'lucide-react-native';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 
 type OwnerRow = Profile & {
@@ -25,7 +25,7 @@ export default function ManageGroundOwnersScreen() {
   const [owners, setOwners] = useState<OwnerRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [selectedOwner, setSelectedOwner] = useState<OwnerRow | null>(null);
 
   useEffect(() => {
     loadOwners();
@@ -129,16 +129,20 @@ export default function ManageGroundOwnersScreen() {
         <>
           <TouchableOpacity 
             activeOpacity={0.7} 
-            style={[styles.tableRow, expandedId === item.id && styles.rowExpanded]}
-            onPress={() => setExpandedId(expandedId === item.id ? null : item.id)}
+            style={styles.tableRow}
+            onPress={() => setSelectedOwner(item)}
           >
             <View style={[styles.tableCell, styles.colOwner]}>
               <View style={styles.ownerPrimaryInfo}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                   <ChevronRight size={14} color="#64748b" style={{ transform: [{ rotate: expandedId === item.id ? '90deg' : '0deg' }] }} />
                    <Text style={styles.ownerNameText}>{item.business_name || item.full_name}</Text>
                 </View>
-                {item.business_name && <Text style={[styles.ownerSubText, { marginLeft: 22 }]}>{item.full_name}</Text>}
+                {item.business_name && <Text style={styles.ownerSubText}>{item.full_name}</Text>}
+                {(item.address || item.state) && (
+                  <Text style={styles.locationText} numberOfLines={1}>
+                    {[item.address, item.state].filter(Boolean).join(', ')}
+                  </Text>
+                )}
               </View>
             </View>
 
@@ -160,7 +164,7 @@ export default function ManageGroundOwnersScreen() {
               <Switch
                 value={feeEnabled}
                 onValueChange={() => togglePlatformFee(item)}
-                trackColor={{ false: '#CBD5E1', true: '#10b981' }}
+                trackColor={{ false: '#CBD5E1', true: '#00ea6b' }}
                 thumbColor={Platform.OS === 'ios' ? undefined : '#FFFFFF'}
                 onStartShouldSetResponder={() => true}
                 onTouchEnd={(e) => e.stopPropagation()}
@@ -181,84 +185,29 @@ export default function ManageGroundOwnersScreen() {
                   router.push(`/(admin)/grounds?ownerId=${item.id}`);
                 }}
               >
-                <ExternalLink size={14} color="#10b981" />
+                <ExternalLink size={14} color="#00ea6b" />
                 <Text style={styles.webIconButtonText}>Grounds</Text>
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
 
-          {expandedId === item.id && (
-            <View style={styles.expandedContent}>
-              <View style={styles.expandedGrid}>
-                  <View style={styles.bankHeaderRow}>
-                    <Text style={styles.expandedLabel}>Banking Information</Text>
-                    {item.bankDetails && (
-                      <View style={[styles.statusBadge, item.bankDetails.is_approved ? styles.approvedBadge : styles.pendingBadge]}>
-                        {item.bankDetails.is_approved ? <Check size={10} color="#059669" /> : <Clock size={10} color="#D97706" />}
-                        <Text style={[styles.statusBadgeText, item.bankDetails.is_approved ? styles.approvedText : styles.pendingText]}>
-                          {item.bankDetails.is_approved ? 'VERIFIED' : 'PENDING'}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                  {item.bankDetails ? (
-                    <View style={styles.bankInfoGrid}>
-                      <View style={styles.infoBlock}>
-                        <Text style={styles.infoLabel}>Bank Name</Text>
-                        <Text style={styles.infoValue}>{item.bankDetails.bank_name}</Text>
-                      </View>
-                      <View style={styles.infoBlock}>
-                        <Text style={styles.infoLabel}>Account Number</Text>
-                        <Text style={styles.infoValue}>{item.bankDetails.account_number}</Text>
-                      </View>
-                      <View style={styles.infoBlock}>
-                        <Text style={styles.infoLabel}>IFSC Code</Text>
-                        <Text style={styles.infoValue}>{item.bankDetails.ifsc}</Text>
-                      </View>
-                      <View style={styles.infoBlock}>
-                        <Text style={styles.infoLabel}>UPI ID</Text>
-                        <Text style={[styles.infoValue, { color: '#10b981' }]}>{item.bankDetails.upi_id || '—'}</Text>
-                      </View>
-                      
-                      {!item.bankDetails.is_approved && (
-                        <TouchableOpacity 
-                          style={styles.approveButton}
-                          onPress={() => approveBankDetails(item.id)}
-                        >
-                          <Check size={14} color="#FFF" />
-                          <Text style={styles.approveButtonText}>Approve Bank Details</Text>
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  ) : (
-                    <Text style={styles.noInfoText}>No banking details provided yet.</Text>
-                  )}
-
-                <View style={styles.expandedActions}>
-                  <Text style={styles.expandedLabel}>Quick Actions</Text>
-                  <TouchableOpacity 
-                    style={styles.primaryActionButton}
-                    onPress={() => router.push(`/(admin)/grounds?ownerId=${item.id}`)}
-                  >
-                    <Building2 size={16} color="#FFF" />
-                    <Text style={styles.primaryActionButtonText}>Review Grounds</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-          )}
         </>
       );
     }
 
     return (
-      <Card style={styles.ownerCard}>
+      <View style={styles.ownerCard}>
         <View style={styles.ownerHeader}>
           <View style={styles.iconPill}>
-            <Users size={18} color="#10b981" />
+            <Users size={18} color="#00ea6b" />
           </View>
           <View style={styles.ownerInfo}>
             <Text style={styles.ownerName}>{item.business_name || item.full_name}</Text>
+            {(item.address || item.state) && (
+              <Text style={styles.locationTextMobile} numberOfLines={1}>
+                {[item.address, item.state].filter(Boolean).join(', ')}
+              </Text>
+            )}
             {item.phone && <Text style={styles.ownerPhone}>{item.phone}</Text>}
           </View>
         </View>
@@ -278,12 +227,12 @@ export default function ManageGroundOwnersScreen() {
 
         <TouchableOpacity
           style={styles.actionButton}
-          onPress={() => router.push(`/(admin)/grounds?ownerId=${item.id}`)}
+          onPress={() => setSelectedOwner(item)}
         >
-          <Building2 size={18} color="#FFFFFF" />
-          <Text style={styles.actionButtonText}>Review Grounds</Text>
+          <Building2 size={18} color="#05291f" />
+          <Text style={styles.actionButtonText}>View Details</Text>
         </TouchableOpacity>
-      </Card>
+      </View>
     );
   };
 
@@ -333,6 +282,135 @@ export default function ManageGroundOwnersScreen() {
         }
         renderItem={renderOwnerItem}
       />
+
+      <Modal
+        visible={!!selectedOwner}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setSelectedOwner(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>{selectedOwner?.business_name || selectedOwner?.full_name}</Text>
+                <Text style={styles.modalSubtitle}>
+                  {[selectedOwner?.full_name, selectedOwner?.address, selectedOwner?.state].filter(Boolean).join(' • ')}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => setSelectedOwner(null)} style={styles.closeBtn}>
+                <X size={20} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            <RNScrollView style={styles.modalBody}>
+              <View style={styles.modalSection}>
+                <View style={styles.bankHeaderRow}>
+                  <Text style={styles.modalLabel}>Banking Information</Text>
+                  {selectedOwner?.bankDetails && (
+                    <View style={[styles.statusBadge, selectedOwner.bankDetails.is_approved ? styles.approvedBadge : styles.pendingBadge]}>
+                      {selectedOwner.bankDetails.is_approved ? <Check size={10} color="#059669" /> : <Clock size={10} color="#D97706" />}
+                      <Text style={[styles.statusBadgeText, selectedOwner.bankDetails.is_approved ? styles.approvedText : styles.pendingText]}>
+                        {selectedOwner.bankDetails.is_approved ? 'VERIFIED' : 'PENDING'}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                {selectedOwner?.bankDetails ? (
+                  <View style={styles.bankInfoGrid}>
+                    <View style={styles.infoBlock}>
+                      <Text style={styles.infoLabel}>Bank Name</Text>
+                      <Text style={styles.infoValue}>{selectedOwner.bankDetails.bank_name}</Text>
+                    </View>
+                    <View style={styles.infoBlock}>
+                      <Text style={styles.infoLabel}>Account Number</Text>
+                      <Text style={styles.infoValue}>{selectedOwner.bankDetails.account_number}</Text>
+                    </View>
+                    <View style={styles.infoBlock}>
+                      <Text style={styles.infoLabel}>IFSC Code</Text>
+                      <Text style={styles.infoValue}>{selectedOwner.bankDetails.ifsc}</Text>
+                    </View>
+                    <View style={styles.infoBlock}>
+                      <Text style={styles.infoLabel}>UPI ID</Text>
+                      <Text style={[styles.infoValue, { color: '#00ea6b' }]}>{selectedOwner.bankDetails.upi_id || '—'}</Text>
+                    </View>
+                    
+                    {!selectedOwner.bankDetails.is_approved && (
+                      <TouchableOpacity 
+                        style={styles.approveButton}
+                        onPress={() => approveBankDetails(selectedOwner.id)}
+                      >
+                        <Check size={14} color="#05291f" />
+                        <Text style={styles.approveButtonText}>Approve Bank Details</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                ) : (
+                  <Text style={styles.noInfoText}>No banking details provided yet.</Text>
+                )}
+              </View>
+
+              <View style={[styles.modalSection, { borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 20 }]}>
+                <Text style={styles.modalLabel}>Contact Details</Text>
+                <View style={styles.modalContactGrid}>
+                  <View style={styles.modalContactItem}>
+                    <Mail size={16} color="#6B7280" />
+                    <Text style={styles.modalContactText}>{selectedOwner?.email}</Text>
+                  </View>
+                  <View style={styles.modalContactItem}>
+                    <Phone size={16} color="#6B7280" />
+                    <Text style={styles.modalContactText}>{selectedOwner?.phone || 'No phone provided'}</Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={[styles.modalSection, { borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 20, marginBottom: 0 }]}>
+                <Text style={styles.modalLabel}>Partner Stats</Text>
+                <View style={styles.modalStatsRow}>
+                  <View style={styles.modalStatItem}>
+                    <Text style={styles.modalStatValue}>{selectedOwner?.totalGroundsCount}</Text>
+                    <Text style={styles.modalStatLabel}>Total Grounds</Text>
+                  </View>
+                  <View style={styles.modalStatItem}>
+                    <Text style={styles.modalStatValue}>{selectedOwner?.pendingGroundsCount}</Text>
+                    <Text style={styles.modalStatLabel}>Pending Review</Text>
+                  </View>
+                  <View style={styles.modalStatItem}>
+                     <Switch
+                      value={selectedOwner?.charge_platform_fee !== false}
+                      onValueChange={() => selectedOwner && togglePlatformFee(selectedOwner)}
+                      trackColor={{ false: '#CBD5E1', true: '#00ea6b' }}
+                    />
+                    <Text style={styles.modalStatLabel}>Platform Fee</Text>
+                  </View>
+                </View>
+              </View>
+            </RNScrollView>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity 
+                style={styles.modalCloseButton}
+                onPress={() => setSelectedOwner(null)}
+              >
+                <Text style={styles.modalCloseButtonText}>Close</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.modalPrimaryButton}
+                onPress={() => {
+                  if (selectedOwner) {
+                    router.push(`/(admin)/grounds?ownerId=${selectedOwner.id}`);
+                    setSelectedOwner(null);
+                  }
+                }}
+              >
+                <Building2 size={16} color="#05291f" />
+                <Text style={styles.modalPrimaryButtonText}>Manage Grounds</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 
@@ -341,8 +419,8 @@ export default function ManageGroundOwnersScreen() {
       {Platform.OS === 'web' ? (
         <WebLayout>{content}</WebLayout>
       ) : (
-        <View style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
-          <MobileAppNavbar title="MANAGE OWNERS" titleColor="#10b981" />
+        <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+          <MobileAppNavbar title="MANAGE OWNERS" titleColor="#00ea6b" />
           {content}
         </View>
       )}
@@ -353,7 +431,7 @@ export default function ManageGroundOwnersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFFFFF',
   },
   headerArea: {
     padding: 24,
@@ -369,54 +447,59 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   title: {
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '700',
     color: '#111827',
     letterSpacing: -0.5,
+    fontFamily: 'Inter',
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#6B7280',
     marginTop: 4,
     fontWeight: '500',
+    fontFamily: 'Inter',
   },
   searchContainer: {
     flex: 1,
     minWidth: 300,
     maxWidth: 450,
-    height: 42,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 0,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
   searchIcon: {
     marginRight: 10,
   },
   searchInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13,
     color: '#111827',
     fontWeight: '500',
+    fontFamily: 'Inter',
   },
   tableHeaderContainer: {
     flexDirection: 'row',
     marginHorizontal: 16,
     marginTop: 16,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#F9FAFB',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    paddingVertical: 8,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 0,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
   headerLabel: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '600',
     color: '#6B7280',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    fontFamily: 'Inter',
   },
   colOwner: { flex: 1.8 },
   colContact: { flex: 1.5 },
@@ -431,16 +514,14 @@ const styles = StyleSheet.create({
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingHorizontal: 0,
+    paddingVertical: 8,
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
   rowExpanded: {
-    borderColor: '#10b981',
+    borderColor: '#00ea6b',
     backgroundColor: '#F0F9FF',
     borderBottomLeftRadius: 0,
     borderBottomRightRadius: 0,
@@ -455,23 +536,27 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   ownerNameText: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
     color: '#111827',
+    fontFamily: 'Inter',
   },
   ownerSubText: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#6B7280',
+    fontFamily: 'Inter',
   },
   contactEmail: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '500',
     color: '#374151',
+    fontFamily: 'Inter',
   },
   contactPhone: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#6B7280',
     marginTop: 2,
+    fontFamily: 'Inter',
   },
   groundsBadgeRow: {
     flexDirection: 'row',
@@ -515,9 +600,10 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   webIconButtonText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#10b981',
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#00ea6b',
+    fontFamily: 'Inter',
   },
   expandedContent: {
     backgroundColor: '#F0FDF4', // Matches the light green theme of active rows
@@ -527,7 +613,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: 1,
     borderRightWidth: 1,
     borderBottomWidth: 1,
-    borderColor: '#10b981',
+    borderColor: '#00ea6b',
     borderBottomLeftRadius: 12,
     borderBottomRightRadius: 12,
     marginBottom: 10,
@@ -569,7 +655,7 @@ const styles = StyleSheet.create({
     width: 240,
   },
   primaryActionButton: {
-    backgroundColor: '#10b981',
+    backgroundColor: '#00ea6b',
     height: 40,
     borderRadius: 10,
     flexDirection: 'row',
@@ -579,9 +665,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   primaryActionButtonText: {
-    color: '#FFF',
-    fontSize: 13,
-    fontWeight: '800',
+    color: '#05291f',
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: 'Inter',
   },
   bankInfoGrid: {
     flexDirection: 'row',
@@ -614,23 +701,27 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   ownerCard: {
-    marginBottom: 12,
-    padding: 16,
-    borderRadius: 16,
+    marginBottom: 0,
+    padding: 10,
+    borderRadius: 0,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    backgroundColor: '#FFFFFF',
   },
   ownerHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    marginBottom: 16,
+    marginBottom: 10,
   },
   ownerInfo: {
     flex: 1,
   },
   ownerName: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '600',
     color: '#111827',
+    fontFamily: 'Inter',
   },
   ownerPhone: {
     fontSize: 13,
@@ -648,13 +739,13 @@ const styles = StyleSheet.create({
   metaRow: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 16,
+    marginBottom: 10,
   },
   metaItem: {
     flex: 1,
     padding: 12,
     borderRadius: 12,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#F3F4F6',
   },
@@ -663,33 +754,36 @@ const styles = StyleSheet.create({
     borderColor: '#FEE2E2',
   },
   metaLabel: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#6B7280',
-    fontWeight: '700',
+    fontWeight: '600',
     textTransform: 'uppercase',
     marginBottom: 6,
+    fontFamily: 'Inter',
   },
   metaValue: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '700',
     color: '#111827',
+    fontFamily: 'Inter',
   },
   metaValuePending: {
     color: '#EF4444',
   },
   actionButton: {
-    backgroundColor: '#10b981',
+    backgroundColor: '#00ea6b',
     borderRadius: 14,
-    paddingVertical: 14,
+    paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
   },
   actionButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '800',
+    color: '#05291f',
+    fontSize: 13,
+    fontWeight: '700',
+    fontFamily: 'Inter',
   },
   settingsRow: {
     flexDirection: 'row',
@@ -712,9 +806,10 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   joinedDateText: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#475569',
     fontWeight: '500',
+    fontFamily: 'Inter',
   },
   feeStatusBadge: {
     paddingHorizontal: 10,
@@ -781,15 +876,169 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#059669',
+    backgroundColor: '#00ea6b',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,
     marginTop: 12,
   },
   approveButtonText: {
-    color: '#FFF',
+    color: '#05291f',
     fontSize: 13,
     fontWeight: '700',
+    fontFamily: 'Inter',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    width: '100%',
+    maxWidth: 600,
+    maxHeight: '90%',
+    borderRadius: 24,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    fontFamily: 'Inter',
+  },
+  modalSubtitle: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontFamily: 'Inter',
+    marginTop: 2,
+  },
+  closeBtn: {
+    padding: 8,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+  },
+  modalBody: {
+    padding: 24,
+  },
+  modalSection: {
+    marginBottom: 32,
+  },
+  modalLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#64748b',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: 16,
+    fontFamily: 'Inter',
+  },
+  modalContactGrid: {
+    gap: 12,
+  },
+  modalContactItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#F9FAFB',
+    padding: 12,
+    borderRadius: 12,
+  },
+  modalContactText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    fontFamily: 'Inter',
+  },
+  modalStatsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalStatItem: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+    padding: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  modalStatValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#111827',
+    fontFamily: 'Inter',
+  },
+  modalStatLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    fontFamily: 'Inter',
+    textAlign: 'center',
+  },
+  modalFooter: {
+    flexDirection: 'row',
+    padding: 24,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    gap: 12,
+  },
+  modalCloseButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCloseButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#4B5563',
+    fontFamily: 'Inter',
+  },
+  modalPrimaryButton: {
+    flex: 2,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#00ea6b',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  modalPrimaryButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#05291f',
+    fontFamily: 'Inter',
+  },
+  locationText: {
+    fontSize: 11,
+    color: '#94a3b8',
+    fontFamily: 'Inter',
+    marginTop: 1,
+  },
+  locationTextMobile: {
+    fontSize: 12,
+    color: '#94a3b8',
+    fontFamily: 'Inter',
+    marginBottom: 2,
   },
 });

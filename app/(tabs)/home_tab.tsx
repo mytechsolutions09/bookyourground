@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   useWindowDimensions,
+  Modal,
 } from 'react-native';
 import Animated, { 
   useSharedValue, 
@@ -46,6 +47,7 @@ import LandingScrollContent from '@/components/landing/LandingScrollContent';
 import LandingBookingForm from '@/components/landing/LandingBookingForm';
 import { useAuth } from '@/contexts/AuthContext';
 import HomeScreenSkeleton from '@/components/landing/HomeScreenSkeleton';
+import ProfileScreen from './profile';
 
 function makeGroundPath(ground: GroundWithImages): string {
   const name = (ground.name ?? '').toString().toLowerCase().trim();
@@ -174,6 +176,10 @@ export default function HomeScreen() {
   const { setTabBarVisible } = useUI();
   const { cityName, refreshLocation } = useLocation();
   
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [isModalActive, setIsModalActive] = useState(false);
+  const slideAnim = useSharedValue(width);
+  
   const lastScrollY = useSharedValue(0);
 
   useEffect(() => {
@@ -279,10 +285,51 @@ export default function HomeScreen() {
     });
   }, [grounds, searchQuery, sportFilter]);
 
+  useEffect(() => {
+    if (!isFocused && showProfileModal) {
+      setShowProfileModal(false);
+      setIsModalActive(false); // Immediate hide on tab switch
+      slideAnim.value = width; // Reset position instantly
+    }
+  }, [isFocused, showProfileModal]);
+
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     loadGrounds();
   }, [loadGrounds]);
+
+  useEffect(() => {
+    if (showProfileModal) {
+      setIsModalActive(true);
+      slideAnim.value = withTiming(0, {
+        duration: 400,
+        easing: Easing.out(Easing.exp),
+      });
+    } else {
+      slideAnim.value = withTiming(width, {
+        duration: 350,
+        easing: Easing.in(Easing.exp),
+      }, (finished) => {
+        if (finished) {
+          runOnJS(setIsModalActive)(false);
+        }
+      });
+    }
+  }, [showProfileModal, width]);
+
+  const profileAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: slideAnim.value }],
+  }));
+
+  const backdropAnimatedStyle = useAnimatedStyle(() => {
+    const opacity = isFocused 
+      ? withTiming(showProfileModal ? 1 : 0, { duration: 300 })
+      : 0;
+    return {
+      opacity,
+      pointerEvents: showProfileModal ? 'auto' : 'none' as any,
+    };
+  }, [isFocused, showProfileModal]);
 
   useEffect(() => {
     if (Platform.OS === 'web') return;
@@ -339,7 +386,7 @@ export default function HomeScreen() {
                 <Text style={styles.locationTextSmall}>{cityName}</Text>
               </Pressable>
               <TouchableOpacity 
-                onPress={() => router.push('/(tabs)/profile')}
+                onPress={() => setShowProfileModal(true)}
                 style={styles.profileButton}
                 activeOpacity={0.7}
               >
@@ -563,6 +610,37 @@ export default function HomeScreen() {
 
         <View style={{ height: 32 }} />
       </Animated.ScrollView>
+
+      {/* Profile Modal Overlay */}
+      {Platform.OS !== 'web' && (
+        <Modal
+          visible={isModalActive}
+          transparent
+          animationType="none"
+          onRequestClose={() => setShowProfileModal(false)}
+        >
+          <View style={StyleSheet.absoluteFill}>
+            <Animated.View 
+              style={[styles.modalBackdrop, backdropAnimatedStyle]}
+            >
+              <TouchableOpacity 
+                style={{ flex: 1 }} 
+                activeOpacity={1} 
+                onPress={() => setShowProfileModal(false)} 
+              />
+            </Animated.View>
+            <Animated.View 
+              style={[
+                styles.profileModalContainer, 
+                profileAnimatedStyle,
+                { width: width * 0.75, height: '100%' }
+              ]}
+            >
+              <ProfileScreen isModal onClose={() => setShowProfileModal(false)} />
+            </Animated.View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -571,6 +649,28 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: '#F8FAFC',
+  },
+  profileModalContainer: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#F8FAFC',
+    zIndex: 10000,
+    shadowColor: '#000',
+    shadowOffset: { width: -4, height: 0 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 20,
+  },
+  modalBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    zIndex: 9999,
   },
   scroll: {
     flex: 1,
@@ -704,19 +804,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   heroMainTitle: {
-    fontSize: 34,
-    fontWeight: '900',
+    fontSize: 24,
+    fontWeight: '500',
     color: '#FFFFFF',
-    lineHeight: 42,
-    letterSpacing: -1,
-    marginBottom: 12,
+    lineHeight: 32,
+    marginBottom: 8,
+    fontFamily: 'Inter',
+    letterSpacing: -0.5,
   },
   heroCopy: {
-    fontSize: 15,
+    fontSize: 13,
+    fontWeight: '400',
     color: 'rgba(255, 255, 255, 0.7)',
-    lineHeight: 22,
     marginBottom: 24,
-    maxWidth: '90%',
+    lineHeight: 18,
+    fontFamily: 'Inter',
   },
   heroStatsContainer: {
     flexDirection: 'row',
@@ -728,15 +830,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   heroStatValue: {
-    fontSize: 18,
-    fontWeight: '900',
+    fontSize: 16,
+    fontWeight: '500',
     color: '#FFFFFF',
-    marginBottom: 2,
+    fontFamily: 'Inter',
   },
   heroStatLabel: {
     fontSize: 10,
     color: 'rgba(255, 255, 255, 0.5)',
-    fontWeight: '700',
+    fontWeight: '400',
+    marginTop: 2,
+    fontFamily: 'Inter',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
@@ -763,9 +867,10 @@ const styles = StyleSheet.create({
   },
   floatingSearchInput: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 14,
+    fontWeight: '400',
     color: '#0F172A',
-    fontWeight: '600',
+    fontFamily: 'Inter',
   },
   heroCategories: {
     paddingVertical: 4,
@@ -807,18 +912,17 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   sectionLabel: {
-    fontSize: 11,
-    fontWeight: '800',
+    fontSize: 10,
+    fontWeight: '400',
     color: '#01b854',
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
-    marginBottom: 4,
+    marginBottom: 2,
+    fontFamily: 'Inter',
   },
   sectionTitle: {
-    fontSize: 22,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '500',
     color: '#0F172A',
-    letterSpacing: -0.6,
+    fontFamily: 'Inter',
   },
   seeAllBtn: {
     flexDirection: 'row',
@@ -827,9 +931,10 @@ const styles = StyleSheet.create({
     paddingBottom: 2,
   },
   seeAllText: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '500',
     color: '#01b854',
+    fontFamily: 'Inter',
   },
 
   // ── Ground cards (horizontal) ─────────────────

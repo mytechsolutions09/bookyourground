@@ -11,6 +11,7 @@ type MobileAppNavbarProps = {
   lightBg?: boolean;
   smallerTitle?: boolean;
   bgColor?: string;
+  leftAction?: React.ReactNode;
 };
 
 /** Green top bar with logo — use on native-only screens (not web). */
@@ -20,7 +21,8 @@ export default function MobileAppNavbar({
   rightAction, 
   lightBg, 
   smallerTitle,
-  bgColor
+  bgColor,
+  leftAction
 }: MobileAppNavbarProps) {
   const navigation = useNavigation();
   const [canGoBack, setCanGoBack] = React.useState(false);
@@ -41,19 +43,11 @@ export default function MobileAppNavbar({
 
   return (
     <View style={[styles.navbar, lightBg && styles.navbarLight, bgColor ? { backgroundColor: bgColor } : null]} accessibilityRole="header">
-      {/* 
-        Back button removed as per user request to use gestures only.
-        canGoBack && (
-          <TouchableOpacity
-            onPress={handleBack}
-            style={styles.backButton}
-            accessibilityLabel="Go back"
-            accessibilityRole="button"
-          >
-            <ArrowLeft size={24} color={titleColor} />
-          </TouchableOpacity>
-        ) 
-      */}
+      {leftAction && (
+        <View style={styles.leftActionContainer}>
+          {leftAction}
+        </View>
+      )}
       {title ? (
         <Text style={[styles.titleText, { color: titleColor }, smallerTitle && { fontSize: 15 }]}>{title}</Text>
       ) : (
@@ -102,6 +96,12 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
     letterSpacing: 1,
     textTransform: 'uppercase',
+  },
+  leftActionContainer: {
+    position: 'absolute',
+    left: 16,
+    bottom: 8,
+    zIndex: 10,
   },
   rightActionContainer: {
     position: 'absolute',
