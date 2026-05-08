@@ -112,7 +112,7 @@ function UserSettingsInner() {
       <View style={[styles.inner, isUltraNarrow && { paddingHorizontal: 12, paddingTop: 10 }]}>
         {IS_WEB && (
           <ProfileHeaderTabs
-            themeAccent="#01b854"
+            themeAccent="#00ea6b"
             themeText={IS_WEB ? '#111827' : '#0F172A'}
             isCompact={!IS_WEB}
           />
@@ -252,7 +252,7 @@ function UserSettingsInner() {
         <View style={modalStyles.overlay}>
           <View style={[modalStyles.card, isUltraNarrow && { padding: 20, maxWidth: '95%' }]}>
             <View style={modalStyles.iconBg}>
-              <CheckCircle size={40} color="#01b854" strokeWidth={2.5} />
+              <CheckCircle size={40} color="#00ea6b" strokeWidth={2.5} />
             </View>
             <Text style={modalStyles.title}>Update Successful!</Text>
             <Text style={modalStyles.message}>Your profile information has been saved successfully.</Text>
@@ -271,7 +271,9 @@ function UserSettingsInner() {
 
 export default function UserSettingsScreen() {
   const { width } = useWindowDimensions();
+  const { profile } = useAuth();
   const isCompact = width < 900;
+  const isOwner = profile?.role === 'ground_owner';
 
   return (IS_WEB && !isCompact) ? (
     <WebLayout noCard>
@@ -279,7 +281,7 @@ export default function UserSettingsScreen() {
     </WebLayout>
   ) : (
     <View style={styles.nativeRoot}>
-      <MobileAppNavbar title="Settings" titleColor="#0F172A" />
+      {!isOwner && <MobileAppNavbar title="Settings" titleColor="#0F172A" />}
       <UserSettingsInner />
     </View>
   );
@@ -372,7 +374,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   submitButton: {
-    backgroundColor: '#01b854',
+    backgroundColor: '#00ea6b',
     borderWidth: 0,
     paddingHorizontal: 24,
     borderRadius: 12,
@@ -462,13 +464,13 @@ const modalStyles = StyleSheet.create({
     marginBottom: 28,
   },
   button: {
-    backgroundColor: '#01b854',
+    backgroundColor: '#00ea6b',
     paddingVertical: 16,
     paddingHorizontal: 40,
     borderRadius: 16,
     width: '100%',
     alignItems: 'center',
-    shadowColor: '#01b854',
+    shadowColor: '#00ea6b',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 10,

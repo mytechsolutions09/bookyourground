@@ -1136,7 +1136,6 @@ export default function AddGroundScreen() {
     <WebLayout>{content}</WebLayout>
   ) : (
     <View style={styles.nativeRoot}>
-      <MobileAppNavbar title="Add Ground" titleColor="#01b854" />
       {content}
     </View>
   );

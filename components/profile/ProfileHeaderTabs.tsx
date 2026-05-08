@@ -22,7 +22,7 @@ export default function ProfileHeaderTabs({ themeAccent, themeText, isCompact, s
     <View style={[styles.tabContainer, style]}>
       <View style={styles.tabBackground}>
         <TouchableOpacity 
-          style={[styles.tab, isActive('/profile') && styles.activeTab]} 
+          style={[styles.tab, isActive('/profile') && { borderBottomColor: themeAccent }]} 
           onPress={() => router.push('/(tabs)/profile' as any)}
         >
           <Text style={[styles.tabText, isActive('/profile') && { color: themeAccent, fontWeight: '700' }]}>
@@ -31,7 +31,7 @@ export default function ProfileHeaderTabs({ themeAccent, themeText, isCompact, s
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={[styles.tab, isActive('/profile/notifications') && styles.activeTab]} 
+          style={[styles.tab, isActive('/profile/notifications') && { borderBottomColor: themeAccent }]} 
           onPress={() => router.push('/(tabs)/profile/notifications' as any)}
         >
           <Text style={[styles.tabText, isActive('/profile/notifications') && { color: themeAccent, fontWeight: '700' }]}>
@@ -40,7 +40,7 @@ export default function ProfileHeaderTabs({ themeAccent, themeText, isCompact, s
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={[styles.tab, isActive('/profile/settings') && styles.activeTab]} 
+          style={[styles.tab, isActive('/profile/settings') && { borderBottomColor: themeAccent }]} 
           onPress={() => router.push('/(tabs)/profile/settings' as any)}
         >
           <Text style={[styles.tabText, isActive('/profile/settings') && { color: themeAccent, fontWeight: '700' }]}>
@@ -55,35 +55,29 @@ export default function ProfileHeaderTabs({ themeAccent, themeText, isCompact, s
 const styles = StyleSheet.create({
   tabContainer: {
     alignItems: 'flex-start',
-    marginBottom: 32,
+    marginBottom: 24,
     width: '100%',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   tabBackground: {
     flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
-    padding: 6,
-    borderRadius: 20,
-    width: '100%',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    gap: 8,
+    paddingHorizontal: 4,
   },
   tab: {
-    flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 16,
     alignItems: 'center',
-    borderRadius: 16,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
   },
   activeTab: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
+    // borderBottomColor will be set dynamically via themeAccent
   },
   tabText: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '500',
     color: '#64748B',
     fontFamily: 'Inter',
   },

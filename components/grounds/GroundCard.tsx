@@ -121,8 +121,8 @@ export default function GroundCard({
                 >
                   <Heart
                     size={18}
-                    color={isFavorite ? '#01b854' : '#0F172A'}
-                    fill={isFavorite ? '#01b854' : 'transparent'}
+                    color={isFavorite ? '#00ea6b' : '#0F172A'}
+                    fill={isFavorite ? '#00ea6b' : 'transparent'}
                     strokeWidth={2.5}
                   />
                 </TouchableOpacity>
@@ -175,7 +175,8 @@ export default function GroundCard({
               ) : (
                 <View style={styles.glassViewDetails}>
                   <Text style={styles.glassViewDetailsText}>View Details</Text>
-                  <ChevronRight size={14} color="#01b854" strokeWidth={3} />
+                  <ChevronRight size={14} color="#00ea6b" strokeWidth={3} />
+
                 </View>
               )}
             </View>
@@ -218,8 +219,8 @@ export default function GroundCard({
             >
               <Heart
                 size={compact ? 16 : 20}
-                color={isFavorite ? '#10B981' : (isLight ? '#64748B' : '#f9fafb')}
-                fill={isFavorite ? '#10B981' : (isLight ? 'transparent' : 'rgba(0,0,0,0.3)')}
+                color={isFavorite ? '#00ea6b' : (isLight ? '#64748B' : '#f9fafb')}
+                fill={isFavorite ? '#00ea6b' : (isLight ? 'transparent' : 'rgba(0,0,0,0.3)')}
                 strokeWidth={2.5}
               />
             </TouchableOpacity>
@@ -657,7 +658,8 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(1, 184, 84, 0.4)',
+    backgroundColor: 'rgba(0, 234, 107, 0.4)',
+
     borderColor: 'rgba(0, 234, 107, 0.5)',
     borderWidth: 1,
     shadowColor: '#00ea6b',

@@ -11,7 +11,10 @@ import {
   TextInput,
   ScrollView,
   ActivityIndicator,
+  Animated,
+  Easing,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { 
   MapPin, 
   Calendar as CalendarIcon, 
@@ -48,6 +51,38 @@ export default function HeroWeb() {
 
   // Calendar State
   const [viewDate, setViewDate] = useState(new Date());
+
+  // Border Animation
+  const rotateAnim = React.useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const startAnimation = () => {
+      rotateAnim.setValue(0);
+      Animated.timing(rotateAnim, {
+        toValue: 1,
+        duration: 10000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished) {
+          startAnimation();
+        }
+      });
+    };
+    
+    startAnimation();
+  }, []);
+
+  const borderRotation = rotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  const closeAll = () => {
+    setIsLocationOpen(false);
+    setIsDateOpen(false);
+    setIsTimeOpen(false);
+  };
 
   useEffect(() => {
     const fetchLocations = async () => {
@@ -168,18 +203,30 @@ export default function HeroWeb() {
   return (
     <ImageBackground
       source={require('@/assets/hero.png')}
-      style={[styles.root, { height: isMobile ? height : 850 }]}
+      style={[
+        styles.root, 
+        { height: isMobile ? 'auto' : 850, minHeight: isMobile ? 580 : 850 },
+        isMobile && { paddingTop: 100, paddingBottom: 40 }
+      ]}
       resizeMode="cover"
     >
       <View style={styles.overlay} />
+
+      {(isLocationOpen || isDateOpen || isTimeOpen) && (
+        <Pressable 
+          style={StyleSheet.absoluteFill} 
+          onPress={closeAll}
+        />
+      )}
       
       <View style={[styles.container, !isMobile && { marginTop: 0 }]}>
         <View style={styles.content}>
           <Text style={[
             styles.title,
             { 
-              fontSize: width < 600 ? 36 : (width < 900 ? 48 : 64),
-              lineHeight: width < 600 ? 44 : 72
+              fontSize: width < 600 ? 32 : (width < 900 ? 48 : 64),
+              lineHeight: width < 600 ? 38 : 72,
+              marginBottom: isMobile ? 12 : 16
             }
           ]}>
             Elevate Your Game
@@ -187,15 +234,16 @@ export default function HeroWeb() {
           <Text style={[
             styles.subtitle,
             {
-              fontSize: width < 600 ? 15 : 18,
-              lineHeight: width < 600 ? 22 : 28,
-              maxWidth: width < 600 ? '95%' : 700,
+              fontSize: width < 600 ? 14 : 16,
+              lineHeight: width < 600 ? 20 : 26,
+              maxWidth: width < 600 ? '90%' : 600,
+              marginBottom: isMobile ? 24 : 32
             }
           ]}>
             Book premium sports venues in seconds and take your performance to the next level.
           </Text>
 
-          <View style={styles.featuresRow}>
+          <View style={[styles.featuresRow, isMobile && { marginBottom: 30 }]}>
             <View style={styles.featureChip}>
               <View style={styles.chipIcon}>
                 <CalendarCheck2 size={16} color="#043529" strokeWidth={2.5} />
@@ -216,8 +264,30 @@ export default function HeroWeb() {
             </View>
           </View>
 
-          {/* Search Form */}
-          <View style={[styles.searchFormContainer, isMobile && styles.searchFormContainerMobile]}>
+          {/* Search Form with Rotating Border */}
+          <View style={[
+            styles.searchFormWrapper,
+            isMobile && styles.searchFormWrapperMobile
+          ]}>
+            {/* Border Layer with Clipping */}
+            <View style={[
+              StyleSheet.absoluteFill, 
+              { overflow: 'hidden', borderRadius: isMobile ? 26 : 100 }
+            ]}>
+              <Animated.View style={[
+                styles.animatedBorder,
+                { transform: [{ rotate: borderRotation }] }
+              ]}>
+                <LinearGradient
+                  colors={['transparent', '#00ea6b', 'transparent', '#00ea6b', 'transparent']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={{ flex: 1 }}
+                />
+              </Animated.View>
+            </View>
+
+            <View style={[styles.searchFormContainer, isMobile && styles.searchFormContainerMobile]}>
             <View style={[styles.searchForm, isMobile && styles.searchFormMobile]}>
               
               {/* Location Selector */}
@@ -245,7 +315,7 @@ export default function HeroWeb() {
                 </Pressable>
                 
                 {isLocationOpen && (
-                  <View style={styles.dropdown}>
+                  <View style={[styles.dropdown, isMobile && styles.timeDropdown]}>
                     <ScrollView style={{ maxHeight: 200 }}>
                       {locations.map((loc) => (
                         <Pressable
@@ -382,7 +452,7 @@ export default function HeroWeb() {
                 </Pressable>
 
                 {isTimeOpen && (selectedLocation && selectedDate) && (
-                  <View style={styles.dropdown}>
+                  <View style={[styles.dropdown, isMobile && styles.timeDropdown]}>
                     <ScrollView style={{ maxHeight: 200 }}>
                       {availableTimes.length > 0 ? (
                         availableTimes.map((time) => {
@@ -440,6 +510,7 @@ export default function HeroWeb() {
           </View>
         </View>
       </View>
+    </View>
     </ImageBackground>
   );
 }
@@ -448,7 +519,7 @@ const styles = StyleSheet.create({
   root: {
     width: '100%',
     justifyContent: 'flex-start',
-    paddingTop: Platform.OS === 'web' ? 180 : 140,
+    paddingTop: Platform.OS === 'web' ? 120 : 100,
     alignItems: 'center',
   },
   overlay: {
@@ -520,21 +591,38 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontFamily: 'Inter-SemiBold',
   },
-  searchFormContainer: {
+  searchFormWrapper: {
     width: '100%',
     maxWidth: 820,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
     borderRadius: 100,
-    padding: 6,
+    padding: 2, 
+    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 50,
+  },
+  searchFormWrapperMobile: {
+    borderRadius: 26,
+  },
+  animatedBorder: {
+    position: 'absolute',
+    width: '200%',
+    height: '200%',
+    zIndex: -1,
+  },
+  searchFormContainer: {
+    width: '100%',
+    backgroundColor: 'rgba(20, 25, 35, 0.85)',
+    borderRadius: 100,
+    padding: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 24 },
     shadowOpacity: 0.15,
     shadowRadius: 40,
     elevation: 20,
-    overflow: 'visible',
     zIndex: 50,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     ...Platform.select({
       web: { backdropFilter: 'blur(24px)' }
     }) as any,
@@ -551,7 +639,7 @@ const styles = StyleSheet.create({
   },
   searchFormMobile: {
     flexDirection: 'column',
-    gap: 12,
+    gap: 8,
   },
   formField: {
     flex: 1,
@@ -683,8 +771,13 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 70,
     top: 'auto' as any,
-    width: 240,
+    left: 0,
+    right: 0,
     padding: 8,
+  },
+  timeDropdown: {
+    bottom: 60,
+    top: 'auto' as any,
   },
   calendarHeader: {
     flexDirection: 'row',
@@ -698,7 +791,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F5F9',
   },
   calendarMonthTitle: {
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: '700',
     color: '#1E293B',
     fontFamily: 'Inter',
@@ -710,7 +803,7 @@ const styles = StyleSheet.create({
   weekdayText: {
     flex: 1,
     textAlign: 'center',
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: '600',
     color: '#94A3B8',
     textTransform: 'uppercase',
@@ -722,7 +815,7 @@ const styles = StyleSheet.create({
   },
   calendarDay: {
     width: '14.28%',
-    height: 28,
+    height: 40,
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 6,
@@ -734,7 +827,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#01b854',
   },
   dayText: {
-    fontSize: 11,
+    fontSize: 14,
     fontWeight: '500',
     color: '#1E293B',
     fontFamily: 'Inter',

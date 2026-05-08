@@ -214,7 +214,8 @@ export default function SupportScreen() {
       {activeTab === 'activity' && (
         <View>
           {loading ? (
-            <ActivityIndicator style={{ marginTop: 40 }} color="#10b981" />
+            <ActivityIndicator style={{ marginTop: 40 }} color="#00ea6b" />
+
           ) : tickets.length === 0 ? (
             <Card style={styles.card}>
               <View style={styles.emptyState}>
@@ -232,7 +233,8 @@ export default function SupportScreen() {
                 >
                   <View style={styles.ticketHeader}>
                     <View style={styles.ticketSubjectContainer}>
-                      <MessageSquare size={16} color="#10b981" />
+                      <MessageSquare size={16} color="#00ea6b" />
+
                       <Text style={styles.ticketSubject}>{ticket.subject || 'Support Request'}</Text>
                     </View>
                     <View style={[styles.statusBadge, ticket.resolved ? styles.resolvedBadge : styles.pendingBadge]}>
@@ -265,7 +267,8 @@ export default function SupportScreen() {
             onPress={() => Linking.openURL('mailto:support@bookyourground.com')}
           >
             <View style={styles.iconCircle}>
-              <Mail size={20} color="#10b981" />
+              <Mail size={20} color="#00ea6b" />
+
             </View>
             <View>
               <Text style={styles.contactLabel}>Official Email</Text>
@@ -366,34 +369,29 @@ const styles = StyleSheet.create({
   },
   tabBackground: {
     flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
-    padding: 4,
-    borderRadius: 12,
+    gap: 24,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
     width: '100%',
-    maxWidth: Platform.OS === 'web' ? 400 : '100%',
   },
   tab: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
     alignItems: 'center',
-    borderRadius: 8,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
   },
   activeTab: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    borderBottomColor: '#00ea6b',
   },
   tabText: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '500',
     color: '#64748B',
   },
   activeTabText: {
-    color: '#01b854',
+    color: '#00ea6b',
     fontWeight: '700',
   },
   card: {
@@ -432,7 +430,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   submitBtn: {
-    backgroundColor: '#10b981',
+    backgroundColor: '#00ea6b',
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',

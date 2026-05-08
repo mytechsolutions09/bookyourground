@@ -228,17 +228,18 @@ function OwnerSettingsInner() {
 
   const renderPayouts = () => (
     <Card style={styles.panel}>
-      <Text style={styles.sectionTitle}>Automated Settlements</Text>
+      <Text style={styles.sectionTitle}>Manual Payout Requests</Text>
       <Text style={styles.sectionSubtitle}>
-        Your earnings are automatically transferred to your bank account every day at 9:00 AM IST.
+        Request your earnings at any time. All payouts require bank verification.
       </Text>
 
       <View style={{ backgroundColor: '#EEF2FF', padding: 16, borderRadius: 16, borderLeftWidth: 4, borderLeftColor: '#4F46E5' }}>
         <Text style={{ fontSize: 14, fontWeight: '700', color: '#1E1B4B', marginBottom: 4 }}>How it works:</Text>
         <Text style={{ fontSize: 13, color: '#312E81', lineHeight: 18 }}>
-          • Matches completed on <Text style={{ fontWeight: '700' }}>Monday</Text> are processed on <Text style={{ fontWeight: '700' }}>Wednesday</Text>.{"\n"}
-          • Platform fees for both Online and Offline bookings are deducted from your online revenue.{"\n"}
-          • Ensure your bank details in the next tab are correct to avoid settlement failures.
+          • Your "Withdrawable Balance" includes all confirmed online revenue.{"\n"}
+          • Platform fees for both Online and Offline bookings are automatically deducted from this balance.{"\n"}
+          • Once you submit a request, our team will verify the details and process the payment within 24-48 business hours.{"\n"}
+          • Ensure your bank details in the next tab are verified to enable withdrawal requests.
         </Text>
       </View>
     </Card>
@@ -864,38 +865,34 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
-    borderRadius: 20,
-    padding: 6,
-    marginBottom: 32,
+    backgroundColor: 'transparent',
+    paddingHorizontal: 16,
+    marginBottom: 0,
     width: '100%',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   tabButton: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
   },
   activeTabButton: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
+    borderBottomColor: '#01b854',
   },
 
   tabText: {
     fontFamily: 'Inter',
-    fontSize: 11,
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: '600',
     color: '#64748B',
   },
   activeTabText: {
     color: '#01b854',
-    fontWeight: '500',
+    fontWeight: '800',
   },
   tabContentGap: {
     gap: 16,

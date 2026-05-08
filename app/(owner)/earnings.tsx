@@ -6,7 +6,7 @@ import WebLayout from '@/components/web/WebLayout';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency } from '@/utils/helpers';
-import { TrendingUp, Download, ArrowRight, Wallet, History, Info, ChevronRight, X, CheckCircle2 } from 'lucide-react-native';
+import { TrendingUp, Download, ArrowRight, Wallet, History, Info, ChevronRight, X, CheckCircle2, AlertCircle } from 'lucide-react-native';
 import Svg, { Path, Circle, Defs, LinearGradient, Stop, Text as SvgText } from 'react-native-svg';
 
 const IS_WEB = Platform.OS === 'web';
@@ -192,6 +192,8 @@ function OwnerEarningsScreenInner() {
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [wallet, setWallet] = useState<WalletData | null>(null);
+  const [isBankVerified, setIsBankVerified] = useState(false);
+  const [bankDetailsLoaded, setBankDetailsLoaded] = useState(false);
   const { tab } = useLocalSearchParams<{ tab: string }>();
   const [viewMode, setViewMode] = useState<'preview' | 'summary' | 'analytics' | 'payouts'>((tab as any) || 'preview');
 
@@ -253,6 +255,8 @@ function OwnerEarningsScreenInner() {
           id,
           created_at,
           total_amount,
+          platform_fee_owner,
+          gst_owner,
           payment_method,
           status,
           ground:grounds!inner(name, city, owner_id)
@@ -270,14 +274,20 @@ function OwnerEarningsScreenInner() {
       }
 
       // Generate CSV
-      const headers = ['Date', 'Venue', 'Location', 'Payment Method', 'Amount'];
-      const rows = data.map(tx => [
-        new Date(tx.created_at).toLocaleDateString(),
-        tx.ground?.name || 'Unknown',
-        tx.ground?.city || 'N/A',
-        tx.payment_method || 'Online',
-        tx.total_amount.toString()
-      ]);
+      const headers = ['Date', 'Venue', 'Location', 'Payment Method', 'Gross Amount', 'Platform Fee & GST', 'Net Earnings'];
+      const rows = data.map(tx => {
+        const fees = Number(tx.platform_fee_owner || 0) + Number(tx.gst_owner || 0);
+        const net = tx.total_amount - fees;
+        return [
+          new Date(tx.created_at).toLocaleDateString(),
+          tx.ground?.name || 'Unknown',
+          tx.ground?.city || 'N/A',
+          tx.payment_method || 'Online',
+          tx.total_amount.toString(),
+          fees.toString(),
+          net.toString()
+        ];
+      });
 
       const csvContent = [
         headers.join(','),
@@ -325,6 +335,22 @@ function OwnerEarningsScreenInner() {
         .select('id, balance')
         .eq('user_id', user.id)
         .single();
+
+      // Check bank verification status
+      const { data: bankData } = await supabase
+        .from('owner_bank_details')
+        .select('is_approved, bank_name, account_number, ifsc, upi_id')
+        .eq('owner_id', user.id)
+        .maybeSingle();
+      
+      if (bankData) {
+        setIsBankVerified(!!bankData.is_approved);
+        setBankName(bankData.bank_name || '');
+        setAccountNumber(bankData.account_number || '');
+        setIfscCode(bankData.ifsc || '');
+        setUpiId(bankData.upi_id || '');
+      }
+      setBankDetailsLoaded(true);
       
       if (walletData) {
         setWallet(walletData);
@@ -346,6 +372,7 @@ function OwnerEarningsScreenInner() {
           payout_status,
           payout_processed_at,
           ground_price,
+          payment_received,
           ground:grounds!inner(name, city, owner_id)
         `)
         .eq('ground.owner_id', user.id)
@@ -387,7 +414,7 @@ function OwnerEarningsScreenInner() {
 
       const { data: allData } = await supabase
         .from('bookings')
-        .select('total_amount, created_at, payment_method, payment_received, ground:grounds!inner(name, city, owner_id)')
+        .select('total_amount, platform_fee_owner, gst_owner, created_at, payment_method, payment_received, ground:grounds!inner(name, city, owner_id)')
         .eq('ground.owner_id', user.id)
         .in('status', ['confirmed', 'completed']);
 
@@ -404,16 +431,16 @@ function OwnerEarningsScreenInner() {
       const dayMap = new Map<number, number>();
 
       allRows.forEach((row) => {
-        const amt = row.total_amount || 0;
-        total += amt;
+        const netAmt = (row.total_amount || 0) - (Number(row.platform_fee_owner || 0) + Number(row.gst_owner || 0));
+        total += netAmt;
 
         if (row.payment_method === 'cash') {
           if (row.payment_received) {
-            offlineEarningsTotal += amt;
+            offlineEarningsTotal += netAmt;
           }
         } else {
           // Online payments are considered received if they are confirmed/completed
-          onlineEarningsTotal += amt;
+          onlineEarningsTotal += netAmt;
         }
         
         const date = new Date(row.created_at);
@@ -422,8 +449,8 @@ function OwnerEarningsScreenInner() {
         const y = date.getFullYear();
         
         if (m === currentMonth && y === currentYear) {
-          thisMonthTotal += amt;
-          dayMap.set(d, (dayMap.get(d) || 0) + amt);
+          thisMonthTotal += netAmt;
+          dayMap.set(d, (dayMap.get(d) || 0) + netAmt);
         }
 
         let groundName = 'Other';
@@ -438,7 +465,7 @@ function OwnerEarningsScreenInner() {
         }
         
         const safeName = typeof groundName === 'string' ? groundName : 'Other';
-        venueMap.set(safeName, (venueMap.get(safeName) || 0) + amt);
+        venueMap.set(safeName, (venueMap.get(safeName) || 0) + netAmt);
       });
 
       const newStats = {
@@ -541,11 +568,12 @@ function OwnerEarningsScreenInner() {
         if (b.ground) {
           gName = Array.isArray(b.ground) ? (b.ground[0]?.name || 'Venue') : (b.ground.name || 'Venue');
         }
+        const netB = (b.total_amount || 0) - (Number(b.platform_fee_owner || 0) + Number(b.gst_owner || 0));
         feed.push({
           id: `b-${b.id}`,
           type: 'booking',
           date: b.created_at,
-          text: `New booking received for ${gName} (₹${b.total_amount})`,
+          text: `New booking received for ${gName} (₹${netB})`,
           color: '#3B82F6'
         });
       });
@@ -579,14 +607,18 @@ function OwnerEarningsScreenInner() {
   const handleWithdrawRequest = async () => {
     if (!user || !wallet) return;
 
-    const amount = parseFloat(withdrawAmount);
-    if (isNaN(amount) || amount <= 0) {
+    if (!withdrawAmount || isNaN(parseFloat(withdrawAmount)) || parseFloat(withdrawAmount) <= 0) {
       alert('Please enter a valid amount');
       return;
     }
 
-    if (amount > wallet.balance) {
+    if (parseFloat(withdrawAmount) > (wallet?.balance || 0)) {
       alert('Withdrawal amount cannot exceed your current balance.');
+      return;
+    }
+
+    if (!isBankVerified) {
+      alert('Your bank details are not yet verified by admin. Please contact support or check your settings.');
       return;
     }
 
@@ -604,20 +636,18 @@ function OwnerEarningsScreenInner() {
 
     try {
       setSubmitting(true);
-      const { error } = await supabase
-        .from('withdrawals')
-        .insert({
-          owner_id: user.id,
-          amount,
-          payment_method: payoutMethod === 'bank' ? 'bank_transfer' : 'upi',
-          account_details: payoutMethod === 'bank' ? {
-            bank_name: bankName,
-            account_number: accountNumber,
-            ifsc_code: ifscCode,
-          } : {
-            upi_id: upiId
-          }
-        });
+      const { error } = await supabase.from('withdrawals').insert({
+        owner_id: user?.id,
+        amount: parseFloat(withdrawAmount),
+        payment_method: payoutMethod === 'bank' ? 'bank_transfer' : 'upi',
+        account_details: payoutMethod === 'bank' ? {
+          bank_name: bankName,
+          account_number: accountNumber,
+          ifsc_code: ifscCode
+        } : {
+          upi_id: upiId
+        }
+      });
 
       if (error) throw error;
 
@@ -803,13 +833,13 @@ function OwnerEarningsScreenInner() {
               <View style={{ width: 80 }}>
                 <View style={[
                   styles.methodBadge, 
-                  { backgroundColor: tx.payment_method === 'cash' ? '#FEF3C7' : '#DCFCE7' }
+                  { backgroundColor: tx.payment_method === 'cash' ? (tx.payment_received ? '#DCFCE7' : '#FEF3C7') : '#DCFCE7' }
                 ]}>
                   <Text style={[
                     styles.methodBadgeText,
-                    { color: tx.payment_method === 'cash' ? '#92400E' : '#15803D' }
+                    { color: tx.payment_method === 'cash' ? (tx.payment_received ? '#15803D' : '#92400E') : '#15803D' }
                   ]}>
-                    {tx.payment_method === 'cash' ? 'CASH' : 'ONLINE'}
+                    {tx.payment_method === 'cash' ? (tx.payment_received ? 'PAID' : 'CASH') : 'ONLINE'}
                   </Text>
                 </View>
               </View>
@@ -955,7 +985,7 @@ function OwnerEarningsScreenInner() {
       <View style={styles.summaryTableWrapper}>
         <View style={styles.sectionCard}>
           <Text style={styles.sectionTitle}>Payout History</Text>
-          <Text style={styles.sectionSubtitle}>List of automated daily settlements to your bank account.</Text>
+          <Text style={styles.sectionSubtitle}>List of manual payout requests and their status.</Text>
 
           <View style={[styles.table, { marginTop: 12 }]}>
             <View style={[styles.tableHeader, { backgroundColor: '#F8FAFC', borderTopLeftRadius: 12, borderTopRightRadius: 12 }]}>
@@ -1008,24 +1038,41 @@ function OwnerEarningsScreenInner() {
     <View style={styles.leftCol}>
       <View style={[styles.totalEarningsCard, isUltraNarrow && { padding: 20 }]}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.totalEarningsLabel}>Transferable Balance (Automated Daily Settlement)</Text>
+          <Text style={styles.totalEarningsLabel}>Withdrawable Balance</Text>
           <Text style={[styles.totalEarningsValue, isUltraNarrow && { fontSize: 28 }]}>{formatCurrency(Number(wallet?.balance || 0))}</Text>
-          <Text style={styles.monthlySubtext}>
-            Settlements happen daily at <Text style={{ fontWeight: '700' }}>9:00 AM IST</Text>
-          </Text>
+          <TouchableOpacity 
+            style={styles.withdrawBtnInline}
+            onPress={() => setShowWithdrawModal(true)}
+          >
+            <Text style={styles.withdrawBtnTextInline}>Request Payout</Text>
+          </TouchableOpacity>
         </View>
         {!isUltraNarrow && <Wallet size={64} color="#043529" strokeWidth={1} style={{ opacity: 0.2 }} />}
       </View>
 
-      <View style={[styles.sectionCard, { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' }]}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-          <CheckCircle2 size={20} color="#059669" />
-          <Text style={[styles.sectionTitle, { color: '#065F46', marginBottom: 0 }]}>Automated Payouts Enabled</Text>
+      {!isBankVerified && bankDetailsLoaded && (
+        <View style={[styles.sectionCard, { backgroundColor: '#FEF2F2', borderColor: '#FECACA' }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+            <AlertCircle size={20} color="#DC2626" />
+            <Text style={[styles.sectionTitle, { color: '#991B1B', marginBottom: 0 }]}>Bank Verification Required</Text>
+          </View>
+          <Text style={{ fontSize: 14, color: '#991B1B', lineHeight: 20 }}>
+            Your bank details must be verified by an admin before you can request payouts. Please ensure your details are correct in <Text style={{ fontWeight: '700' }} onPress={() => router.push('/(owner)/settings?tab=bank')}>Settings</Text>.
+          </Text>
         </View>
-        <Text style={{ fontSize: 14, color: '#065F46', lineHeight: 20 }}>
-          Your earnings for matches completed <Text style={{ fontWeight: '700' }}>2 days ago (T-2)</Text> are automatically settled to your bank account every morning at 9:00 AM. No manual request is needed.
-        </Text>
-      </View>
+      )}
+
+      {isBankVerified && (
+        <View style={[styles.sectionCard, { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+            <CheckCircle2 size={20} color="#059669" />
+            <Text style={[styles.sectionTitle, { color: '#065F46', marginBottom: 0 }]}>Bank Account Verified</Text>
+          </View>
+          <Text style={{ fontSize: 14, color: '#065F46', lineHeight: 20 }}>
+            Your bank details are verified. You can now request manual payouts of your transferable balance at any time.
+          </Text>
+        </View>
+      )}
   
       <View style={[styles.sectionCard, { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 }}>
@@ -1050,24 +1097,27 @@ function OwnerEarningsScreenInner() {
             <Text style={[styles.headerText, { flex: 1 }]}>Description</Text>
             <Text style={[styles.headerText, { width: 80, textAlign: 'right' }]}>Amount</Text>
           </View>
-          {transactions.map((tx) => (
-            <View key={tx.id} style={styles.tableRow}>
-              <View style={{ width: 120 }}>
-                <Text style={styles.cellTextMain}>
-                  {new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
-                </Text>
-                <Text style={styles.cellTextSub}>
-                  {new Date(tx.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
-                </Text>
-              </View>
-              <Text style={[styles.cellText, { flex: 1 }]} numberOfLines={1}>
-                {tx.ground?.name || 'Venue'}
-              </Text>
-              <Text style={[styles.cellText, { width: 80, textAlign: 'right', fontWeight: '700' }]}>
-                {formatCurrency(tx.total_amount)}
-              </Text>
-            </View>
-          ))}
+            {transactions.map((tx) => {
+              const netTx = (tx.total_amount || 0) - (Number(tx.platform_fee_owner || 0) + Number(tx.gst_owner || 0));
+              return (
+                <View key={tx.id} style={styles.tableRow}>
+                  <View style={{ width: 120 }}>
+                    <Text style={styles.cellTextMain}>
+                      {new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
+                    </Text>
+                    <Text style={styles.cellTextSub}>
+                      {new Date(tx.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                    </Text>
+                  </View>
+                  <Text style={[styles.cellText, { flex: 1 }]} numberOfLines={1}>
+                    {tx.ground?.name || 'Venue'}
+                  </Text>
+                  <Text style={[styles.cellText, { width: 80, textAlign: 'right', fontWeight: '700', color: '#01b854' }]}>
+                    {formatCurrency(netTx)}
+                  </Text>
+                </View>
+              );
+            })}
           {hasMore && (
             <TouchableOpacity 
               style={[styles.statementBtn, { marginTop: 12, borderStyle: 'dashed' }]}
@@ -1090,16 +1140,16 @@ function OwnerEarningsScreenInner() {
         </View>
 
       <View style={styles.sectionCard}>
-        <Text style={styles.sectionTitle}>Upcoming Payouts</Text>
+        <Text style={styles.sectionTitle}>Payout Requests</Text>
         <View style={styles.table}>
           <View style={styles.tableHeader}>
-            <Text style={[styles.headerText, { width: 140 }]}>Scheduled Date</Text>
+            <Text style={[styles.headerText, { width: 140 }]}>Request Date</Text>
             <Text style={[styles.headerText, { flex: 1 }]}>Amount</Text>
             <Text style={[styles.headerText, { width: 100, textAlign: 'right' }]}>Status</Text>
           </View>
           {upcomingPayouts.length === 0 ? (
             <View style={{ paddingVertical: 20, alignItems: 'center' }}>
-              <Text style={{ color: '#64748B', fontSize: 14 }}>No upcoming payouts scheduled</Text>
+              <Text style={{ color: '#64748B', fontSize: 14 }}>No payout requests found</Text>
             </View>
           ) : (
             upcomingPayouts.map((p) => (
@@ -1126,13 +1176,13 @@ function OwnerEarningsScreenInner() {
         <Text style={styles.sectionTitle}>Earnings Bifurcation</Text>
         <View style={styles.bifurcationRow}>
            <View style={styles.bifurcationItem}>
-              <Text style={styles.bifurcationLabel}>Online Earnings</Text>
+              <Text style={styles.bifurcationLabel}>Online Earnings (Net)</Text>
               <Text style={[styles.bifurcationValue, { color: '#01b854' }]}>{formatCurrency(onlineEarnings)}</Text>
               <Text style={styles.bifurcationSubtext}>Razorpay, PayU, Wallet</Text>
            </View>
            <View style={styles.bifurcationDivider} />
            <View style={styles.bifurcationItem}>
-              <Text style={styles.bifurcationLabel}>Offline Earnings</Text>
+              <Text style={styles.bifurcationLabel}>Offline Earnings (Net)</Text>
               <Text style={[styles.bifurcationValue, { color: '#64748B' }]}>{formatCurrency(offlineEarnings)}</Text>
               <Text style={styles.bifurcationSubtext}>Cash / On-venue</Text>
            </View>
@@ -1481,10 +1531,12 @@ function OwnerEarningsScreenInner() {
                     </View>
                     <View style={{ width: 100 }}>
                       <Text style={[styles.cellTextMain, { textTransform: 'capitalize' }]}>{tx.payment_method || 'Other'}</Text>
-                      <Text style={[styles.cellTextSub, { color: '#22C55E' }]}>Confirmed</Text>
+                      <Text style={[styles.cellTextSub, { color: tx.payment_received ? '#22C55E' : '#64748B' }]}>
+                        {tx.payment_received ? 'Payment Received' : (tx.payment_method === 'cash' ? 'Pending Cash' : 'Confirmed')}
+                      </Text>
                     </View>
-                    <Text style={[styles.cellTextMain, { width: 80, textAlign: 'right', fontWeight: '700' }]}>
-                      {formatCurrency(tx.total_amount)}
+                    <Text style={[styles.cellTextMain, { width: 80, textAlign: 'right', fontWeight: '700', color: '#01b854' }]}>
+                      {formatCurrency((tx.total_amount || 0) - (Number(tx.platform_fee_owner || 0) + Number(tx.gst_owner || 0)))}
                     </Text>
                   </View>
                 ))}
@@ -2003,31 +2055,24 @@ const styles = StyleSheet.create({
   },
   viewToggleContainer: {
     flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
-    borderRadius: 20,
-    padding: 6,
-    marginHorizontal: 8,
-    marginTop: 0,
-    marginBottom: 32,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    alignSelf: 'stretch',
+    backgroundColor: 'transparent',
+    paddingHorizontal: 16,
+    marginBottom: 0,
+    width: '100%',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   viewToggleBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
   },
   viewToggleBtnActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    borderBottomColor: '#01b854',
   },
   viewToggleBtnText: {
     fontSize: 13,
@@ -2037,7 +2082,7 @@ const styles = StyleSheet.create({
   },
   viewToggleBtnTextActive: {
     color: '#01b854',
-    fontWeight: '700',
+    fontWeight: '800',
   },
   summaryTableWrapper: {
     paddingHorizontal: 8,

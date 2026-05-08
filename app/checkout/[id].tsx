@@ -1298,6 +1298,13 @@ export default function CheckoutScreen() {
                                 <RNText style={styles.breakdownValueNew}>{formatCurrency(platformFeeIncGst)}</RNText>
                             </View>
 
+                            {isGroundOwnerOrAdmin && (
+                                <View style={[styles.breakdownRowNew, { backgroundColor: '#F0FDF4', marginHorizontal: -12, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, marginTop: 4 }]}>
+                                    <RNText style={[styles.breakdownLabelNew, { fontWeight: '700', color: '#166534' }]}>Total Receivable</RNText>
+                                    <RNText style={[styles.breakdownValueNew, { fontWeight: '800', color: '#166534' }]}>{formatCurrency(totalReceivable)}</RNText>
+                                </View>
+                            )}
+
                             {booking.discount_amount > 0 && (
                                 <View style={styles.breakdownRowNew}>
                                     <RNText style={[styles.breakdownLabelNew, { color: '#10B981' }]}>Coupon Discount</RNText>
@@ -1309,45 +1316,46 @@ export default function CheckoutScreen() {
 
                             <View style={styles.totalRowNew}>
                                 <View>
-                                    <RNText style={styles.totalLabelNew}>Total Payable</RNText>
-                                    <RNText style={styles.totalSubtitleNew}>Incl. all taxes</RNText>
+                                    <RNText style={styles.totalLabelNew}>{isGroundOwnerOrAdmin ? 'Total Receivable' : 'Total Payable'}</RNText>
+                                    <RNText style={styles.totalSubtitleNew}>{isGroundOwnerOrAdmin ? 'Net take-home' : 'Incl. all taxes'}</RNText>
                                 </View>
-                                <RNText style={styles.totalValueNew}>{formatCurrency(totalPayable)}</RNText>
+                                <RNText style={styles.totalValueNew}>{formatCurrency(isGroundOwnerOrAdmin ? totalReceivable : totalPayable)}</RNText>
                             </View>
                         </View>
 
-                        {/* Contact Details Confirmation */}
-                        <View style={{ marginBottom: 24 }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                                <Users size={18} color="#0F172A" />
-                                <RNText style={{ fontSize: 15, fontWeight: '700', color: '#0F172A', fontFamily: 'Inter' }}>Confirm Contact Details</RNText>
-                            </View>
-                            
-                            <View style={styles.contactInfoCard}>
-                                <View style={[styles.contactInputRow, { marginBottom: 8 }]}>
-                                    <MessageSquare size={16} color="#94A3B8" />
-                                    <RNTextInput 
-                                        style={styles.contactInput} 
-                                        value={contactEmail} 
-                                        onChangeText={setContactEmail}
-                                        placeholder="Email Address"
-                                    />
-                                    <TouchableOpacity style={styles.contactEditBtn}><X size={14} color="#94A3B8" /></TouchableOpacity>
+                        {!isGroundOwnerOrAdmin && (
+                            <View style={{ marginBottom: 24 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                                    <Users size={18} color="#0F172A" />
+                                    <RNText style={{ fontSize: 15, fontWeight: '700', color: '#0F172A', fontFamily: 'Inter' }}>Confirm Contact Details</RNText>
                                 </View>
-                                <View style={styles.contactInputRow}>
-                                    <Smartphone size={16} color="#94A3B8" />
-                                    <RNTextInput 
-                                        style={styles.contactInput} 
-                                        value={contactPhone} 
-                                        onChangeText={setContactPhone}
-                                        placeholder="Phone Number"
-                                        keyboardType="phone-pad"
-                                    />
-                                    <TouchableOpacity style={styles.contactEditBtn}><X size={14} color="#94A3B8" /></TouchableOpacity>
+                                
+                                <View style={styles.contactInfoCard}>
+                                    <View style={[styles.contactInputRow, { marginBottom: 8 }]}>
+                                        <MessageSquare size={16} color="#94A3B8" />
+                                        <RNTextInput 
+                                            style={styles.contactInput} 
+                                            value={contactEmail} 
+                                            onChangeText={setContactEmail}
+                                            placeholder="Email Address"
+                                        />
+                                        <TouchableOpacity style={styles.contactEditBtn}><X size={14} color="#94A3B8" /></TouchableOpacity>
+                                    </View>
+                                    <View style={styles.contactInputRow}>
+                                        <Smartphone size={16} color="#94A3B8" />
+                                        <RNTextInput 
+                                            style={styles.contactInput} 
+                                            value={contactPhone} 
+                                            onChangeText={setContactPhone}
+                                            placeholder="Phone Number"
+                                            keyboardType="phone-pad"
+                                        />
+                                        <TouchableOpacity style={styles.contactEditBtn}><X size={14} color="#94A3B8" /></TouchableOpacity>
+                                    </View>
+                                    <RNText style={styles.contactHint}>Required for payment receipt and confirmation.</RNText>
                                 </View>
-                                <RNText style={styles.contactHint}>Required for payment receipt and confirmation.</RNText>
                             </View>
-                        </View>
+                        )}
 
                         {/* Payment Method Selector */}
                         <View style={{ marginBottom: 24 }}>
@@ -1401,7 +1409,6 @@ export default function CheckoutScreen() {
                                         {(selectedGateway === 'razorpay' && selectedSubMethod === 'card') && <View style={styles.radioInner} />}
                                     </View>
                                 </TouchableOpacity>
-
                                 {/* Net Banking */}
                                 <TouchableOpacity 
                                     style={[styles.methodItemNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') && styles.methodItemActiveNew]}
@@ -1416,7 +1423,48 @@ export default function CheckoutScreen() {
                                         {(selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') && <View style={styles.radioInner} />}
                                     </View>
                                 </TouchableOpacity>
+                                {isGroundOwnerOrAdmin && (
+                                    <TouchableOpacity 
+                                        style={[styles.methodItemNew, selectedGateway === 'cash' && styles.methodItemActiveNew]}
+                                        onPress={() => setSelectedGateway('cash')}
+                                    >
+                                        <View style={styles.methodIconBoxNew}><CreditCard size={20} color={selectedGateway === 'cash' ? '#059669' : '#64748B'} /></View>
+                                        <View style={{ flex: 1 }}>
+                                            <RNText style={[styles.methodLabelNew, selectedGateway === 'cash' && styles.methodLabelActiveNew]}>Cash / Direct Payment</RNText>
+                                            <RNText style={styles.methodSubtitleNew}>Bypass online gateway</RNText>
+                                        </View>
+                                        <View style={[styles.radioOuter, selectedGateway === 'cash' && styles.radioOuterActive]}>
+                                            {selectedGateway === 'cash' && <View style={styles.radioInner} />}
+                                        </View>
+                                    </TouchableOpacity>
+                                )}
                             </View>
+
+                            {selectedGateway === 'cash' && (
+                                <View style={styles.cashFieldsContainer}>
+                                    <View style={styles.cashFieldsRow}>
+                                        <View style={styles.cashFieldColumn}>
+                                            <RNText style={styles.cashAmountLabel}>Actual Amount (₹)</RNText>
+                                            <RNTextInput
+                                                style={styles.cashAmountInput}
+                                                placeholder=""
+                                                value={customCashAmount}
+                                                onChangeText={setCustomCashAmount}
+                                                keyboardType="numeric"
+                                            />
+                                        </View>
+                                        <View style={styles.cashFieldColumn}>
+                                            <RNText style={styles.cashAmountLabel}>Booked For (Name)</RNText>
+                                            <RNTextInput
+                                                style={styles.cashAmountInput}
+                                                placeholder=""
+                                                value={bookedForName}
+                                                onChangeText={setBookedForName}
+                                            />
+                                        </View>
+                                    </View>
+                                </View>
+                            )}
                         </View>
 
                         {/* Confirm & Pay Button */}
@@ -1424,13 +1472,16 @@ export default function CheckoutScreen() {
                             style={[styles.confirmBtnNew, processing && { opacity: 0.7 }]}
                             onPress={() => {
                                 if (selectedGateway === 'wallet') handleWalletPayment();
+                                else if (selectedGateway === 'cash') handleCashPayment();
                                 else handleRazorpay();
                             }}
                             disabled={processing}
                         >
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%' }}>
                                 <ShieldCheck size={20} color="#FFFFFF" />
-                                <RNText style={styles.confirmBtnTextNew}>Confirm & Pay {formatCurrency(totalPayable)}</RNText>
+                                <RNText style={styles.confirmBtnTextNew}>
+                                    {selectedGateway === 'cash' ? 'Confirm' : `Confirm & Pay ${formatCurrency(totalPayable)}`}
+                                </RNText>
                             </View>
                         </TouchableOpacity>
 
@@ -1965,7 +2016,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#059669',
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: 'center',
         paddingHorizontal: 24,
         marginBottom: 24,
         shadowColor: '#059669',

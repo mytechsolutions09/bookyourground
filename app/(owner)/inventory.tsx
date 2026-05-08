@@ -299,7 +299,7 @@ export default function OwnerInventoryScreen() {
                 const startHHMM = normalizeDbTimeToHHMM(s.start_time);
                 const endHHMM = normalizeDbTimeToHHMM(s.end_time);
                 const isBox = (ground.pitch_type ?? '').toLowerCase().includes('box');
-                const basePrice = s.custom_price ?? 0;
+                const basePrice = Number(s.custom_price ?? (ground as any).base_price_per_hour ?? 0);
 
                 const goToCheckout = (teams: 'one' | 'both') => {
                   const finalAmount = isBox ? basePrice : (teams === 'one' ? basePrice / 2 : basePrice);
@@ -352,397 +352,7 @@ export default function OwnerInventoryScreen() {
     }
   };
 
-  const content = (
-    <View style={styles.content}>
-      <View style={[
-        styles.pageHeader, 
-        isWeb && styles.webPageHeader,
-      ]}>
-        <View style={[
-          styles.headerTop,
-          (isWeb && !isSmall) ? { flexDirection: 'row', alignItems: 'center' } : { flexDirection: 'column', alignItems: 'flex-start' }
-        ]}>
-          <View>
-            {!isSmall && <Text style={styles.title}>Inventory Management</Text>}
-            {!isSmall && (
-              isScrolled && currentGround ? (
-                <View style={styles.headerContext}>
-                  <View style={styles.contextBadge}>
-                    <Building2 size={12} color="#00ea6b" />
-                    <Text style={styles.contextText}>{currentGround.name}</Text>
-                  </View>
-                </View>
-              ) : (
-                <Text style={styles.subtitle}>Owner Dashboard</Text>
-              )
-            )}
-          </View>
-          
-          <View style={[
-            styles.filterCard,
-            isSmall && { marginTop: -8 }
-          ]}>
-            {isSmall ? (
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.mobileFiltersRow}
-              >
-                {/* Ground Selector Dropdown */}
-                <TouchableOpacity 
-                  style={[styles.mobileDropdown, isUltraNarrow && { paddingHorizontal: 8, minWidth: 80 }]}
-                  onPress={() => setActivePicker('ground')}
-                >
-                  <Building2 size={14} color="#00ea6b" />
-                  <Text style={[styles.mobileDropdownText, isUltraNarrow && { fontSize: 10 }]} numberOfLines={1}>
-                    {currentGround?.name || 'Select Ground'}
-                  </Text>
-                  <ChevronDown size={14} color="#6B7280" />
-                </TouchableOpacity>
 
-                {/* Status Selector Dropdown */}
-                <TouchableOpacity 
-                  style={[styles.mobileDropdown, isUltraNarrow && { paddingHorizontal: 8, minWidth: 60 }]}
-                  onPress={() => setActivePicker('status')}
-                >
-                  <Filter size={14} color="#00ea6b" />
-                  <Text style={[styles.mobileDropdownText, isUltraNarrow && { fontSize: 10 }]}>{statusFilter}</Text>
-                  <ChevronDown size={14} color="#6B7280" />
-                </TouchableOpacity>
-
-                {/* Range Selector */}
-                <TouchableOpacity 
-                  style={[styles.mobileDropdown, isUltraNarrow && { paddingHorizontal: 8, minWidth: 50 }]}
-                  onPress={() => setActivePicker('range')}
-                >
-                  <Clock size={14} color="#00ea6b" />
-                  <Text style={[styles.mobileDropdownText, isUltraNarrow && { fontSize: 10 }]}>{daysToShow}D</Text>
-                  <ChevronDown size={14} color="#6B7280" />
-                </TouchableOpacity>
-              </ScrollView>
-            ) : (
-              <View style={styles.filtersContainer}>
-                 <View style={styles.statusFilters}>
-                    {['ALL', 'EMPTY', 'PARTIAL', 'FULL'].map(status => (
-                      <TouchableOpacity
-                        key={status}
-                        onPress={() => setStatusFilter(status)}
-                        style={[
-                          styles.filterTag,
-                          statusFilter === status && styles.filterTagActive,
-                          status === 'ALL' && statusFilter === 'ALL' && styles.tagAll,
-                          status === 'EMPTY' && statusFilter === 'EMPTY' && styles.tagEmpty,
-                          status === 'PARTIAL' && statusFilter === 'PARTIAL' && styles.tagPartial,
-                          status === 'FULL' && statusFilter === 'FULL' && styles.tagFull,
-                        ]}
-                      >
-                        <Text style={[
-                          styles.filterTagText,
-                          statusFilter === status && styles.filterTagTextActive
-                        ]}>{status}</Text>
-                      </TouchableOpacity>
-                    ))}
-                 </View>
-    
-                 <View style={styles.rangeSelector}>
-                    {[7, 14, 30, 90, 'L30'].map(days => (
-                      <TouchableOpacity
-                        key={days.toString()}
-                        onPress={() => setDaysToShow(days as any)}
-                        style={[styles.rangeBtn, daysToShow === days && styles.rangeBtnActive]}
-                      >
-                        <Text style={[styles.rangeBtnText, daysToShow === days && styles.rangeBtnTextActive]}>
-                          {days === 'L30' ? 'Past' : `${days}D`}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                 </View>
-  
-                 <View style={styles.searchContainer}>
-                    <Search size={16} color="#6B7280" />
-                    <TextInput
-                      style={styles.searchInput}
-                      placeholder="Search Ground..."
-                      value={searchQuery}
-                      onChangeText={setSearchQuery}
-                    />
-                 </View>
-              </View>
-            )}
-          </View>
-        </View>
-      </View>
-
-      <ScrollView 
-        style={styles.mainScroll} 
-        contentContainerStyle={[
-          styles.mainScrollContent,
-          { 
-            paddingBottom: isSmall ? 100 : 80
-          }
-        ]}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-        showsVerticalScrollIndicator={false}
-        overScrollMode="never"
-        bounces={false}
-        refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
-      >
-        {loading && grounds.length === 0 && (
-          <View style={{ padding: 40, alignItems: 'center' }}>
-            <ActivityIndicator size="large" color="#00ea6b" />
-            <Text style={{ marginTop: 12, color: '#6B7280', fontSize: 14 }}>Loading inventory...</Text>
-          </View>
-        )}
-        {!isScrolled && !isSmall && grounds.length > 0 && (
-          <View style={styles.selectionTabs}>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false} 
-              showsVerticalScrollIndicator={false}
-              overScrollMode="never"
-              bounces={false}
-              contentContainerStyle={styles.tabsScroll}
-            >
-              {filteredGrounds.map(ground => {
-                const isSelected = selectedGroundId === ground.id;
-                return (
-                  <TouchableOpacity 
-                    key={ground.id}
-                    style={[styles.tabChip, isSelected && styles.tabChipSelected]}
-                    onPress={() => setSelectedGroundId(ground.id)}
-                  >
-                    <Building2 size={12} color={isSelected ? '#FFFFFF' : '#6B7280'} />
-                    <Text style={[styles.tabChipText, isSelected && styles.tabChipTextSelected]}>
-                      {ground.name}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-        )}
-
-        <View style={[
-          styles.hierarchyContainer,
-          isSmall && { padding: 0, paddingTop: 0, gap: 0 }
-        ]}>
-          <View style={[
-            styles.inventoryContainer,
-            (isScrolled || isSmall) && styles.inventoryContainerExpanded,
-            isSmall && { backgroundColor: 'transparent' }
-          ]}>
-            {!isSmall && (
-              <View style={styles.sectionHeader}>
-                <LayoutGrid size={16} color="#111827" />
-                <Text style={styles.sectionTitle}>
-                  {currentGround ? `Inventory: ${currentGround.name}` : 'Select a ground'}
-                </Text>
-              </View>
-            )}
-
-            {currentGround ? (
-              <View style={styles.inventoryStaticList}>
-                {Array.from({ length: daysToShow === 'L30' ? 30 : daysToShow }).map((_, i) => {
-                  const d = new Date();
-                  if (daysToShow === 'L30') {
-                    d.setDate(d.getDate() - 29 + i);
-                  } else if (selectedDateFilter) {
-                    const [y, m, day] = selectedDateFilter.split('-').map(Number);
-                    d.setFullYear(y, m - 1, day);
-                    d.setDate(d.getDate() + i);
-                  }
-
-                  const dateStr = toLocalIsoDate(d);
-                  const displayDate = d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
-
-                  return (
-                    <View key={dateStr} style={[styles.compactDateRow, isUltraNarrow && { gap: 8 }]}>
-                      <View style={[styles.compactDateLabel, isUltraNarrow && { width: 50 }]}>
-                        <Text style={styles.dateDay}>{displayDate.split(' ')[0]}</Text>
-                        <Text style={styles.dateNum}>{displayDate.split(' ')[1]} {displayDate.split(' ')[2]}</Text>
-                      </View>
-                      <View style={styles.slotsWrapper}>
-                        {renderSlotsForDate(currentGround, dateStr)}
-                      </View>
-                    </View>
-                  );
-                })}
-              </View>
-            ) : (
-              <View style={styles.noGroundSelected}>
-                 <Building2 size={48} color="#D1D5DB" />
-                 <Text style={styles.emptyText}>No grounds found in your inventory.</Text>
-                 <TouchableOpacity 
-                   style={styles.addGroundBtn}
-                   onPress={() => router.push('/(owner)/grounds')}
-                 >
-                   <Text style={styles.addGroundBtnText}>Manage Grounds</Text>
-                 </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        </View>
-      </ScrollView>
-
-      <Modal
-        visible={!!bookingChoice}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setBookingChoice(null)}
-      >
-        <View style={styles.modalOverlay}>
-          <Card style={styles.choiceCard}>
-            <Text style={styles.choiceTitle}>Select Booking Type</Text>
-            <Text style={styles.choiceSubtitle}>
-              {bookingChoice?.ground?.name} - {bookingChoice?.dateStr}
-            </Text>
-            
-            <View style={styles.choiceButtons}>
-              <TouchableOpacity 
-                style={styles.choiceBtn}
-                onPress={() => {
-                  const b = bookingChoice;
-                  const finalAmount = (b.basePrice / 2);
-                  setBookingChoice(null);
-                  router.push({
-                    pathname: '/checkout/new',
-                    params: { 
-                      groundId: b.ground.id,
-                      date: b.dateStr,
-                      time: b.startHHMM,
-                      endTime: b.endHHMM,
-                      teamType: 'one',
-                      amount: finalAmount.toString(),
-                      pricePerHour: b.basePrice.toString()
-                    }
-                  });
-                }}
-              >
-                <Text style={styles.choiceBtnText}>Book 1 Team</Text>
-                <Text style={styles.choiceBtnPrice}>₹{(bookingChoice?.basePrice / 2).toLocaleString('en-IN')}</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={[styles.choiceBtn, styles.choiceBtnPrimary]}
-                onPress={() => {
-                  const b = bookingChoice;
-                  setBookingChoice(null);
-                  router.push({
-                    pathname: '/checkout/new',
-                    params: { 
-                      groundId: b.ground.id,
-                      date: b.dateStr,
-                      time: b.startHHMM,
-                      endTime: b.endHHMM,
-                      teamType: 'both',
-                      amount: b.basePrice.toString(),
-                      pricePerHour: b.basePrice.toString()
-                    }
-                  });
-                }}
-              >
-                <Text style={[styles.choiceBtnText, styles.choiceBtnTextWhite]}>Full Ground</Text>
-                <Text style={[styles.choiceBtnPrice, styles.choiceBtnTextWhite]}>₹{bookingChoice?.basePrice?.toLocaleString('en-IN')}</Text>
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity 
-              style={styles.choiceCancel}
-              onPress={() => setBookingChoice(null)}
-            >
-              <Text style={styles.choiceCancelText}>Cancel</Text>
-            </TouchableOpacity>
-          </Card>
-        </View>
-      </Modal>
-
-      {/* Picker Modal for Mobile Dropdowns */}
-      <Modal
-        visible={!!activePicker}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setActivePicker(null)}
-      >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
-          onPress={() => setActivePicker(null)}
-        >
-          <Card style={styles.pickerCard}>
-            <View style={styles.pickerHeader}>
-              <Text style={styles.pickerTitle}>
-                {activePicker === 'ground' ? 'Select Ground' : 
-                 activePicker === 'status' ? 'Select Status' : 'Select Range'}
-              </Text>
-              <TouchableOpacity onPress={() => setActivePicker(null)}>
-                <X size={20} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-            
-            <ScrollView style={styles.pickerOptions}>
-              {activePicker === 'ground' && filteredGrounds.map(ground => (
-                <TouchableOpacity 
-                  key={ground.id}
-                  style={[styles.pickerOption, selectedGroundId === ground.id && styles.pickerOptionActive]}
-                  onPress={() => {
-                    setSelectedGroundId(ground.id);
-                    setActivePicker(null);
-                  }}
-                >
-                  <Building2 size={16} color={selectedGroundId === ground.id ? '#00ea6b' : '#6B7280'} />
-                  <Text style={[styles.pickerOptionText, selectedGroundId === ground.id && styles.pickerOptionTextActive]}>
-                    {ground.name}
-                  </Text>
-                  {selectedGroundId === ground.id && <Check size={16} color="#00ea6b" />}
-                </TouchableOpacity>
-              ))}
-
-              {activePicker === 'status' && ['ALL', 'EMPTY', 'PARTIAL', 'FULL'].map(status => (
-                <TouchableOpacity 
-                  key={status}
-                  style={[styles.pickerOption, statusFilter === status && styles.pickerOptionActive]}
-                  onPress={() => {
-                    setStatusFilter(status);
-                    setActivePicker(null);
-                  }}
-                >
-                  <View style={[
-                    styles.statusDot, 
-                    status === 'ALL' ? { backgroundColor: '#00ea6b' } :
-                    status === 'EMPTY' ? { backgroundColor: '#E5E7EB' } :
-                    status === 'PARTIAL' ? { backgroundColor: '#FEF3C7' } :
-                    { backgroundColor: '#DEF7EC' }
-                  ]} />
-                  <Text style={[styles.pickerOptionText, statusFilter === status && styles.pickerOptionTextActive]}>
-                    {status}
-                  </Text>
-                  {statusFilter === status && <Check size={16} color="#00ea6b" />}
-                </TouchableOpacity>
-              ))}
-
-              {activePicker === 'range' && [7, 14, 30, 90, 'L30'].map(days => (
-                <TouchableOpacity 
-                  key={days.toString()}
-                  style={[styles.pickerOption, daysToShow === days && styles.pickerOptionActive]}
-                  onPress={() => {
-                    setDaysToShow(days as any);
-                    setActivePicker(null);
-                  }}
-                >
-                  <Clock size={16} color={daysToShow === days ? '#00ea6b' : '#6B7280'} />
-                  <Text style={[styles.pickerOptionText, daysToShow === days && styles.pickerOptionTextActive]}>
-                    {days === 'L30' ? 'Past' : `${days} Days`}
-                  </Text>
-                  {daysToShow === days && <Check size={16} color="#00ea6b" />}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </Card>
-        </TouchableOpacity>
-      </Modal>
-    </View>
-  );
 
   return (
     <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
@@ -894,19 +504,72 @@ export default function OwnerInventoryScreen() {
       )}
 
       {/* Choice Modal */}
-      <Modal visible={!!bookingChoice} transparent animationType="fade">
+      <Modal
+        visible={!!bookingChoice}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setBookingChoice(null)}
+      >
         <View style={styles.modalOverlay}>
           <Card style={styles.choiceCard}>
             <Text style={styles.choiceTitle}>Select Booking Type</Text>
+            <Text style={styles.choiceSubtitle}>
+              {bookingChoice?.ground?.name} - {bookingChoice?.dateStr}
+            </Text>
+            
             <View style={styles.choiceButtons}>
-               <TouchableOpacity style={styles.choiceBtn} onPress={() => {/* Book 1 Team Logic */}}>
-                 <Text style={styles.choiceBtnText}>Book 1 Team</Text>
-               </TouchableOpacity>
-               <TouchableOpacity style={[styles.choiceBtn, styles.choiceBtnPrimary]} onPress={() => {/* Full Ground Logic */}}>
-                 <Text style={[styles.choiceBtnText, { color: '#FFF' }]}>Full Ground</Text>
-               </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.choiceBtn}
+                onPress={() => {
+                  const b = bookingChoice;
+                  const finalAmount = ((b?.basePrice || 0) / 2);
+                  setBookingChoice(null);
+                  router.push({
+                    pathname: '/checkout/new',
+                    params: { 
+                      groundId: b.ground.id,
+                      date: b.dateStr,
+                      time: b.startHHMM,
+                      endTime: b.endHHMM,
+                      teamType: 'one',
+                      amount: finalAmount.toString(),
+                      pricePerHour: (b?.basePrice || 0).toString()
+                    }
+                  });
+                }}
+              >
+                <Text style={styles.choiceBtnText}>Book 1 Team</Text>
+                <Text style={styles.choiceBtnPrice}>₹{((bookingChoice?.basePrice || 0) / 2).toLocaleString('en-IN')}</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.choiceBtn, styles.choiceBtnPrimary]}
+                onPress={() => {
+                  const b = bookingChoice;
+                  setBookingChoice(null);
+                  router.push({
+                    pathname: '/checkout/new',
+                    params: { 
+                      groundId: b.ground.id,
+                      date: b.dateStr,
+                      time: b.startHHMM,
+                      endTime: b.endHHMM,
+                      teamType: 'both',
+                      amount: (b?.basePrice || 0).toString(),
+                      pricePerHour: (b?.basePrice || 0).toString()
+                    }
+                  });
+                }}
+              >
+                <Text style={[styles.choiceBtnText, styles.choiceBtnTextWhite]}>Full Ground</Text>
+                <Text style={[styles.choiceBtnPrice, styles.choiceBtnTextWhite]}>₹{(bookingChoice?.basePrice || 0).toLocaleString('en-IN')}</Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.choiceCancel} onPress={() => setBookingChoice(null)}>
+
+            <TouchableOpacity 
+              style={styles.choiceCancel}
+              onPress={() => setBookingChoice(null)}
+            >
               <Text style={styles.choiceCancelText}>Cancel</Text>
             </TouchableOpacity>
           </Card>
@@ -914,29 +577,85 @@ export default function OwnerInventoryScreen() {
       </Modal>
 
       {/* Picker Modal */}
-      <Modal visible={!!activePicker} transparent animationType="fade">
-        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setActivePicker(null)}>
+      <Modal
+        visible={!!activePicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setActivePicker(null)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setActivePicker(null)}
+        >
           <Card style={styles.pickerCard}>
             <View style={styles.pickerHeader}>
-              <Text style={styles.pickerTitle}>Select Option</Text>
-              <TouchableOpacity onPress={() => setActivePicker(null)}><X size={20} color="#6B7280" /></TouchableOpacity>
+              <Text style={styles.pickerTitle}>
+                {activePicker === 'ground' ? 'Select Ground' : 
+                 activePicker === 'status' ? 'Select Status' : 'Select Range'}
+              </Text>
+              <TouchableOpacity onPress={() => setActivePicker(null)}>
+                <X size={20} color="#6B7280" />
+              </TouchableOpacity>
             </View>
+            
             <ScrollView style={styles.pickerOptions}>
-               {activePicker === 'ground' && grounds.map(g => (
-                 <TouchableOpacity key={g.id} style={styles.pickerOption} onPress={() => { setSelectedGroundId(g.id); setActivePicker(null); }}>
-                   <Text style={styles.pickerOptionText}>{g.name}</Text>
-                 </TouchableOpacity>
-               ))}
-               {activePicker === 'status' && ['ALL', 'EMPTY', 'PARTIAL', 'FULL'].map(s => (
-                 <TouchableOpacity key={s} style={styles.pickerOption} onPress={() => { setStatusFilter(s); setActivePicker(null); }}>
-                   <Text style={styles.pickerOptionText}>{s}</Text>
-                 </TouchableOpacity>
-               ))}
-               {activePicker === 'range' && [7, 14, 30, 90, 'L30'].map(r => (
-                 <TouchableOpacity key={r.toString()} style={styles.pickerOption} onPress={() => { setDaysToShow(r as any); setActivePicker(null); }}>
-                   <Text style={styles.pickerOptionText}>{r === 'L30' ? 'Past 30D' : `${r} Days`}</Text>
-                 </TouchableOpacity>
-               ))}
+              {activePicker === 'ground' && filteredGrounds.map(ground => (
+                <TouchableOpacity 
+                  key={ground.id}
+                  style={[styles.pickerOption, selectedGroundId === ground.id && styles.pickerOptionActive]}
+                  onPress={() => {
+                    setSelectedGroundId(ground.id);
+                    setActivePicker(null);
+                  }}
+                >
+                  <Building2 size={16} color={selectedGroundId === ground.id ? '#00ea6b' : '#6B7280'} />
+                  <Text style={[styles.pickerOptionText, selectedGroundId === ground.id && styles.pickerOptionTextActive]}>
+                    {ground.name}
+                  </Text>
+                  {selectedGroundId === ground.id && <Check size={16} color="#00ea6b" />}
+                </TouchableOpacity>
+              ))}
+
+              {activePicker === 'status' && ['ALL', 'EMPTY', 'PARTIAL', 'FULL'].map(status => (
+                <TouchableOpacity 
+                  key={status}
+                  style={[styles.pickerOption, statusFilter === status && styles.pickerOptionActive]}
+                  onPress={() => {
+                    setStatusFilter(status);
+                    setActivePicker(null);
+                  }}
+                >
+                  <View style={[
+                    styles.statusDot, 
+                    status === 'ALL' ? { backgroundColor: '#00ea6b' } :
+                    status === 'EMPTY' ? { backgroundColor: '#E5E7EB' } :
+                    status === 'PARTIAL' ? { backgroundColor: '#FEF3C7' } :
+                    { backgroundColor: '#DEF7EC' }
+                  ]} />
+                  <Text style={[styles.pickerOptionText, statusFilter === status && styles.pickerOptionTextActive]}>
+                    {status}
+                  </Text>
+                  {statusFilter === status && <Check size={16} color="#00ea6b" />}
+                </TouchableOpacity>
+              ))}
+
+              {activePicker === 'range' && [7, 14, 30, 90, 'L30'].map(days => (
+                <TouchableOpacity 
+                  key={days.toString()}
+                  style={[styles.pickerOption, daysToShow === days && styles.pickerOptionActive]}
+                  onPress={() => {
+                    setDaysToShow(days as any);
+                    setActivePicker(null);
+                  }}
+                >
+                  <Clock size={16} color={daysToShow === days ? '#00ea6b' : '#6B7280'} />
+                  <Text style={[styles.pickerOptionText, daysToShow === days && styles.pickerOptionTextActive]}>
+                    {days === 'L30' ? 'Past' : `${days} Days`}
+                  </Text>
+                  {daysToShow === days && <Check size={16} color="#00ea6b" />}
+                </TouchableOpacity>
+              ))}
             </ScrollView>
           </Card>
         </TouchableOpacity>

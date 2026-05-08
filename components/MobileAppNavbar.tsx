@@ -17,7 +17,7 @@ type MobileAppNavbarProps = {
 /** Green top bar with logo — use on native-only screens (not web). */
 export default function MobileAppNavbar({ 
   title, 
-  titleColor = '#01b854', 
+  titleColor = '#00ea6b', 
   rightAction, 
   lightBg, 
   smallerTitle,

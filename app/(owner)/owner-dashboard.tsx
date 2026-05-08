@@ -355,7 +355,7 @@ export default function OwnerDashboardScreen() {
         <View style={styles.verificationBanner}>
           <ShieldCheck size={14} color="#0EA5E9" />
           <Text style={styles.verificationText}>Verification in progress</Text>
-          <Text style={styles.verificationSubtext}>Our team is reviewing your payout details. Settlements will begin once verified.</Text>
+          <Text style={styles.verificationSubtext}>Our team is reviewing your payout details. Once verified, you can manually request payouts at any time.</Text>
         </View>
       )}
       <View style={styles.grid}>
@@ -876,19 +876,19 @@ export default function OwnerDashboardScreen() {
         <MobileAppNavbar title="Owner Dashboard" titleColor={THEME_ACCENT} />
         <View style={styles.tabContainer}>
           <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'owner' && styles.activeTabButton, !hasBanking && styles.disabledTab]} 
+            style={[styles.tabButton, activeTab === 'owner' && styles.activeTabButton]} 
             onPress={() => onTabPress('owner')}
           >
             <Text style={[styles.tabText, activeTab === 'owner' && styles.activeTabText]}>Owner Hub</Text>
           </TouchableOpacity>
           <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'personal' && styles.activeTabButton, !hasBanking && styles.disabledTab]} 
+            style={[styles.tabButton, activeTab === 'personal' && styles.activeTabButton]} 
             onPress={() => onTabPress('personal')}
           >
             <Text style={[styles.tabText, activeTab === 'personal' && styles.activeTabText]}>Activity</Text>
           </TouchableOpacity>
           <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'profile' && styles.activeTabButton, !hasBanking && styles.disabledTab]} 
+            style={[styles.tabButton, activeTab === 'profile' && styles.activeTabButton]} 
             onPress={() => onTabPress('profile')}
           >
             <Text style={[styles.tabText, activeTab === 'profile' && styles.activeTabText]}>Profile</Text>
@@ -1029,41 +1029,37 @@ const styles = StyleSheet.create({
 
   tabContainer: {
     flexDirection: 'row',
-    backgroundColor: '#F1F5F9',
-    borderRadius: 20,
-    padding: 6,
-    marginBottom: 32,
+    backgroundColor: 'transparent',
+    paddingHorizontal: 16,
+    marginBottom: 0,
     width: '100%',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
   tabButton: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
   },
   activeTabButton: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
+    borderBottomColor: '#01b854',
   },
 
   tabText: {
     fontFamily: 'Inter',
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '600',
     color: '#64748B',
   },
   activeTabText: {
     color: '#01b854',
-    fontWeight: '700',
+    fontWeight: '800',
   },
   disabledTab: {
-    opacity: 0.4,
+    opacity: 0.5,
   },
   grid: {
     flexDirection: 'row',

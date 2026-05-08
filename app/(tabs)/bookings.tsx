@@ -25,7 +25,7 @@ import { normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
 import Modal from '@/components/ui/Modal';
 import { slugifyGroundSegment } from '@/utils/groundSlug';
 import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
-import { Calendar, X, Swords, Save, CheckCircle2, Circle, Clock, TrendingUp } from 'lucide-react-native';
+import { Calendar, X, Swords, Save, CheckCircle2, Circle, Clock, TrendingUp, Filter } from 'lucide-react-native';
 import { Svg, Circle as SvgCircle } from 'react-native-svg';
 import { useUI } from '@/contexts/UIContext';
 
@@ -65,6 +65,7 @@ function NameInputCell({ booking, onSave }: { booking: BookingWithDetails, onSav
           disabled={saving}
         >
           <Save size={16} color={saving ? '#9CA3AF' : '#00ea6b'} />
+
         </TouchableOpacity>
       )}
     </TouchableOpacity>
@@ -79,12 +80,16 @@ export default function BookingsScreen() {
   const [activeTab, setActiveTab] = useState<'all' | 'upcoming' | 'past' | 'cancelled'>('upcoming');
   const [ownerScope, setOwnerScope] = useState<'all' | 'own' | 'other'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [fromDate, setFromDate] = useState<string | null>(null);
+  const [toDate, setToDate] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<'date' | 'ground' | 'amount' | 'status' | 'booked_at' | 'paid' | 'teams' | 'name'>('date');
   const [sortAsc, setSortAsc] = useState(false);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
+  const [tempFromDate, setTempFromDate] = useState<string | null>(null);
+  const [tempToDate, setTempToDate] = useState<string | null>(null);
   const PAGE_SIZE = 10;
   const [totalCount, setTotalCount] = useState(0);
   const [userStats, setUserStats] = useState({
@@ -131,7 +136,7 @@ export default function BookingsScreen() {
       loadBookings(0);
       loadUserStats();
     }
-  }, [user, profile, activeTab, ownerScope, selectedDate, searchQuery]);
+  }, [user, profile, activeTab, ownerScope, fromDate, toDate, searchQuery]);
 
   const loadBookings = async (targetPage = 0, isLoadMore = false) => {
     if (!user) return;
@@ -181,8 +186,11 @@ export default function BookingsScreen() {
         query = query.eq('user_id', user.id);
       }
 
-      if (selectedDate) {
-        query = query.eq('booking_date', selectedDate);
+      if (fromDate) {
+        query = query.gte('booking_date', fromDate);
+      }
+      if (toDate) {
+        query = query.lte('booking_date', toDate);
       }
 
       if (searchQuery.trim()) {
@@ -440,6 +448,7 @@ export default function BookingsScreen() {
         >
           {loadingMore ? (
             <ActivityIndicator color="#00ea6b" />
+
           ) : (
             <Text style={styles.loadMoreText}>Load More</Text>
           )}
@@ -483,6 +492,89 @@ export default function BookingsScreen() {
         >
           <Text style={styles.pageBtnText}>Next</Text>
         </TouchableOpacity>
+      </View>
+    );
+  };
+
+  const handleDateClick = (dateStr: string) => {
+    if (!tempFromDate || (tempFromDate && tempToDate)) {
+      setTempFromDate(dateStr);
+      setTempToDate(null);
+    } else {
+      if (dateStr < tempFromDate) {
+        setTempToDate(tempFromDate);
+        setTempFromDate(dateStr);
+      } else {
+        setTempToDate(dateStr);
+      }
+    }
+  };
+
+  const renderCalendar = (monthOffset: number) => {
+    const today = new Date();
+    const date = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
+    const month = date.getMonth();
+    const year = date.getFullYear();
+    const monthName = date.toLocaleString('default', { month: 'long' });
+    
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDay = new Date(year, month, 1).getDay();
+    
+    const days = [];
+    for (let i = 0; i < firstDay; i++) days.push(null);
+    for (let i = 1; i <= daysInMonth; i++) days.push(new Date(year, month, i));
+    
+    const weeks = [];
+    for (let i = 0; i < days.length; i += 7) weeks.push(days.slice(i, i + 7));
+    
+    return (
+      <View style={styles.calMonth}>
+        <Text style={styles.calMonthTitle}>{monthName} {year}</Text>
+        <View style={styles.calGrid}>
+           <View style={styles.calHeaderRow}>
+             {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
+               <Text key={d} style={styles.calHeaderCell}>{d}</Text>
+             ))}
+           </View>
+           {weeks.map((week, wi) => (
+             <View key={wi} style={styles.calRow}>
+               {week.map((day, di) => {
+                 if (!day) return <View key={di} style={styles.calCell} />;
+                 
+                 const dateStr = day.toISOString().split('T')[0];
+                 const isSelected = tempFromDate === dateStr || tempToDate === dateStr;
+                 const isInRange = tempFromDate && tempToDate && dateStr > tempFromDate && dateStr < tempToDate;
+                 const isStart = tempFromDate === dateStr;
+                 const isEnd = tempToDate === dateStr;
+                 const isToday = new Date().toISOString().split('T')[0] === dateStr;
+                 
+                 return (
+                   <TouchableOpacity 
+                     key={di} 
+                     style={[
+                       styles.calCell,
+                       isInRange && styles.calCellInRange,
+                       isStart && styles.calCellStart,
+                       isEnd && styles.calCellEnd,
+                       isSelected && styles.calCellSelected,
+                       isToday && !isSelected && !isInRange && { backgroundColor: '#F0FDF4' }
+                     ]}
+                     onPress={() => handleDateClick(dateStr)}
+                   >
+                     <Text style={[
+                       styles.calDayText,
+                       isInRange && styles.calDayTextInRange,
+                       isSelected && styles.calDayTextSelected,
+                       isToday && !isSelected && !isInRange && { color: '#00ea6b', fontWeight: '700' }
+                     ]}>
+                       {day.getDate()}
+                     </Text>
+                   </TouchableOpacity>
+                 );
+               })}
+             </View>
+           ))}
+        </View>
       </View>
     );
   };
@@ -540,30 +632,7 @@ export default function BookingsScreen() {
                 </>
               )}
 
-              <View style={styles.webFilterSection}>
-                <View style={styles.webDateInputWrap}>
-                  <Calendar size={14} color="#64748B" />
-                  <input
-                    type="date"
-                    value={selectedDate || ''}
-                    onChange={(e) => setSelectedDate(e.target.value || null)}
-                    style={{
-                      border: 'none',
-                      outline: 'none',
-                      fontSize: '13px',
-                      color: '#0F172A',
-                      fontFamily: 'Inter',
-                      background: 'transparent',
-                      cursor: 'pointer'
-                    }}
-                  />
-                  {selectedDate && (
-                    <TouchableOpacity onPress={() => setSelectedDate(null)} style={{ marginLeft: 4 }}>
-                      <X size={14} color="#64748B" />
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </View>
+
             </View>
 
             {/* Cards */}
@@ -675,6 +744,7 @@ export default function BookingsScreen() {
                 <View style={styles.summaryCountRow}>
                   <View style={styles.summaryCount}>
                     <Text style={[styles.summaryValue, { color: '#00ea6b' }]}>
+
                       {bookings.filter(b => !isDateInPast(b.booking_date) && b.status === 'confirmed').length}
                     </Text>
                     <Text style={styles.summaryLabel}>Upcoming</Text>
@@ -713,6 +783,7 @@ export default function BookingsScreen() {
                         cy={35}
                         r={32}
                         stroke="#00ea6b"
+
                         strokeWidth={6}
                         strokeDasharray={2 * Math.PI * 32}
                         strokeDashoffset={2 * Math.PI * 32 * (1 - userStats.percent / 100)}
@@ -728,6 +799,7 @@ export default function BookingsScreen() {
                     <Text style={styles.statsSmall}>Match Activity</Text>
                     <Text style={styles.statsBold}>Level: {userStats.level}</Text>
                     <Text style={[styles.statsBold, { color: '#00ea6b', marginTop: 4 }]}>
+
                       {userStats.totalHours} hrs
                     </Text>
                     <Text style={styles.statsSmall}>played total</Text>
@@ -858,11 +930,123 @@ export default function BookingsScreen() {
     </View>
   );
 
+  const datePickerModal = (
+    <Modal
+      visible={isDatePickerVisible}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={() => setIsDatePickerVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={() => setIsDatePickerVisible(false)} />
+        <View style={styles.datePickerModalWrap}>
+          <View style={styles.dpMain}>
+            {/* Sidebar Quick Range */}
+            <View style={styles.dpSidebar}>
+              <Text style={styles.dpSidebarTitle}>Quick Range</Text>
+              {[
+                { id: 'all', label: 'All Time' },
+                { id: 'today', label: 'Today' },
+                { id: 'yesterday', label: 'Yesterday' },
+                { id: 'this_week', label: 'This Week' },
+                { id: 'last_week', label: 'Last Week' },
+                { id: 'this_month', label: 'This Month' },
+                { id: 'last_month', label: 'Last Month' },
+                { id: 'custom', label: 'Custom' },
+              ].map((range) => (
+                <TouchableOpacity 
+                  key={range.id} 
+                  style={[styles.quickRangeItem, range.id === 'custom' && styles.quickRangeItemActive]}
+                  onPress={() => {
+                    const today = new Date();
+                    let start = new Date();
+                    let end = new Date();
+                    switch (range.id) {
+                      case 'all': setTempFromDate(null); setTempToDate(null); return;
+                      case 'today': break;
+                      case 'yesterday': start.setDate(today.getDate() - 1); end.setDate(today.getDate() - 1); break;
+                      case 'this_week': start.setDate(today.getDate() - today.getDay()); end.setDate(today.getDate() + (6 - today.getDay())); break;
+                      case 'last_week': start.setDate(today.getDate() - today.getDay() - 7); end.setDate(today.getDate() - today.getDay() - 1); break;
+                      case 'this_month': start = new Date(today.getFullYear(), today.getMonth(), 1); end = new Date(today.getFullYear(), today.getMonth() + 1, 0); break;
+                      case 'last_month': start = new Date(today.getFullYear(), today.getMonth() - 1, 1); end = new Date(today.getFullYear(), today.getMonth(), 0); break;
+                      case 'custom': return;
+                    }
+                    setTempFromDate(start.toISOString().split('T')[0]);
+                    setTempToDate(end.toISOString().split('T')[0]);
+                  }}
+                >
+                  <Calendar size={14} color={range.id === 'custom' ? '#00ea6b' : '#64748B'} />
+                  <Text style={[styles.quickRangeText, range.id === 'custom' && styles.quickRangeTextActive]}>{range.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Main Selection Area */}
+            <View style={styles.dpSelectionArea}>
+              <View style={styles.dpInputsRow}>
+                <View style={styles.dpInputBox}>
+                  <Text style={styles.dpInputLabel}>Start Date</Text>
+                  <View style={styles.dpInput}>
+                    <Calendar size={16} color="#64748B" />
+                    <Text style={styles.dpInputText}>
+                      {tempFromDate ? new Date(tempFromDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Select Date'}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.dpArrow}>
+                  <Text style={{ color: '#94A3B8', fontSize: 20 }}>→</Text>
+                </View>
+                <View style={styles.dpInputBox}>
+                  <Text style={styles.dpInputLabel}>End Date</Text>
+                  <View style={styles.dpInput}>
+                    <Calendar size={16} color="#64748B" />
+                    <Text style={styles.dpInputText}>
+                      {tempToDate ? new Date(tempToDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Select Date'}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Calendar View */}
+              <View style={styles.calendarPlaceholder}>
+                 {renderCalendar(0)}
+                 {Platform.OS === 'web' && width > 850 && renderCalendar(1)}
+              </View>
+            </View>
+          </View>
+
+          {/* Footer */}
+          <View style={styles.dpFooter}>
+            <TouchableOpacity onPress={() => { setTempFromDate(null); setTempToDate(null); }}>
+              <Text style={styles.dpClearBtn}>Clear</Text>
+            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity style={styles.dpCancelBtn} onPress={() => setIsDatePickerVisible(false)}>
+                <Text style={styles.dpCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.dpApplyBtn} 
+                onPress={() => {
+                  setFromDate(tempFromDate);
+                  setToDate(tempToDate);
+                  setIsDatePickerVisible(false);
+                }}
+              >
+                <Text style={styles.dpApplyText}>Apply</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
   const isCompact = width < 900;
 
   return (Platform.OS === 'web' && !isCompact) ? (
     <WebLayout>
       {content}
+      {datePickerModal}
       <Modal
         visible={cancelModalVisible}
         onClose={() => !cancelling && setCancelModalVisible(false)}
@@ -913,6 +1097,7 @@ export default function BookingsScreen() {
       <MobileAppNavbar title="My Bookings" titleColor="#111827" lightBg />
       <View style={styles.nativeBody}>
         {content}
+        {datePickerModal}
         
         <Modal
           visible={cancelModalVisible}
@@ -1550,12 +1735,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+  },
+  webDateText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0F172A',
+    fontFamily: 'Inter',
   },
   webTab: {
     paddingHorizontal: 12,
@@ -1887,6 +2078,246 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#00ea6b',
     fontFamily: 'Inter',
+  },
+  webFilterSection: {
+    marginLeft: 'auto',
+  },
+  webDateInputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
+    minWidth: 160,
+  },
+  webDateText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: Platform.OS === 'web' ? 'center' : 'flex-end',
+  },
+  datePickerModalWrap: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    width: '95%',
+    maxWidth: 1200,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.15,
+    shadowRadius: 30,
+    elevation: 10,
+    alignSelf: 'center',
+    marginTop: Platform.OS === 'web' ? '5%' : 0,
+  },
+  dpMain: {
+    flexDirection: Platform.OS === 'web' ? 'row' : 'column',
+    minHeight: 450,
+  },
+  dpSidebar: {
+    width: Platform.OS === 'web' ? 220 : '100%',
+    borderRightWidth: Platform.OS === 'web' ? 1 : 0,
+    borderRightColor: '#F1F5F9',
+    borderBottomWidth: Platform.OS === 'web' ? 0 : 1,
+    borderBottomColor: '#F1F5F9',
+    padding: 16,
+    gap: 4,
+  },
+  dpSidebarTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1E293B',
+    marginBottom: 12,
+    paddingHorizontal: 12,
+  },
+  quickRangeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 10,
+  },
+  quickRangeItemActive: {
+    backgroundColor: '#F0FDF4',
+  },
+  quickRangeText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  quickRangeTextActive: {
+    color: '#00ea6b',
+  },
+  dpSelectionArea: {
+    flex: 1,
+    padding: 24,
+    minWidth: Platform.OS === 'web' ? 500 : 'auto',
+  },
+  dpInputsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 24,
+  },
+  dpInputBox: {
+    flex: 1,
+    minWidth: 140,
+  },
+  dpInputLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#94A3B8',
+    textTransform: 'uppercase',
+    marginBottom: 6,
+    letterSpacing: 0.5,
+  },
+  dpInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#00ea6b',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 10,
+    backgroundColor: '#FFFFFF',
+  },
+  dpInputText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1E293B',
+    flex: 1,
+  },
+  dpArrow: {
+    paddingTop: 18,
+  },
+  calendarPlaceholder: {
+    flexDirection: 'row',
+    gap: 32,
+    marginTop: 12,
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+  },
+  calMonth: {
+    flex: 1,
+    minWidth: 280,
+  },
+  calMonthTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  calGrid: {
+    width: '100%',
+  },
+  calHeaderRow: {
+    flexDirection: 'row',
+    marginBottom: 8,
+  },
+  calHeaderCell: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  calRow: {
+    flexDirection: 'row',
+    marginBottom: 2,
+  },
+  calCell: {
+    flex: 1,
+    height: 38,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  calCellInRange: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: 0,
+  },
+  calCellStart: {
+    borderTopLeftRadius: 8,
+    borderBottomLeftRadius: 8,
+    backgroundColor: '#00ea6b',
+  },
+  calCellEnd: {
+    borderTopRightRadius: 8,
+    borderBottomRightRadius: 8,
+    backgroundColor: '#00ea6b',
+  },
+  calCellSelected: {
+    backgroundColor: '#00ea6b',
+  },
+  calDayText: {
+    fontSize: 14,
+    color: '#334155',
+  },
+  calDayTextSelected: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  calDayTextInRange: {
+    color: '#065F46',
+    fontWeight: '600',
+  },
+  calHint: {
+    fontSize: 12,
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: 20,
+    fontStyle: 'italic',
+  },
+  dpFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    backgroundColor: '#F8FAFC',
+  },
+  dpClearBtn: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#64748B',
+    marginLeft: 8,
+  },
+  dpCancelBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+  },
+  dpCancelText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  dpApplyBtn: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: '#00ea6b',
+  },
+  dpApplyText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#043529',
   },
 });
 

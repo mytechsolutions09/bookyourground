@@ -9,7 +9,7 @@ import { formatCurrency } from '@/utils/helpers';
 import { useUI } from '@/contexts/UIContext';
 
 const THEME_BG = '#043529';
-const ACCENT = '#c8f35c'; 
+const ACCENT = '#00ea6b'; 
 
 export default function WalletScreen() {
   const { user, profile } = useAuth();
@@ -438,7 +438,7 @@ export default function WalletScreen() {
                            setIsDatePickerVisible(true);
                          }}
                        >
-                         <Calendar size={18} color="#059669" />
+                         <Calendar size={18} color="#00ea6b" />
                          <Text style={styles.filterByDateText}>Filter by Date</Text>
                          <Filter size={14} color="#64748B" />
                        </TouchableOpacity>
@@ -451,7 +451,7 @@ export default function WalletScreen() {
                      return (
                        <View key={tx.id} style={[styles.txCard, isLast && { borderBottomWidth: 0 }]}>
                           <View style={[styles.txIconBox, isPos ? styles.txIconBoxPos : styles.txIconBoxNeg]}>
-                             {isPos ? <ArrowUp size={20} color="#059669" /> : <ArrowDown size={20} color="#dc2626" />}
+                             {isPos ? <ArrowUp size={20} color="#00ea6b" /> : <ArrowDown size={20} color="#dc2626" />}
                           </View>
                           <View style={styles.txInfo}>
                              <Text style={styles.txTitle}>{tx.title}</Text>
@@ -855,7 +855,7 @@ const styles = StyleSheet.create({
     marginBottom: 1,
   },
   txAmountPos: {
-    color: '#15803d',
+    color: '#00ea6b',
   },
   txAmountNeg: {
     color: '#dc2626',
@@ -1069,7 +1069,7 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   quickRangeTextActive: {
-    color: '#059669',
+    color: '#00ea6b',
   },
   dpSelectionArea: {
     flex: 1,
@@ -1096,7 +1096,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#059669',
+    borderColor: '#00ea6b',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
@@ -1152,7 +1152,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   calCellSelected: {
-    backgroundColor: '#059669',
+    backgroundColor: '#00ea6b',
   },
   calCellInRange: {
     backgroundColor: '#ECFDF5',
@@ -1217,7 +1217,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 10,
-    backgroundColor: '#059669',
+    backgroundColor: '#00ea6b',
   },
   dpApplyText: {
     fontSize: 14,

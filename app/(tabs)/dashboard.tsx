@@ -30,6 +30,7 @@ import {
   QrCode,
   Activity as ActivityIcon,
 } from 'lucide-react-native';
+import { Svg, Circle } from 'react-native-svg';
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -52,7 +53,7 @@ import DashboardMap from '@/components/maps/DashboardMap';
 
 const THEME_BG = '#F8FAFC';
 const THEME_CARD_BG = '#FFFFFF';
-const THEME_ACCENT = '#10b981';
+const THEME_ACCENT = '#00ea6b';
 const THEME_TEXT = '#0F172A';
 const THEME_MUTED = '#64748B';
 const THEME_BORDER = '#F1F5F9';
@@ -410,15 +411,36 @@ function DashboardContent() {
       <View style={[styles.panelCard, styles.noContainer]}>
         <Text style={styles.panelTitle}>Balance & Stats</Text>
         <View style={styles.statsDonutContainer}>
-          <View style={[styles.donutPlaceholder, { 
-            borderColor: THEME_ACCENT,
-            borderLeftColor: '#F1F5F9',
-            // Simple visual based on goal of 25hrs
-            borderWidth: 10 
-          }]}>
-            <Text style={styles.donutPercent}>
-              {Math.min(100, Math.round((statsPlayedThisMonth / 25) * 100))}%
-            </Text>
+          <View style={styles.donutContainer}>
+            <Svg width="80" height="80" viewBox="0 0 100 100">
+              {/* Background Circle */}
+              <Circle
+                cx="50"
+                cy="50"
+                r="40"
+                stroke="#F1F5F9"
+                strokeWidth="10"
+                fill="transparent"
+              />
+              {/* Progress Circle */}
+              <Circle
+                cx="50"
+                cy="50"
+                r="40"
+                stroke={THEME_ACCENT}
+                strokeWidth="10"
+                fill="transparent"
+                strokeDasharray={`${2 * Math.PI * 40}`}
+                strokeDashoffset={`${2 * Math.PI * 40 * (1 - Math.min(100, Math.round((statsPlayedThisMonth / 25) * 100)) / 100)}`}
+                strokeLinecap="round"
+                transform="rotate(-90 50 50)"
+              />
+            </Svg>
+            <View style={styles.donutTextOverlay}>
+              <Text style={styles.donutPercent}>
+                {Math.min(100, Math.round((statsPlayedThisMonth / 25) * 100))}%
+              </Text>
+            </View>
           </View>
           <View style={styles.statsInfo}>
             <Text style={styles.statsValueMain}>{statsPlayedThisMonth} hrs</Text>
@@ -436,7 +458,7 @@ function DashboardContent() {
         <ScrollView
           style={[styles.root, IS_DARK && styles.rootDark]}
           contentContainerStyle={[styles.scrollContent, styles.scrollContentWeb]}
-          refreshControl={<RefreshControl refreshing={loading} onRefresh={loadBookings} tintColor="#01b854" />}
+          refreshControl={<RefreshControl refreshing={loading} onRefresh={loadBookings} tintColor="#00ea6b" />}
           showsVerticalScrollIndicator
         >
           <View style={styles.mainLayout}>
@@ -597,7 +619,7 @@ function DashboardContent() {
             style={styles.root}
             contentContainerStyle={[styles.scrollContent, { paddingTop: HEADER_HEIGHT + insets.top + 16 }]}
             showsVerticalScrollIndicator={false}
-            refreshControl={<RefreshControl refreshing={loading} onRefresh={loadBookings} tintColor="#01b854" />}
+            refreshControl={<RefreshControl refreshing={loading} onRefresh={loadBookings} tintColor="#00ea6b" />}
           >
             <View style={[styles.centerContentNative, width > 768 && styles.centerContentWide, isUltraNarrow && { padding: 12 }]}>
                {/* Compact Greeting */}
@@ -754,13 +776,13 @@ const styles = StyleSheet.create({
   tabText: {
     color: '#64748B',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '500',
     fontFamily: 'Inter',
   },
   activeTabText: {
     color: '#00ea6b',
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '600',
     fontFamily: 'Inter',
   },
   noContainer: {
@@ -807,8 +829,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   greetingTextSmall: {
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: 15,
+    fontWeight: '400',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
@@ -840,13 +862,13 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   greetingText: {
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 22,
+    fontWeight: '700',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
   dateText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#64748B',
     marginTop: 2,
     fontFamily: 'Inter',
@@ -878,7 +900,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#F1F5F9',
-    shadowColor: '#10b981',
+    shadowColor: '#00ea6b',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.05,
     shadowRadius: 20,
@@ -889,14 +911,14 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   searchHeroTitle: {
-    fontSize: 22,
-    fontWeight: '800',
+    fontSize: 20,
+    fontWeight: '700',
     color: '#0F172A',
     marginBottom: 4,
     fontFamily: 'Inter',
   },
   searchHeroSub: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#64748B',
     marginBottom: 20,
     fontFamily: 'Inter',
@@ -962,8 +984,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   cardHeaderTitle: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: '400',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
@@ -996,8 +1018,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   bookingName: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
@@ -1037,8 +1059,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   recentGroundName: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '600',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
@@ -1086,8 +1108,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   panelTitle: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: '400',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
@@ -1141,8 +1163,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F5F9',
   },
   panelSubTitle: {
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '700',
     color: '#0F172A',
     marginTop: 24,
     marginBottom: 12,
@@ -1165,7 +1187,7 @@ const styles = StyleSheet.create({
   },
   slotTime: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
@@ -1181,7 +1203,7 @@ const styles = StyleSheet.create({
   },
   slotName: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
@@ -1212,19 +1234,25 @@ const styles = StyleSheet.create({
     gap: 20,
     marginTop: 16,
   },
-  donutPlaceholder: {
+  donutContainer: {
     width: 80,
     height: 80,
-    borderRadius: 40,
-    borderWidth: 10,
-    borderColor: THEME_ACCENT,
-    borderLeftColor: '#F1F5F9',
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  donutTextOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
   },
   donutPercent: {
     fontSize: 16,
-    fontWeight: '900',
+    fontWeight: '700',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
@@ -1232,8 +1260,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   statsValueMain: {
-    fontSize: 18,
-    fontWeight: '900',
+    fontSize: 16,
+    fontWeight: '700',
     color: '#0F172A',
     fontFamily: 'Inter',
   },

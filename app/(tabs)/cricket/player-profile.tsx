@@ -61,7 +61,7 @@ const INDIAN_STATES = [
 const { width } = Dimensions.get('window');
 
 
-const PlayerProfileView = () => {
+const PlayerProfileView = ({ activeTab = 'Overview' }: { activeTab?: 'Overview' | 'Batting' | 'Bowling' }) => {
    const { profile, loading: authLoading, user } = useAuth();
    const { width } = useWindowDimensions();
    const { setTabBarVisible } = useUI();
@@ -132,12 +132,25 @@ const PlayerProfileView = () => {
             not_outs: (acc.not_outs || 0) + (curr.not_outs || 0),
             runs_conceded: (acc.runs_conceded || 0) + (curr.runs_conceded || 0),
             overs_bowled: (acc.overs_bowled || 0) + (curr.overs_bowled || 0),
+            balls_faced: (acc.balls_faced || 0) + (curr.balls_faced || 0),
+            fours: (acc.fours || 0) + (curr.fours || 0),
+            sixes: (acc.sixes || 0) + (curr.sixes || 0),
+            fifties: (acc.fifties || 0) + (curr.fifties || 0),
+            hundreds: (acc.hundreds || 0) + (curr.hundreds || 0),
+            maidens: (acc.maidens || 0) + (curr.maidens || 0),
+            dots_bowled: (acc.dots_bowled || 0) + (curr.dots_bowled || 0),
           }), {} as any);
 
           const batting_avg = summed.total_runs / (summed.innings_batted - summed.not_outs || 1);
+          const strike_rate = (summed.total_runs / (summed.balls_faced || 1)) * 100;
+          const bowling_avg = summed.runs_conceded / (summed.total_wickets || 1);
+          const economy = (summed.runs_conceded / (summed.overs_bowled || 1));
           setGlobalStats({
             ...summed,
-            batting_avg: batting_avg.toFixed(1)
+            batting_avg: batting_avg.toFixed(1),
+            strike_rate: strike_rate.toFixed(1),
+            bowling_avg: bowling_avg.toFixed(2),
+            economy: economy.toFixed(2)
           });
         }
 
@@ -270,7 +283,8 @@ const PlayerProfileView = () => {
   };
 
   const content = (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+    <View style={{ flex: 1 }}>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
       <View style={[styles.responsiveContent, isTablet && { maxWidth: '90%' }]}>
       <View style={[styles.section, isUltraNarrow && { paddingHorizontal: 12 }]}>
         {fetchingData ? (
@@ -284,22 +298,74 @@ const PlayerProfileView = () => {
           </View>
         ) : (
           <View style={styles.statsGrid}>
-            <View style={styles.statBox}>
-               <RNText style={styles.statValue}>{globalStats?.total_runs || 0}</RNText>
-               <RNText style={styles.statLabel}>Runs</RNText>
-            </View>
-            <View style={styles.statBox}>
-               <RNText style={styles.statValue}>{globalStats?.total_wickets || 0}</RNText>
-               <RNText style={styles.statLabel}>Wickets</RNText>
-            </View>
-            <View style={styles.statBox}>
-               <RNText style={styles.statValue}>{globalStats?.matches_played || 0}</RNText>
-               <RNText style={styles.statLabel}>Matches</RNText>
-            </View>
-            <View style={styles.statBox}>
-               <RNText style={styles.statValue}>{globalStats?.batting_avg || '0.0'}</RNText>
-               <RNText style={styles.statLabel}>Average</RNText>
-            </View>
+            {activeTab === 'Overview' && (
+              <>
+                <View style={styles.statBox}>
+                  <RNText style={styles.statValue}>{globalStats?.total_runs || 0}</RNText>
+                  <RNText style={styles.statLabel}>Runs</RNText>
+                </View>
+                <View style={styles.statBox}>
+                  <RNText style={styles.statValue}>{globalStats?.total_wickets || 0}</RNText>
+                  <RNText style={styles.statLabel}>Wickets</RNText>
+                </View>
+                <View style={styles.statBox}>
+                  <RNText style={styles.statValue}>{globalStats?.matches_played || 0}</RNText>
+                  <RNText style={styles.statLabel}>Matches</RNText>
+                </View>
+                <View style={styles.statBox}>
+                  <RNText style={styles.statValue}>{globalStats?.batting_avg || '0.0'}</RNText>
+                  <RNText style={styles.statLabel}>Average</RNText>
+                </View>
+              </>
+            )}
+            {activeTab === 'Batting' && (
+              <>
+                <View style={styles.statBox}>
+                  <RNText style={styles.statValue}>{globalStats?.total_runs || 0}</RNText>
+                  <RNText style={styles.statLabel}>Runs</RNText>
+                </View>
+                <View style={styles.statBox}>
+                  <RNText style={styles.statValue}>{globalStats?.innings_batted || 0}</RNText>
+                  <RNText style={styles.statLabel}>Innings</RNText>
+                </View>
+                <View style={styles.statBox}>
+                  <RNText style={styles.statValue}>{globalStats?.batting_avg || '0.0'}</RNText>
+                  <RNText style={styles.statLabel}>Avg</RNText>
+                </View>
+                <View style={styles.statBox}>
+                  <RNText style={styles.statValue}>{globalStats?.strike_rate || '0.0'}</RNText>
+                  <RNText style={styles.statLabel}>S/R</RNText>
+                </View>
+                <View style={styles.statBox}>
+                  <RNText style={styles.statValue}>{globalStats?.hundreds || 0}</RNText>
+                  <RNText style={styles.statLabel}>100s</RNText>
+                </View>
+                <View style={styles.statBox}>
+                  <RNText style={styles.statValue}>{globalStats?.fifties || 0}</RNText>
+                  <RNText style={styles.statLabel}>50s</RNText>
+                </View>
+              </>
+            )}
+            {activeTab === 'Bowling' && (
+              <>
+                <View style={styles.statBox}>
+                  <RNText style={styles.statValue}>{globalStats?.total_wickets || 0}</RNText>
+                  <RNText style={styles.statLabel}>Wickets</RNText>
+                </View>
+                <View style={styles.statBox}>
+                  <RNText style={styles.statValue}>{globalStats?.overs_bowled || 0}</RNText>
+                  <RNText style={styles.statLabel}>Overs</RNText>
+                </View>
+                <View style={styles.statBox}>
+                  <RNText style={styles.statValue}>{globalStats?.economy || '0.00'}</RNText>
+                  <RNText style={styles.statLabel}>Econ</RNText>
+                </View>
+                <View style={styles.statBox}>
+                  <RNText style={styles.statValue}>{globalStats?.bowling_avg || '0.00'}</RNText>
+                  <RNText style={styles.statLabel}>Avg</RNText>
+                </View>
+              </>
+            )}
           </View>
         )}
       </View>
@@ -451,8 +517,8 @@ const PlayerProfileView = () => {
         </View>
 
         <View style={styles.formCard}>
-          {filteredForms.length > 0 ? (
-            filteredForms.map((m, idx) => (
+          {filteredForms.filter(m => activeTab === 'Overview' || m.type === activeTab).length > 0 ? (
+            filteredForms.filter(m => activeTab === 'Overview' || m.type === activeTab).map((m, idx) => (
               <React.Fragment key={m.id}>
                 <View style={styles.formRow}>
                   <View style={[styles.matchInfo, { flex: 1 }]}>
@@ -469,7 +535,7 @@ const PlayerProfileView = () => {
             ))
           ) : (
             <View style={{ padding: 20, alignItems: 'center' }}>
-              <RNText style={{ color: '#94A3B8', fontSize: 13 }}>No matches match this filter</RNText>
+              <RNText style={{ color: '#94A3B8', fontSize: 13 }}>No {activeTab !== 'Overview' ? activeTab.toLowerCase() : ''} matches match this filter</RNText>
             </View>
           )}
         </View>
@@ -495,6 +561,7 @@ const PlayerProfileView = () => {
       </ScrollView>
       </View>
     </ScrollView>
+    </View>
   );
 
   return content;
@@ -607,14 +674,16 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: width < 350 ? 18 : 20,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#0F172A',
+    fontFamily: 'Inter',
   },
   statLabel: {
     fontSize: 12,
     color: '#64748B',
     marginTop: 4,
-    fontWeight: '600',
+    fontWeight: '500',
+    fontFamily: 'Inter',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -624,8 +693,9 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#0F172A',
+    fontFamily: 'Inter',
   },
   editBtn: {
     flexDirection: 'row',

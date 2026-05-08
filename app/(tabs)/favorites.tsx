@@ -9,7 +9,7 @@ import { router } from 'expo-router';
 
 import GroundCard from '@/components/grounds/GroundCard';
 
-const ACCENT = '#c8f35c'; 
+const ACCENT = '#00ea6b'; 
 
 export default function FavoritesScreen() {
   const { width } = useWindowDimensions();
@@ -208,27 +208,23 @@ export default function FavoritesScreen() {
             style={[styles.toggleBtn, activeTab === 'grounds' && styles.toggleBtnActive]}
             onPress={() => setActiveTab('grounds')}
           >
-            <View style={styles.btnContent}>
-              <Text style={[styles.toggleBtnTxt, activeTab === 'grounds' && styles.toggleBtnTxtActive]}>Grounds</Text>
-              {favorites.length > 0 && (
-                <View style={[styles.dot, activeTab === 'grounds' && styles.dotActive]}>
-                  <Text style={styles.dotTxt}>{favorites.length}</Text>
-                </View>
-              )}
-            </View>
+            <Text style={[styles.toggleBtnTxt, activeTab === 'grounds' && styles.toggleBtnTxtActive]}>Grounds</Text>
+            {favorites.length > 0 && (
+              <View style={[styles.dot, activeTab === 'grounds' && styles.dotActive]}>
+                <Text style={styles.dotTxt}>{favorites.length}</Text>
+              </View>
+            )}
           </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.toggleBtn, activeTab === 'merchandise' && styles.toggleBtnActive]}
             onPress={() => setActiveTab('merchandise')}
           >
-            <View style={styles.btnContent}>
-              <Text style={[styles.toggleBtnTxt, activeTab === 'merchandise' && styles.toggleBtnTxtActive]}>Merchandise</Text>
-              {shopFavorites.length > 0 && (
-                <View style={[styles.dot, activeTab === 'merchandise' && styles.dotActive]}>
-                  <Text style={styles.dotTxt}>{shopFavorites.length}</Text>
-                </View>
-              )}
-            </View>
+            <Text style={[styles.toggleBtnTxt, activeTab === 'merchandise' && styles.toggleBtnTxtActive]}>Merchandise</Text>
+            {shopFavorites.length > 0 && (
+              <View style={[styles.dot, activeTab === 'merchandise' && styles.dotActive]}>
+                <Text style={styles.dotTxt}>{shopFavorites.length}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -242,7 +238,8 @@ export default function FavoritesScreen() {
           <View style={styles.centerContent}>
             <View style={styles.favoritesList}>
               {loading ? (
-                <ActivityIndicator size="large" color="#01b854" style={{ marginTop: 40 }} />
+                <ActivityIndicator size="large" color="#00ea6b" style={{ marginTop: 40 }} />
+
               ) : (activeTab === 'grounds' ? favorites : shopFavorites).length === 0 ? (
                 <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 80 }}>
                   <Heart size={48} color="#D1D5DB" strokeWidth={1.5} style={{ marginBottom: 16 }} />
@@ -277,11 +274,11 @@ export default function FavoritesScreen() {
 const styles = StyleSheet.create({
   nativeWrapper: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#FFFFFF',
   },
   root: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#FFFFFF',
   },
   scrollContent: {
     flexGrow: 1,
@@ -295,9 +292,7 @@ const styles = StyleSheet.create({
   headerContainer: {
     paddingHorizontal: 20,
     paddingTop: 16,
-    backgroundColor: '#F3F4F6',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
   },
   mainLayout: {
     flexDirection: 'row',
@@ -332,35 +327,30 @@ const styles = StyleSheet.create({
   },
   toggleContainer: {
     flexDirection: 'row',
-    backgroundColor: '#E2E8F0',
-    padding: 4,
-    borderRadius: 14,
-    marginBottom: 24,
-    width: '100%',
-    alignSelf: 'stretch',
+    gap: 24,
+    marginBottom: 20,
   },
   toggleBtn: {
-    flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
+    gap: 8,
   },
   toggleBtnActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    borderBottomColor: '#00ea6b',
   },
   toggleBtnTxt: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '500',
     color: '#64748B',
+    fontFamily: 'Inter',
   },
   toggleBtnTxtActive: {
-    color: '#043529',
+    color: '#00ea6b',
+    fontWeight: '700',
   },
   btnContent: {
     flexDirection: 'row',

@@ -20,7 +20,7 @@ interface BookingCardProps {
 }
 
 const NATIVE_CARD_BG = '#043529';
-const NATIVE_ACCENT = '#02c259';
+const NATIVE_ACCENT = '#00ea6b';
 const NATIVE_TEXT = '#dcc093';
 
 export default function BookingCard({
@@ -45,7 +45,7 @@ export default function BookingCard({
   );
 
   const isLight = lightMode || (!isWeb && !IS_DARK) || (isWeb && !IS_DARK);
-  const iconDetail = isLight ? '#10b981' : NATIVE_ACCENT;
+  const iconDetail = isLight ? '#00ea6b' : NATIVE_ACCENT;
   const pinColor = isLight ? '#666' : NATIVE_TEXT;
   const groundNameStyle = [styles.groundName, !isLight && styles.groundNameNative];
   const locationStyle = [styles.location, !isLight && styles.locationNative];
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
     fontSize: 14,
     fontWeight: '600',
-    color: '#10b981',
+    color: '#00ea6b',
   },
   amountNative: {
     color: NATIVE_ACCENT,
@@ -395,7 +395,7 @@ const styles = StyleSheet.create({
   },
   reviewBtnText: {
     fontFamily: 'Inter',
-    color: '#01b854',
+    color: '#00ea6b',
     fontSize: 10,
     fontWeight: '600',
     letterSpacing: 0.5,
@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
   vsBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    backgroundColor: 'rgba(0, 234, 107, 0.1)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
   vsBadgeText: {
     fontSize: 9,
     fontWeight: '900',
-    color: '#10b981',
+    color: '#00ea6b',
   },
   opponentNameText: {
     fontSize: 11,

@@ -135,7 +135,8 @@ export default function DashboardMap() {
                         {g.name}
                       </Text>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                        <MapPin size={10} color="#10B981" />
+                        <MapPin size={10} color="#00ea6b" />
+
                         <Text style={{ fontSize: 11, color: '#64748B', fontFamily: 'Inter' }}>
                           {g.city}
                         </Text>
@@ -168,7 +169,7 @@ export default function DashboardMap() {
                       <TouchableOpacity 
                         onPress={() => Linking.openURL(getDirectionsUrl(g))}
                         style={{ 
-                          backgroundColor: '#10B981', 
+                          backgroundColor: '#00ea6b', 
                           paddingVertical: 6, 
                           paddingHorizontal: 12, 
                           borderRadius: 6,

@@ -136,7 +136,7 @@ function AdminPayoutsInner() {
   const renderHeader = () => (
     <View style={styles.header}>
       <View style={styles.headerTop}>
-        <Text style={styles.title}>Automated Payouts</Text>
+        <Text style={styles.title}>Payout History</Text>
         <View style={styles.searchContainer}>
           <View style={styles.searchBar}>
             <Search size={18} color="#9CA3AF" />

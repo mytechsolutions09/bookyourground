@@ -604,7 +604,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
         '/manage-grounds', '/(owner)/manage-grounds', '/inventory', '/(owner)/inventory',
         '/wallet', '/(owner)/wallet', '/ground-bookings', '/(owner)/ground-bookings',
         '/profile/orders', '/profile/order-details', '/earnings', '/(owner)/earnings', '/settings', '/(owner)/settings',
-        '/support', '/(tabs)/support'
+        '/support', '/(tabs)/support', '/profile/notifications', '/(tabs)/profile/notifications', '/profile/settings', '/(tabs)/profile/settings'
       ];
       return ownerRoutes.includes(cleanPath);
     }
@@ -612,7 +612,8 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     if (!isGroundOwner && !isSuperAdmin) {
       const userRoutes = [
         '/profile/orders', '/profile/order-details', '/dashboard', '/(tabs)/dashboard', '/profile', '/(tabs)/profile',
-        '/bookings', '/(tabs)/bookings', '/favorites', '/wallet', '/support', '/(tabs)/support'
+        '/bookings', '/(tabs)/bookings', '/favorites', '/wallet', '/support', '/(tabs)/support',
+        '/profile/notifications', '/(tabs)/profile/notifications', '/profile/settings', '/(tabs)/profile/settings'
       ];
       return userRoutes.includes(cleanPath);
     }
@@ -846,7 +847,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                               <Text style={[
                                 styles.headerPrimaryButtonText,
                                 scrolled && styles.headerPrimaryButtonTextScrolled,
-                                { color: '#00ea6b' }
+                                { color: '#dcc093' }
                               ]}>
                                 GROUNDS
                               </Text>
@@ -1235,6 +1236,12 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                           isActiveOverride={cleanPath === '/(tabs)/dashboard' || cleanPath === '/dashboard'}
                         />
                         <NavLink
+                          href="/(tabs)/profile"
+                          icon={CircleUser}
+                          label="My Profile"
+                          isActiveOverride={cleanPath === '/(tabs)/profile' || cleanPath === '/profile'}
+                        />
+                        <NavLink
                           href="/(tabs)/bookings"
                           icon={Calendar}
                           label="My Bookings"
@@ -1248,12 +1255,6 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                           isActiveOverride={cleanPath === '/profile/orders'}
                         />
 
-                        <NavLink
-                          href="/(tabs)/profile"
-                          icon={CircleUser}
-                          label="My Profile"
-                          isActiveOverride={cleanPath === '/(tabs)/profile' || cleanPath === '/profile'}
-                        />
 
                         <NavLink
                           href="/favorites"

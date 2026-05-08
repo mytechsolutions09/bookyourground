@@ -126,7 +126,7 @@ function NotificationsInner() {
         onPress={() => router.push(`/bookings/${b.id}` as any)}
       >
         <View style={[styles.iconWrap, isMatch ? styles.matchIcon : styles.bookingIcon]}>
-          {isMatch ? <Trophy size={18} color="#01b854" /> : <Calendar size={18} color="#01b854" />}
+          {isMatch ? <Trophy size={18} color="#00ea6b" /> : <Calendar size={18} color="#00ea6b" />}
         </View>
         
         <View style={styles.reminderContent}>
@@ -168,7 +168,7 @@ function NotificationsInner() {
       <View style={styles.inner}>
         {IS_WEB && (
           <ProfileHeaderTabs
-            themeAccent="#01b854"
+            themeAccent="#00ea6b"
             themeText={IS_WEB ? '#111827' : '#0F172A'}
             isCompact={!IS_WEB}
           />
@@ -176,7 +176,7 @@ function NotificationsInner() {
 
         {loading ? (
           <View style={styles.loader}>
-            <ActivityIndicator size="large" color="#01b854" />
+            <ActivityIndicator size="large" color="#00ea6b" />
           </View>
         ) : reminders.length === 0 ? (
           <View style={styles.emptyWrap}>
@@ -204,7 +204,9 @@ function NotificationsInner() {
 
 export default function NotificationsScreen() {
   const { width } = useWindowDimensions();
+  const { profile } = useAuth();
   const isCompact = width < 900;
+  const isOwner = profile?.role === 'ground_owner';
 
   return (IS_WEB && !isCompact) ? (
     <WebLayout noCard>
@@ -212,7 +214,7 @@ export default function NotificationsScreen() {
     </WebLayout>
   ) : (
     <View style={styles.nativeRoot}>
-      <MobileAppNavbar title="Notifications" titleColor="#0F172A" lightBg />
+      {!isOwner && <MobileAppNavbar title="Notifications" titleColor="#0F172A" lightBg />}
       <NotificationsInner />
     </View>
   );
@@ -314,8 +316,8 @@ const styles = StyleSheet.create({
      paddingHorizontal: 24,
      paddingVertical: 14,
      borderRadius: 16,
-     backgroundColor: '#01b854',
-     shadowColor: '#01b854',
+     backgroundColor: '#00ea6b',
+     shadowColor: '#00ea6b',
      shadowOpacity: 0.2,
      shadowRadius: 10,
      shadowOffset: { width: 0, height: 4 },
@@ -372,7 +374,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
     fontSize: 11,
     fontWeight: '600',
-    color: '#01b854',
+    color: '#00ea6b',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   },

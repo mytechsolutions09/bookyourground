@@ -142,6 +142,9 @@ export default function CricketLayout() {
   const [connectionsTab, setConnectionsTab] = React.useState('followers');
   const connectionsIdx = useSharedValue(0);
 
+  const [profileTab, setProfileTab] = React.useState('Overview');
+  const profileIdx = useSharedValue(0);
+
   const [tabBarVisible, setTabBarVisible] = useState(true);
 
   const [tabMeasurements, setTabMeasurements] = React.useState<any[]>([]);
@@ -202,6 +205,11 @@ export default function CricketLayout() {
     const idx = ['followers', 'following'].indexOf(connectionsTab);
     if (idx !== -1) connectionsIdx.value = idx;
   }, [connectionsTab]);
+
+  useEffect(() => {
+    const idx = ['Overview', 'Batting', 'Bowling'].indexOf(profileTab);
+    if (idx !== -1) profileIdx.value = idx;
+  }, [profileTab]);
 
   // Sync pager when pathname changes (e.g. from bottom bar or deep link)
   React.useEffect(() => {
@@ -335,7 +343,7 @@ export default function CricketLayout() {
     },
   });
 
-  const hasSubBar = activeTabId === 'matches' || activeTabId === 'stats' || activeTabId === 'trophies' || activeTabId === 'badges' || activeTabId === 'connections' || activeTabId === 'teams' || activeTabId === 'tournaments';
+  const hasSubBar = activeTabId === 'player-profile' || activeTabId === 'matches' || activeTabId === 'stats' || activeTabId === 'trophies' || activeTabId === 'badges' || activeTabId === 'connections' || activeTabId === 'teams' || activeTabId === 'tournaments';
 
   const headerHeight = useAnimatedStyle(() => {
     // Standardize min height to avoid jumps between tabs with/without sub-bars
@@ -410,6 +418,11 @@ export default function CricketLayout() {
   const connectionsPillStyle = useAnimatedStyle(() => ({
     left: withTiming((connectionsIdx.value / 2) * 100 + '%', { duration: 250 }),
     width: '50%',
+  }));
+
+  const profilePillStyle = useAnimatedStyle(() => ({
+    left: withTiming((profileIdx.value / 3) * 100 + '%', { duration: 250 }),
+    width: '33.33%',
   }));
 
   const miniHeaderTitleOpacity = useAnimatedStyle(() => {
@@ -908,11 +921,28 @@ export default function CricketLayout() {
           {/* Sub-bar area - Fixed height for all tabs to ensure consistent header height when pinned */}
           <View style={[
             styles.subBarInjection, 
-            !hasSubBar && { height: SUB_BAR_HEIGHT },
             Platform.OS === 'web' && styles.webResponsiveContent
           ]}>
             {hasSubBar && (
               <View style={styles.toggleGroup}>
+                {activeTabId === 'player-profile' && (
+                  <>
+                    <Animated.View style={[styles.subTabPill, profilePillStyle]} />
+                    {[
+                      { id: 'Overview', label: 'Overview' },
+                      { id: 'Batting', label: 'Batting' },
+                      { id: 'Bowling', label: 'Bowling' },
+                    ].map((chip) => (
+                      <TouchableOpacity
+                        key={chip.id}
+                        onPress={() => setProfileTab(chip.id)}
+                        style={styles.toggleBtn}
+                      >
+                        <Text style={[styles.toggleBtnText, profileTab === chip.id && styles.toggleBtnTextActive]}>{chip.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </>
+                )}
                 {activeTabId === 'matches' && (
                   <>
                     <Animated.View style={[styles.subTabPill, matchesPillStyle]} />
@@ -1080,7 +1110,7 @@ export default function CricketLayout() {
               showsVerticalScrollIndicator={false}
             >
               <View style={styles.contentContainer}>
-                {tab.id === 'player-profile' && <CricketPlayerProfile />}
+                {tab.id === 'player-profile' && <CricketPlayerProfile activeTab={profileTab as any} />}
                 {tab.id === 'matches' && (
                   <CricketMatches 
                     playerId={user?.id} 

@@ -251,7 +251,7 @@ function AdminEarningsInner() {
               </View>
             </View>
             <View style={[styles.statCard, { backgroundColor: '#F0F9FF' }]}>
-              <Text style={[styles.statLabel, { color: '#0369A1' }]}>{isFiltered ? 'Net Settlement' : 'Owner Net Pool'}</Text>
+              <Text style={[styles.statLabel, { color: '#0369A1' }]}>{isFiltered ? 'Withdrawable Balance' : 'Owner Net Pool'}</Text>
               <Text style={[styles.statValue, { color: '#0369A1' }]}>{formatCurrency(stats.totalNet)}</Text>
               <View style={styles.statTrend}>
                  <TrendingUp size={14} color="#0369A1" />
