@@ -18,6 +18,8 @@ type OwnerRow = Profile & {
     ifsc: string;
     upi_id: string;
     is_approved?: boolean;
+    rejected_at?: string | null;
+    rejection_reason?: string | null;
   };
 };
 
@@ -26,6 +28,9 @@ export default function ManageGroundOwnersScreen() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOwner, setSelectedOwner] = useState<OwnerRow | null>(null);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [rejecting, setRejecting] = useState(false);
 
   useEffect(() => {
     loadOwners();
@@ -96,7 +101,10 @@ export default function ManageGroundOwnersScreen() {
         .update({ 
           is_approved: true,
           approved_at: new Date().toISOString(),
-          approved_by: (await supabase.auth.getUser()).data.user?.id
+          approved_by: (await supabase.auth.getUser()).data.user?.id,
+          rejected_at: null,
+          rejected_by: null,
+          rejection_reason: null,
         })
         .eq('owner_id', ownerId);
       
@@ -107,6 +115,42 @@ export default function ManageGroundOwnersScreen() {
     } catch (e: any) {
       console.error('Error approving bank details:', e);
       Alert.alert('Error', 'Could not approve bank details: ' + e.message);
+    }
+  };
+
+  const rejectBankDetails = async (ownerId: string, reason: string) => {
+    const trimmed = reason.trim();
+    if (!trimmed) {
+      Alert.alert('Missing reason', 'Please enter a rejection reason so the owner can fix it.');
+      return;
+    }
+
+    try {
+      setRejecting(true);
+      const authUser = (await supabase.auth.getUser()).data.user;
+      const { error } = await supabase
+        .from('owner_bank_details')
+        .update({
+          is_approved: false,
+          approved_at: null,
+          approved_by: null,
+          rejected_at: new Date().toISOString(),
+          rejected_by: authUser?.id,
+          rejection_reason: trimmed,
+        })
+        .eq('owner_id', ownerId);
+
+      if (error) throw error;
+
+      Alert.alert('Rejected', 'Bank details rejected. The owner will be asked to update details.');
+      setShowRejectModal(false);
+      setRejectReason('');
+      loadOwners();
+    } catch (e: any) {
+      console.error('Error rejecting bank details:', e);
+      Alert.alert('Error', 'Could not reject bank details: ' + e.message);
+    } finally {
+      setRejecting(false);
     }
   };
 
@@ -308,10 +352,30 @@ export default function ManageGroundOwnersScreen() {
                 <View style={styles.bankHeaderRow}>
                   <Text style={styles.modalLabel}>Banking Information</Text>
                   {selectedOwner?.bankDetails && (
-                    <View style={[styles.statusBadge, selectedOwner.bankDetails.is_approved ? styles.approvedBadge : styles.pendingBadge]}>
-                      {selectedOwner.bankDetails.is_approved ? <Check size={10} color="#059669" /> : <Clock size={10} color="#D97706" />}
-                      <Text style={[styles.statusBadgeText, selectedOwner.bankDetails.is_approved ? styles.approvedText : styles.pendingText]}>
-                        {selectedOwner.bankDetails.is_approved ? 'VERIFIED' : 'PENDING'}
+                    <View style={[
+                      styles.statusBadge,
+                      selectedOwner.bankDetails.is_approved
+                        ? styles.approvedBadge
+                        : selectedOwner.bankDetails.rejected_at
+                          ? styles.rejectedBadge
+                          : styles.pendingBadge
+                    ]}>
+                      {selectedOwner.bankDetails.is_approved ? (
+                        <Check size={10} color="#059669" />
+                      ) : selectedOwner.bankDetails.rejected_at ? (
+                        <X size={10} color="#DC2626" />
+                      ) : (
+                        <Clock size={10} color="#D97706" />
+                      )}
+                      <Text style={[
+                        styles.statusBadgeText,
+                        selectedOwner.bankDetails.is_approved
+                          ? styles.approvedText
+                          : selectedOwner.bankDetails.rejected_at
+                            ? styles.rejectedText
+                            : styles.pendingText
+                      ]}>
+                        {selectedOwner.bankDetails.is_approved ? 'APPROVED' : selectedOwner.bankDetails.rejected_at ? 'REJECTED' : 'PENDING'}
                       </Text>
                     </View>
                   )}
@@ -337,13 +401,35 @@ export default function ManageGroundOwnersScreen() {
                     </View>
                     
                     {!selectedOwner.bankDetails.is_approved && (
-                      <TouchableOpacity 
-                        style={styles.approveButton}
-                        onPress={() => approveBankDetails(selectedOwner.id)}
-                      >
-                        <Check size={14} color="#05291f" />
-                        <Text style={styles.approveButtonText}>Approve Bank Details</Text>
-                      </TouchableOpacity>
+                      <View style={{ width: '100%' as any }}>
+                        <View style={{ flexDirection: 'row', gap: 12, marginTop: 12, flexWrap: 'wrap' }}>
+                          <TouchableOpacity
+                            style={[styles.approveButton, { flex: 1, minWidth: 180 } as any]}
+                            onPress={() => approveBankDetails(selectedOwner.id)}
+                          >
+                            <Check size={14} color="#05291f" />
+                            <Text style={styles.approveButtonText}>Approve Bank Details</Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            style={[styles.rejectButton, { flex: 1, minWidth: 180 } as any]}
+                            onPress={() => {
+                              setRejectReason(selectedOwner.bankDetails?.rejection_reason || '');
+                              setShowRejectModal(true);
+                            }}
+                          >
+                            <X size={14} color="#7F1D1D" />
+                            <Text style={styles.rejectButtonText}>Reject</Text>
+                          </TouchableOpacity>
+                        </View>
+
+                        {selectedOwner.bankDetails.rejected_at && selectedOwner.bankDetails.rejection_reason ? (
+                          <View style={styles.rejectionBox}>
+                            <Text style={styles.rejectionTitle}>Previous rejection reason</Text>
+                            <Text style={styles.rejectionReason}>{selectedOwner.bankDetails.rejection_reason}</Text>
+                          </View>
+                        ) : null}
+                      </View>
                     )}
                   </View>
                 ) : (
@@ -406,6 +492,58 @@ export default function ManageGroundOwnersScreen() {
               >
                 <Building2 size={16} color="#05291f" />
                 <Text style={styles.modalPrimaryButtonText}>Manage Grounds</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={showRejectModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowRejectModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { maxWidth: 520 } as any]}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>Reject bank details</Text>
+                <Text style={styles.modalSubtitle}>Write a short reason so the owner can correct it.</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowRejectModal(false)} style={styles.closeBtn}>
+                <X size={20} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ padding: 24, paddingTop: 0 }}>
+              <Text style={[styles.modalLabel, { marginBottom: 10 }]}>Rejection reason</Text>
+              <TextInput
+                value={rejectReason}
+                onChangeText={setRejectReason}
+                placeholder="e.g. Account number does not match bank name / IFSC invalid / UPI ID missing"
+                multiline
+                style={styles.rejectInput}
+              />
+            </View>
+
+            <View style={styles.modalFooter}>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowRejectModal(false)}
+                disabled={rejecting}
+              >
+                <Text style={styles.modalCloseButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalPrimaryButton, { backgroundColor: '#FEE2E2' } as any]}
+                onPress={() => selectedOwner && rejectBankDetails(selectedOwner.id, rejectReason)}
+                disabled={rejecting || !selectedOwner}
+              >
+                <X size={16} color="#7F1D1D" />
+                <Text style={[styles.modalPrimaryButtonText, { color: '#7F1D1D' } as any]}>
+                  {rejecting ? 'Rejecting...' : 'Reject'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -871,6 +1009,13 @@ const styles = StyleSheet.create({
   pendingText: {
     color: '#D97706',
   },
+  rejectedBadge: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+  },
+  rejectedText: {
+    color: '#DC2626',
+  },
   approveButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -886,6 +1031,60 @@ const styles = StyleSheet.create({
     color: '#05291f',
     fontSize: 13,
     fontWeight: '700',
+    fontFamily: 'Inter',
+  },
+  rejectButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  rejectButtonText: {
+    color: '#7F1D1D',
+    fontSize: 13,
+    fontWeight: '800',
+    fontFamily: 'Inter',
+  },
+  rejectInput: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    minHeight: 90,
+    backgroundColor: '#F9FAFB',
+    fontSize: 13,
+    color: '#111827',
+    fontFamily: 'Inter',
+  },
+  rejectionBox: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 12,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  rejectionTitle: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#991B1B',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 6,
+    fontFamily: 'Inter',
+  },
+  rejectionReason: {
+    fontSize: 13,
+    color: '#7F1D1D',
+    lineHeight: 18,
     fontFamily: 'Inter',
   },
   modalOverlay: {

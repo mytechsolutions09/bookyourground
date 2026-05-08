@@ -80,6 +80,7 @@ function OwnerSettingsInner() {
   const [ifsc, setIfsc] = useState('');
   const [upiId, setUpiId] = useState('');
   const [isApproved, setIsApproved] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState<string | null>(null);
   const [savingBank, setSavingBank] = useState(false);
   const [loadingBank, setLoadingBank] = useState(false);
   const [hasJustSavedBank, setHasJustSavedBank] = useState(false);
@@ -118,6 +119,7 @@ function OwnerSettingsInner() {
         setIfsc(data.ifsc || '');
         setUpiId(data.upi_id || '');
         setIsApproved(data.is_approved || false);
+        setRejectionReason(data.rejection_reason || null);
       }
     } catch (e) {
       console.error('Error loading bank details', e);
@@ -300,6 +302,14 @@ function OwnerSettingsInner() {
           <AlertCircle size={24} color="#6366F1" />
         </View>
 
+        {rejectionReason ? (
+          <View style={styles.rejectedBanner}>
+            <Text style={styles.rejectedTitle}>Rejected by admin</Text>
+            <Text style={styles.rejectedText}>{rejectionReason}</Text>
+            <Text style={styles.rejectedHint}>Please correct your details and resubmit for verification.</Text>
+          </View>
+        ) : null}
+
         <View style={[styles.formRowHorizontal, (IS_WEB && width >= 768) && { flexDirection: 'row' }]}>
           <View style={styles.formCol}>
             <Text style={styles.label}>Bank name</Text>
@@ -370,7 +380,12 @@ function OwnerSettingsInner() {
                       account_number: accountNumber.trim(),
                       ifsc: ifsc.trim(),
                       upi_id: upiId.trim() || null,
-                      is_approved: false // Reset approval on update
+                      is_approved: false, // Reset approval on update
+                      approved_at: null,
+                      approved_by: null,
+                      rejected_at: null,
+                      rejected_by: null,
+                      rejection_reason: null,
                     },
                     { onConflict: 'owner_id' },
                   );
@@ -1055,6 +1070,36 @@ const styles = StyleSheet.create({
   verifiedPanel: {
     borderColor: '#10b981',
     backgroundColor: '#F0FDF4',
+  },
+  rejectedBanner: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    padding: 14,
+    borderRadius: 16,
+    marginBottom: 16,
+  },
+  rejectedTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#991B1B',
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    fontFamily: 'Inter',
+  },
+  rejectedText: {
+    fontSize: 13,
+    color: '#7F1D1D',
+    lineHeight: 18,
+    fontFamily: 'Inter',
+  },
+  rejectedHint: {
+    marginTop: 8,
+    fontSize: 12,
+    color: '#991B1B',
+    fontWeight: '600',
+    fontFamily: 'Inter',
   },
   verifiedHeader: {
     alignItems: 'center',

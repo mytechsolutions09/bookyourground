@@ -76,6 +76,8 @@ export default function OwnerDashboardScreen() {
   const [accountNumber, setAccountNumber] = useState('');
   const [ifsc, setIfsc] = useState('');
   const [upiId, setUpiId] = useState('');
+  const [bankApproved, setBankApproved] = useState<boolean | null>(null);
+  const [bankRejectedReason, setBankRejectedReason] = useState<string | null>(null);
   const [savingBank, setSavingBank] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorModalMessage, setErrorModalMessage] = useState('');
@@ -98,6 +100,8 @@ export default function OwnerDashboardScreen() {
         .maybeSingle();
       
       const isComplete = !!(data && data.bank_name && data.account_number && data.ifsc && data.upi_id);
+      setBankApproved(data ? !!data.is_approved : null);
+      setBankRejectedReason(data?.rejection_reason || null);
       
       if (isComplete) {
         setHasBanking(true);
@@ -351,13 +355,28 @@ export default function OwnerDashboardScreen() {
 
   const renderOwnerHub = () => (
     <View>
-      {hasBanking && (
+      {hasBanking && bankApproved !== true && (
         <View style={styles.verificationBanner}>
           <ShieldCheck size={14} color="#0EA5E9" />
           <Text style={styles.verificationText}>Verification in progress</Text>
-          <Text style={styles.verificationSubtext}>Our team is reviewing your payout details. Once verified, you can manually request payouts at any time.</Text>
+          <Text style={styles.verificationSubtext}>
+            Our team is reviewing your payout details. Once verified, you can request payouts.
+          </Text>
         </View>
       )}
+
+      {bankRejectedReason ? (
+        <View style={styles.rejectedBanner}>
+          <Text style={styles.rejectedTitle}>Bank details rejected</Text>
+          <Text style={styles.rejectedReason}>{bankRejectedReason}</Text>
+          <TouchableOpacity
+            style={styles.rejectedCta}
+            onPress={() => router.push('/(owner)/settings?tab=bank' as any)}
+          >
+            <Text style={styles.rejectedCtaText}>Fix bank details</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
       <View style={styles.grid}>
       <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]}>
         <View style={[styles.statBox, isUltraNarrow && { paddingVertical: 16, paddingHorizontal: 12, borderRadius: 20 }]}>
@@ -597,7 +616,13 @@ export default function OwnerDashboardScreen() {
           account_number: accountNumber.trim(),
           ifsc: ifsc.trim().toUpperCase(),
           upi_id: upiId.trim().toLowerCase(),
-          updated_at: new Date().toISOString()
+          is_approved: false,
+          approved_at: null,
+          approved_by: null,
+          rejected_at: null,
+          rejected_by: null,
+          rejection_reason: null,
+          updated_at: new Date().toISOString(),
         }, { onConflict: 'owner_id' });
 
       if (error) {
@@ -1285,5 +1310,45 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#0C4A6E',
     flex: 1,
+  },
+  rejectedBanner: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 16,
+    marginBottom: 20,
+  },
+  rejectedTitle: {
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#991B1B',
+    textTransform: 'uppercase',
+    letterSpacing: 0.7,
+    marginBottom: 8,
+  },
+  rejectedReason: {
+    fontFamily: 'Inter',
+    fontSize: 13,
+    color: '#7F1D1D',
+    lineHeight: 18,
+  },
+  rejectedCta: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  rejectedCtaText: {
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#7F1D1D',
   },
 });

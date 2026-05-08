@@ -558,8 +558,10 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     '/(admin)/cricketdata',
   ];
 
-  const isAdminRoute = useMemo(() => 
-    isSuperAdmin || 
+  // Important: "admin route" should be determined by the current path,
+  // not by the viewer's role. Otherwise super admins would be treated as
+  // being on an admin route even on public pages like `/`.
+  const isAdminRoute = useMemo(() =>
     adminPathnames.includes(cleanPath) ||
     cleanPath.startsWith('/cricketdata') ||
     cleanPath.startsWith('/(admin)/') ||
@@ -568,7 +570,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     cleanPath === '/(owner)/add-ground' ||
     cleanPath === '/matches' ||
     cleanPath === '/find-an-opponent',
-    [cleanPath, isSuperAdmin]
+    [cleanPath]
   );
 
   const isGroundInfoPage = isGroundDetails;
@@ -588,11 +590,39 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
 
   // On ground info (/grounds/[id]) and booking info (/bookings/[id]) pages,
   // hide the left sidebar for all roles so the content can take full width.
-  const isPublicNoSidebar = useMemo(() => 
-    !isSuperAdmin && (
-      propIsPublicNoSidebar || isLanding || (isMarketing && !isOwnerGroundsDashboard) || isGroundInfoPage || isBookingDetails || isCheckoutPage || isLegalOrInfoPage || (cleanPath === '/find-an-opponent') || cleanPath === '/(tabs)/grounds' || cleanPath === '/shop' || cleanPath.startsWith('/shop/') || cleanPath === '/search' || cleanPath.startsWith('/live/') || (cleanPath.startsWith('/cricket/') && !cleanPath.startsWith('/cricketdata')) || cleanPath.startsWith('/players/') || cleanPath.startsWith('/blog')
+  const isPublicNoSidebar = useMemo(() =>
+    // Hide sidebar on public/marketing style pages even for super admins.
+    // The sidebar should only appear when they are actually on admin pages.
+    !isAdminRoute && (
+      propIsPublicNoSidebar ||
+      isLanding ||
+      (isMarketing && !isOwnerGroundsDashboard) ||
+      isGroundInfoPage ||
+      isBookingDetails ||
+      isCheckoutPage ||
+      isLegalOrInfoPage ||
+      (cleanPath === '/find-an-opponent') ||
+      cleanPath === '/(tabs)/grounds' ||
+      cleanPath === '/shop' ||
+      cleanPath.startsWith('/shop/') ||
+      cleanPath === '/search' ||
+      cleanPath.startsWith('/live/') ||
+      (cleanPath.startsWith('/cricket/') && !cleanPath.startsWith('/cricketdata')) ||
+      cleanPath.startsWith('/players/') ||
+      cleanPath.startsWith('/blog')
     ),
-    [propIsPublicNoSidebar, isLanding, isMarketing, isSuperAdmin, isOwnerGroundsDashboard, isGroundInfoPage, isBookingDetails, isCheckoutPage, isLegalOrInfoPage, cleanPath]
+    [
+      isAdminRoute,
+      propIsPublicNoSidebar,
+      isLanding,
+      isMarketing,
+      isOwnerGroundsDashboard,
+      isGroundInfoPage,
+      isBookingDetails,
+      isCheckoutPage,
+      isLegalOrInfoPage,
+      cleanPath,
+    ]
   );
 
   const shouldHideAppHeader = useMemo(() => {
@@ -1044,7 +1074,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                 isAdminRoute && { transition: 'width 0.3s ease-in-out' } as any,
               ]}
             >
-              {(shouldHideAppHeader || isGroundOwner) && (
+              {(shouldHideAppHeader || isGroundOwner) && !(isSuperAdmin && isAdminRoute && sidebarCollapsed) && (
                 <TouchableOpacity
                   onPress={() => router.replace('/')}
                   style={[styles.logo, { marginBottom: 32, paddingHorizontal: 4 }]}
