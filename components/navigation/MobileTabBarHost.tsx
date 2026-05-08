@@ -24,6 +24,8 @@ export function MobileTabBarHost() {
     (root === '(owner)' && !isInventory) ||
     (root === '(admin)' && !isInventory) ||
     root === 'players' ||
+    root === 'teams' ||
+    root === 'live' ||
     root === 'search' ||
     root === 'ground' ||
     root === 'cricket' ||

@@ -14,6 +14,7 @@ import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import QRCode from 'react-native-qrcode-svg';
 import Animated, { FadeInUp } from 'react-native-reanimated';
+import { useUI } from '@/contexts/UIContext';
 
 const INITIAL_TEAMS_DATA = [
   {
@@ -56,9 +57,15 @@ export default function CricketTeams({ activeSubTab }: { activeSubTab?: string }
   const subTab = activeSubTab || 'your';
   const [fetchedTeams, setFetchedTeams] = useState<any[]>([]);
   const [selectedQRTeam, setSelectedQRTeam] = useState<any>(null);
+  const { setTabBarVisible } = useUI();
 
   useEffect(() => {
     fetchTeams();
+  }, []);
+
+  useEffect(() => {
+    setTabBarVisible(false);
+    return () => setTabBarVisible(true);
   }, []);
 
   const fetchTeams = async () => {
@@ -177,7 +184,7 @@ export default function CricketTeams({ activeSubTab }: { activeSubTab?: string }
           onPress={() => setSelectedQRTeam(null)}
         >
           <View style={styles.qrModalContent}>
-            <Text style={styles.qrModalTitle}>{selectedQRTeam?.name} Profile</Text>
+            <Text style={styles.qrModalTitle}>{selectedQRTeam?.name}</Text>
             <View style={styles.qrModalWrapper}>
                {selectedQRTeam && (
                  <QRCode
@@ -188,6 +195,7 @@ export default function CricketTeams({ activeSubTab }: { activeSubTab?: string }
                  />
                )}
             </View>
+            <Text style={styles.qrTeamName}>{selectedQRTeam?.name}</Text>
             <Text style={styles.qrModalHint}>Scan to join the squad</Text>
             <TouchableOpacity 
               style={styles.qrModalCloseBtn}
@@ -390,6 +398,13 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#043529',
     marginBottom: 24,
+  },
+  qrTeamName: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#043529',
+    fontFamily: 'Inter',
+    marginBottom: 8,
   },
   qrModalWrapper: {
     padding: 20,

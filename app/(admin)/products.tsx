@@ -16,7 +16,7 @@ export default function AdminProductsScreen() {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'products' | 'categories' | 'reviews'>('products');
+  const [viewMode, setViewMode] = useState<'products' | 'categories' | 'reviews' | 'fetch'>('products');
   const [showAddForm, setShowAddForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
@@ -24,6 +24,7 @@ export default function AdminProductsScreen() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [reviews, setReviews] = useState<any[]>([]);
   const [newColorVariant, setNewColorVariant] = useState({ name: '', hex: '#f8688a' });
+  const [amazonUrl, setAmazonUrl] = useState('');
 
   // Form State
   const [newProduct, setNewProduct] = useState({
@@ -42,8 +43,7 @@ export default function AdminProductsScreen() {
   const [selection, setSelection] = useState({ start: 0, end: 0 });
 
   const applyFormatting = (type: 'bold' | 'italic' | 'list' | 'heading' | 'link' | 'quote' | 'clear') => {
-    const text = editingProduct ? editingProduct.description : newProduct.description;
-    const currentText = text || '';
+    const currentText = newProduct.description || '';
     let formattedText = currentText;
 
     const selectedText = currentText.substring(selection.start, selection.end);
@@ -74,28 +74,19 @@ export default function AdminProductsScreen() {
         break;
     }
 
-    if (editingProduct) {
-      setEditingProduct({ ...editingProduct, description: formattedText });
-    } else {
-      setNewProduct({ ...newProduct, description: formattedText });
-    }
+    setNewProduct({ ...newProduct, description: formattedText });
   };
 
   const insertEmoji = (emoji: string) => {
-    const text = editingProduct ? editingProduct.description : newProduct.description;
-    const currentText = text || '';
+    const currentText = newProduct.description || '';
     const beforeSelection = currentText.substring(0, selection.start);
     const afterSelection = currentText.substring(selection.end);
     const formattedText = beforeSelection + emoji + afterSelection;
 
-    if (editingProduct) {
-      setEditingProduct({ ...editingProduct, description: formattedText });
-    } else {
-      setNewProduct({ ...newProduct, description: formattedText });
-    }
+    setNewProduct({ ...newProduct, description: formattedText });
   };
 
-  const charCount = (editingProduct ? editingProduct.description : newProduct.description)?.length || 0;
+  const charCount = newProduct.description?.length || 0;
 
   useEffect(() => {
     fetchProducts();
@@ -138,6 +129,8 @@ export default function AdminProductsScreen() {
       setViewMode('reviews');
     } else if (params.view === 'products') {
       setViewMode('products');
+    } else if (params.view === 'fetch') {
+      setViewMode('fetch');
     }
   }, [params.view]);
 
@@ -468,6 +461,81 @@ export default function AdminProductsScreen() {
     c.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleFetchAmazon = async (url: string) => {
+    if (!url) return;
+    try {
+      setIsSubmitting(true);
+      
+      let html = '';
+      // Use our dedicated local proxy to bypass CORS and avoid Amazon proxy blocks
+      const proxyUrl = `http://localhost:3001/?url=${encodeURIComponent(url)}`;
+      
+      try {
+        const response = await fetch(proxyUrl);
+        if (!response.ok) throw new Error('Proxy failed');
+        html = await response.text();
+      } catch (e) {
+        // Fallback to direct fetch if proxy isn't running (e.g., on mobile or production)
+        const response = await fetch(url);
+        html = await response.text();
+      }
+      
+      if (!html || html.includes('Enter the characters you see below')) {
+        throw new Error("Fetch failed or returned CAPTCHA.");
+      }
+      
+      const titleMatch = html.match(/<span id="productTitle"[^>]*>\s*([^<]+)\s*<\/span>/) || html.match(/<title>([^<]+)<\/title>/);
+      const title = titleMatch ? titleMatch[1].trim() : 'Amazon Product';
+      
+      const priceMatch = html.match(/<span class="a-price-whole">([^<]+)<\/span>/) || html.match(/<span id="priceblock_ourprice"[^>]*>([^<]+)<\/span>/);
+      const price = priceMatch ? priceMatch[1].trim().replace(/,/g, '') : '0';
+      
+      let img = 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?q=80&w=1000';
+      
+      const landingImageMatch = html.match(/id="landingImage"[^>]*src="([^"]+)"/);
+      const dynamicImageMatch = html.match(/data-a-dynamic-image="([^"]+)"/);
+      
+      if (landingImageMatch) {
+        img = landingImageMatch[1];
+      } else if (dynamicImageMatch) {
+        try {
+          const dynamicImageStr = dynamicImageMatch[1].replace(/&quot;/g, '"');
+          const dynamicImageData = JSON.parse(dynamicImageStr);
+          const urls = Object.keys(dynamicImageData);
+          if (urls.length > 0) {
+            img = urls[0];
+          }
+        } catch (e) {
+          const urlMatch = dynamicImageMatch[1].match(/(https:\/\/[^&"]+)/);
+          if (urlMatch) img = urlMatch[1];
+        }
+      } else {
+        const anyImgMatch = html.match(/"large":"([^"]+)"/) || 
+                            html.match(/"main":"([^"]+)"/) ||
+                            html.match(/data-old-hires="([^"]+)"/);
+        if (anyImgMatch) {
+          img = anyImgMatch[1];
+        }
+      }
+      
+      setNewProduct({
+        ...newProduct,
+        name: title,
+        price: price,
+        images: [img],
+        description: `Fetched from Amazon: ${url}`,
+      });
+      setShowAddForm(true);
+    } catch (err: any) {
+      console.error('Fetch Amazon error:', err);
+      const msg = 'Failed to fetch real data from Amazon.\n\nPlease ensure you are running the local proxy server (node local-proxy.js) in your terminal to bypass CORS and Amazon scraping blocks.';
+      if (Platform.OS === 'web') window.alert(msg);
+      else Alert.alert('Fetch Error', msg);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleAddCategory = async () => {
     if (!newCategoryName.trim()) return;
     try {
@@ -606,8 +674,8 @@ export default function AdminProductsScreen() {
                     <TextInput 
                       style={styles.input}
                       placeholder="e.g. Premium Cricket Bat"
-                      value={editingProduct ? editingProduct.name : newProduct.name}
-                      onChangeText={(val) => editingProduct ? setEditingProduct({...editingProduct, name: val}) : setNewProduct({...newProduct, name: val})}
+                      value={newProduct.name}
+                      onChangeText={(val) => setNewProduct({...newProduct, name: val})}
                     />
                   </View>
 
@@ -617,8 +685,8 @@ export default function AdminProductsScreen() {
                       style={styles.input}
                       placeholder="0.00"
                       keyboardType="numeric"
-                      value={editingProduct ? String(editingProduct.price) : newProduct.price}
-                      onChangeText={(val) => editingProduct ? setEditingProduct({...editingProduct, price: val}) : setNewProduct({...newProduct, price: val})}
+                      value={newProduct.price}
+                      onChangeText={(val) => setNewProduct({...newProduct, price: val})}
                     />
                   </View>
 
@@ -636,8 +704,8 @@ export default function AdminProductsScreen() {
                           color: '#111827',
                           fontFamily: 'Inter'
                         }}
-                        value={editingProduct ? editingProduct.category_id : newProduct.category_id}
-                        onChange={(e) => editingProduct ? setEditingProduct({...editingProduct, category_id: e.target.value}) : setNewProduct({...newProduct, category_id: e.target.value})}
+                        value={newProduct.category_id}
+                        onChange={(e) => setNewProduct({...newProduct, category_id: e.target.value})}
                       >
                         <option value="">Select Category</option>
                         {categories.map(cat => (
@@ -653,8 +721,8 @@ export default function AdminProductsScreen() {
                       style={styles.input}
                       placeholder="0"
                       keyboardType="numeric"
-                      value={editingProduct ? String(editingProduct.stock_quantity) : newProduct.stock_quantity}
-                      onChangeText={(val) => editingProduct ? setEditingProduct({...editingProduct, stock_quantity: val}) : setNewProduct({...newProduct, stock_quantity: val})}
+                      value={newProduct.stock_quantity}
+                      onChangeText={(val) => setNewProduct({...newProduct, stock_quantity: val})}
                     />
                   </View>
                 </View>
@@ -724,9 +792,39 @@ export default function AdminProductsScreen() {
                   {previewMode ? (
                     <View style={[styles.input, styles.previewContainer]}>
                       <ScrollView showsVerticalScrollIndicator={false}>
-                        <Text style={styles.previewText}>
-                          {editingProduct ? editingProduct.description : newProduct.description}
-                        </Text>
+                        <View style={{ paddingVertical: 4 }}>
+                          {(newProduct.description || '').split('\n').map((line, index) => {
+                            let content = line;
+                            let lineStyle: any = { ...styles.previewText, marginBottom: 4 };
+                            
+                            if (line.startsWith('### ')) {
+                              content = line.substring(4);
+                              lineStyle = { ...lineStyle, fontSize: 15, fontWeight: '700', marginTop: 12, marginBottom: 8, color: '#111827' };
+                            } else if (line.startsWith('- ')) {
+                              content = `•  ${line.substring(2)}`;
+                              lineStyle = { ...lineStyle, marginLeft: 8 };
+                            } else if (line.startsWith('> ')) {
+                              content = line.substring(2);
+                              lineStyle = { ...lineStyle, fontStyle: 'italic', color: '#6B7280', borderLeftWidth: 3, borderLeftColor: '#D1D5DB', paddingLeft: 12, marginLeft: 4 };
+                            }
+                            
+                            const parts = content.split(/(\*\*.*?\*\*|_.*?_)/g);
+                            
+                            return (
+                              <Text key={index} style={lineStyle}>
+                                {parts.map((part, i) => {
+                                  if (part.startsWith('**') && part.endsWith('**')) {
+                                    return <Text key={i} style={{ fontWeight: '700', color: '#111827' }}>{part.slice(2, -2)}</Text>;
+                                  }
+                                  if (part.startsWith('_') && part.endsWith('_')) {
+                                    return <Text key={i} style={{ fontStyle: 'italic' }}>{part.slice(1, -1)}</Text>;
+                                  }
+                                  return part;
+                                })}
+                              </Text>
+                            );
+                          })}
+                        </View>
                       </ScrollView>
                     </View>
                   ) : (
@@ -734,8 +832,8 @@ export default function AdminProductsScreen() {
                       style={[styles.input, { height: 180, textAlignVertical: 'top', paddingTop: 12 }]}
                       placeholder="Product description..."
                       multiline
-                      value={editingProduct ? editingProduct.description : newProduct.description}
-                      onChangeText={(val) => editingProduct ? setEditingProduct({...editingProduct, description: val}) : setNewProduct({...newProduct, description: val})}
+                      value={newProduct.description}
+                      onChangeText={(val) => setNewProduct({...newProduct, description: val})}
                       onSelectionChange={(e) => setSelection(e.nativeEvent.selection)}
                     />
                   )}
@@ -744,22 +842,22 @@ export default function AdminProductsScreen() {
                 <View style={styles.formGroup}>
                   <Text style={styles.label}>Product Images</Text>
                   <ScrollView horizontal style={styles.imageSlots} showsHorizontalScrollIndicator={false}>
-                    {(editingProduct ? editingProduct.images : newProduct.images).map((img: string, idx: number) => (
+                    {newProduct.images.map((img: string, idx: number) => (
                       <View key={idx} style={styles.imageSlot}>
                         <Image source={{ uri: img }} style={styles.slotImage} />
                         <TouchableOpacity 
                           style={styles.removeImgBtn}
                           onPress={() => {
-                            const currentImages = editingProduct ? [...editingProduct.images] : [...newProduct.images];
+                            const currentImages = [...newProduct.images];
                             currentImages.splice(idx, 1);
-                            editingProduct ? setEditingProduct({...editingProduct, images: currentImages}) : setNewProduct({...newProduct, images: currentImages});
+                            setNewProduct({...newProduct, images: currentImages});
                           }}
                         >
                           <X size={14} color="#FFFFFF" />
                         </TouchableOpacity>
                       </View>
                     ))}
-                    {(editingProduct ? editingProduct.images.length : newProduct.images.length) < 5 && (
+                    {newProduct.images.length < 5 && (
                       <TouchableOpacity 
                         style={styles.addSlotBtn}
                         onPress={handleImageUpload}
@@ -796,6 +894,37 @@ export default function AdminProductsScreen() {
                   />
                 </View>
               </View>
+            </View>
+          ) : viewMode === 'fetch' ? (
+            <View style={{ padding: 24, backgroundColor: '#FFFFFF', borderRadius: 12, borderWidth: 1, borderColor: '#F3F4F6' }}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 8, fontFamily: 'Inter' }}>Fetch via Amazon URL</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                <TextInput
+                  style={{
+                    flex: 1,
+                    height: 44,
+                    borderWidth: 1,
+                    borderColor: '#D1D5DB',
+                    borderRadius: 8,
+                    paddingHorizontal: 12,
+                    fontSize: 14,
+                    fontFamily: 'Inter',
+                  }}
+                  placeholder="Paste Amazon URL here..."
+                  placeholderTextColor="#9CA3AF"
+                  value={amazonUrl}
+                  onChangeText={setAmazonUrl}
+                />
+                <Button
+                  title="Fetch Product"
+                  onPress={() => handleFetchAmazon(amazonUrl)}
+                  loading={isSubmitting}
+                  style={{ height: 44, paddingHorizontal: 20 }}
+                />
+              </View>
+              <Text style={{ fontSize: 12, color: '#6B7280', fontFamily: 'Inter' }}>
+                This will fetch product name, price, images, and specifications (where possible) and open the product form.
+              </Text>
             </View>
           ) : viewMode === 'reviews' ? (
             <View style={styles.reviewsContainer}>
@@ -976,7 +1105,7 @@ export default function AdminProductsScreen() {
     <>
       {Platform.OS === 'web' ? (
         <WebLayout viewMode={viewMode} showAddForm={showAddForm}>
-          <ShopSubbar onAddProduct={() => setShowAddForm(true)}>
+          <ShopSubbar onAddProduct={() => setShowAddForm(true)} onFetchAmazon={handleFetchAmazon}>
             {content}
           </ShopSubbar>
         </WebLayout>

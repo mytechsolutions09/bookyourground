@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, Pressable, Platform, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Pressable, Platform, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { router, usePathname, useLocalSearchParams } from 'expo-router';
 import { 
   ShoppingBag, 
@@ -11,7 +11,7 @@ import {
 
 const BASE = '/(admin)';
 
-export default function ShopSubbar({ children, onAddProduct }: { children: React.ReactNode, onAddProduct?: () => void }) {
+export default function ShopSubbar({ children, onAddProduct, onFetchAmazon }: { children: React.ReactNode, onAddProduct?: () => void, onFetchAmazon?: (url: string) => void }) {
   const pathname = usePathname();
   const params = useLocalSearchParams();
   const isOrders = pathname.includes('/orders');
@@ -19,6 +19,9 @@ export default function ShopSubbar({ children, onAddProduct }: { children: React
   const isProducts = pathname.includes('/products') && !params.view;
   const isCategories = pathname.includes('/categories') || params.view === 'categories';
   const isReviews = pathname.includes('/reviews') || params.view === 'reviews';
+  const isFetch = params.view === 'fetch';
+
+  const [amazonUrl, setAmazonUrl] = useState('');
 
   return (
     <View style={styles.shell}>
@@ -32,7 +35,7 @@ export default function ShopSubbar({ children, onAddProduct }: { children: React
             <Text style={styles.subtitleText}>Management</Text>
           </View>
         </View>
-
+ 
         <View style={styles.navSection}>
           <ScrollView
             horizontal
@@ -64,8 +67,15 @@ export default function ShopSubbar({ children, onAddProduct }: { children: React
               isActive={isReviews}
               label="REVIEWS"
             />
+            <NavButton 
+              onPress={() => router.push((BASE + '/products?view=fetch') as any)}
+              isActive={isFetch}
+              label="FETCH"
+            />
           </ScrollView>
         </View>
+
+
 
         <TouchableOpacity 
           style={styles.addButton}

@@ -56,6 +56,7 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUI } from '@/contexts/UIContext';
 import { getPlayerTags, PlayerTag } from '@/lib/stats-logic';
 import QRCode from 'react-native-qrcode-svg';
 
@@ -96,6 +97,14 @@ export default function CricketLayout() {
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const isCompact = useIsCompact();
+  const { setTabBarVisible: setGlobalTabBarVisible } = useUI();
+
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      setGlobalTabBarVisible(false);
+      return () => setGlobalTabBarVisible(true);
+    }
+  }, []);
   const [profile, setProfile] = useState<any>(null);
   const [followerCount, setFollowerCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
@@ -623,7 +632,7 @@ export default function CricketLayout() {
       >
         <View style={styles.qrCard}>
           <View style={styles.qrHeader}>
-            <Text style={styles.qrTitle}>Player ID</Text>
+            <View />
             <TouchableOpacity onPress={() => setIsQrModalVisible(false)}>
               <X size={24} color="#64748B" />
             </TouchableOpacity>
@@ -1135,7 +1144,7 @@ export default function CricketLayout() {
   );
   
   if (Platform.OS === 'web') {
-    return <WebLayout hideHeader={!isCompact}>{content}</WebLayout>;
+    return <WebLayout hideHeader={true}>{content}</WebLayout>;
   }
 
   return content;
@@ -1556,7 +1565,7 @@ const styles = StyleSheet.create({
   qrCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 32,
-    padding: 24,
+    padding: 16,
     width: '100%',
     maxWidth: 320,
     alignItems: 'center',
@@ -1570,7 +1579,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     width: '100%',
-    marginBottom: 24,
+    marginBottom: 12,
   },
   qrTitle: {
     fontSize: 18,
@@ -1580,20 +1589,16 @@ const styles = StyleSheet.create({
   },
   qrContent: {
     backgroundColor: '#FFFFFF',
-    padding: 20,
+    padding: 10,
     borderRadius: 24,
     alignItems: 'center',
     width: '100%',
   },
   qrWrapper: {
-    padding: 10,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
+    padding: 0,
   },
   qrPlayerName: {
-    marginTop: 16,
+    marginTop: 8,
     fontSize: 20,
     fontWeight: '800',
     color: '#06392e',
@@ -1612,7 +1617,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 16,
-    marginTop: 24,
+    marginTop: 16,
     gap: 10,
     width: '100%',
     justifyContent: 'center',

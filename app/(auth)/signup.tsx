@@ -646,7 +646,7 @@ function WebGenericPicker(props: any) {
   const { label, value, onValueChange, options, placeholder = "Select option" } = props;
   return (
     <View style={{ marginBottom: 10 }}>
-      {label && <Text style={{ fontSize: 12, fontWeight: '700', color: '#0F172A', marginBottom: 4 }}>{label}</Text>}
+      {label && <Text style={{ fontSize: 12, fontWeight: '500', color: '#0F172A', marginBottom: 4 }}>{label}</Text>}
       <View style={{ position: 'relative', width: '100%' }}>
         <select
           value={value}
@@ -662,7 +662,7 @@ function WebGenericPicker(props: any) {
             color: '#0F172A',
             outline: 'none',
             cursor: 'pointer',
-            fontWeight: '600',
+            fontWeight: '400',
           }}
         >
           <option value="" disabled hidden>{placeholder}</option>
@@ -684,7 +684,7 @@ function WebInput(props: any) {
   const { label, showToggle, onToggle, isToggled, ...rest } = props;
   return (
     <View style={{ marginBottom: 10 }}>
-      {label && <Text style={{ fontSize: 12, fontWeight: '700', color: '#0F172A', marginBottom: 4 }}>{label}</Text>}
+      {label && <Text style={{ fontSize: 12, fontWeight: '500', color: '#0F172A', marginBottom: 4 }}>{label}</Text>}
       <View style={{ position: 'relative', width: '100%' }}>
         <TextInput
           style={{
@@ -697,7 +697,7 @@ function WebInput(props: any) {
             fontSize: 14,
             backgroundColor: 'rgba(255, 255, 255, 0.7)',
             color: '#0F172A',
-            fontWeight: '600',
+            fontWeight: '400',
             outlineStyle: 'none',
           } as any}
           placeholderTextColor="#64748B"
@@ -767,7 +767,7 @@ const styles = StyleSheet.create({
   fieldWrap: { marginBottom: 14 },
   fieldLabel: { 
     fontSize: 11, 
-    fontWeight: '700', 
+    fontWeight: '500', 
     color: '#334155', 
     marginBottom: 4, 
     letterSpacing: 0.2,
@@ -798,7 +798,7 @@ const styles = StyleSheet.create({
     fontSize: 13, 
     color: '#0F172A', 
     fontFamily: 'Inter',
-    fontWeight: '500',
+    fontWeight: '400',
   },
   buttonRow: { flexDirection: 'row', gap: 12, marginTop: 16 },
   signUpBtn: { 
@@ -874,7 +874,7 @@ const webStyles = StyleSheet.create({
   logoImage: { width: 220, height: 55, marginBottom: 8 },
   formTitle: { 
     fontSize: 26, 
-    fontWeight: '900', 
+    fontWeight: '600', 
     color: '#0F172A', 
     marginTop: 4, 
     marginBottom: 0,

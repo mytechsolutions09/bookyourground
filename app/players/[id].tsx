@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  TouchableOpacity, 
-  Image, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Image,
   ActivityIndicator,
   Platform,
   Dimensions,
@@ -18,7 +18,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { extractUuid, getPlayerSlug } from '@/lib/utils';
-import { 
+import {
   ChevronLeft,
   QrCode,
   Filter,
@@ -76,7 +76,7 @@ export default function PlayerProfile() {
   const insets = useSafeAreaInsets();
   const scrollY = useRef(new Animated.Value(0)).current;
   const isCompact = useIsCompact();
-  
+
   const [profile, setProfile] = useState<any>(null);
   const [stats, setStats] = useState<any>({
     overall: { matches: 0, batting: {}, bowling: {}, fielding: {}, captain: {} },
@@ -110,7 +110,7 @@ export default function PlayerProfile() {
   const badgesPagerRef = useRef<ScrollView>(null);
   const highlightsPagerRef = useRef<ScrollView>(null);
   const connectionsPagerRef = useRef<ScrollView>(null);
-  
+
   const isScrollingProgrammatically = useRef(false);
   const [measuredPagerWidth, setMeasuredPagerWidth] = useState(windowWidth);
   const tabMeasurements = useRef<Record<number, { x: number, width: number }>>({});
@@ -123,16 +123,16 @@ export default function PlayerProfile() {
   const handleShareQR = async () => {
     try {
       if (!qrRef.current) return;
-      
+
       // Wait a moment for the view to be fully rendered
       await new Promise(resolve => setTimeout(resolve, 150));
-      
+
       const uri = await captureRef(qrRef, {
         format: 'png',
         quality: 0.9,
         result: 'tmpfile',
       });
-      
+
       await Sharing.shareAsync(uri, {
         mimeType: 'image/png',
         dialogTitle: `Share ${profile?.full_name}'s QR ID Card`,
@@ -148,9 +148,9 @@ export default function PlayerProfile() {
     const idx = TABS.findIndex(t => t.id === activeTab);
     const measurement = tabMeasurements.current[idx];
     if (measurement && tabBarRef.current) {
-      tabBarRef.current.scrollTo({ 
+      tabBarRef.current.scrollTo({
         x: measurement.x - (windowWidth / 2) + (measurement.width / 2),
-        animated: true 
+        animated: true
       });
     }
   }, [activeTab]);
@@ -164,14 +164,14 @@ export default function PlayerProfile() {
   const loadPlayerData = async () => {
     try {
       setLoading(true);
-      
+
       // 1. Fetch Profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', id)
         .single();
-      
+
       if (profileError) throw profileError;
 
       // Calculate age if DOB exists
@@ -185,7 +185,7 @@ export default function PlayerProfile() {
           calculatedAge--;
         }
       }
-      
+
       setProfile({
         ...profileData,
         age: calculatedAge,
@@ -241,14 +241,14 @@ export default function PlayerProfile() {
       const teamIds = teamMembers?.map(tm => tm.team_id).filter(Boolean) || [];
       const profileMemberIds = teamMembers?.map(tm => tm.id).filter(Boolean) || [];
       let allMemberIds = [...profileMemberIds];
-      
+
       const pName = profileData?.full_name;
       if (pName) {
         const { data: nameMatches } = await supabase
           .from('team_members')
           .select('id')
           .ilike('player_name', `%${pName}%`);
-        
+
         if (nameMatches) {
           const extraIds = nameMatches.map(nm => nm.id);
           allMemberIds = [...new Set([...allMemberIds, ...extraIds])];
@@ -273,18 +273,18 @@ export default function PlayerProfile() {
         .from('match_playing_xi')
         .select('match_id')
         .in('player_id', allMemberIds);
-      
+
       const playingIds = playedMatchData?.map(pm => pm.match_id) || [];
       setPlayedMatchIds(playingIds);
 
       // 2. Fetch matches history (Teams History + Personal History)
-      const matchQuery = teamIds.length > 0 ? 
-        `team_a_id.in.(${teamIds.join(',')}),team_b_id.in.(${teamIds.join(',')})` : 
+      const matchQuery = teamIds.length > 0 ?
+        `team_a_id.in.(${teamIds.join(',')}),team_b_id.in.(${teamIds.join(',')})` :
         '';
-      const playedQuery = playingIds.length > 0 ? 
-        `id.in.(${playingIds.join(',')})` : 
+      const playedQuery = playingIds.length > 0 ?
+        `id.in.(${playingIds.join(',')})` :
         '';
-      
+
       const finalOrQuery = [matchQuery, playedQuery].filter(Boolean).join(',');
 
       if (finalOrQuery) {
@@ -297,7 +297,7 @@ export default function PlayerProfile() {
           `)
           .or(finalOrQuery)
           .order('created_at', { ascending: false });
-        
+
         if (matchesError) {
           console.error('[PlayerProfile] Matches error:', matchesError);
           setMatches([]);
@@ -323,7 +323,7 @@ export default function PlayerProfile() {
 
       const battingStatsData = battingRes.data || [];
       const bowlingStatsData = bowlingRes.data || [];
-      
+
       const statsByBall: Record<string, any> = {
         overall: createEmptyDiscipline(),
         leather: createEmptyDiscipline(),
@@ -335,7 +335,7 @@ export default function PlayerProfile() {
       battingStatsData.forEach(curr => {
         const type = 'overall'; // For now, views don't have ball_type, defaulting to overall
         const s = statsByBall[type];
-        
+
         s.batting.innings += 1;
         s.batting.runs += (curr.runs || 0);
         s.batting.highest = Math.max(s.batting.highest, curr.runs || 0);
@@ -351,21 +351,21 @@ export default function PlayerProfile() {
       bowlingStatsData.forEach(curr => {
         const type = 'overall';
         const s = statsByBall[type];
-        
+
         s.bowling.innings += 1;
         s.bowling.wickets += (curr.wickets || 0);
         s.bowling.runs_conceded += (curr.runs_conceded || 0);
-        
+
         const legalBalls = curr.legal_balls || 0;
         const overs = Math.floor(legalBalls / 6) + (legalBalls % 6) / 10;
         s.bowling.overs += overs;
-        
+
         if (curr.wickets >= 5) s.bowling.five_w += 1;
-        
+
         // Update best bowling
-        const currentBest = s.bowling.best === '-' ? { w: 0, r: 999 } : { 
-          w: parseInt(s.bowling.best.split('/')[0]), 
-          r: parseInt(s.bowling.best.split('/')[1]) 
+        const currentBest = s.bowling.best === '-' ? { w: 0, r: 999 } : {
+          w: parseInt(s.bowling.best.split('/')[0]),
+          r: parseInt(s.bowling.best.split('/')[1])
         };
         if (curr.wickets > currentBest.w || (curr.wickets === currentBest.w && curr.runs_conceded < currentBest.r)) {
           s.bowling.best = `${curr.wickets}/${curr.runs_conceded}`;
@@ -390,7 +390,7 @@ export default function PlayerProfile() {
         if (s.bowling.overs > 0) {
           const totalLegalBalls = bowlingStatsData.reduce((acc, b) => acc + (b.legal_balls || 0), 0);
           s.bowling.economy = totalLegalBalls > 0 ? ((s.bowling.runs_conceded / totalLegalBalls) * 6) : 0;
-          
+
           if (s.bowling.wickets > 0) {
             s.bowling.average = (s.bowling.runs_conceded / s.bowling.wickets);
             s.bowling.sr = (totalLegalBalls / s.bowling.wickets);
@@ -428,7 +428,7 @@ export default function PlayerProfile() {
           date: b.created_at,
           match_id: b.match_id
         }));
-      
+
       const topBowling = bowlingStatsData
         .filter(b => b.wickets >= 3)
         .map(b => ({
@@ -447,9 +447,9 @@ export default function PlayerProfile() {
         .from('profiles_follows')
         .select('*')
         .eq('following_id', id);
-      
+
       setFollowerCount(followData?.length || 0);
-      
+
       if (user) {
         const { data: currentFollow } = await supabase
           .from('profiles_follows')
@@ -503,7 +503,7 @@ export default function PlayerProfile() {
           .delete()
           .eq('follower_id', user.id)
           .eq('following_id', id);
-        
+
         if (error) throw error;
         setIsFollowing(false);
         setFollowerCount(prev => Math.max(0, prev - 1));
@@ -515,7 +515,7 @@ export default function PlayerProfile() {
             follower_id: user.id,
             following_id: id
           });
-        
+
         if (error) throw error;
         setIsFollowing(true);
         setFollowerCount(prev => prev + 1);
@@ -541,11 +541,11 @@ export default function PlayerProfile() {
     const live = match.match_live_state;
     const team1Name = match.team_a || 'Team A';
     const team2Name = match.team_b || 'Team B';
-    
+
     // Calculate scores from innings and live state
     const firstInn = match.innings?.find((i: any) => i.innings_number === 1);
     const secondInn = match.innings?.find((i: any) => i.innings_number === 2);
-    
+
     const formatScore = (runs: number, wickets: number, legal_balls: number) => {
       return `${runs}/${wickets} (${Math.floor(legal_balls / 6)}.${legal_balls % 6})`;
     };
@@ -579,7 +579,7 @@ export default function PlayerProfile() {
     const isCompleted = match.status === 'completed' || live?.match_status === 'completed' || live?.match_status === 'Result' || match.status === 'Result';
     const isLive = !isCompleted && (match.status === 'live' || match.status === 'Live' || !!live);
     const statusDisplay = isCompleted ? 'RESULT' : (isLive ? 'LIVE' : 'UPCOMING');
-    
+
     const getBadgeStyle = () => {
       if (statusDisplay === 'RESULT') return { backgroundColor: '#005b80' };
       if (statusDisplay === 'LIVE') return { backgroundColor: '#01b854' };
@@ -587,8 +587,8 @@ export default function PlayerProfile() {
     };
 
     return (
-      <TouchableOpacity 
-        key={match.id} 
+      <TouchableOpacity
+        key={match.id}
         style={styles.matchCard}
         onPress={() => router.push(`/live/${match.id}`)}
       >
@@ -655,8 +655,8 @@ export default function PlayerProfile() {
 
   const renderTeamCard = (team: any) => {
     return (
-      <TouchableOpacity 
-        key={team.id} 
+      <TouchableOpacity
+        key={team.id}
         style={styles.teamCard}
         onPress={() => router.push(`/teams/${team.id}`)}
       >
@@ -697,8 +697,8 @@ export default function PlayerProfile() {
 
   const renderHighlightCard = (highlight: any) => {
     return (
-      <TouchableOpacity 
-        key={highlight.id} 
+      <TouchableOpacity
+        key={highlight.id}
         style={styles.highlightCard}
         onPress={() => {
           if (highlight.match_id) {
@@ -709,9 +709,9 @@ export default function PlayerProfile() {
         }}
       >
         <View style={styles.thumbnailWrapper}>
-          <Image 
-            source={{ uri: highlight.thumbnail || 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg' }} 
-            style={styles.thumbnail} 
+          <Image
+            source={{ uri: highlight.thumbnail || 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg' }}
+            style={styles.thumbnail}
           />
           <View style={styles.playOverlay}>
             <PlayCircle size={32} color="#FFFFFF" strokeWidth={2.5} />
@@ -734,15 +734,15 @@ export default function PlayerProfile() {
 
   const renderConnectionCard = (user: any) => {
     return (
-      <TouchableOpacity 
-        key={user.id} 
+      <TouchableOpacity
+        key={user.id}
         style={styles.connectionCard}
         onPress={() => router.push(`/players/${getPlayerSlug(user.full_name, user.id)}`)}
       >
         <View style={styles.connectionLeft}>
-          <Image 
-            source={user.avatar_url ? { uri: user.avatar_url } : require('../../assets/avatar.png')} 
-            style={styles.connectionAvatar} 
+          <Image
+            source={user.avatar_url ? { uri: user.avatar_url } : require('../../assets/avatar.png')}
+            style={styles.connectionAvatar}
           />
           <View style={styles.connectionMainInfo}>
             <Text style={styles.connectionName}>{user.full_name}</Text>
@@ -763,10 +763,10 @@ export default function PlayerProfile() {
     const offset = e.nativeEvent.contentOffset.x;
     const width = e.nativeEvent.layoutMeasurement.width || measuredPagerWidth;
     const index = Math.round(offset / width);
-    
+
     let subTabs: any[] = [];
     switch (type) {
-      case 'stats': 
+      case 'stats':
         subTabs = [{ id: 'batting' }, { id: 'bowling' }, { id: 'fielding' }, { id: 'captain' }];
         if (subTabs[index] && subTabs[index].id !== statsTab) setStatsTab(subTabs[index].id);
         break;
@@ -871,7 +871,7 @@ export default function PlayerProfile() {
     isScrollingProgrammatically.current = true;
     setActiveTab(tabId);
     mainPagerRef.current?.scrollTo({ x: index * (measuredPagerWidth || windowWidth), animated: true });
-    
+
     setTimeout(() => {
       isScrollingProgrammatically.current = false;
     }, 600);
@@ -902,7 +902,7 @@ export default function PlayerProfile() {
         connectionsPagerRef.current?.scrollTo({ x: targetX, animated: true });
         break;
     }
-    
+
     setTimeout(() => {
       isScrollingProgrammatically.current = false;
     }, 600);
@@ -926,14 +926,14 @@ export default function PlayerProfile() {
       animationType="slide"
       onRequestClose={() => setShowQR(false)}
     >
-      <Pressable 
-        style={styles.bottomSheetOverlay} 
+      <Pressable
+        style={styles.bottomSheetOverlay}
         onPress={() => setShowQR(false)}
       >
         <View style={styles.bottomSheetInner}>
           <View style={styles.dragHandle} />
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.modalShareBtn}
             onPress={handleShare}
           >
@@ -942,38 +942,38 @@ export default function PlayerProfile() {
 
           <View ref={qrRef} collapsable={false} style={styles.qrCaptureArea}>
             <View style={styles.qrAvatarWrapper}>
-              <Image 
-                source={profile?.avatar_url ? { uri: profile.avatar_url } : require('../../assets/avatar.png')} 
-                style={styles.qrAvatar} 
+              <Image
+                source={profile?.avatar_url ? { uri: profile.avatar_url } : require('../../assets/avatar.png')}
+                style={styles.qrAvatar}
               />
-          </View>
-          
-          <Text style={styles.qrTitle}>{profile?.full_name}</Text>
-          <Text style={styles.qrSubTitle}>{profile?.address || 'Location not set'}</Text>
-          
-          <View style={styles.qrWrapper}>
-            <QRCode
-              value={`https://bookyourground.com/players/${getPlayerSlug(profile?.full_name, id)}`}
-              size={180}
-              color="#431043"
-              backgroundColor="#FFFFFF"
-            />
-          </View>
+            </View>
 
-          <Text style={styles.qrId}>REG. NO: {id?.toString().slice(0, 8).toUpperCase()}</Text>
+            <Text style={styles.qrTitle}>{profile?.full_name}</Text>
+            <Text style={styles.qrSubTitle}>{profile?.address || 'Location not set'}</Text>
 
-          <TouchableOpacity 
-            style={styles.compactShareBtn}
-            onPress={handleShareQR}
-          >
-            <Share2 size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
-            <Text style={styles.compactShareBtnText}>Share QR Code</Text>
-          </TouchableOpacity>
+            <View style={styles.qrWrapper}>
+              <QRCode
+                value={`https://bookyourground.com/players/${getPlayerSlug(profile?.full_name, id)}`}
+                size={180}
+                color="#431043"
+                backgroundColor="#FFFFFF"
+              />
+            </View>
+
+            <Text style={styles.qrId}>REG. NO: {id?.toString().slice(0, 8).toUpperCase()}</Text>
+
+            <TouchableOpacity
+              style={styles.compactShareBtn}
+              onPress={handleShareQR}
+            >
+              <Share2 size={16} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={styles.compactShareBtnText}>Share QR Code</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </Pressable>
-  </Modal>
-);
+      </Pressable>
+    </Modal>
+  );
 
   const headerHeight = scrollY.interpolate({
     inputRange: [0, HEADER_MAX_HEIGHT - HEADER_MIN_HEIGHT],
@@ -1013,7 +1013,7 @@ export default function PlayerProfile() {
           <TouchableOpacity onPress={() => router.back()} style={styles.navBtn}>
             <ChevronLeft size={24} color="#FFFFFF" />
           </TouchableOpacity>
-          
+
           <Animated.View style={{ opacity: headerTitleOpacity, flex: 1, alignItems: 'center' }}>
             <Text style={styles.miniHeaderTitle}>{profile?.full_name}</Text>
           </Animated.View>
@@ -1030,10 +1030,10 @@ export default function PlayerProfile() {
       </View>
 
       {/* 2. Parallax Background Content (Z-Index 1) */}
-      <Animated.View 
+      <Animated.View
         style={[
-          styles.headerAnimatedContainer, 
-          { 
+          styles.headerAnimatedContainer,
+          {
             height: headerHeight,
             zIndex: 1,
             top: 0
@@ -1046,13 +1046,13 @@ export default function PlayerProfile() {
           end={{ x: 1, y: 0 }}
           style={StyleSheet.absoluteFill}
         />
-        
+
         {/* Large Profile Info Block */}
-        <Animated.View 
+        <Animated.View
           style={[
-            styles.headerContent, 
-            { 
-              opacity: profileInfoOpacity, 
+            styles.headerContent,
+            {
+              opacity: profileInfoOpacity,
               top: HEADER_MIN_HEIGHT,
               paddingTop: Platform.OS === 'web' ? 0 : 0 // The top: HEADER_MIN_HEIGHT already pushes it down
             },
@@ -1061,9 +1061,9 @@ export default function PlayerProfile() {
         >
           <View style={styles.playerMainRow}>
             <View style={styles.playerAvatarWrapper}>
-              <Image 
-                source={profile?.avatar_url ? { uri: profile.avatar_url } : require('../../assets/avatar.png')} 
-                style={styles.playerAvatar} 
+              <Image
+                source={profile?.avatar_url ? { uri: profile.avatar_url } : require('../../assets/avatar.png')}
+                style={styles.playerAvatar}
               />
             </View>
             <View style={styles.playerTextInfo}>
@@ -1094,8 +1094,8 @@ export default function PlayerProfile() {
 
           {/* Action Buttons */}
           <View style={styles.headerActions}>
-            <TouchableOpacity 
-              style={[styles.followBtn, isFollowing && styles.followingBtn]} 
+            <TouchableOpacity
+              style={[styles.followBtn, isFollowing && styles.followingBtn]}
               onPress={handleFollow}
             >
               <UserPlus size={18} color={isFollowing ? '#FFFFFF' : '#fcd34d'} />
@@ -1103,7 +1103,7 @@ export default function PlayerProfile() {
                 {isFollowing ? 'Following' : 'Follow'}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.insightsBtn}
               onPress={() => onTabPress('stats', 2)}
             >
@@ -1115,7 +1115,7 @@ export default function PlayerProfile() {
       </Animated.View>
 
       {/* 3. Main Scrollable Content (Z-Index 5) */}
-      <Animated.ScrollView 
+      <Animated.ScrollView
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -1131,16 +1131,16 @@ export default function PlayerProfile() {
         {/* Tab Selection + Sub-bar Container (Sticky) */}
         <View style={[styles.stickyPillsContainer, Platform.OS === 'web' && styles.webResponsiveHeader]}>
           <View style={styles.tabBarContainer}>
-            <ScrollView 
+            <ScrollView
               ref={tabBarRef}
-              horizontal 
+              horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.tabContentContainer}
               scrollEnabled={true}
             >
               {TABS.map((tab, idx) => (
-                <TouchableOpacity 
-                  key={tab.id} 
+                <TouchableOpacity
+                  key={tab.id}
                   onPress={() => onTabPress(tab.id, idx)}
                   onLayout={(e) => {
                     tabMeasurements.current[idx] = {
@@ -1158,7 +1158,7 @@ export default function PlayerProfile() {
               ))}
             </ScrollView>
           </View>
-          
+
           {/* Intelligent Sub-bar Injection */}
           {activeTab === 'matches' && (
             <View style={styles.stickySubBar}>
@@ -1378,15 +1378,15 @@ export default function PlayerProfile() {
                 {(() => {
                   const filteredMatches = matches.filter(m => {
                     if (matchFilter === 'all') return true;
-                    
+
                     // Check explicit Playing XI table
                     if (playedMatchIds.includes(m.id)) return true;
-                    
+
                     // Fallback: Check if name is in innings or live state
                     const pName = profile?.full_name;
                     if (!pName) return false;
                     const searchName = pName.toLowerCase().trim();
-                    
+
                     // Check live state first
                     const live = m.match_live_state;
                     if (live) {
@@ -1399,7 +1399,7 @@ export default function PlayerProfile() {
                     return m.innings?.some((inn: any) => {
                       const batters = Array.isArray(inn.batting_players) ? inn.batting_players : [];
                       const bowlers = Array.isArray(inn.bowling_players) ? inn.bowling_players : [];
-                      
+
                       const hasName = (list: any[]) => list.some((b: any) => {
                         const name = (typeof b === 'string' ? b : (b.name || b.player_name || '')).toLowerCase().trim();
                         return name.includes(searchName) || searchName.includes(name);
@@ -1542,7 +1542,7 @@ export default function PlayerProfile() {
                       if (sub === 'recent') return true;
                       return h.type === sub;
                     });
-                    
+
                     return (
                       <View key={sub} style={{ width: measuredPagerWidth, paddingHorizontal: 16 }}>
                         <View style={[styles.highlightsGrid, Platform.OS === 'web' && styles.webResponsiveHeader]}>
@@ -1610,7 +1610,7 @@ export default function PlayerProfile() {
             </View>
           </ScrollView>
         </View>
-        
+
         <View style={{ height: 100 }} />
       </Animated.ScrollView>
       {renderQRModal()}

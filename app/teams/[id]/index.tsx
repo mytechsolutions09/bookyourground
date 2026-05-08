@@ -79,12 +79,12 @@ interface TeamMember {
 }
 
 const TABS = [
-  { key: 'info', label: 'Info', hidden: true },
   { key: 'members', label: 'Members' },
   { key: 'chat', label: 'Chat' },
   { key: 'matches', label: 'Matches' },
   { key: 'stats', label: 'Stats' },
   { key: 'leaderboard', label: 'Leaderboard' },
+  { key: 'info', label: 'Info' },
 ];
 
 export default function TeamDetailsPage() {
@@ -230,7 +230,7 @@ export default function TeamDetailsPage() {
 
       const { data, error } = await supabase
         .from('matches')
-        .select(`*, match_live_state (*)`)
+        .select(`*, match_live_state (*), innings (*)`)
         .or(`team_a_id.eq.${id},team_b_id.eq.${id}`)
         .order('created_at', { ascending: false })
         .limit(10);
@@ -511,8 +511,41 @@ export default function TeamDetailsPage() {
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#00ea6b" />
+        {/* Header Skeleton */}
+        <View style={[styles.header, { justifyContent: 'flex-start', gap: 16 }]}>
+          <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: '#E2E8F0' }} />
+          <View style={{ width: 120, height: 18, borderRadius: 4, backgroundColor: '#E2E8F0' }} />
+        </View>
+        
+        {/* Profile Card Skeleton */}
+        <View style={{ padding: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+            <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: '#E2E8F0' }} />
+            <View style={{ flex: 1 }}>
+              <View style={{ width: '60%', height: 16, borderRadius: 4, backgroundColor: '#E2E8F0', marginBottom: 8 }} />
+              <View style={{ width: '40%', height: 12, borderRadius: 4, backgroundColor: '#E2E8F0' }} />
+            </View>
+          </View>
+        </View>
+
+        {/* Tabs Skeleton */}
+        <View style={{ flexDirection: 'row', paddingHorizontal: 16, gap: 12, marginBottom: 16 }}>
+          <View style={{ width: 80, height: 32, borderRadius: 16, backgroundColor: '#E2E8F0' }} />
+          <View style={{ width: 80, height: 32, borderRadius: 16, backgroundColor: '#E2E8F0' }} />
+          <View style={{ width: 80, height: 32, borderRadius: 16, backgroundColor: '#E2E8F0' }} />
+        </View>
+
+        {/* List Skeleton */}
+        <View style={{ paddingHorizontal: 16 }}>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }}>
+              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#E2E8F0' }} />
+              <View style={{ flex: 1 }}>
+                <View style={{ width: '50%', height: 14, borderRadius: 4, backgroundColor: '#E2E8F0', marginBottom: 6 }} />
+                <View style={{ width: '30%', height: 10, borderRadius: 4, backgroundColor: '#E2E8F0' }} />
+              </View>
+            </View>
+          ))}
         </View>
       </View>
     );
@@ -567,12 +600,14 @@ export default function TeamDetailsPage() {
               return (
                 <TouchableOpacity 
                   key={tab.key}
-                  style={[styles.tab, activeTab === tab.key && styles.activeTab]} 
+                  style={styles.tab} 
                   onPress={() => onTabPress(tab.key, actualIdx)}
                 >
-                  <RNText style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
-                    {tab.label}
-                  </RNText>
+                  <View style={[styles.tabTextContainer, activeTab === tab.key && styles.activeTab]}>
+                    <RNText style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
+                      {tab.label}
+                    </RNText>
+                  </View>
                 </TouchableOpacity>
               );
             })}
@@ -663,9 +698,34 @@ export default function TeamDetailsPage() {
                     <View style={styles.matchesList}>
                       {teamMatches.slice(0, 10).map((match) => {
                         const isTeamA = match.team_a_id === id;
-                        const myScore = isTeamA ? match.match_live_state?.team_a_score : match.match_live_state?.team_b_score;
-                        const oppScore = isTeamA ? match.match_live_state?.team_b_score : match.match_live_state?.team_a_score;
                         const oppName = isTeamA ? match.team_b : match.team_a;
+                        
+                        // Calculate scores from innings and live state
+                        const batFirstTeamId = match.toss_decision === 'bat' ? match.toss_winner_id : (match.team_a_id === match.toss_winner_id ? match.team_b_id : match.team_a_id);
+                        const isTeamABattingFirst = match.team_a_id === batFirstTeamId;
+
+                        const firstInn = match.innings?.find((i: any) => i.innings_number === 1);
+                        const secondInn = match.innings?.find((i: any) => i.innings_number === 2);
+                        
+                        const formatScore = (runs: number, wickets: number, legal_balls: number) => {
+                          return `${runs}/${wickets} (${Math.floor(legal_balls / 6)}.${legal_balls % 6})`;
+                        };
+
+                        let score1 = isTeamA ? match.match_live_state?.team_a_score : match.match_live_state?.team_b_score;
+                        let score2 = isTeamA ? match.match_live_state?.team_b_score : match.match_live_state?.team_a_score;
+
+                        if (!score1 || score1 === '0/0') {
+                          const inn = isTeamA ? (isTeamABattingFirst ? firstInn : secondInn) : (!isTeamABattingFirst ? firstInn : secondInn);
+                          if (inn) score1 = formatScore(inn.runs || 0, inn.wickets || 0, inn.legal_balls || 0);
+                        }
+
+                        if (!score2 || score2 === '0/0') {
+                          const inn = isTeamA ? (!isTeamABattingFirst ? firstInn : secondInn) : (isTeamABattingFirst ? firstInn : secondInn);
+                          if (inn) score2 = formatScore(inn.runs || 0, inn.wickets || 0, inn.legal_balls || 0);
+                        }
+
+                        const myScore = score1 || '0/0';
+                        const oppScore = score2 || '0/0';
                         const isWon = match.match_live_state?.winner_id === id;
                         return (
                           <TouchableOpacity 
@@ -1006,9 +1066,34 @@ export default function TeamDetailsPage() {
                         <View style={styles.matchesList}>
                           {teamMatches.slice(0, 10).map((match) => {
                             const isTeamA = match.team_a_id === id;
-                            const myScore = isTeamA ? match.match_live_state?.team_a_score : match.match_live_state?.team_b_score;
-                            const oppScore = isTeamA ? match.match_live_state?.team_b_score : match.match_live_state?.team_a_score;
                             const oppName = isTeamA ? match.team_b : match.team_a;
+                            
+                            // Calculate scores from innings and live state
+                            const batFirstTeamId = match.toss_decision === 'bat' ? match.toss_winner_id : (match.team_a_id === match.toss_winner_id ? match.team_b_id : match.team_a_id);
+                            const isTeamABattingFirst = match.team_a_id === batFirstTeamId;
+
+                            const firstInn = match.innings?.find((i: any) => i.innings_number === 1);
+                            const secondInn = match.innings?.find((i: any) => i.innings_number === 2);
+                            
+                            const formatScore = (runs: number, wickets: number, legal_balls: number) => {
+                              return `${runs}/${wickets} (${Math.floor(legal_balls / 6)}.${legal_balls % 6})`;
+                            };
+
+                            let score1 = isTeamA ? match.match_live_state?.team_a_score : match.match_live_state?.team_b_score;
+                            let score2 = isTeamA ? match.match_live_state?.team_b_score : match.match_live_state?.team_a_score;
+
+                            if (!score1 || score1 === '0/0') {
+                              const inn = isTeamA ? (isTeamABattingFirst ? firstInn : secondInn) : (!isTeamABattingFirst ? firstInn : secondInn);
+                              if (inn) score1 = formatScore(inn.runs || 0, inn.wickets || 0, inn.legal_balls || 0);
+                            }
+
+                            if (!score2 || score2 === '0/0') {
+                              const inn = isTeamA ? (!isTeamABattingFirst ? firstInn : secondInn) : (isTeamABattingFirst ? firstInn : secondInn);
+                              if (inn) score2 = formatScore(inn.runs || 0, inn.wickets || 0, inn.legal_balls || 0);
+                            }
+
+                            const myScore = score1 || '0/0';
+                            const oppScore = score2 || '0/0';
                             const isWon = match.match_live_state?.winner_id === id;
                             return (
                               <TouchableOpacity 
@@ -1212,13 +1297,25 @@ export default function TeamDetailsPage() {
                           <View style={styles.memberInfo}>
                             <View style={styles.memberNameRow}>
                               <RNText style={styles.memberName}>{member.player_name}</RNText>
-                              {member.role?.split(',').map(r => (
-                                <View key={r} style={[styles.roleMiniTag, { backgroundColor: '#F1F5F9' }]}>
-                                  <RNText style={styles.roleMiniTagText}>{r[0].toUpperCase()}</RNText>
-                                </View>
-                              ))}
+                              {member.role?.split(',').map(r => {
+                                const roleKey = r.trim().toLowerCase();
+                                if (roleKey === 'captain') {
+                                  return (
+                                    <View key={r} style={[styles.roleMiniTag, { backgroundColor: '#F1F5F9' }]}>
+                                      <RNText style={styles.roleMiniTagText}>C</RNText>
+                                    </View>
+                                  );
+                                }
+                                if (roleKey === 'wicket_keeper') {
+                                  return (
+                                    <View key={r} style={[styles.roleMiniTag, { backgroundColor: '#F1F5F9' }]}>
+                                      <RNText style={styles.roleMiniTagText}>WK</RNText>
+                                    </View>
+                                  );
+                                }
+                                return null;
+                              })}
                             </View>
-                            <RNText style={styles.memberRole}>{member.role || 'Player'}</RNText>
                           </View>
                           {isOwner && member.profile_id !== user?.id && (
                             <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -1298,7 +1395,7 @@ export default function TeamDetailsPage() {
               <View style={styles.qrWrapper}>
                 <QRCode value={`https://bookyourground.com/teams/${id}`} size={250} color="#043529" backgroundColor="#FFFFFF" />
               </View>
-              <RNText style={styles.qrHint}>Team QR Code</RNText>
+              <RNText style={styles.qrHint}>{team?.name}</RNText>
               <RNText style={styles.qrSubHint}>Scan to view team profile</RNText>
             </View>
           </TouchableOpacity>
@@ -1379,9 +1476,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: '#01b854',
-    flex: 1,
-    marginHorizontal: 16,
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: Platform.OS === 'web' ? 20 : 44,
     textAlign: 'center',
+    paddingHorizontal: 100,
     letterSpacing: 1.2,
     textTransform: 'uppercase',
   },
@@ -1403,20 +1503,11 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 24,
   },
   infoProfileCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 12,
-    elevation: 3,
+    marginBottom: 12,
+    paddingVertical: 12,
   },
   profileMainInfo: {
     flexDirection: 'row',
@@ -1445,8 +1536,8 @@ const styles = StyleSheet.create({
   },
   infoProfileName: {
     fontFamily: 'Inter',
-    fontSize: 19,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#0F172A',
     letterSpacing: -0.3,
   },
@@ -1594,23 +1685,20 @@ const styles = StyleSheet.create({
   },
   statGridItem: {
     flex: 1,
-    minWidth: (Platform.OS === 'web' ? 120 : 100),
+    minWidth: (Platform.OS === 'web' ? 100 : 80),
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 8,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.02,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
+    aspectRatio: 1,
   },
   statGridLabel: {
     fontFamily: 'Inter',
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 9,
+    fontWeight: '600',
     color: '#64748B',
     textAlign: 'center',
     textTransform: 'uppercase',
@@ -1619,8 +1707,8 @@ const styles = StyleSheet.create({
   },
   statGridValue: {
     fontFamily: 'Inter',
-    fontSize: 18,
-    fontWeight: '900',
+    fontSize: 15,
+    fontWeight: '700',
     color: '#043529',
     textAlign: 'center',
   },
@@ -1649,21 +1737,13 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
   },
   leaderboardCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOpacity: 0.02,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
+    // Flat layout
   },
   leaderboardRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#F8FAFC',
   },
@@ -1675,8 +1755,8 @@ const styles = StyleSheet.create({
   },
   leaderboardRank: {
     fontFamily: 'Inter',
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '600',
     color: '#94A3B8',
     width: 20,
   },
@@ -1691,8 +1771,8 @@ const styles = StyleSheet.create({
   },
   leaderboardName: {
     fontFamily: 'Inter',
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
     color: '#1E293B',
     flex: 1,
   },
@@ -1701,14 +1781,14 @@ const styles = StyleSheet.create({
   },
   leaderboardValue: {
     fontFamily: 'Inter',
-    fontSize: 18,
-    fontWeight: '900',
+    fontSize: 15,
+    fontWeight: '700',
     color: '#043529',
   },
   leaderboardUnit: {
     fontFamily: 'Inter',
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 9,
+    fontWeight: '600',
     color: '#94A3B8',
     textTransform: 'uppercase',
   },
@@ -1759,13 +1839,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   tab: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  tabTextContainer: {
+    paddingVertical: 12,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
-    minWidth: 100,
   },
   activeTab: {
     borderBottomColor: '#01b854',
@@ -1808,19 +1889,15 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontFamily: 'Inter',
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '600',
     color: '#1E293B',
     marginBottom: 12,
     letterSpacing: -0.3,
   },
   infoCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    gap: 16,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
+    paddingVertical: 12,
+    gap: 12,
   },
   infoRow: {
     flexDirection: 'row',
@@ -1837,15 +1914,15 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontFamily: 'Inter',
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 11,
+    fontWeight: '500',
     color: '#94A3B8',
     textTransform: 'uppercase',
   },
   infoValue: {
     fontFamily: 'Inter',
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '600',
     color: '#1E293B',
     marginTop: 2,
   },
@@ -1955,12 +2032,9 @@ const styles = StyleSheet.create({
   memberRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 12,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
   },
   memberAvatar: {
     width: 44,
@@ -1992,19 +2066,20 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   roleMiniTag: {
-    width: 18,
     height: 18,
+    minWidth: 18,
     borderRadius: 4,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 4,
   },
   roleMiniTagText: {
     fontSize: 10,
-    fontWeight: '900',
+    fontWeight: '600',
     fontFamily: 'Inter',
   },
   memberName: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '500',
     color: '#1e293b',
     fontFamily: 'Inter',

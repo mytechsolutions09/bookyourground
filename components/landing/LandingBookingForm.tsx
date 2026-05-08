@@ -613,7 +613,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
   const hideBothTeamsOption =
     !isBoxCricket &&
     shouldFetchCricketSlotUsage &&
-    (cricketSlotsFetched ? cricketSlotsUsed !== null && cricketSlotsUsed >= 1 : true);
+    (cricketSlotsFetched ? cricketSlotsUsed !== null && cricketSlotsUsed >= 1 : false);
 
   useEffect(() => {
     if (isBoxCricket || !selectedGround?.id || !bookingDate || !startTime) {

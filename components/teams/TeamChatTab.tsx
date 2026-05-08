@@ -216,7 +216,8 @@ const styles = StyleSheet.create({
   inputArea: {
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 12,
+    paddingBottom: 24,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
   },

@@ -15,7 +15,8 @@ import {
   CheckCircle2,
   Package,
   ArrowRight,
-  TrendingUp
+  TrendingUp,
+  ChevronDown
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import WebLayout from '@/components/web/WebLayout';
@@ -40,6 +41,7 @@ export default function ProductDetailScreen() {
   const { setTabBarVisible } = useUI();
   const insets = useSafeAreaInsets();
   const [product, setProduct] = useState<any>(null);
+  const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
   const [isFavorited, setIsFavorited] = useState(false);
   const [selectedColor, setSelectedColor] = useState<any>(null);
   const [selectedSize, setSelectedSize] = useState<any>(null);
@@ -47,6 +49,8 @@ export default function ProductDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [cartCount, setCartCount] = useState(0);
   const [activeWebTab, setActiveWebTab] = useState('DETAILS');
+  const [quantity, setQuantity] = useState(1);
+  const [showQuantityDropdown, setShowQuantityDropdown] = useState(false);
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -113,6 +117,34 @@ export default function ProductDetailScreen() {
       if (!finalProduct) throw new Error('Product not found');
       
       setProduct(finalProduct);
+
+      if (finalProduct.category_id) {
+        let { data: relatedData } = await supabase
+          .from('shop_products')
+          .select('id, name, price, images, discount_price')
+          .eq('category_id', finalProduct.category_id)
+          .neq('id', finalProduct.id)
+          .limit(4);
+          
+        relatedData = relatedData || [];
+        
+        if (relatedData.length < 4) {
+          const { data: moreData } = await supabase
+            .from('shop_products')
+            .select('id, name, price, images, discount_price')
+            .neq('id', finalProduct.id)
+            .limit(4 - relatedData.length);
+            
+          if (moreData) {
+            const existingIds = new Set(relatedData.map(r => r.id));
+            moreData.forEach(item => {
+              if (!existingIds.has(item.id)) relatedData!.push(item);
+            });
+          }
+        }
+        
+        setRelatedProducts(relatedData);
+      }
 
       // Redirect to proper slug if accessed via ID
       if (isUuid && finalProduct.name) {
@@ -241,7 +273,7 @@ export default function ProductDetailScreen() {
         // Update quantity
         const { error: updateError } = await supabase
           .from('shop_cart')
-          .update({ quantity: (existingItem.quantity || 0) + 1 })
+          .update({ quantity: (existingItem.quantity || 0) + quantity })
           .eq('id', existingItem.id);
         if (updateError) throw updateError;
       } else {
@@ -252,7 +284,7 @@ export default function ProductDetailScreen() {
             user_id: user.id, 
             product_id: product.id,
             selected_attributes,
-            quantity: 1
+            quantity: quantity
           });
         if (insertError) throw insertError;
       }
@@ -490,6 +522,33 @@ export default function ProductDetailScreen() {
             </View>
           )}
 
+          {/* Related Products */}
+          {relatedProducts.length > 0 && (
+            <View style={[styles.section, { borderBottomWidth: 0 }]}>
+              <Text style={styles.sectionTitle}>Related Products</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 16, paddingVertical: 10 }}>
+                {relatedProducts.map((item, idx) => (
+                  <TouchableOpacity 
+                    key={idx} 
+                    style={{ width: 160, backgroundColor: '#FFFFFF', borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#F3F4F6' }}
+                    onPress={() => router.push(`/shop/${slugify(item.name)}`)}
+                  >
+                    <View style={{ width: '100%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center' }}>
+                      <Image 
+                        source={{ uri: item.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80' }} 
+                        style={{ width: '80%', height: '80%', resizeMode: 'contain' }} 
+                      />
+                    </View>
+                    <View style={{ padding: 12 }}>
+                      <Text style={{ fontSize: 12, color: '#2b2f4b', marginBottom: 4, fontFamily: 'Inter', minHeight: 30 }} numberOfLines={2}>{item.name}</Text>
+                      <Text style={{ fontSize: 14, color: '#f8688a', fontWeight: '700', fontFamily: 'Inter' }}>₹{item.price.toLocaleString('en-IN')}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
           <View style={styles.footerGap} />
         </View>
       </Reanimated.ScrollView>
@@ -608,244 +667,257 @@ export default function ProductDetailScreen() {
       <WebLayout>
         <Stack.Screen options={{ title: product.name }} />
         <ScrollView style={{ flex: 1, backgroundColor: '#FFFFFF' }} showsVerticalScrollIndicator={false}>
-          <View style={[styles.webContainer, isShoes && styles.shoesWebContainer]}>
-            <View style={[styles.webGrid, isCompact && styles.webGridCompact, isShoes && styles.shoesWebGrid]}>
-              {/* Left: Image */}
-              <View style={[styles.webImageCol, isShoes && styles.shoesImageCol]}>
-                <View style={[styles.webMainImageWrapper, isShoes && styles.shoesMainImageWrapper]}>
-                  <Image 
-                    source={{ uri: product.images?.[activeImageIndex] || product.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80' }} 
-                    style={styles.webMainImage} 
-                  />
-                  {isShoes && (
-                    <View style={styles.shoesNikeLogo}>
-                      <LinearGradient 
-                        colors={['rgba(248, 104, 138, 0.4)', 'rgba(248, 104, 138, 0.05)']} 
-                        style={styles.shoesSwoosh}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                      />
-                    </View>
-                  )}
-                  {isShoes && (
-                    <View style={styles.webHeroTag}>
-                      <Text style={styles.webHeroTagText}>NEW COLORWAY</Text>
-                    </View>
-                  )}
-                </View>
-                
-                {product.images && product.images.length > 1 && (
-                  <View style={styles.webThumbnails}>
+          <View style={[styles.webContainer, { maxWidth: 1500, padding: 20 }]}>
+            <View style={{ flexDirection: 'row', gap: 24, paddingVertical: 20 }}>
+                {/* COLUMN 1: IMAGES */}
+                <View style={{ flex: 1.2, flexDirection: 'row', gap: 16 }}>
+                  {/* Thumbnails */}
+                  <View style={{ width: 60, gap: 12 }}>
                     {(product.images || []).map((img: string, i: number) => (
                       <TouchableOpacity 
                         key={i} 
-                        style={[styles.webThumb, i === activeImageIndex && styles.webThumbActive]}
+                        style={{ width: 60, height: 60, borderRadius: 8, borderWidth: 1, borderColor: activeImageIndex === i ? '#007185' : '#D5D9D9', overflow: 'hidden' }}
                         onPress={() => setActiveImageIndex(i)}
                       >
-                        <Image source={{ uri: img }} style={styles.webThumbImage} />
+                        <Image source={{ uri: img }} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
                       </TouchableOpacity>
                     ))}
                   </View>
-                )}
-              </View>
+                  {/* Main Image */}
+                  <View style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 8, alignItems: 'center', justifyContent: 'flex-start' }}>
+                    <Image 
+                      source={{ uri: product.images?.[activeImageIndex] || product.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=800&q=80' }} 
+                      style={{ width: '100%', height: '100%', resizeMode: 'contain', maxHeight: 600 }} 
+                    />
+                  </View>
+                </View>
 
-              {/* Right: Info */}
-              <View style={[styles.webInfoCol, isShoes && styles.shoesInfoCol]}>
-                <Text style={isShoes ? styles.shoesTitle : styles.webProductName}>
-                  {isShoes ? (product.name.toUpperCase()) : product.name}
-                </Text>
-                
-                {isShoes ? (
-                  <>
-                    <Text style={styles.shoesSubtitle}>
-                      Limited Edition - {selectedColor?.name || (product.specifications?.colors?.[0]?.name || 'Coral Rush')}
-                    </Text>
-                    
-                    <View style={styles.shoesPriceRow}>
-                      <Text style={styles.shoesPrice}>₹{product.price.toLocaleString('en-IN')}</Text>
-                      {product.discount_price && (
-                        <Text style={styles.shoesOriginalPrice}>₹{product.discount_price.toLocaleString('en-IN')}</Text>
-                      )}
+                {/* COLUMN 2: DETAILS */}
+                <View style={{ flex: 1.5, paddingHorizontal: 12 }}>
+                  <TouchableOpacity>
+                    <Text style={{ color: '#007185', fontSize: 14, marginBottom: 8, fontFamily: 'Inter' }}>{`Visit the ${product.category?.name || 'Official'} Store`}</Text>
+                  </TouchableOpacity>
+                  <Text style={{ fontSize: 24, color: '#0F1111', marginBottom: 12, fontFamily: 'Inter', lineHeight: 32 }}>{product.name}</Text>
+                  
+                  {/* Price */}
+                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 4 }}>
+                    <Text style={{ color: '#CC0C39', fontSize: 28, fontWeight: '300', fontFamily: 'Inter' }}>-60%</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                      <Text style={{ fontSize: 14, color: '#0F1111', marginTop: 4, marginRight: 2 }}>₹</Text>
+                      <Text style={{ fontSize: 28, fontWeight: '600', color: '#0F1111', fontFamily: 'Inter' }}>{product.price.toLocaleString('en-IN')}</Text>
                     </View>
+                  </View>
+                  <Text style={{ color: '#565959', fontSize: 12, marginBottom: 4, fontFamily: 'Inter' }}>
+                    M.R.P.: <Text style={{ textDecorationLine: 'line-through' }}>₹{product.discount_price ? product.discount_price.toLocaleString('en-IN') : (product.price * 2.5).toLocaleString('en-IN')}</Text>
+                  </Text>
+                  <Text style={{ color: '#0F1111', fontSize: 14, marginBottom: 16, fontFamily: 'Inter' }}>Inclusive of all taxes</Text>
 
-                    <View style={styles.ratingRow}>
-                      <View style={{ flexDirection: 'row', gap: 4 }}>
-                        {[1,2,3,4,5].map(i => <Star key={i} size={18} color="#f8688a" fill="#f8688a" />)}
-                      </View>
-                      <Text style={styles.ratingText}>({product.review_count || 248})</Text>
+                  {/* Badges */}
+                  <View style={{ flexDirection: 'row', gap: 24, borderBottomWidth: 1, borderBottomColor: '#E5E7EB', paddingBottom: 16, marginBottom: 16 }}>
+                    <View style={{ alignItems: 'center', width: 80 }}>
+                      <RotateCcw size={28} color="#007185" strokeWidth={1} />
+                      <Text style={{ fontSize: 12, color: '#007185', textAlign: 'center', marginTop: 8, fontFamily: 'Inter' }}>10 days Return & Exchange</Text>
                     </View>
+                    <View style={{ alignItems: 'center', width: 80 }}>
+                      <Truck size={28} color="#007185" strokeWidth={1} />
+                      <Text style={{ fontSize: 12, color: '#007185', textAlign: 'center', marginTop: 8, fontFamily: 'Inter' }}>Free Delivery</Text>
+                    </View>
+                    <View style={{ alignItems: 'center', width: 80 }}>
+                      <ShieldCheck size={28} color="#007185" strokeWidth={1} />
+                      <Text style={{ fontSize: 12, color: '#007185', textAlign: 'center', marginTop: 8, fontFamily: 'Inter' }}>Secure transaction</Text>
+                    </View>
+                  </View>
 
-                    <View style={styles.shoesSection}>
-                      <Text style={styles.shoesSectionTitle}>COLORS</Text>
-                      <View style={styles.shoesColorRow}>
+                  {/* Selection */}
+                  {isShoes && (
+                    <>
+                      <Text style={{ fontSize: 14, color: '#0F1111', marginBottom: 8, fontFamily: 'Inter' }}>
+                        Colour: <Text style={{ fontWeight: '700' }}>{selectedColor?.name || 'White'}</Text>
+                      </Text>
+                      <View style={{ flexDirection: 'row', gap: 12, marginBottom: 20 }}>
                         {((product.specifications?.colors && product.specifications.colors.length > 0) ? product.specifications.colors : [
-                          { name: 'Red Rush', hex: '#f8688a' },
-                          { name: 'Midnight', hex: '#2b2f4b' },
-                          { name: 'Lime', hex: '#bef264' },
-                          { name: 'Pure', hex: '#ffffff' }
+                          { name: 'White', hex: '#FFFFFF' },
+                          { name: 'Black', hex: '#0F1111' },
+                          { name: 'Red', hex: '#CC0C39' },
                         ]).map((color: any, idx: number) => {
-                          const isSelected = selectedColor?.name === color.name;
+                          const isSelected = (selectedColor?.name || 'White') === color.name;
                           return (
                             <TouchableOpacity 
                               key={idx} 
-                              style={[styles.shoesColorCircle, isSelected && styles.shoesColorCircleActive]}
+                              style={{ 
+                                width: 36, 
+                                height: 36, 
+                                borderRadius: 18, 
+                                backgroundColor: color.hex, 
+                                borderWidth: isSelected ? 3 : 1, 
+                                borderColor: isSelected ? '#007185' : '#D5D9D9',
+                                shadowColor: '#000',
+                                shadowOffset: { width: 0, height: 1 },
+                                shadowOpacity: 0.1,
+                                shadowRadius: 2,
+                              }}
                               onPress={() => setSelectedColor(color)}
-                            >
-                              <View style={[styles.colorInnerCircle, { backgroundColor: color.hex || color.hex1 }]} />
-                            </TouchableOpacity>
+                            />
                           );
                         })}
                       </View>
-                    </View>
-
-                    <View style={styles.shoesSection}>
-                      <Text style={styles.shoesSectionTitle}>SIZE</Text>
-                      <View style={styles.shoesSizeRow}>
-                        {((product.specifications?.sizes && product.specifications.sizes.length > 0) ? product.specifications.sizes : [6, 7, 7.5, 8, 8.5, 9, 10, 11]).map((size: any, idx: number) => (
-                          <TouchableOpacity 
-                            key={idx} 
-                            style={[styles.sizeBox, selectedSize === size && styles.sizeBoxActive]}
-                            onPress={() => setSelectedSize(size)}
-                          >
-                            <Text style={[styles.sizeBoxText, selectedSize === size && styles.sizeBoxTextActive]}>{size}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    </View>
-
-                    <View style={styles.shoesActionRow}>
-                      <TouchableOpacity style={styles.shoesAddToCartBtn} onPress={addToCart}>
-                        <Text style={styles.shoesAddToCartText}>ADD TO CART</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={[styles.shoesAddToCartBtn, { backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#1e293b', marginTop: 12, shadowOpacity: 0 }]}>
-                        <Text style={[styles.shoesAddToCartText, { color: '#1e293b' }]}>SAVE FOR LATER</Text>
-                      </TouchableOpacity>
-                    </View>
-
-                    <View style={styles.webTabsContainer}>
-                      <View style={styles.webTabsHeader}>
-                        <TouchableOpacity 
-                          style={[styles.webTab, activeWebTab === 'DETAILS' && styles.webTabActive]}
-                          onPress={() => setActiveWebTab('DETAILS')}
-                        >
-                          <Text style={activeWebTab === 'DETAILS' ? styles.webTabTextActive : styles.webTabText}>DETAILS</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity 
-                          style={[styles.webTab, activeWebTab === 'SPECIFICATIONS' && styles.webTabActive]}
-                          onPress={() => setActiveWebTab('SPECIFICATIONS')}
-                        >
-                          <Text style={activeWebTab === 'SPECIFICATIONS' ? styles.webTabTextActive : styles.webTabText}>SPECIFICATIONS</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity 
-                          style={[styles.webTab, activeWebTab === 'REVIEWS' && styles.webTabActive]}
-                          onPress={() => setActiveWebTab('REVIEWS')}
-                        >
-                          <Text style={activeWebTab === 'REVIEWS' ? styles.webTabTextActive : styles.webTabText}>REVIEWS</Text>
-                        </TouchableOpacity>
-                      </View>
+                      <Text style={{ fontSize: 14, color: '#0F1111', marginBottom: 12, fontFamily: 'Inter' }}>
+                        Size: <Text style={{ fontWeight: '700' }}>{selectedSize || '9 UK'}</Text>
+                      </Text>
                       
-                      <View style={styles.webTabContent}>
-                        {activeWebTab === 'DETAILS' && (
-                          <>
-                            <Text style={styles.webDetailDescription}>
-                              {product.description || 'Engineered knit upper for breathability • Nitrogen-infused midsole • 8.2 oz • 6mm drop • Ideal for tempo runs and daily training'}
-                            </Text>
-                            
-                            <View style={styles.webFeaturesGrid}>
-                              {product.features && product.features.length > 0 ? (
-                                product.features.map((feature: string, index: number) => (
-                                  <View key={index} style={styles.webFeatureItem}>
-                                    <CheckCircle2 size={18} color="#2b2f4b" />
-                                    <Text style={styles.webFeatureText}>{feature}</Text>
-                                  </View>
-                                ))
-                              ) : (
-                                <>
-                                  <View style={styles.webFeatureItem}>
-                                    <TrendingUp size={18} color="#2b2f4b" />
-                                    <Text style={styles.webFeatureText}>Lightweight</Text>
-                                  </View>
-                                  <View style={styles.webFeatureItem}>
-                                    <Star size={18} color="#2b2f4b" />
-                                    <Text style={styles.webFeatureText}>Responsive</Text>
-                                  </View>
-                                  <View style={styles.webFeatureItem}>
-                                    <ShieldCheck size={18} color="#2b2f4b" />
-                                    <Text style={styles.webFeatureText}>12-month warranty</Text>
-                                  </View>
-                                </>
-                              )}
-                            </View>
-                          </>
-                        )}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
+                    {((product.specifications?.sizes && product.specifications.sizes.length > 0) ? product.specifications.sizes : [6, 7, 8, 9, 10, 11]).map((size: any, idx: number) => {
+                      const isSelected = selectedSize === size;
+                      return (
+                        <TouchableOpacity 
+                          key={idx} 
+                          style={{ 
+                            borderWidth: isSelected ? 2 : 1, 
+                            borderColor: isSelected ? '#007185' : '#D5D9D9', 
+                            borderRadius: 4, 
+                            padding: 8,
+                            width: 80,
+                            backgroundColor: isSelected ? '#F0F8FA' : '#FFFFFF'
+                          }}
+                          onPress={() => setSelectedSize(size)}
+                        >
+                          <Text style={{ fontSize: 14, fontWeight: isSelected ? '700' : '400', color: '#0F1111', marginBottom: 4, fontFamily: 'Inter' }}>{size} UK</Text>
+                          <Text style={{ fontSize: 12, color: '#B12704', fontWeight: '500', fontFamily: 'Inter' }}>₹{product.price.toLocaleString('en-IN')}</Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                  <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 24 }}>
+                    <Text style={{ fontSize: 14, color: '#007185', fontFamily: 'Inter' }}>Size Chart</Text>
+                  </TouchableOpacity>
+                  </>)}
 
-                        {activeWebTab === 'SPECIFICATIONS' && (
-                          <View style={styles.specTable}>
-                            {product.specifications && Object.keys(product.specifications).filter(k => !['images', 'features', 'colors', 'sizes'].includes(k)).length > 0 ? (
-                              Object.entries(product.specifications)
-                                .filter(([key]) => !['images', 'features', 'colors', 'sizes'].includes(key))
-                                .map(([key, value]: [string, any], index, array) => {
-                                  const isLast = index === array.length - 1;
-                                  let displayValue = String(value);
-                                  
-                                  if (Array.isArray(value)) {
-                                    displayValue = value.map(v => (typeof v === 'object' && v !== null) ? (v.name || v.label || JSON.stringify(v)) : String(v)).join(', ');
-                                  } else if (typeof value === 'object' && value !== null) {
-                                    displayValue = JSON.stringify(value);
-                                  }
-
-                                  return (
-                                    <View key={key} style={[styles.specRow, isLast && { borderBottomWidth: 0 }]}>
-                                      <Text style={styles.specKey}>{key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}</Text>
-                                      <Text style={styles.specValue}>{displayValue}</Text>
-                                    </View>
-                                  );
-                                })
-                            ) : (
-                              <Text style={styles.webDetailDescription}>No specifications available for this product.</Text>
-                            )}
-                          </View>
-                        )}
-
-                        {activeWebTab === 'REVIEWS' && (
-                          <View style={{ alignItems: 'center', paddingVertical: 32 }}>
-                            <Star size={48} color="#D1D5DB" />
-                            <Text style={[styles.webDetailDescription, { textAlign: 'center', marginTop: 16 }]}>
-                              No reviews yet. Be the first to review this product!
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                    </View>
-                  </>
-                ) : (
-                  <>
-                    <View style={styles.webPriceContainer}>
-                      <Text style={styles.webCurrentPrice}>₹{Number(product.price).toLocaleString('en-IN')}</Text>
-                    </View>
-                    <Text style={styles.webDescription}>{product.description}</Text>
-                    <View style={styles.webActionRow}>
-                      <TouchableOpacity style={styles.webAddToCartBtn} onPress={addToCart}>
-                        <Text style={styles.webAddToCartText}>ADD TO CART</Text>
+                  {/* Product Details Section */}
+                  <View style={{ marginTop: 8 }}>
+                    <Text style={{ fontSize: 20, fontWeight: '700', color: '#0F1111', marginBottom: 12, fontFamily: 'Inter' }}>Product details</Text>
+                    
+                    <View style={{ borderTopWidth: 1, borderTopColor: '#E5E7EB' }}>
+                      <TouchableOpacity style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}>
+                        <Text style={{ fontSize: 16, fontWeight: '700', color: '#0F1111', fontFamily: 'Inter' }}>Top highlights</Text>
+                        <ChevronDown size={20} color="#0F1111" />
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}>
+                        <Text style={{ fontSize: 16, fontWeight: '700', color: '#0F1111', fontFamily: 'Inter' }}>Style</Text>
+                        <ChevronDown size={20} color="#0F1111" />
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}>
+                        <Text style={{ fontSize: 16, fontWeight: '700', color: '#0F1111', fontFamily: 'Inter' }}>Features & Specs</Text>
+                        <ChevronDown size={20} color="#0F1111" />
                       </TouchableOpacity>
                     </View>
-                    <View style={styles.webTrustGrid}>
-                      <View style={styles.webTrustItem}>
-                        <Truck size={24} color="#2b2f4b" />
-                        <Text style={styles.webTrustTitle}>Free Shipping</Text>
-                        <Text style={styles.webTrustSub}>On orders over ₹999</Text>
-                      </View>
-                      <View style={styles.webTrustItem}>
-                        <ShieldCheck size={24} color="#2b2f4b" />
-                        <Text style={styles.webTrustTitle}>Secure Payment</Text>
-                        <Text style={styles.webTrustSub}>100% Secure Checkout</Text>
-                      </View>
+                  </View>
+                </View>
+
+                {/* COLUMN 3: BUY BOX */}
+                <View style={{ width: 280, borderWidth: 1, borderColor: '#D5D9D9', borderRadius: 8, padding: 16, alignSelf: 'flex-start' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 12 }}>
+                    <Text style={{ fontSize: 14, color: '#0F1111', marginTop: 2, marginRight: 2 }}>₹</Text>
+                    <Text style={{ fontSize: 24, fontWeight: '600', color: '#0F1111', fontFamily: 'Inter' }}>{product.price.toLocaleString('en-IN')}</Text>
+                  </View>
+                  
+                  <Text style={{ fontSize: 14, color: '#0F1111', marginBottom: 8, fontFamily: 'Inter' }}>
+                    FREE delivery <Text style={{ fontWeight: '700' }}>Tuesday, 12 May.</Text>
+                  </Text>
+                  <TouchableOpacity style={{ marginBottom: 16 }}>
+                    <Text style={{ fontSize: 14, color: '#007185', fontFamily: 'Inter' }}>Details</Text>
+                  </TouchableOpacity>
+
+                  <Text style={{ fontSize: 18, color: '#007600', fontWeight: '500', marginBottom: 16, fontFamily: 'Inter' }}>In stock</Text>
+                  
+                  <View style={{ marginBottom: 16 }}>
+                    <View style={{ flexDirection: 'row', marginBottom: 4 }}>
+                      <Text style={{ width: 80, fontSize: 12, color: '#565959', fontFamily: 'Inter' }}>Sold by</Text>
+                      <Text style={{ fontSize: 12, color: '#007185', fontFamily: 'Inter' }}>adidas India Marketing Pvt Ltd</Text>
                     </View>
-                  </>
-                )}
+                    <View style={{ flexDirection: 'row', marginBottom: 4 }}>
+                      <Text style={{ width: 80, fontSize: 12, color: '#565959', fontFamily: 'Inter' }}>Payment</Text>
+                      <Text style={{ fontSize: 12, color: '#007185', fontFamily: 'Inter' }}>Secure transaction</Text>
+                    </View>
+                  </View>
+
+                  <View style={{ position: 'relative', alignSelf: 'flex-start', zIndex: 100, marginBottom: 16 }}>
+                    <TouchableOpacity 
+                      style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: showQuantityDropdown ? '#007185' : '#D5D9D9', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: '#F0F2F2', minWidth: 110, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 1 }}
+                      onPress={() => setShowQuantityDropdown(!showQuantityDropdown)}
+                    >
+                      <Text style={{ fontSize: 14, color: '#0F1111', fontFamily: 'Inter' }}>Quantity: <Text style={{fontWeight: '600'}}>{quantity}</Text></Text>
+                      <ChevronDown size={16} color="#0F1111" style={{ marginLeft: 8 }} />
+                    </TouchableOpacity>
+                    
+                    {showQuantityDropdown && (
+                      <View style={{ position: 'absolute', top: 40, left: 0, right: 0, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#D5D9D9', borderRadius: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 5, zIndex: 1000, overflow: 'hidden' }}>
+                        <ScrollView style={{ maxHeight: 150 }} nestedScrollEnabled>
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                            <TouchableOpacity 
+                              key={num} 
+                              style={{ paddingVertical: 10, paddingHorizontal: 16, backgroundColor: quantity === num ? '#F0F8FA' : '#FFFFFF', borderBottomWidth: num < 10 ? 1 : 0, borderBottomColor: '#F0F2F2' }}
+                              onPress={() => {
+                                setQuantity(num);
+                                setShowQuantityDropdown(false);
+                              }}
+                            >
+                              <Text style={{ fontSize: 14, color: '#0F1111', fontFamily: 'Inter', fontWeight: quantity === num ? '600' : '400' }}>{num}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+                      </View>
+                    )}
+                  </View>
+
+                  <TouchableOpacity 
+                    style={{ backgroundColor: '#2d3450', borderRadius: 100, paddingVertical: 12, alignItems: 'center', marginBottom: 8 }}
+                    onPress={addToCart}
+                  >
+                    <Text style={{ color: '#FFFFFF', fontSize: 14, fontFamily: 'Inter', fontWeight: '500' }}>Add to cart</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    style={{ backgroundColor: '#f8688a', borderRadius: 100, paddingVertical: 12, alignItems: 'center', marginBottom: 16 }}
+                    onPress={addToCart}
+                  >
+                    <Text style={{ color: '#FFFFFF', fontSize: 14, fontFamily: 'Inter', fontWeight: '500' }}>Buy Now</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity style={{ borderWidth: 1, borderColor: '#D5D9D9', borderRadius: 8, paddingVertical: 8, alignItems: 'center' }}>
+                    <Text style={{ color: '#0F1111', fontSize: 14, fontFamily: 'Inter' }}>Add to Wish List</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
+
+              {/* RELATED PRODUCTS */}
+              {relatedProducts.length > 0 && (
+                <View style={{ marginTop: 60, borderTopWidth: 1, borderTopColor: '#E5E7EB', paddingTop: 40 }}>
+                  <Text style={{ fontSize: 24, fontWeight: '700', color: '#0F1111', marginBottom: 24, fontFamily: 'Inter' }}>Related products</Text>
+                  <View style={{ flexDirection: 'row', gap: 24 }}>
+                    {relatedProducts.map((item, idx) => (
+                      <TouchableOpacity 
+                        key={idx} 
+                        style={{ width: '23%', minWidth: 200, backgroundColor: '#FFFFFF', borderRadius: 8, overflow: 'hidden' }}
+                        onPress={() => router.push(`/shop/${slugify(item.name)}`)}
+                      >
+                        <View style={{ width: '100%', aspectRatio: 1, alignItems: 'center', justifyContent: 'center' }}>
+                          <Image 
+                            source={{ uri: item.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&q=80' }} 
+                            style={{ width: '80%', height: '80%', resizeMode: 'contain' }} 
+                          />
+                        </View>
+                        <View style={{ paddingTop: 12 }}>
+                          <Text style={{ fontSize: 14, color: '#007185', marginBottom: 4, fontFamily: 'Inter', minHeight: 40 }} numberOfLines={2}>{item.name}</Text>
+                          <Text style={{ fontSize: 18, color: '#B12704', fontWeight: '500', fontFamily: 'Inter' }}>₹{item.price.toLocaleString('en-IN')}</Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
             </View>
-          </View>
         </ScrollView>
       </WebLayout>
     );

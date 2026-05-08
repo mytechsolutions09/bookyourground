@@ -242,19 +242,8 @@ export default function AdminBookingsScreen() {
     <View style={styles.container}>
       {Platform.OS === 'web' && (
         <View style={[styles.header, styles.webHeader]}>
-          <View style={styles.headerTop}>
-            <Text style={styles.title}>All Platform Bookings</Text>
-            <View style={styles.searchContainer}>
-              <TextInput
-                style={styles.searchBar}
-                placeholder="Search ground, city, customer or ID..."
-                placeholderTextColor="#9CA3AF"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-            </View>
-          </View>
-          <ScrollView 
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+            <ScrollView 
             horizontal 
             showsHorizontalScrollIndicator={false} 
             contentContainerStyle={styles.tabRow}
@@ -382,8 +371,18 @@ export default function AdminBookingsScreen() {
               )}
             </View>
           </ScrollView>
+          <View style={{ width: 300 }}>
+            <TextInput
+              style={styles.searchBar}
+              placeholder="Search ground, city, customer or ID..."
+              placeholderTextColor="#9CA3AF"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
         </View>
-      )}
+      </View>
+    )}
 
       {isWeb && bookings.length > 0 && (
         <View style={styles.tableHeaderContainer}>
@@ -620,7 +619,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    backgroundColor: IS_WEB ? '#F5F5F5' : '#043529',
+    backgroundColor: IS_WEB ? '#FFFFFF' : '#043529',
   },
   header: {
     backgroundColor: IS_WEB ? '#FFFFFF' : '#043529',
@@ -662,7 +661,7 @@ const styles = StyleSheet.create({
     borderColor: '#E5E7EB',
   },
   list: {
-    padding: 16,
+    padding: 0,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -674,15 +673,11 @@ const styles = StyleSheet.create({
     color: IS_WEB ? '#666' : '#9ca3af',
   },
   tableHeaderContainer: {
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 4,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 10,
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
   tableHeaderRow: {
     flexDirection: 'row',
@@ -698,12 +693,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    marginBottom: 8,
+    paddingVertical: 16,
     backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
   tableCell: {
     paddingRight: 16,

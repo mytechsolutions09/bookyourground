@@ -68,13 +68,13 @@ export default function AdminDashboardScreen() {
   };
 
   const StatCard = ({ icon: Icon, label, value, color }: any) => (
-    <Card style={styles.statCard}>
+    <View style={styles.statCard}>
       <View style={[styles.iconContainer, { backgroundColor: color + '15' }]}>
         <Icon size={18} color={color} />
         <Text style={styles.statValue}>{value}</Text>
       </View>
       <Text style={styles.statLabel}>{label}</Text>
-    </Card>
+    </View>
   );
 
   const content = (
@@ -82,42 +82,44 @@ export default function AdminDashboardScreen() {
       style={styles.container}
       refreshControl={<RefreshControl refreshing={loading} onRefresh={loadStats} />}
     >
-      {Platform.OS === 'web' && (
-        <View style={[styles.header, styles.webHeader]}>
-          <Text style={styles.title}>Admin Dashboard</Text>
-          <Text style={styles.subtitle}>Platform Overview</Text>
-        </View>
-      )}
-
       <View style={styles.content}>
-        <View style={styles.statsGrid}>
-          <StatCard
-            icon={Users}
-            label="Total Users"
-            value={stats.totalUsers}
-            color={Platform.OS === 'web' ? '#10b981' : '#2196F3'}
-          />
-          <StatCard
-            icon={Building2}
-            label="Total Grounds"
-            value={stats.totalGrounds}
-            color="#4CAF50"
-          />
-          <StatCard
-            icon={Calendar}
-            label="Total Bookings"
-            value={stats.totalBookings}
-            color="#FF9800"
-          />
-          <StatCard
-            icon={TrendingUp}
-            label="Pending Approvals"
-            value={stats.pendingApprovals}
-            color="#F44336"
-          />
+        <View style={Platform.OS === 'web' ? { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 } : {}}>
+          {Platform.OS === 'web' && (
+            <View>
+              <Text style={styles.title}>Admin Dashboard</Text>
+              <Text style={styles.subtitle}>Platform Overview</Text>
+            </View>
+          )}
+          
+          <View style={[styles.statsGrid, Platform.OS === 'web' && { marginBottom: 0, flex: 1, justifyContent: 'flex-end' }]}>
+            <StatCard
+              icon={Users}
+              label="Total Users"
+              value={stats.totalUsers}
+              color={Platform.OS === 'web' ? '#10b981' : '#2196F3'}
+            />
+            <StatCard
+              icon={Building2}
+              label="Total Grounds"
+              value={stats.totalGrounds}
+              color="#4CAF50"
+            />
+            <StatCard
+              icon={Calendar}
+              label="Total Bookings"
+              value={stats.totalBookings}
+              color="#FF9800"
+            />
+            <StatCard
+              icon={TrendingUp}
+              label="Pending Approvals"
+              value={stats.pendingApprovals}
+              color="#F44336"
+            />
+          </View>
         </View>
 
-        <Card style={styles.quickActionsCard}>
+        <View style={styles.quickActionsCard}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
 
           <TouchableOpacity
@@ -207,9 +209,9 @@ export default function AdminDashboardScreen() {
             </View>
             <ChevronRight size={18} color="#666" />
           </TouchableOpacity>
-        </Card>
+        </View>
 
-        <Card style={styles.infoCard}>
+        <View style={styles.infoCard}>
           <Text style={styles.sectionTitle}>Platform Health</Text>
           <View style={styles.healthRow}>
             <Text style={styles.healthLabel}>System Status</Text>
@@ -223,7 +225,7 @@ export default function AdminDashboardScreen() {
               <Text style={styles.healthText}>Connected</Text>
             </View>
           </View>
-        </Card>
+        </View>
       </View>
     </ScrollView>
   );
@@ -233,7 +235,7 @@ export default function AdminDashboardScreen() {
       {Platform.OS === 'web' ? (
         <WebLayout>{content}</WebLayout>
       ) : (
-        <View style={{ flex: 1, backgroundColor: '#F5F5F5' }}>
+        <View style={{ flex: 1 }}>
           <MobileAppNavbar title="ADMIN DASHBOARD" titleColor="#10b981" />
           {content}
         </View>
@@ -245,7 +247,6 @@ export default function AdminDashboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5',
   },
   header: {
     backgroundColor: '#FFFFFF',
@@ -258,7 +259,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#111827',
     marginBottom: 2,
   },
@@ -294,12 +295,12 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#111827',
   },
   statLabel: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#6B7280',
     textAlign: 'center',
     textTransform: 'uppercase',
@@ -322,13 +323,13 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   actionText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '500',
     color: '#333',
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#212121',
     marginBottom: 12,
   },
@@ -349,7 +350,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F0F0F0',
   },
   healthLabel: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#333',
   },
   healthBadge: {
@@ -360,7 +361,7 @@ const styles = StyleSheet.create({
   },
   healthText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#4CAF50',
   },
 });

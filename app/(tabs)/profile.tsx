@@ -386,70 +386,136 @@ export default function ProfileScreen({
       </View>
     )}
 
-    {/* 3. GROUND OWNER HUB (Grid) */}
+    {/* 3. GROUND OWNER HUB (Grid or Rows) */}
     {(profile?.role === 'ground_owner' || isSuperAdmin) && (
       <View style={styles.sectionContainer}>
         <RNText style={styles.sectionTitle}>GROUND OWNER HUB</RNText>
-        <View style={styles.hubGrid}>
-          <TouchableOpacity 
-            style={[styles.hubCard, isModal && styles.noContainer, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
-            onPress={() => router.push('/(owner)/owner-dashboard' as any)}
-          >
-            <View style={styles.hubIconCircle}>
-              <LayoutGrid size={24} color="#00ea6b" />
-            </View>
-            <RNText style={styles.hubCardText}>Dashboard</RNText>
-          </TouchableOpacity>
+        <View style={isModal ? [styles.rowList, styles.noContainer] : styles.hubGrid}>
+          {isModal ? (
+            <>
+              <TouchableOpacity 
+                style={styles.rowItem}
+                onPress={() => router.push('/(owner)/owner-dashboard' as any)}
+              >
+                <View style={styles.rowLeft}>
+                  <LayoutGrid size={20} color="#00ea6b" />
+                  <RNText style={styles.rowText}>Dashboard</RNText>
+                </View>
+              </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
-            onPress={() => router.push('/(owner)/manage-grounds' as any)}
-          >
-            <View style={styles.hubIconCircle}>
-              <MapPin size={24} color="#00ea6b" />
-            </View>
-            <RNText style={styles.hubCardText}>My Grounds</RNText>
-          </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.rowItem}
+                onPress={() => router.push('/(owner)/manage-grounds' as any)}
+              >
+                <View style={styles.rowLeft}>
+                  <MapPin size={20} color="#00ea6b" />
+                  <RNText style={styles.rowText}>My Grounds</RNText>
+                </View>
+              </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
-            onPress={() => router.push('/(owner)/ground-bookings' as any)}
-          >
-            <View style={styles.hubIconCircle}>
-              <Calendar size={24} color="#00ea6b" />
-            </View>
-            <RNText style={styles.hubCardText}>Bookings</RNText>
-          </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.rowItem}
+                onPress={() => router.push('/(owner)/ground-bookings' as any)}
+              >
+                <View style={styles.rowLeft}>
+                  <Calendar size={20} color="#00ea6b" />
+                  <RNText style={styles.rowText}>Bookings</RNText>
+                </View>
+              </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
-            onPress={() => router.push('/(owner)/earnings' as any)}
-          >
-            <View style={styles.hubIconCircle}>
-              <IndianRupee size={24} color="#00ea6b" />
-            </View>
-            <RNText style={styles.hubCardText}>Earnings</RNText>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
-            onPress={() => router.push('/(owner)/inventory' as any)}
-          >
-            <View style={styles.hubIconCircle}>
-              <CalendarClock size={24} color="#00ea6b" />
-            </View>
-            <RNText style={styles.hubCardText}>Inventory</RNText>
-          </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.rowItem}
+                onPress={() => router.push('/(owner)/earnings' as any)}
+              >
+                <View style={styles.rowLeft}>
+                  <IndianRupee size={20} color="#00ea6b" />
+                  <RNText style={styles.rowText}>Earnings</RNText>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.rowItem}
+                onPress={() => router.push('/(owner)/inventory' as any)}
+              >
+                <View style={styles.rowLeft}>
+                  <CalendarClock size={20} color="#00ea6b" />
+                  <RNText style={styles.rowText}>Inventory</RNText>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.rowItem}
+                onPress={() => router.push('/(owner)/settings' as any)}
+              >
+                <View style={styles.rowLeft}>
+                  <Settings size={20} color="#00ea6b" />
+                  <RNText style={styles.rowText}>Settings</RNText>
+                </View>
+              </TouchableOpacity>
+            </>
+          ) : (
+            <>
+              <TouchableOpacity 
+                style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
+                onPress={() => router.push('/(owner)/owner-dashboard' as any)}
+              >
+                <View style={styles.hubIconCircle}>
+                  <LayoutGrid size={24} color="#00ea6b" />
+                </View>
+                <RNText style={styles.hubCardText}>Dashboard</RNText>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
+                onPress={() => router.push('/(owner)/manage-grounds' as any)}
+              >
+                <View style={styles.hubIconCircle}>
+                  <MapPin size={24} color="#00ea6b" />
+                </View>
+                <RNText style={styles.hubCardText}>My Grounds</RNText>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
+                onPress={() => router.push('/(owner)/ground-bookings' as any)}
+              >
+                <View style={styles.hubIconCircle}>
+                  <Calendar size={24} color="#00ea6b" />
+                </View>
+                <RNText style={styles.hubCardText}>Bookings</RNText>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
+                onPress={() => router.push('/(owner)/earnings' as any)}
+              >
+                <View style={styles.hubIconCircle}>
+                  <IndianRupee size={24} color="#00ea6b" />
+                </View>
+                <RNText style={styles.hubCardText}>Earnings</RNText>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
+                onPress={() => router.push('/(owner)/inventory' as any)}
+              >
+                <View style={styles.hubIconCircle}>
+                  <CalendarClock size={24} color="#00ea6b" />
+                </View>
+                <RNText style={styles.hubCardText}>Inventory</RNText>
+              </TouchableOpacity>
 
 
-          <TouchableOpacity 
-            style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
-            onPress={() => router.push('/(owner)/settings' as any)}
-          >
-            <View style={styles.hubIconCircle}>
-              <Settings size={24} color="#00ea6b" />
-            </View>
-            <RNText style={styles.hubCardText}>Settings</RNText>
-          </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
+                onPress={() => router.push('/(owner)/settings' as any)}
+              >
+                <View style={styles.hubIconCircle}>
+                  <Settings size={24} color="#00ea6b" />
+                </View>
+                <RNText style={styles.hubCardText}>Settings</RNText>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </View>
     )}
