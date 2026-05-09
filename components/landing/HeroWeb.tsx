@@ -8,6 +8,7 @@ import {
   Platform,
   useWindowDimensions,
   Pressable,
+  TouchableOpacity,
   TextInput,
   ScrollView,
   ActivityIndicator,
@@ -39,6 +40,7 @@ export default function HeroWeb() {
   const isMobile = useIsCompact();
   const { width, height } = useWindowDimensions();
   const [locations, setLocations] = useState<LocationOption[]>([]);
+  const [loadingLocations, setLoadingLocations] = useState(true);
   const [selectedLocation, setSelectedLocation] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string>('');
@@ -73,6 +75,27 @@ export default function HeroWeb() {
     startAnimation();
   }, []);
 
+  const pulseAnim = React.useRef(new Animated.Value(0.5)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 0.9,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 0.5,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulseAnim]);
+
   const borderRotation = rotateAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
@@ -86,6 +109,7 @@ export default function HeroWeb() {
 
   useEffect(() => {
     const fetchLocations = async () => {
+      setLoadingLocations(true);
       const { data, error } = await supabase
         .from('locations')
         .select('city, state')
@@ -100,6 +124,7 @@ export default function HeroWeb() {
         }));
         setLocations(unique);
       }
+      setLoadingLocations(false);
     };
     fetchLocations();
   }, []);
@@ -205,7 +230,7 @@ export default function HeroWeb() {
       source={require('@/assets/hero.png')}
       style={[
         styles.root, 
-        { height: isMobile ? 'auto' : 850, minHeight: isMobile ? 580 : 850 },
+        { height: isMobile ? '100%' : 850, minHeight: isMobile ? 580 : 850 },
         isMobile && { paddingTop: 100, paddingBottom: 40 }
       ]}
       resizeMode="cover"
@@ -363,13 +388,13 @@ export default function HeroWeb() {
                 {isDateOpen && (
                   <View style={[styles.dropdown, styles.calendarDropdown]}>
                     <View style={styles.calendarHeader}>
-                      <Pressable onPress={prevMonth} style={styles.calendarNav}>
+                      <TouchableOpacity onPress={prevMonth} style={styles.calendarNav}>
                         <ChevronLeft size={20} color="#1E293B" />
-                      </Pressable>
+                      </TouchableOpacity>
                       <Text style={styles.calendarMonthTitle}>{monthName}</Text>
-                      <Pressable onPress={nextMonth} style={styles.calendarNav}>
+                      <TouchableOpacity onPress={nextMonth} style={styles.calendarNav}>
                         <ChevronRight size={20} color="#1E293B" />
-                      </Pressable>
+                      </TouchableOpacity>
                     </View>
                     <View style={styles.calendarWeekdays}>
                       {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
@@ -532,6 +557,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     zIndex: 10,
     overflow: 'visible',
+    position: 'relative',
   },
   content: {
     alignItems: 'center',
@@ -603,6 +629,7 @@ const styles = StyleSheet.create({
   },
   searchFormWrapperMobile: {
     borderRadius: 26,
+    marginTop: 20,
   },
   animatedBorder: {
     position: 'absolute',
@@ -774,6 +801,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: 8,
+    minWidth: 320,
   },
   timeDropdown: {
     bottom: 60,
@@ -786,9 +814,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   calendarNav: {
-    padding: 4,
-    borderRadius: 6,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   calendarMonthTitle: {
     fontSize: 16,

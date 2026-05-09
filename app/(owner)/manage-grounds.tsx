@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Platform, Modal, Pressable, ScrollView, TextInput, Switch, Alert, ActivityIndicator, Image, useWindowDimensions } from 'react-native';
 import { router } from 'expo-router';
-import { Plus } from 'lucide-react-native';
+import { Plus, Pencil, Eye, Calendar, Download } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { supabase } from '@/lib/supabase';
@@ -628,44 +628,47 @@ export default function OwnerGroundsScreen() {
               </TouchableOpacity>
             </View>
 
-            <View style={{ padding: 16, gap: 12 }}>
-              <Button
-                title="Edit Venue & Pricing"
+            <View style={{ padding: 16, gap: 8 }}>
+              <TouchableOpacity 
+                style={styles.compactModalBtn} 
                 onPress={() => {
                   const ground = grounds.find(g => g.id === selectedGroundId);
                   if (ground) startEditGround(ground);
                 }}
-                variant="primary"
-                fullWidth
-              />
+              >
+                <Pencil size={18} color="#0F172A" />
+                <Text style={styles.compactModalBtnText}>Edit Venue & Pricing</Text>
+              </TouchableOpacity>
               
-              <View style={{ flexDirection: 'row', gap: 12 }}>
-                <Button
-                  title="View Public Page"
-                  onPress={() => {
-                    const ground = grounds.find(g => g.id === selectedGroundId);
-                    if (ground) router.push(makeGroundPath(ground) as any);
-                  }}
-                  variant="outline"
-                  style={{ flex: 1 }}
-                />
-                <Button
-                  title="Manage Bookings"
-                  onPress={() => router.push('/(owner)/bookings')}
-                  variant="outline"
-                  style={{ flex: 1 }}
-                />
-              </View>
+              <TouchableOpacity 
+                style={styles.compactModalBtn} 
+                onPress={() => {
+                  const ground = grounds.find(g => g.id === selectedGroundId);
+                  if (ground) router.push(makeGroundPath(ground) as any);
+                }}
+              >
+                <Eye size={18} color="#0F172A" />
+                <Text style={styles.compactModalBtnText}>View Public Page</Text>
+              </TouchableOpacity>
 
-              <Button
-                title="Export Data (JSON)"
+              <TouchableOpacity 
+                style={styles.compactModalBtn} 
+                onPress={() => router.push('/(owner)/bookings')}
+              >
+                <Calendar size={18} color="#0F172A" />
+                <Text style={styles.compactModalBtnText}>Manage Bookings</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.compactModalBtn} 
                 onPress={() => {
                   const ground = grounds.find(g => g.id === selectedGroundId);
                   if (ground) handleExportGround(ground);
                 }}
-                variant="outline"
-                fullWidth
-              />
+              >
+                <Download size={18} color="#0F172A" />
+                <Text style={styles.compactModalBtnText}>Export Data (JSON)</Text>
+              </TouchableOpacity>
             </View>
           </Card>
         </View>
@@ -1066,8 +1069,8 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontFamily: 'Inter',
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#0F172A',
     flex: 1,
     letterSpacing: -0.5,
@@ -1399,6 +1402,30 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
     backgroundColor: '#F8FAFC',
+  },
+  compactModalBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    borderWidth: 1,
+    borderColor: 'rgba(226, 232, 240, 0.8)',
+    gap: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.03,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    ...Platform.select({
+      web: { backdropFilter: 'blur(8px)' }
+    }) as any,
+  },
+  compactModalBtnText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1E293B',
+    fontFamily: 'Inter',
   },
 });
 

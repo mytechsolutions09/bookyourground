@@ -79,7 +79,7 @@ export default function LandingScrollContent({
               position: Platform.OS === 'web' ? 'sticky' : 'relative' as any,
               top: 0,
               zIndex: 0,
-              height: isCompact ? 600 : 850,
+              height: heroHeight,
               width: '100%',
               overflow: 'visible',
             }}
