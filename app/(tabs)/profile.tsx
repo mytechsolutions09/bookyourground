@@ -522,7 +522,7 @@ export default function ProfileScreen({
 
     {/* 3. PLAYER DASHBOARD (Rows) */}
     <View style={styles.sectionContainer}>
-      <RNText style={styles.sectionTitle}>QUICK ACCESS</RNText>
+      <RNText style={styles.sectionTitle}>{profile?.role === 'ground_owner' ? 'PLAYER ACCESS' : 'QUICK ACCESS'}</RNText>
       <View style={[styles.rowList, isModal && styles.noContainer]}>
         <TouchableOpacity 
           style={styles.rowItem}

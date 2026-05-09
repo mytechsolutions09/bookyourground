@@ -197,6 +197,8 @@ export default function GroundsAdminScreen() {
     });
   }, [grounds, locationFilter, typeFilter, searchQuery]);
 
+  const showApproveOption = selectedGround ? !groundIsApproved(selectedGround) : false;
+
   useEffect(() => {
     loadGrounds();
     loadLocations();
@@ -1505,6 +1507,24 @@ export default function GroundsAdminScreen() {
           </View>
 
           <View style={styles.actionsModalBody}>
+            {showApproveOption && (
+              <TouchableOpacity 
+                style={styles.actionModalItem}
+                onPress={() => {
+                  setIsActionsModalOpen(false);
+                  updateGroundStatus(selectedGround!.id, true);
+                }}
+              >
+                <View style={[styles.actionIconBox, { backgroundColor: '#DEF7EC' }]}>
+                  <Text style={{ color: '#03543F', fontWeight: '800' }}>A</Text>
+                </View>
+                <View>
+                  <Text style={styles.actionItemTitle}>Approve Ground</Text>
+                  <Text style={styles.actionItemDesc}>Approve this ground for listings</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity 
               style={styles.actionModalItem}
               onPress={() => {

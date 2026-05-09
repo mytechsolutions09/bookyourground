@@ -89,6 +89,10 @@ export interface Database {
           verified: boolean;
           approved: boolean;
           active: boolean;
+          pricing_model: 'hours' | 'overs';
+          is_indoor: boolean;
+          has_bowling_machine: boolean;
+          lanes_count: number;
           created_at: string;
           updated_at: string;
           min_price: number | null;
@@ -117,6 +121,10 @@ export interface Database {
           verified?: boolean;
           approved?: boolean;
           active?: boolean;
+          pricing_model?: 'hours' | 'overs';
+          is_indoor?: boolean;
+          has_bowling_machine?: boolean;
+          lanes_count?: number;
           created_at?: string;
           updated_at?: string;
           min_price?: number | null;
@@ -145,6 +153,10 @@ export interface Database {
           verified?: boolean;
           approved?: boolean;
           active?: boolean;
+          pricing_model?: 'hours' | 'overs';
+          is_indoor?: boolean;
+          has_bowling_machine?: boolean;
+          lanes_count?: number;
           created_at?: string;
           updated_at?: string;
           min_price?: number | null;
@@ -246,6 +258,7 @@ export interface Database {
           end_time: string;
           custom_price: number | null;
           is_available: boolean;
+          overs_count: number | null;
           created_at: string;
         };
         Insert: {
@@ -256,6 +269,7 @@ export interface Database {
           end_time: string;
           custom_price?: number | null;
           is_available?: boolean;
+          overs_count?: number | null;
           created_at?: string;
         };
         Update: {
@@ -266,6 +280,7 @@ export interface Database {
           end_time?: string;
           custom_price?: number | null;
           is_available?: boolean;
+          overs_count?: number | null;
           created_at?: string;
         };
       };
@@ -284,6 +299,7 @@ export interface Database {
           notes: string | null;
           cancelled_at: string | null;
           cancellation_reason: string | null;
+          lane_number: number | null;
           created_at: string;
           updated_at: string;
           payment_method: string | null;
@@ -305,6 +321,7 @@ export interface Database {
           notes?: string | null;
           cancelled_at?: string | null;
           cancellation_reason?: string | null;
+          lane_number?: number | null;
           created_at?: string;
           updated_at?: string;
           payment_method?: string | null;
@@ -326,6 +343,7 @@ export interface Database {
           notes?: string | null;
           cancelled_at?: string | null;
           cancellation_reason?: string | null;
+          lane_number?: number | null;
           created_at?: string;
           updated_at?: string;
           payment_method?: string | null;

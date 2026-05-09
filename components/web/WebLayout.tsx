@@ -1223,6 +1223,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                         <NavLink href="/(owner)/owner-dashboard" icon={LayoutDashboard} label="Dashboard" />
                         
                         <View style={{ opacity: hasPayoutSetup === false ? 0.4 : 1 }}>
+                          <NavLink href="/(owner)/add-venue" icon={PlusCircle} label="Add Venue" disabled={hasPayoutSetup === false} />
                           <NavLink 
                             href="/(owner)/manage-grounds" 
                             icon={MapPin} 
@@ -1768,7 +1769,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     ...Platform.select({
       web: {
-        maxHeight: 'calc(100vh - 72px)' as any,
         overflow: 'hidden' as any,
         scrollbarWidth: 'none' as any,
         msOverflowStyle: 'none' as any,

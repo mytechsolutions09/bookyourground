@@ -48,6 +48,7 @@ import LandingBookingForm from '@/components/landing/LandingBookingForm';
 import { useAuth } from '@/contexts/AuthContext';
 import HomeScreenSkeleton from '@/components/landing/HomeScreenSkeleton';
 import ProfileScreen from './profile';
+import { Gesture, GestureDetector, Directions } from 'react-native-gesture-handler';
 
 function makeGroundPath(ground: GroundWithImages): string {
   const name = (ground.name ?? '').toString().toLowerCase().trim();
@@ -181,6 +182,13 @@ export default function HomeScreen() {
   const slideAnim = useSharedValue(width);
   
   const lastScrollY = useSharedValue(0);
+
+  const flingGesture = Gesture.Fling()
+    .direction(Directions.LEFT)
+    .runOnJS(true)
+    .onStart(() => {
+      setShowProfileModal(true);
+    });
 
   useEffect(() => {
     return () => setTabBarVisible(true);
@@ -354,8 +362,9 @@ export default function HomeScreen() {
       <ActivityIndicator size="large" color="#00ea6b" />
     </View>
   ) : (
-    <View style={styles.screen}>
-      <Animated.ScrollView
+    <GestureDetector gesture={flingGesture}>
+      <View style={styles.screen}>
+        <Animated.ScrollView
         onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
         scrollEventThrottle={16}
         style={styles.scroll}
@@ -641,7 +650,8 @@ export default function HomeScreen() {
           </View>
         </Modal>
       )}
-    </View>
+      </View>
+    </GestureDetector>
   );
 }
 
