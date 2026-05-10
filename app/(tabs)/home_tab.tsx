@@ -77,6 +77,7 @@ const SPORT_CATEGORIES = [
   { label: 'Football', value: 'football' },
   { label: 'Cricket', value: 'cricket' },
   { label: 'Box Cricket', value: 'box' },
+  { label: 'Nets', value: 'nets' },
   { label: 'Multi-Sport', value: 'multi' },
 ];
 

@@ -13,7 +13,7 @@ import {
   Pressable,
   Modal,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import Input from '@/components/ui/Input';
@@ -44,9 +44,11 @@ interface SavedSlot {
   oversCount?: number;
 }
 
-export default function AddNetPage() {
+export default function EditNetPage() {
   const { user } = useAuth();
+  const { id } = useLocalSearchParams();
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -96,7 +98,7 @@ export default function AddNetPage() {
         if (error) throw error;
         setLocationRows(data || []);
       } catch (e) {
-        console.error('Error loading locations for add net:', e);
+        console.error('Error loading locations for edit net:', e);
       }
     };
 
@@ -119,22 +121,82 @@ export default function AddNetPage() {
   const [slotOversCountText, setSlotOversCountText] = useState('10'); // Default 10 for overs
   const [slotCustomPriceText, setSlotCustomPriceText] = useState('');
   const [slotSelectedDays, setSlotSelectedDays] = useState<DayOfWeek[]>(DAY_ORDER);
-  const [laneSurfaces, setLaneSurfaces] = useState<string[]>([]);
+
+  const hoursToMins = (start: string, end: string) => {
+    const [sh, sm] = start.split(':').map(Number);
+    const [eh, em] = end.split(':').map(Number);
+    return (eh * 60 + em) - (sh * 60 + sm);
+  };
 
   useEffect(() => {
-    const count = parseInt(formData.lanes_count, 10) || 1;
-    setLaneSurfaces(prev => {
-      const next = [...prev];
-      if (next.length < count) {
-        for (let i = next.length; i < count; i++) {
-          next.push(formData.surface_type || 'AstroTurf');
+    if (id) {
+      fetchNetDetails();
+    }
+  }, [id]);
+
+  const fetchNetDetails = async () => {
+    setFetching(true);
+    try {
+      const { data, error } = await supabase
+        .from('grounds')
+        .select('*, time_slots(*), ground_images(*)')
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setFormData({
+          name: data.name || '',
+          description: data.description || '',
+          address: data.address || '',
+          city: data.city || '',
+          state: data.state || '',
+          pincode: data.pincode || '',
+          lanes_count: '1', // Each listing is 1 lane
+          is_indoor: data.is_indoor || false,
+          has_bowling_machine: data.has_bowling_machine || false,
+          has_floodlights: data.has_floodlights || false,
+          has_manual_throwdown: data.has_manual_throwdown || false,
+          pricing_model: data.pricing_model || 'hours',
+          surface_type: data.cricket_pitch_surface || 'Turf',
+        });
+
+        if (data.city && data.state) {
+          setSelectedLocationKey(`${data.city}__${data.state}`);
         }
-      } else if (next.length > count) {
-        return next.slice(0, count);
+
+        // Populate mediaUrls
+        if (data.ground_images) {
+          setMediaUrls(data.ground_images.map((img: any) => img.image_url));
+        }
+
+        // Populate savedSlots from data.time_slots
+        const groups: Record<string, SavedSlot> = {};
+        (data.time_slots || []).forEach((s: any) => {
+          const duration = s.end_time && s.start_time ? hoursToMins(s.start_time, s.end_time) : 60;
+          const key = `${s.start_time}__${duration}__${s.custom_price}__${s.overs_count}`;
+          if (!groups[key]) {
+            groups[key] = {
+              startHHMM: s.start_time.substring(0, 5),
+              durationMinutes: duration,
+              customPrice: s.custom_price,
+              days: [s.day_of_week as DayOfWeek],
+              oversCount: s.overs_count,
+            };
+          } else {
+            groups[key].days.push(s.day_of_week as DayOfWeek);
+          }
+        });
+        setSavedSlots(Object.values(groups));
       }
-      return next;
-    });
-  }, [formData.lanes_count, formData.surface_type]);
+    } catch (error) {
+      console.error('Error fetching net details:', error);
+      Alert.alert('Error', 'Failed to fetch net details');
+    } finally {
+      setFetching(false);
+    }
+  };
 
   const durationForTimeOptions = useMemo(() => parseInt(slotDurationMinutesText, 10) || 60, [slotDurationMinutesText]);
   const timeOptions = useMemo(() => generateTimeOptions(durationForTimeOptions), [durationForTimeOptions]);
@@ -278,7 +340,7 @@ export default function AddNetPage() {
   };
 
   const handleSubmit = async () => {
-    if (!user) return;
+    if (!user || !id) return;
 
     if (!formData.name || !formData.address || !formData.city || !formData.state || !formData.pincode) {
       Alert.alert('Error', 'Please fill in all required fields');
@@ -287,88 +349,80 @@ export default function AddNetPage() {
 
     setLoading(true);
     try {
-      const count = laneSurfaces.length || 1;
-      const surfacesToUse = laneSurfaces.length > 0 ? laneSurfaces : [formData.surface_type || 'AstroTurf'];
+      // 1. Update Ground
+      const { error } = await supabase
+        .from('grounds')
+        .update({
+          name: formData.name,
+          description: formData.description || null,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          pincode: formData.pincode,
+          cricket_pitch_surface: formData.surface_type,
+          has_floodlights: formData.has_floodlights,
+          pricing_model: formData.pricing_model,
+          is_indoor: formData.is_indoor,
+          has_bowling_machine: formData.has_bowling_machine,
+          has_manual_throwdown: formData.has_manual_throwdown,
+        })
+        .eq('id', id);
 
-      for (let i = 0; i < surfacesToUse.length; i++) {
-        const surface = surfacesToUse[i];
-        const name = count > 1 ? `${formData.name} - Lane ${i + 1} (${surface})` : formData.name;
+      if (error) throw error;
 
-        // 1. Insert Ground (Net) for this lane
-        const { data: created, error } = await supabase
-          .from('grounds')
-          .insert({
-            owner_id: user.id,
-            name: name,
-            description: formData.description || null,
-            address: formData.address,
-            city: formData.city,
-            state: formData.state,
-            pincode: formData.pincode,
-            pitch_type: 'Nets',
-            cricket_pitch_surface: surface,
-            has_floodlights: formData.has_floodlights,
-            pricing_model: formData.pricing_model,
-            is_indoor: formData.is_indoor,
-            has_bowling_machine: formData.has_bowling_machine,
-            has_manual_throwdown: formData.has_manual_throwdown,
-            lanes_count: 1, // Each listing represents 1 lane
-            base_price_per_hour: 0,
-          })
-          .select('id')
-          .single();
+      // 1.5 Sync Media
+      const cleaned = mediaUrls.map((u) => String(u ?? '').trim()).filter(Boolean);
+      const imageUrls = cleaned.filter((u) => !isVideoUrl(u)).slice(0, 8);
+      const videoUrls = cleaned.filter(isVideoUrl).slice(0, 2);
+      const finalUrls = [...imageUrls, ...videoUrls];
 
-        if (error) throw error;
+      await supabase.from('ground_images').delete().eq('ground_id', id);
 
-        // 1.5 Insert Media for this lane
-        const cleaned = mediaUrls.map((u) => String(u ?? '').trim()).filter(Boolean);
-        const imageUrls = cleaned.filter((u) => !isVideoUrl(u)).slice(0, 8);
-        const videoUrls = cleaned.filter(isVideoUrl).slice(0, 2);
-        const finalUrls = [...imageUrls, ...videoUrls];
+      if (finalUrls.length > 0) {
+        const rows = finalUrls.map((url, index) => ({
+          ground_id: id as string,
+          image_url: url,
+          is_primary: index === 0,
+          display_order: index,
+        }));
+        const { error: mediaError } = await supabase
+          .from('ground_images')
+          .insert(rows);
+        if (mediaError) throw mediaError;
+      }
 
-        if (finalUrls.length > 0) {
-          const rows = finalUrls.map((url, index) => ({
-            ground_id: created.id as string,
-            image_url: url,
-            is_primary: index === 0,
-            display_order: index,
-          }));
-          const { error: mediaError } = await supabase
-            .from('ground_images')
-            .insert(rows);
-          if (mediaError) throw mediaError;
+      // 2. Delete old slots
+      await supabase.from('time_slots').delete().eq('ground_id', id);
+
+      // 3. Insert new slots
+      if (savedSlots.length > 0) {
+        const slotRows: any[] = [];
+        for (const slot of savedSlots) {
+          for (const day of slot.days) {
+            slotRows.push({
+              ground_id: id,
+              day_of_week: day,
+              start_time: slot.startHHMM,
+              end_time: calculateEndTime(slot.startHHMM, slot.durationMinutes),
+              custom_price: slot.customPrice,
+              is_available: true,
+              overs_count: slot.oversCount || null,
+            });
+          }
         }
 
-        // 2. Insert Time Slots for this lane
-        if (savedSlots.length > 0) {
-          const slotRows: any[] = [];
-          for (const slot of savedSlots) {
-            for (const day of slot.days) {
-              slotRows.push({
-                ground_id: created.id,
-                day_of_week: day,
-                start_time: slot.startHHMM,
-                end_time: calculateEndTime(slot.startHHMM, slot.durationMinutes),
-                custom_price: slot.customPrice,
-                is_available: true,
-                overs_count: slot.oversCount || null,
-              });
-            }
-          }
-
-          if (slotRows.length > 0) {
-            const { error: slotError } = await supabase
-              .from('time_slots')
-              .insert(slotRows);
-            if (slotError) {
-              console.error('Error creating slots:', slotError);
-              throw slotError;
-            }
+        if (slotRows.length > 0) {
+          const { error: slotError } = await supabase
+            .from('time_slots')
+            .insert(slotRows);
+          if (slotError) {
+            console.error('Error creating slots:', slotError);
+            throw slotError;
           }
         }
       }
 
-      Alert.alert('Success', 'Cricket Net added successfully!');
+      Alert.alert('Success', 'Cricket Net updated successfully!');
       router.replace('/(owner)/manage-grounds');
     } catch (error: any) {
       Alert.alert('Error', error.message);
@@ -457,17 +511,13 @@ export default function AddNetPage() {
         const updatedDaysForOriginal = originalSlot.days.filter(d => d !== sourceDayForEdit);
         
         if (updatedDaysForOriginal.length === 0) {
-          // If it only applied to this day, replace it
           updated[editingSlotIdx] = newSlot;
         } else {
-          // Otherwise, update the original to not include this day
           updated[editingSlotIdx] = { ...originalSlot, days: updatedDaysForOriginal };
-          // AND add the new slot as a NEW entry
           updated.push(newSlot);
         }
-        setSourceDayForEdit(null); // Clear source day
+        setSourceDayForEdit(null);
       } else {
-        // Normal update (if no source day)
         updated[editingSlotIdx] = newSlot;
       }
       
@@ -504,6 +554,16 @@ export default function AddNetPage() {
     setEditingSlotIdx(idx);
   };
 
+  if (fetching) {
+    return (
+      <WebLayout hideHeader={true}>
+        <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+          <Text>Loading net details...</Text>
+        </View>
+      </WebLayout>
+    );
+  }
+
   return (
     <WebLayout hideHeader={true}>
       <KeyboardAvoidingView
@@ -511,7 +571,7 @@ export default function AddNetPage() {
         style={styles.container}
       >
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.title}>Add Cricket Net</Text>
+        <Text style={styles.title}>Edit Cricket Net</Text>
 
         <Card style={styles.section}>
           <Text style={styles.sectionTitle}>Basic Information</Text>
@@ -533,48 +593,7 @@ export default function AddNetPage() {
 
         <Card style={styles.section}>
           <Text style={styles.sectionTitle}>Attributes</Text>
-          <Input
-            label="Number of Lanes *"
-            value={formData.lanes_count}
-            onChangeText={(text) => setFormData({ ...formData, lanes_count: text })}
-            keyboardType="numeric"
-            placeholder="e.g., 3"
-          />
           
-          {/* Lane specific surfaces */}
-          <View style={{ marginTop: 10 }}>
-            <Text style={styles.subLabel}>Surfaces for each lane:</Text>
-            {laneSurfaces.map((surface, idx) => (
-              <View key={idx} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <Text style={{ fontSize: 14, color: '#0F172A', fontFamily: 'Inter' }}>Lane {idx + 1}</Text>
-                <View style={{ flexDirection: 'row', gap: 6 }}>
-                  {['Concrete', 'Turf', 'Astroturf', 'Matting'].map((s) => {
-                    const active = surface === s;
-                    return (
-                      <Pressable
-                        key={s}
-                        onPress={() => {
-                          const updated = [...laneSurfaces];
-                          updated[idx] = s;
-                          setLaneSurfaces(updated);
-                        }}
-                        style={[
-                          styles.typeChip, 
-                          { paddingVertical: 4, paddingHorizontal: 8 }, 
-                          active && styles.typeChipActive
-                        ]}
-                      >
-                        <Text style={[styles.typeChipText, { fontSize: 12 }, active && styles.typeChipTextActive]}>
-                          {s}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </View>
-            ))}
-          </View>
-
           <View style={styles.switchRow}>
             <Text style={styles.switchLabel}>Bowling Machine</Text>
             <Switch
@@ -602,6 +621,24 @@ export default function AddNetPage() {
               value={formData.has_floodlights}
               onValueChange={(val) => setFormData({ ...formData, has_floodlights: val })}
             />
+          </View>
+          
+          <Text style={styles.subLabel}>Surface Type</Text>
+          <View style={styles.typeChipsRow}>
+            {['Concrete', 'Turf', 'Astroturf', 'Matting'].map((s) => {
+              const active = formData.surface_type === s;
+              return (
+                <Pressable
+                  key={s}
+                  onPress={() => setFormData({ ...formData, surface_type: s })}
+                  style={[styles.typeChip, active && styles.typeChipActive]}
+                >
+                  <Text style={[styles.typeChipText, active && styles.typeChipTextActive]}>
+                    {s}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
         </Card>
 
@@ -634,7 +671,6 @@ export default function AddNetPage() {
                   let urlToParse = raw;
                   if (raw.includes('maps.app.goo.gl') || raw.includes('goo.gl/maps')) {
                     try {
-                      // Try to fetch to resolve redirect (works on Native, fails on Web due to CORS)
                       const response = await fetch(raw, { method: 'GET' });
                       urlToParse = response.url;
                     } catch (fetchErr) {
@@ -650,7 +686,7 @@ export default function AddNetPage() {
                   }
                   Alert.alert(
                     'Could not extract address',
-                    'Short links (like maps.app.goo.gl) cannot be read directly in the browser due to security (CORS). Please paste the full URL from your browser or search query.',
+                    'Short links cannot be read directly in the browser due to CORS. Please paste the full URL.',
                   );
                   return;
                 } catch (error: any) {
@@ -733,7 +769,6 @@ export default function AddNetPage() {
           <Text style={styles.sectionTitle}>Add Time Slots</Text>
           
           <View style={styles.splitRow}>
-            {/* Left Form */}
             <View style={styles.leftCol}>
               <Text style={styles.subLabel}>Duration (minutes) *</Text>
               <SimpleDropdown
@@ -783,7 +818,7 @@ export default function AddNetPage() {
               <View style={[styles.typeChipsRow, { marginBottom: 16 }]}>
                 {DAY_ORDER.map((day) => {
                   const active = slotSelectedDays.includes(day);
-                  const dayLabel = day.charAt(0).toUpperCase() + day.slice(1, 3); // Mon, Tue, etc.
+                  const dayLabel = day.charAt(0).toUpperCase() + day.slice(1, 3);
                   return (
                     <Pressable
                       key={day}
@@ -811,13 +846,12 @@ export default function AddNetPage() {
               />
             </View>
 
-            {/* Right Slots */}
             <View style={styles.rightCol}>
               <Text style={styles.subLabel}>Saved Slots (Click Day)</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
                 {DAY_ORDER.map((day) => {
                   const hasSlots = savedSlots.some(slot => slot.days.includes(day));
-                  const dayLabel = day.charAt(0).toUpperCase() + day.slice(1, 3); // Mon, Tue...
+                  const dayLabel = day.charAt(0).toUpperCase() + day.slice(1, 3);
                   
                   return (
                     <Pressable
@@ -846,7 +880,7 @@ export default function AddNetPage() {
         </Card>
 
         <Button
-          title={loading ? 'Adding Net...' : 'Add Net'}
+          title={loading ? 'Updating Net...' : 'Save Changes'}
           onPress={handleSubmit}
           loading={loading}
           disabled={loading}
@@ -901,7 +935,7 @@ export default function AddNetPage() {
                               setSourceDayForEdit(selectedDayForModal);
                               editSlot(originalIdx);
                               setSlotSelectedDays([selectedDayForModal!]);
-                              setModalVisible(false); // Close modal to show edit form
+                              setModalVisible(false);
                             }}
                           >
                             <Edit size={18} color="#64748B" />
@@ -1038,7 +1072,7 @@ const generateTimeOptions = (durationMins: number) => {
     const minutes = (i % 60).toString().padStart(2, '0');
     
     const ampm = hours24 >= 12 ? 'PM' : 'AM';
-    const hours12 = hours24 % 12 || 12; // convert 0 to 12
+    const hours12 = hours24 % 12 || 12;
     const label = `${hours12.toString().padStart(2, '0')}:${minutes} ${ampm}`;
     
     options.push({ key: `${hours24.toString().padStart(2, '0')}:${minutes}`, label: label });
@@ -1171,23 +1205,23 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingTop: 24,
     paddingHorizontal: 24,
-    paddingBottom: 0,
+    paddingBottom: 40,
   },
   title: {
     fontSize: 22,
     fontWeight: '600',
-    color: '#0F172A', // Dark text
+    color: '#0F172A',
     marginBottom: 24,
     textAlign: 'center',
     fontFamily: 'Inter',
   },
   section: {
-    backgroundColor: '#FFFFFF', // White card
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 20,
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#E2E8F0', // Light border
+    borderColor: '#E2E8F0',
   },
   sectionTitle: {
     fontSize: 16,
@@ -1214,7 +1248,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
-    backgroundColor: '#F1F5F9', // Light gray chip
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
     borderColor: 'transparent',
   },
@@ -1242,37 +1276,6 @@ const styles = StyleSheet.create({
   switchLabel: {
     fontSize: 14,
     color: '#0F172A',
-    fontFamily: 'Inter',
-  },
-  previewContainer: {
-    marginTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-    paddingTop: 16,
-  },
-  previewTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#0F172A',
-    marginBottom: 10,
-    fontFamily: 'Inter',
-  },
-  previewRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  previewText: {
-    color: '#64748B',
-    fontSize: 13,
-    fontFamily: 'Inter',
-  },
-  previewPrice: {
-    color: '#00ea6b',
-    fontWeight: '600',
-    fontSize: 13,
     fontFamily: 'Inter',
   },
   mapsFetchBlock: {

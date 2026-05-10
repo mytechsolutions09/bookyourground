@@ -227,6 +227,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
     if (initialStartTime) return initialStartTime as TimeString;
     return hideGroundPicker && !initialGroundId ? '' : ('09:00' as TimeString);
   });
+  const [selectedNetsSlots, setSelectedNetsSlots] = useState<string[]>([]);
   const [teamType, setTeamType] = useState<'one' | 'both'>(initialTeamType ?? 'both');
   /** Cricket only: team slots (0–2) already used for selected ground + date + time; null = not loaded. */
   const [cricketSlotsUsed, setCricketSlotsUsed] = useState<number | null>(null);
@@ -372,6 +373,11 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
     () => grounds.find((g) => g.id === selectedGroundId) ?? null,
     [grounds, selectedGroundId],
   );
+
+  const isNets = useMemo(() => {
+    const p = (selectedGround?.pitch_type ?? typeKey ?? '').toLowerCase();
+    return p === 'nets' || p.includes('nets');
+  }, [selectedGround, typeKey]);
 
   const locationKeyForGround = (g: GroundWithImages) => `${g.city}__${g.state}`;
 
@@ -646,13 +652,31 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
   }, [isBoxCricket, selectedGround?.id, bookingDate, startTime]);
 
   useEffect(() => {
-    if (!isBoxCricket && hideBothTeamsOption && teamType === 'both') {
+    if (isNets) {
+      setTeamType('one');
+      setSelectedNetsSlots(prev => {
+        if (prev.length === 0 && initialStartTime) {
+          return [initialStartTime];
+        }
+        return prev;
+      });
+    } else if (!isBoxCricket && hideBothTeamsOption && teamType === 'both') {
       setTeamType('one');
     }
-  }, [isBoxCricket, hideBothTeamsOption, teamType]);
+  }, [isNets, isBoxCricket, hideBothTeamsOption, teamType, initialStartTime]);
 
   const computed = useMemo(() => {
     if (!selectedGround) return null;
+    
+    if (isNets) {
+      if (selectedNetsSlots.length === 0) return null;
+      let totalAmount = 0;
+      selectedNetsSlots.forEach(slot => {
+        totalAmount += slotPriceByStartTime[slot] ?? 0;
+      });
+      return { totalHours: selectedNetsSlots.length, totalAmount, pricePerUnit: totalAmount / selectedNetsSlots.length, unitLabel: 'slot' as const };
+    }
+
     if (!startTime || !derivedEndTime) return null;
 
     const isCricketGround = !isBoxCricket;
@@ -686,7 +710,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
     const totalAmount = Math.round(totalHours * pricePerHour * 100) / 100;
 
     return { totalHours, totalAmount, pricePerUnit: pricePerHour, unitLabel: 'hour' as const };
-  }, [selectedGround, startTime, derivedEndTime, slotPriceByStartTime, isBoxCricket, teamType]);
+  }, [selectedGround, startTime, derivedEndTime, slotPriceByStartTime, isBoxCricket, teamType, isNets, selectedNetsSlots]);
 
   const discountAmount = useMemo(() => {
     if (!appliedCoupon || !computed) return 0;
@@ -1585,17 +1609,22 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       return;
     }
 
-    if (!computed) {
+    if (isNets && selectedNetsSlots.length === 0) {
+      Alert.alert('No slots selected', 'Please select at least one time slot.');
+      return;
+    }
+
+    if (!isNets && !computed) {
       Alert.alert('Invalid start time', 'Please enter a valid start time (HH:MM).');
       return;
     }
 
-    if (allowedStartHHMM.size && !allowedStartHHMM.has(startTime)) {
+    if (!isNets && allowedStartHHMM.size && !allowedStartHHMM.has(startTime)) {
       Alert.alert('Unavailable slot', 'Please choose a different time slot.');
       return;
     }
 
-    if (!isBoxCricket && cricketSlotsFetched) {
+    if (!isNets && !isBoxCricket && cricketSlotsFetched) {
       if (teamType === 'both' && (cricketSlotsUsed ?? 0) >= 1) {
         Alert.alert('Slot partially booked', 'This slot already has 1 team booked. Please choose "1 team" or a different slot.');
         return;
@@ -1611,12 +1640,19 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       const params = new URLSearchParams();
       params.set('groundId', selectedGround.id);
       params.set('date', bookingDate);
-      params.set('time', startTime);
+      
+      if (isNets) {
+        params.set('slots', selectedNetsSlots.join(','));
+        if (selectedNetsSlots.length > 0) params.set('time', selectedNetsSlots[0]);
+      } else {
+        params.set('time', startTime);
+      }
+      
       params.set('teamType', teamType);
       if (computed) {
         params.set('amount', computed.totalAmount.toString());
         params.set('pricePerHour', computed.pricePerUnit.toString());
-        params.set('endTime', derivedEndTime);
+        if (!isNets) params.set('endTime', derivedEndTime);
       }
       if (appliedCoupon) params.set('couponId', appliedCoupon.id);
       if (discountAmount > 0) params.set('discount', discountAmount.toString());
@@ -1651,6 +1687,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
           >
             {searchResults.map((g) => {
               const isBox = String(g.pitch_type ?? '').toLowerCase().includes('box');
+              const isNets = String(g.pitch_type ?? '').toLowerCase().includes('nets');
               const slotCustom =
                 Object.prototype.hasOwnProperty.call(searchSlotPriceByGroundId, g.id) &&
                   searchSlotPriceByGroundId[g.id] != null
@@ -1667,6 +1704,9 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                 if (isBox) {
                   displayPricePerUnit = currentBasePrice;
                   unitLabelOverride = '/hr';
+                } else if (isNets) {
+                  displayPricePerUnit = currentBasePrice;
+                  unitLabelOverride = '/slot';
                 } else if (teamType === 'one') {
                   displayPricePerUnit = Math.round((currentBasePrice / 2) * 100) / 100;
                   unitLabelOverride = ' / team';
@@ -1677,7 +1717,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
               } else {
                 // Default view (no specific slot chosen): pass half-min-price if "1 team" selected
                 const startingBase = g.min_price || g.base_price_per_hour || 0;
-                if (teamType === 'one' && !isBox) {
+                if (teamType === 'one' && !isBox && !isNets) {
                   displayPricePerUnit = Math.round((startingBase / 2) * 100) / 100;
                   unitLabelOverride = ' / team';
                 } else {
@@ -1887,7 +1927,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
         </View>
       </View>
 
-      {!isBoxCricket ? (
+      {!isBoxCricket && !isNets ? (
         <View style={[styles.section, isWeb ? webGridHalfWidthStyle : webGridSectionStyle, webSingleColumnStyle]}>
           <Text style={fieldLabelStyle}>Teams</Text>
           <View style={styles.teamToggle}>
@@ -2133,7 +2173,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                 <Text style={styles.smallMuted}>All slots are booked for this date.</Text>
               ) : (
                 availableTimeSlots.map((s) => {
-                  const active = s.value === startTime;
+                  const active = isNets ? selectedNetsSlots.includes(s.value) : s.value === startTime;
                   const slotIsAvailable = selectedGround?.id
                     ? allowedStartHHMM.has(s.value)
                     : searchAllowedStartHHMM.has(s.value);
@@ -2143,7 +2183,21 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                       onPress={() => {
                         if (lockSlot) return;
                         if (useLandingSearchFlow) clearSearchState();
-                        setStartTime(s.value as TimeString);
+                        if (isNets) {
+                          setSelectedNetsSlots(prev => {
+                            if (prev.includes(s.value)) {
+                              const next = prev.filter(v => v !== s.value);
+                              if (next.length > 0) setStartTime(next[0] as TimeString);
+                              else setStartTime('' as TimeString);
+                              return next;
+                            } else {
+                              setStartTime(s.value as TimeString);
+                              return [...prev, s.value];
+                            }
+                          });
+                        } else {
+                          setStartTime(s.value as TimeString);
+                        }
                       }}
                       disabled={lockSlot || submitting || !slotIsAvailable}
                       accessibilityRole="button"
@@ -2186,7 +2240,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                 <Text style={styles.smallMuted}>All slots are booked for this date.</Text>
               ) : (
                 availableTimeSlots.map((s) => {
-                  const active = s.value === startTime;
+                  const active = isNets ? selectedNetsSlots.includes(s.value) : s.value === startTime;
                   const slotIsAvailable = selectedGround?.id
                     ? allowedStartHHMM.has(s.value)
                     : searchAllowedStartHHMM.has(s.value);
@@ -2196,7 +2250,21 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                       onPress={() => {
                         if (lockSlot) return;
                         if (useLandingSearchFlow) clearSearchState();
-                        setStartTime(s.value as TimeString);
+                        if (isNets) {
+                          setSelectedNetsSlots(prev => {
+                            if (prev.includes(s.value)) {
+                              const next = prev.filter(v => v !== s.value);
+                              if (next.length > 0) setStartTime(next[0] as TimeString);
+                              else setStartTime('' as TimeString);
+                              return next;
+                            } else {
+                              setStartTime(s.value as TimeString);
+                              return [...prev, s.value];
+                            }
+                          });
+                        } else {
+                          setStartTime(s.value as TimeString);
+                        }
                       }}
                       disabled={lockSlot || submitting || !slotIsAvailable}
                       accessibilityRole="button"
@@ -2333,9 +2401,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       ]}
     >
       <ContainerComponent style={mainCardStyle}>
-        {!hideTitle && (
-          <Text style={[styles.title, (!isWeb || isCompact) && styles.titleMobile]}>Book a Ground</Text>
-        )}
+
 
         {isWeb && !isCompact ? (
           <View style={styles.formFieldsWeb}>{formFields}</View>
@@ -2381,18 +2447,31 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                 </Text>
               )}
             </Text>
-            <Text
-              style={[
-                styles.summaryMuted,
-                groundPageAccent && !isWeb && styles.summaryMutedGroundMobile,
-              ]}
-            >
-              {isBoxCricket
-                ? `Duration: ${computed.totalHours} hours @ ${formatCurrency(
-                  computed.pricePerUnit,
-                )}/hr`
-                : `Cricket ground: ${teamType === 'one' ? '1 team' : 'Both teams'} • ${formatCurrency(teamType === 'one' ? computed.pricePerUnit / 2 : computed.pricePerUnit)} ${teamType === 'one' ? 'per team' : 'per match'}`}
-            </Text>
+            {isNets ? (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginTop: 4 }}>
+                <Text style={[styles.summaryMuted, groundPageAccent && !isWeb && styles.summaryMutedGroundMobile, { marginTop: 0 }]}>Nets: </Text>
+                {selectedNetsSlots.map(s => (
+                  <View key={s} style={{ backgroundColor: 'rgba(1, 184, 84, 0.1)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(1, 184, 84, 0.3)' }}>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#01b854' }}>
+                      {`${formatTime(s)} (${formatCurrency(slotPriceByStartTime[s] ?? selectedGround?.base_price_per_hour ?? 0)})`}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text
+                style={[
+                  styles.summaryMuted,
+                  groundPageAccent && !isWeb && styles.summaryMutedGroundMobile,
+                ]}
+              >
+                {isBoxCricket
+                  ? `Duration: ${computed.totalHours} hours @ ${formatCurrency(
+                    computed.pricePerUnit,
+                  )}/hr`
+                  : `Cricket ground: ${teamType === 'one' ? '1 team' : 'Both teams'} • ${formatCurrency(teamType === 'one' ? computed.pricePerUnit / 2 : computed.pricePerUnit)} ${teamType === 'one' ? 'per team' : 'per match'}`}
+              </Text>
+            )}
           </View>
         )}
 
@@ -2461,9 +2540,9 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
         >
           <View style={styles.searchResultsHeader}>
             <View>
-              <Text style={styles.searchResultsTitle}>Available Grounds</Text>
+
               <Text style={styles.searchResultsSubtitle}>
-                Found {searchResults.length} grounds matching your filters
+                Found {searchResults.length} results
               </Text>
             </View>
             <View style={styles.resultsBadge}>
@@ -2999,9 +3078,9 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     marginBottom: 4,
   },
   searchResultsSubtitle: {
-    fontSize: 13,
-    color: '#64748B',
-    fontWeight: '500',
+    fontSize: 18,
+    color: '#0F172A',
+    fontWeight: '800',
     fontFamily: 'Inter',
   },
   resultsBadge: {

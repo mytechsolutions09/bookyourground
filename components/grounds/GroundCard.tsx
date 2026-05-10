@@ -60,7 +60,9 @@ export default function GroundCard({
   
   const basePrice = displayPricePerUnit ?? ground.min_price ?? ground.base_price_per_hour ?? 0;
   const teamPrice = Math.round(basePrice / 2);
-  const showTeamPrice = !hideTeamPrice && !(String(ground.pitch_type ?? '').toLowerCase().includes('box'));
+  const showTeamPrice = !hideTeamPrice && 
+                        !(String(ground.pitch_type ?? '').toLowerCase().includes('box')) &&
+                        !(String(ground.pitch_type ?? '').toLowerCase().includes('nets'));
 
   const isWeb = Platform.OS === 'web';
   const isLight = glass ? false : lightMode;
@@ -145,7 +147,9 @@ export default function GroundCard({
                   {formatCurrency(basePrice)}
                 </Text>
                 <Text style={styles.priceUnitGlass}>
-                  {unitLabelOverride ?? (String(ground.pitch_type ?? '').toLowerCase().includes('box') ? '/hr' : ' / match')}
+                  {unitLabelOverride ?? 
+                    (String(ground.pitch_type ?? '').toLowerCase().includes('box') ? '/hr' : 
+                    (String(ground.pitch_type ?? '').toLowerCase().includes('nets') ? '/slot' : ' / match'))}
                 </Text>
               </View>
             </View>
@@ -250,7 +254,9 @@ export default function GroundCard({
                 )}
                 <Text style={[styles.priceValueNew, compact && { fontSize: 16 }]}>₹{basePrice}</Text>
                 <Text style={styles.priceUnitNew}>
-                  {unitLabelOverride ?? (String(ground.pitch_type ?? '').toLowerCase().includes('box') ? '/hr' : ' / match')}
+                  {unitLabelOverride ?? 
+                    (String(ground.pitch_type ?? '').toLowerCase().includes('box') ? '/hr' : 
+                    (String(ground.pitch_type ?? '').toLowerCase().includes('nets') ? '/slot' : ' / match'))}
                 </Text>
               </View>
             </View>

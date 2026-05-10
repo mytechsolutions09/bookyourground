@@ -148,7 +148,7 @@ export default function SearchScreen() {
         .eq('approved', true);
 
       if (s.trim()) {
-        gQuery = gQuery.or(`name.ilike.${ts},city.ilike.${ts},state.ilike.${ts},address.ilike.${ts}`);
+        gQuery = gQuery.or(`name.ilike.${ts},city.ilike.${ts},state.ilike.${ts},address.ilike.${ts},pitch_type.ilike.${ts}`);
       }
 
       if (locKey) {
@@ -224,7 +224,8 @@ export default function SearchScreen() {
             (m.user?.full_name?.toLowerCase().includes(s.toLowerCase())) ||
             (m.opponent_team_name?.toLowerCase().includes(s.toLowerCase())) ||
             (m.opponent_captain_name?.toLowerCase().includes(s.toLowerCase())) ||
-            (m.notes?.toLowerCase().includes(s.toLowerCase()));
+            (m.notes?.toLowerCase().includes(s.toLowerCase())) ||
+            (m.ground?.pitch_type?.toLowerCase().includes(s.toLowerCase()));
           
           const matchesLoc = !locKey || `${m.ground?.city}__${m.ground?.state}` === locKey;
           const matchesTyp = !typKey || m.ground?.pitch_type === typKey;

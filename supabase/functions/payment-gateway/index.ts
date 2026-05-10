@@ -646,41 +646,83 @@ serve(async (req) => {
           bygNetRevenue
         } = calculateFinalAmounts(bookingDetails, ground?.pitch_type, settings, ground?.owner?.charge_platform_fee === false);
 
-        const { data: newBooking, error: insertError } = await supabaseClient
-          .from('bookings')
-          .insert({
+        const slots = bookingDetails.slots;
+        let finalBookingId;
+
+        if (slots && Array.isArray(slots) && slots.length > 0) {
+          console.log(`[Cash] Creating multiple bookings for slots: ${slots.join(', ')}`);
+          const bookingsToInsert = slots.map((slotTime: string) => ({
             user_id: user.id,
             ground_id,
             booking_date,
-            start_time,
-            end_time,
-            total_hours: Number(bookingDetails.total_hours ?? 1),
-            price_per_hour: pricePerHour,
-            total_amount: netAmount,
-            ground_price: groundPrice,
-            platform_fee_user: platformFeeUser,
-            platform_fee_owner: platformFeeOwner,
-            gst_user: gstUser,
-            gst_owner: gstOwner,
-            total_charged: totalCharged,
-            owner_settlement: ownerSettlement,
-            byg_net_revenue: bygNetRevenue,
+            start_time: slotTime,
+            total_hours: 1,
+            price_per_hour: pricePerHour / slots.length,
+            total_amount: netAmount / slots.length,
+            ground_price: groundPrice / slots.length,
+            platform_fee_user: platformFeeUser / slots.length,
+            platform_fee_owner: platformFeeOwner / slots.length,
+            gst_user: gstUser / slots.length,
+            gst_owner: gstOwner / slots.length,
+            total_charged: totalCharged / slots.length,
+            owner_settlement: ownerSettlement / slots.length,
+            byg_net_revenue: bygNetRevenue / slots.length,
             coupon_id,
-            discount_amount: discountAmount,
+            discount_amount: discountAmount / slots.length,
             booked_for_name: bookingDetails.booked_for_name || bookingDetails.bookedForName,
-            notes: (team_type === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Player: ${bookingDetails.booked_for_name || bookingDetails.bookedForName || 'Manual Entry'})` + ' (Cash Payment confirmed by Owner)',
+            notes: (team_type === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Slot: ${slotTime}) (Player: ${bookingDetails.booked_for_name || bookingDetails.bookedForName || 'Manual Entry'})` + ' (Cash Payment confirmed by Owner)',
             status: 'confirmed',
             payment_method: 'cash',
-          })
-          .select('id')
-          .single();
+          }));
 
-        if (insertError) {
-           console.error(`[Cash] Insert error: ${insertError.message}`);
-           throw new Error(`Booking creation failed: ${insertError.message}`);
+          const { data: newBookings, error: insertError } = await supabaseClient
+            .from('bookings')
+            .insert(bookingsToInsert)
+            .select('id');
+
+          if (insertError) {
+             console.error(`[Cash] Insert error: ${insertError.message}`);
+             throw new Error(`Booking creation failed: ${insertError.message}`);
+          }
+          finalBookingId = newBookings[0].id;
+          console.log(`[Cash] New bookings created, first ID: ${finalBookingId}`);
+        } else {
+          const { data: newBooking, error: insertError } = await supabaseClient
+            .from('bookings')
+            .insert({
+              user_id: user.id,
+              ground_id,
+              booking_date,
+              start_time,
+              end_time,
+              total_hours: Number(bookingDetails.total_hours ?? 1),
+              price_per_hour: pricePerHour,
+              total_amount: netAmount,
+              ground_price: groundPrice,
+              platform_fee_user: platformFeeUser,
+              platform_fee_owner: platformFeeOwner,
+              gst_user: gstUser,
+              gst_owner: gstOwner,
+              total_charged: totalCharged,
+              owner_settlement: ownerSettlement,
+              byg_net_revenue: bygNetRevenue,
+              coupon_id,
+              discount_amount: discountAmount,
+              booked_for_name: bookingDetails.booked_for_name || bookingDetails.bookedForName,
+              notes: (team_type === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Player: ${bookingDetails.booked_for_name || bookingDetails.bookedForName || 'Manual Entry'})` + ' (Cash Payment confirmed by Owner)',
+              status: 'confirmed',
+              payment_method: 'cash',
+            })
+            .select('id')
+            .single();
+
+          if (insertError) {
+             console.error(`[Cash] Insert error: ${insertError.message}`);
+             throw new Error(`Booking creation failed: ${insertError.message}`);
+          }
+          finalBookingId = newBooking.id;
+          console.log(`[Cash] New booking created: ${finalBookingId}`);
         }
-        finalBookingId = newBooking.id;
-        console.log(`[Cash] New booking created: ${finalBookingId}`);
       } else if (finalBookingId) {
         console.log(`[Cash] Updating existing booking: ${finalBookingId}`);
         // For existing bookings being confirmed via cash, we should also calculate fees
@@ -728,12 +770,12 @@ serve(async (req) => {
 
       // Record transaction
       console.log(`[Cash] Recording transaction for booking: ${finalBookingId}`);
-      const { data: bookingData } = await supabaseClient.from('bookings').select('total_amount, user_id, ground:grounds(name, owner_id)').eq('id', finalBookingId).single();
+      const { data: bookingData } = await supabaseClient.from('bookings').select('user_id, ground:grounds(name, owner_id)').eq('id', finalBookingId).single();
 
       await supabaseClient.from('transactions').insert({
         booking_id: finalBookingId,
-        user_id: bookingData.user_id,
-        amount: bookingData.total_amount,
+        user_id: user.id,
+        amount: netAmount,
         status: 'completed',
         payment_method: 'cash',
         transaction_reference: 'CASH_' + Date.now(),
@@ -741,27 +783,8 @@ serve(async (req) => {
 
       // Credit Owner's Wallet (Internal tracking / Settlement)
       if (bookingData?.ground?.owner_id) {
-        // Fetch breakdown to get owner_settlement
-        const { data: bData } = await supabaseClient
-          .from('bookings')
-          .select('owner_settlement, payment_method')
-          .eq('id', finalBookingId)
-          .single();
-
-        if (bData?.payment_method === 'cash') {
-          // For cash, owner already has the ground_price. 
-          // We should probably DEBIT the platform fee from their wallet instead of crediting.
-          // However, to keep it simple for now as requested, we just log it or handle as per policy.
-          console.log(`[Cash] Owner ${bookingData.ground.owner_id} already has cash for booking ${finalBookingId}`);
-        } else {
-          await supabaseClient.rpc('add_money_to_wallet', {
-            target_user_id: bookingData.ground.owner_id,
-            amount_to_add: bData?.owner_settlement || bookingData.total_amount,
-            description_text: `Earning from booking for ${bookingData.ground.name}`,
-            ref_type: 'booking_revenue',
-            ref_id: finalBookingId
-          });
-        }
+        // For cash, owner already has the money. We don't credit wallet.
+        console.log(`[Cash] Owner ${bookingData.ground.owner_id} collected cash directly for booking ${finalBookingId}`);
       }
 
       console.log('[Cash] Finished successfully');
@@ -891,17 +914,34 @@ serve(async (req) => {
 
       if ((!finalBookingId || finalBookingId === 'pending') && bookingDetails) {
         const { ground_id, booking_date, start_time, end_time, team_type, coupon_id } = bookingDetails;
+        const slots = bookingDetails.slots;
         
-        const { data: availableIds, error: availError } = await supabaseClient.rpc('available_ground_ids_for_slot', {
-            p_ground_ids: [ground_id],
-            p_booking_date: booking_date,
-            p_start_time: start_time,
-        });
+        // Availability check
+        if (slots && Array.isArray(slots) && slots.length > 0) {
+          for (const slot of slots) {
+            const { data: availableIds, error: availError } = await supabaseClient.rpc('available_ground_ids_for_slot', {
+                p_ground_ids: [ground_id],
+                p_booking_date: booking_date,
+                p_start_time: slot,
+            });
 
-        if (availError) throw new Error(`Availability check failed: ${availError.message}`);
-        
-        const isAvailable = Array.isArray(availableIds) && availableIds.some((r: any) => r.ground_id === ground_id);
-        if (!isAvailable) throw new Error('Slot no longer available.');
+            if (availError) throw new Error(`Availability check failed: ${availError.message}`);
+            
+            const isAvailable = Array.isArray(availableIds) && availableIds.some((r: any) => r.ground_id === ground_id);
+            if (!isAvailable) throw new Error(`Slot ${slot} no longer available.`);
+          }
+        } else {
+          const { data: availableIds, error: availError } = await supabaseClient.rpc('available_ground_ids_for_slot', {
+              p_ground_ids: [ground_id],
+              p_booking_date: booking_date,
+              p_start_time: start_time,
+          });
+
+          if (availError) throw new Error(`Availability check failed: ${availError.message}`);
+          
+          const isAvailable = Array.isArray(availableIds) && availableIds.some((r: any) => r.ground_id === ground_id);
+          if (!isAvailable) throw new Error('Slot no longer available.');
+        }
 
         const { data: ground } = await supabaseClient.from('grounds').select('pitch_type, owner:profiles!owner_id(charge_platform_fee)').eq('id', ground_id).single();
         
@@ -919,39 +959,76 @@ serve(async (req) => {
           bygNetRevenue
         } = calculateFinalAmounts(bookingDetails, ground?.pitch_type, settings, ground?.owner?.charge_platform_fee === false);
 
-        const { data: newBooking, error: insertError } = await supabaseClient
-          .from('bookings')
-          .insert({
+        if (slots && Array.isArray(slots) && slots.length > 0) {
+          console.log(`[Razorpay] Creating multiple bookings for slots: ${slots.join(', ')}`);
+          const bookingsToInsert = slots.map((slotTime: string) => ({
             user_id: user.id,
             ground_id,
             booking_date,
-            start_time,
-            end_time,
-            total_hours: Number(bookingDetails.total_hours ?? 1),
-            price_per_hour: pricePerHour,
-            total_amount: netAmount,
-            ground_price: groundPrice,
-            platform_fee_user: platformFeeUser,
-            platform_fee_owner: platformFeeOwner,
-            gst_user: gstUser,
-            gst_owner: gstOwner,
-            total_charged: totalCharged,
-            owner_settlement: ownerSettlement,
-            byg_net_revenue: bygNetRevenue,
+            start_time: slotTime,
+            total_hours: 1,
+            price_per_hour: pricePerHour / slots.length,
+            total_amount: netAmount / slots.length,
+            ground_price: groundPrice / slots.length,
+            platform_fee_user: platformFeeUser / slots.length,
+            platform_fee_owner: platformFeeOwner / slots.length,
+            gst_user: gstUser / slots.length,
+            gst_owner: gstOwner / slots.length,
+            total_charged: totalCharged / slots.length,
+            owner_settlement: ownerSettlement / slots.length,
+            byg_net_revenue: bygNetRevenue / slots.length,
             razorpay_order_id,
-            razorpay_transfer_id: razorpayTransferId, // Store the transfer ID
+            razorpay_transfer_id: razorpayTransferId,
             coupon_id,
-            discount_amount: discountAmount,
-            notes: (team_type === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Paid via Razorpay: ${razorpay_payment_id})`,
+            discount_amount: discountAmount / slots.length,
+            notes: (team_type === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Slot: ${slotTime})` + ` (Paid via Razorpay: ${razorpay_payment_id})`,
             status: 'confirmed',
             payment_method: 'razorpay',
             payment_received: true,
-          })
-          .select('id')
-          .single();
+          }));
 
-        if (insertError) throw insertError;
-        finalBookingId = newBooking.id;
+          const { data: newBookings, error: insertError } = await supabaseClient
+            .from('bookings')
+            .insert(bookingsToInsert)
+            .select('id');
+
+          if (insertError) throw insertError;
+          finalBookingId = newBookings[0].id;
+        } else {
+          const { data: newBooking, error: insertError } = await supabaseClient
+            .from('bookings')
+            .insert({
+              user_id: user.id,
+              ground_id,
+              booking_date,
+              start_time,
+              end_time,
+              total_hours: Number(bookingDetails.total_hours ?? 1),
+              price_per_hour: pricePerHour,
+              total_amount: netAmount,
+              ground_price: groundPrice,
+              platform_fee_user: platformFeeUser,
+              platform_fee_owner: platformFeeOwner,
+              gst_user: gstUser,
+              gst_owner: gstOwner,
+              total_charged: totalCharged,
+              owner_settlement: ownerSettlement,
+              byg_net_revenue: bygNetRevenue,
+              razorpay_order_id,
+              razorpay_transfer_id: razorpayTransferId, // Store the transfer ID
+              coupon_id,
+              discount_amount: discountAmount,
+              notes: (team_type === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Paid via Razorpay: ${razorpay_payment_id})`,
+              status: 'confirmed',
+              payment_method: 'razorpay',
+              payment_received: true,
+            })
+            .select('id')
+            .single();
+
+          if (insertError) throw insertError;
+          finalBookingId = newBooking.id;
+        }
       } else {
         // Update existing booking with transfer ID if not already set
         await supabaseClient.from('bookings').update({
@@ -962,12 +1039,12 @@ serve(async (req) => {
       }
 
       // Record transaction
-      const { data: bookingData } = await supabaseClient.from('bookings').select('total_amount, user_id, ground:grounds(name, owner_id)').eq('id', finalBookingId).single();
+      const { data: bookingData } = await supabaseClient.from('bookings').select('user_id, ground:grounds(name, owner_id)').eq('id', finalBookingId).single();
 
       await supabaseClient.from('transactions').insert({
         booking_id: finalBookingId,
-        user_id: bookingData.user_id,
-        amount: bookingData.total_amount,
+        user_id: user.id,
+        amount: netAmount,
         status: 'completed',
         payment_method: 'razorpay',
         transaction_reference: razorpay_payment_id,
@@ -982,9 +1059,13 @@ serve(async (req) => {
           .eq('id', finalBookingId)
           .single();
 
+        const amountToAdd = (bookingDetails && bookingDetails.slots && Array.isArray(bookingDetails.slots))
+          ? ownerSettlement
+          : (bData?.owner_settlement || bookingData.total_amount);
+
         await supabaseClient.rpc('add_money_to_wallet', {
           target_user_id: bookingData.ground.owner_id,
-          amount_to_add: bData?.owner_settlement || bookingData.total_amount,
+          amount_to_add: amountToAdd,
           description_text: `Earning from booking for ${bookingData.ground.name} (Settled via Wallet/Razorpay)`,
           ref_type: 'booking_revenue',
           ref_id: finalBookingId
@@ -1028,37 +1109,74 @@ serve(async (req) => {
         
         const breakdown = calculateFinalAmounts(details, ground?.pitch_type, settings, ground?.owner?.charge_platform_fee === false);
 
-        const { data: newBooking, error: insertError } = await supabaseClient
-          .from('bookings')
-          .insert({
+        const slots = details.slots;
+
+        if (slots && Array.isArray(slots) && slots.length > 0) {
+          console.log(`[Wallet] Creating multiple bookings for slots: ${slots.join(', ')}`);
+          const bookingsToInsert = slots.map((slotTime: string) => ({
             user_id: user.id,
             ground_id: details.ground_id,
             booking_date: details.booking_date,
-            start_time: details.start_time,
-            end_time: details.end_time,
-            total_hours: Number(details.total_hours ?? 1),
-            price_per_hour: breakdown.pricePerHour,
-            total_amount: breakdown.netAmount,
-            ground_price: breakdown.groundPrice,
-            platform_fee_user: breakdown.platformFeeUser,
-            platform_fee_owner: breakdown.platformFeeOwner,
-            gst_user: breakdown.gstUser,
-            gst_owner: breakdown.gstOwner,
-            total_charged: breakdown.totalCharged,
-            owner_settlement: breakdown.ownerSettlement,
-            byg_net_revenue: breakdown.bygNetRevenue,
+            start_time: slotTime,
+            total_hours: 1,
+            price_per_hour: breakdown.pricePerHour / slots.length,
+            total_amount: breakdown.netAmount / slots.length,
+            ground_price: breakdown.groundPrice / slots.length,
+            platform_fee_user: breakdown.platformFeeUser / slots.length,
+            platform_fee_owner: breakdown.platformFeeOwner / slots.length,
+            gst_user: breakdown.gstUser / slots.length,
+            gst_owner: breakdown.gstOwner / slots.length,
+            total_charged: breakdown.totalCharged / slots.length,
+            owner_settlement: breakdown.ownerSettlement / slots.length,
+            byg_net_revenue: breakdown.bygNetRevenue / slots.length,
             coupon_id: details.coupon_id,
-            discount_amount: breakdown.discountAmount,
+            discount_amount: breakdown.discountAmount / slots.length,
             status: 'confirmed',
             payment_method: 'wallet',
             payment_received: true,
-            notes: (details.team_type === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ' (Paid via Wallet)',
-          })
-          .select('id')
-          .single();
+            notes: (details.team_type === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Slot: ${slotTime}) (Paid via Wallet)`,
+          }));
 
-        if (insertError) throw insertError;
-        actualBookingId = newBooking.id;
+          const { data: newBookings, error: insertError } = await supabaseClient
+            .from('bookings')
+            .insert(bookingsToInsert)
+            .select('id');
+
+          if (insertError) throw insertError;
+          actualBookingId = newBookings[0].id;
+        } else {
+          const { data: newBooking, error: insertError } = await supabaseClient
+            .from('bookings')
+            .insert({
+              user_id: user.id,
+              ground_id: details.ground_id,
+              booking_date: details.booking_date,
+              start_time: details.start_time,
+              end_time: details.end_time,
+              total_hours: Number(details.total_hours ?? 1),
+              price_per_hour: breakdown.pricePerHour,
+              total_amount: breakdown.netAmount,
+              ground_price: breakdown.groundPrice,
+              platform_fee_user: breakdown.platformFeeUser,
+              platform_fee_owner: breakdown.platformFeeOwner,
+              gst_user: breakdown.gstUser,
+              gst_owner: breakdown.gstOwner,
+              total_charged: breakdown.totalCharged,
+              owner_settlement: breakdown.ownerSettlement,
+              byg_net_revenue: breakdown.bygNetRevenue,
+              coupon_id: details.coupon_id,
+              discount_amount: breakdown.discountAmount,
+              status: 'confirmed',
+              payment_method: 'wallet',
+              payment_received: true,
+              notes: (details.team_type === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ' (Paid via Wallet)',
+            })
+            .select('id')
+            .single();
+
+          if (insertError) throw insertError;
+          actualBookingId = newBooking.id;
+        }
       } else {
         await supabaseClient.from('bookings').update({
           status: 'confirmed',

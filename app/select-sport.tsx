@@ -54,9 +54,10 @@ const TEAMS_OPTIONS = [
   { id: 'both', label: 'Both Teams', icon: Users },
 ];
 const SPORT_ICON_MAP: Record<string, any> = {
-  'Box Cricket': { icon: Swords, bg: '#043529', image: require('@/assets/images/box_cricket_bg.jpg') },
+  'Box Cricket': { icon: Swords, bg: '#043529', image: require('@/assets/box-cricket.png') },
   'Cricket Ground': { icon: Trophy, bg: '#064e3b', image: require('@/assets/images/cricket_bg.jpg') },
   'Football': { icon: Trophy, bg: '#024421', image: require('@/assets/images/football_bg.jpg') },
+  'Nets': { icon: Trophy, bg: '#052e16', image: require('@/assets/net.png') },
 };
 
 const DEFAULT_SPORT_ASSETS = { icon: Trophy, bg: '#043529', image: require('@/assets/images/hero-bg.jpg') };
@@ -147,6 +148,12 @@ export default function SelectSportScreen() {
   const [activeTimeIndex, setActiveTimeIndex] = useState(0);
   const [activeResultPage, setActiveResultPage] = useState(0);
   
+  const currentTeamsOptions = useMemo(() => {
+    return sports[activeSportIndex]?.name === 'Nets' 
+      ? [{ id: 'both', label: 'Full Slot', icon: Users }] 
+      : TEAMS_OPTIONS;
+  }, [activeSportIndex, sports]);
+
   const [grounds, setGrounds] = useState<any[]>([]);
   const [loadingGrounds, setLoadingGrounds] = useState(false);
   const [selectedGround, setSelectedGround] = useState<any>(null);
@@ -241,12 +248,22 @@ export default function SelectSportScreen() {
         ]);
 
         if (typesRes.data) {
-          setSports(typesRes.data.map(t => ({
+          const dbSports = typesRes.data.map(t => ({
             id: t.id,
             name: t.name,
             dbType: t.name,
             ...(SPORT_ICON_MAP[t.name] || DEFAULT_SPORT_ASSETS)
-          })));
+          }));
+          
+          if (!dbSports.some(s => s.name === 'Nets')) {
+            dbSports.push({
+              id: 'nets-fallback',
+              name: 'Nets',
+              dbType: 'Nets',
+              ...(SPORT_ICON_MAP['Nets'] || DEFAULT_SPORT_ASSETS)
+            });
+          }
+          setSports(dbSports);
         }
         if (locsRes.data) {
           setLocations(locsRes.data.map(l => ({
@@ -377,7 +394,7 @@ export default function SelectSportScreen() {
 
         if (error) throw error;
 
-        const teamType = TEAMS_OPTIONS[activeTeamIndex].id;
+        const teamType = currentTeamsOptions[activeTeamIndex]?.id || 'both';
         const isBox = (sport.dbType || '').toLowerCase().includes('box');
 
         const processed = (data || []).map(g => {
@@ -389,7 +406,7 @@ export default function SelectSportScreen() {
             displayPrice,
             selectedDateLabel: date.label,
             selectedTimeLabel: time,
-            selectedTeamLabel: TEAMS_OPTIONS[activeTeamIndex].label,
+            selectedTeamLabel: currentTeamsOptions[activeTeamIndex]?.label || currentTeamsOptions[0].label,
           };
         });
 
@@ -482,7 +499,7 @@ export default function SelectSportScreen() {
   const sport = sports[activeSportIndex];
   const loc = locations[activeLocIndex];
   const date = dates[activeDateIndex];
-  const teamOption = TEAMS_OPTIONS[activeTeamIndex];
+  const teamOption = currentTeamsOptions[activeTeamIndex] || currentTeamsOptions[0];
   const time = timeSlots[activeTimeIndex] || 'No slots';
 
   if (sports.length === 0 || locations.length === 0) {
@@ -600,12 +617,12 @@ export default function SelectSportScreen() {
         <View style={{ height: height - (HEADER_TABS[0] + HEADER_TABS[1] + HEADER_TABS[2]) - insets.top }}>
           <View style={[styles.pageCard, { backgroundColor: '#5bcd8e' }]}>
             <ScrollView horizontal pagingEnabled onScroll={(e) => setActiveTeamIndex(Math.round(e.nativeEvent.contentOffset.x / width))} scrollEventThrottle={16}>
-              {TEAMS_OPTIONS.map((opt) => (
+              {currentTeamsOptions.map((opt) => (
                 <View key={opt.id} style={styles.slide}>
                   <View style={styles.iconCircleSmall}><opt.icon size={40} color="#043529" /></View>
                   <Text style={[styles.heroName, { color: '#043529' }]}>{opt.label}</Text>
                   <Text style={[styles.tabTextSmall, { marginTop: 10, opacity: 0.7 }]}>
-                    {opt.id === 'one' ? 'Single team booking' : 'Full ground booking'}
+                    {opt.id === 'one' ? 'Single team booking' : (sports[activeSportIndex]?.name === 'Nets' ? 'Full net booking' : 'Full ground booking')}
                   </Text>
                 </View>
               ))}

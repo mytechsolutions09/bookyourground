@@ -633,7 +633,14 @@ export default function OwnerGroundsScreen() {
                 style={styles.compactModalBtn} 
                 onPress={() => {
                   const ground = grounds.find(g => g.id === selectedGroundId);
-                  if (ground) startEditGround(ground);
+                  if (ground) {
+                    if ((ground.pitch_type ?? '').toLowerCase() === 'nets') {
+                      setSelectedGroundId(null);
+                      router.push(`/(owner)/edit-net?id=${ground.id}`);
+                    } else {
+                      startEditGround(ground);
+                    }
+                  }
                 }}
               >
                 <Pencil size={18} color="#0F172A" />

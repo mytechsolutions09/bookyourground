@@ -105,7 +105,7 @@ export default function GroundDetailsScreen() {
             *,
             ground_images(*),
             reviews(rating, comment, user:profiles(full_name)),
-            time_slots(custom_price, is_available)
+            time_slots(custom_price, is_available, overs_count, start_time, end_time)
           `,
           )
           .eq('id', idParam)
@@ -128,7 +128,7 @@ export default function GroundDetailsScreen() {
             *,
             ground_images(*),
             reviews(rating, comment, user:profiles(full_name)),
-            time_slots(custom_price, is_available)
+            time_slots(custom_price, is_available, overs_count, start_time, end_time)
           `,
           )
           .eq('active', true)
@@ -513,9 +513,39 @@ export default function GroundDetailsScreen() {
             <Text style={styles.sectionTitle}>Details</Text>
             {ground.pitch_type && (
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>Ground type</Text>
+                <Text style={styles.detailLabel}>{ground.pitch_type?.toLowerCase().includes('nets') ? 'Type' : 'Ground type'}</Text>
                 <Text style={styles.detailValue}>{ground.pitch_type}</Text>
               </View>
+            )}
+            {ground.pitch_type?.toLowerCase().includes('nets') && (
+              <>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>{ground.pricing_model === 'overs' ? 'Overs per slot' : 'Time per slot'}</Text>
+                  <Text style={styles.detailValue}>
+                    {ground.pricing_model === 'overs' 
+                      ? (ground.time_slots?.find((s: any) => s.overs_count != null)?.overs_count || '—')
+                      : '1 Hour'}
+                  </Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Duration</Text>
+                  <Text style={styles.detailValue}>
+                    {(() => {
+                      const slot = ground.time_slots?.[0];
+                      if (!slot?.start_time || !slot?.end_time) return '—';
+                      const [h1, m1] = slot.start_time.split(':').map(Number);
+                      const [h2, m2] = slot.end_time.split(':').map(Number);
+                      let diff = (h2 * 60 + m2) - (h1 * 60 + m1);
+                      if (diff < 0) diff += 24 * 60;
+                      const hrs = Math.floor(diff / 60);
+                      const mins = diff % 60;
+                      if (hrs > 0 && mins > 0) return `${hrs} hr ${mins} min`;
+                      if (hrs > 0) return `${hrs} ${hrs === 1 ? 'hr' : 'hrs'}`;
+                      return `${mins} min`;
+                    })()}
+                  </Text>
+                </View>
+              </>
             )}
             {isCricketGroundType(ground.pitch_type) ? (
               <View style={styles.detailRow}>

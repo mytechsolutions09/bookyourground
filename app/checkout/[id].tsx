@@ -246,6 +246,7 @@ export default function CheckoutScreen() {
                         coupon_id: booking.coupon_id,
                         booked_for_name: bookedForName,
                         payment_method: 'cash',
+                        slots: booking.slots,
                     } : {
                         total_amount: parseFloat(customCashAmount) || booking.total_amount,
                         booked_for_name: bookedForName,
@@ -294,7 +295,7 @@ export default function CheckoutScreen() {
     const fetchNewBookingDetails = async () => {
         try {
             setLoading(true);
-            const { groundId, date, time, teamType, couponId, discount, amount: passedAmount, endTime: passedEndTime, pricePerHour: passedPricePerHour } = params;
+            const { groundId, date, time, teamType, couponId, discount, amount: passedAmount, endTime: passedEndTime, pricePerHour: passedPricePerHour, slots } = params;
 
             const { data: ground, error: groundError } = await supabase
                 .from('grounds')
@@ -305,10 +306,12 @@ export default function CheckoutScreen() {
             if (groundError) throw groundError;
 
             const isBox = (ground.pitch_type ?? '').toLowerCase().includes('box');
+            const isNets = (ground.pitch_type ?? '').toLowerCase() === 'nets';
+            const slotsArray = slots ? (slots as string).split(',') : [];
 
             // Use passed values from form if available, otherwise fall back to 1hr default
             let endTime = passedEndTime as string;
-            if (!endTime) {
+            if (!endTime && !isNets) {
                 const durationHours = 1;
                 const startTimeMinutes = parseTimeToMinutes(time as string) || 540;
                 const endMinutes = startTimeMinutes + (durationHours * 60);
@@ -328,9 +331,9 @@ export default function CheckoutScreen() {
                 id: 'pending',
                 ground_id: groundId,
                 booking_date: date,
-                start_time: time,
+                start_time: isNets && slotsArray.length > 0 ? slotsArray[0] : time,
                 end_time: endTime,
-                total_hours: totalHours || 1,
+                total_hours: totalHours || (isNets ? slotsArray.length : 1),
                 price_per_hour: pricePerHour,
                 total_amount: totalAmount - discountVal,
                 discount_amount: discountVal,
@@ -338,6 +341,7 @@ export default function CheckoutScreen() {
                 coupon_id: couponId,
                 grounds: ground,
                 isNew: true,
+                slots: slotsArray,
             });
         } catch (error: any) {
             console.error('Error fetching new booking details:', error);
@@ -564,6 +568,7 @@ export default function CheckoutScreen() {
                         price_per_hour: booking.price_per_hour,
                         total_amount: booking.total_amount + (booking.discount_amount || 0),
                         discount_amount: booking.discount_amount || 0,
+                        slots: booking.slots,
                     } : {
                         total_amount: booking.total_amount
                     },
@@ -822,6 +827,7 @@ export default function CheckoutScreen() {
                         discount_amount: booking.discount_amount || 0,
                         booked_for_name: bookedForName,
                         payment_method: 'wallet',
+                        slots: booking.slots,
                     } : {
                         total_amount: totalPayable,
                         booked_for_name: bookedForName,
@@ -890,6 +896,8 @@ export default function CheckoutScreen() {
     // isLargeWebScreen: web only at ≥768px → dual column with hero image
     const isCompactCheckout = Platform.OS !== 'web' || width < 768;
     const isLargeWebScreen = Platform.OS === 'web' && width >= 768;
+    const groundData = booking.grounds || booking.ground;
+    const isNets = (groundData?.pitch_type ?? '').toLowerCase() === 'nets';
 
     const dynamicStyles = {
         content: {
@@ -973,20 +981,26 @@ export default function CheckoutScreen() {
                             <View style={{ marginLeft: 8 }}>
                                 <RNText style={styles.compactDetailLabel}>Time</RNText>
                                 <RNText style={styles.compactDetailValue}>
-                                    {booking.start_time.substring(0, 5)} – {booking.end_time.substring(0, 5)}
+                                    {booking.slots && booking.slots.length > 0 
+                                        ? booking.slots.join(', ') 
+                                        : `${booking.start_time.substring(0, 5)} – ${booking.end_time.substring(0, 5)}`}
                                 </RNText>
                             </View>
                         </View>
-                        <View style={styles.compactDetailDivider} />
-                        <View style={styles.compactDetailItem}>
-                            <Users size={16} color="#06392e" />
-                            <View style={{ marginLeft: 8 }}>
-                                <RNText style={styles.compactDetailLabel}>Teams</RNText>
-                                <RNText style={styles.compactDetailValue}>
-                                    {booking.team_type === 'one' ? '1 Team' : 'Both'}
-                                </RNText>
-                            </View>
-                        </View>
+                        {!isNets && (
+                            <>
+                                <View style={styles.compactDetailDivider} />
+                                <View style={styles.compactDetailItem}>
+                                    <Users size={16} color="#06392e" />
+                                    <View style={{ marginLeft: 8 }}>
+                                        <RNText style={styles.compactDetailLabel}>Teams</RNText>
+                                        <RNText style={styles.compactDetailValue}>
+                                            {booking.team_type === 'one' ? '1 Team' : 'Both'}
+                                        </RNText>
+                                    </View>
+                                </View>
+                            </>
+                        )}
                     </View>
                 </>
             )}
@@ -1053,29 +1067,37 @@ export default function CheckoutScreen() {
                                 <View style={styles.detailInfoContent}>
                                     <RNText style={styles.detailLabel}>Slot Time</RNText>
                                     <RNText style={styles.detailValue}>
-                                        {booking.start_time.substring(0, 5)} – {booking.end_time.substring(0, 5)}
+                                        {booking.slots && booking.slots.length > 0 
+                                            ? booking.slots.join(', ') 
+                                            : `${booking.start_time.substring(0, 5)} – ${booking.end_time.substring(0, 5)}`}
                                     </RNText>
                                     <RNText style={styles.detailSub}>
-                                        {hoursBetweenBooked(booking.start_time, booking.end_time)} Hours
+                                        {booking.slots && booking.slots.length > 0 
+                                            ? `${booking.slots.length} Slots` 
+                                            : `${hoursBetweenBooked(booking.start_time, booking.end_time)} Hours`}
                                     </RNText>
                                 </View>
                             </View>
 
-                            <View style={styles.detailDivider} />
+                            {!isNets && (
+                                <>
+                                    <View style={styles.detailDivider} />
 
-                            {/* Booking For */}
-                            <View style={styles.bookingDetailItem}>
-                                <View style={styles.detailIconBox}>
-                                    <Users size={20} color="#059669" />
-                                </View>
-                                <View style={styles.detailInfoContent}>
-                                    <RNText style={styles.detailLabel}>Booking For</RNText>
-                                    <RNText style={styles.detailValue}>
-                                        {booking.team_type === 'one' ? '1 Team' : 'Both Teams'}
-                                    </RNText>
-                                    <RNText style={styles.detailSub}>(Max 12 Players)</RNText>
-                                </View>
-                            </View>
+                                    {/* Booking For */}
+                                    <View style={styles.bookingDetailItem}>
+                                        <View style={styles.detailIconBox}>
+                                            <Users size={20} color="#059669" />
+                                        </View>
+                                        <View style={styles.detailInfoContent}>
+                                            <RNText style={styles.detailLabel}>Booking For</RNText>
+                                            <RNText style={styles.detailValue}>
+                                                {booking.team_type === 'one' ? '1 Team' : 'Both Teams'}
+                                            </RNText>
+                                            <RNText style={styles.detailSub}>(Max 12 Players)</RNText>
+                                        </View>
+                                    </View>
+                                </>
+                            )}
 
                         </View>
                     </View>
@@ -1111,7 +1133,7 @@ export default function CheckoutScreen() {
                     {/* Ground Overview Section */}
                     {isLargeWebScreen && (
                         <View style={styles.overviewSection}>
-                            <RNText style={styles.overviewTitle}>Ground Overview</RNText>
+                            <RNText style={styles.overviewTitle}>{isNets ? 'Cricket Nets Overview' : 'Ground Overview'}</RNText>
                             
                             <View style={styles.imageGalleryRow}>
                                 <View style={styles.imageGallery}>
@@ -1142,41 +1164,83 @@ export default function CheckoutScreen() {
                                 </View>
 
                                 <View style={styles.amenitiesContainer}>
-                                    <View style={styles.amenityItem}>
-                                        <View style={styles.amenityIconBox}><Zap size={16} color="#64748B" /></View>
-                                        <View style={styles.amenityInfo}>
-                                            <RNText style={styles.amenityLabel}>Floodlights</RNText>
-                                            <RNText style={styles.amenityValue}>Yes</RNText>
-                                        </View>
-                                    </View>
-                                    <View style={styles.amenityItem}>
-                                        <View style={styles.amenityIconBox}><Users size={16} color="#64748B" /></View>
-                                        <View style={styles.amenityInfo}>
-                                            <RNText style={styles.amenityLabel}>Changing Room</RNText>
-                                            <RNText style={styles.amenityValue}>Yes</RNText>
-                                        </View>
-                                    </View>
-                                    <View style={styles.amenityItem}>
-                                        <View style={styles.amenityIconBox}><MapPin size={16} color="#64748B" /></View>
-                                        <View style={styles.amenityInfo}>
-                                            <RNText style={styles.amenityLabel}>Parking</RNText>
-                                            <RNText style={styles.amenityValue}>Yes</RNText>
-                                        </View>
-                                    </View>
-                                    <View style={styles.amenityItem}>
-                                        <View style={styles.amenityIconBox}><ShieldCheck size={16} color="#64748B" /></View>
-                                        <View style={styles.amenityInfo}>
-                                            <RNText style={styles.amenityLabel}>Drinking Water</RNText>
-                                            <RNText style={styles.amenityValue}>Yes</RNText>
-                                        </View>
-                                    </View>
-                                    <View style={styles.amenityItem}>
-                                        <View style={styles.amenityIconBox}><ShieldCheck size={16} color="#64748B" /></View>
-                                        <View style={styles.amenityInfo}>
-                                            <RNText style={styles.amenityLabel}>First Aid</RNText>
-                                            <RNText style={styles.amenityValue}>Yes</RNText>
-                                        </View>
-                                    </View>
+                                    {isNets ? (
+                                        <>
+                                            <View style={styles.amenityItem}>
+                                                <View style={styles.amenityIconBox}><MapPin size={16} color="#64748B" /></View>
+                                                <View style={styles.amenityInfo}>
+                                                    <RNText style={styles.amenityLabel}>Surface</RNText>
+                                                    <RNText style={styles.amenityValue}>{groundData?.cricket_pitch_surface || 'N/A'}</RNText>
+                                                </View>
+                                            </View>
+                                            <View style={styles.amenityItem}>
+                                                <View style={styles.amenityIconBox}><Zap size={16} color="#64748B" /></View>
+                                                <View style={styles.amenityInfo}>
+                                                    <RNText style={styles.amenityLabel}>Bowling Machine</RNText>
+                                                    <RNText style={styles.amenityValue}>{groundData?.has_bowling_machine ? 'Yes' : 'No'}</RNText>
+                                                </View>
+                                            </View>
+                                            <View style={styles.amenityItem}>
+                                                <View style={styles.amenityIconBox}><ShieldCheck size={16} color="#64748B" /></View>
+                                                <View style={styles.amenityInfo}>
+                                                    <RNText style={styles.amenityLabel}>Manual Throwdown</RNText>
+                                                    <RNText style={styles.amenityValue}>{groundData?.has_manual_throwdown ? 'Yes' : 'No'}</RNText>
+                                                </View>
+                                            </View>
+                                            <View style={styles.amenityItem}>
+                                                <View style={styles.amenityIconBox}><Users size={16} color="#64748B" /></View>
+                                                <View style={styles.amenityInfo}>
+                                                    <RNText style={styles.amenityLabel}>Type</RNText>
+                                                    <RNText style={styles.amenityValue}>{groundData?.is_indoor ? 'Indoor' : 'Outdoor'}</RNText>
+                                                </View>
+                                            </View>
+                                            <View style={styles.amenityItem}>
+                                                <View style={styles.amenityIconBox}><Zap size={16} color="#64748B" /></View>
+                                                <View style={styles.amenityInfo}>
+                                                    <RNText style={styles.amenityLabel}>Floodlights</RNText>
+                                                    <RNText style={styles.amenityValue}>{groundData?.has_floodlights ? 'Yes' : 'No'}</RNText>
+                                                </View>
+                                            </View>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <View style={styles.amenityItem}>
+                                                <View style={styles.amenityIconBox}><Zap size={16} color="#64748B" /></View>
+                                                <View style={styles.amenityInfo}>
+                                                    <RNText style={styles.amenityLabel}>Floodlights</RNText>
+                                                    <RNText style={styles.amenityValue}>Yes</RNText>
+                                                </View>
+                                            </View>
+                                            <View style={styles.amenityItem}>
+                                                <View style={styles.amenityIconBox}><Users size={16} color="#64748B" /></View>
+                                                <View style={styles.amenityInfo}>
+                                                    <RNText style={styles.amenityLabel}>Changing Room</RNText>
+                                                    <RNText style={styles.amenityValue}>Yes</RNText>
+                                                </View>
+                                            </View>
+                                            <View style={styles.amenityItem}>
+                                                <View style={styles.amenityIconBox}><MapPin size={16} color="#64748B" /></View>
+                                                <View style={styles.amenityInfo}>
+                                                    <RNText style={styles.amenityLabel}>Parking</RNText>
+                                                    <RNText style={styles.amenityValue}>Yes</RNText>
+                                                </View>
+                                            </View>
+                                            <View style={styles.amenityItem}>
+                                                <View style={styles.amenityIconBox}><ShieldCheck size={16} color="#64748B" /></View>
+                                                <View style={styles.amenityInfo}>
+                                                    <RNText style={styles.amenityLabel}>Drinking Water</RNText>
+                                                    <RNText style={styles.amenityValue}>Yes</RNText>
+                                                </View>
+                                            </View>
+                                            <View style={styles.amenityItem}>
+                                                <View style={styles.amenityIconBox}><ShieldCheck size={16} color="#64748B" /></View>
+                                                <View style={styles.amenityInfo}>
+                                                    <RNText style={styles.amenityLabel}>First Aid</RNText>
+                                                    <RNText style={styles.amenityValue}>Yes</RNText>
+                                                </View>
+                                            </View>
+                                        </>
+                                    )}
                                 </View>
                             </View>
                         </View>

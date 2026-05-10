@@ -91,7 +91,7 @@ export default function GroundDetailsPrettyUrlScreen() {
           *,
           ground_images(*),
           reviews(rating, comment, created_at, user:profiles(full_name)),
-          time_slots(custom_price, is_available)
+          time_slots(custom_price, is_available, overs_count, start_time, end_time)
         `;
 
       // Narrow by city when possible; links use slugify(city), not "name with spaces" from the slug.
@@ -475,9 +475,39 @@ export default function GroundDetailsPrettyUrlScreen() {
                   <Text style={styles.sectionTitle}>Details</Text>
                   {ground.pitch_type && (
                     <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Ground type</Text>
+                      <Text style={styles.detailLabel}>{ground.pitch_type?.toLowerCase().includes('nets') ? 'Type' : 'Ground type'}</Text>
                       <Text style={styles.detailValue}>{ground.pitch_type}</Text>
                     </View>
+                  )}
+                  {ground.pitch_type?.toLowerCase().includes('nets') && (
+                    <>
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>{ground.pricing_model === 'overs' ? 'Overs per slot' : 'Time per slot'}</Text>
+                        <Text style={styles.detailValue}>
+                          {ground.pricing_model === 'overs' 
+                            ? (ground.time_slots?.find((s: any) => s.overs_count != null)?.overs_count || '—')
+                            : '1 Hour'}
+                        </Text>
+                      </View>
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailLabel}>Duration</Text>
+                        <Text style={styles.detailValue}>
+                          {(() => {
+                            const slot = ground.time_slots?.[0];
+                            if (!slot?.start_time || !slot?.end_time) return '—';
+                            const [h1, m1] = slot.start_time.split(':').map(Number);
+                            const [h2, m2] = slot.end_time.split(':').map(Number);
+                            let diff = (h2 * 60 + m2) - (h1 * 60 + m1);
+                            if (diff < 0) diff += 24 * 60;
+                            const hrs = Math.floor(diff / 60);
+                            const mins = diff % 60;
+                            if (hrs > 0 && mins > 0) return `${hrs} hr ${mins} min`;
+                            if (hrs > 0) return `${hrs} ${hrs === 1 ? 'hr' : 'hrs'}`;
+                            return `${mins} min`;
+                          })()}
+                        </Text>
+                      </View>
+                    </>
                   )}
                   {isCricketGroundType(ground.pitch_type) ? (
                     <View style={styles.detailRow}>
@@ -607,6 +637,28 @@ export default function GroundDetailsPrettyUrlScreen() {
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Details</Text>
                 {ground.pitch_type && <Text style={styles.description}>Type: {ground.pitch_type}</Text>}
+                {ground.pitch_type?.toLowerCase().includes('nets') && (
+                  <>
+                    <Text style={styles.description}>
+                      {ground.pricing_model === 'overs' ? 'Overs per slot' : 'Time per slot'}: {ground.pricing_model === 'overs' ? (ground.time_slots?.find((s: any) => s.overs_count != null)?.overs_count || '—') : '1 Hour'}
+                    </Text>
+                    <Text style={styles.description}>
+                      Duration: {(() => {
+                        const slot = ground.time_slots?.[0];
+                        if (!slot?.start_time || !slot?.end_time) return '—';
+                        const [h1, m1] = slot.start_time.split(':').map(Number);
+                        const [h2, m2] = slot.end_time.split(':').map(Number);
+                        let diff = (h2 * 60 + m2) - (h1 * 60 + m1);
+                        if (diff < 0) diff += 24 * 60;
+                        const hrs = Math.floor(diff / 60);
+                        const mins = diff % 60;
+                        if (hrs > 0 && mins > 0) return `${hrs} hr ${mins} min`;
+                        if (hrs > 0) return `${hrs} ${hrs === 1 ? 'hr' : 'hrs'}`;
+                        return `${mins} min`;
+                      })()}
+                    </Text>
+                  </>
+                )}
               </View>
               
               <View style={styles.section}>
@@ -910,11 +962,21 @@ function WebMap({ ground, mapsUrl }: { ground: GroundWithImages, mapsUrl: string
 // ── Sub-components for cleaner structure ──
 function AmenitiesList({ ground }: { ground: GroundWithImages }) {
   const items: string[] = [];
-  if (ground.has_floodlights) items.push('Floodlights');
-  if (ground.has_parking) items.push('Parking');
-  if (ground.has_changing_rooms) items.push('Changing Rooms');
-  if (ground.has_pavilion) items.push('Pavilion');
-  if (ground.has_washrooms) items.push('Washroom');
+  const isNets = ground.pitch_type?.toLowerCase() === 'nets';
+
+  if (isNets) {
+    if (ground.cricket_pitch_surface) items.push(`Surface: ${ground.cricket_pitch_surface}`);
+    if (ground.has_bowling_machine) items.push('Bowling Machine');
+    items.push(ground.is_indoor ? 'Indoor' : 'Outdoor');
+    if (ground.has_floodlights) items.push('Floodlights');
+    if ((ground as any).has_manual_throwdown) items.push('Manual Throwdown');
+  } else {
+    if (ground.has_floodlights) items.push('Floodlights');
+    if (ground.has_parking) items.push('Parking');
+    if (ground.has_changing_rooms) items.push('Changing Rooms');
+    if (ground.has_pavilion) items.push('Pavilion');
+    if (ground.has_washrooms) items.push('Washroom');
+  }
 
   if (!items.length) return <Text style={styles.amenitiesEmpty}>None listed</Text>;
 
