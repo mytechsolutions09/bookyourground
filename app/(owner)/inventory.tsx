@@ -68,6 +68,7 @@ export default function OwnerInventoryScreen() {
   const [daysToShow, setDaysToShow] = useState<number | 'L30'>(7);
   const [bookingChoice, setBookingChoice] = useState<any | null>(null);
   const [activePicker, setActivePicker] = useState<'ground' | 'status' | 'range' | null>(null);
+  const [hoveredVenueId, setHoveredVenueId] = useState<string | null>(null);
 
   const isWeb = Platform.OS === 'web';
   const { width } = useWindowDimensions();
@@ -361,24 +362,105 @@ export default function OwnerInventoryScreen() {
           <View style={styles.screen}>
             {/* Direct Header */}
             <View style={[styles.pageHeader, styles.webPageHeader]}>
-               <View style={[styles.headerTop, { flexDirection: 'row', alignItems: 'center' }]}>
-                 <View>
-                   <Text style={styles.title}>Inventory Management</Text>
-                   <Text style={styles.subtitle}>Owner Dashboard</Text>
-                 </View>
-                 <View style={styles.filterCard}>
-                    <View style={styles.filtersContainer}>
-                      {/* Web Filters Here - Simplified for now to ensure rendering */}
-                      <View style={styles.statusFilters}>
-                        {['ALL', 'EMPTY', 'PARTIAL', 'FULL'].map(status => (
-                          <TouchableOpacity key={status} onPress={() => setStatusFilter(status)} style={[styles.filterTag, statusFilter === status && styles.tagAll]}>
-                            <Text style={[styles.filterTagText, statusFilter === status && { color: '#043529' }]}>{status}</Text>
-                          </TouchableOpacity>
-                        ))}
+              {/* Row 1: Title + selected venue name (top-right) */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Text style={styles.title}>Inventory Management</Text>
+                {currentGround && (
+                  <View style={styles.headerVenueName}>
+                    <Building2 size={13} color="#00ea6b" />
+                    <Text style={styles.headerVenueNameText} numberOfLines={1}>
+                      {currentGround.name}
+                    </Text>
+                    {currentGround.city ? (
+                      <Text style={styles.headerVenueCity}>{currentGround.city}</Text>
+                    ) : null}
+                  </View>
+                )}
+              </View>
+
+              {/* Row 2: Venue tabs + Days filter + Status filter — all in one line */}
+              <View style={styles.webControlsRow}>
+                {/* Venue tabs — scrollable, takes remaining space */}
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={{ flex: 1 }}
+                  contentContainerStyle={styles.venueTabsRow}
+                >
+                  {grounds.map(g => {
+                    const isSelected = selectedGroundId === g.id;
+                    const isHovered = hoveredVenueId === g.id;
+                    return (
+                      <View key={g.id} style={{ position: 'relative' }}>
+                        {/* Hover tooltip */}
+                        {isHovered && IS_WEB && (
+                          <View style={styles.venueTooltip} pointerEvents="none">
+                            <Text style={styles.venueTooltipText} numberOfLines={2}>
+                              {g.name}{g.city ? ` · ${g.city}` : ''}
+                            </Text>
+                          </View>
+                        )}
+                        <TouchableOpacity
+                          onPress={() => setSelectedGroundId(g.id)}
+                          style={[styles.venueTab, isSelected && styles.venueTabSelected]}
+                          {...(IS_WEB ? {
+                            onMouseEnter: () => setHoveredVenueId(g.id),
+                            onMouseLeave: () => setHoveredVenueId(null),
+                          } : {})}
+                        >
+                          <Building2 size={11} color={isSelected ? '#043529' : '#6B7280'} />
+                          <Text
+                            style={[styles.venueTabText, isSelected && styles.venueTabTextSelected]}
+                            numberOfLines={1}
+                          >
+                            {g.name}
+                          </Text>
+                        </TouchableOpacity>
                       </View>
-                    </View>
-                 </View>
-               </View>
+                    );
+                  })}
+                </ScrollView>
+
+                {/* Divider */}
+                <View style={styles.webControlsDivider} />
+
+                {/* Days filter pills */}
+                <View style={styles.webDaysFilterPills}>
+                  {([7, 14, 30, 90, 'L30'] as const).map(d => {
+                    const isActive = daysToShow === d;
+                    const label = d === 'L30' ? 'Past 30' : `${d}D`;
+                    return (
+                      <TouchableOpacity
+                        key={d.toString()}
+                        onPress={() => setDaysToShow(d as any)}
+                        style={[styles.webDaysPill, isActive && styles.webDaysPillActive]}
+                      >
+                        <Text style={[styles.webDaysPillText, isActive && styles.webDaysPillTextActive]}>
+                          {label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                {/* Divider */}
+                <View style={styles.webControlsDivider} />
+
+                {/* Status filter pills */}
+                <View style={styles.statusFilters}>
+                  {['ALL', 'EMPTY', 'PARTIAL', 'FULL'].map(status => (
+                    <TouchableOpacity
+                      key={status}
+                      onPress={() => setStatusFilter(status)}
+                      style={[styles.filterTag, statusFilter === status && styles.tagAll]}
+                    >
+                      <Text style={[styles.filterTagText, statusFilter === status && { color: '#043529' }]}>
+                        {status}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
             </View>
 
             <ScrollView 
@@ -1101,5 +1183,170 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-  }
+  },
+  // --- Single-row controls bar (web) ---
+  webControlsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 12,
+  },
+  webControlsDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: '#E5E7EB',
+    marginHorizontal: 2,
+  },
+  // --- Venue selector styles (web) ---
+  venueTabsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingBottom: 2,
+  },
+  venueTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  venueTabSelected: {
+    backgroundColor: '#00ea6b',
+    borderColor: '#00ea6b',
+  },
+  venueTabText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#374151',
+    maxWidth: 90,
+  },
+  venueTabTextSelected: {
+    color: '#043529',
+  },
+  venueTabCity: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    fontWeight: '500',
+    maxWidth: 70,
+  },
+  venueTabCitySelected: {
+    color: '#086641',
+  },
+  // Hover tooltip
+  venueTooltip: {
+    position: 'absolute',
+    bottom: '100%' as any,
+    left: '50%' as any,
+    transform: [{ translateX: -60 }],
+    marginBottom: 6,
+    backgroundColor: '#111827',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    zIndex: 9999,
+    minWidth: 120,
+    maxWidth: 220,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+  },
+  venueTooltipText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  // --- Current venue bar (web inventory header) ---
+  currentVenueBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: '#F0FDF4',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  currentVenueName: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#065F46',
+    flex: 1,
+  },
+  currentVenueCity: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  // --- Header top-right venue name ---
+  headerVenueName: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F0FDF4',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    maxWidth: 320,
+  },
+  headerVenueNameText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#065F46',
+    maxWidth: 200,
+  },
+  headerVenueCity: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  // --- Days range filter (web) ---
+  webDaysFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  webDaysFilterLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  webDaysFilterPills: {
+    flexDirection: 'row',
+    gap: 6,
+    backgroundColor: '#F3F4F6',
+    padding: 3,
+    borderRadius: 10,
+  },
+  webDaysPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 7,
+  },
+  webDaysPillActive: {
+    backgroundColor: '#111827',
+  },
+  webDaysPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  webDaysPillTextActive: {
+    color: '#00ea6b',
+  },
 });
