@@ -235,6 +235,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
   const [cricketSlotsFetched, setCricketSlotsFetched] = useState(false);
 
   const [submitting, setSubmitting] = useState(false);
+  const [loadingSlots, setLoadingSlots] = useState(false);
 
   const [couponCode, setCouponCode] = useState('');
   const [validatingCoupon, setValidatingCoupon] = useState(false);
@@ -672,7 +673,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       if (selectedNetsSlots.length === 0) return null;
       let totalAmount = 0;
       selectedNetsSlots.forEach(slot => {
-        totalAmount += slotPriceByStartTime[slot] ?? 0;
+        totalAmount += slotPriceByStartTime[slot] ?? selectedGround?.base_price_per_hour ?? 0;
       });
       return { totalHours: selectedNetsSlots.length, totalAmount, pricePerUnit: totalAmount / selectedNetsSlots.length, unitLabel: 'slot' as const };
     }
@@ -779,36 +780,6 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
   useEffect(() => {
     if (!selectedGround?.id || !bookingDate) {
       setBookedStartHHMM(new Set());
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      const { data, error } = await supabase.rpc('booked_start_times_for_ground_day', {
-        p_ground_id: selectedGround.id,
-        p_booking_date: bookingDate,
-      });
-      if (cancelled) return;
-      if (error) {
-        console.warn('booked_start_times_for_ground_day', error);
-        setBookedStartHHMM(new Set());
-        return;
-      }
-      const next = new Set<string>();
-      (data as { start_time: string }[] | null)?.forEach((row) => {
-        const hh = normalizeDbTimeToHHMM(row.start_time);
-        if (hh) next.add(hh);
-      });
-      setBookedStartHHMM(next);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedGround?.id, bookingDate]);
-
-  // Pull which slot start-times are currently available for the selected ground/day.
-  // This is what the ground-owner can edit in the admin/owner dashboards (`time_slots.is_available`).
-  useEffect(() => {
-    if (!selectedGround?.id || !bookingDate) {
       setAllowedStartHHMM(new Set());
       setAllStartHHMM(new Set());
       setSlotPriceByStartTime({});
@@ -818,6 +789,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
 
     const parsed = parseISODate(bookingDate);
     if (!parsed) {
+      setBookedStartHHMM(new Set());
       setAllowedStartHHMM(new Set());
       setAllStartHHMM(new Set());
       setSlotPriceByStartTime({});
@@ -826,58 +798,81 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
     }
 
     const dow = getDayOfWeek(parsed) as any;
-
     let cancelled = false;
+
     (async () => {
-      const { data, error } = await supabase
-        .from('time_slots')
-        .select('start_time, end_time, custom_price, is_available')
-        .eq('ground_id', selectedGround.id)
-        .eq('day_of_week', dow)
-        .order('start_time', { ascending: true });
+      setLoadingSlots(true);
+
+      const [bookedRes, slotsRes] = await Promise.all([
+        supabase.rpc('booked_start_times_for_ground_day', {
+          p_ground_id: selectedGround.id,
+          p_booking_date: bookingDate,
+        }),
+        supabase
+          .from('time_slots')
+          .select('start_time, end_time, custom_price, is_available')
+          .eq('ground_id', selectedGround.id)
+          .eq('day_of_week', dow)
+          .order('start_time', { ascending: true })
+      ]);
 
       if (cancelled) return;
-      if (error) {
-        console.warn('time_slots availability load failed', error);
+
+      // Handle bookedRes
+      if (bookedRes.error) {
+        console.warn('booked_start_times_for_ground_day', bookedRes.error);
+        setBookedStartHHMM(new Set());
+      } else {
+        const next = new Set<string>();
+        (bookedRes.data as { start_time: string }[] | null)?.forEach((row) => {
+          const hh = normalizeDbTimeToHHMM(row.start_time);
+          if (hh) next.add(hh);
+        });
+        setBookedStartHHMM(next);
+      }
+
+      // Handle slotsRes
+      if (slotsRes.error) {
+        console.warn('time_slots availability load failed', slotsRes.error);
         setAllowedStartHHMM(new Set());
         setAllStartHHMM(new Set());
         setSlotPriceByStartTime({});
         setEndTimeByStartTime({});
-        return;
+      } else {
+        const nextAllowed = new Set<string>();
+        const nextAll = new Set<string>();
+        const nextPrices: Record<string, number | null> = {};
+        const nextEnds: Record<string, string> = {};
+
+        (slotsRes.data as any[] | null)?.forEach((row: any) => {
+          const hh = normalizeDbTimeToHHMM(row.start_time);
+          if (!hh) return;
+          nextAll.add(hh);
+          
+          const isPreSelected = lockSlot && hh === initialStartTime;
+          if (row.is_available || isPreSelected) {
+            nextAllowed.add(hh);
+          }
+
+          nextPrices[hh] = row.custom_price ?? null;
+
+          const endHHMM = normalizeDbTimeToHHMM(row.end_time);
+          if (endHHMM) nextEnds[hh] = endHHMM;
+        });
+
+        setAllowedStartHHMM(nextAllowed);
+        setAllStartHHMM(nextAll);
+        setSlotPriceByStartTime(nextPrices);
+        setEndTimeByStartTime(nextEnds);
       }
 
-      const nextAllowed = new Set<string>();
-      const nextAll = new Set<string>();
-      const nextPrices: Record<string, number | null> = {};
-      const nextEnds: Record<string, string> = {};
-      (data ?? []).forEach((row: any) => {
-        const hh = normalizeDbTimeToHHMM(row.start_time);
-        if (!hh) return;
-        nextAll.add(hh);
-        
-        // Only allow booking for slots marked as available, 
-        // OR if this is the specifically pre-selected slot for joining a match.
-        const isPreSelected = lockSlot && hh === initialStartTime;
-        if (row.is_available || isPreSelected) {
-          nextAllowed.add(hh);
-        }
-
-        nextPrices[hh] = row.custom_price ?? null;
-
-        const endHHMM = normalizeDbTimeToHHMM(row.end_time);
-        if (endHHMM) nextEnds[hh] = endHHMM;
-      });
-
-      setAllowedStartHHMM(nextAllowed);
-      setAllStartHHMM(nextAll);
-      setSlotPriceByStartTime(nextPrices);
-      setEndTimeByStartTime(nextEnds);
+      setLoadingSlots(false);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [selectedGround?.id, bookingDate]);
+  }, [selectedGround?.id, bookingDate, lockSlot, initialStartTime]);
 
   /**
    * Before search picks a ground, do not constrain chips to one ground's `time_slots`
@@ -1643,7 +1638,18 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       
       if (isNets) {
         params.set('slots', selectedNetsSlots.join(','));
-        if (selectedNetsSlots.length > 0) params.set('time', selectedNetsSlots[0]);
+        if (selectedNetsSlots.length > 0) {
+          const firstSlot = selectedNetsSlots[0];
+          params.set('time', firstSlot);
+          
+          const endStr = endTimeByStartTime[firstSlot];
+          if (endStr) {
+            const [h1, m1] = firstSlot.split(':').map(Number);
+            const [h2, m2] = endStr.split(':').map(Number);
+            const duration = (h2 * 60 + m2) - (h1 * 60 + m1);
+            params.set('slotDuration', duration.toString());
+          }
+        }
       } else {
         params.set('time', startTime);
       }
@@ -2169,7 +2175,9 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
             <View style={[styles.timeSlotsWrap, isBoxCricket && styles.timeSlotsWrapBox]}>
               {!timeSlots.length ? (
                 <Text style={styles.smallMuted}>Select a ground type to see time slots.</Text>
-              ) : !availableTimeSlots.length ? (
+              ) : loadingSlots ? (
+                <ActivityIndicator color="#10b981" />
+              ) : bookingDate && !availableTimeSlots.length ? (
                 <Text style={styles.smallMuted}>All slots are booked for this date.</Text>
               ) : (
                 availableTimeSlots.map((s) => {
@@ -2236,7 +2244,9 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
             >
               {!timeSlots.length ? (
                 <Text style={styles.smallMuted}>Select a ground type to see time slots.</Text>
-              ) : !availableTimeSlots.length ? (
+              ) : loadingSlots ? (
+                <ActivityIndicator color="#10b981" />
+              ) : bookingDate && !availableTimeSlots.length ? (
                 <Text style={styles.smallMuted}>All slots are booked for this date.</Text>
               ) : (
                 availableTimeSlots.map((s) => {

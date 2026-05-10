@@ -4,13 +4,41 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { MapPin, Calendar, Clock, User, Users, Star, CheckCircle2, CreditCard, ShieldCheck, Info, ChevronLeft, Share2, Globe, FileText, Copy, Check } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { BookingWithDetails } from '@/types';
-import { formatCurrency, formatDate } from '@/utils/helpers';
+import { formatCurrency, formatDate, formatTime } from '@/utils/helpers';
 import { formatBookingSlotSummary } from '@/utils/bookingSlotFormat';
 import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
 import { getBookingDisplayAmount } from '@/utils/bookingPricing';
 import { useAuth } from '@/contexts/AuthContext';
 import WebLayout from '@/components/web/WebLayout';
 import Button from '@/components/ui/Button';
+
+function getNetsTimeSlotSummary(booking: any): string {
+  const isNets = booking.ground.pitch_type?.toLowerCase().includes('nets');
+  if (isNets && booking.notes) {
+    const matchSlots = /\(Slots:\s*([^)]+)\)/.exec(booking.notes);
+    const matchDuration = /\(Duration:\s*([^)]+)\)/.exec(booking.notes);
+    
+    if (matchSlots) {
+      const slots = matchSlots[1].split(',').map(s => s.trim());
+      if (slots.length > 0) {
+        slots.sort();
+        const start = slots[0];
+        const last = slots[slots.length - 1];
+        
+        const duration = matchDuration ? parseInt(matchDuration[1]) : 20;
+        
+        const [hours, minutes] = last.split(':').map(Number);
+        const totalMinutes = hours * 60 + minutes + duration;
+        const endHours = Math.floor(totalMinutes / 60) % 24;
+        const endMinutes = totalMinutes % 60;
+        const endTime = `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
+        
+        return `${formatTime(start)} – ${formatTime(endTime)}`;
+      }
+    }
+  }
+  return formatBookingSlotSummary(booking.start_time, booking.end_time, booking.ground.pitch_type);
+}
 
 export default function BookingDetailsScreen() {
   const { id } = useLocalSearchParams();
@@ -56,7 +84,30 @@ export default function BookingDetailsScreen() {
         .single();
 
       if (error) throw error;
-      setBooking(data);
+      
+      // Fetch duration from ground info (time_slots)
+      let calculatedDuration = null;
+      try {
+        const { data: slotsData } = await supabase
+          .from('time_slots')
+          .select('start_time, end_time')
+          .eq('ground_id', data.ground_id)
+          .eq('date', data.booking_date);
+
+        if (slotsData) {
+          const targetHHMM = normalizeDbTimeToHHMM(data.start_time);
+          const matchedSlot = slotsData.find(s => normalizeDbTimeToHHMM(s.start_time) === targetHHMM);
+          if (matchedSlot) {
+            const [h1, m1] = matchedSlot.start_time.split(':').map(Number);
+            const [h2, m2] = matchedSlot.end_time.split(':').map(Number);
+            calculatedDuration = ((h2 * 60 + m2) - (h1 * 60 + m1)) / 60;
+          }
+        }
+      } catch (e) {
+        console.log('Could not fetch slot duration:', e);
+      }
+
+      setBooking({ ...data, calculatedDuration });
       
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -103,6 +154,27 @@ export default function BookingDetailsScreen() {
       console.error('Error sharing:', error);
     }
   };
+
+  const { slotCount, timeSlotLabel, isNetsWithMultipleSlots } = useMemo(() => {
+    if (!booking) return { slotCount: 1, timeSlotLabel: '', isNetsWithMultipleSlots: false };
+    let count = 1;
+    let label = formatTime(booking.start_time);
+    let multiple = false;
+    const isNets = booking.ground.pitch_type?.toLowerCase().includes('nets');
+    if (isNets && booking.notes) {
+      const matchSlots = /\(Slots:\s*([^)]+)\)/.exec(booking.notes);
+      if (matchSlots) {
+        const slots = matchSlots[1].split(',').map(s => s.trim());
+        if (slots.length > 0) {
+          count = slots.length;
+          multiple = count > 1;
+          slots.sort();
+          label = slots.map(s => formatTime(s)).join(', ');
+        }
+      }
+    }
+    return { slotCount: count, timeSlotLabel: label, isNetsWithMultipleSlots: multiple };
+  }, [booking]);
 
   const storedTotal = Number(booking?.total_amount || 0);
   const displayTotalAmount = useMemo(() => {
@@ -187,18 +259,39 @@ export default function BookingDetailsScreen() {
                 <View style={styles.slotItem}>
                   <View style={styles.slotLabel}>
                     <Clock size={11} color="#01C45A" strokeWidth={2.5} />
-                    <Text style={styles.slotLabelText}>Time slot</Text>
+                    <Text style={styles.slotLabelText}>{isNetsWithMultipleSlots ? 'Slots' : 'Start Time'}</Text>
+                  </View>
+                  <Text style={styles.slotValue}>{timeSlotLabel}</Text>
+                </View>
+                <View style={styles.slotItem}>
+                  <View style={styles.slotLabel}>
+                    <Clock size={11} color="#01C45A" strokeWidth={2.5} />
+                    <Text style={styles.slotLabelText}>Duration</Text>
                   </View>
                   <Text style={styles.slotValue}>
-                    {formatBookingSlotSummary(booking.start_time, booking.end_time, booking.ground.pitch_type)}
+                    {(() => {
+                      const isNets = booking.ground.pitch_type?.toLowerCase().includes('nets');
+                      if (isNets && !booking.calculatedDuration) {
+                        const m = 20 * slotCount;
+                        const h = Math.floor(m / 60);
+                        const rem = m % 60;
+                        return `${h > 0 ? `${h} hr ` : ''}${rem > 0 ? `${rem} mins` : ''}`.trim() || '20 mins';
+                      }
+                      const hours = Number(booking.calculatedDuration || booking.total_hours || 1) * slotCount;
+                      const h = Math.floor(hours);
+                      const m = Math.round((hours - h) * 60);
+                      return `${h > 0 ? `${h} hr ` : ''}${m > 0 ? `${m} mins` : ''}`.trim() || '1 hr';
+                    })()}
                   </Text>
                 </View>
                 <View style={styles.slotItem}>
                   <View style={styles.slotLabel}>
                     <Users size={11} color="#01C45A" strokeWidth={2.5} />
-                    <Text style={styles.slotLabelText}>Teams</Text>
+                    <Text style={styles.slotLabelText}>{booking.ground.pitch_type?.toLowerCase().includes('nets') ? 'Booking' : 'Teams'}</Text>
                   </View>
-                  <Text style={styles.slotValue}>{cricketTeamsLabel || '1 Team'}</Text>
+                  <Text style={styles.slotValue}>
+                    {booking.ground.pitch_type?.toLowerCase().includes('nets') ? 'Nets' : (cricketTeamsLabel || '1 Team')}
+                  </Text>
                 </View>
               </View>
             </View>
@@ -211,7 +304,7 @@ export default function BookingDetailsScreen() {
               {[
                 "Please arrive 15 minutes before your slot.",
                 "Proper footwear is mandatory for the pitch.",
-                "Respect the ground staff and other players.",
+                "Respect the venue staff and other players.",
                 "No littering or smoking allowed inside the premises.",
               ].map((rule, i) => (
                 <View key={i} style={styles.ruleItem}>
@@ -233,12 +326,12 @@ export default function BookingDetailsScreen() {
                 <>
                   <View style={styles.summaryRow}>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Text style={styles.summaryLabel}>Ground price</Text>
+                      <Text style={styles.summaryLabel}>Venue price</Text>
                       <View style={[styles.teamTag, { marginLeft: 6 }]}>
                         <Text style={styles.teamTagText}>{cricketTeamsLabel || '1 team'}</Text>
                       </View>
                     </View>
-                    <Text style={styles.summaryValue}>{formatCurrency(Number(booking.ground_price || displayTotalAmount))}</Text>
+                    <Text style={styles.summaryValue}>{formatCurrency(Number(booking.ground_price || displayTotalAmount) * slotCount)}</Text>
                   </View>
 
                   <View style={styles.summaryRow}>
@@ -249,26 +342,26 @@ export default function BookingDetailsScreen() {
                       </View>
                     </View>
                     <Text style={[styles.summaryValue, { color: '#EF4444' }]}>
-                      -{formatCurrency(Number(booking.platform_fee_owner || 0) + Number(booking.gst_owner || 0))}
+                      -{formatCurrency((Number(booking.platform_fee_owner || 0) + Number(booking.gst_owner || 0)) * slotCount)}
                     </Text>
                   </View>
 
                   <View style={styles.divider} />
                   <View style={styles.totalRow}>
                     <Text style={styles.totalLabel}>Total Receivable</Text>
-                    <Text style={styles.totalValue}>{formatCurrency(Number(booking.owner_settlement || displayTotalAmount))}</Text>
+                    <Text style={styles.totalValue}>{formatCurrency(Number(booking.owner_settlement || displayTotalAmount) * slotCount)}</Text>
                   </View>
                 </>
               ) : (
                 <>
                   <View style={styles.summaryRow}>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Text style={styles.summaryLabel}>Ground price</Text>
+                      <Text style={styles.summaryLabel}>Venue price</Text>
                       <View style={[styles.teamTag, { marginLeft: 6 }]}>
                         <Text style={styles.teamTagText}>{cricketTeamsLabel || '1 team'}</Text>
                       </View>
                     </View>
-                    <Text style={styles.summaryValue}>{formatCurrency(Number(booking.ground_price || displayTotalAmount))}</Text>
+                    <Text style={styles.summaryValue}>{formatCurrency(Number(booking.ground_price || displayTotalAmount) * slotCount)}</Text>
                   </View>
 
                   {(booking.platform_fee_user > 0 || booking.gst_user > 0) ? (
@@ -279,7 +372,7 @@ export default function BookingDetailsScreen() {
                           <Text style={styles.gstTagTextSmall}>inc. GST</Text>
                         </View>
                       </View>
-                      <Text style={styles.summaryValue}>{formatCurrency(Number(booking.platform_fee_user || 0) + Number(booking.gst_user || 0))}</Text>
+                      <Text style={styles.summaryValue}>{formatCurrency((Number(booking.platform_fee_user || 0) + Number(booking.gst_user || 0)) * slotCount)}</Text>
                     </View>
                   ) : (
                     <View style={styles.summaryRow}>
@@ -291,7 +384,7 @@ export default function BookingDetailsScreen() {
                   <View style={styles.divider} />
                   <View style={styles.totalRow}>
                     <Text style={styles.totalLabel}>Grand total</Text>
-                    <Text style={styles.totalValue}>{formatCurrency(Math.round(Number(booking.total_charged || displayTotalAmount)))}</Text>
+                    <Text style={styles.totalValue}>{formatCurrency(Math.round(Number(booking.total_charged || displayTotalAmount) * slotCount))}</Text>
                   </View>
                 </>
               )}
@@ -302,7 +395,7 @@ export default function BookingDetailsScreen() {
                 </View>
                 <View>
                   <Text style={styles.pmLabel}>Payment method</Text>
-                  <Text style={styles.pmValue}>{booking.payment_method === 'cash' ? 'Cash at Ground' : (booking.payment_method?.toUpperCase() || 'PAID ONLINE')}</Text>
+                  <Text style={styles.pmValue}>{booking.payment_method === 'cash' ? 'Cash at Venue' : (booking.payment_method?.toUpperCase() || 'PAID ONLINE')}</Text>
                 </View>
               </View>
 
@@ -339,15 +432,15 @@ export default function BookingDetailsScreen() {
             </View>
             <View style={styles.receiptBody}>
               {[
-                ["Ground", booking.ground.name],
+                ["Venue", booking.ground.name],
                 ["Booking ID", `#${bookingId.substring(0, 8).toUpperCase()}`],
                 ["Date", formatDate(booking.booking_date)],
-                ["Slot", formatBookingSlotSummary(booking.start_time, booking.end_time, booking.ground.pitch_type)],
+                ["Slot", isNetsWithMultipleSlots ? timeSlotLabel : formatBookingSlotSummary(booking.start_time, booking.end_time, booking.ground.pitch_type)],
                 ["Teams", cricketTeamsLabel || '1 Team'],
-                ["Ground Price", formatCurrency(Number(booking.ground_price || displayTotalAmount))],
-                ["Platform Fee", formatCurrency(Number(booking.platform_fee_user || 0) + Number(booking.gst_user || 0))],
-                ["Payment", booking.payment_method === 'cash' ? 'Cash at Ground' : 'Online'],
-                ["Total Amount", formatCurrency(Math.round(Number(booking.total_charged || displayTotalAmount)))],
+                ["Venue Price", formatCurrency(Number(booking.ground_price || displayTotalAmount) * slotCount)],
+                ["Platform Fee", formatCurrency((Number(booking.platform_fee_user || 0) + Number(booking.gst_user || 0)) * slotCount)],
+                ["Payment", booking.payment_method === 'cash' ? 'Cash at Venue' : 'Online'],
+                ["Total Amount", formatCurrency(Math.round(Number(booking.total_charged || displayTotalAmount) * slotCount))],
               ].map(([k, v]) => (
                 <View key={k} style={styles.receiptRow}>
                   <Text style={styles.receiptKey}>{k}</Text>

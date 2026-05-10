@@ -55,6 +55,7 @@ export default function CheckoutScreen() {
     const [bookedForName, setBookedForName] = useState<string>('');
     const [platformSettings, setPlatformSettings] = useState<any>(null);
     const [walletBalance, setWalletBalance] = useState(0);
+    const [walletAmountUsed, setWalletAmountUsed] = useState(0);
     const [selectedSubMethod, setSelectedSubMethod] = useState<string | null>(null);
     const [contactEmail, setContactEmail] = useState('');
     const [contactPhone, setContactPhone] = useState('');
@@ -225,7 +226,7 @@ export default function CheckoutScreen() {
         if (!booking) return;
 
         try {
-            setProcessingCash(true);
+            setProcessing(true);
 
             const { data: { session } } = await supabase.auth.getSession();
 
@@ -247,6 +248,7 @@ export default function CheckoutScreen() {
                         booked_for_name: bookedForName,
                         payment_method: 'cash',
                         slots: booking.slots,
+                        slotDuration: booking.slotDuration,
                     } : {
                         total_amount: parseFloat(customCashAmount) || booking.total_amount,
                         booked_for_name: bookedForName,
@@ -286,7 +288,7 @@ export default function CheckoutScreen() {
             console.error('Cash payment error:', error);
             Alert.alert('Error', error.message || 'Something went wrong.');
         } finally {
-            setProcessingCash(false);
+            setProcessing(false);
         }
     };
     
@@ -295,7 +297,7 @@ export default function CheckoutScreen() {
     const fetchNewBookingDetails = async () => {
         try {
             setLoading(true);
-            const { groundId, date, time, teamType, couponId, discount, amount: passedAmount, endTime: passedEndTime, pricePerHour: passedPricePerHour, slots } = params;
+            const { groundId, date, time, teamType, couponId, discount, amount: passedAmount, endTime: passedEndTime, pricePerHour: passedPricePerHour, slots, slotDuration } = params;
 
             const { data: ground, error: groundError } = await supabase
                 .from('grounds')
@@ -342,6 +344,7 @@ export default function CheckoutScreen() {
                 grounds: ground,
                 isNew: true,
                 slots: slotsArray,
+                slotDuration: slotDuration ? parseInt(slotDuration as string) : 20,
             });
         } catch (error: any) {
             console.error('Error fetching new booking details:', error);
@@ -540,15 +543,15 @@ export default function CheckoutScreen() {
         }
     };
 
-    const handleRazorpay = async () => {
+    const handleRazorpay = async (walletAmount: number = 0) => {
         if (!booking) return;
         try {
             setProcessing(true);
 
             const { data: { session } } = await supabase.auth.getSession();
 
-            // Use the pre-calculated totalPayable
-            const finalAmount = totalPayable;
+            // Use the pre-calculated totalPayable minus wallet used
+            const finalAmount = totalPayable - walletAmount;
 
             // 1. Create Order
             const { data: order, error: orderError } = await supabase.functions.invoke('payment-gateway', {
@@ -569,8 +572,10 @@ export default function CheckoutScreen() {
                         total_amount: booking.total_amount + (booking.discount_amount || 0),
                         discount_amount: booking.discount_amount || 0,
                         slots: booking.slots,
+                        wallet_amount: walletAmount,
                     } : {
-                        total_amount: booking.total_amount
+                        total_amount: booking.total_amount,
+                        wallet_amount: walletAmount,
                     },
                 },
             });
@@ -648,7 +653,11 @@ export default function CheckoutScreen() {
                                     price_per_hour: booking.price_per_hour,
                                     total_amount: booking.total_amount + (booking.discount_amount || 0),
                                     discount_amount: booking.discount_amount || 0,
-                                } : null,
+                                    wallet_amount: walletAmount,
+                                } : {
+                                    total_amount: booking.total_amount,
+                                    wallet_amount: walletAmount,
+                                },
                             },
                         });
 
@@ -716,8 +725,10 @@ export default function CheckoutScreen() {
                             price_per_hour: booking.price_per_hour,
                             total_amount: booking.total_amount + (booking.discount_amount || 0),
                             discount_amount: booking.discount_amount || 0,
+                            wallet_amount: walletAmountUsed,
                         } : {
-                            total_amount: booking.total_amount
+                            total_amount: booking.total_amount,
+                            wallet_amount: walletAmountUsed,
                         },
                     },
                 });
@@ -803,7 +814,17 @@ export default function CheckoutScreen() {
     const handleWalletPayment = async () => {
         if (!booking) return;
         if (walletBalance < totalPayable) {
-            Alert.alert('Insufficient Balance', 'Your wallet balance is less than the total amount.');
+            Alert.alert(
+                'Split Payment',
+                `Your wallet balance of ${formatCurrency(walletBalance)} is insufficient. Would you like to use it and pay the remaining ${formatCurrency(totalPayable - walletBalance)} online?`,
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Pay Online', onPress: () => {
+                        setWalletAmountUsed(walletBalance);
+                        handleRazorpay(walletBalance);
+                    }}
+                ]
+            );
             return;
         }
 

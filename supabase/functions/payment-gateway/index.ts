@@ -647,33 +647,42 @@ serve(async (req) => {
         } = calculateFinalAmounts(bookingDetails, ground?.pitch_type, settings, ground?.owner?.charge_platform_fee === false);
 
         const slots = bookingDetails.slots;
-        let finalBookingId;
 
         if (slots && Array.isArray(slots) && slots.length > 0) {
           console.log(`[Cash] Creating multiple bookings for slots: ${slots.join(', ')}`);
-          const bookingsToInsert = slots.map((slotTime: string) => ({
-            user_id: user.id,
-            ground_id,
-            booking_date,
-            start_time: slotTime,
-            total_hours: 1,
-            price_per_hour: pricePerHour / slots.length,
-            total_amount: netAmount / slots.length,
-            ground_price: groundPrice / slots.length,
-            platform_fee_user: platformFeeUser / slots.length,
-            platform_fee_owner: platformFeeOwner / slots.length,
-            gst_user: gstUser / slots.length,
-            gst_owner: gstOwner / slots.length,
-            total_charged: totalCharged / slots.length,
-            owner_settlement: ownerSettlement / slots.length,
-            byg_net_revenue: bygNetRevenue / slots.length,
-            coupon_id,
-            discount_amount: discountAmount / slots.length,
-            booked_for_name: bookingDetails.booked_for_name || bookingDetails.bookedForName,
-            notes: (team_type === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Slot: ${slotTime}) (Player: ${bookingDetails.booked_for_name || bookingDetails.bookedForName || 'Manual Entry'})` + ' (Cash Payment confirmed by Owner)',
-            status: 'confirmed',
-            payment_method: 'cash',
-          }));
+          const bookingsToInsert = slots.map((slotTime: string) => {
+            const [hours, minutes] = slotTime.split(':').map(Number);
+            const duration = bookingDetails.slotDuration || 20;
+            const totalMinutes = hours * 60 + minutes + duration;
+            const endHours = Math.floor(totalMinutes / 60) % 24;
+            const endMinutes = totalMinutes % 60;
+            const endTime = `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
+            
+            return {
+              user_id: user.id,
+              ground_id,
+              booking_date,
+              start_time: slotTime,
+              end_time: endTime,
+              total_hours: duration / 60,
+              price_per_hour: pricePerHour / slots.length,
+              total_amount: netAmount / slots.length,
+              ground_price: groundPrice / slots.length,
+              platform_fee_user: platformFeeUser / slots.length,
+              platform_fee_owner: platformFeeOwner / slots.length,
+              gst_user: gstUser / slots.length,
+              gst_owner: gstOwner / slots.length,
+              total_charged: totalCharged / slots.length,
+              owner_settlement: ownerSettlement / slots.length,
+              byg_net_revenue: bygNetRevenue / slots.length,
+              coupon_id,
+              discount_amount: discountAmount / slots.length,
+              booked_for_name: bookingDetails.booked_for_name || bookingDetails.bookedForName,
+              notes: (team_type === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Slots: ${slots.join(', ')}) (Duration: ${duration}) (Player: ${bookingDetails.booked_for_name || bookingDetails.bookedForName || 'Manual Entry'})` + ' (Cash Payment confirmed by Owner)',
+              status: 'confirmed',
+              payment_method: 'cash',
+            };
+          });
 
           const { data: newBookings, error: insertError } = await supabaseClient
             .from('bookings')
@@ -770,12 +779,23 @@ serve(async (req) => {
 
       // Record transaction
       console.log(`[Cash] Recording transaction for booking: ${finalBookingId}`);
-      const { data: bookingData } = await supabaseClient.from('bookings').select('user_id, ground:grounds(name, owner_id)').eq('id', finalBookingId).single();
+      const { data: bookingData } = await supabaseClient.from('bookings').select('user_id, total_amount, notes, ground:grounds(name, owner_id)').eq('id', finalBookingId).single();
+
+      let txAmount = bookingData?.total_amount || 0;
+      if (bookingData?.notes) {
+        const matchSlots = /\(Slots:\s*([^)]+)\)/.exec(bookingData.notes);
+        if (matchSlots) {
+          const slots = matchSlots[1].split(',');
+          if (slots.length > 0) {
+             txAmount = txAmount * slots.length;
+          }
+        }
+      }
 
       await supabaseClient.from('transactions').insert({
         booking_id: finalBookingId,
         user_id: user.id,
-        amount: netAmount,
+        amount: txAmount,
         status: 'completed',
         payment_method: 'cash',
         transaction_reference: 'CASH_' + Date.now(),
@@ -983,7 +1003,7 @@ serve(async (req) => {
             discount_amount: discountAmount / slots.length,
             notes: (team_type === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Slot: ${slotTime})` + ` (Paid via Razorpay: ${razorpay_payment_id})`,
             status: 'confirmed',
-            payment_method: 'razorpay',
+            payment_method: (bookingDetails.wallet_amount ?? 0) > 0 ? 'split_wallet_razorpay' : 'razorpay',
             payment_received: true,
           }));
 
@@ -1020,7 +1040,7 @@ serve(async (req) => {
               discount_amount: discountAmount,
               notes: (team_type === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Paid via Razorpay: ${razorpay_payment_id})`,
               status: 'confirmed',
-              payment_method: 'razorpay',
+              payment_method: (bookingDetails.wallet_amount ?? 0) > 0 ? 'split_wallet_razorpay' : 'razorpay',
               payment_received: true,
             })
             .select('id')
@@ -1038,6 +1058,21 @@ serve(async (req) => {
         }).eq('id', finalBookingId);
       }
 
+      // Deduct from Wallet if split payment
+      if (bookingDetails && bookingDetails.wallet_amount > 0) {
+        console.log(`[Razorpay] Deducting wallet amount: ${bookingDetails.wallet_amount} for split payment`);
+        const { error: walletDeductErr } = await supabaseClient.rpc('process_wallet_transaction', {
+          p_user_id: user.id,
+          p_amount: -Number(bookingDetails.wallet_amount),
+          p_type: 'used',
+          p_description: `Split payment for Booking #${finalBookingId.substring(0, 8).toUpperCase()}`,
+          p_booking_id: finalBookingId
+        });
+        if (walletDeductErr) {
+          console.error('[Razorpay] Wallet deduction failed:', walletDeductErr.message);
+        }
+      }
+
       // Record transaction
       const { data: bookingData } = await supabaseClient.from('bookings').select('user_id, ground:grounds(name, owner_id)').eq('id', finalBookingId).single();
 
@@ -1046,7 +1081,7 @@ serve(async (req) => {
         user_id: user.id,
         amount: netAmount,
         status: 'completed',
-        payment_method: 'razorpay',
+        payment_method: (bookingDetails.wallet_amount ?? 0) > 0 ? 'split_wallet_razorpay' : 'razorpay',
         transaction_reference: razorpay_payment_id,
       });
 
