@@ -109,12 +109,16 @@ function FilterDropdown({
 }
 
 export default function GroundsAdminScreen() {
+  const { width } = useWindowDimensions();
+  const isWeb = Platform.OS === 'web';
+  const isSmallWeb = isWeb && width < 1024;
+  const isMobile = width < 768;
+
   const params = useLocalSearchParams();
   const ownerIdParam = Array.isArray(params.ownerId) ? params.ownerId[0] : params.ownerId;
   const createParam = Array.isArray(params.create) ? params.create[0] : params.create;
 
   const { user } = useAuth();
-  const { width } = useWindowDimensions();
   const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
   const [loading, setLoading] = useState(true);
   const [occupancyRates, setOccupancyRates] = useState<Record<string, number>>({});
@@ -1021,9 +1025,12 @@ export default function GroundsAdminScreen() {
 
   const content = (
     <View style={styles.container}>
-      {Platform.OS === 'web' && (
-        <View style={[styles.header, styles.webHeader]}>
-          <View style={styles.compactHeaderRow}>
+      {isWeb && (
+        <View style={[styles.header, styles.webHeader, (isMobile || isSmallWeb) && { padding: 16 }]}>
+          <View style={[
+            styles.compactHeaderRow,
+            (isMobile || isSmallWeb) && { flexDirection: 'column', alignItems: 'stretch', gap: 12 }
+          ]}>
             <View style={styles.titleSection}>
               <Text style={styles.title}>Grounds</Text>
             </View>
@@ -1037,7 +1044,7 @@ export default function GroundsAdminScreen() {
               />
             </View>
 
-            <View style={styles.filtersSection}>
+            <View style={[styles.filtersSection, (isMobile || isSmallWeb) && { flex: 0, justifyContent: 'flex-start', gap: 8 }]}>
               <FilterDropdown
                 options={locationOptions}
                 value={locationFilter}
@@ -1052,7 +1059,7 @@ export default function GroundsAdminScreen() {
 
             <TouchableOpacity
               onPress={handleImportGround}
-              style={styles.importButtonFlat}
+              style={[styles.importButtonFlat, (isMobile || isSmallWeb) && { alignSelf: 'flex-start' }]}
             >
               <Text style={styles.importButtonText}>Import JSON</Text>
             </TouchableOpacity>
@@ -1061,17 +1068,19 @@ export default function GroundsAdminScreen() {
         </View>
       )}
 
-      {Platform.OS === 'web' && filteredGrounds.length > 0 && (
-        <View style={styles.tableHeaderContainer}>
-          <View style={styles.tableHeaderRow}>
-            <Text style={[styles.tableHeaderCell, styles.colGround]}>Ground</Text>
-            <Text style={[styles.tableHeaderCell, styles.colOwner]}>Owner</Text>
-            <Text style={[styles.tableHeaderCell, styles.colLocation]}>Location</Text>
-            <Text style={[styles.tableHeaderCell, styles.colPrice]}>Price & Type</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStatus]}>Status</Text>
-            <Text style={[styles.tableHeaderCell, styles.colActions]}>Actions</Text>
+      {isWeb && filteredGrounds.length > 0 && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} bounces={false}>
+          <View style={[styles.tableHeaderContainer, (isMobile || isSmallWeb) && { minWidth: 1000, marginHorizontal: 0, paddingHorizontal: 16 }]}>
+            <View style={styles.tableHeaderRow}>
+              <Text style={[styles.tableHeaderCell, styles.colGround]}>Ground</Text>
+              <Text style={[styles.tableHeaderCell, styles.colOwner]}>Owner</Text>
+              <Text style={[styles.tableHeaderCell, styles.colLocation]}>Location</Text>
+              <Text style={[styles.tableHeaderCell, styles.colPrice]}>Price & Type</Text>
+              <Text style={[styles.tableHeaderCell, styles.colStatus]}>Status</Text>
+              <Text style={[styles.tableHeaderCell, styles.colActions]}>Actions</Text>
+            </View>
           </View>
-        </View>
+        </ScrollView>
       )}
 
       {createOpen ? (
@@ -1260,7 +1269,7 @@ export default function GroundsAdminScreen() {
 
           const ownerPhone = (latestGround as any).owner?.phone || '—';
 
-          if (Platform.OS === 'web') {
+          if (isWeb && !isSmallWeb) {
             return (
               <View style={styles.tableRowContainer}>
                 <TouchableOpacity
@@ -1316,6 +1325,65 @@ export default function GroundsAdminScreen() {
 
                 {/* Modal actions replaced inline expansion */}
               </View>
+            );
+          }
+
+          if (isWeb && isSmallWeb) {
+            return (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} bounces={false}>
+                <View style={[styles.tableRowContainer, { minWidth: 1000 }]}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSelectedGround(latestGround);
+                      setIsActionsModalOpen(true);
+                    }}
+                    activeOpacity={0.8}
+                    style={styles.tableRow}
+                  >
+                    <View style={[styles.tableCell, styles.colGround]}>
+                      <View style={styles.tableGroundInfo}>
+                        <Image source={{ uri: primaryImage }} style={styles.tableThumb} />
+                        <View>
+                          <Text style={styles.groundName}>{latestGround.name}</Text>
+                          <Text style={styles.groundType}>{latestGround.pitch_type}</Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    <View style={[styles.tableCell, styles.colOwner]}>
+                      <Text style={styles.ownerName}>{ownerName}</Text>
+                      <Text style={styles.ownerPhone}>{ownerPhone}</Text>
+                    </View>
+
+                    <View style={[styles.tableCell, styles.colLocation]}>
+                      <Text style={styles.locationText}>{latestGround.city}, {latestGround.state}</Text>
+                    </View>
+
+                    <View style={[styles.tableCell, styles.colPrice]}>
+                      <Text style={styles.priceText}>Price set in Availability</Text>
+                    </View>
+
+                    <View style={[styles.tableCell, styles.colStatus]}>
+                      <View style={styles.statusBadges}>
+                          <View style={[styles.miniBadge, isApproved ? styles.miniBadgeApproved : styles.miniBadgePending]}>
+                              <Text style={[styles.miniBadgeText, isApproved ? styles.miniBadgeTextApproved : styles.miniBadgeTextPending]}>
+                                  {isApproved ? 'Approved' : 'Pending'}
+                              </Text>
+                          </View>
+                          <View style={[styles.miniBadge, latestGround.active ? styles.miniBadgeActive : styles.miniBadgeInactive]}>
+                              <Text style={[styles.miniBadgeText, latestGround.active ? styles.miniBadgeTextActive : styles.miniBadgeTextInactive]}>
+                                  {latestGround.active ? 'Active' : 'Inactive'}
+                              </Text>
+                          </View>
+                      </View>
+                    </View>
+
+                    <View style={[styles.tableCell, styles.colActions]}>
+                      <Text style={{ fontSize: 12, color: '#6b7280' }}>Click to manage</Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
             );
           }
 

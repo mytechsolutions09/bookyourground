@@ -339,8 +339,14 @@ export default function GroundCard({
             {mapsUrl && (
               <TouchableOpacity
                 style={styles.viewMapsAction}
-                onPress={() => {
-                  void Linking.openURL(mapsUrl);
+                onPress={async () => {
+                  if (mapsUrl) {
+                    try {
+                      await Linking.openURL(mapsUrl);
+                    } catch (err) {
+                      console.error('Failed to open maps URL:', err);
+                    }
+                  }
                 }}
               >
                 <View style={styles.viewMapsLeft}>

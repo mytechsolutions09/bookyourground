@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, Platform, useWindowDimensions } from 'react-native';
 import {
   Users,
   Building2,
@@ -11,6 +11,9 @@ import {
   LifeBuoy,
   Package,
   ShoppingBag,
+  IndianRupee,
+  Star,
+  AlertCircle
 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -28,6 +31,11 @@ interface Stats {
 }
 
 export default function AdminDashboardScreen() {
+  const { width } = useWindowDimensions();
+  const isDesktop = width > 1024;
+  const isTablet = width > 768 && width <= 1024;
+  const isMobile = width <= 768;
+
   const { user, loading: authLoading } = useAuth();
   const [stats, setStats] = useState<Stats>({
     totalUsers: 0,
@@ -68,7 +76,10 @@ export default function AdminDashboardScreen() {
   };
 
   const StatCard = ({ icon: Icon, label, value, color }: any) => (
-    <View style={styles.statCard}>
+    <View style={[
+      styles.statCard,
+      { minWidth: isDesktop ? '23.5%' : isTablet ? '48%' : '100%' }
+    ]}>
       <View style={[styles.iconContainer, { backgroundColor: color + '15' }]}>
         <Icon size={18} color={color} />
         <Text style={styles.statValue}>{value}</Text>
@@ -83,20 +94,24 @@ export default function AdminDashboardScreen() {
       refreshControl={<RefreshControl refreshing={loading} onRefresh={loadStats} />}
     >
       <View style={styles.content}>
-        <View style={Platform.OS === 'web' ? { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 } : {}}>
-          {Platform.OS === 'web' && (
-            <View>
-              <Text style={styles.title}>Admin Dashboard</Text>
-              <Text style={styles.subtitle}>Platform Overview</Text>
-            </View>
-          )}
+        <View style={[
+          styles.headerRow,
+          isDesktop && { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }
+        ]}>
+          <View>
+            <Text style={styles.title}>Admin Dashboard</Text>
+            <Text style={styles.subtitle}>Platform Overview</Text>
+          </View>
           
-          <View style={[styles.statsGrid, Platform.OS === 'web' && { marginBottom: 0, flex: 1, justifyContent: 'flex-end' }]}>
+          <View style={[
+            styles.statsGrid,
+            isDesktop && { marginBottom: 0, flex: 1, justifyContent: 'flex-end', marginLeft: 24 }
+          ]}>
             <StatCard
               icon={Users}
               label="Total Users"
               value={stats.totalUsers}
-              color={Platform.OS === 'web' ? '#10b981' : '#2196F3'}
+              color="#10b981"
             />
             <StatCard
               icon={Building2}
@@ -119,96 +134,112 @@ export default function AdminDashboardScreen() {
           </View>
         </View>
 
+        {/* User & Owner Management */}
         <View style={styles.quickActionsCard}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <Text style={styles.sectionTitle}>User & Partner Management</Text>
+          <View style={styles.actionsGrid}>
+            {[
+              { label: 'Manage Users', icon: Users, color: '#2196F3', path: '/(admin)/manage-users' },
+              { label: 'Manage Owners', icon: Users, color: '#10b981', path: '/(admin)/manage-ground-owners' },
+              { label: 'Approve Grounds', icon: Building2, color: '#F59E0B', path: '/(admin)/approve-grounds' },
+            ].map((action, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={[styles.actionCard, { width: isMobile ? '100%' : isTablet ? '48%' : '31.5%' }]}
+                onPress={() => router.push(action.path as any)}
+              >
+                <View style={styles.actionContent}>
+                  <View style={[styles.actionIconBox, { backgroundColor: action.color + '10' }]}>
+                    <action.icon size={20} color={action.color} />
+                  </View>
+                  <Text style={styles.actionText}>{action.label}</Text>
+                </View>
+                <ChevronRight size={18} color="#CBD5E1" />
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
 
-          <TouchableOpacity
-            style={styles.actionItem}
-            onPress={() => router.push('/(admin)/manage-users')}
-          >
-            <View style={styles.actionContent}>
-              <Users size={18} color={Platform.OS === 'web' ? '#10b981' : '#2196F3'} />
-              <Text style={styles.actionText}>Manage Users</Text>
-            </View>
-            <ChevronRight size={18} color="#666" />
-          </TouchableOpacity>
+        {/* Financials & Compliance */}
+        <View style={styles.quickActionsCard}>
+          <Text style={styles.sectionTitle}>Financials & Compliance</Text>
+          <View style={styles.actionsGrid}>
+            {[
+              { label: 'Platform Earnings', icon: TrendingUp, color: '#10b981', path: '/(admin)/earnings' },
+              { label: 'Payouts & Bank Details', icon: IndianRupee, color: '#059669', path: '/(admin)/payouts' },
+            ].map((action, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={[styles.actionCard, { width: isMobile ? '100%' : isTablet ? '48%' : '48.5%' }]}
+                onPress={() => router.push(action.path as any)}
+              >
+                <View style={styles.actionContent}>
+                  <View style={[styles.actionIconBox, { backgroundColor: action.color + '10' }]}>
+                    <action.icon size={20} color={action.color} />
+                  </View>
+                  <Text style={styles.actionText}>{action.label}</Text>
+                </View>
+                <ChevronRight size={18} color="#CBD5E1" />
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
 
-          <TouchableOpacity
-            style={styles.actionItem}
-            onPress={() => router.push('/(admin)/bookings')}
-          >
-            <View style={styles.actionContent}>
-              <Calendar size={18} color="#FF9800" />
-              <Text style={styles.actionText}>Bookings</Text>
-            </View>
-            <ChevronRight size={18} color="#666" />
-          </TouchableOpacity>
+        {/* Operations & Inventory */}
+        <View style={styles.quickActionsCard}>
+          <Text style={styles.sectionTitle}>Platform Operations</Text>
+          <View style={styles.actionsGrid}>
+            {[
+              { label: 'Bookings', icon: Calendar, color: '#FF9800', path: '/(admin)/bookings' },
+              { label: 'Grounds Inventory', icon: Building2, color: '#4CAF50', path: '/(admin)/grounds' },
+              { label: 'Inventory & Occupancy', icon: Package, color: '#6366F1', path: '/(admin)/inventory' },
+              { label: 'Categories', icon: ShoppingBag, color: '#EC4899', path: '/(admin)/categories' },
+              { label: 'Locations', icon: LifeBuoy, color: '#3B82F6', path: '/(admin)/locations' },
+              { label: 'Reviews', icon: Star, color: '#F59E0B', path: '/(admin)/reviews' },
+            ].map((action, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={[styles.actionCard, { width: isMobile ? '100%' : isTablet ? '48%' : '31.5%' }]}
+                onPress={() => router.push(action.path as any)}
+              >
+                <View style={styles.actionContent}>
+                  <View style={[styles.actionIconBox, { backgroundColor: action.color + '10' }]}>
+                    <action.icon size={20} color={action.color} />
+                  </View>
+                  <Text style={styles.actionText}>{action.label}</Text>
+                </View>
+                <ChevronRight size={18} color="#CBD5E1" />
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
 
-          <TouchableOpacity
-            style={styles.actionItem}
-            onPress={() => router.push('/(admin)/earnings')}
-          >
-            <View style={styles.actionContent}>
-              <TrendingUp size={18} color="#10b981" />
-              <Text style={styles.actionText}>Platform Earnings</Text>
-            </View>
-            <ChevronRight size={18} color="#666" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionItem}
-            onPress={() => router.push('/(admin)/grounds')}
-          >
-            <View style={styles.actionContent}>
-              <Building2 size={18} color="#4CAF50" />
-              <Text style={styles.actionText}>Grounds</Text>
-            </View>
-            <ChevronRight size={18} color="#666" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionItem}
-            onPress={() => router.push('/(admin)/inventory')}
-          >
-            <View style={styles.actionContent}>
-              <Package size={18} color="#6366F1" />
-              <Text style={styles.actionText}>Inventory & Occupancy</Text>
-            </View>
-            <ChevronRight size={18} color="#666" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionItem}
-            onPress={() => router.push('/(admin)/messages' as any)}
-          >
-            <View style={styles.actionContent}>
-              <LifeBuoy size={18} color="#6366F1" />
-              <Text style={styles.actionText}>Support Tickets</Text>
-            </View>
-            <ChevronRight size={18} color="#666" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionItem}
-            onPress={() => router.push('/(admin)/orders' as any)}
-          >
-            <View style={styles.actionContent}>
-              <ShoppingBag size={18} color="#059669" />
-              <Text style={styles.actionText}>Shop Orders</Text>
-            </View>
-            <ChevronRight size={18} color="#666" />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionItem}
-            onPress={() => router.push('/(admin)/settings' as any)}
-          >
-            <View style={styles.actionContent}>
-              <Settings size={18} color="#6B7280" />
-              <Text style={styles.actionText}>Settings</Text>
-            </View>
-            <ChevronRight size={18} color="#666" />
-          </TouchableOpacity>
+        {/* Shop & Commerce */}
+        <View style={styles.quickActionsCard}>
+          <Text style={styles.sectionTitle}>Shop & Commerce</Text>
+          <View style={styles.actionsGrid}>
+            {[
+              { label: 'Products', icon: Package, color: '#8B5CF6', path: '/(admin)/products' },
+              { label: 'Orders', icon: ShoppingBag, color: '#059669', path: '/(admin)/orders' },
+              { label: 'Returns', icon: AlertCircle, color: '#EF4444', path: '/(admin)/returns' },
+              { label: 'Support Tickets', icon: LifeBuoy, color: '#6366F1', path: '/(admin)/messages' },
+              { label: 'Settings', icon: Settings, color: '#6B7280', path: '/(admin)/settings' },
+            ].map((action, idx) => (
+              <TouchableOpacity
+                key={idx}
+                style={[styles.actionCard, { width: isMobile ? '100%' : isTablet ? '48%' : '31.5%' }]}
+                onPress={() => router.push(action.path as any)}
+              >
+                <View style={styles.actionContent}>
+                  <View style={[styles.actionIconBox, { backgroundColor: action.color + '10' }]}>
+                    <action.icon size={20} color={action.color} />
+                  </View>
+                  <Text style={styles.actionText}>{action.label}</Text>
+                </View>
+                <ChevronRight size={18} color="#CBD5E1" />
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         <View style={styles.infoCard}>
@@ -309,23 +340,41 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingBottom: 4,
   },
-  actionItem: {
+  actionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  actionCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  actionIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   actionContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 16,
   },
   actionText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#333',
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  headerRow: {
+    marginBottom: 24,
+    gap: 16,
   },
   sectionTitle: {
     fontSize: 18,

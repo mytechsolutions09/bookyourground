@@ -108,6 +108,14 @@ function formatISODate(d: Date): string {
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
 
+function formatDateDDMMYYYY(isoDate: string): string {
+  const parts = isoDate.split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return isoDate;
+}
+
 function formatDateButtonLabel(iso: string): string {
   const d = parseISODate(iso);
   if (!d) return '';
@@ -380,6 +388,15 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
     return p === 'nets' || p.includes('nets');
   }, [selectedGround, typeKey]);
 
+  const isCricketGroundType = useMemo(() => {
+    const p = (selectedGround?.pitch_type ?? typeKey ?? '').toLowerCase();
+    return p === 'cricket ground' || p.includes('cricket ground');
+  }, [selectedGround, typeKey]);
+
+  const supportMultipleSlots = useMemo(() => {
+    return isNets || isCricketGroundType;
+  }, [isNets, isCricketGroundType]);
+
   const locationKeyForGround = (g: GroundWithImages) => `${g.city}__${g.state}`;
 
   const locationOptions = useMemo(() => {
@@ -452,6 +469,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
   >(undefined);
   // Custom price per slot start time (if set in `time_slots.custom_price`).
   const [slotPriceByStartTime, setSlotPriceByStartTime] = useState<Record<string, number | null>>({});
+  const [pricesByDate, setPricesByDate] = useState<Record<string, Record<string, number | null>>>({});
   // DB end_time per slot start_time, so we can support custom slot durations.
   const [endTimeByStartTime, setEndTimeByStartTime] = useState<Record<string, string>>({});
 
@@ -669,13 +687,34 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
   const computed = useMemo(() => {
     if (!selectedGround) return null;
     
-    if (isNets) {
+    if (supportMultipleSlots) {
       if (selectedNetsSlots.length === 0) return null;
       let totalAmount = 0;
       selectedNetsSlots.forEach(slot => {
-        totalAmount += slotPriceByStartTime[slot] ?? selectedGround?.base_price_per_hour ?? 0;
+        const parts = slot.split('__');
+        const date = parts[0];
+        const time = parts[1];
+        const slotTeamType = parts[2] || teamType;
+        
+        let price = pricesByDate[date]?.[time] ?? slotPriceByStartTime[time] ?? selectedGround?.base_price_per_hour ?? 0;
+        
+        if (isCricketGroundType) {
+          // Apply team type factor per slot!
+          const factor = slotTeamType === 'one' ? 0.5 : 1.0;
+          price = price * factor;
+        }
+        
+        totalAmount += price;
       });
-      return { totalHours: selectedNetsSlots.length, totalAmount, pricePerUnit: totalAmount / selectedNetsSlots.length, unitLabel: 'slot' as const };
+      
+      totalAmount = Math.round(totalAmount * 100) / 100;
+      
+      return { 
+        totalHours: selectedNetsSlots.length, 
+        totalAmount, 
+        pricePerUnit: totalAmount / selectedNetsSlots.length, 
+        unitLabel: isNets ? 'slot' as const : 'match' as const 
+      };
     }
 
     if (!startTime || !derivedEndTime) return null;
@@ -864,6 +903,10 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
         setAllStartHHMM(nextAll);
         setSlotPriceByStartTime(nextPrices);
         setEndTimeByStartTime(nextEnds);
+        setPricesByDate(prev => ({
+          ...prev,
+          [bookingDate]: nextPrices
+        }));
       }
 
       setLoadingSlots(false);
@@ -1615,17 +1658,17 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       return;
     }
 
-    if (isNets && selectedNetsSlots.length === 0) {
+    if (supportMultipleSlots && selectedNetsSlots.length === 0) {
       Alert.alert('No slots selected', 'Please select at least one time slot.');
       return;
     }
 
-    if (!isNets && !computed) {
+    if (!supportMultipleSlots && !computed) {
       Alert.alert('Invalid start time', 'Please enter a valid start time (HH:MM).');
       return;
     }
 
-    if (!isNets && allowedStartHHMM.size && !allowedStartHHMM.has(startTime)) {
+    if (!supportMultipleSlots && allowedStartHHMM.size && !allowedStartHHMM.has(startTime)) {
       Alert.alert('Unavailable slot', 'Please choose a different time slot.');
       return;
     }
@@ -1647,15 +1690,17 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       params.set('groundId', selectedGround.id);
       params.set('date', bookingDate);
       
-      if (isNets) {
+      if (supportMultipleSlots) {
         params.set('slots', selectedNetsSlots.join(','));
         if (selectedNetsSlots.length > 0) {
           const firstSlot = selectedNetsSlots[0];
-          params.set('time', firstSlot);
+          const [date, time] = firstSlot.includes('__') ? firstSlot.split('__') : [bookingDate, firstSlot];
+          params.set('time', time);
+          params.set('date', date);
           
-          const endStr = endTimeByStartTime[firstSlot];
+          const endStr = endTimeByStartTime[time];
           if (endStr) {
-            const [h1, m1] = firstSlot.split(':').map(Number);
+            const [h1, m1] = time.split(':').map(Number);
             const [h2, m2] = endStr.split(':').map(Number);
             const duration = (h2 * 60 + m2) - (h1 * 60 + m1);
             params.set('slotDuration', duration.toString());
@@ -1669,7 +1714,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       if (computed) {
         params.set('amount', computed.totalAmount.toString());
         params.set('pricePerHour', computed.pricePerUnit.toString());
-        if (!isNets) params.set('endTime', derivedEndTime);
+        if (!supportMultipleSlots && derivedEndTime) params.set('endTime', derivedEndTime);
       }
       if (appliedCoupon) params.set('couponId', appliedCoupon.id);
       if (discountAmount > 0) params.set('discount', discountAmount.toString());
@@ -1854,7 +1899,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
         </View>
       )}
 
-      <View style={[styles.row, isWeb && webGridHalfWidthStyle, !!openSelectMenu && styles.sectionDropdownOpen]}>
+      <View style={[styles.row, !!openSelectMenu && styles.sectionDropdownOpen]}>
         <View
           style={[
             styles.section,
@@ -1944,8 +1989,8 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
         </View>
       </View>
 
-      {!isBoxCricket && !isNets ? (
-        <View style={[styles.section, isWeb ? webGridHalfWidthStyle : webGridSectionStyle, webSingleColumnStyle]}>
+      {(!isBoxCricket && !isNets) || (groundPageAccent && !isNets) ? (
+        <View style={[styles.section, isWeb ? webFullSpanStyle : webGridSectionStyle, webSingleColumnStyle]}>
           <Text style={fieldLabelStyle}>Teams</Text>
           <View style={styles.teamToggle}>
             <Pressable
@@ -2181,149 +2226,85 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       {(!useLandingSearchFlow || bookingDate) && (
         <View style={[styles.section, webSingleColumnStyle, webFullSpanStyle]}>
           <Text style={fieldLabelStyle}>Start Time</Text>
-
-          {isWeb && !isCompact ? (
-            <View style={[styles.timeSlotsWrap, isBoxCricket && styles.timeSlotsWrapBox]}>
-              {!timeSlots.length ? (
-                <Text style={styles.smallMuted}>Select a ground type to see time slots.</Text>
-              ) : loadingSlots ? (
-                <ActivityIndicator color="#10b981" />
-              ) : bookingDate && !availableTimeSlots.length ? (
-                <Text style={styles.smallMuted}>All slots are booked for this date.</Text>
-              ) : (
-                availableTimeSlots.map((s) => {
-                  const active = isNets ? selectedNetsSlots.includes(s.value) : s.value === startTime;
-                  const slotIsAvailable = selectedGround?.id
-                    ? allowedStartHHMM.has(s.value)
-                    : searchAllowedStartHHMM.has(s.value);
-                  return (
-                    <Pressable
-                      key={s.value}
-                      onPress={() => {
-                        if (lockSlot) return;
-                        if (useLandingSearchFlow) clearSearchState();
-                        if (isNets) {
-                          setSelectedNetsSlots(prev => {
-                            if (prev.includes(s.value)) {
-                              const next = prev.filter(v => v !== s.value);
-                              if (next.length > 0) setStartTime(next[0] as TimeString);
-                              else setStartTime('' as TimeString);
+          <View style={[styles.timeSlotsWrap, isBoxCricket && styles.timeSlotsWrapBox]}>
+            {!timeSlots.length ? (
+              <Text style={styles.smallMuted}>Select a ground type to see time slots.</Text>
+            ) : loadingSlots ? (
+              <ActivityIndicator color="#10b981" />
+            ) : bookingDate && !availableTimeSlots.length ? (
+              <Text style={styles.smallMuted}>All slots are booked for this date.</Text>
+            ) : (
+              availableTimeSlots.map((s) => {
+                const prefix = `${bookingDate}__${s.value}__`;
+                const existingSlot = supportMultipleSlots ? selectedNetsSlots.find(v => v.startsWith(prefix)) : null;
+                const active = supportMultipleSlots ? !!existingSlot : s.value === startTime;
+                const slotIsAvailable = selectedGround?.id
+                  ? allowedStartHHMM.has(s.value)
+                  : searchAllowedStartHHMM.has(s.value);
+                return (
+                  <Pressable
+                    key={s.value}
+                    onPress={() => {
+                      if (lockSlot) return;
+                      if (useLandingSearchFlow) clearSearchState();
+                      if (supportMultipleSlots) {
+                        setSelectedNetsSlots(prev => {
+                          const existing = prev.find(v => v.startsWith(prefix));
+                          if (existing) {
+                            const [_, __, existingTeam] = existing.split('__');
+                            if (existingTeam === teamType) {
+                              // Deselect
+                              const next = prev.filter(v => v !== existing);
+                              if (next.length > 0) {
+                                const [__, t] = next[0].split('__');
+                                setStartTime(t as TimeString);
+                              } else {
+                                setStartTime('' as TimeString);
+                              }
                               return next;
                             } else {
-                              setStartTime(s.value as TimeString);
-                              return [...prev, s.value];
+                              // Update team type
+                              return prev.map(v => v === existing ? `${prefix}${teamType}` : v);
                             }
-                          });
-                        } else {
-                          setStartTime(s.value as TimeString);
-                        }
-                      }}
-                      disabled={lockSlot || submitting || !slotIsAvailable}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: active, disabled: lockSlot || submitting || !slotIsAvailable }}
-                      accessibilityLabel={`${s.label} time slot`}
-                      style={({ pressed }) => [
-                        styles.timeSlotChip,
-                        isBoxCricket && styles.timeSlotChipDense,
-                        active && styles.timeSlotChipActive,
-                        lockSlot && !active && styles.timeSlotChipDisabled,
-                        lockSlot && active && { opacity: 0.8 },
-                        ...(Platform.OS === 'web' ? [{ cursor: 'pointer' } as object] : []),
-                        pressed && !active && !lockSlot && styles.timeSlotChipPressed,
+                          } else {
+                            // Add new
+                            setStartTime(s.value as TimeString);
+                            return [...prev, `${prefix}${teamType}`];
+                          }
+                        });
+                      } else {
+                        setStartTime(s.value as TimeString);
+                      }
+                    }}
+                    disabled={lockSlot || submitting || !slotIsAvailable}
+                    accessibilityRole="button"
+                    accessibilityState={{ selected: active, disabled: lockSlot || submitting || !slotIsAvailable }}
+                    accessibilityLabel={`${s.label} time slot`}
+                    style={({ pressed }) => [
+                      styles.timeSlotChip,
+                      isCompact && styles.timeSlotChipCompact,
+                      isBoxCricket && styles.timeSlotChipDense,
+                      active && styles.timeSlotChipActive,
+                      lockSlot && !active && styles.timeSlotChipDisabled,
+                      lockSlot && active && { opacity: 0.8 },
+                      ...(Platform.OS === 'web' ? [{ cursor: 'pointer' } as object] : []),
+                      pressed && !active && !lockSlot && styles.timeSlotChipPressed,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.timeSlotText,
+                        isBoxCricket && styles.timeSlotTextDense,
+                        active && styles.timeSlotTextActive,
                       ]}
                     >
-                      <Text
-                        style={[
-                          styles.timeSlotText,
-                          isBoxCricket && styles.timeSlotTextDense,
-                          active && styles.timeSlotTextActive,
-                        ]}
-                      >
-                        {s.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })
-              )}
-            </View>
-          ) : (
-            <ScrollView
-              ref={timeScrollRef}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.timeSlotsScrollContent}
-            >
-              {!timeSlots.length ? (
-                <Text style={styles.smallMuted}>Select a ground type to see time slots.</Text>
-              ) : loadingSlots ? (
-                <ActivityIndicator color="#10b981" />
-              ) : bookingDate && !availableTimeSlots.length ? (
-                <Text style={styles.smallMuted}>All slots are booked for this date.</Text>
-              ) : (
-                availableTimeSlots.map((s) => {
-                  const active = isNets ? selectedNetsSlots.includes(s.value) : s.value === startTime;
-                  const slotIsAvailable = selectedGround?.id
-                    ? allowedStartHHMM.has(s.value)
-                    : searchAllowedStartHHMM.has(s.value);
-                  return (
-                    <Pressable
-                      key={s.value}
-                      onPress={() => {
-                        if (lockSlot) return;
-                        if (useLandingSearchFlow) clearSearchState();
-                        if (isNets) {
-                          setSelectedNetsSlots(prev => {
-                            if (prev.includes(s.value)) {
-                              const next = prev.filter(v => v !== s.value);
-                              if (next.length > 0) setStartTime(next[0] as TimeString);
-                              else setStartTime('' as TimeString);
-                              return next;
-                            } else {
-                              setStartTime(s.value as TimeString);
-                              return [...prev, s.value];
-                            }
-                          });
-                        } else {
-                          setStartTime(s.value as TimeString);
-                        }
-                      }}
-                      disabled={lockSlot || submitting || !slotIsAvailable}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: active, disabled: lockSlot || submitting || !slotIsAvailable }}
-                      accessibilityLabel={`${s.label} time slot`}
-                      style={({ pressed }) => [
-                        styles.timeSlotChip,
-                        styles.timeSlotChipMobile,
-                        isBoxCricket && styles.timeSlotChipDense,
-                        active && styles.timeSlotChipActive,
-                        lockSlot && !active && styles.timeSlotChipDisabled,
-                        lockSlot && active && { opacity: 0.8 },
-                        nativeTanChrome && !active && styles.timeSlotChipBorderBookGroundNative,
-                        pressed &&
-                        !active &&
-                        !lockSlot &&
-                        (nativeTanChrome
-                          ? styles.timeSlotChipPressedBookGroundNative
-                          : styles.timeSlotChipPressed),
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.timeSlotText,
-                          styles.timeSlotTextMobile,
-                          nativeTanChrome && styles.timeSlotTextBookGroundNative,
-                          isBoxCricket && styles.timeSlotTextDense,
-                          active && styles.timeSlotTextActive,
-                        ]}
-                      >
-                        {s.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })
-              )}
-            </ScrollView>
-          )}
+                      {s.label}
+                    </Text>
+                  </Pressable>
+                );
+              })
+            )}
+          </View>
         </View>
       )}
 
@@ -2468,16 +2449,32 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                 </Text>
               )}
             </Text>
-            {isNets ? (
+            {supportMultipleSlots ? (
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginTop: 4 }}>
-                <Text style={[styles.summaryMuted, groundPageAccent && !isWeb && styles.summaryMutedGroundMobile, { marginTop: 0 }]}>Nets: </Text>
-                {selectedNetsSlots.map(s => (
-                  <View key={s} style={{ backgroundColor: 'rgba(1, 184, 84, 0.1)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(1, 184, 84, 0.3)' }}>
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#01b854' }}>
-                      {`${formatTime(s)} (${formatCurrency(slotPriceByStartTime[s] ?? selectedGround?.base_price_per_hour ?? 0)})`}
-                    </Text>
-                  </View>
-                ))}
+                <Text style={[styles.summaryMuted, groundPageAccent && !isWeb && styles.summaryMutedGroundMobile, { marginTop: 0 }]}>{isNets ? 'Nets: ' : 'Slots: '}</Text>
+                {selectedNetsSlots.map(s => {
+                  const parts = s.split('__');
+                  const date = parts[0];
+                  const time = parts[1];
+                  const slotTeamType = parts[2] || teamType;
+                  
+                  const isCurrentDate = date === bookingDate;
+                  const label = isCurrentDate ? formatTime(time) : `${formatDateDDMMYYYY(date)} ${formatTime(time)}`;
+                  
+                  let price = pricesByDate[date]?.[time] ?? slotPriceByStartTime[time] ?? selectedGround?.base_price_per_hour ?? 0;
+                  if (isCricketGroundType) {
+                    const factor = slotTeamType === 'one' ? 0.5 : 1.0;
+                    price = price * factor;
+                  }
+                  
+                  return (
+                    <View key={s} style={{ backgroundColor: 'rgba(1, 184, 84, 0.1)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(1, 184, 84, 0.3)' }}>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#01b854' }}>
+                        {`${label}${!isNets ? ` (${slotTeamType === 'one' ? '1 Team' : 'Both'})` : ''} (${formatCurrency(price)})`}
+                      </Text>
+                    </View>
+                  );
+                })}
               </View>
             ) : (
               <Text
@@ -2616,10 +2613,10 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     paddingHorizontal: 16,
   },
   premiumGlassButton: {
-    backgroundColor: Platform.OS === 'web' ? 'rgba(1, 184, 84, 0.4)' : '#01b854',
+    backgroundColor: Platform.OS === 'web' ? 'rgba(1, 184, 84, 0.7)' : '#01b854',
     borderRadius: 100,
     borderWidth: 1,
-    borderColor: Platform.OS === 'web' ? 'rgba(0, 234, 107, 0.5)' : '#01b854',
+    borderColor: Platform.OS === 'web' ? 'rgba(0, 234, 107, 0.8)' : '#01b854',
     ...Platform.select({
       web: {
         backdropFilter: 'blur(12px)',
@@ -2877,11 +2874,11 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
   teamToggleOption: {
     flex: 1,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    minHeight: 48,
+    paddingVertical: 6,
+    minHeight: 40,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 16,
+    borderRadius: 12,
     backgroundColor: '#F8FAFC',
     alignItems: 'center',
     justifyContent: 'center',
@@ -3336,7 +3333,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     }),
   },
   dropdownButtonTextSelectedGroundPage: {
-    fontWeight: '800',
+    fontWeight: '500',
     ...Platform.select({
       web: { color: isLight ? '#64748B' : '#64748B' },
       default: { color: isLight ? '#64748B' : '#dcc093' },
@@ -3387,7 +3384,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     alignSelf: 'stretch',
   },
   dateChip: {
-    paddingVertical: 8,
+    paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 12,
     borderWidth: 1,
@@ -3396,7 +3393,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     alignItems: 'center',
     justifyContent: 'center',
     minWidth: 64,
-    minHeight: 48,
+    minHeight: 40,
   },
   /** Mobile-only: smaller chip for compact horizontal scrolling. */
   dateChipMobile: {
@@ -3504,15 +3501,29 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     gap: 6,
   },
   timeSlotChip: {
-    paddingVertical: 8,
-    paddingHorizontal: 18,
-    borderRadius: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     backgroundColor: '#F8FAFC',
-    minHeight: 48,
+    minHeight: 40,
     justifyContent: 'center',
     alignItems: 'center',
+    ...Platform.select({
+      web: {
+        flexBasis: '23.5%',
+        maxWidth: '23.5%',
+      },
+    }),
+  },
+  timeSlotChipCompact: {
+    ...Platform.select({
+      web: {
+        flexBasis: '31%',
+        maxWidth: '31%',
+      },
+    }),
   },
   timeSlotChipBorderBookGroundNative: {
     borderColor: '#E5E7EB',
@@ -3549,16 +3560,16 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     borderColor: '#64748B',
   },
   timeSlotText: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '400',
     fontFamily: 'Inter',
     color: isLight ? '#374151' : '#FFFFFF',
   },
   timeSlotTextMobile: {
-    fontSize: 12,
+    fontSize: 10,
   },
   timeSlotTextDense: {
-    fontSize: 11,
+    fontSize: 9,
   },
   timeSlotTextActive: {
     color: '#059669',

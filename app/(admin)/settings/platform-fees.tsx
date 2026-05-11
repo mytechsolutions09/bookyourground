@@ -56,7 +56,8 @@ export default function PlatformFeesSettings() {
         { key: 'nets_owner_fee_fixed',    default: 25,  desc: 'Fixed fee per booking per slot for nets/lanes (Owner self-booking)' },
         { key: 'user_platform_fee_rate',  default: 0.05, desc: 'Platform fee rate for users (e.g. 0.05 for 5%)' },
         { key: 'nets_user_fee_rate',   default: 0.10, desc: 'Platform fee rate for users on nets/lanes (e.g. 0.10 for 10%)' },
-        { key: 'gst_rate',                default: 0.18, desc: 'GST rate (e.g. 0.18 for 18%)' }
+        { key: 'gst_rate',                default: 0.18, desc: 'GST rate (e.g. 0.18 for 18%)' },
+        { key: 'cancellation_days',       default: 7,    desc: 'Days before slot during which cancellation is allowed for full refund' }
       ];
 
       const existingKeys = loadedSettings.map(s => s.key);
@@ -267,6 +268,7 @@ export default function PlatformFeesSettings() {
       case 'user_platform_fee_rate': return 'User Platform Fee Rate';
       case 'nets_user_fee_rate': return 'Nets User Platform Fee Rate';
       case 'gst_rate': return 'GST Rate';
+      case 'cancellation_days': return 'Cancellation Days';
       default: return key;
     }
   };
@@ -293,7 +295,7 @@ export default function PlatformFeesSettings() {
       
       <View style={[styles.cell, { flex: 2, alignItems: 'flex-end' }]}>
         <Text style={styles.cellText}>
-          {item.key.includes('_fixed') ? `₹${item.value}` : `${(item.value * 100).toFixed(0)}%`}
+          {item.key.includes('_fixed') ? `₹${item.value}` : item.key === 'cancellation_days' ? `${item.value} days` : `${(item.value * 100).toFixed(0)}%`}
         </Text>
       </View>
 

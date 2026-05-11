@@ -473,7 +473,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
                   style={styles.tab}
                   onPress={() => router.push('/book-my-ground')}
                 >
-                  <Text style={styles.tabText}>Book a Ground</Text>
+                  <Text style={styles.tabText}>Book a Venue</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.tab, styles.activeTab]}
@@ -536,7 +536,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
                 style={styles.tab}
                 onPress={() => router.push('/book-my-ground')}
               >
-                <Text style={styles.tabText}>Book a Ground</Text>
+                <Text style={styles.tabText}>Book a Venue</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.tab, styles.activeTab]}

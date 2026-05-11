@@ -317,7 +317,7 @@ export default function GroundDetailsPrettyUrlScreen() {
           showsVerticalScrollIndicator={false}
         >
 
-        <View style={styles.content}>
+        <View style={[styles.content, isWeb && isCompact && { paddingTop: 12 }]}>
           {/* ── Hero Gallery ── */}
           {IS_WEB ? (
             isLargeWeb ? (
@@ -375,6 +375,9 @@ export default function GroundDetailsPrettyUrlScreen() {
                     <View style={[styles.webMapContainer, { height: 520 }]}>
                       <WebMap ground={ground} mapsUrl={mapsUrl} />
                     </View>
+                  </Card>
+
+                  <Card style={[styles.section, { marginTop: 16, borderRadius: 24, padding: 0, overflow: 'hidden' }]}>
                     <View style={styles.mapActionsContainer}>
                       <Button
                         title={isFavorite ? "Favourited" : "Favourite"}
@@ -393,7 +396,15 @@ export default function GroundDetailsPrettyUrlScreen() {
                         variant="outline"
                         icon={Navigation2}
                         iconSize={16}
-                        onPress={() => mapsUrl && Linking.openURL(mapsUrl)}
+                        onPress={async () => {
+                          if (mapsUrl) {
+                            try {
+                              await Linking.openURL(mapsUrl);
+                            } catch (err) {
+                              console.error('Failed to open maps URL:', err);
+                            }
+                          }
+                        }}
                         style={styles.mapActionBtn}
                         textStyle={{ color: '#01b854', fontSize: 12 }}
                       />
@@ -592,7 +603,15 @@ export default function GroundDetailsPrettyUrlScreen() {
                   </Text>
                 </View>
                 {mapsUrl && (
-                  <Pressable onPress={() => Linking.openURL(mapsUrl)} style={styles.mapsLinkWrap}>
+                  <Pressable onPress={async () => {
+                    if (mapsUrl) {
+                      try {
+                        await Linking.openURL(mapsUrl);
+                      } catch (err) {
+                        console.error('Failed to open maps URL:', err);
+                      }
+                    }
+                  }} style={styles.mapsLinkWrap}>
                     <MapPin size={14} color="#01b854" />
                     <Text style={styles.mapsLinkText}>Get Directions</Text>
                   </Pressable>
@@ -672,7 +691,15 @@ export default function GroundDetailsPrettyUrlScreen() {
                     <NativeMap ground={ground} />
                     {mapsUrl && (
                       <Pressable 
-                        onPress={() => Linking.openURL(mapsUrl)} 
+                        onPress={async () => {
+                          if (mapsUrl) {
+                            try {
+                              await Linking.openURL(mapsUrl);
+                            } catch (err) {
+                              console.error('Failed to open maps URL:', err);
+                            }
+                          }
+                        }} 
                         style={[styles.mapsLinkWrap, { position: 'absolute', bottom: 12, right: 12, backgroundColor: '#FFFFFF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, flexDirection: 'row', alignItems: 'center', gap: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 }]}
                       >
                         <Navigation2 size={14} color="#01b854" strokeWidth={2.5} />
@@ -935,7 +962,15 @@ function WebMap({ ground, mapsUrl }: { ground: GroundWithImages, mapsUrl: string
                       {ground.address}, {ground.city}
                     </Text>
                     <TouchableOpacity 
-                      onPress={() => mapsUrl && Linking.openURL(mapsUrl)}
+                      onPress={async () => {
+                        if (mapsUrl) {
+                          try {
+                            await Linking.openURL(mapsUrl);
+                          } catch (err) {
+                            console.error('Failed to open maps URL:', err);
+                          }
+                        }
+                      }}
                       style={{ 
                         backgroundColor: '#10B981', 
                         paddingVertical: 6, 
@@ -1210,8 +1245,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     padding: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
     backgroundColor: '#FFFFFF',
   },
   mapActionBtn: {
@@ -1490,22 +1523,17 @@ const styles = StyleSheet.create({
   // ── Section card ─────────────────────────────────────
   section: {
     marginBottom: 12,
-    ...Platform.select({
-      default: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 24,
-        padding: 20,
-        marginTop: 12,
-        borderWidth: 1,
-        borderColor: '#F1F5F9',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-        elevation: 2,
-      },
-      web: {},
-    }),
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 20,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
 
   // ── Name / location / rating ──────────────────────────

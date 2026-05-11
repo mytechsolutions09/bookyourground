@@ -158,6 +158,33 @@ export default function CricketLayout() {
 
   const [tabMeasurements, setTabMeasurements] = React.useState<any[]>([]);
   const [dynamicTags, setDynamicTags] = useState<PlayerTag[]>([]);
+  const rawTabMeasurements = React.useRef<Array<{x?: number, width?: number, textWidth?: number}>>([]);
+
+  const updateTabMeasurement = (index: number, data: {x?: number, width?: number, textWidth?: number}) => {
+    rawTabMeasurements.current[index] = { ...rawTabMeasurements.current[index], ...data };
+    const current = rawTabMeasurements.current[index];
+    
+    if (Platform.OS === 'web') {
+      if (current.x !== undefined && current.width !== undefined && current.textWidth !== undefined) {
+        setTabMeasurements(prev => {
+          const next = [...prev];
+          next[index] = {
+            x: current.x! + (current.width! - current.textWidth!) / 2,
+            width: current.textWidth!
+          };
+          return next;
+        });
+      }
+    } else {
+      if (current.x !== undefined && current.width !== undefined) {
+        setTabMeasurements(prev => {
+          const next = [...prev];
+          next[index] = { x: current.x!, width: current.width! };
+          return next;
+        });
+      }
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -690,6 +717,13 @@ export default function CricketLayout() {
   const horizontalScrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
       horizontalOffset.value = event.contentOffset.x;
+      if (Platform.OS === 'web') {
+        const index = Math.round(event.contentOffset.x / (measuredPagerWidth || windowWidth));
+        if (index !== activeTabIndex.value) {
+          activeTabIndex.value = index;
+          runOnJS(syncTabState)(index);
+        }
+      }
     },
     onMomentumEnd: (event) => {
       if (isScrollingProgrammatically.current) return;
@@ -892,7 +926,7 @@ export default function CricketLayout() {
               contentContainerStyle={styles.tabsScroll} 
               style={{ flex: 1 }}
             >
-              <Animated.View style={[styles.mainTabIndicator, mainIndicatorStyle]} />
+              {Platform.OS !== 'web' && <Animated.View style={[styles.mainTabIndicator, mainIndicatorStyle]} />}
               
               {TABS.map((tab) => (
                 <TouchableOpacity 
@@ -901,20 +935,27 @@ export default function CricketLayout() {
                   onPress={() => onTabPress(tab.id, tab.index)}
                   onLayout={(e) => {
                     const { x, width } = e.nativeEvent.layout;
-                    setTabMeasurements(prev => {
-                      const next = [...prev];
-                      next[tab.index] = { x, width };
-                      return next;
-                    });
+                    updateTabMeasurement(tab.index, { x, width });
                   }}
                   activeOpacity={0.7}
                 >
-                  <Text style={[
-                    styles.tabText, 
-                    activeTabId === tab.id && styles.tabTextActive
-                  ]}>
-                    {tab.label}
-                  </Text>
+                  <View 
+                    style={[
+                      Platform.OS === 'web' && styles.tabTextWrapperWeb,
+                      activeTabId === tab.id && Platform.OS === 'web' && styles.tabTextWrapperActiveWeb
+                    ]}
+                    onLayout={(e) => {
+                      const { width: textWidth } = e.nativeEvent.layout;
+                      updateTabMeasurement(tab.index, { textWidth });
+                    }}
+                  >
+                    <Text style={[
+                      styles.tabText, 
+                      activeTabId === tab.id && styles.tabTextActive
+                    ]}>
+                      {tab.label}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -1351,9 +1392,17 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   tab: {
-    paddingBottom: 8,
+    paddingBottom: Platform.OS === 'web' ? 4 : 8,
     paddingHorizontal: 4,
     alignItems: 'center',
+  },
+  tabTextWrapperWeb: {
+    paddingBottom: 4,
+    alignSelf: 'center',
+  },
+  tabTextWrapperActiveWeb: {
+    borderBottomWidth: 3,
+    borderBottomColor: '#01b854',
   },
   tabText: {
     fontSize: 14,

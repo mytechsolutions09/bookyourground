@@ -141,6 +141,7 @@ export default function MobileTabBar() {
   const isSmallWeb = Platform.OS === 'web' && width < 768;
 
   if (Platform.OS === 'web' && !isSmallWeb) return null;
+  if (Platform.OS === 'web' && segments[0] === 'search') return null;
 
   const activeTab = getActiveTab(segments as string[]);
   const { setTabAnimation } = useUI();
@@ -198,7 +199,7 @@ export default function MobileTabBar() {
           onPress={() => go('/book-my-ground', 'grounds')}
         >
           <LandPlot size={size} color={activeTab === 'grounds' ? ACTIVE : INACTIVE} strokeWidth={activeTab === 'grounds' ? 2.5 : 2} />
-          <Text style={[styles.label, { color: activeTab === 'grounds' ? ACTIVE : INACTIVE }]}>Grounds</Text>
+          <Text style={[styles.label, { color: activeTab === 'grounds' ? ACTIVE : INACTIVE }]}>Venue</Text>
         </Pressable>
       )}
       

@@ -161,7 +161,7 @@ export default function BookMyGroundPage() {
         {width < 900 && (
           <Animated.View style={[styles.headerContainerFixed, { paddingTop: insets.top }, headerAnimatedStyle]}>
             <MobileAppNavbar
-              title="Book a ground"
+              title="Book a venue"
               titleColor="#0F172A"
               lightBg
             />
@@ -169,7 +169,7 @@ export default function BookMyGroundPage() {
               <TouchableOpacity
                 style={[styles.tab, styles.activeTab]}
               >
-                <Text style={styles.activeTabText}>Book a Ground</Text>
+                <Text style={styles.activeTabText}>Book a Venue</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.tab}
@@ -214,12 +214,12 @@ export default function BookMyGroundPage() {
   return (
     <View style={styles.nativeRoot}>
       <Animated.View style={[{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000, backgroundColor: '#FFFFFF' }, headerAnimatedStyle]}>
-        <MobileAppNavbar title="Book a ground" titleColor="#0F172A" lightBg />
+        <MobileAppNavbar title="Book a venue" titleColor="#0F172A" lightBg />
         <View style={styles.tabContainer}>
           <TouchableOpacity
             style={[styles.tab, styles.activeTab]}
           >
-            <Text style={styles.activeTabText}>Book a Ground</Text>
+            <Text style={styles.activeTabText}>Book a Venue</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.tab}

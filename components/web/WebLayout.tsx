@@ -704,7 +704,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
         (isLanding || isMarketing) && styles.containerLanding,
       ]}
     >
-      {!hideHeader && showHeroHeader && !(isCheckoutPage && isCompact) && (
+      {!hideHeader && showHeroHeader && !isCheckoutPage && !(isGroundInfoPage && isCompact) && (
         <View
           style={[
             styles.heroHeader,
@@ -959,7 +959,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
         </View>
       )}
 
-      {!hideHeader && !isLanding && !isMarketing && (!isGroundDetails || isOwnerGroundsDashboard) && !(isCheckoutPage && isCompact) && !shouldHideAppHeader && (
+      {!hideHeader && !isLanding && !isMarketing && (!isGroundDetails || isOwnerGroundsDashboard) && !isCheckoutPage && !shouldHideAppHeader && (
         <View
           style={[
             styles.header,
@@ -1354,7 +1354,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
         </View>
       </View>
 
-      {isCompact && !isInTabs && !isCheckoutPage && (
+      {isCompact && !isInTabs && !isCheckoutPage && cleanPath !== '/search' && !isGroundInfoPage && (
         <View style={[
           styles.bottomBar,
           (!isBottomBarVisible || !isTabBarVisible) && { 
@@ -1364,7 +1364,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
         ]}>
           {[
             { label: 'Home', icon: House, href: '/' },
-            { label: 'Grounds', icon: LandPlot, href: '/book-my-ground' },
+            { label: 'Venue', icon: LandPlot, href: '/book-my-ground' },
             { label: 'Search', icon: Search, href: '/search' },
             { label: 'Shop', icon: ShoppingBag, href: '/shop' },
             { label: 'Cricket', icon: Trophy, href: '/cricket/player-profile' },

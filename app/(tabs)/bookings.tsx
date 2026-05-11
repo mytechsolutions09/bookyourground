@@ -293,16 +293,26 @@ export default function BookingsScreen() {
     }
   };
 
+  const [cancellationDays, setCancellationDays] = useState(7);
+
+  useEffect(() => {
+    const fetchPolicy = async () => {
+      const { data } = await supabase.from('platform_settings').select('value').eq('key', 'cancellation_days').single();
+      if (data) setCancellationDays(Number(data.value));
+    };
+    fetchPolicy();
+  }, []);
+
   const handleCancelBooking = async (booking: BookingWithDetails) => {
-    // 7-day restriction
+    // Dynamic restriction
     const bDate = new Date(booking.booking_date);
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const bDay = new Date(bDate.getFullYear(), bDate.getMonth(), bDate.getDate());
     const diffDays = Math.ceil((bDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
-    if (diffDays < 7) {
-      const msg = 'Bookings can only be cancelled at least 7 days before the slot time. For urgent queries, please contact support.';
+    if (diffDays < cancellationDays) {
+      const msg = `Bookings can only be cancelled at least ${cancellationDays} days before the slot time. For urgent queries, please contact support.`;
       if (Platform.OS === 'web') alert(msg);
       else Alert.alert('Cancellation Policy', msg);
       return;

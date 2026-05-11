@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Platform, TextInput, Switch, Alert, Modal, ScrollView as RNScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, TouchableOpacity, Platform, TextInput, Switch, Alert, Modal, ScrollView as RNScrollView, useWindowDimensions } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { Profile } from '@/types';
 import Card from '@/components/ui/Card';
@@ -24,6 +24,11 @@ type OwnerRow = Profile & {
 };
 
 export default function ManageGroundOwnersScreen() {
+  const { width } = useWindowDimensions();
+  const isWeb = Platform.OS === 'web';
+  const isSmallWeb = isWeb && width < 900;
+  const isMobile = width < 768;
+
   const [owners, setOwners] = useState<OwnerRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -167,7 +172,8 @@ export default function ManageGroundOwnersScreen() {
 
   const renderOwnerItem = ({ item }: { item: OwnerRow }) => {
 
-    if (Platform.OS === 'web') {
+    const isWebInternal = Platform.OS === 'web';
+    if (isWebInternal && !isSmallWeb) {
       const feeEnabled = item.charge_platform_fee !== false;
       return (
         <>
@@ -282,15 +288,18 @@ export default function ManageGroundOwnersScreen() {
 
   const content = (
     <View style={styles.container}>
-      {Platform.OS === 'web' && (
-        <View style={styles.headerArea}>
-          <View style={styles.headerTop}>
+      {isWeb && (
+        <View style={[styles.headerArea, (isMobile || isSmallWeb) && { padding: 16 }]}>
+          <View style={[
+            styles.headerTop,
+            (isMobile || isSmallWeb) && { flexDirection: 'column', alignItems: 'stretch', gap: 12 }
+          ]}>
             <View>
               <Text style={styles.title}>Venue Owners</Text>
               <Text style={styles.subtitle}>{owners.length} registered partners</Text>
             </View>
             
-            <View style={styles.searchContainer}>
+            <View style={[styles.searchContainer, (isMobile || isSmallWeb) && { maxWidth: '100%' }]}>
               <Search size={18} color="#6B7280" style={styles.searchIcon} />
               <TextInput
                 style={styles.searchInput}
@@ -303,7 +312,7 @@ export default function ManageGroundOwnersScreen() {
         </View>
       )}
 
-      {Platform.OS === 'web' && (
+      {isWeb && !isSmallWeb && (
         <View style={styles.tableHeaderContainer}>
            <Text style={[styles.headerLabel, styles.colOwner]}>Business / Owner</Text>
            <Text style={[styles.headerLabel, styles.colContact]}>Contact Details</Text>
@@ -317,7 +326,10 @@ export default function ManageGroundOwnersScreen() {
       <FlatList
         data={filteredOwners}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[
+          styles.list,
+          (isMobile || isSmallWeb) && { padding: 16 }
+        ]}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadOwners} />}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>

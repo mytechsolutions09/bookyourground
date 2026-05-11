@@ -650,8 +650,13 @@ serve(async (req) => {
 
         if (slots && Array.isArray(slots) && slots.length > 0) {
           console.log(`[Cash] Creating multiple bookings for slots: ${slots.join(', ')}`);
-          const bookingsToInsert = slots.map((slotTime: string) => {
-            const [hours, minutes] = slotTime.split(':').map(Number);
+          const bookingsToInsert = slots.map((slotStr: string) => {
+            const parts = slotStr.split('__');
+            const datePart = parts[0];
+            const timePart = parts[1] || slotStr;
+            const slotTeamType = parts[2] || team_type;
+            
+            const [hours, minutes] = timePart.split(':').map(Number);
             const duration = bookingDetails.slotDuration || 20;
             const totalMinutes = hours * 60 + minutes + duration;
             const endHours = Math.floor(totalMinutes / 60) % 24;
@@ -661,8 +666,8 @@ serve(async (req) => {
             return {
               user_id: user.id,
               ground_id,
-              booking_date,
-              start_time: slotTime,
+              booking_date: datePart,
+              start_time: timePart,
               end_time: endTime,
               total_hours: duration / 60,
               price_per_hour: pricePerHour / slots.length,
@@ -678,7 +683,7 @@ serve(async (req) => {
               coupon_id,
               discount_amount: discountAmount / slots.length,
               booked_for_name: bookingDetails.booked_for_name || bookingDetails.bookedForName,
-              notes: (team_type === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Slots: ${slots.join(', ')}) (Duration: ${duration}) (Player: ${bookingDetails.booked_for_name || bookingDetails.bookedForName || 'Manual Entry'})` + ' (Cash Payment confirmed by Owner)',
+              notes: (slotTeamType === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Slots: ${slots.join(', ')}) (Duration: ${duration}) (Player: ${bookingDetails.booked_for_name || bookingDetails.bookedForName || 'Manual Entry'})` + ' (Cash Payment confirmed by Owner)',
               status: 'confirmed',
               payment_method: 'cash',
             };
@@ -981,31 +986,37 @@ serve(async (req) => {
 
         if (slots && Array.isArray(slots) && slots.length > 0) {
           console.log(`[Razorpay] Creating multiple bookings for slots: ${slots.join(', ')}`);
-          const bookingsToInsert = slots.map((slotTime: string) => ({
-            user_id: user.id,
-            ground_id,
-            booking_date,
-            start_time: slotTime,
-            total_hours: 1,
-            price_per_hour: pricePerHour / slots.length,
-            total_amount: netAmount / slots.length,
-            ground_price: groundPrice / slots.length,
-            platform_fee_user: platformFeeUser / slots.length,
-            platform_fee_owner: platformFeeOwner / slots.length,
-            gst_user: gstUser / slots.length,
-            gst_owner: gstOwner / slots.length,
-            total_charged: totalCharged / slots.length,
-            owner_settlement: ownerSettlement / slots.length,
-            byg_net_revenue: bygNetRevenue / slots.length,
-            razorpay_order_id,
-            razorpay_transfer_id: razorpayTransferId,
-            coupon_id,
-            discount_amount: discountAmount / slots.length,
-            notes: (team_type === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Slot: ${slotTime})` + ` (Paid via Razorpay: ${razorpay_payment_id})`,
-            status: 'confirmed',
-            payment_method: (bookingDetails.wallet_amount ?? 0) > 0 ? 'split_wallet_razorpay' : 'razorpay',
-            payment_received: true,
-          }));
+          const bookingsToInsert = slots.map((slotStr: string) => {
+            const parts = slotStr.split('__');
+            const datePart = parts[0];
+            const timePart = parts[1] || slotStr;
+            const slotTeamType = parts[2] || team_type;
+            return {
+              user_id: user.id,
+              ground_id,
+              booking_date: datePart,
+              start_time: timePart,
+              total_hours: 1,
+              price_per_hour: pricePerHour / slots.length,
+              total_amount: netAmount / slots.length,
+              ground_price: groundPrice / slots.length,
+              platform_fee_user: platformFeeUser / slots.length,
+              platform_fee_owner: platformFeeOwner / slots.length,
+              gst_user: gstUser / slots.length,
+              gst_owner: gstOwner / slots.length,
+              total_charged: totalCharged / slots.length,
+              owner_settlement: ownerSettlement / slots.length,
+              byg_net_revenue: bygNetRevenue / slots.length,
+              razorpay_order_id,
+              razorpay_transfer_id: razorpayTransferId,
+              coupon_id,
+              discount_amount: discountAmount / slots.length,
+              notes: (slotTeamType === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Slot: ${timePart})` + ` (Paid via Razorpay: ${razorpay_payment_id})`,
+              status: 'confirmed',
+              payment_method: (bookingDetails.wallet_amount ?? 0) > 0 ? 'split_wallet_razorpay' : 'razorpay',
+              payment_received: true,
+            };
+          });
 
           const { data: newBookings, error: insertError } = await supabaseClient
             .from('bookings')
@@ -1148,29 +1159,35 @@ serve(async (req) => {
 
         if (slots && Array.isArray(slots) && slots.length > 0) {
           console.log(`[Wallet] Creating multiple bookings for slots: ${slots.join(', ')}`);
-          const bookingsToInsert = slots.map((slotTime: string) => ({
-            user_id: user.id,
-            ground_id: details.ground_id,
-            booking_date: details.booking_date,
-            start_time: slotTime,
-            total_hours: 1,
-            price_per_hour: breakdown.pricePerHour / slots.length,
-            total_amount: breakdown.netAmount / slots.length,
-            ground_price: breakdown.groundPrice / slots.length,
-            platform_fee_user: breakdown.platformFeeUser / slots.length,
-            platform_fee_owner: breakdown.platformFeeOwner / slots.length,
-            gst_user: breakdown.gstUser / slots.length,
-            gst_owner: breakdown.gstOwner / slots.length,
-            total_charged: breakdown.totalCharged / slots.length,
-            owner_settlement: breakdown.ownerSettlement / slots.length,
-            byg_net_revenue: breakdown.bygNetRevenue / slots.length,
-            coupon_id: details.coupon_id,
-            discount_amount: breakdown.discountAmount / slots.length,
-            status: 'confirmed',
-            payment_method: 'wallet',
-            payment_received: true,
-            notes: (details.team_type === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Slot: ${slotTime}) (Paid via Wallet)`,
-          }));
+          const bookingsToInsert = slots.map((slotStr: string) => {
+            const parts = slotStr.split('__');
+            const datePart = parts[0];
+            const timePart = parts[1] || slotStr;
+            const slotTeamType = parts[2] || details.team_type;
+            return {
+              user_id: user.id,
+              ground_id: details.ground_id,
+              booking_date: datePart,
+              start_time: timePart,
+              total_hours: 1,
+              price_per_hour: breakdown.pricePerHour / slots.length,
+              total_amount: breakdown.netAmount / slots.length,
+              ground_price: breakdown.groundPrice / slots.length,
+              platform_fee_user: breakdown.platformFeeUser / slots.length,
+              platform_fee_owner: breakdown.platformFeeOwner / slots.length,
+              gst_user: breakdown.gstUser / slots.length,
+              gst_owner: breakdown.gstOwner / slots.length,
+              total_charged: breakdown.totalCharged / slots.length,
+              owner_settlement: breakdown.ownerSettlement / slots.length,
+              byg_net_revenue: breakdown.bygNetRevenue / slots.length,
+              coupon_id: details.coupon_id,
+              discount_amount: breakdown.discountAmount / slots.length,
+              status: 'confirmed',
+              payment_method: 'wallet',
+              payment_received: true,
+              notes: (slotTeamType === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Slot: ${timePart}) (Paid via Wallet)`,
+            };
+          });
 
           const { data: newBookings, error: insertError } = await supabaseClient
             .from('bookings')
@@ -1267,8 +1284,10 @@ serve(async (req) => {
         const bDay = new Date(bDate.getFullYear(), bDate.getMonth(), bDate.getDate());
         const diffDays = Math.ceil((bDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
-        if (diffDays < 7) {
-          throw new Error('Bookings can only be cancelled at least 7 days before the slot. Please contact support for urgent requests.');
+        const cancellationDays = Number(settings?.cancellation_days ?? 7);
+
+        if (diffDays < cancellationDays) {
+          throw new Error(`Bookings can only be cancelled at least ${cancellationDays} days before the slot. Please contact support for urgent requests.`);
         }
       }
 

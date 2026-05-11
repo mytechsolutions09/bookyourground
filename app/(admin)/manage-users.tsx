@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, TouchableOpacity, Platform, TextInput, Switch } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, TouchableOpacity, Platform, TextInput, Switch, useWindowDimensions } from 'react-native';
 import { User, Shield, Search, X, Mail, Phone, Calendar, ChevronRight, UserCircle2, Trash2, MapPin } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { Profile } from '@/types';
@@ -12,6 +12,11 @@ import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 
 export default function ManageUsersScreen() {
+  const { width } = useWindowDimensions();
+  const isWeb = Platform.OS === 'web';
+  const isSmallWeb = isWeb && width < 900;
+  const isMobile = width < 768;
+
   const { user } = useAuth();
   const [users, setUsers] = useState<(Profile & { 
     wallets?: { balance: number }[],
@@ -555,10 +560,13 @@ export default function ManageUsersScreen() {
 
   const content = (
     <View style={styles.container}>
-      {Platform.OS === 'web' && (
-        <View style={styles.headerArea}>
-          <View style={styles.headerFiltersRow}>
-            <View style={styles.searchContainer}>
+      {isWeb && (
+        <View style={[styles.headerArea, (isMobile || isSmallWeb) && { paddingBottom: 16 }]}>
+          <View style={[
+            styles.headerFiltersRow,
+            (isMobile || isSmallWeb) && { flexDirection: 'column', alignItems: 'stretch', gap: 12 }
+          ]}>
+            <View style={[styles.searchContainer, (isMobile || isSmallWeb) && { maxWidth: '100%' }]}>
               <Search size={16} color="#6B7280" style={styles.searchIcon} />
               <TextInput
                 style={styles.searchInput}
@@ -575,47 +583,58 @@ export default function ManageUsersScreen() {
               )}
             </View>
 
-            <FilterDropdown 
-              id="role" 
-              label="System Role" 
-              value={roleFilter}
-              options={[
-                { key: 'all', label: 'All Roles' },
-                { key: 'user', label: 'Players' },
-                { key: 'ground_owner', label: 'Owners' },
-                { key: 'super_admin', label: 'Admins' },
-              ]}
-              onSelect={setRoleFilter}
-            />
+            <View style={[
+              { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+              (isMobile || isSmallWeb) && { justifyContent: 'space-between' }
+            ]}>
+              <View style={(isMobile || isSmallWeb) ? { flex: 1, minWidth: '48%' } : {}}>
+                <FilterDropdown 
+                  id="role" 
+                  label="Role" 
+                  value={roleFilter}
+                  options={[
+                    { key: 'all', label: 'All Roles' },
+                    { key: 'user', label: 'Players' },
+                    { key: 'ground_owner', label: 'Owners' },
+                    { key: 'super_admin', label: 'Admins' },
+                  ]}
+                  onSelect={setRoleFilter}
+                />
+              </View>
 
-            <FilterDropdown 
-              id="status" 
-              label="Account Status" 
-              value={statusFilter}
-              options={[
-                { key: 'all', label: 'All Status' },
-                { key: 'active', label: 'Active Only' },
-                { key: 'inactive', label: 'Inactive Only' },
-              ]}
-              onSelect={setStatusFilter}
-            />
+              <View style={(isMobile || isSmallWeb) ? { flex: 1, minWidth: '48%' } : {}}>
+                <FilterDropdown 
+                  id="status" 
+                  label="Status" 
+                  value={statusFilter}
+                  options={[
+                    { key: 'all', label: 'All Status' },
+                    { key: 'active', label: 'Active Only' },
+                    { key: 'inactive', label: 'Inactive Only' },
+                  ]}
+                  onSelect={setStatusFilter}
+                />
+              </View>
 
-            <FilterDropdown 
-              id="wallet" 
-              label="Wallet Balance" 
-              value={walletFilter}
-              options={[
-                { key: 'all', label: 'All Balance' },
-                { key: 'has_balance', label: 'Positive Balance' },
-                { key: 'zero_balance', label: 'Zero Balance' },
-              ]}
-              onSelect={setWalletFilter}
-            />
+              <View style={(isMobile || isSmallWeb) ? { flex: 1, minWidth: '100%' } : {}}>
+                <FilterDropdown 
+                  id="wallet" 
+                  label="Wallet Balance" 
+                  value={walletFilter}
+                  options={[
+                    { key: 'all', label: 'All Balance' },
+                    { key: 'has_balance', label: 'Positive Balance' },
+                    { key: 'zero_balance', label: 'Zero Balance' },
+                  ]}
+                  onSelect={setWalletFilter}
+                />
+              </View>
+            </View>
           </View>
         </View>
       )}
 
-      {Platform.OS === 'web' && (
+      {isWeb && !isSmallWeb && (
         <View style={styles.webTableHeader}>
            <Text style={[styles.headerLabel, styles.colUser]}>User Profile</Text>
            <Text style={[styles.headerLabel, styles.colContact]}>Contact info</Text>
@@ -633,9 +652,12 @@ export default function ManageUsersScreen() {
 
       <FlatList
         data={filteredUsers}
-        renderItem={Platform.OS === 'web' ? renderWebUser : renderMobileUser}
+        renderItem={(isWeb && !isSmallWeb) ? renderWebUser : renderMobileUser}
         keyExtractor={item => item.id}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[
+          styles.list,
+          (isMobile || isSmallWeb) && { padding: 16 }
+        ]}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadUsers} />}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>

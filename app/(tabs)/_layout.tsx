@@ -182,7 +182,7 @@ export default function TabLayout() {
             name="grounds"
             options={{
               href: Platform.OS === 'web' ? null : undefined,
-              title: 'Grounds',
+              title: 'Venue',
               tabBarIcon: ({ color, size }) => <LandPlot size={size} color={color} />,
             }}
           />

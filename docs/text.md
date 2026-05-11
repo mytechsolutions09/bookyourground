@@ -36,3 +36,6 @@ git checkout main
 git merge --no-ff dev -m "Merge dev into main"
 git push origin main
 
+
+
+once the teams and slot is selected and then teams are changes, it should not affect the selected teams and slots

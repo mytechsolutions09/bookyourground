@@ -279,7 +279,7 @@ export default function HeroWeb() {
         />
       )}
       
-      <View style={[styles.container, !isMobile && { marginTop: 0 }]}>
+      <View style={[styles.container, !isMobile && { marginTop: width > 1200 ? 120 : 60 }]}>
         <View style={styles.content}>
           <Text style={[
             styles.title,

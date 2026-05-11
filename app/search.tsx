@@ -217,7 +217,10 @@ export default function SearchScreen() {
 
       if (mError) console.error('Match search error:', mError);
 
-      let filteredMs = ms || [];
+      // Filter out nets from matchmaking results
+      let filteredMs = (ms || []).filter((m: any) => 
+        !String(m.ground?.pitch_type ?? '').toLowerCase().includes('nets')
+      );
 
       // Manual filtering for keywords/location/type on match results
       if (s.trim() || locKey || typKey) {
@@ -412,7 +415,11 @@ export default function SearchScreen() {
   };
 
   const combinedResults = useMemo(() => {
-    let filteredMatches = results.matches;
+    // Filter out nets from matches
+    let filteredMatches = results.matches.filter((m: any) => 
+      !String(m.ground?.pitch_type ?? '').toLowerCase().includes('nets')
+    );
+
     if (dateKey !== 'All') {
       const today = new Date().toISOString().split('T')[0];
       if (dateKey === 'Today') {
@@ -604,7 +611,7 @@ export default function SearchScreen() {
                 <Pressable style={styles.mobileFilterPill} onPress={() => setShowTypeModal(true)}>
                   <Building2 size={12} color={typeKey ? '#01b854' : '#6B7280'} />
                   <Text style={[styles.mobileFilterPillText, typeKey && styles.mobileFilterPillTextActive]}>
-                    {typeKey || 'Ground Type'}
+                    {typeKey || 'Venue'}
                   </Text>
                 </Pressable>
 
@@ -624,7 +631,7 @@ export default function SearchScreen() {
               <View style={styles.mobileFilterDropdownContent}>
                 <View style={styles.mobileDropdownHeader}>
                   <Text style={styles.mobileDropdownTitle}>
-                    {showLocationModal ? 'Select Location' : showTypeModal ? 'Select Ground Type' : showDateModal ? 'Select Date' : 'Select Time'}
+                    {showLocationModal ? 'Select Location' : showTypeModal ? 'Select Venue' : showDateModal ? 'Select Date' : 'Select Time'}
                   </Text>
                   <Pressable onPress={() => { setShowLocationModal(false); setShowTypeModal(false); setShowTimeModal(false); setShowDateModal(false); }}>
                     <Text style={styles.closeText}>Done</Text>
@@ -645,7 +652,7 @@ export default function SearchScreen() {
                   ) : showTypeModal ? (
                     <>
                       <Pressable style={styles.dropdownOption} onPress={() => { setTypeKey(''); setShowTypeModal(false); }}>
-                        <Text style={styles.dropdownOptionText}>All Types</Text>
+                        <Text style={styles.dropdownOptionText}>All</Text>
                       </Pressable>
                       {types.map(t => (
                         <Pressable key={t.id} style={styles.dropdownOption} onPress={() => { setTypeKey(t.name); setShowTypeModal(false); }}>

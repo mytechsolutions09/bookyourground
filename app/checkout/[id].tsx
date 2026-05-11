@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { WebView } from 'react-native-webview';
-import { useLocalSearchParams, router } from 'expo-router';
+import { useLocalSearchParams, useRouter, router as expoRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { Image as RNImage } from 'react-native';
@@ -24,7 +24,8 @@ import WebLayout from '@/components/web/WebLayout';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import { formatCurrency, formatDateDDMMYYYY } from '@/utils/helpers';
-import { CreditCard, ShieldCheck, Clock, Calendar, MapPin, ChevronLeft, Wallet, Users, X, Ticket, ShoppingBag, Star, Zap, Smartphone, Globe, MessageSquare, Headphones, Banknote } from 'lucide-react-native';
+import { makeGroundPath } from '@/utils/groundSlug';
+import { CreditCard, ShieldCheck, Clock, Calendar, MapPin, ChevronLeft, ChevronRight, Wallet, Users, X, Ticket, ShoppingBag, Star, Zap, Smartphone, Globe, MessageSquare, Headphones, Banknote, Maximize, Home, Bath, Car, Shirt, Layers, Target } from 'lucide-react-native';
 import { hoursBetweenBooked, normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
 import { useUI } from '@/contexts/UIContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -34,6 +35,7 @@ import CheckoutSkeleton from '@/components/landing/CheckoutSkeleton';
 
 export default function CheckoutScreen() {
     const params = useLocalSearchParams();
+    const router = useRouter();
     const { id } = params;
     const { user, profile } = useAuth();
     const { width } = useWindowDimensions();
@@ -41,6 +43,19 @@ export default function CheckoutScreen() {
     const isDesktop = width > 768;
 
     const [booking, setBooking] = useState<any>(null);
+
+    const handleBack = () => {
+        if (router.canGoBack()) {
+            router.back();
+        } else {
+            const ground = booking?.grounds || booking?.ground;
+            if (ground) {
+                router.replace(makeGroundPath(ground) as any);
+            } else {
+                router.replace('/(tabs)/cricket' as any);
+            }
+        }
+    };
     const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState(false);
     const [processingCash, setProcessingCash] = useState(false);
@@ -48,6 +63,8 @@ export default function CheckoutScreen() {
     const [selectedGateway, setSelectedGateway] = useState<string | null>(null);
     const [couponCode, setCouponCode] = useState('');
     const [isCouponsModalVisible, setIsCouponsModalVisible] = useState(false);
+    const [isSlotsModalVisible, setIsSlotsModalVisible] = useState(false);
+    const [isPolicyModalVisible, setIsPolicyModalVisible] = useState(false);
     const [availableCoupons, setAvailableCoupons] = useState<any[]>([]);
     const [fetchingCoupons, setFetchingCoupons] = useState(false);
     const [applyingCoupon, setApplyingCoupon] = useState(false);
@@ -96,12 +113,25 @@ export default function CheckoutScreen() {
         const cricketFixedFee = platformSettings?.cricket_owner_fee_fixed ?? 100;
         const netsFixedFee = platformSettings?.nets_owner_fee_fixed ?? 25;
         const netsUserRate = platformSettings?.nets_user_fee_rate ?? 0.10;
+        const cancellationDays = platformSettings?.cancellation_days ?? 7;
 
         const pitchType = (booking?.grounds?.pitch_type ?? '').toLowerCase();
         const groundName = (booking?.grounds?.name ?? '').toLowerCase();
         const isCricket = pitchType === 'cricket ground';
         const isNet = pitchType.includes('net') || groundName.includes('net') || pitchType.includes('lane') || groundName.includes('lane');
         const isCash = selectedGateway === 'cash';
+
+        // Calculate total teams across all slots
+        let totalTeams = 0;
+        if (booking?.slots && booking.slots.length > 0) {
+            booking.slots.forEach((s: string) => {
+                const parts = s.split('__');
+                const slotTeamType = parts[2] || booking.team_type;
+                totalTeams += slotTeamType === 'one' ? 1 : 2;
+            });
+        } else {
+            totalTeams = booking?.team_type === 'one' ? 1 : 2;
+        }
 
         // 1. Calculate User's Platform Fee
         const userPfRate = isNet ? netsUserRate : rate;
@@ -115,8 +145,7 @@ export default function CheckoutScreen() {
             if (isNet) {
                 ownerPf = netsFixedFee;
             } else if (isCricket) {
-                const teamCount = booking?.team_type === 'one' ? 1 : 2;
-                ownerPf = cricketFixedFee * teamCount;
+                ownerPf = cricketFixedFee * totalTeams;
             } else {
                 ownerPf = bgp * rate;
             }
@@ -934,7 +963,8 @@ export default function CheckoutScreen() {
 
     const dynamicStyles = {
         content: {
-            padding: isCompactCheckout ? 0 : 24,
+            padding: isCompactCheckout ? 16 : 24,
+            paddingTop: isCompactCheckout ? 0 : 24,
         },
         layout: {
             gap: isLargeWebScreen ? (width > 1200 ? 40 : 24) : 0,
@@ -945,12 +975,13 @@ export default function CheckoutScreen() {
         },
         mainColumn: {
             flex: isLargeWebScreen ? 2.2 : 0,
-            display: isLargeWebScreen ? 'flex' : 'none',
+            width: '100%',
         },
         sideColumn: {
             flex: isLargeWebScreen ? 1 : 0,
             width: '100%',
-            padding: isLargeWebScreen ? 0 : 16,
+            padding: isLargeWebScreen ? 0 : 12,
+            paddingTop: isLargeWebScreen ? 0 : 0,
         },
         heroTitle: {
             fontSize: width < 1000 ? 32 : 42,
@@ -976,7 +1007,7 @@ export default function CheckoutScreen() {
                         styles.checkoutMiniHeader,
                         Platform.OS !== 'web' && { paddingTop: insets.top + 12, height: insets.top + 56 }
                     ]}>
-                        <TouchableOpacity onPress={() => router.back()} style={styles.checkoutMiniBackBtn}>
+                        <TouchableOpacity onPress={handleBack} style={styles.checkoutMiniBackBtn}>
                             <ChevronLeft size={20} color="#0F172A" />
                         </TouchableOpacity>
                         <RNText style={styles.checkoutMiniTitle}>Checkout</RNText>
@@ -1000,53 +1031,50 @@ export default function CheckoutScreen() {
                         </View>
                     </View>
 
-                    <View style={styles.compactDetailsRow}>
-                        <View style={styles.compactDetailItem}>
+                    <TouchableOpacity 
+                        style={[
+                            styles.compactDetailsRow, 
+                            { 
+                                paddingVertical: 12, 
+                                paddingHorizontal: 16, 
+                                backgroundColor: '#f0fdf4', 
+                                borderRadius: 12, 
+                                alignItems: 'center', 
+                                justifyContent: 'space-between', 
+                                flexDirection: 'row',
+                                width: '100%',
+                                marginTop: 12
+                            }
+                        ]} 
+                        onPress={() => setIsSlotsModalVisible(true)}
+                    >
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                             <Calendar size={16} color="#06392e" />
-                            <View style={{ marginLeft: 8 }}>
-                                <RNText style={styles.compactDetailLabel}>Date</RNText>
-                                <RNText style={styles.compactDetailValue}>{formatDateDDMMYYYY(booking.booking_date)}</RNText>
-                            </View>
+                            <RNText style={{ marginLeft: 8, fontSize: 14, fontWeight: '600', color: '#06392e' }}>
+                                {booking.slots && booking.slots.length > 0 
+                                    ? `${booking.slots.length} Slots Selected` 
+                                    : `${formatDateDDMMYYYY(booking.booking_date)} ${booking.start_time.substring(0, 5)}`}
+                            </RNText>
                         </View>
-                        <View style={styles.compactDetailDivider} />
-                        <View style={styles.compactDetailItem}>
-                            <Clock size={16} color="#06392e" />
-                            <View style={{ marginLeft: 8 }}>
-                                <RNText style={styles.compactDetailLabel}>Time</RNText>
-                                <RNText style={styles.compactDetailValue}>
-                                    {booking.slots && booking.slots.length > 0 
-                                        ? booking.slots.join(', ') 
-                                        : `${booking.start_time.substring(0, 5)} – ${booking.end_time.substring(0, 5)}`}
-                                </RNText>
-                            </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <RNText style={{ fontSize: 12, color: '#059669', marginRight: 4 }}>View Details</RNText>
+                            <ChevronRight size={16} color="#059669" />
                         </View>
-                        {!isNets && (
-                            <>
-                                <View style={styles.compactDetailDivider} />
-                                <View style={styles.compactDetailItem}>
-                                    <Users size={16} color="#06392e" />
-                                    <View style={{ marginLeft: 8 }}>
-                                        <RNText style={styles.compactDetailLabel}>Teams</RNText>
-                                        <RNText style={styles.compactDetailValue}>
-                                            {booking.team_type === 'one' ? '1 Team' : 'Both'}
-                                        </RNText>
-                                    </View>
-                                </View>
-                            </>
-                        )}
-                    </View>
+                    </TouchableOpacity>
                 </>
             )}
 
-            <View style={[styles.layout, !isDesktop && Platform.OS !== 'web' && styles.layoutMobile, dynamicStyles.layout as any]}>
+            <View style={[styles.layout, isCompactCheckout && styles.layoutMobile, dynamicStyles.layout as any]}>
                 {/* Left Column: Items (Booking Details) */}
                 <View style={[styles.mainColumn, dynamicStyles.mainColumn as any]}>
+                    
+
                     
                     {/* Header Section (Web) */}
                     {isLargeWebScreen && (
                         <View style={styles.headerCard}>
                             <TouchableOpacity
-                                onPress={() => router.back()}
+                                onPress={handleBack}
                                 style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20, gap: 4 }}
                             >
                                 <ChevronLeft size={18} color="#94A3B8" />
@@ -1065,99 +1093,50 @@ export default function CheckoutScreen() {
                                     </RNText>
                                 </View>
 
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0, 234, 107, 0.08)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(0, 234, 107, 0.15)' }}>
-                                    <Star size={14} color="#00ea6b" fill="#00ea6b" />
-                                    <RNText style={{ fontSize: 14, color: '#00ea6b', fontWeight: '700', fontFamily: 'Inter' }}>4.5 (128 reviews)</RNText>
-                                </View>
+                                {((booking.grounds || booking.ground)?.reviews_count || 0) > 0 && (
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(0, 234, 107, 0.08)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(0, 234, 107, 0.15)' }}>
+                                        <Star size={14} color="#00ea6b" fill="#00ea6b" />
+                                        <RNText style={{ fontSize: 14, color: '#00ea6b', fontWeight: '700', fontFamily: 'Inter' }}>
+                                            {(booking.grounds || booking.ground)?.rating?.toFixed(1) || '0.0'} ({(booking.grounds || booking.ground)?.reviews_count || 0} reviews)
+                                        </RNText>
+                                    </View>
+                                )}
                             </View>
                         </View>
                     )}
 
-                    {/* Booking Details Horizontal Bar */}
-                    <View style={styles.bookingDetailsCard}>
-                        <View style={styles.bookingDetailsRow}>
-                            {/* Match Date */}
-                            <View style={styles.bookingDetailItem}>
-                                <View style={styles.detailIconBox}>
-                                    <Calendar size={20} color="#059669" />
-                                </View>
-                                <View style={styles.detailInfoContent}>
-                                    <RNText style={styles.detailLabel}>Match Date</RNText>
-                                    <RNText style={styles.detailValue}>{formatDateDDMMYYYY(booking.booking_date)}</RNText>
-                                    <RNText style={styles.detailSub}>
-                                        {new Date(booking.booking_date).toLocaleDateString('en-US', { weekday: 'long' })}
-                                    </RNText>
-                                </View>
+                    {/* Booking Details Horizontal Bar (Web only) */}
+                    {isLargeWebScreen && (
+                        <View style={styles.bookingDetailsCard}>
+                            <View style={styles.bookingDetailsRow}>
+                                 <TouchableOpacity 
+                                     style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 8 }} 
+                                     onPress={() => setIsSlotsModalVisible(true)}
+                                 >
+                                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                         <View style={styles.detailIconBox}>
+                                             <Calendar size={20} color="#059669" />
+                                         </View>
+                                         <View style={[styles.detailInfoContent, { marginLeft: 12 }]}>
+                                             <RNText style={styles.detailLabel}>Booking Slots & Teams</RNText>
+                                             <RNText style={styles.detailValue}>
+                                                 {booking.slots && booking.slots.length > 0 
+                                                     ? `${booking.slots.length} Slots Selected` 
+                                                     : `${formatDateDDMMYYYY(booking.booking_date)} ${booking.start_time.substring(0, 5)}`}
+                                             </RNText>
+                                             <RNText style={styles.detailSub}>Click to view full details</RNText>
+                                         </View>
+                                     </View>
+                                     <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 16 }}>
+                                         <RNText style={{ fontSize: 14, color: '#059669', marginRight: 4 }}>View</RNText>
+                                         <ChevronRight size={18} color="#059669" />
+                                     </View>
+                                 </TouchableOpacity>
                             </View>
-
-                            <View style={styles.detailDivider} />
-
-                            {/* Slot Time */}
-                            <View style={styles.bookingDetailItem}>
-                                <View style={styles.detailIconBox}>
-                                    <Clock size={20} color="#059669" />
-                                </View>
-                                <View style={styles.detailInfoContent}>
-                                    <RNText style={styles.detailLabel}>Slot Time</RNText>
-                                    <RNText style={styles.detailValue}>
-                                        {booking.slots && booking.slots.length > 0 
-                                            ? booking.slots.join(', ') 
-                                            : `${booking.start_time.substring(0, 5)} – ${booking.end_time.substring(0, 5)}`}
-                                    </RNText>
-                                    <RNText style={styles.detailSub}>
-                                        {booking.slots && booking.slots.length > 0 
-                                            ? `${booking.slots.length} Slots` 
-                                            : `${hoursBetweenBooked(booking.start_time, booking.end_time)} Hours`}
-                                    </RNText>
-                                </View>
-                            </View>
-
-                            {!isNets && (
-                                <>
-                                    <View style={styles.detailDivider} />
-
-                                    {/* Booking For */}
-                                    <View style={styles.bookingDetailItem}>
-                                        <View style={styles.detailIconBox}>
-                                            <Users size={20} color="#059669" />
-                                        </View>
-                                        <View style={styles.detailInfoContent}>
-                                            <RNText style={styles.detailLabel}>Booking For</RNText>
-                                            <RNText style={styles.detailValue}>
-                                                {booking.team_type === 'one' ? '1 Team' : 'Both Teams'}
-                                            </RNText>
-                                            <RNText style={styles.detailSub}>(Max 12 Players)</RNText>
-                                        </View>
-                                    </View>
-                                </>
-                            )}
-
                         </View>
-                    </View>
+                    )}
 
-                    {/* Trust Section */}
-                    <View style={styles.secureCardNew}>
-                        <View style={styles.secureIconBox}>
-                            <ShieldCheck size={28} color="#059669" />
-                        </View>
-                        <View style={{ flex: 1 }}>
-                            <RNText style={styles.secureTitleNew}>Safe & Secure Booking</RNText>
-                            <RNText style={styles.secureSubNew}>Your booking is protected. Get instant confirmation.</RNText>
-                        </View>
-                        
-                        {isLargeWebScreen && (
-                            <View style={{ flexDirection: 'row', gap: 24, paddingRight: 8 }}>
-                                <View style={{ alignItems: 'center', gap: 6 }}>
-                                    <CreditCard size={18} color="#0D9488" />
-                                    <RNText style={{ fontSize: 11, color: '#0D9488', fontWeight: '600' }}>Secure Payments</RNText>
-                                </View>
-                                <View style={{ alignItems: 'center', gap: 6 }}>
-                                    <Zap size={18} color="#0D9488" />
-                                    <RNText style={{ fontSize: 11, color: '#0D9488', fontWeight: '600' }}>Instant Confirmation</RNText>
-                                </View>
-                            </View>
-                        )}
-                    </View>
+
 
                     {/* Ground Overview Section */}
                     {isLargeWebScreen && (
@@ -1185,19 +1164,22 @@ export default function CheckoutScreen() {
                                                 source={{ uri: (booking.grounds || booking.ground)?.ground_images?.[2]?.image_url || (booking.grounds || booking.ground)?.ground_images?.[0]?.image_url }} 
                                                 style={{ width: '100%', height: '100%' }}
                                             />
-                                            <View style={styles.moreImagesOverlay}>
-                                                <RNText style={styles.moreImagesText}>+{(booking.grounds || booking.ground)?.ground_images?.length - 2 || 6}</RNText>
-                                            </View>
+                                            {(booking.grounds || booking.ground)?.ground_images?.length > 3 && (
+                                                <View style={styles.moreImagesOverlay}>
+                                                    <RNText style={styles.moreImagesText}>+{(booking.grounds || booking.ground)?.ground_images?.length - 3}</RNText>
+                                                </View>
+                                            )}
                                         </View>
                                     </View>
                                 </View>
 
                                 <View style={styles.amenitiesContainer}>
-                                    {isNets ? (
+                                    {/* Net Specifics */}
+                                    {isNets && (
                                         <>
                                             {groundData?.cricket_pitch_surface && (
                                                 <View style={styles.amenityItem}>
-                                                    <View style={styles.amenityIconBox}><MapPin size={16} color="#64748B" /></View>
+                                                    <View style={styles.amenityIconBox}><Layers size={16} color="#64748B" /></View>
                                                     <View style={styles.amenityInfo}>
                                                         <RNText style={styles.amenityLabel}>Surface</RNText>
                                                         <RNText style={styles.amenityValue}>{groundData?.cricket_pitch_surface}</RNText>
@@ -1206,87 +1188,101 @@ export default function CheckoutScreen() {
                                             )}
                                             {groundData?.has_bowling_machine && (
                                                 <View style={styles.amenityItem}>
-                                                    <View style={styles.amenityIconBox}><Zap size={16} color="#64748B" /></View>
+                                                    <View style={styles.amenityIconBox}><Target size={16} color="#64748B" /></View>
                                                     <View style={styles.amenityInfo}>
                                                         <RNText style={styles.amenityLabel}>Bowling Machine</RNText>
                                                         <RNText style={styles.amenityValue}>Yes</RNText>
                                                     </View>
                                                 </View>
                                             )}
-                                            {groundData?.has_manual_throwdown && (
+                                            {groundData?.lanes_count > 0 && (
                                                 <View style={styles.amenityItem}>
                                                     <View style={styles.amenityIconBox}><ShieldCheck size={16} color="#64748B" /></View>
                                                     <View style={styles.amenityInfo}>
-                                                        <RNText style={styles.amenityLabel}>Manual Throwdown</RNText>
-                                                        <RNText style={styles.amenityValue}>Yes</RNText>
-                                                    </View>
-                                                </View>
-                                            )}
-                                            <View style={styles.amenityItem}>
-                                                <View style={styles.amenityIconBox}><Users size={16} color="#64748B" /></View>
-                                                <View style={styles.amenityInfo}>
-                                                    <RNText style={styles.amenityLabel}>Type</RNText>
-                                                    <RNText style={styles.amenityValue}>{groundData?.is_indoor ? 'Indoor' : 'Outdoor'}</RNText>
-                                                </View>
-                                            </View>
-                                            {groundData?.has_floodlights && (
-                                                <View style={styles.amenityItem}>
-                                                    <View style={styles.amenityIconBox}><Zap size={16} color="#64748B" /></View>
-                                                    <View style={styles.amenityInfo}>
-                                                        <RNText style={styles.amenityLabel}>Floodlights</RNText>
-                                                        <RNText style={styles.amenityValue}>Yes</RNText>
+                                                        <RNText style={styles.amenityLabel}>Lanes</RNText>
+                                                        <RNText style={styles.amenityValue}>{groundData?.lanes_count}</RNText>
                                                     </View>
                                                 </View>
                                             )}
                                         </>
-                                    ) : (
+                                    )}
+
+                                    {/* Ground Specifics */}
+                                    {!isNets && (
                                         <>
-                                            {groundData?.has_floodlights && (
+                                            {groundData?.ground_size && (
                                                 <View style={styles.amenityItem}>
-                                                    <View style={styles.amenityIconBox}><Zap size={16} color="#64748B" /></View>
+                                                    <View style={styles.amenityIconBox}><Maximize size={16} color="#64748B" /></View>
                                                     <View style={styles.amenityInfo}>
-                                                        <RNText style={styles.amenityLabel}>Floodlights</RNText>
-                                                        <RNText style={styles.amenityValue}>Yes</RNText>
+                                                        <RNText style={styles.amenityLabel}>Ground Size</RNText>
+                                                        <RNText style={styles.amenityValue}>{groundData?.ground_size}</RNText>
                                                     </View>
                                                 </View>
                                             )}
-                                            {groundData?.has_changing_rooms && (
+                                            {groundData?.capacity && (
                                                 <View style={styles.amenityItem}>
                                                     <View style={styles.amenityIconBox}><Users size={16} color="#64748B" /></View>
                                                     <View style={styles.amenityInfo}>
-                                                        <RNText style={styles.amenityLabel}>Changing Room</RNText>
-                                                        <RNText style={styles.amenityValue}>Yes</RNText>
-                                                    </View>
-                                                </View>
-                                            )}
-                                            {groundData?.has_parking && (
-                                                <View style={styles.amenityItem}>
-                                                    <View style={styles.amenityIconBox}><MapPin size={16} color="#64748B" /></View>
-                                                    <View style={styles.amenityInfo}>
-                                                        <RNText style={styles.amenityLabel}>Parking</RNText>
-                                                        <RNText style={styles.amenityValue}>Yes</RNText>
-                                                    </View>
-                                                </View>
-                                            )}
-                                            {groundData?.has_pavilion && (
-                                                <View style={styles.amenityItem}>
-                                                    <View style={styles.amenityIconBox}><ShieldCheck size={16} color="#64748B" /></View>
-                                                    <View style={styles.amenityInfo}>
-                                                        <RNText style={styles.amenityLabel}>Pavilion</RNText>
-                                                        <RNText style={styles.amenityValue}>Yes</RNText>
-                                                    </View>
-                                                </View>
-                                            )}
-                                            {groundData?.has_washrooms && (
-                                                <View style={styles.amenityItem}>
-                                                    <View style={styles.amenityIconBox}><ShieldCheck size={16} color="#64748B" /></View>
-                                                    <View style={styles.amenityInfo}>
-                                                        <RNText style={styles.amenityLabel}>Washrooms</RNText>
-                                                        <RNText style={styles.amenityValue}>Yes</RNText>
+                                                        <RNText style={styles.amenityLabel}>Capacity</RNText>
+                                                        <RNText style={styles.amenityValue}>{groundData?.capacity}</RNText>
                                                     </View>
                                                 </View>
                                             )}
                                         </>
+                                    )}
+
+                                    {/* Common Amenities */}
+                                    <View style={styles.amenityItem}>
+                                        <View style={styles.amenityIconBox}><Globe size={16} color="#64748B" /></View>
+                                        <View style={styles.amenityInfo}>
+                                            <RNText style={styles.amenityLabel}>Type</RNText>
+                                            <RNText style={styles.amenityValue}>{groundData?.is_indoor ? 'Indoor' : 'Outdoor'}</RNText>
+                                        </View>
+                                    </View>
+                                    {groundData?.has_floodlights && (
+                                        <View style={styles.amenityItem}>
+                                            <View style={styles.amenityIconBox}><Zap size={16} color="#64748B" /></View>
+                                            <View style={styles.amenityInfo}>
+                                                <RNText style={styles.amenityLabel}>Floodlights</RNText>
+                                                <RNText style={styles.amenityValue}>Yes</RNText>
+                                            </View>
+                                        </View>
+                                    )}
+                                    {groundData?.has_changing_rooms && (
+                                        <View style={styles.amenityItem}>
+                                            <View style={styles.amenityIconBox}><Shirt size={16} color="#64748B" /></View>
+                                            <View style={styles.amenityInfo}>
+                                                <RNText style={styles.amenityLabel}>Changing Room</RNText>
+                                                <RNText style={styles.amenityValue}>Yes</RNText>
+                                            </View>
+                                        </View>
+                                    )}
+                                    {groundData?.has_parking && (
+                                        <View style={styles.amenityItem}>
+                                            <View style={styles.amenityIconBox}><Car size={16} color="#64748B" /></View>
+                                            <View style={styles.amenityInfo}>
+                                                <RNText style={styles.amenityLabel}>Parking</RNText>
+                                                <RNText style={styles.amenityValue}>Yes</RNText>
+                                            </View>
+                                        </View>
+                                    )}
+                                    {groundData?.has_pavilion && (
+                                        <View style={styles.amenityItem}>
+                                            <View style={styles.amenityIconBox}><Home size={16} color="#64748B" /></View>
+                                            <View style={styles.amenityInfo}>
+                                                <RNText style={styles.amenityLabel}>Pavilion</RNText>
+                                                <RNText style={styles.amenityValue}>Yes</RNText>
+                                            </View>
+                                        </View>
+                                    )}
+                                    {groundData?.has_washrooms && (
+                                        <View style={styles.amenityItem}>
+                                            <View style={styles.amenityIconBox}><Bath size={16} color="#64748B" /></View>
+                                            <View style={styles.amenityInfo}>
+                                                <RNText style={styles.amenityLabel}>Washrooms</RNText>
+                                                <RNText style={styles.amenityValue}>Yes</RNText>
+                                            </View>
+                                        </View>
                                     )}
                                 </View>
                             </View>
@@ -1302,8 +1298,8 @@ export default function CheckoutScreen() {
                                 </View>
                                 <View style={{ flex: 1 }}>
                                     <RNText style={styles.policyTitle}>Cancellation Policy</RNText>
-                                    <RNText style={styles.policyDesc}>Cancel up to 24 hours before the match for a full refund.</RNText>
-                                    <TouchableOpacity onPress={() => router.push('/terms')}><RNText style={styles.policyLink}>View full policy</RNText></TouchableOpacity>
+                                    <RNText style={styles.policyDesc}>Cancel up to {platformSettings?.cancellation_days ?? 7} days before the match for a full refund.</RNText>
+                                    <TouchableOpacity onPress={() => setIsPolicyModalVisible(true)}><RNText style={styles.policyLink}>View full policy</RNText></TouchableOpacity>
                                 </View>
                             </View>
                         </View>
@@ -1438,7 +1434,6 @@ export default function CheckoutScreen() {
                                             onChangeText={setContactEmail}
                                             placeholder="Email Address"
                                         />
-                                        <TouchableOpacity style={styles.contactEditBtn}><X size={14} color="#94A3B8" /></TouchableOpacity>
                                     </View>
                                     <View style={styles.contactInputRow}>
                                         <Smartphone size={16} color="#94A3B8" />
@@ -1449,7 +1444,6 @@ export default function CheckoutScreen() {
                                             placeholder="Phone Number"
                                             keyboardType="phone-pad"
                                         />
-                                        <TouchableOpacity style={styles.contactEditBtn}><X size={14} color="#94A3B8" /></TouchableOpacity>
                                     </View>
                                     <RNText style={styles.contactHint}>Required for payment receipt and confirmation.</RNText>
                                 </View>
@@ -1661,6 +1655,110 @@ export default function CheckoutScreen() {
                 </Pressable>
             </Modal>
 
+            <Modal
+                visible={isSlotsModalVisible}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setIsSlotsModalVisible(false)}
+            >
+                <Pressable 
+                    style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}
+                    onPress={() => setIsSlotsModalVisible(false)}
+                >
+                    <View style={{ backgroundColor: '#FFF', borderRadius: 16, padding: 24, width: '90%', maxWidth: 500 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                            <RNText style={{ fontSize: 18, fontWeight: '700', color: '#333' }}>Selected Slots & Teams</RNText>
+                        </View>
+                        
+                        <ScrollView style={{ maxHeight: 300 }}>
+                            {booking.slots && booking.slots.length > 0 ? (
+                                booking.slots.map((s, index) => {
+                                    const parts = s.split('__');
+                                    const date = parts[0];
+                                    const time = parts[1];
+                                    const slotTeamType = parts[2] || booking.team_type;
+                                    
+                                    const dateParts = date.split('-');
+                                    const formattedDate = dateParts.length === 3 ? `${dateParts[2]}/${dateParts[1]}` : date;
+                                    
+                                    const teamsLabel = slotTeamType === 'one' ? '1 Team' : 'Both Teams';
+                                    
+                                    return (
+                                        <View key={index} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 0.5, borderBottomColor: '#EEE' }}>
+                                            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                                <Calendar size={16} color="#059669" />
+                                                <RNText style={{ marginLeft: 8, fontSize: 14, color: '#333' }}>{formattedDate}</RNText>
+                                                <Clock size={16} color="#059669" style={{ marginLeft: 16 }} />
+                                                <RNText style={{ marginLeft: 4, fontSize: 14, color: '#333', fontWeight: '600' }}>{time}</RNText>
+                                            </View>
+                                            {!isNets && (
+                                                <View style={{ backgroundColor: '#f0fdf4', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999 }}>
+                                                    <RNText style={{ fontSize: 12, color: '#059669', fontWeight: '600' }}>{teamsLabel}</RNText>
+                                                </View>
+                                            )}
+                                        </View>
+                                    );
+                                })
+                            ) : (
+                                <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                                    <RNText style={{ color: '#666' }}>No slots selected or single slot booking.</RNText>
+                                    <RNText style={{ color: '#333', fontWeight: '600', marginTop: 4 }}>
+                                        {formatDateDDMMYYYY(booking.booking_date)} | {booking.start_time.substring(0, 5)} – {booking.end_time.substring(0, 5)}
+                                    </RNText>
+                                </View>
+                            )}
+                        </ScrollView>
+                        
+                        <TouchableOpacity 
+                            style={{ backgroundColor: '#059669', paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 16 }}
+                            onPress={() => setIsSlotsModalVisible(false)}
+                        >
+                            <RNText style={{ color: '#FFF', fontWeight: '700' }}>Close</RNText>
+                        </TouchableOpacity>
+                    </View>
+                </Pressable>
+            </Modal>
+
+            <Modal
+                visible={isPolicyModalVisible}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setIsPolicyModalVisible(false)}
+            >
+                <Pressable 
+                    style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}
+                    onPress={() => setIsPolicyModalVisible(false)}
+                >
+                    <View style={{ backgroundColor: '#FFF', borderRadius: 16, padding: 24, width: '90%', maxWidth: 500 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                            <RNText style={{ fontSize: 18, fontWeight: '700', color: '#333' }}>Cancellation Policy</RNText>
+                        </View>
+                        
+                        <ScrollView style={{ maxHeight: 300 }}>
+                            <RNText style={{ fontSize: 14, color: '#333', lineHeight: 20 }}>
+                                Cancel up to {platformSettings?.cancellation_days ?? 7} days before the match for a full refund.
+                            </RNText>
+                            <RNText style={{ fontSize: 14, color: '#666', lineHeight: 20, marginTop: 12 }}>
+                                1. Cancellations made less than {platformSettings?.cancellation_days ?? 7} days before the start time are non-refundable.
+                            </RNText>
+                            <RNText style={{ fontSize: 14, color: '#666', lineHeight: 20, marginTop: 8 }}>
+                                2. In case of rain or ground unsuitability, full refund or reschedule will be provided.
+                            </RNText>
+                            <RNText style={{ fontSize: 14, color: '#666', lineHeight: 20, marginTop: 8 }}>
+                                3. Refunds may take 5-7 working days to reflect in your account.
+                            </RNText>
+                        </ScrollView>
+                        
+                        <TouchableOpacity 
+                            style={{ backgroundColor: '#059669', paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 16 }}
+                            onPress={() => setIsPolicyModalVisible(false)}
+                        >
+                            <RNText style={{ color: '#FFF', fontWeight: '700' }}>Close</RNText>
+                        </TouchableOpacity>
+                    </View>
+                </Pressable>
+            </Modal>
+
             <Modal visible={showRazorpayWebView} transparent animationType="slide">
                 <View style={{ flex: 1, backgroundColor: '#000' }}>
                     <View style={{ height: 60, backgroundColor: '#FFF', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#EEE', marginTop: Platform.OS === 'ios' ? 40 : 0 }}>
@@ -1715,7 +1813,7 @@ const styles = StyleSheet.create({
     },
     layoutMobile: {
         flexDirection: 'column',
-        gap: 12,
+        gap: 0,
     },
     mainColumn: {
         flex: 1.8,
@@ -1845,15 +1943,15 @@ const styles = StyleSheet.create({
     },
     summaryCard: {
         padding: 20,
-        borderRadius: 32,
-        backgroundColor: '#FFFFFF',
-        borderWidth: 1,
-        borderColor: '#F1F5F9',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.04,
-        shadowRadius: 12,
-        elevation: 3,
+        borderRadius: 0,
+        backgroundColor: 'transparent',
+        borderWidth: 0,
+        borderColor: 'transparent',
+        shadowColor: 'transparent',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0,
+        shadowRadius: 0,
+        elevation: 0,
     },
     summaryHeaderRow: {
         flexDirection: 'row',
@@ -2021,33 +2119,35 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter',
     },
     methodListNew: {
-        gap: 12,
+        gap: 8,
     },
     methodItemNew: {
         flexDirection: 'row',
         alignItems: 'center',
-        padding: 16,
-        borderRadius: 16,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 12,
         borderWidth: 1,
         borderColor: '#F1F5F9',
         backgroundColor: '#FFFFFF',
+        marginBottom: 8,
     },
     methodItemActiveNew: {
         borderColor: '#00ea6b',
         backgroundColor: '#FFFFFF',
     },
     methodIconBoxNew: {
-        width: 44,
-        height: 44,
-        borderRadius: 12,
+        width: 32,
+        height: 32,
+        borderRadius: 8,
         backgroundColor: '#F8FAFC',
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: 16,
+        marginRight: 10,
     },
     methodLabelNew: {
         fontSize: 14,
-        fontWeight: '500',
+        fontWeight: '400',
         color: '#0F172A',
         fontFamily: 'Inter',
     },
@@ -2105,8 +2205,8 @@ const styles = StyleSheet.create({
         ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
     },
     confirmBtnNew: {
-        height: 60,
-        borderRadius: 18,
+        height: 56,
+        borderRadius: 16,
         backgroundColor: '#00ea6b',
         flexDirection: 'row',
         alignItems: 'center',
@@ -2420,17 +2520,17 @@ const styles = StyleSheet.create({
         color: 'rgba(255, 255, 255, 0.7)',
     },
     bookingDetailsCard: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 24,
+        backgroundColor: 'transparent',
+        borderRadius: 0,
         padding: 24,
         marginTop: 20,
-        borderWidth: 1,
-        borderColor: '#F1F5F9',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.02,
-        shadowRadius: 10,
-        elevation: 2,
+        borderWidth: 0,
+        borderColor: 'transparent',
+        shadowColor: 'transparent',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0,
+        shadowRadius: 0,
+        elevation: 0,
     },
     bookingDetailsRow: {
         flexDirection: 'row',
@@ -2440,8 +2540,10 @@ const styles = StyleSheet.create({
     },
     bookingDetailItem: {
         flex: 1,
+        minWidth: 140,
         flexDirection: 'row',
         gap: 12,
+        alignItems: 'center',
     },
     detailIconBox: {
         width: 40,
@@ -2528,7 +2630,7 @@ const styles = StyleSheet.create({
         backgroundColor: '#FFFFFF',
         paddingHorizontal: 16,
         paddingVertical: 14,
-        borderBottomWidth: 1,
+        borderBottomWidth: 0.5,
         borderBottomColor: '#F1F5F9',
     },
     checkoutMiniBackBtn: {
@@ -2571,10 +2673,12 @@ const styles = StyleSheet.create({
     compactGroundBanner: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'space-between',
         backgroundColor: '#FFFFFF',
         padding: 16,
-        borderBottomWidth: 1,
+        borderBottomWidth: 0.5,
         borderBottomColor: '#F1F5F9',
+        gap: 16,
     },
     compactBackBtn: {
         width: 36,
@@ -2619,7 +2723,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 14,
         marginBottom: 2,
-        borderBottomWidth: 1,
+        borderBottomWidth: 0.5,
         borderBottomColor: '#F1F5F9',
     },
     compactDetailItem: {
@@ -2697,14 +2801,17 @@ const styles = StyleSheet.create({
         fontFamily: 'Inter',
     },
     amenitiesContainer: {
-        flex: 1,
-        paddingLeft: 12,
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        marginTop: 8,
     },
     amenityItem: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
-        marginBottom: 14,
+        marginBottom: 16,
+        width: '50%',
+        paddingRight: 8,
     },
     amenityIconBox: {
         width: 32,

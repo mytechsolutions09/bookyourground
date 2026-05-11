@@ -53,7 +53,7 @@ export default function GroundsTabScreen() {
   const HEADER_HEIGHT = 110;
 
   const TABS_LIST = [
-    { id: 'book', label: 'Book a Ground', index: 0 },
+    { id: 'book', label: 'Book a Venue', index: 0 },
     { id: 'opponent', label: 'Find an Opponent', index: 1 },
   ];
 
@@ -223,7 +223,7 @@ export default function GroundsTabScreen() {
 
   const renderHeader = () => (
     <View style={styles.customHeader}>
-      {!isWeb && <Text style={styles.headerTitle}>BOOK A GROUND</Text>}
+      {!isWeb && <Text style={styles.headerTitle}>BOOK A VENUE</Text>}
       {renderTabs()}
     </View>
   );
@@ -307,7 +307,7 @@ export default function GroundsTabScreen() {
             style={{ flex: 1 }}
             scrollEnabled={activeTab !== 'favorite'}
           >
-            {/* Slide 1: Book a Ground */}
+            {/* Slide 1: Book a Venue */}
             <View style={{ width }}>
               <AnimatedScrollView
                 onScroll={verticalScrollHandler}

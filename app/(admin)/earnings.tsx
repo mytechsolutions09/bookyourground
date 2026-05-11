@@ -92,6 +92,11 @@ function LineChart({ data, height = 150 }: { data: ChartPoint[], height?: number
 import { useAuth } from '@/contexts/AuthContext';
 
 function AdminEarningsInner() {
+  const { width } = useWindowDimensions();
+  const isWeb = Platform.OS === 'web';
+  const isSmallWeb = isWeb && width < 1024;
+  const isMobile = width < 768;
+
   const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [owners, setOwners] = useState<OwnerOption[]>([]);
@@ -231,7 +236,7 @@ function AdminEarningsInner() {
     const selectedOwner = owners.find(o => o.id === selectedOwnerId);
     
     return (
-      <View style={styles.layoutRow}>
+      <View style={[styles.layoutRow, (isMobile || isSmallWeb) && { flexDirection: 'column' }]}>
         <View style={styles.mainCol}>
           <View style={styles.statsGrid}>
             <View style={[styles.statCard, { backgroundColor: '#d9f99d' }]}>
@@ -303,7 +308,8 @@ function AdminEarningsInner() {
         <Download size={18} color="#64748B" />
       </View>
       
-      <View style={styles.table}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} bounces={false}>
+        <View style={[styles.table, (isMobile || isSmallWeb) && { minWidth: 600 }]}>
         <View style={styles.tableHeader}>
           <Text style={[styles.headerText, { width: 120 }]}>Date & Time</Text>
           <Text style={[styles.headerText, { flex: 1 }]}>Venue</Text>
@@ -334,14 +340,16 @@ function AdminEarningsInner() {
             </View>
           ))
         )}
-      </View>
+        </View>
+      </ScrollView>
     </View>
   );
 
   const renderPayouts = () => (
     <View style={styles.sectionCard}>
       <Text style={styles.sectionTitle}>Payouts & Withdrawals</Text>
-      <View style={styles.table}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} bounces={false}>
+        <View style={[styles.table, (isMobile || isSmallWeb) && { minWidth: 600 }]}>
         <View style={styles.tableHeader}>
           <Text style={[styles.headerText, { width: 120 }]}>Date</Text>
           <Text style={[styles.headerText, { flex: 1 }]}>Method</Text>
@@ -369,7 +377,8 @@ function AdminEarningsInner() {
             </View>
           ))
         )}
-      </View>
+        </View>
+      </ScrollView>
     </View>
   );
 
@@ -379,9 +388,9 @@ function AdminEarningsInner() {
       contentContainerStyle={styles.scrollContent}
       refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
     >
-      <View style={styles.content}>
+      <View style={[styles.content, (isMobile || isSmallWeb) && { paddingLeft: 16, paddingRight: 16 }]}>
         {/* Header Row: Filter + Tabs */}
-        <View style={styles.headerRow}>
+        <View style={[styles.headerRow, (isMobile || isSmallWeb) && { flexDirection: 'column', alignItems: 'stretch' }]}>
           <View style={styles.filterCard}>
             <View style={styles.ownerPickerContainer}>
               {IS_WEB ? (

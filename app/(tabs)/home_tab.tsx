@@ -607,7 +607,7 @@ export default function HomeScreen() {
             onPress={() => router.push(primaryCta as any)}
           >
             <Text style={styles.ctaButtonText}>
-              {user ? 'Book a Ground' : 'Get Started Free'}
+              {user ? 'Book a Venue' : 'Get Started Free'}
             </Text>
             <ArrowRight size={18} color="#FFFFFF" strokeWidth={2.5} />
           </Pressable>

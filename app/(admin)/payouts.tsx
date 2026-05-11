@@ -8,7 +8,8 @@ import {
   TouchableOpacity, 
   ActivityIndicator, 
   RefreshControl,
-  TextInput
+  TextInput,
+  useWindowDimensions
 } from 'react-native';
 import WebLayout from '@/components/web/WebLayout';
 import { supabase } from '@/lib/supabase';
@@ -35,6 +36,11 @@ interface PayoutGroup {
 }
 
 function AdminPayoutsInner() {
+  const { width } = useWindowDimensions();
+  const isWeb = Platform.OS === 'web';
+  const isSmallWeb = isWeb && width < 1024;
+  const isMobile = width < 768;
+
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -134,10 +140,13 @@ function AdminPayoutsInner() {
   }, [payoutGroups, searchQuery]);
 
   const renderHeader = () => (
-    <View style={styles.header}>
-      <View style={styles.headerTop}>
+    <View style={[styles.header, (isMobile || isSmallWeb) && { padding: 16 }]}>
+      <View style={[
+        styles.headerTop,
+        (isMobile || isSmallWeb) && { flexDirection: 'column', alignItems: 'stretch', gap: 12 }
+      ]}>
         <Text style={styles.title}>Payout History</Text>
-        <View style={styles.searchContainer}>
+        <View style={[styles.searchContainer, (isMobile || isSmallWeb) && { maxWidth: '100%' }]}>
           <View style={styles.searchBar}>
             <Search size={18} color="#9CA3AF" />
             <TextInput
@@ -152,13 +161,12 @@ function AdminPayoutsInner() {
     </View>
   );
 
-  const isWeb = Platform.OS === 'web';
 
   const content = (
     <View style={styles.container}>
       {Platform.OS === 'web' && renderHeader()}
 
-      {isWeb && (
+      {isWeb && !isSmallWeb && (
         <View style={styles.tableHeaderContainer}>
           <View style={styles.tableHeaderRow}>
             <Text style={[styles.tableHeaderCell, styles.colDate]}>Payout Date</Text>
@@ -178,62 +186,64 @@ function AdminPayoutsInner() {
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
-          <TouchableOpacity 
-            style={styles.tableRow}
-            activeOpacity={0.7}
-            onPress={() => {
-                // Future: show details of all matches in this payout
-            }}
-          >
-            <View style={[styles.tableCell, styles.colDate]}>
-              <View style={styles.dateBadge}>
-                <Calendar size={14} color="#6B7280" />
-                <Text style={styles.dateText}>{formatDateDDMMYY(item.payoutDate)}</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} bounces={false}>
+            <TouchableOpacity 
+              style={[styles.tableRow, (isMobile || isSmallWeb) && { minWidth: 700 }]}
+              activeOpacity={0.7}
+              onPress={() => {
+                  // Future: show details of all matches in this payout
+              }}
+            >
+              <View style={[styles.tableCell, styles.colDate]}>
+                <View style={styles.dateBadge}>
+                  <Calendar size={14} color="#6B7280" />
+                  <Text style={styles.dateText}>{formatDateDDMMYY(item.payoutDate)}</Text>
+                </View>
               </View>
-            </View>
 
-            <View style={[styles.tableCell, styles.colOwner]}>
-              <Text style={styles.ownerName}>{item.ownerName}</Text>
-              <View style={styles.groundInfo}>
-                <Building2 size={12} color="#9CA3AF" />
-                <Text style={styles.groundName}>{item.groundName}, {item.groundCity}</Text>
+              <View style={[styles.tableCell, styles.colOwner]}>
+                <Text style={styles.ownerName}>{item.ownerName}</Text>
+                <View style={styles.groundInfo}>
+                  <Building2 size={12} color="#9CA3AF" />
+                  <Text style={styles.groundName}>{item.groundName}, {item.groundCity}</Text>
+                </View>
               </View>
-            </View>
 
-            <View style={[styles.tableCell, styles.colMatches]}>
-              <View style={styles.matchBadge}>
-                <Text style={styles.matchCountText}>{item.matchCount} Matches</Text>
+              <View style={[styles.tableCell, styles.colMatches]}>
+                <View style={styles.matchBadge}>
+                  <Text style={styles.matchCountText}>{item.matchCount} Matches</Text>
+                </View>
               </View>
-            </View>
 
-            <View style={[styles.tableCell, styles.colAmount]}>
-              <Text style={styles.amountGross}>₹{Math.round(item.onlineRevenue)}</Text>
-            </View>
-
-            <View style={[styles.tableCell, styles.colAmount]}>
-              <Text style={styles.amountFees}>-₹{Math.round(item.offlineFees)}</Text>
-            </View>
-
-            <View style={[styles.tableCell, styles.colAmount]}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Text style={[styles.amountNet, item.netPayout <= 0 && { color: '#EF4444' }]}>
-                  ₹{Math.max(0, Math.round(item.netPayout))}
-                </Text>
-                {item.netPayout < 0 && (
-                   <View style={styles.debtBadge}>
-                     <Text style={styles.debtText}>DEBT</Text>
-                   </View>
-                )}
+              <View style={[styles.tableCell, styles.colAmount]}>
+                <Text style={styles.amountGross}>₹{Math.round(item.onlineRevenue)}</Text>
               </View>
-            </View>
 
-            <View style={[styles.tableCell, styles.colStatus]}>
-              <View style={styles.statusBadge}>
-                <CheckCircle2 size={14} color="#10B981" />
-                <Text style={styles.statusText}>{item.netPayout <= 0 ? 'ADJUSTED' : 'SETTLED'}</Text>
+              <View style={[styles.tableCell, styles.colAmount]}>
+                <Text style={styles.amountFees}>-₹{Math.round(item.offlineFees)}</Text>
               </View>
-            </View>
-          </TouchableOpacity>
+
+              <View style={[styles.tableCell, styles.colAmount]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <Text style={[styles.amountNet, item.netPayout <= 0 && { color: '#EF4444' }]}>
+                    ₹{Math.max(0, Math.round(item.netPayout))}
+                  </Text>
+                  {item.netPayout < 0 && (
+                     <View style={styles.debtBadge}>
+                       <Text style={styles.debtText}>DEBT</Text>
+                     </View>
+                  )}
+                </View>
+              </View>
+
+              <View style={[styles.tableCell, styles.colStatus]}>
+                <View style={styles.statusBadge}>
+                  <CheckCircle2 size={14} color="#10B981" />
+                  <Text style={styles.statusText}>{item.netPayout <= 0 ? 'ADJUSTED' : 'SETTLED'}</Text>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </ScrollView>
         )}
         ListEmptyComponent={
           loading ? (
