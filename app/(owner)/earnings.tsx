@@ -618,7 +618,7 @@ function OwnerEarningsScreenInner() {
     }
 
     if (!isBankVerified) {
-      alert('Your bank details are not yet verified by admin. Please contact support or check your settings.');
+      alert('Your bank details are not yet verified by Book your ground. Please contact support or check your settings.');
       return;
     }
 
@@ -1608,10 +1608,10 @@ const styles = StyleSheet.create({
     // Moved padding to individual columns
   },
   pageTitle: {
-    fontSize: 32,
+    fontSize: 22,
     fontWeight: '800',
     color: '#0F172A',
-    marginBottom: 24,
+    marginBottom: 16,
     fontFamily: 'Inter',
   },
   layoutRow: {
@@ -1622,12 +1622,12 @@ const styles = StyleSheet.create({
   leftCol: {
     flex: 1.5,
     gap: 24,
-    paddingTop: 16,
+    paddingTop: 8,
   },
   rightCol: {
     flex: 1,
     gap: 24,
-    paddingTop: 16,
+    paddingTop: 8,
     paddingBottom: 24,
   },
   totalEarningsCard: {
@@ -2076,13 +2076,13 @@ const styles = StyleSheet.create({
   },
   viewToggleBtnText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#64748B',
     fontFamily: 'Inter',
   },
   viewToggleBtnTextActive: {
     color: '#01b854',
-    fontWeight: '800',
+    fontWeight: '600',
   },
   summaryTableWrapper: {
     paddingHorizontal: 8,

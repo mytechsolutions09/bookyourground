@@ -93,24 +93,36 @@ export default function CheckoutScreen() {
         // Fallback to defaults if settings not yet loaded
         const rate = platformSettings?.user_platform_fee_rate ?? 0.05;
         const gstRate = platformSettings?.gst_rate ?? 0.18;
-        const fixedFee = platformSettings?.cricket_owner_fee_fixed ?? 100;
+        const cricketFixedFee = platformSettings?.cricket_owner_fee_fixed ?? 100;
+        const netsFixedFee = platformSettings?.nets_owner_fee_fixed ?? 25;
+        const netsUserRate = platformSettings?.nets_user_fee_rate ?? 0.10;
 
-        const isCricket = (booking?.grounds?.pitch_type ?? '').toLowerCase() === 'cricket ground';
+        const pitchType = (booking?.grounds?.pitch_type ?? '').toLowerCase();
+        const groundName = (booking?.grounds?.name ?? '').toLowerCase();
+        const isCricket = pitchType === 'cricket ground';
+        const isNet = pitchType.includes('net') || groundName.includes('net') || pitchType.includes('lane') || groundName.includes('lane');
         const isCash = selectedGateway === 'cash';
 
-        // 1. Calculate User's Platform Fee (Always percentage for online bookings)
-        const userPfRate = platformSettings?.user_platform_fee_rate ?? 0.05;
+        // 1. Calculate User's Platform Fee
+        const userPfRate = isNet ? netsUserRate : rate;
         const userPf = bgp * userPfRate;
         const userGst = userPf * gstRate;
         const userTotalPfGst = userPf + userGst;
 
-        // 2. Calculate Owner's Platform Fee (Fixed for Cricket/Cash/Owner, Percentage otherwise)
+        // 2. Calculate Owner's Platform Fee
         let ownerPf = 0;
-        if (isCricket || isCash || isGroundOwnerOrAdmin) {
-            const teamCount = booking?.team_type === 'one' ? 1 : 2;
-            ownerPf = fixedFee * teamCount;
+        if (isGroundOwnerOrAdmin || isCash) {
+            if (isNet) {
+                ownerPf = netsFixedFee;
+            } else if (isCricket) {
+                const teamCount = booking?.team_type === 'one' ? 1 : 2;
+                ownerPf = cricketFixedFee * teamCount;
+            } else {
+                ownerPf = bgp * rate;
+            }
         } else {
-            ownerPf = bgp * rate;
+            // Regular user booking - owner commission
+            ownerPf = isNet ? (bgp * netsUserRate) : (bgp * rate);
         }
         const ownerGst = ownerPf * gstRate;
         const ownerTotalPfGst = ownerPf + ownerGst;
@@ -124,7 +136,7 @@ export default function CheckoutScreen() {
             totalPayable: tp,
             totalReceivable: tr
         };
-    }, [selectedGateway, customCashAmount, booking?.total_amount, booking?.team_type, booking?.grounds?.pitch_type, platformSettings, isGroundOwnerOrAdmin]);
+    }, [selectedGateway, customCashAmount, booking?.total_amount, booking?.team_type, booking?.grounds?.pitch_type, booking?.grounds?.name, platformSettings, isGroundOwnerOrAdmin]);
 
     const [showRazorpayWebView, setShowRazorpayWebView] = useState(false);
     const [razorpayOrderData, setRazorpayOrderData] = useState<any>(null);
@@ -1143,10 +1155,6 @@ export default function CheckoutScreen() {
                                     <Zap size={18} color="#0D9488" />
                                     <RNText style={{ fontSize: 11, color: '#0D9488', fontWeight: '600' }}>Instant Confirmation</RNText>
                                 </View>
-                                <View style={{ alignItems: 'center', gap: 6 }}>
-                                    <Headphones size={18} color="#0D9488" />
-                                    <RNText style={{ fontSize: 11, color: '#0D9488', fontWeight: '600' }}>24/7 Support</RNText>
-                                </View>
                             </View>
                         )}
                     </View>
@@ -1187,27 +1195,33 @@ export default function CheckoutScreen() {
                                 <View style={styles.amenitiesContainer}>
                                     {isNets ? (
                                         <>
-                                            <View style={styles.amenityItem}>
-                                                <View style={styles.amenityIconBox}><MapPin size={16} color="#64748B" /></View>
-                                                <View style={styles.amenityInfo}>
-                                                    <RNText style={styles.amenityLabel}>Surface</RNText>
-                                                    <RNText style={styles.amenityValue}>{groundData?.cricket_pitch_surface || 'N/A'}</RNText>
+                                            {groundData?.cricket_pitch_surface && (
+                                                <View style={styles.amenityItem}>
+                                                    <View style={styles.amenityIconBox}><MapPin size={16} color="#64748B" /></View>
+                                                    <View style={styles.amenityInfo}>
+                                                        <RNText style={styles.amenityLabel}>Surface</RNText>
+                                                        <RNText style={styles.amenityValue}>{groundData?.cricket_pitch_surface}</RNText>
+                                                    </View>
                                                 </View>
-                                            </View>
-                                            <View style={styles.amenityItem}>
-                                                <View style={styles.amenityIconBox}><Zap size={16} color="#64748B" /></View>
-                                                <View style={styles.amenityInfo}>
-                                                    <RNText style={styles.amenityLabel}>Bowling Machine</RNText>
-                                                    <RNText style={styles.amenityValue}>{groundData?.has_bowling_machine ? 'Yes' : 'No'}</RNText>
+                                            )}
+                                            {groundData?.has_bowling_machine && (
+                                                <View style={styles.amenityItem}>
+                                                    <View style={styles.amenityIconBox}><Zap size={16} color="#64748B" /></View>
+                                                    <View style={styles.amenityInfo}>
+                                                        <RNText style={styles.amenityLabel}>Bowling Machine</RNText>
+                                                        <RNText style={styles.amenityValue}>Yes</RNText>
+                                                    </View>
                                                 </View>
-                                            </View>
-                                            <View style={styles.amenityItem}>
-                                                <View style={styles.amenityIconBox}><ShieldCheck size={16} color="#64748B" /></View>
-                                                <View style={styles.amenityInfo}>
-                                                    <RNText style={styles.amenityLabel}>Manual Throwdown</RNText>
-                                                    <RNText style={styles.amenityValue}>{groundData?.has_manual_throwdown ? 'Yes' : 'No'}</RNText>
+                                            )}
+                                            {groundData?.has_manual_throwdown && (
+                                                <View style={styles.amenityItem}>
+                                                    <View style={styles.amenityIconBox}><ShieldCheck size={16} color="#64748B" /></View>
+                                                    <View style={styles.amenityInfo}>
+                                                        <RNText style={styles.amenityLabel}>Manual Throwdown</RNText>
+                                                        <RNText style={styles.amenityValue}>Yes</RNText>
+                                                    </View>
                                                 </View>
-                                            </View>
+                                            )}
                                             <View style={styles.amenityItem}>
                                                 <View style={styles.amenityIconBox}><Users size={16} color="#64748B" /></View>
                                                 <View style={styles.amenityInfo}>
@@ -1215,51 +1229,63 @@ export default function CheckoutScreen() {
                                                     <RNText style={styles.amenityValue}>{groundData?.is_indoor ? 'Indoor' : 'Outdoor'}</RNText>
                                                 </View>
                                             </View>
-                                            <View style={styles.amenityItem}>
-                                                <View style={styles.amenityIconBox}><Zap size={16} color="#64748B" /></View>
-                                                <View style={styles.amenityInfo}>
-                                                    <RNText style={styles.amenityLabel}>Floodlights</RNText>
-                                                    <RNText style={styles.amenityValue}>{groundData?.has_floodlights ? 'Yes' : 'No'}</RNText>
+                                            {groundData?.has_floodlights && (
+                                                <View style={styles.amenityItem}>
+                                                    <View style={styles.amenityIconBox}><Zap size={16} color="#64748B" /></View>
+                                                    <View style={styles.amenityInfo}>
+                                                        <RNText style={styles.amenityLabel}>Floodlights</RNText>
+                                                        <RNText style={styles.amenityValue}>Yes</RNText>
+                                                    </View>
                                                 </View>
-                                            </View>
+                                            )}
                                         </>
                                     ) : (
                                         <>
-                                            <View style={styles.amenityItem}>
-                                                <View style={styles.amenityIconBox}><Zap size={16} color="#64748B" /></View>
-                                                <View style={styles.amenityInfo}>
-                                                    <RNText style={styles.amenityLabel}>Floodlights</RNText>
-                                                    <RNText style={styles.amenityValue}>Yes</RNText>
+                                            {groundData?.has_floodlights && (
+                                                <View style={styles.amenityItem}>
+                                                    <View style={styles.amenityIconBox}><Zap size={16} color="#64748B" /></View>
+                                                    <View style={styles.amenityInfo}>
+                                                        <RNText style={styles.amenityLabel}>Floodlights</RNText>
+                                                        <RNText style={styles.amenityValue}>Yes</RNText>
+                                                    </View>
                                                 </View>
-                                            </View>
-                                            <View style={styles.amenityItem}>
-                                                <View style={styles.amenityIconBox}><Users size={16} color="#64748B" /></View>
-                                                <View style={styles.amenityInfo}>
-                                                    <RNText style={styles.amenityLabel}>Changing Room</RNText>
-                                                    <RNText style={styles.amenityValue}>Yes</RNText>
+                                            )}
+                                            {groundData?.has_changing_rooms && (
+                                                <View style={styles.amenityItem}>
+                                                    <View style={styles.amenityIconBox}><Users size={16} color="#64748B" /></View>
+                                                    <View style={styles.amenityInfo}>
+                                                        <RNText style={styles.amenityLabel}>Changing Room</RNText>
+                                                        <RNText style={styles.amenityValue}>Yes</RNText>
+                                                    </View>
                                                 </View>
-                                            </View>
-                                            <View style={styles.amenityItem}>
-                                                <View style={styles.amenityIconBox}><MapPin size={16} color="#64748B" /></View>
-                                                <View style={styles.amenityInfo}>
-                                                    <RNText style={styles.amenityLabel}>Parking</RNText>
-                                                    <RNText style={styles.amenityValue}>Yes</RNText>
+                                            )}
+                                            {groundData?.has_parking && (
+                                                <View style={styles.amenityItem}>
+                                                    <View style={styles.amenityIconBox}><MapPin size={16} color="#64748B" /></View>
+                                                    <View style={styles.amenityInfo}>
+                                                        <RNText style={styles.amenityLabel}>Parking</RNText>
+                                                        <RNText style={styles.amenityValue}>Yes</RNText>
+                                                    </View>
                                                 </View>
-                                            </View>
-                                            <View style={styles.amenityItem}>
-                                                <View style={styles.amenityIconBox}><ShieldCheck size={16} color="#64748B" /></View>
-                                                <View style={styles.amenityInfo}>
-                                                    <RNText style={styles.amenityLabel}>Drinking Water</RNText>
-                                                    <RNText style={styles.amenityValue}>Yes</RNText>
+                                            )}
+                                            {groundData?.has_pavilion && (
+                                                <View style={styles.amenityItem}>
+                                                    <View style={styles.amenityIconBox}><ShieldCheck size={16} color="#64748B" /></View>
+                                                    <View style={styles.amenityInfo}>
+                                                        <RNText style={styles.amenityLabel}>Pavilion</RNText>
+                                                        <RNText style={styles.amenityValue}>Yes</RNText>
+                                                    </View>
                                                 </View>
-                                            </View>
-                                            <View style={styles.amenityItem}>
-                                                <View style={styles.amenityIconBox}><ShieldCheck size={16} color="#64748B" /></View>
-                                                <View style={styles.amenityInfo}>
-                                                    <RNText style={styles.amenityLabel}>First Aid</RNText>
-                                                    <RNText style={styles.amenityValue}>Yes</RNText>
+                                            )}
+                                            {groundData?.has_washrooms && (
+                                                <View style={styles.amenityItem}>
+                                                    <View style={styles.amenityIconBox}><ShieldCheck size={16} color="#64748B" /></View>
+                                                    <View style={styles.amenityInfo}>
+                                                        <RNText style={styles.amenityLabel}>Washrooms</RNText>
+                                                        <RNText style={styles.amenityValue}>Yes</RNText>
+                                                    </View>
                                                 </View>
-                                            </View>
+                                            )}
                                         </>
                                     )}
                                 </View>
@@ -1278,17 +1304,6 @@ export default function CheckoutScreen() {
                                     <RNText style={styles.policyTitle}>Cancellation Policy</RNText>
                                     <RNText style={styles.policyDesc}>Cancel up to 24 hours before the match for a full refund.</RNText>
                                     <TouchableOpacity onPress={() => router.push('/terms')}><RNText style={styles.policyLink}>View full policy</RNText></TouchableOpacity>
-                                </View>
-                            </View>
-
-                            <View style={styles.policyBox}>
-                                <View style={[styles.policyIconBox, { backgroundColor: '#F0F9FF' }]}>
-                                    <Headphones size={24} color="#0284C7" />
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                    <RNText style={styles.policyTitle}>Need Help?</RNText>
-                                    <RNText style={styles.policyDesc}>Our team is available 24/7 to assist with your booking.</RNText>
-                                    <TouchableOpacity><RNText style={[styles.policyLink, { color: '#0284C7' }]}>Chat with us</RNText></TouchableOpacity>
                                 </View>
                             </View>
                         </View>
@@ -1578,10 +1593,6 @@ export default function CheckoutScreen() {
                             <View style={styles.sidebarFooterItem}>
                                 <Zap size={16} color="#94A3B8" />
                                 <RNText style={styles.sidebarFooterText}>Instant Confirmation</RNText>
-                            </View>
-                            <View style={styles.sidebarFooterItem}>
-                                <Headphones size={16} color="#94A3B8" />
-                                <RNText style={styles.sidebarFooterText}>24/7 Support</RNText>
                             </View>
                         </View>
                     </Card>

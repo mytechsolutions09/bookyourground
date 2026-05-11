@@ -214,9 +214,11 @@ export default function OwnerInventoryScreen() {
     if (activeBookings.length === 0) return 0;
 
     const isBox = String(pitchType || '').toLowerCase().includes('box');
+    const isNet = String(pitchType || '').toLowerCase().includes('net') || String(pitchType || '').toLowerCase().includes('lane');
+    const isFullSlotOnly = isBox || isNet;
 
     return activeBookings.reduce((sum, b) => {
-      if (isBox) return sum + 2; // Any booking for box cricket takes full slot (2 units)
+      if (isFullSlotOnly) return sum + 2; // Any booking for box or nets takes full slot (2 units)
 
       // Cricket ground logic
       if (b.team_type === 'one') return sum + 1;
@@ -300,10 +302,15 @@ export default function OwnerInventoryScreen() {
                 const startHHMM = normalizeDbTimeToHHMM(s.start_time);
                 const endHHMM = normalizeDbTimeToHHMM(s.end_time);
                 const isBox = (ground.pitch_type ?? '').toLowerCase().includes('box');
+                const isNet = (ground.pitch_type ?? '').toLowerCase().includes('net') || 
+                              (ground.name ?? '').toLowerCase().includes('net') ||
+                              (ground.pitch_type ?? '').toLowerCase().includes('lane') ||
+                              (ground.name ?? '').toLowerCase().includes('lane');
+                const skipChoice = isBox || isNet;
                 const basePrice = Number(s.custom_price ?? (ground as any).base_price_per_hour ?? 0);
 
                 const goToCheckout = (teams: 'one' | 'both') => {
-                  const finalAmount = isBox ? basePrice : (teams === 'one' ? basePrice / 2 : basePrice);
+                  const finalAmount = skipChoice ? basePrice : (teams === 'one' ? basePrice / 2 : basePrice);
                   router.push({
                     pathname: '/checkout/new',
                     params: { 
@@ -311,14 +318,14 @@ export default function OwnerInventoryScreen() {
                       date: dateStr,
                       time: startHHMM,
                       endTime: endHHMM,
-                      teamType: teams,
+                      teamType: skipChoice ? 'both' : teams,
                       amount: finalAmount.toString(),
                       pricePerHour: basePrice.toString()
                     }
                   });
                 };
 
-                if (statusText === 'EMPTY' && !isBox) {
+                if (statusText === 'EMPTY' && !skipChoice) {
                   setBookingChoice({
                     ground,
                     slot: s,
@@ -487,10 +494,10 @@ export default function OwnerInventoryScreen() {
                           }
                           const dateStr = toLocalIsoDate(d);
                           return (
-                            <View key={dateStr} style={styles.compactDateRow}>
-                              <View style={styles.compactDateLabel}>
-                                <Text style={styles.dateDay}>{d.toLocaleDateString('en-IN', { weekday: 'short' })}</Text>
-                                <Text style={styles.dateNum}>{d.getDate()} {d.toLocaleDateString('en-IN', { month: 'short' })}</Text>
+                            <View key={dateStr} style={[styles.compactDateRow, isSmall && { flexDirection: 'column', gap: 8, borderBottomWidth: 0, paddingBottom: 0 }]}>
+                              <View style={[styles.compactDateLabel, isSmall && { width: '100%', flexDirection: 'row', justifyContent: 'flex-start', gap: 8, alignItems: 'center', marginBottom: 4 }]}>
+                                <Text style={[styles.dateDay, isSmall && { fontSize: 13, color: '#111827' }]}>{d.toLocaleDateString('en-IN', { weekday: 'short' })}</Text>
+                                <Text style={[styles.dateNum, isSmall && { color: '#6B7280', fontSize: 13 }]}>{d.getDate()} {d.toLocaleDateString('en-IN', { month: 'short' })}</Text>
                               </View>
                               <View style={styles.slotsWrapper}>
                                 {renderSlotsForDate(currentGround, dateStr)}
@@ -561,10 +568,10 @@ export default function OwnerInventoryScreen() {
                       }
                       const dateStr = toLocalIsoDate(d);
                       return (
-                        <View key={dateStr} style={styles.compactDateRow}>
-                          <View style={styles.compactDateLabel}>
-                            <Text style={styles.dateDay}>{d.toLocaleDateString('en-IN', { weekday: 'short' })}</Text>
-                            <Text style={styles.dateNum}>{d.getDate()} {d.toLocaleDateString('en-IN', { month: 'short' })}</Text>
+                        <View key={dateStr} style={[styles.compactDateRow, isSmall && { flexDirection: 'column', gap: 8, borderBottomWidth: 0, paddingBottom: 0 }]}>
+                          <View style={[styles.compactDateLabel, isSmall && { width: '100%', flexDirection: 'row', justifyContent: 'flex-start', gap: 8, alignItems: 'center', marginBottom: 4 }]}>
+                            <Text style={[styles.dateDay, isSmall && { fontSize: 13, color: '#111827' }]}>{d.toLocaleDateString('en-IN', { weekday: 'short' })}</Text>
+                            <Text style={[styles.dateNum, isSmall && { color: '#6B7280', fontSize: 13 }]}>{d.getDate()} {d.toLocaleDateString('en-IN', { month: 'short' })}</Text>
                           </View>
                           <View style={styles.slotsWrapper}>
                             {renderSlotsForDate(currentGround, dateStr)}
@@ -761,13 +768,13 @@ const styles = StyleSheet.create({
     borderBottomColor: '#F3F4F6',
   },
   webPageHeader: {
-    paddingTop: 24,
-    paddingBottom: 24,
+    paddingTop: 12,
+    paddingBottom: 12,
     backgroundColor: 'transparent',
     width: '100%',
   },
   title: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '800',
     color: '#111827',
     letterSpacing: -0.5,
@@ -1004,19 +1011,19 @@ const styles = StyleSheet.create({
   },
   slotChip: {
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 8,
     borderRadius: 8,
-    minWidth: 85,
+    minWidth: 105,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.05)',
   },
   slotTime: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
   },
   slotStatus: {
-    fontSize: 8,
+    fontSize: 9,
     fontWeight: '700',
     marginTop: 1,
     textTransform: 'uppercase',

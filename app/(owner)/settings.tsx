@@ -262,7 +262,7 @@ function OwnerSettingsInner() {
           <View style={styles.verifiedHeader}>
             <View style={styles.verifiedBadge}>
               <CheckCircle2 size={16} color="#059669" />
-              <Text style={styles.verifiedBadgeText}>VERIFIED BY ADMIN</Text>
+              <Text style={styles.verifiedBadgeText}>Verified by Book your ground</Text>
             </View>
             <Text style={styles.verifiedTitle}>Bank Details Locked</Text>
             <Text style={styles.verifiedSubtitle}>Your bank details are approved for payouts. To change them, please contact support.</Text>
@@ -304,7 +304,7 @@ function OwnerSettingsInner() {
 
         {rejectionReason ? (
           <View style={styles.rejectedBanner}>
-            <Text style={styles.rejectedTitle}>Rejected by admin</Text>
+            <Text style={styles.rejectedTitle}>Rejected by Book your ground</Text>
             <Text style={styles.rejectedText}>{rejectionReason}</Text>
             <Text style={styles.rejectedHint}>Please correct your details and resubmit for verification.</Text>
           </View>
@@ -882,7 +882,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: 'transparent',
     paddingHorizontal: 16,
-    marginBottom: 0,
+    marginBottom: 20,
     width: '100%',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,0,0,0.05)',
@@ -902,12 +902,12 @@ const styles = StyleSheet.create({
   tabText: {
     fontFamily: 'Inter',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#64748B',
   },
   activeTabText: {
     color: '#01b854',
-    fontWeight: '800',
+    fontWeight: '600',
   },
   tabContentGap: {
     gap: 16,

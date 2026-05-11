@@ -1354,7 +1354,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
         </View>
       </View>
 
-      {isCompact && !isInTabs && !isCheckoutPage && cleanPath !== '/search' && (
+      {isCompact && !isInTabs && !isCheckoutPage && (
         <View style={[
           styles.bottomBar,
           (!isBottomBarVisible || !isTabBarVisible) && { 

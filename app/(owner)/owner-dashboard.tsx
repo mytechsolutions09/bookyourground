@@ -1056,7 +1056,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: 'transparent',
     paddingHorizontal: 16,
-    marginBottom: 0,
+    marginBottom: 20,
     width: '100%',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,0,0,0.05)',
@@ -1076,12 +1076,12 @@ const styles = StyleSheet.create({
   tabText: {
     fontFamily: 'Inter',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#64748B',
   },
   activeTabText: {
     color: '#01b854',
-    fontWeight: '800',
+    fontWeight: '600',
   },
   disabledTab: {
     opacity: 0.5,
@@ -1104,6 +1104,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F1F5F9',
     alignItems: 'center',
+    justifyContent: 'center',
+    height: 180,
     shadowColor: '#000',
     shadowOpacity: 0.04,
     shadowRadius: 10,
@@ -1121,10 +1123,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F1F5F9',
   },
-  statsLabel: {
+   statsLabel: {
     fontFamily: 'Inter',
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#64748B',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
@@ -1134,7 +1136,7 @@ const styles = StyleSheet.create({
   statsValue: {
     fontFamily: 'Inter',
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#0F172A',
     marginBottom: 6,
     letterSpacing: -0.5,
@@ -1142,7 +1144,7 @@ const styles = StyleSheet.create({
   statsValueSmall: {
     fontFamily: 'Inter',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#0F172A',
     marginBottom: 4,
     textAlign: 'center',

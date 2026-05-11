@@ -61,7 +61,7 @@ export default function OwnerGroundsScreen() {
   const { width } = useWindowDimensions();
   const isUltraNarrow = width < 350;
   const isTablet = width >= 600 && width < 900;
-  const numColumns = Platform.OS === 'web' ? (width > 1400 ? 4 : (width > 1100 ? 3 : (width > 768 ? 2 : 1))) : 1;
+  const numColumns = Platform.OS === 'web' ? (width > 1100 ? 3 : (width > 768 ? 2 : 1)) : 1;
   const [selectedGroundId, setSelectedGroundId] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
@@ -962,7 +962,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   webHeader: {
-    paddingVertical: 16,
+    paddingVertical: 10,
     paddingTop: 0,
     flexDirection: Platform.OS === 'web' ? 'row' : 'column',
     flexWrap: 'wrap',
@@ -970,12 +970,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
-    marginBottom: 16,
+    marginBottom: 12,
     gap: 16,
   },
   webTitle: {
     fontFamily: 'Inter',
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: '700',
     color: '#0F172A',
     letterSpacing: -0.5,

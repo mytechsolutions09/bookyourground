@@ -92,9 +92,7 @@ function DashboardContent() {
   const HEADER_HEIGHT = 100;
 
   // Now we can safely early return if needed, as all hooks have been called.
-  if (Platform.OS === 'web' && profile?.role === 'ground_owner') {
-    return null;
-  }
+  // We will check for the ground_owner role after all hooks are called to avoid hook violation.
 
   const onTabPress = (tab: 'overview' | 'activity') => {
     setActiveTab(tab);
@@ -454,6 +452,11 @@ function DashboardContent() {
       </View>
     </View>
   );
+  
+  // Early return for ground owners on web after all hooks are called
+  if (Platform.OS === 'web' && profile?.role === 'ground_owner') {
+    return null;
+  }
 
   if (Platform.OS === 'web' && !isCompact) {
     return (

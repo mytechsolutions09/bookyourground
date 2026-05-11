@@ -741,7 +741,7 @@ export default function SearchScreen() {
   );
 
   if (isWeb) {
-    return <WebLayout>{content}</WebLayout>;
+    return <WebLayout hideHeader={isCompact}>{content}</WebLayout>;
   }
 
   return (

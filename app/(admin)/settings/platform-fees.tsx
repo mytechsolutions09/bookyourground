@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Platform, ScrollView, Alert, TextInput, FlatList, ActivityIndicator, TouchableOpacity, Switch } from 'react-native';
-import { Save, Percent, IndianRupee, Info } from 'lucide-react-native';
+import { Save, Percent, IndianRupee, Info, ChevronDown, ChevronUp, Box, Zap, Settings as SettingsIcon } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import Button from '@/components/ui/Button';
 import WebLayout from '@/components/web/WebLayout';
@@ -27,6 +27,11 @@ export default function PlatformFeesSettings() {
   // Commission
   const [comm, setComm]           = useState<CommissionConfig>({ type: 'percent', value: '10', gst: true });
   const [savingComm, setSavingComm] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    cricket: true,
+    nets: true,
+    general: false
+  });
 
   useEffect(() => {
     loadSettings();
@@ -42,7 +47,29 @@ export default function PlatformFeesSettings() {
         .not('key', 'in', '(contract_commission_type,contract_commission_value,contract_commission_gst)');
 
       if (error) throw error;
-      const loadedSettings = data || [];
+      
+      let loadedSettings = data || [];
+      
+      // Ensure critical keys are visible even if not yet in DB
+      const criticalKeys = [
+        { key: 'cricket_owner_fee_fixed', default: 500, desc: 'Fixed fee per booking per team for cricket grounds' },
+        { key: 'nets_owner_fee_fixed',    default: 25,  desc: 'Fixed fee per booking per slot for nets/lanes (Owner self-booking)' },
+        { key: 'user_platform_fee_rate',  default: 0.05, desc: 'Platform fee rate for users (e.g. 0.05 for 5%)' },
+        { key: 'nets_user_fee_rate',   default: 0.10, desc: 'Platform fee rate for users on nets/lanes (e.g. 0.10 for 10%)' },
+        { key: 'gst_rate',                default: 0.18, desc: 'GST rate (e.g. 0.18 for 18%)' }
+      ];
+
+      const existingKeys = loadedSettings.map(s => s.key);
+      criticalKeys.forEach(ck => {
+        if (!existingKeys.includes(ck.key)) {
+          loadedSettings.push({
+            key: ck.key,
+            value: ck.default,
+            description: ck.desc
+          });
+        }
+      });
+
       setSettings(loadedSettings);
       const values: Record<string, string> = {};
       loadedSettings.forEach(s => { values[s.key] = String(s.value); });
@@ -107,8 +134,12 @@ export default function PlatformFeesSettings() {
       for (const update of updates) {
         const { error } = await supabase
           .from('platform_settings')
-          .update({ value: update.value, updated_at: update.updated_at })
-          .eq('key', update.key);
+          .upsert({ 
+            key: update.key, 
+            value: update.value, 
+            updated_at: update.updated_at,
+            description: settings.find(s => s.key === update.key)?.description || 'Platform setting'
+          }, { onConflict: 'key' });
           
         if (error) throw error;
       }
@@ -232,7 +263,9 @@ export default function PlatformFeesSettings() {
   const getLabel = (key: string) => {
     switch (key) {
       case 'cricket_owner_fee_fixed': return 'Cricket Owner Fee';
+      case 'nets_owner_fee_fixed': return 'Nets Owner Fee';
       case 'user_platform_fee_rate': return 'User Platform Fee Rate';
+      case 'nets_user_fee_rate': return 'Nets User Platform Fee Rate';
       case 'gst_rate': return 'GST Rate';
       default: return key;
     }
@@ -241,59 +274,116 @@ export default function PlatformFeesSettings() {
   const getIcon = (key: string) => {
     if (key.includes('fee')) return <IndianRupee size={14} color="#10b981" />;
     if (key.includes('rate')) return <Percent size={14} color="#3B82F6" />;
-    return <SettingsSubbar size={14} color="#6B7280" />;
+    return <SettingsIcon size={14} color="#6B7280" />;
   };
+
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
+
+  const renderSettingRow = (item: PlatformSetting) => (
+    <View key={item.key} style={styles.tableRow}>
+      <View style={[styles.cell, { flex: 4 }]}>
+        <View style={styles.labelRow}>
+          {getIcon(item.key)}
+          <Text style={styles.cellTextBold}>{getLabel(item.key)}</Text>
+        </View>
+        <Text style={styles.cellTextSub}>{item.description || 'Global platform constant'}</Text>
+      </View>
+      
+      <View style={[styles.cell, { flex: 2, alignItems: 'flex-end' }]}>
+        <Text style={styles.cellText}>
+          {item.key.includes('_fixed') ? `₹${item.value}` : `${(item.value * 100).toFixed(0)}%`}
+        </Text>
+      </View>
+
+      <View style={[styles.cell, { flex: 2.5, alignItems: 'flex-end' }]}>
+        <TextInput
+          style={styles.tableInput}
+          value={localValues[item.key]}
+          onChangeText={(text) => setLocalValues(prev => ({ ...prev, [item.key]: text }))}
+          keyboardType="numeric"
+          placeholder="0"
+        />
+      </View>
+    </View>
+  );
+
+  const cricketSettings = settings.filter(s => s.key.includes('cricket') || s.key === 'user_platform_fee_rate');
+  const netsSettings = settings.filter(s => s.key.includes('nets'));
+  const otherSettings = settings.filter(s => s.key === 'gst_rate');
 
   const inner = (
     <View style={styles.container}>
-      <FlatList
-        data={settings}
-        keyExtractor={(item) => item.key}
-        contentContainerStyle={styles.listContent}
-        keyboardShouldPersistTaps="handled"
-        ListHeaderComponent={() => (
-          <View>
-            {renderListHeader()}
-            {settings.length > 0 && renderTableHeader()}
-          </View>
-        )}
-        renderItem={({ item }) => (
-          <View style={styles.tableRow}>
-            <View style={[styles.cell, { flex: 4 }]}>
-              <View style={styles.labelRow}>
-                {getIcon(item.key)}
-                <Text style={styles.cellTextBold}>{getLabel(item.key)}</Text>
-              </View>
-              <Text style={styles.cellTextSub}>{item.description || 'Global platform constant'}</Text>
-            </View>
-            
-            <View style={[styles.cell, { flex: 2, alignItems: 'flex-end' }]}>
-              <Text style={styles.cellText}>
-                {item.key === 'cricket_owner_fee_fixed' ? `₹${item.value}` : `${(item.value * 100).toFixed(0)}%`}
-              </Text>
-            </View>
+      <ScrollView contentContainerStyle={styles.listContent} keyboardShouldPersistTaps="handled">
+        {renderListHeader()}
 
-            <View style={[styles.cell, { flex: 2.5, alignItems: 'flex-end' }]}>
-              <TextInput
-                style={styles.tableInput}
-                value={localValues[item.key]}
-                onChangeText={(text) => setLocalValues(prev => ({ ...prev, [item.key]: text }))}
-                keyboardType="numeric"
-                placeholder="0"
-              />
-            </View>
+        {loading ? (
+          <ActivityIndicator style={{ marginTop: 40 }} color="#10b981" />
+        ) : (
+          <View style={{ marginTop: 24 }}>
+            {/* ── Cricket Section ── */}
+            <TouchableOpacity 
+              style={styles.sectionToggle} 
+              onPress={() => toggleSection('cricket')}
+              activeOpacity={0.7}
+            >
+              <View style={styles.sectionToggleLeft}>
+                <Zap size={18} color="#10b981" />
+                <Text style={styles.sectionToggleTitle}>Cricket Ground Fees</Text>
+              </View>
+              {expandedSections.cricket ? <ChevronUp size={18} color="#6B7280" /> : <ChevronDown size={18} color="#6B7280" />}
+            </TouchableOpacity>
+            
+            {expandedSections.cricket && (
+              <View style={styles.sectionBody}>
+                {renderTableHeader()}
+                {cricketSettings.map(renderSettingRow)}
+              </View>
+            )}
+
+            {/* ── Nets Section ── */}
+            <TouchableOpacity 
+              style={[styles.sectionToggle, { marginTop: 16 }]} 
+              onPress={() => toggleSection('nets')}
+              activeOpacity={0.7}
+            >
+              <View style={styles.sectionToggleLeft}>
+                <Box size={18} color="#10b981" />
+                <Text style={styles.sectionToggleTitle}>Nets & Lanes Fees</Text>
+              </View>
+              {expandedSections.nets ? <ChevronUp size={18} color="#6B7280" /> : <ChevronDown size={18} color="#6B7280" />}
+            </TouchableOpacity>
+            
+            {expandedSections.nets && (
+              <View style={styles.sectionBody}>
+                {renderTableHeader()}
+                {netsSettings.map(renderSettingRow)}
+              </View>
+            )}
+
+            {/* ── General Section ── */}
+            <TouchableOpacity 
+              style={[styles.sectionToggle, { marginTop: 16 }]} 
+              onPress={() => toggleSection('general')}
+              activeOpacity={0.7}
+            >
+              <View style={styles.sectionToggleLeft}>
+                <SettingsIcon size={18} color="#10b981" />
+                <Text style={styles.sectionToggleTitle}>General Settings</Text>
+              </View>
+              {expandedSections.general ? <ChevronUp size={18} color="#6B7280" /> : <ChevronDown size={18} color="#6B7280" />}
+            </TouchableOpacity>
+            
+            {expandedSections.general && (
+              <View style={styles.sectionBody}>
+                {renderTableHeader()}
+                {otherSettings.map(renderSettingRow)}
+              </View>
+            )}
           </View>
         )}
-        ListEmptyComponent={
-          loading ? (
-            <ActivityIndicator style={{ marginTop: 40 }} color="#10b981" />
-          ) : (
-            <View style={styles.emptyBox}>
-              <Text style={styles.emptyText}>No settings found</Text>
-            </View>
-          )
-        }
-      />
+      </ScrollView>
     </View>
   );
 
@@ -483,4 +573,32 @@ const styles = StyleSheet.create({
   commInputSuffix: { fontSize: 12, color: '#6B7280', fontFamily: 'Inter' },
   commGstRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   commGstLabel: { fontSize: 13, color: '#374151', fontFamily: 'Inter' },
+
+  // Section toggle
+  sectionToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  sectionToggleLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  sectionToggleTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+    fontFamily: 'Inter',
+  },
+  sectionBody: {
+    paddingHorizontal: 4,
+    paddingBottom: 8,
+  },
 });

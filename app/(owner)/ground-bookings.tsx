@@ -1251,7 +1251,7 @@ export default function OwnerBookingsScreen() {
   );
 
   if (Platform.OS === 'web') {
-    return <WebLayout noCard>{content}</WebLayout>;
+    return <WebLayout noCard hideHeader={isSmallScreen}>{content}</WebLayout>;
   }
 
   return (

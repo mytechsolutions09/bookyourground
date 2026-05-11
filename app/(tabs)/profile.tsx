@@ -29,6 +29,8 @@ import {
   Camera,
   CheckCircle2,
   Users,
+  Store,
+  Package,
 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -386,13 +388,93 @@ export default function ProfileScreen({
       </View>
     )}
 
-    {/* 3. VENUE OWNER HUB (Grid or Rows) */}
+    {/* 3. VENUE OWNER HUB (Redesigned) */}
     {(profile?.role === 'ground_owner' || isSuperAdmin) && (
-      <View style={styles.sectionContainer}>
-        <RNText style={styles.sectionTitle}>VENUE OWNER HUB</RNText>
-        <View style={isModal ? [styles.rowList, styles.noContainer] : styles.hubGrid}>
-          {isModal ? (
-            <>
+      <View style={styles.venueOwnerSection}>
+        {!isModal ? (
+          <>
+            <View style={styles.venueOwnerHeader}>
+              <View style={styles.venueOwnerHeaderIcon}>
+                <Store size={24} color="#00ea6b" />
+              </View>
+              <View style={styles.venueOwnerHeaderText}>
+                <RNText style={styles.venueOwnerTitle}>Venue Owner Hub</RNText>
+                <RNText style={styles.venueOwnerSubtitle}>Manage your venues, bookings, and business all in one place.</RNText>
+              </View>
+            </View>
+
+            <View style={styles.venueOwnerGrid}>
+              <TouchableOpacity 
+                style={[styles.venueOwnerCard, { width: (width > 1200) ? '31.5%' : (width > 700 ? '48.5%' : '100%') }]}
+                onPress={() => router.push('/(owner)/owner-dashboard' as any)}
+              >
+                <View style={styles.venueOwnerCardIconBg}>
+                  <LayoutGrid size={28} color="#00ea6b" />
+                </View>
+                <RNText style={styles.venueOwnerCardTitle}>Dashboard</RNText>
+                <RNText style={styles.venueOwnerCardDesc}>Overview of your venues, bookings, and performance.</RNText>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.venueOwnerCard, { width: (width > 1200) ? '31.5%' : (width > 700 ? '48.5%' : '100%') }]}
+                onPress={() => router.push('/(owner)/manage-grounds' as any)}
+              >
+                <View style={styles.venueOwnerCardIconBg}>
+                  <MapPin size={28} color="#00ea6b" />
+                </View>
+                <RNText style={styles.venueOwnerCardTitle}>My Grounds</RNText>
+                <RNText style={styles.venueOwnerCardDesc}>View and manage your grounds and venues.</RNText>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.venueOwnerCard, { width: (width > 1200) ? '31.5%' : (width > 700 ? '48.5%' : '100%') }]}
+                onPress={() => router.push('/(owner)/ground-bookings' as any)}
+              >
+                <View style={styles.venueOwnerCardIconBg}>
+                  <Calendar size={28} color="#00ea6b" />
+                </View>
+                <RNText style={styles.venueOwnerCardTitle}>Bookings</RNText>
+                <RNText style={styles.venueOwnerCardDesc}>Manage bookings, availability, and reservations.</RNText>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.venueOwnerCard, { width: (width > 1200) ? '31.5%' : (width > 700 ? '48.5%' : '100%') }]}
+                onPress={() => router.push('/(owner)/earnings' as any)}
+              >
+                <View style={styles.venueOwnerCardIconBg}>
+                  <IndianRupee size={28} color="#00ea6b" />
+                </View>
+                <RNText style={styles.venueOwnerCardTitle}>Earnings</RNText>
+                <RNText style={styles.venueOwnerCardDesc}>Track your earnings, transactions, and payouts.</RNText>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.venueOwnerCard, { width: (width > 1200) ? '31.5%' : (width > 700 ? '48.5%' : '100%') }]}
+                onPress={() => router.push('/(owner)/inventory' as any)}
+              >
+                <View style={styles.venueOwnerCardIconBg}>
+                  <Package size={28} color="#00ea6b" />
+                </View>
+                <RNText style={styles.venueOwnerCardTitle}>Inventory</RNText>
+                <RNText style={styles.venueOwnerCardDesc}>Manage your inventory, equipment, and stock.</RNText>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.venueOwnerCard, { width: (width > 1200) ? '31.5%' : (width > 700 ? '48.5%' : '100%') }]}
+                onPress={() => router.push('/(owner)/settings' as any)}
+              >
+                <View style={styles.venueOwnerCardIconBg}>
+                  <Settings size={28} color="#00ea6b" />
+                </View>
+                <RNText style={styles.venueOwnerCardTitle}>Settings</RNText>
+                <RNText style={styles.venueOwnerCardDesc}>Update your profile, preferences, and account settings.</RNText>
+              </TouchableOpacity>
+            </View>
+          </>
+        ) : (
+          <View style={styles.sectionContainer}>
+            <RNText style={styles.sectionTitle}>VENUE OWNER HUB</RNText>
+            <View style={[styles.rowList, styles.noContainer]}>
               <TouchableOpacity 
                 style={styles.rowItem}
                 onPress={() => router.push('/(owner)/owner-dashboard' as any)}
@@ -452,71 +534,9 @@ export default function ProfileScreen({
                   <RNText style={styles.rowText}>Settings</RNText>
                 </View>
               </TouchableOpacity>
-            </>
-          ) : (
-            <>
-              <TouchableOpacity 
-                style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
-                onPress={() => router.push('/(owner)/owner-dashboard' as any)}
-              >
-                <View style={styles.hubIconCircle}>
-                  <LayoutGrid size={24} color="#00ea6b" />
-                </View>
-                <RNText style={styles.hubCardText}>Dashboard</RNText>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
-                onPress={() => router.push('/(owner)/manage-grounds' as any)}
-              >
-                <View style={styles.hubIconCircle}>
-                  <MapPin size={24} color="#00ea6b" />
-                </View>
-                <RNText style={styles.hubCardText}>My Grounds</RNText>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
-                onPress={() => router.push('/(owner)/ground-bookings' as any)}
-              >
-                <View style={styles.hubIconCircle}>
-                  <Calendar size={24} color="#00ea6b" />
-                </View>
-                <RNText style={styles.hubCardText}>Bookings</RNText>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
-                onPress={() => router.push('/(owner)/earnings' as any)}
-              >
-                <View style={styles.hubIconCircle}>
-                  <IndianRupee size={24} color="#00ea6b" />
-                </View>
-                <RNText style={styles.hubCardText}>Earnings</RNText>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
-                onPress={() => router.push('/(owner)/inventory' as any)}
-              >
-                <View style={styles.hubIconCircle}>
-                  <CalendarClock size={24} color="#00ea6b" />
-                </View>
-                <RNText style={styles.hubCardText}>Inventory</RNText>
-              </TouchableOpacity>
-
-
-              <TouchableOpacity 
-                style={[styles.hubCard, { width: (width > 900 || isTablet) ? '31.5%' : (isUltraNarrow ? '100%' : '47.5%') }, isUltraNarrow && { padding: 16, borderRadius: 16 }]}
-                onPress={() => router.push('/(owner)/settings' as any)}
-              >
-                <View style={styles.hubIconCircle}>
-                  <Settings size={24} color="#00ea6b" />
-                </View>
-                <RNText style={styles.hubCardText}>Settings</RNText>
-              </TouchableOpacity>
-            </>
-          )}
-        </View>
+            </View>
+          </View>
+        )}
       </View>
     )}
 
@@ -1082,5 +1102,84 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     fontFamily: 'Inter',
+  },
+
+  // VENUE OWNER HUB REDESIGN
+  venueOwnerSection: {
+    marginBottom: 40,
+    marginTop: 8,
+  },
+  venueOwnerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginBottom: 28,
+  },
+  venueOwnerHeaderIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'rgba(0, 234, 107, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  venueOwnerHeaderText: {
+    flex: 1,
+  },
+  venueOwnerTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#0f172a',
+    fontFamily: 'Inter',
+    letterSpacing: -0.5,
+  },
+  venueOwnerSubtitle: {
+    fontSize: 14,
+    color: '#64748b',
+    fontFamily: 'Inter',
+    marginTop: 2,
+    lineHeight: 20,
+  },
+  venueOwnerGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  venueOwnerCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    elevation: 3,
+  },
+  venueOwnerCardIconBg: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: 'rgba(0, 234, 107, 0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  venueOwnerCardTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0f172a',
+    fontFamily: 'Inter',
+    marginBottom: 8,
+  },
+  venueOwnerCardDesc: {
+    fontSize: 13,
+    color: '#64748b',
+    textAlign: 'center',
+    lineHeight: 18,
+    fontFamily: 'Inter',
+    fontWeight: '400',
   },
 });
