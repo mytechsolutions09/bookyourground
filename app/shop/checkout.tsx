@@ -594,7 +594,7 @@ export default function CheckoutScreen() {
                     </TouchableOpacity>
                     <View style={styles.webTermsContainer}>
                       <Text style={styles.smallTermsText}>By placing this order, you agree to our </Text>
-                      <TouchableOpacity onPress={() => router.push('/shop/terms')}>
+                      <TouchableOpacity onPress={() => router.push('/terms')}>
                         <Text style={styles.smallTermsLink}>Terms & Conditions</Text>
                       </TouchableOpacity>
                     </View>
@@ -616,7 +616,7 @@ export default function CheckoutScreen() {
         {Platform.OS !== 'web' && (
           <View style={styles.mobileTermsContainer}>
             <Text style={styles.smallTermsText}>By placing this order, you agree to our </Text>
-            <TouchableOpacity onPress={() => router.push('/shop/terms')}>
+            <TouchableOpacity onPress={() => router.push('/terms')}>
               <Text style={styles.smallTermsLink}>Terms & Conditions</Text>
             </TouchableOpacity>
           </View>

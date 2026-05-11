@@ -125,12 +125,6 @@ export default function SiteFooter() {
             </Text>
             <Text
               style={styles.footerLink}
-              onPress={() => router.push('/shop/terms' as any)}
-            >
-              Terms &amp; Conditions
-            </Text>
-            <Text
-              style={styles.footerLink}
               onPress={() => router.push('/privacy' as any)}
             >
               Privacy policy

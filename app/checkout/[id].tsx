@@ -1277,7 +1277,7 @@ export default function CheckoutScreen() {
                                 <View style={{ flex: 1 }}>
                                     <RNText style={styles.policyTitle}>Cancellation Policy</RNText>
                                     <RNText style={styles.policyDesc}>Cancel up to 24 hours before the match for a full refund.</RNText>
-                                    <TouchableOpacity><RNText style={styles.policyLink}>View full policy</RNText></TouchableOpacity>
+                                    <TouchableOpacity onPress={() => router.push('/terms')}><RNText style={styles.policyLink}>View full policy</RNText></TouchableOpacity>
                                 </View>
                             </View>
 
