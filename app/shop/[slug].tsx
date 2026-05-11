@@ -16,7 +16,9 @@ import {
   Package,
   ArrowRight,
   TrendingUp,
-  ChevronDown
+  ChevronDown,
+  ChevronUp,
+  Trophy
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import WebLayout from '@/components/web/WebLayout';
@@ -51,6 +53,9 @@ export default function ProductDetailScreen() {
   const [activeWebTab, setActiveWebTab] = useState('DETAILS');
   const [quantity, setQuantity] = useState(1);
   const [showQuantityDropdown, setShowQuantityDropdown] = useState(false);
+  const [showHighlights, setShowHighlights] = useState(false);
+  const [showStyle, setShowStyle] = useState(false);
+  const [showFeatures, setShowFeatures] = useState(false);
   const scrollY = useSharedValue(0);
   const scrollHandler = useAnimatedScrollHandler({
     onScroll: (event) => {
@@ -374,6 +379,17 @@ export default function ProductDetailScreen() {
     );
   }
 
+  const renderMarkdown = (text: string) => {
+    if (!text) return null;
+    const parts = text.split(/(\*\*.*?\*\*)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return <Text key={i} style={{ fontWeight: '700', color: '#0F1111' }}>{part.slice(2, -2)}</Text>;
+      }
+      return part;
+    });
+  };
+
   const content = (
     <View style={{ flex: 1 }}>
       {/* Fixed Background Image */}
@@ -694,7 +710,7 @@ export default function ProductDetailScreen() {
 
                 {/* COLUMN 2: DETAILS */}
                 <View style={{ flex: 1.5, paddingHorizontal: 12 }}>
-                  <TouchableOpacity>
+                  <TouchableOpacity onPress={() => router.push(`/shop?category=${product.category?.name || 'Shoes'}`)}>
                     <Text style={{ color: '#007185', fontSize: 14, marginBottom: 8, fontFamily: 'Inter' }}>{`Visit the ${product.category?.name || 'Official'} Store`}</Text>
                   </TouchableOpacity>
                   <Text style={{ fontSize: 24, color: '#0F1111', marginBottom: 12, fontFamily: 'Inter', lineHeight: 32 }}>{product.name}</Text>
@@ -725,6 +741,10 @@ export default function ProductDetailScreen() {
                     <View style={{ alignItems: 'center', width: 80 }}>
                       <ShieldCheck size={28} color="#007185" strokeWidth={1} />
                       <Text style={{ fontSize: 12, color: '#007185', textAlign: 'center', marginTop: 8, fontFamily: 'Inter' }}>Secure transaction</Text>
+                    </View>
+                    <View style={{ alignItems: 'center', width: 80 }}>
+                      <Trophy size={28} color="#007185" strokeWidth={1} />
+                      <Text style={{ fontSize: 12, color: '#007185', textAlign: 'center', marginTop: 8, fontFamily: 'Inter' }}>Top Brand</Text>
                     </View>
                   </View>
 
@@ -797,20 +817,50 @@ export default function ProductDetailScreen() {
                     <Text style={{ fontSize: 20, fontWeight: '700', color: '#0F1111', marginBottom: 12, fontFamily: 'Inter' }}>Product details</Text>
                     
                     <View style={{ borderTopWidth: 1, borderTopColor: '#E5E7EB' }}>
-                      <TouchableOpacity style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}>
+                      <TouchableOpacity 
+                        style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}
+                        onPress={() => setShowHighlights(!showHighlights)}
+                      >
                         <Text style={{ fontSize: 16, fontWeight: '700', color: '#0F1111', fontFamily: 'Inter' }}>Top highlights</Text>
-                        <ChevronDown size={20} color="#0F1111" />
+                        {showHighlights ? <ChevronUp size={20} color="#0F1111" /> : <ChevronDown size={20} color="#0F1111" />}
                       </TouchableOpacity>
+                      {showHighlights && (
+                        <View style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}>
+                          <Text style={{ fontSize: 14, color: '#4B5563', fontFamily: 'Inter', lineHeight: 20 }}>
+                            {renderMarkdown(product.specifications?.highlights) || 'No highlights available.'}
+                          </Text>
+                        </View>
+                      )}
                       
-                      <TouchableOpacity style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}>
+                      <TouchableOpacity 
+                        style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}
+                        onPress={() => setShowStyle(!showStyle)}
+                      >
                         <Text style={{ fontSize: 16, fontWeight: '700', color: '#0F1111', fontFamily: 'Inter' }}>Style</Text>
-                        <ChevronDown size={20} color="#0F1111" />
+                        {showStyle ? <ChevronUp size={20} color="#0F1111" /> : <ChevronDown size={20} color="#0F1111" />}
                       </TouchableOpacity>
+                      {showStyle && (
+                        <View style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}>
+                          <Text style={{ fontSize: 14, color: '#4B5563', fontFamily: 'Inter', lineHeight: 20 }}>
+                            {renderMarkdown(product.specifications?.style) || 'No style details available.'}
+                          </Text>
+                        </View>
+                      )}
                       
-                      <TouchableOpacity style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}>
+                      <TouchableOpacity 
+                        style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}
+                        onPress={() => setShowFeatures(!showFeatures)}
+                      >
                         <Text style={{ fontSize: 16, fontWeight: '700', color: '#0F1111', fontFamily: 'Inter' }}>Features & Specs</Text>
-                        <ChevronDown size={20} color="#0F1111" />
+                        {showFeatures ? <ChevronUp size={20} color="#0F1111" /> : <ChevronDown size={20} color="#0F1111" />}
                       </TouchableOpacity>
+                      {showFeatures && (
+                        <View style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}>
+                          <Text style={{ fontSize: 14, color: '#4B5563', fontFamily: 'Inter', lineHeight: 20 }}>
+                            {renderMarkdown(product.specifications?.features) || 'No features or specifications available.'}
+                          </Text>
+                        </View>
+                      )}
                     </View>
                   </View>
                 </View>

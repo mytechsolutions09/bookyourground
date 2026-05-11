@@ -259,7 +259,7 @@ export default function ManageUsersScreen() {
 
   const getRoleLabel = (role: UserRole) => {
     switch (role) {
-      case 'ground_owner': return 'Ground Owner';
+      case 'ground_owner': return 'Venue Owner';
       case 'super_admin': return 'Super Admin';
       default: return 'Player';
     }
@@ -392,7 +392,7 @@ export default function ManageUsersScreen() {
                 <View style={styles.roleGrid}>
                   {[
                     { id: 'user' as UserRole, label: 'Player', color: '#6B7280' },
-                    { id: 'ground_owner' as UserRole, label: 'Ground Owner', color: '#10b981' },
+                    { id: 'ground_owner' as UserRole, label: 'Venue Owner', color: '#10b981' },
                     { id: 'super_admin' as UserRole, label: 'Super Admin', color: '#EF4444' }
                   ].map(role => (
                     <TouchableOpacity
@@ -655,7 +655,7 @@ export default function ManageUsersScreen() {
           <View style={styles.modalContent}>
             <View style={styles.modalUserHeader}>
               <Text style={styles.modalUserName}>{selectedBankUser.full_name}</Text>
-              <Text style={styles.modalUserRole}>Ground Owner</Text>
+              <Text style={styles.modalUserRole}>Venue Owner</Text>
             </View>
 
             <View style={styles.modalDetailsGrid}>

@@ -42,12 +42,16 @@ export default function HeroWeb() {
   const [locations, setLocations] = useState<LocationOption[]>([]);
   const [loadingLocations, setLoadingLocations] = useState(true);
   const [selectedLocation, setSelectedLocation] = useState<string>('');
+  const [groundTypes, setGroundTypes] = useState<{name: string, label: string}[]>([]);
+  const [loadingGroundTypes, setLoadingGroundTypes] = useState(true);
+  const [selectedType, setSelectedType] = useState<string>('');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [availableTimes, setAvailableTimes] = useState<string[]>([]);
   const [loadingTimes, setLoadingTimes] = useState(false);
   
   const [isLocationOpen, setIsLocationOpen] = useState(false);
+  const [isTypeOpen, setIsTypeOpen] = useState(false);
   const [isDateOpen, setIsDateOpen] = useState(false);
   const [isTimeOpen, setIsTimeOpen] = useState(false);
 
@@ -103,6 +107,7 @@ export default function HeroWeb() {
 
   const closeAll = () => {
     setIsLocationOpen(false);
+    setIsTypeOpen(false);
     setIsDateOpen(false);
     setIsTimeOpen(false);
   };
@@ -130,8 +135,34 @@ export default function HeroWeb() {
   }, []);
 
   useEffect(() => {
+    const fetchGroundTypes = async () => {
+      setLoadingGroundTypes(true);
+      try {
+        const { data, error } = await supabase
+          .from('ground_types')
+          .select('name, label')
+          .eq('active', true)
+          .order('sort_order', { ascending: true });
+        
+        if (!error && data) {
+          const types = [...data];
+          if (!types.some(t => t.name.toLowerCase() === 'nets')) {
+            types.push({ name: 'Nets', label: 'Nets' });
+          }
+          setGroundTypes(types);
+        }
+      } catch (e) {
+        console.error('Error fetching ground types:', e);
+      } finally {
+        setLoadingGroundTypes(false);
+      }
+    };
+    fetchGroundTypes();
+  }, []);
+
+  useEffect(() => {
     const fetchAvailableTimes = async () => {
-      if (!selectedLocation || !selectedDate) {
+      if (!selectedLocation || !selectedDate || !selectedType) {
         setAvailableTimes([]);
         return;
       }
@@ -141,12 +172,13 @@ export default function HeroWeb() {
         const [city, state] = selectedLocation.split('__');
         const dayOfWeek = selectedDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
         
-        // 1. Get grounds in this location
+        // 1. Get grounds in this location with selected type
         const { data: grounds } = await supabase
           .from('grounds')
           .select('id')
           .eq('city', city)
           .eq('state', state)
+          .eq('pitch_type', selectedType)
           .eq('active', true);
           
         if (!grounds || grounds.length === 0) {
@@ -178,12 +210,15 @@ export default function HeroWeb() {
     };
     
     fetchAvailableTimes();
-  }, [selectedLocation, selectedDate]);
+  }, [selectedLocation, selectedDate, selectedType]);
 
   const handleSearch = () => {
     const params: any = {};
     if (selectedLocation) {
       params.location = selectedLocation;
+    }
+    if (selectedType) {
+      params.type = selectedType;
     }
     if (selectedDate) {
       params.date = selectedDate.toISOString().split('T')[0];
@@ -196,10 +231,10 @@ export default function HeroWeb() {
     });
   };
 
-  const isSearchEnabled = !!selectedLocation && !!selectedDate && !!selectedTime;
+  const isSearchEnabled = !!selectedLocation && !!selectedType && !!selectedDate && !!selectedTime;
 
   const formatDate = (date: Date | null) => {
-    if (!date) return 'Select Date';
+    if (!date) return 'Date';
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
@@ -334,7 +369,7 @@ export default function HeroWeb() {
                   }}
                 >
                   <Text style={[styles.fieldText, !selectedLocation && styles.placeholderText]}>
-                    {selectedLocation ? selectedLocation.split('__')[0] : 'Select Location'}
+                    {selectedLocation ? selectedLocation.split('__')[0] : 'Location'}
                   </Text>
                   <ChevronDown size={16} color="#64748B" />
                 </Pressable>
@@ -354,6 +389,53 @@ export default function HeroWeb() {
                           }}
                         >
                           <Text style={styles.dropdownItemText}>{loc.city}, {loc.state}</Text>
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+              </View>
+
+              {/* Type Selector */}
+              <View style={[
+                styles.formField, 
+                styles.fieldDivider, 
+                isMobile && styles.formFieldMobile,
+                isTypeOpen && { zIndex: 1000 }
+              ]}>
+                <View style={styles.fieldIcon}>
+                  <Trophy size={20} color="#FFFFFF" strokeWidth={2} />
+                </View>
+                <Pressable 
+                  style={styles.fieldContent}
+                  onPress={() => {
+                    setIsTypeOpen(!isTypeOpen);
+                    setIsLocationOpen(false);
+                    setIsDateOpen(false);
+                    setIsTimeOpen(false);
+                  }}
+                >
+                  <Text style={[styles.fieldText, !selectedType && styles.placeholderText]}>
+                    {selectedType ? (groundTypes.find(t => t.name === selectedType)?.label || selectedType) : 'Type'}
+                  </Text>
+                  <ChevronDown size={16} color="#64748B" />
+                </Pressable>
+                
+                {isTypeOpen && (
+                  <View style={[styles.dropdown, isMobile && styles.timeDropdown]}>
+                    <ScrollView style={{ maxHeight: 200 }}>
+                      {groundTypes.map((type) => (
+                        <Pressable
+                          key={type.name}
+                          style={styles.dropdownItem}
+                          onPress={() => {
+                            setSelectedType(type.name);
+                            setIsTypeOpen(false);
+                            // Clear time if type changes
+                            setSelectedTime('');
+                          }}
+                        >
+                          <Text style={styles.dropdownItemText}>{type.label}</Text>
                         </Pressable>
                       ))}
                     </ScrollView>
@@ -467,7 +549,7 @@ export default function HeroWeb() {
                     styles.fieldText, 
                     (!selectedTime) && styles.placeholderText
                   ]}>
-                    {selectedTime || 'Select Time'}
+                    {selectedTime || 'Time'}
                   </Text>
                   {loadingTimes ? (
                     <ActivityIndicator size="small" color="#FFFFFF" />
@@ -639,7 +721,7 @@ const styles = StyleSheet.create({
   },
   searchFormContainer: {
     width: '100%',
-    backgroundColor: 'rgba(20, 25, 35, 0.85)',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
     borderRadius: 100,
     padding: 4,
     shadowColor: '#000',
@@ -708,9 +790,9 @@ const styles = StyleSheet.create({
     }) as any,
   },
   fieldText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#FFFFFF',
-    fontFamily: 'Inter-SemiBold',
+    fontFamily: 'Inter-Medium',
     letterSpacing: -0.3,
   },
   placeholderText: {

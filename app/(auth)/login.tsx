@@ -84,23 +84,7 @@ export default function LoginScreen() {
         Alert.alert('Login Failed', error.message);
       }
     } else {
-      setShowSuccessModal(true);
-      
-      const adminEmail = 'invirtualcoin@gmail.com';
-      const isSuperAdmin =
-        profile?.role === 'super_admin' ||
-        (user?.email?.toLowerCase() ?? '') === adminEmail.toLowerCase() ||
-        email.toLowerCase() === adminEmail.toLowerCase();
-
-      const isGroundOwner = profile?.role === 'ground_owner';
-      const redirectPath = typeof redirect === 'string' ? redirect : null;
-
-      setTimeout(() => {
-        setShowSuccessModal(false);
-        
-        // Redirection logic is now handled centraly in the useEffect above 
-        // to avoid duplicate transitions and ensure consistency across platforms.
-      }, 1500);
+      // Success. Redirection is handled in useEffect based on user/profile state.
     }
   };
 
@@ -235,11 +219,7 @@ export default function LoginScreen() {
                       onPress={handleLogin}
                       disabled={loading}
                     >
-                      {loading ? (
-                        <ActivityIndicator color="#FFFFFF" size="small" />
-                      ) : (
-                        <Text style={webStyles.buttonText}>SIGN IN</Text>
-                      )}
+                      <Text style={webStyles.buttonText}>SIGN IN</Text>
                     </TouchableOpacity>
   
                     <TouchableOpacity
@@ -370,11 +350,7 @@ export default function LoginScreen() {
               onPress={handleLogin}
               disabled={loading}
             >
-              {loading ? (
-                <ActivityIndicator color="#043529" size="small" />
-              ) : (
-                <Text style={styles.signInBtnText}>SIGN IN</Text>
-              )}
+              <Text style={styles.signInBtnText}>SIGN IN</Text>
             </Pressable>
   
             <Pressable
@@ -391,22 +367,6 @@ export default function LoginScreen() {
       </ScrollView>
     </ImageBackground>
 
-      {/* Login Success Modal - Optional but good for consistency */}
-      <Modal
-        visible={showSuccessModal}
-        transparent
-        animationType="fade"
-      >
-        <View style={modalStyles.overlay}>
-          <View style={modalStyles.card}>
-            <View style={[modalStyles.iconBg, { backgroundColor: 'rgba(71, 85, 105, 0.1)' }]}>
-              <CheckCircle size={40} color="#475569" strokeWidth={2.5} />
-            </View>
-            <Text style={modalStyles.title}>Welcome Back!</Text>
-            <Text style={modalStyles.message}>Signed in successfully. redirecting you...</Text>
-          </View>
-        </View>
-      </Modal>
 
       {/* Password Reset Modal */}
       <Modal

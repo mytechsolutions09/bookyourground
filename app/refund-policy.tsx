@@ -11,19 +11,19 @@ export default function RefundPolicyScreen() {
           <Text style={styles.title}>Refund policy</Text>
           <Text style={styles.updated}>Last updated: April 23, 2026</Text>
 
-          <Text style={styles.mainSectionTitle}>1. Ground Bookings</Text>
+          <Text style={styles.mainSectionTitle}>1. Venue Bookings</Text>
 
           <Text style={styles.sectionTitle}>1.1. General</Text>
           <Text style={styles.paragraph}>
             Refunds for bookings made through Book my ground are governed by this Refund
-            policy, together with each ground&apos;s individual rules. By confirming a
+            policy, together with each venue&apos;s individual rules. By confirming a
             booking you agree to the applicable cancellation and refund terms.
           </Text>
 
           <Text style={styles.sectionTitle}>1.2. When refunds are possible</Text>
           <Text style={styles.paragraph}>
             A booking may be eligible for a full or partial refund when:{'\n'}
-            {'\u2022'} The ground owner cancels the booking or the ground is unavailable.{'\n'}
+            {'\u2022'} The venue owner cancels the booking or the venue is unavailable.{'\n'}
             {'\u2022'} The booking is cancelled by the user at least 7 days prior to the slot time.{'\n'}
             {'\u2022'} There is a verified double booking or payment error.
           </Text>
@@ -31,7 +31,7 @@ export default function RefundPolicyScreen() {
           <Text style={styles.sectionTitle}>1.3. Non-refundable bookings</Text>
           <Text style={styles.paragraph}>
             Some slots may be marked as non-refundable or may have a cut-off time after
-            which no refunds are possible. These details are set by the ground owner and
+            which no refunds are possible. These details are set by the venue owner and
             shown at the time of booking where applicable.
           </Text>
 
@@ -39,15 +39,15 @@ export default function RefundPolicyScreen() {
           <Text style={styles.paragraph}>
             If you or your team do not arrive on time or fail to show up, the booking may
             be treated as completed and may not be eligible for a refund. Any exceptions
-            are at the discretion of the ground owner.
+            are at the discretion of the venue owner.
           </Text>
 
           <Text style={styles.sectionTitle}>1.5. Weather and Rain Policy</Text>
           <Text style={styles.paragraph}>
-            For matches affected by rain or wet ground conditions, the following rules apply:
-            {"\n"}{"\u2022"} <Text style={styles.boldText}>Full Refund:</Text> If no ball is bowled during the booked slot due to rain or unplayable wet ground conditions, the entire ground fee will be refunded.
+            For matches affected by rain or wet venue conditions, the following rules apply:
+            {"\n"}{"\u2022"} <Text style={styles.boldText}>Full Refund:</Text> If no ball is bowled during the booked slot due to rain or unplayable wet venue conditions, the entire venue fee will be refunded.
             {"\n"}{"\u2022"} <Text style={styles.boldText}>No Refund:</Text> If even a single ball is bowled and the match is subsequently interrupted or cancelled due to rain, no refund will be issued. The booking is considered utilized once the match commences.
-            {"\n"}{"\u2022"} The ground owner or on-site staff have the final authority to decide if the ground is playable.
+            {"\n"}{"\u2022"} The venue owner or on-site staff have the final authority to decide if the venue is playable.
           </Text>
 
           <Text style={styles.sectionTitle}>1.6. How refunds are processed</Text>

@@ -11,25 +11,25 @@ export default function TermsScreen() {
           <Text style={styles.title}>Terms &amp; Conditions</Text>
           <Text style={styles.updated}>Last updated: April 23, 2026</Text>
 
-          <Text style={styles.mainSectionTitle}>1. Ground Bookings</Text>
+          <Text style={styles.mainSectionTitle}>1. Venue Bookings</Text>
 
           <Text style={styles.sectionTitle}>1.1. Introduction</Text>
           <Text style={styles.paragraph}>
             These Terms &amp; Conditions govern your use of the Book my ground platform to
-            search, book, and manage cricket grounds and box cricket turfs. By creating an
+            search, book, and manage cricket grounds, box cricket, and cricket nets. By creating an
             account or making a booking you agree to these terms.
           </Text>
 
           <Text style={styles.sectionTitle}>1.2. Roles</Text>
           <Text style={styles.paragraph}>
             There are two primary roles on the platform: players (users who book grounds)
-            and ground owners (partners who list and manage grounds). Ground owners are
+            and venue owners (partners who list and manage grounds). Venue owners are
             responsible for the accuracy of their listings, prices, and availability.
           </Text>
 
           <Text style={styles.sectionTitle}>1.3. Bookings &amp; payments</Text>
           <Text style={styles.paragraph}>
-            All bookings are subject to ground owner approval and the ground&apos;s
+            All bookings are subject to venue owner approval and the ground&apos;s
             individual rules, including pricing, cancellation policies, and any additional
             charges at the venue. Where online payments are enabled, you authorize us and
             our payment partners to charge the displayed amount for your booking.
@@ -37,23 +37,23 @@ export default function TermsScreen() {
 
           <Text style={styles.sectionTitle}>1.4. Cancellations &amp; refunds</Text>
           <Text style={styles.paragraph}>
-            Cancellation and refund eligibility may vary by ground. Some bookings may be
-            non-refundable or subject to cut-offs. Please review the ground&apos;s
+            Cancellation and refund eligibility may vary by venue. Some bookings may be
+            non-refundable or subject to cut-offs. Please review the venue&apos;s
             cancellation policy before confirming your booking.
           </Text>
 
           <Text style={styles.sectionTitle}>1.5. Conduct at grounds</Text>
           <Text style={styles.paragraph}>
-            You agree to follow ground rules, respect staff and other players, and use the
-            facilities responsibly. Ground owners may refuse entry or stop play in case of
+            You agree to follow venue rules, respect staff and other players, and use the
+            facilities responsibly. Venue owners may refuse entry or stop play in case of
             unsafe or inappropriate behaviour, without a right to refund.
           </Text>
 
           <Text style={styles.sectionTitle}>1.6. Liability</Text>
           <Text style={styles.paragraph}>
             While we aim to provide a reliable service, Book my ground does not guarantee
-            ground availability, conditions, or safety, and is not liable for injuries,
-            damages, or losses arising from your use of a ground, except where required by
+            venue availability, conditions, or safety, and is not liable for injuries,
+            damages, or losses arising from your use of a venue, except where required by
             law.
           </Text>
 

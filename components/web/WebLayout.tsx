@@ -115,7 +115,7 @@ const NavLink = React.memo(({
       hrefSegments.every((seg, i) => segments[i] === seg)
       : (currentPath === targetHref || pathname === href)
   );
-  const iconColor = isActive ? '#00ea6b' : 'rgba(255,255,255,0.7)';
+  const iconColor = isActive ? '#01b854' : '#6b7280';
   const activeStyle = styles.navLinkActive;
 
   return (
@@ -239,8 +239,11 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
   
   const isLegalOrInfoPage = useMemo(() =>
     cleanPath === '/terms' ||
+    cleanPath === '/about' ||
+    cleanPath === '/faq' ||
     cleanPath === '/privacy' ||
     cleanPath === '/refund-policy' ||
+    cleanPath === '/shipping' ||
     cleanPath === '/contact' ||
     cleanPath === '/cricket/player-profile',
     [cleanPath]
@@ -1220,24 +1223,30 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                             <Text style={styles.sidebarSectionTitle}>Ground owner</Text>
                           )}
                         </View>
-                        <NavLink href="/(owner)/owner-dashboard" icon={LayoutDashboard} label="Dashboard" />
+                        <NavLink href="/(owner)/owner-dashboard" icon={LayoutDashboard} label="Dashboard" isActiveOverride={cleanPath === '/(owner)/owner-dashboard' || cleanPath === '/owner-dashboard'} />
                         
                         <View style={{ opacity: hasPayoutSetup === false ? 0.4 : 1 }}>
-                          <NavLink href="/(owner)/add-venue" icon={PlusCircle} label="Add Venue" disabled={hasPayoutSetup === false} />
+                          <NavLink href="/(owner)/add-venue" icon={PlusCircle} label="Add Venue" isActiveOverride={cleanPath === '/(owner)/add-venue' || cleanPath === '/add-venue'} disabled={hasPayoutSetup === false} />
                           <NavLink 
                             href="/(owner)/manage-grounds" 
                             icon={MapPin} 
                             label="My grounds" 
-                            isActiveOverride={false} 
+                            isActiveOverride={cleanPath === '/(owner)/manage-grounds' || cleanPath === '/manage-grounds'} 
                             badge={hasPayoutSetup === false ? 'Locked' : undefined}
                             disabled={hasPayoutSetup === false}
                           />
-                          <NavLink href="/(owner)/inventory" icon={Package} label="Inventory" disabled={hasPayoutSetup === false} />
+                          <NavLink href="/(owner)/inventory" icon={Package} label="Inventory" isActiveOverride={cleanPath === '/(owner)/inventory' || cleanPath === '/inventory'} disabled={hasPayoutSetup === false} />
                           <NavLink href="/wallet" icon={Wallet} label="Wallet" disabled={hasPayoutSetup === false} />
-                          <NavLink href="/(owner)/ground-bookings" icon={ClipboardList} label="Bookings" disabled={hasPayoutSetup === false} />
-                          <NavLink href="/profile/orders" icon={ShoppingBag} label="My Orders" disabled={hasPayoutSetup === false} />
-                          <NavLink href="/(owner)/earnings" icon={IndianRupee} label="Earnings" disabled={hasPayoutSetup === false} />
-                          <NavLink href="/(owner)/settings" icon={Settings} label="Settings" disabled={hasPayoutSetup === false} />
+                          <NavLink href="/(owner)/ground-bookings" icon={ClipboardList} label="Bookings" isActiveOverride={cleanPath === '/(owner)/ground-bookings' || cleanPath === '/ground-bookings'} disabled={hasPayoutSetup === false} />
+                          <NavLink 
+                            href="/profile/orders" 
+                            icon={ShoppingBag} 
+                            label="My Orders" 
+                            isActiveOverride={cleanPath === '/profile/orders'}
+                            disabled={hasPayoutSetup === false} 
+                          />
+                          <NavLink href="/(owner)/earnings" icon={IndianRupee} label="Earnings" isActiveOverride={cleanPath === '/(owner)/earnings' || cleanPath === '/earnings'} disabled={hasPayoutSetup === false} />
+                          <NavLink href="/(owner)/settings" icon={Settings} label="Settings" isActiveOverride={cleanPath === '/(owner)/settings' || cleanPath === '/settings'} disabled={hasPayoutSetup === false} />
                           <NavLink href="/(tabs)/support" icon={Phone} label="Contact Us" disabled={hasPayoutSetup === false} />
                         </View>
 
@@ -1406,6 +1415,8 @@ const styles = StyleSheet.create({
         overflow: 'hidden' as any,
         height: '100vh' as any,
         minHeight: '100vh' as any,
+        backgroundImage: 'radial-gradient(at 0% 0%, rgba(0, 234, 107, 0.1) 0, transparent 40%), radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.1) 0, transparent 40%), radial-gradient(at 50% 100%, rgba(245, 158, 11, 0.05) 0, transparent 40%)',
+        backgroundColor: '#f8fafc',
       }
     })
   },
@@ -1414,16 +1425,18 @@ const styles = StyleSheet.create({
   },
   header: {
     height: 84,
-    backgroundColor: '#043529',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     zIndex: 100,
     borderBottomWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(0, 0, 0, 0.05)',
     ...Platform.select({
       web: {
         position: 'sticky' as any,
         top: 0,
         transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+        backdropFilter: 'blur(40px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(40px) saturate(180%)',
       },
     }),
   },
@@ -1504,17 +1517,17 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
   },
   headerSearch: {
     minWidth: 260,
     maxWidth: 360,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(0,0,0,0.1)',
     paddingHorizontal: 12,
     position: 'relative',
   },
@@ -1524,7 +1537,7 @@ const styles = StyleSheet.create({
   headerSearchInput: {
     flex: 1,
     height: 32,
-    color: '#FFFFFF',
+    color: '#111827',
     fontSize: 13,
     fontFamily: 'Inter',
     backgroundColor: 'transparent',
@@ -1630,7 +1643,7 @@ const styles = StyleSheet.create({
   },
   signOutText: {
     fontSize: 13,
-    color: 'rgba(255,255,255,0.7)',
+    color: '#4b5563',
     fontWeight: '500',
     fontFamily: 'Inter',
   },
@@ -1680,11 +1693,11 @@ const styles = StyleSheet.create({
   },
   sidebar: {
     width: 240,
-    backgroundColor: '#043529',
+    backgroundColor: Platform.OS === 'web' ? 'rgba(255, 255, 255, 0.15)' : '#f3f4f6',
     paddingVertical: 24,
     paddingHorizontal: 16,
     borderRightWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(0, 0, 0, 0.05)',
     ...Platform.select({
       web: {
         position: 'sticky' as any,
@@ -1697,6 +1710,8 @@ const styles = StyleSheet.create({
         scrollbarWidth: 'none' as any,
         msOverflowStyle: 'none' as any,
         zIndex: 2000,
+        backdropFilter: 'blur(40px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(40px) saturate(180%)',
       },
       default: {
         height: '100%',
@@ -1724,7 +1739,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
   },
   navLinkActive: {
-    backgroundColor: 'rgba(0,234,107,0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 24,
+    ...Platform.select({
+      web: {
+        backdropFilter: 'blur(40px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.3)',
+      }
+    }) as any,
   },
   sidebarHeaderOffset: {
     // Keep sidebar content below the landing hero header (logo + burger).
@@ -1735,7 +1759,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
     fontSize: 13,
     fontWeight: '400',
-    color: 'rgba(255,255,255,0.7)',
+    color: '#4b5563',
     marginLeft: 12,
     flex: 1,
   },
@@ -1744,7 +1768,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   navLinkTextActive: {
-    color: '#00ea6b',
+    color: '#01b854',
     fontWeight: '500',
   },
 
@@ -1797,7 +1821,7 @@ const styles = StyleSheet.create({
   sidebarSectionTitle: {
     fontSize: 10,
     fontWeight: '500',
-    color: 'rgba(255,255,255,0.5)',
+    color: '#9ca3af',
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: 10,
@@ -1818,13 +1842,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(0,0,0,0.03)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(0,0,0,0.05)',
   },
   sidebarDivider: {
     height: 1,
-    backgroundColor: 'rgba(220,192,147,0.15)',
+    backgroundColor: '#e5e7eb',
     marginVertical: 12,
   },
   tooltip: {
@@ -1926,14 +1950,14 @@ const styles = StyleSheet.create({
   headerNavLink: {
     fontSize: 14,
     fontWeight: '500',
-    color: 'rgba(255,255,255,0.7)',
+    color: '#4b5563',
     fontFamily: 'Inter',
     textTransform: 'uppercase',
   },
   headerNavLinkActive: {
-    color: '#00ea6b',
+    color: '#01b854',
     borderBottomWidth: 2,
-    borderBottomColor: '#00ea6b',
+    borderBottomColor: '#01b854',
     paddingBottom: 4,
   },
   badge: {

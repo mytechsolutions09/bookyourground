@@ -86,8 +86,8 @@ export default function SignupScreen() {
     const hasUpper = /[A-Z]/.test(password);
     const hasNumber = /[0-9]/.test(password);
 
-    if (password.length < 6 || !hasLower || !hasUpper || !hasNumber) {
-      const msg = 'Password must be at least 6 characters and contain at least one lowercase letter, one uppercase letter, and one number.';
+    if (password.length < 8 || !hasLower || !hasUpper || !hasNumber) {
+      const msg = 'Password must be at least 8 characters and contain at least one lowercase letter, one uppercase letter, and one number.';
       if (Platform.OS === 'web') alert(msg);
       else Alert.alert('Error', msg);
       return;
@@ -211,7 +211,7 @@ export default function SignupScreen() {
                         label="Password"
                         value={password}
                         onChangeText={setPassword}
-                        placeholder="Min 6 characters"
+                        placeholder="Min 8 characters"
                         secureTextEntry={!showPassword}
                         showToggle={true}
                         onToggle={() => setShowPassword(!showPassword)}
@@ -236,7 +236,7 @@ export default function SignupScreen() {
                     <PasswordRequirement label="At least 1 lowercase (a-z)" met={/[a-z]/.test(password)} theme="light" />
                     <PasswordRequirement label="At least 1 uppercase (A-Z)" met={/[A-Z]/.test(password)} theme="light" />
                     <PasswordRequirement label="At least 1 number (0-9)" met={/[0-9]/.test(password)} theme="light" />
-                    <PasswordRequirement label="At least 6 characters" met={password.length >= 6} theme="light" />
+                    <PasswordRequirement label="At least 8 characters" met={password.length >= 8} theme="light" />
                   </View>
  
                   {Platform.OS === 'web' && TurnstileComponent && (
@@ -260,11 +260,7 @@ export default function SignupScreen() {
                       onPress={handleSignup}
                       disabled={loading}
                     >
-                      {loading ? (
-                        <ActivityIndicator color="#FFFFFF" size="small" />
-                      ) : (
-                        <Text style={webStyles.buttonText}>CREATE ACCOUNT</Text>
-                      )}
+                      <Text style={webStyles.buttonText}>CREATE ACCOUNT</Text>
                     </TouchableOpacity>
   
                     <TouchableOpacity
@@ -493,7 +489,7 @@ export default function SignupScreen() {
                 style={styles.textInput}
                 value={password}
                 onChangeText={setPassword}
-                placeholder="Min 6 characters"
+                placeholder="Min 8 characters"
                 placeholderTextColor="#94A3B8"
                 secureTextEntry={!showPassword}
                 onFocus={() => setFocusedField('password')}
@@ -512,7 +508,7 @@ export default function SignupScreen() {
               <PasswordRequirement label="At least 1 lowercase (a-z)" met={/[a-z]/.test(password)} theme="light" />
               <PasswordRequirement label="At least 1 uppercase (A-Z)" met={/[A-Z]/.test(password)} theme="light" />
               <PasswordRequirement label="At least 1 number (0-9)" met={/[0-9]/.test(password)} theme="light" />
-              <PasswordRequirement label="At least 6 characters" met={password.length >= 6} theme="light" />
+              <PasswordRequirement label="At least 8 characters" met={password.length >= 8} theme="light" />
             </View>
           </View>
 
@@ -552,11 +548,7 @@ export default function SignupScreen() {
               onPress={handleSignup}
               disabled={loading}
             >
-              {loading ? (
-                <ActivityIndicator color="#043529" size="small" />
-              ) : (
                 <Text style={styles.signUpBtnText}>SIGN UP</Text>
-              )}
             </Pressable>
             <Pressable style={styles.outlineBtn} onPress={() => {
               if (router.canGoBack()) router.back();

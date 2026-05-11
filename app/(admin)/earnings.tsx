@@ -390,7 +390,7 @@ function AdminEarningsInner() {
                   onChange={(e) => setSelectedOwnerId(e.target.value)}
                   style={styles.webSelect}
                 >
-                  <option value="all">All Ground Owners</option>
+                  <option value="all">All Venue Owners</option>
                   {owners.map(o => (
                     <option key={o.id} value={o.id}>{o.full_name} {o.business_name ? `(${o.business_name})` : ''}</option>
                   ))}

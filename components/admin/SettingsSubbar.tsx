@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable, Platform, ScrollView } from 'react-native';
 import { router, usePathname } from 'expo-router';
-import { Settings as SettingsIcon, MapPin, Tag, LifeBuoy, Ticket, CreditCard } from 'lucide-react-native';
+import { Settings as SettingsIcon, MapPin, Tag, LifeBuoy, Ticket, CreditCard, FileText } from 'lucide-react-native';
 
 const BASE = '/(admin)/settings';
 
@@ -16,6 +16,7 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
   const isCoupons = pathname.includes('/settings/coupons');
   const isPayment = pathname.includes('/settings/payment');
   const isPlatformFees = pathname.includes('/settings/platform-fees');
+  const isContracts = pathname.includes('/settings/contract-submissions');
 
   return (
     <View style={styles.shell}>
@@ -90,6 +91,16 @@ export default function SettingsSubbar({ children }: { children: React.ReactNode
             <LifeBuoy size={16} color={isSupport ? '#FFFFFF' : '#666'} />
             <Text style={[styles.subLinkText, isSupport && styles.subLinkTextActive]}>
               Support
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.push((BASE + '/contract-submissions') as any)}
+            style={[styles.subLink, isContracts && styles.subLinkActive]}
+          >
+            <FileText size={16} color={isContracts ? '#FFFFFF' : '#666'} />
+            <Text style={[styles.subLinkText, isContracts && styles.subLinkTextActive]}>
+              Contracts
             </Text>
           </Pressable>
         </ScrollView>

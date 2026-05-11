@@ -286,7 +286,7 @@ export default function ManageGroundOwnersScreen() {
         <View style={styles.headerArea}>
           <View style={styles.headerTop}>
             <View>
-              <Text style={styles.title}>Ground Owners</Text>
+              <Text style={styles.title}>Venue Owners</Text>
               <Text style={styles.subtitle}>{owners.length} registered partners</Text>
             </View>
             
@@ -321,7 +321,7 @@ export default function ManageGroundOwnersScreen() {
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadOwners} />}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No ground owners found matching your criteria.</Text>
+            <Text style={styles.emptyText}>No venue owners found matching your criteria.</Text>
           </View>
         }
         renderItem={renderOwnerItem}

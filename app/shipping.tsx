@@ -11,51 +11,56 @@ export default function ShippingScreen() {
           <Text style={styles.title}>Service Fulfillment (Shipping &amp; Delivery) Policy</Text>
           <Text style={styles.updated}>Last updated: April 7, 2026</Text>
 
+          <Text style={styles.mainTitle}>Part A: Venue Bookings</Text>
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>1. Service Nature</Text>
             <Text style={styles.paragraph}>
-              Book my ground provides a digital platform for booking sports facilities like cricket grounds 
-              and turfs. As our services are digital in nature, there is no physical "shipping" of goods.
+              Book my ground provides a digital platform for booking sports facilities like cricket grounds, 
+              turfs, and nets. As these services are digital in nature, there is no physical "shipping" involved.
             </Text>
           </View>
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>2. Fulfillment Process</Text>
             <Text style={styles.paragraph}>
-              Upon successful payment through our platform, you will receive:
+              Upon successful payment, you will receive:
             </Text>
             <View style={styles.bulletList}>
-              <Text style={styles.bulletItem}>• An instant booking confirmation within the Book my ground app.</Text>
-              <Text style={styles.bulletItem}>• A confirmation email sent to your registered email address with the booking details and venue information.</Text>
-              <Text style={styles.bulletItem}>• Access to your booking details under the "My Bookings" section of the app.</Text>
+              <Text style={styles.bulletItem}>• Instant booking confirmation within the app.</Text>
+              <Text style={styles.bulletItem}>• Confirmation email with venue details and access instructions.</Text>
+              <Text style={styles.bulletItem}>• Digital booking pass under the "My Bookings" section.</Text>
             </View>
           </View>
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>3. Service Access</Text>
             <Text style={styles.paragraph}>
-              Once a booking is confirmed, you are entitled to use the selected sports facility during 
-              the reserved time slot. Please present your booking confirmation (digital or printout) 
+              Once a booking is confirmed, you are entitled to use the selected venue during 
+              the reserved time slot. Please present your digital booking confirmation 
               at the venue for verification.
             </Text>
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>4. Delays &amp; Cancellations</Text>
+            <Text style={styles.divider} />
+            <Text style={styles.mainTitle}>Part B: Physical Products</Text>
+            <Text style={styles.sectionTitle}>4. Shipping &amp; Delivery</Text>
             <Text style={styles.paragraph}>
-              If you do not receive a confirmation within 15 minutes of payment, please check your 
-              internet connection or contact our support team immediately at support@bookyourground.com. 
-              Cancellations and refunds are governed by our separate Refund and Cancellation Policy.
+              For sports gear, apparel, and equipment purchased through our shop:
             </Text>
+            <View style={styles.bulletList}>
+              <Text style={styles.bulletItem}>• <Text style={styles.boldText}>Timeline:</Text> Orders are processed within 24–48 hours and typically delivered within 3–7 business days.</Text>
+              <Text style={styles.bulletItem}>• <Text style={styles.boldText}>Tracking:</Text> Once shipped, a tracking ID will be sent to your email and visible in your order history.</Text>
+              <Text style={styles.bulletItem}>• <Text style={styles.boldText}>Shipping Charges:</Text> Free shipping is available on orders above ₹1,000. For orders below this amount, a flat shipping fee of ₹50–₹100 may apply based on location.</Text>
+            </View>
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>5. Contact for Fulfillment Queries</Text>
+            <Text style={styles.sectionTitle}>5. Delivery Issues</Text>
             <Text style={styles.paragraph}>
-              For any questions regarding your booking status or service fulfillment, 
-              please reach out to us at:
+              If your product is not delivered within the expected timeline, or if you receive a damaged package, 
+              please contact us within 48 hours of the delivery attempt at support@bookyourground.com.
             </Text>
-            <Text style={[styles.paragraph, styles.bold]}>Email: support@bookyourground.com</Text>
           </View>
         </View>
 
@@ -122,6 +127,23 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#4B5563',
     lineHeight: 24,
+  },
+  boldText: {
+    fontWeight: '700',
+    color: '#111827',
+  },
+  mainTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#043529',
+    marginBottom: 16,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginVertical: 12,
   },
   bold: {
     fontWeight: '700',

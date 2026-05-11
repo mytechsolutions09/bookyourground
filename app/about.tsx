@@ -14,7 +14,7 @@ export default function AboutScreen() {
             <Text style={styles.sectionTitle}>Our Mission</Text>
             <Text style={styles.paragraph}>
               At Book my ground, our mission is to make sports accessible to everyone. 
-              We bridge the gap between sports enthusiasts and ground owners by providing a 
+              We bridge the gap between sports enthusiasts and venue owners by providing a 
               seamless, technology-driven booking platform. Whether it's a late-night cricket match 
               with friends or a corporate tournament, we ensure that finding and booking the perfect 
               venue is just a few clicks away.
@@ -24,12 +24,12 @@ export default function AboutScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>What We Offer</Text>
             <Text style={styles.paragraph}>
-              We provide an integrated ecosystem for both players and ground owners:
+              We provide an integrated ecosystem for both players and venue owners:
             </Text>
             <View style={styles.bulletList}>
-              <Text style={styles.bulletItem}>• Real-time availability of cricket grounds and box turfs.</Text>
+              <Text style={styles.bulletItem}>• Real-time availability of cricket grounds, box cricket, and cricket nets.</Text>
               <Text style={styles.bulletItem}>• Secure online payments and instant booking confirmations.</Text>
-              <Text style={styles.bulletItem}>• Advanced management tools for ground owners to track bookings and revenue.</Text>
+              <Text style={styles.bulletItem}>• Advanced management tools for venue owners to track bookings and revenue.</Text>
               <Text style={styles.bulletItem}>• Matchmaking features to help players find opponents and join matches.</Text>
             </View>
           </View>

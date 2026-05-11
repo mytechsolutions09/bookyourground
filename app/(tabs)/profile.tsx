@@ -183,7 +183,7 @@ export default function ProfileScreen({
   const getRoleLabel = (role: string) => {
     switch (role) {
       case 'ground_owner':
-        return 'Ground Owner';
+        return 'Venue Owner';
       case 'super_admin':
         return 'Super Admin';
       default:
@@ -251,7 +251,7 @@ export default function ProfileScreen({
           <View style={styles.profileTextContainer}>
             <RNText style={[styles.nameNew, isUltraNarrow && { fontSize: 16 }]}>{getFormattedName(profile?.full_name)}</RNText>
             <RNText style={[styles.roleNew, isUltraNarrow && { fontSize: 12 }]}>
-              {profile?.role === 'ground_owner' ? 'Ground Owner & Player' : 'Player'}
+              {profile?.role === 'ground_owner' ? 'Venue Owner & Player' : 'Player'}
             </RNText>
             
           </View>
@@ -386,10 +386,10 @@ export default function ProfileScreen({
       </View>
     )}
 
-    {/* 3. GROUND OWNER HUB (Grid or Rows) */}
+    {/* 3. VENUE OWNER HUB (Grid or Rows) */}
     {(profile?.role === 'ground_owner' || isSuperAdmin) && (
       <View style={styles.sectionContainer}>
-        <RNText style={styles.sectionTitle}>GROUND OWNER HUB</RNText>
+        <RNText style={styles.sectionTitle}>VENUE OWNER HUB</RNText>
         <View style={isModal ? [styles.rowList, styles.noContainer] : styles.hubGrid}>
           {isModal ? (
             <>

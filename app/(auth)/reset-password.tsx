@@ -42,8 +42,8 @@ export default function ResetPasswordScreen() {
       return;
     }
 
-    if (password.length < 6) {
-      const msg = 'Password must be at least 6 characters';
+    if (password.length < 8) {
+      const msg = 'Password must be at least 8 characters';
       if (Platform.OS === 'web') alert(msg);
       else Alert.alert('Error', msg);
       return;
@@ -179,7 +179,7 @@ export default function ResetPasswordScreen() {
                 style={styles.textInput}
                 value={password}
                 onChangeText={setPassword}
-                placeholder="Min 6 characters"
+                placeholder="Min 8 characters"
                 placeholderTextColor="#4b5563"
                 secureTextEntry={!showPassword}
               />

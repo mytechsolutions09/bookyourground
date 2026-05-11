@@ -25,7 +25,7 @@ export default function ContactScreen() {
 
   const handleSubmit = async () => {
     if (!role) {
-      Alert.alert('Select type', 'Please select whether you are a User or Ground owner.');
+      Alert.alert('Select type', 'Please select whether you are a User or Venue owner.');
       return;
     }
 
@@ -60,7 +60,7 @@ export default function ContactScreen() {
         ? `[Book my ground] ${subject.trim()}`
         : '[Book my ground] Support request';
       const bodyLines = [
-        `Type: ${role === 'ground_owner' ? 'Ground owner' : 'User'}`,
+        `Type: ${role === 'ground_owner' ? 'Venue owner' : 'User'}`,
         `Name: ${name.trim()}`,
         `Email: ${email.trim()}`,
         '',
@@ -94,7 +94,7 @@ export default function ContactScreen() {
         <View style={styles.card}>
           <Text style={styles.title}>Contact</Text>
           <Text style={styles.subtitle}>
-            Have a question about bookings or listing your ground? Reach out to us.
+            Have a question about bookings or listing your venue? Reach out to us.
           </Text>
 
           <View style={styles.section}>
@@ -122,10 +122,10 @@ export default function ContactScreen() {
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>For ground owners</Text>
+            <Text style={styles.sectionTitle}>For venue owners</Text>
             <Text style={styles.paragraph}>
-              If you want to list your ground or need help managing availability and
-              bookings, email us with your ground name, city, and contact details. Our
+              If you want to list your venue or need help managing availability and
+              bookings, email us with your venue name, city, and contact details. Our
               team will get back to you with next steps.
             </Text>
           </View>
@@ -178,7 +178,7 @@ export default function ContactScreen() {
                         role === 'ground_owner' && styles.roleChipTextActive,
                       ]}
                     >
-                      Ground owner
+                      Venue owner
                     </Text>
                   </TouchableOpacity>
                 </View>

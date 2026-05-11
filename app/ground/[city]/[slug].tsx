@@ -968,15 +968,15 @@ function AmenitiesList({ ground }: { ground: GroundWithImages }) {
     if (ground.cricket_pitch_surface) items.push(`Surface: ${ground.cricket_pitch_surface}`);
     if (ground.has_bowling_machine) items.push('Bowling Machine');
     items.push(ground.is_indoor ? 'Indoor' : 'Outdoor');
-    if (ground.has_floodlights) items.push('Floodlights');
     if ((ground as any).has_manual_throwdown) items.push('Manual Throwdown');
-  } else {
-    if (ground.has_floodlights) items.push('Floodlights');
-    if (ground.has_parking) items.push('Parking');
-    if (ground.has_changing_rooms) items.push('Changing Rooms');
-    if (ground.has_pavilion) items.push('Pavilion');
-    if (ground.has_washrooms) items.push('Washroom');
   }
+
+  // Common amenities should be visible for all, including nets
+  if (ground.has_floodlights) items.push('Floodlights');
+  if (ground.has_parking) items.push('Parking');
+  if (ground.has_changing_rooms) items.push('Changing Rooms');
+  if (ground.has_pavilion) items.push('Pavilion');
+  if (ground.has_washrooms) items.push('Washroom');
 
   if (!items.length) return <Text style={styles.amenitiesEmpty}>None listed</Text>;
 

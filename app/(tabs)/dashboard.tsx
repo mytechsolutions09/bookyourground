@@ -50,6 +50,7 @@ import BookingCard from '@/components/bookings/BookingCard';
 import { useUI } from '@/contexts/UIContext';
 import { useLocation } from '@/contexts/LocationContext';
 import DashboardMap from '@/components/maps/DashboardMap';
+import GlassButton from '@/components/web/GlassButton';
 
 const THEME_BG = '#F8FAFC';
 const THEME_CARD_BG = '#FFFFFF';
@@ -73,9 +74,6 @@ function DashboardContent() {
     }
   }, [profile, authLoading]);
 
-  if (Platform.OS === 'web' && profile?.role === 'ground_owner') {
-    return null;
-  }
   const [bookings, setBookings] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [popularSlots, setPopularSlots] = useState<any[]>([]);
@@ -92,6 +90,11 @@ function DashboardContent() {
   const lastScrollY = useSharedValue(0);
   const headerTranslateY = useSharedValue(0);
   const HEADER_HEIGHT = 100;
+
+  // Now we can safely early return if needed, as all hooks have been called.
+  if (Platform.OS === 'web' && profile?.role === 'ground_owner') {
+    return null;
+  }
 
   const onTabPress = (tab: 'overview' | 'activity') => {
     setActiveTab(tab);
@@ -584,21 +587,25 @@ function DashboardContent() {
     <View style={styles.nativeWrapper}>
       <Animated.View style={headerAnimatedStyle}>
         <MobileAppNavbar title="Dashboard" titleColor={THEME_TEXT} />
-        <View style={styles.tabContainer}>
-          <TouchableOpacity 
-            style={[styles.tab, activeTab === 'overview' && styles.activeTab]}
-            onPress={() => onTabPress('overview')}
-            activeOpacity={0.7}
+        <View style={[styles.tabContainer, Platform.OS === 'web' && { backgroundColor: 'transparent', borderWidth: 0 } as any]}>
+          <GlassButton
+            variant={activeTab === 'overview' ? 'white' : 'clear'}
+            size="sm"
+            pill
+            onClick={() => onTabPress('overview')}
+            style={{ flex: 1, height: 40 }}
           >
             <Text style={[styles.tabText, activeTab === 'overview' && styles.activeTabText]}>Overview</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.tab, activeTab === 'activity' && styles.activeTab]}
-            onPress={() => onTabPress('activity')}
-            activeOpacity={0.7}
+          </GlassButton>
+          <GlassButton
+            variant={activeTab === 'activity' ? 'white' : 'clear'}
+            size="sm"
+            pill
+            onClick={() => onTabPress('activity')}
+            style={{ flex: 1, height: 40 }}
           >
             <Text style={[styles.tabText, activeTab === 'activity' && styles.activeTabText]}>Activity</Text>
-          </TouchableOpacity>
+          </GlassButton>
         </View>
       </Animated.View>
 
@@ -766,12 +773,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   activeTab: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
     shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
     elevation: 4,
+    ...Platform.select({
+      web: {
+        backdropFilter: 'blur(12px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(12px) saturate(180%)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.5)',
+      }
+    }) as any,
   },
   tabText: {
     color: '#64748B',
@@ -816,12 +831,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    ...Platform.select({
+      web: {
+        backdropFilter: 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+      }
+    }) as any,
   },
   greetingTextGroup: {
     flexDirection: 'row',
@@ -876,13 +897,19 @@ const styles = StyleSheet.create({
   weatherBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 99,
     gap: 8,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    ...Platform.select({
+      web: {
+        backdropFilter: 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+      }
+    }) as any,
   },
   weatherText: {
     fontSize: 12,
@@ -964,18 +991,34 @@ const styles = StyleSheet.create({
   },
   contentCardLarge: {
     flex: 1.6,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 24,
     padding: 24,
+    ...Platform.select({
+      web: {
+        backdropFilter: 'blur(40px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.3)',
+      }
+    }) as any,
   },
   contentCardWide: {
     flex: 1,
   },
   contentCardSmall: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 24,
     padding: 24,
+    ...Platform.select({
+      web: {
+        backdropFilter: 'blur(40px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.3)',
+      }
+    }) as any,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -1072,11 +1115,17 @@ const styles = StyleSheet.create({
   },
   mapContainer: {
     height: 300,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
     borderRadius: 24,
     overflow: 'hidden',
     borderWidth: 8,
-    borderColor: '#FFFFFF',
+    borderColor: 'rgba(255, 255, 255, 0.4)',
+    ...Platform.select({
+      web: {
+        backdropFilter: 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+      }
+    }) as any,
   },
   mapContainerWide: {
     flex: 1.5,
@@ -1096,10 +1145,18 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   panelCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 24,
     padding: 24,
     width: '100%',
+    ...Platform.select({
+      web: {
+        backdropFilter: 'blur(40px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(40px) saturate(180%)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.3)',
+      }
+    }) as any,
   },
   panelHeader: {
     flexDirection: 'row',

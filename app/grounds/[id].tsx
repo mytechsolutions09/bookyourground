@@ -580,6 +580,15 @@ export default function GroundDetailsScreen() {
             <Text style={styles.sectionTitle}>Amenities</Text>
             {(() => {
               const items: string[] = [];
+              const isNets = ground.pitch_type?.toLowerCase() === 'nets';
+
+              if (isNets) {
+                if (ground.cricket_pitch_surface) items.push(`Surface: ${ground.cricket_pitch_surface}`);
+                if ((ground as any).has_bowling_machine) items.push('Bowling Machine');
+                items.push(ground.is_indoor ? 'Indoor' : 'Outdoor');
+                if ((ground as any).has_manual_throwdown) items.push('Manual Throwdown');
+              }
+
               if (ground.has_floodlights) items.push('Floodlights');
               if (ground.has_parking) items.push('Parking');
               if (ground.has_changing_rooms) items.push('Changing Rooms');

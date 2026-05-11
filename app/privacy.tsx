@@ -16,7 +16,7 @@ export default function PrivacyScreen() {
             We collect information you provide directly to us, such as your name, email
             address, phone number, and booking details. When you use certain features
             of the App, we may also request access to your device's **Camera** and
-            **Photo Library** to allow you to take and upload photos of sports grounds
+            **Photo Library** to allow you to take and upload photos of sports venues
             or update your profile picture. We also collect technical
             information like device type and basic usage analytics to improve the product.
           </Text>
@@ -25,8 +25,8 @@ export default function PrivacyScreen() {
           <Text style={styles.paragraph}>
             We use your information to create and manage bookings, operate the platform,
             communicate with you about your account, and notify you about changes or
-            important updates. Ground owners can access booking details relevant to their
-            own grounds only.
+            important updates. Venue owners can access booking details relevant to their
+            own venues only.
           </Text>
 
           <Text style={styles.sectionTitle}>3. Sharing with third parties</Text>

@@ -115,7 +115,7 @@ export default function TabLayout() {
     ? ({ display: 'none' } as const)
     : { backgroundColor: '#043529', borderTopWidth: 1, borderTopColor: '#06392e', height: 60 };
 
-  const showLoading = needsAuth && (loading || !user);
+  const showLoading = needsAuth && (loading || !user) && !pathname.endsWith('/profile');
 
   return (
     <View style={{ flex: 1, backgroundColor: '#043529' }}>

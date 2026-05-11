@@ -12,9 +12,9 @@ export default function FAQScreen() {
           <Text style={styles.updated}>Last updated: April 7, 2026</Text>
 
           <View style={styles.faqSection}>
-            <Text style={styles.question}>How do I book a ground?</Text>
+            <Text style={styles.question}>How do I book a venue?</Text>
             <Text style={styles.answer}>
-              Browse available grounds, select your preferred date and time slot, and confirm your booking. 
+              Browse available cricket grounds, box cricket, or cricket nets, select your preferred date and time slot, and confirm your booking. 
               If online payment is enabled, you can pay directly on the platform. Once confirmed, you'll receive a booking summary.
             </Text>
           </View>
@@ -22,7 +22,7 @@ export default function FAQScreen() {
           <View style={styles.faqSection}>
             <Text style={styles.question}>Can I cancel my booking?</Text>
             <Text style={styles.answer}>
-              Cancellation policies vary by ground owner. You can view the cancellation policy on the ground's listing page 
+              Cancellation policies vary by venue owner. You can view the cancellation policy on the venue's listing page 
               or in your booking details. To cancel, go to "My Bookings" and select the booking you wish to cancel.
             </Text>
           </View>
@@ -31,16 +31,16 @@ export default function FAQScreen() {
             <Text style={styles.question}>What happens if it rains?</Text>
             <Text style={styles.answer}>
               Our rain policy is simple: 
-              {"\n"}{"\u2022"} If <Text style={{ fontWeight: '700', color: '#111827' }}>no ball is bowled</Text> during your slot due to wet grounds or rain, you will receive a <Text style={{ fontWeight: '700', color: '#111827' }}>Full Refund</Text>.
+              {"\n"}{"\u2022"} If <Text style={{ fontWeight: '700', color: '#111827' }}>no ball is bowled</Text> during your slot due to wet venues or rain, you will receive a <Text style={{ fontWeight: '700', color: '#111827' }}>Full Refund</Text>.
               {"\n"}{"\u2022"} If even a <Text style={{ fontWeight: '700', color: '#111827' }}>single ball is bowled</Text> and then it rains, the booking is considered utilized and <Text style={{ fontWeight: '700', color: '#111827' }}>no refund</Text> will be issued. 
-              {"\n\n"}The decision on whether a ground is playable rests with the ground owner or site staff.
+              {"\n\n"}The decision on whether a venue is playable rests with the venue owner or site staff.
             </Text>
           </View>
 
           <View style={styles.faqSection}>
-            <Text style={styles.question}>How do I list my ground?</Text>
+            <Text style={styles.question}>How do I list my venue?</Text>
             <Text style={styles.answer}>
-              If you own a cricket ground or box turf, click on "Become a partner" in the footer. 
+              If you own a cricket ground, box cricket, or cricket nets, click on "Become a partner" in the footer. 
               Complete the registration process, and once approved, you can start listing your facilities and managing bookings.
             </Text>
           </View>
@@ -49,7 +49,7 @@ export default function FAQScreen() {
             <Text style={styles.question}>Are there any hidden charges?</Text>
             <Text style={styles.answer}>
               No, transparency is important to us. The price displayed at the time of booking is what you pay. 
-              Some grounds may offer optional on-site services like equipment rental or refreshments, which are paid for separately.
+              Some venues may offer optional on-site services like equipment rental or refreshments, which are paid for separately.
             </Text>
           </View>
 

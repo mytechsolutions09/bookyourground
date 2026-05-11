@@ -39,7 +39,7 @@ export default function OwnerLayout() {
       return (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Access Denied</Text>
-          <Text style={styles.errorSubtext}>You need to be a ground owner to access this area.</Text>
+          <Text style={styles.errorSubtext}>You need to be a venue owner to access this area.</Text>
         </View>
       );
     }
@@ -49,7 +49,7 @@ export default function OwnerLayout() {
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>Access Denied</Text>
-        <Text style={styles.errorSubtext}>You need to be a ground owner to access this area.</Text>
+        <Text style={styles.errorSubtext}>You need to be a venue owner to access this area.</Text>
       </View>
     );
   }

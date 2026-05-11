@@ -276,6 +276,11 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
 
   const filteredMatches = useMemo(() => {
     return matches.filter(match => {
+      // Filter out Nets
+      const isNets = String(match.ground?.pitch_type ?? '').toLowerCase().includes('nets') || 
+                     String(match.ground?.name ?? '').toLowerCase().includes('nets');
+      if (isNets) return false;
+
       const searchFields = [
         match.ground?.name,
         match.ground?.city,

@@ -62,7 +62,12 @@ export default function SearchScreen() {
         supabase.from('ground_types').select('*').eq('active', true).order('sort_order')
       ]);
       setLocations(locs.data || []);
-      setTypes(typs.data || []);
+      
+      const typesData = typs.data || [];
+      if (!typesData.some((t: any) => t.name.toLowerCase() === 'nets')) {
+        typesData.push({ id: 'fallback-nets', name: 'Nets', label: 'Nets', active: true, sort_order: 99 });
+      }
+      setTypes(typesData);
     };
     loadFilters();
   }, []);
@@ -456,20 +461,30 @@ export default function SearchScreen() {
 
               <View style={styles.sidebarSection}>
                 <Text style={styles.sidebarSectionTitle}>Categories</Text>
-                {(['all', 'grounds', 'matches'] as const).map(t => (
+                <Pressable 
+                  onPress={() => { setActiveTab('all'); setTypeKey(''); }}
+                  style={[styles.sidebarTab, activeTab === 'all' && !typeKey && styles.sidebarTabActive]}
+                >
+                  <Text style={[styles.sidebarTabText, activeTab === 'all' && !typeKey && styles.sidebarTabTextActive]}>
+                    All
+                  </Text>
+                </Pressable>
+                <Pressable 
+                  onPress={() => { setActiveTab('matches'); setTypeKey(''); }}
+                  style={[styles.sidebarTab, activeTab === 'matches' && styles.sidebarTabActive]}
+                >
+                  <Text style={[styles.sidebarTabText, activeTab === 'matches' && styles.sidebarTabTextActive]}>
+                    Find Opposition
+                  </Text>
+                </Pressable>
+                {types.map(t => (
                   <Pressable 
-                    key={t}
-                    onPress={() => setActiveTab(t)}
-                    style={[
-                      styles.sidebarTab, 
-                      activeTab === t && styles.sidebarTabActive
-                    ]}
+                    key={t.id}
+                    onPress={() => { setActiveTab('grounds'); setTypeKey(t.name); }}
+                    style={[styles.sidebarTab, activeTab === 'grounds' && typeKey === t.name && styles.sidebarTabActive]}
                   >
-                    <Text style={[
-                      styles.sidebarTabText, 
-                      activeTab === t && styles.sidebarTabTextActive
-                    ]}>
-                        {labels[t]}
+                    <Text style={[styles.sidebarTabText, activeTab === 'grounds' && typeKey === t.name && styles.sidebarTabTextActive]}>
+                      {t.label || t.name}
                     </Text>
                   </Pressable>
                 ))}
@@ -786,6 +801,7 @@ const styles = StyleSheet.create({
   },
   sidebarScroll: {
     padding: 16,
+    paddingBottom: 40,
     gap: 20,
   },
   sidebarSearchBox: {

@@ -72,8 +72,8 @@ export default function OwnerSignupScreen() {
     const hasUpper = /[A-Z]/.test(password);
     const hasNumber = /[0-9]/.test(password);
 
-    if (password.length < 6 || !hasLower || !hasUpper || !hasNumber) {
-      const msg = 'Password must be at least 6 characters and contain at least one lowercase letter, one uppercase letter, and one number.';
+    if (password.length < 8 || !hasLower || !hasUpper || !hasNumber) {
+      const msg = 'Password must be at least 8 characters and contain at least one lowercase letter, one uppercase letter, and one number.';
       if (Platform.OS === 'web') alert(msg);
       else Alert.alert('Error', msg);
       return;
@@ -129,14 +129,14 @@ export default function OwnerSignupScreen() {
                     />
                   </TouchableOpacity>
                   <Text style={webStyles.formTitle}>Partner with Us</Text>
-                  <Text style={webStyles.formSubtitle}>List your ground and reach players</Text>
+                  <Text style={webStyles.formSubtitle}>List your venue and reach players</Text>
                 </View>
 
                 <View style={webStyles.form}>
                   <View style={webStyles.row}>
                     <View style={webStyles.col}>
                       <WebInput
-                        label="Ground Name"
+                        label="Venue Name"
                         value={businessName}
                         onChangeText={setBusinessName}
                         placeholder="e.g. Dream Arena"
@@ -180,7 +180,7 @@ export default function OwnerSignupScreen() {
                         label="Password"
                         value={password}
                         onChangeText={setPassword}
-                        placeholder="Min 6 chars"
+                        placeholder="Min 8 chars"
                         secureTextEntry={!showPassword}
                         showToggle={true}
                         onToggle={() => setShowPassword(!showPassword)}
@@ -205,7 +205,7 @@ export default function OwnerSignupScreen() {
                     {password.length > 0 && !/[a-z]/.test(password) && <PasswordRequirement label="1 lower" met={false} theme="light" />}
                     {password.length > 0 && !/[A-Z]/.test(password) && <PasswordRequirement label="1 upper" met={false} theme="light" />}
                     {password.length > 0 && !/[0-9]/.test(password) && <PasswordRequirement label="1 num" met={false} theme="light" />}
-                    {password.length > 0 && password.length < 6 && <PasswordRequirement label="6+ chars" met={false} theme="light" />}
+                    {password.length > 0 && password.length < 8 && <PasswordRequirement label="8+ chars" met={false} theme="light" />}
                   </View>
 
                   <View style={webStyles.row}>
@@ -295,11 +295,11 @@ export default function OwnerSignupScreen() {
             <BlurView intensity={90} tint="light" style={styles.card}>
               <View style={styles.headingWrap}>
                 <Text style={styles.title}>Partner Signup</Text>
-                <Text style={styles.subtitle}>List your ground and start accepting bookings</Text>
+                <Text style={styles.subtitle}>List your venue and start accepting bookings</Text>
               </View>
 
               <View style={styles.fieldWrap}>
-                <Text style={styles.fieldLabel}>Ground Name</Text>
+                <Text style={styles.fieldLabel}>Venue Name</Text>
                 <View style={styles.inputRow}>
                   <Building2 size={17} color="#475569" />
                   <TextInput
@@ -365,7 +365,7 @@ export default function OwnerSignupScreen() {
                     style={styles.textInput}
                     value={address}
                     onChangeText={setAddress}
-                    placeholder="Ground street address"
+                    placeholder="Venue street address"
                     placeholderTextColor="#94a3b8"
                   />
                 </View>
@@ -393,7 +393,7 @@ export default function OwnerSignupScreen() {
                     style={styles.textInput}
                     value={password}
                     onChangeText={setPassword}
-                    placeholder="Min 6 characters"
+                    placeholder="Min 8 characters"
                     placeholderTextColor="#94a3b8"
                     secureTextEntry={!showPassword}
                   />
@@ -405,7 +405,7 @@ export default function OwnerSignupScreen() {
                   {password.length > 0 && !/[a-z]/.test(password) && <PasswordRequirement label="1 lower" met={false} theme="light" />}
                   {password.length > 0 && !/[A-Z]/.test(password) && <PasswordRequirement label="1 upper" met={false} theme="light" />}
                   {password.length > 0 && !/[0-9]/.test(password) && <PasswordRequirement label="1 num" met={false} theme="light" />}
-                  {password.length > 0 && password.length < 6 && <PasswordRequirement label="6+ chars" met={false} theme="light" />}
+                  {password.length > 0 && password.length < 8 && <PasswordRequirement label="8+ chars" met={false} theme="light" />}
                 </View>
               </View>
 
@@ -494,7 +494,7 @@ function WebStatePicker(props: any) {
   const { label, value, onValueChange } = props;
   return (
     <View style={{ marginBottom: 10 }}>
-      {label && <Text style={{ fontSize: 12, fontWeight: '700', color: '#F1F5F9', marginBottom: 4 }}>{label}</Text>}
+      {label && <Text style={{ fontSize: 12, fontWeight: '500', color: '#F1F5F9', marginBottom: 4 }}>{label}</Text>}
       <View style={{ position: 'relative', width: '100%' }}>
         <select
           value={value}
@@ -508,7 +508,7 @@ function WebStatePicker(props: any) {
             fontSize: '14px',
             backgroundColor: 'rgba(255, 255, 255, 0.7)',
             color: '#0F172A',
-            fontWeight: '600',
+            fontWeight: '400',
             outline: 'none',
             cursor: 'pointer',
           }}
@@ -585,7 +585,7 @@ function WebInput(props: any) {
   return (
     <View style={{ marginBottom: 10 }}>
       {label && (
-        <Text style={{ fontSize: 12, fontWeight: '700', color: '#F1F5F9', marginBottom: 4 }}>
+        <Text style={{ fontSize: 12, fontWeight: '500', color: '#F1F5F9', marginBottom: 4 }}>
           {label}
         </Text>
       )}
@@ -601,7 +601,7 @@ function WebInput(props: any) {
             fontSize: 14,
             backgroundColor: 'rgba(255, 255, 255, 0.7)',
             color: '#0F172A',
-            fontWeight: '600',
+            fontWeight: '400',
             outlineStyle: 'none',
           } as any}
           placeholderTextColor="#64748B"
@@ -631,7 +631,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 13, color: '#E2E8F0', textAlign: 'center' },
   card: { backgroundColor: 'rgba(255, 255, 255, 0.15)', borderRadius: 24, padding: 24, overflow: 'hidden' },
   fieldWrap: { marginBottom: 12 },
-  fieldLabel: { fontSize: 12, fontWeight: '700', color: '#F1F5F9', marginBottom: 6, letterSpacing: 0.3 },
+  fieldLabel: { fontSize: 12, fontWeight: '500', color: '#F1F5F9', marginBottom: 6, letterSpacing: 0.3 },
   inputRow: { 
     flexDirection: 'row', 
     alignItems: 'center', 

@@ -28,7 +28,7 @@ import {
   Check
 } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { slugify } from '@/utils/helpers';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import WebLayout from '@/components/web/WebLayout';
@@ -86,6 +86,7 @@ export default function ShopScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const { category } = useLocalSearchParams();
   const numColumns = useMemo(() => {
     if (width > 1600) return 5;
     if (width > 1200) return 4;
@@ -164,6 +165,12 @@ export default function ShopScreen() {
     setTabBarVisible(true);
     return () => setTabBarVisible(true);
   }, [user]);
+
+  useEffect(() => {
+    if (category) {
+      setActiveCategory(category as string);
+    }
+  }, [category]);
 
   const loadCartCount = async () => {
     if (!user) return;

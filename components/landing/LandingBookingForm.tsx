@@ -927,7 +927,18 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
           ? allowedStartHHMM.has(s.value)
           : searchAllowedStartHHMM.has(s.value);
 
-        return isAllowed;
+        if (!isAllowed) return false;
+
+        // Filter out passed slots for today
+        const today = new Date().toISOString().split('T')[0];
+        if (bookingDate < today) return false;
+        if (bookingDate === today) {
+          const now = new Date();
+          const currentHHMM = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+          if (s.value < currentHHMM) return false;
+        }
+
+        return true;
       });
       if (
         useLandingSearchFlow &&
@@ -2605,10 +2616,10 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     paddingHorizontal: 16,
   },
   premiumGlassButton: {
-    backgroundColor: 'rgba(1, 184, 84, 0.4)',
+    backgroundColor: Platform.OS === 'web' ? 'rgba(1, 184, 84, 0.4)' : '#01b854',
     borderRadius: 100,
     borderWidth: 1,
-    borderColor: 'rgba(0, 234, 107, 0.5)',
+    borderColor: Platform.OS === 'web' ? 'rgba(0, 234, 107, 0.5)' : '#01b854',
     ...Platform.select({
       web: {
         backdropFilter: 'blur(12px)',

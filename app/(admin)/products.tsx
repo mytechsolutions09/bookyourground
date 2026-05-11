@@ -41,6 +41,7 @@ export default function AdminProductsScreen() {
 
   const [previewMode, setPreviewMode] = useState(false);
   const [selection, setSelection] = useState({ start: 0, end: 0 });
+  const [fieldSelections, setFieldSelections] = useState<any>({});
 
   const applyFormatting = (type: 'bold' | 'italic' | 'list' | 'heading' | 'link' | 'quote' | 'clear') => {
     const currentText = newProduct.description || '';
@@ -75,6 +76,23 @@ export default function AdminProductsScreen() {
     }
 
     setNewProduct({ ...newProduct, description: formattedText });
+  };
+
+  const applyBoldToField = (fieldName: string) => {
+    const specs = newProduct.specifications || {};
+    const currentText = specs[fieldName] || '';
+    const fieldSel = fieldSelections[fieldName] || { start: 0, end: 0 };
+    
+    const selectedText = currentText.substring(fieldSel.start, fieldSel.end);
+    const beforeSelection = currentText.substring(0, fieldSel.start);
+    const afterSelection = currentText.substring(fieldSel.end);
+    
+    const formattedText = beforeSelection + `**${selectedText || 'Bold Text'}**` + afterSelection;
+    
+    setNewProduct({
+      ...newProduct,
+      specifications: { ...specs, [fieldName]: formattedText }
+    });
   };
 
   const insertEmoji = (emoji: string) => {
@@ -727,117 +745,158 @@ export default function AdminProductsScreen() {
                   </View>
                 </View>
 
-                <View style={styles.formGroup}>
-                  <View style={styles.editorHeader}>
-                    <Text style={styles.label}>Description</Text>
-                    <View style={styles.charCountContainer}>
-                      <FileText size={12} color="#9CA3AF" />
-                      <Text style={styles.charCountText}>{charCount} chars</Text>
-                    </View>
+                {/* Additional Product Details (Available for All Products) */}
+                <View style={[styles.formGrid, { marginTop: 16 }]}>
+                  <View style={styles.formGroup}>
+                    <Text style={styles.label}>Sizes</Text>
+                    <TextInput 
+                      style={styles.input}
+                      placeholder="e.g. 7, 8, 9, 10"
+                      value={typeof newProduct.specifications?.sizes === 'string' 
+                        ? newProduct.specifications.sizes 
+                        : (Array.isArray(newProduct.specifications?.sizes) 
+                            ? newProduct.specifications.sizes.join(', ') 
+                            : '')}
+                      onChangeText={(val) => setNewProduct({
+                        ...newProduct, 
+                        specifications: { ...newProduct.specifications, sizes: val }
+                      })}
+                    />
+                    <Text style={styles.helperText}>Separate with commas</Text>
                   </View>
 
-                  <View style={styles.editorToolbar}>
-                    <View style={styles.toolbarGroup}>
-                      <TouchableOpacity style={styles.toolbarBtn} onPress={() => applyFormatting('bold')}>
+                  <View style={styles.formGroup}>
+                    <Text style={styles.label}>Colors</Text>
+                    <TextInput 
+                      style={styles.input}
+                      placeholder="e.g. Red|#FF0000, Black|#000000"
+                      value={typeof newProduct.specifications?.colors === 'string' 
+                        ? newProduct.specifications.colors 
+                        : (Array.isArray(newProduct.specifications?.colors) 
+                            ? newProduct.specifications.colors.map((c: any) => `${c.name}|${c.hex}`).join(', ') 
+                            : '')}
+                      onChangeText={(val) => setNewProduct({
+                        ...newProduct, 
+                        specifications: { ...newProduct.specifications, colors: val }
+                      })}
+                    />
+                    <Text style={styles.helperText}>Format: Name|Hex, Name|Hex</Text>
+
+                    {/* Color Picker Helper */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                      <TextInput 
+                        style={[styles.input, { flex: 1, marginBottom: 0, height: 32, fontSize: 12 }]}
+                        placeholder="Color Name"
+                        value={newColorVariant.name}
+                        onChangeText={(val) => setNewColorVariant({ ...newColorVariant, name: val })}
+                      />
+                      
+                      {Platform.OS === 'web' ? (
+                        <input 
+                          type="color" 
+                          value={newColorVariant.hex}
+                          onChange={(e) => setNewColorVariant({ ...newColorVariant, hex: e.target.value })}
+                          style={{ width: 32, height: 32, border: 'none', borderRadius: 4, cursor: 'pointer' }}
+                        />
+                      ) : (
+                        <TextInput 
+                          style={[styles.input, { width: 80, marginBottom: 0, height: 32, fontSize: 12 }]}
+                          placeholder="#Hex"
+                          value={newColorVariant.hex}
+                          onChangeText={(val) => setNewColorVariant({ ...newColorVariant, hex: val })}
+                        />
+                      )}
+
+                      <TouchableOpacity 
+                        style={{ backgroundColor: '#00ea6b', paddingHorizontal: 12, height: 32, borderRadius: 6, justifyContent: 'center', alignItems: 'center' }}
+                        onPress={() => {
+                          if (!newColorVariant.name || !newColorVariant.hex) return;
+                          const currentColors = typeof newProduct.specifications?.colors === 'string' 
+                            ? newProduct.specifications.colors 
+                            : (Array.isArray(newProduct.specifications?.colors) 
+                                ? newProduct.specifications.colors.map((c: any) => `${c.name}|${c.hex}`).join(', ') 
+                                : '');
+                          
+                          const newColorStr = `${newColorVariant.name}|${newColorVariant.hex}`;
+                          const updatedColors = currentColors ? `${currentColors}, ${newColorStr}` : newColorStr;
+                          
+                          setNewProduct({
+                            ...newProduct,
+                            specifications: { ...newProduct.specifications, colors: updatedColors }
+                          });
+                          setNewColorVariant({ name: '', hex: '#f8688a' }); // Reset
+                        }}
+                      >
+                        <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '700' }}>Add</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+
+                {/* New 3 Sections from Screenshot */}
+                <View style={[styles.formGrid, { marginTop: 16 }]}>
+                  <View style={styles.formGroup}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <Text style={styles.label}>Top Highlights</Text>
+                      <TouchableOpacity style={{ padding: 4 }} onPress={() => applyBoldToField('highlights')}>
                         <Bold size={14} color="#4B5563" />
                       </TouchableOpacity>
-                      <TouchableOpacity style={styles.toolbarBtn} onPress={() => applyFormatting('italic')}>
-                        <Italic size={14} color="#4B5563" />
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.toolbarBtn} onPress={() => applyFormatting('heading')}>
-                        <Type size={14} color="#4B5563" />
-                      </TouchableOpacity>
                     </View>
-                    
-                    <View style={styles.toolbarDivider} />
-                    
-                    <View style={styles.toolbarGroup}>
-                      <TouchableOpacity style={styles.toolbarBtn} onPress={() => applyFormatting('list')}>
-                        <List size={14} color="#4B5563" />
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.toolbarBtn} onPress={() => applyFormatting('quote')}>
-                        <Quote size={14} color="#4B5563" />
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.toolbarBtn} onPress={() => applyFormatting('link')}>
-                        <Link size={14} color="#4B5563" />
-                      </TouchableOpacity>
-                    </View>
-
-                    <View style={styles.toolbarDivider} />
-
-                    <View style={styles.toolbarGroup}>
-                      <TouchableOpacity style={styles.toolbarBtn} onPress={() => applyFormatting('clear')}>
-                        <Trash size={14} color="#EF4444" />
-                      </TouchableOpacity>
-                      <TouchableOpacity 
-                        style={[styles.toolbarBtn, previewMode && styles.toolbarBtnActive]} 
-                        onPress={() => setPreviewMode(!previewMode)}
-                      >
-                        {previewMode ? <Code size={14} color="#00ea6b" /> : <Eye size={14} color="#4B5563" />}
-                        <Text style={[styles.toolbarBtnText, previewMode && { color: '#00ea6b' }]}>
-                          {previewMode ? 'Edit' : 'Preview'}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-
-                  <View style={styles.emojiRow}>
-                    {['🔥', '✨', '⚽', '🏏', '👟', '👕', '⭐', '💯'].map(emoji => (
-                      <TouchableOpacity key={emoji} style={styles.emojiBtn} onPress={() => insertEmoji(emoji)}>
-                        <Text style={styles.emojiText}>{emoji}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                  
-                  {previewMode ? (
-                    <View style={[styles.input, styles.previewContainer]}>
-                      <ScrollView showsVerticalScrollIndicator={false}>
-                        <View style={{ paddingVertical: 4 }}>
-                          {(newProduct.description || '').split('\n').map((line, index) => {
-                            let content = line;
-                            let lineStyle: any = { ...styles.previewText, marginBottom: 4 };
-                            
-                            if (line.startsWith('### ')) {
-                              content = line.substring(4);
-                              lineStyle = { ...lineStyle, fontSize: 15, fontWeight: '700', marginTop: 12, marginBottom: 8, color: '#111827' };
-                            } else if (line.startsWith('- ')) {
-                              content = `•  ${line.substring(2)}`;
-                              lineStyle = { ...lineStyle, marginLeft: 8 };
-                            } else if (line.startsWith('> ')) {
-                              content = line.substring(2);
-                              lineStyle = { ...lineStyle, fontStyle: 'italic', color: '#6B7280', borderLeftWidth: 3, borderLeftColor: '#D1D5DB', paddingLeft: 12, marginLeft: 4 };
-                            }
-                            
-                            const parts = content.split(/(\*\*.*?\*\*|_.*?_)/g);
-                            
-                            return (
-                              <Text key={index} style={lineStyle}>
-                                {parts.map((part, i) => {
-                                  if (part.startsWith('**') && part.endsWith('**')) {
-                                    return <Text key={i} style={{ fontWeight: '700', color: '#111827' }}>{part.slice(2, -2)}</Text>;
-                                  }
-                                  if (part.startsWith('_') && part.endsWith('_')) {
-                                    return <Text key={i} style={{ fontStyle: 'italic' }}>{part.slice(1, -1)}</Text>;
-                                  }
-                                  return part;
-                                })}
-                              </Text>
-                            );
-                          })}
-                        </View>
-                      </ScrollView>
-                    </View>
-                  ) : (
                     <TextInput 
-                      style={[styles.input, { height: 180, textAlignVertical: 'top', paddingTop: 12 }]}
-                      placeholder="Product description..."
+                      style={[styles.input, { minHeight: 60, textAlignVertical: 'top', paddingTop: 8 }]}
+                      placeholder="Enter key highlights..."
                       multiline
-                      value={newProduct.description}
-                      onChangeText={(val) => setNewProduct({...newProduct, description: val})}
-                      onSelectionChange={(e) => setSelection(e.nativeEvent.selection)}
+                      value={newProduct.specifications?.highlights || ''}
+                      onChangeText={(val) => setNewProduct({
+                        ...newProduct, 
+                        specifications: { ...newProduct.specifications, highlights: val }
+                      })}
+                      onSelectionChange={(e) => setFieldSelections({ ...fieldSelections, highlights: e.nativeEvent.selection })}
                     />
-                  )}
+                  </View>
+
+                  <View style={styles.formGroup}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                      <Text style={styles.label}>Style</Text>
+                      <TouchableOpacity style={{ padding: 4 }} onPress={() => applyBoldToField('style')}>
+                        <Bold size={14} color="#4B5563" />
+                      </TouchableOpacity>
+                    </View>
+                    <TextInput 
+                      style={[styles.input, { minHeight: 60, textAlignVertical: 'top', paddingTop: 8 }]}
+                      placeholder="Enter style details..."
+                      multiline
+                      value={newProduct.specifications?.style || ''}
+                      onChangeText={(val) => setNewProduct({
+                        ...newProduct, 
+                        specifications: { ...newProduct.specifications, style: val }
+                      })}
+                      onSelectionChange={(e) => setFieldSelections({ ...fieldSelections, style: e.nativeEvent.selection })}
+                    />
+                  </View>
                 </View>
+
+                <View style={styles.formGroup}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <Text style={styles.label}>Features & Specs</Text>
+                    <TouchableOpacity style={{ padding: 4 }} onPress={() => applyBoldToField('features')}>
+                      <Bold size={14} color="#4B5563" />
+                    </TouchableOpacity>
+                  </View>
+                  <TextInput 
+                    style={[styles.input, { minHeight: 60, textAlignVertical: 'top', paddingTop: 8 }]}
+                    placeholder="Enter technical features and specifications..."
+                    multiline
+                    value={newProduct.specifications?.features || ''}
+                    onChangeText={(val) => setNewProduct({
+                      ...newProduct, 
+                      specifications: { ...newProduct.specifications, features: val }
+                    })}
+                    onSelectionChange={(e) => setFieldSelections({ ...fieldSelections, features: e.nativeEvent.selection })}
+                  />
+                </View>
+
+
 
                 <View style={styles.formGroup}>
                   <Text style={styles.label}>Product Images</Text>
@@ -845,16 +904,39 @@ export default function AdminProductsScreen() {
                     {newProduct.images.map((img: string, idx: number) => (
                       <View key={idx} style={styles.imageSlot}>
                         <Image source={{ uri: img }} style={styles.slotImage} />
-                        <TouchableOpacity 
-                          style={styles.removeImgBtn}
-                          onPress={() => {
-                            const currentImages = [...newProduct.images];
-                            currentImages.splice(idx, 1);
-                            setNewProduct({...newProduct, images: currentImages});
-                          }}
-                        >
-                          <X size={14} color="#FFFFFF" />
-                        </TouchableOpacity>
+                        
+                        {idx === 0 && (
+                          <View style={styles.coverBadge}>
+                            <Text style={styles.coverBadgeText}>Cover</Text>
+                          </View>
+                        )}
+
+                        <View style={styles.imageActionsOverlay}>
+                          {idx > 0 && (
+                            <TouchableOpacity 
+                              style={styles.imageActionBtn}
+                              onPress={() => {
+                                const currentImages = [...newProduct.images];
+                                const item = currentImages.splice(idx, 1)[0];
+                                currentImages.unshift(item);
+                                setNewProduct({...newProduct, images: currentImages});
+                              }}
+                            >
+                              <Star size={10} color="#FFFFFF" fill="#FFFFFF" />
+                            </TouchableOpacity>
+                          )}
+                          
+                          <TouchableOpacity 
+                            style={[styles.imageActionBtn, { backgroundColor: '#EF4444' }]}
+                            onPress={() => {
+                              const currentImages = [...newProduct.images];
+                              currentImages.splice(idx, 1);
+                              setNewProduct({...newProduct, images: currentImages});
+                            }}
+                          >
+                            <X size={10} color="#FFFFFF" />
+                          </TouchableOpacity>
+                        </View>
                       </View>
                     ))}
                     {newProduct.images.length < 5 && (
@@ -1624,16 +1706,38 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    marginRight: 12,
   },
   slotImage: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
   },
-  removeImageBtn: {
+  coverBadge: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    backgroundColor: '#00ea6b',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    zIndex: 10,
+  },
+  coverBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    textTransform: 'uppercase',
+  },
+  imageActionsOverlay: {
     position: 'absolute',
     top: 4,
     right: 4,
+    flexDirection: 'row',
+    gap: 4,
+    zIndex: 10,
+  },
+  imageActionBtn: {
     width: 22,
     height: 22,
     borderRadius: 11,

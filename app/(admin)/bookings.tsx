@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, Platform, TouchableOpacity, ScrollView, TextInput } from 'react-native';
-import { Calendar, Filter, X } from 'lucide-react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, Platform, TouchableOpacity, ScrollView, TextInput, Modal } from 'react-native';
+import { Calendar, Filter, X, ChevronDown, CheckCircle2 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { BookingWithDetails } from '@/types';
@@ -27,13 +27,154 @@ export default function AdminBookingsScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const PAGE_SIZE = 20;
 
+  const [totalDbCount, setTotalDbCount] = useState(0);
+  const [upcomingDbCount, setUpcomingDbCount] = useState(0);
+  const [pastDbCount, setPastDbCount] = useState(0);
+  const [cancelledDbCount, setCancelledDbCount] = useState(0);
+
+  const [showDateModal, setShowDateModal] = useState(false);
+  const [dateRange, setDateRange] = useState<{start: Date | null, end: Date | null}>({start: null, end: null});
+
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [types, setTypes] = useState<any[]>([]);
+
   useEffect(() => {
     if (user) {
       setPage(0);
       setHasMore(true);
       loadBookings(0, false);
+      loadCounts();
     }
-  }, [user]);
+  }, [user, dateRange, typeFilter]);
+
+  useEffect(() => {
+    const loadTypes = async () => {
+      const { data } = await supabase.from('ground_types').select('*').eq('active', true).order('sort_order');
+      const typesData = data || [];
+      if (!typesData.some((t: any) => t.name.toLowerCase() === 'nets')) {
+        typesData.push({ id: 'fallback-nets', name: 'Nets', label: 'Nets', active: true, sort_order: 99 });
+      }
+      setTypes(typesData);
+    };
+    loadTypes();
+  }, []);
+
+  const loadCounts = async () => {
+    try {
+      const todayIso = new Date().toISOString().split('T')[0];
+
+      const [totalRes, upcomingRes, pastRes, cancelledRes] = await Promise.all([
+        supabase.from('bookings').select('*', { count: 'exact', head: true }),
+        supabase.from('bookings').select('*', { count: 'exact', head: true }).gte('booking_date', todayIso),
+        supabase.from('bookings').select('*', { count: 'exact', head: true }).lt('booking_date', todayIso),
+        supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('status', 'cancelled')
+      ]);
+
+      setTotalDbCount(totalRes.count || 0);
+      setUpcomingDbCount(upcomingRes.count || 0);
+      setPastDbCount(pastRes.count || 0);
+      setCancelledDbCount(cancelledRes.count || 0);
+    } catch (e) {
+      console.error('Error loading counts:', e);
+    }
+  };
+
+  const FilterDropdown = ({ id, label, value, options, onSelect }: any) => {
+    const isOpen = activeDropdown === id;
+    const selectedOption = options.find((o: any) => o.key === value);
+
+    return (
+      <View style={[styles.dropdownContainer, isOpen && { zIndex: 2000 }]}>
+        <TouchableOpacity 
+          style={[styles.dropdownTrigger, isOpen && styles.dropdownTriggerActive]} 
+          onPress={() => setActiveDropdown(isOpen ? null : id)}
+        >
+          <Text style={styles.dropdownLabel}>{label}:</Text>
+          <Text style={styles.dropdownValue}>{selectedOption?.label || 'Select'}</Text>
+          <ChevronDown size={14} color="#6B7280" />
+        </TouchableOpacity>
+
+        {isOpen && (
+          <View style={styles.dropdownMenu}>
+            {options.map((opt: any) => (
+              <TouchableOpacity 
+                key={opt.key} 
+                style={[styles.dropdownItem, value === opt.key && styles.dropdownItemActive]}
+                onPress={() => {
+                  onSelect(opt.key);
+                  setActiveDropdown(null);
+                }}
+              >
+                <Text style={[styles.dropdownItemText, value === opt.key && styles.dropdownItemTextActive]}>
+                  {opt.label}
+                </Text>
+                {value === opt.key && <CheckCircle2 size={14} color="#10b981" />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  const DateRangeModal = () => {
+    const quickRanges = [
+      { label: 'All Time', start: null, end: null },
+      { label: 'Today', start: new Date(), end: new Date() },
+      { label: 'Yesterday', start: new Date(Date.now() - 86400000), end: new Date(Date.now() - 86400000) },
+      { label: 'This Week', start: new Date(Date.now() - new Date().getDay() * 86400000), end: new Date() },
+      { label: 'Last Week', start: new Date(Date.now() - (new Date().getDay() + 7) * 86400000), end: new Date(Date.now() - (new Date().getDay() + 1) * 86400000) },
+      { label: 'This Month', start: new Date(new Date().getFullYear(), new Date().getMonth(), 1), end: new Date() },
+      { label: 'Last Month', start: new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1), end: new Date(new Date().getFullYear(), new Date().getMonth(), 0) },
+    ];
+
+    return (
+      <Modal visible={showDateModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.dateModalContent}>
+            <View style={styles.dateModalHeader}>
+              <Text style={styles.dateModalTitle}>Filter by Date</Text>
+              <TouchableOpacity onPress={() => setShowDateModal(false)}>
+                <X size={20} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.dateModalBody}>
+              <View style={styles.quickRangeList}>
+                <Text style={styles.sectionLabel}>Quick Range</Text>
+                {quickRanges.map((range) => (
+                  <TouchableOpacity 
+                    key={range.label} 
+                    style={styles.quickRangeItem}
+                    onPress={() => {
+                      setDateRange({ start: range.start, end: range.end });
+                      setShowDateModal(false);
+                    }}
+                  >
+                    <Calendar size={14} color="#9CA3AF" />
+                    <Text style={styles.quickRangeLabel}>{range.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.dateModalFooter}>
+               <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setShowDateModal(false)}>
+                 <Text style={styles.modalCancelBtnText}>Cancel</Text>
+               </TouchableOpacity>
+               <TouchableOpacity 
+                 style={styles.modalApplyBtn} 
+                 onPress={() => setShowDateModal(false)}
+               >
+                 <Text style={styles.modalApplyBtnText}>Apply Filter</Text>
+               </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
 
   const loadBookings = async (targetPage: number, isLoadMore: boolean) => {
     if (!user) return;
@@ -45,19 +186,32 @@ export default function AdminBookingsScreen() {
       const from = targetPage * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('bookings')
         .select(`
           *,
-          ground:grounds(
+          ground:grounds${typeFilter !== 'all' ? '!inner' : ''}(
             *,
             ground_images(*)
           ),
           user:profiles(full_name, phone)
         `)
-        .neq('status', 'pending')
-        .order('booking_date', { ascending: false })
-        .range(from, to);
+        .order('booking_date', { ascending: false });
+
+      if (typeFilter !== 'all') {
+        query = query.eq('grounds.pitch_type', typeFilter);
+      }
+
+      if (dateRange.start) {
+        const startStr = dateRange.start.toISOString().split('T')[0];
+        query = query.gte('booking_date', startStr);
+      }
+      if (dateRange.end) {
+        const endStr = dateRange.end.toISOString().split('T')[0];
+        query = query.lte('booking_date', endStr);
+      }
+
+      const { data, error } = await query.range(from, to);
 
       if (error) throw error;
       
@@ -135,6 +289,7 @@ export default function AdminBookingsScreen() {
           setBookings(prev => 
             prev.map(b => b.id === booking.id ? { ...b, status: 'cancelled' } : b)
           );
+          loadCounts();
           if (Platform.OS === 'web') alert('Booking cancelled and refunded to wallet.');
           else Alert.alert('Success', 'Booking cancelled and refunded to wallet.');
         } else {
@@ -228,18 +383,11 @@ export default function AdminBookingsScreen() {
     return `${yyyy}-${mm}-${dd}`;
   }, []);
 
-  const upcomingCount = useMemo(
-    () => bookings.filter((b) => b.booking_date >= todayIsoForCounts).length,
-    [bookings, todayIsoForCounts],
-  );
 
-  const pastCount = useMemo(
-    () => bookings.filter((b) => b.booking_date < todayIsoForCounts).length,
-    [bookings, todayIsoForCounts],
-  );
 
   const content = (
     <View style={styles.container}>
+      <DateRangeModal />
       {Platform.OS === 'web' && (
         <View style={[styles.header, styles.webHeader]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
@@ -262,7 +410,7 @@ export default function AdminBookingsScreen() {
                   activeTab === 'all' && styles.tabChipTextActive,
                 ]}
               >
-                {`All (${bookings.length})`}
+                {`All (${totalDbCount})`}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -278,7 +426,7 @@ export default function AdminBookingsScreen() {
                   activeTab === 'upcoming' && styles.tabChipTextActive,
                 ]}
               >
-                {`Upcoming (${upcomingCount})`}
+                {`Upcoming (${upcomingDbCount})`}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -294,7 +442,7 @@ export default function AdminBookingsScreen() {
                   activeTab === 'past' && styles.tabChipTextActive,
                 ]}
               >
-                {`Past (${pastCount})`}
+                {`Past (${pastDbCount})`}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -310,67 +458,36 @@ export default function AdminBookingsScreen() {
                   activeTab === ('cancelled' as any) && styles.tabChipTextActive,
                 ]}
               >
-                {`Cancelled (${bookings.filter(b => b.status === 'cancelled').length})`}
+                {`Cancelled (${cancelledDbCount})`}
               </Text>
             </TouchableOpacity>
 
-
-            <View style={styles.dateFilterWrap}>
-              <View 
-                style={[
-                  styles.tabChip, 
-                  selectedDate && styles.tabChipActive,
-                  { paddingRight: selectedDate ? 32 : 12, position: 'relative' }
-                ]}
-              >
-                <View pointerEvents="none" style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Calendar 
-                    size={14} 
-                    color={selectedDate ? '#FFFFFF' : '#6B7280'} 
-                  />
-                  <Text 
-                    style={[
-                      styles.tabChipText, 
-                      selectedDate && styles.tabChipTextActive
-                    ]}
-                  >
-                    {selectedDate ? selectedDate : 'Filter by Date'}
-                  </Text>
-                </View>
-                
-                {/* Native input overlay for web picker triggering */}
-                <input
-                    type="date"
-                    value={selectedDate ?? ''}
-                    onChange={(e: any) =>
-                      setSelectedDate(e.target.value ? e.target.value : null)
-                    }
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      opacity: 0,
-                      cursor: 'pointer',
-                      width: '100%',
-                      zIndex: 10,
-                      borderWidth: 0,
-                      display: 'block',
-                    }}
-                />
-              </View>
-              
-              {selectedDate && (
-                <TouchableOpacity 
-                  onPress={() => setSelectedDate(null)}
-                  style={styles.dateClearBtn}
-                >
-                  <X size={12} color="#6B7280" />
-                </TouchableOpacity>
-              )}
-            </View>
           </ScrollView>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <FilterDropdown 
+              id="type" 
+              label="Type" 
+              value={typeFilter}
+              options={[
+                { key: 'all', label: 'All Types' },
+                ...types.map(t => ({ key: t.name, label: t.label || t.name }))
+              ]}
+              onSelect={setTypeFilter}
+            />
+
+            <TouchableOpacity 
+              style={[styles.dateFilterBtn, (dateRange.start || dateRange.end) && styles.dateFilterBtnActive]}
+              onPress={() => setShowDateModal(true)}
+            >
+              <Calendar size={14} color={(dateRange.start || dateRange.end) ? "#10b981" : "#6B7280"} />
+              <Text style={[styles.dateFilterText, (dateRange.start || dateRange.end) && styles.dateFilterTextActive]}>
+                {dateRange.start ? (
+                   `${dateRange.start.toLocaleDateString()} - ${dateRange.end ? dateRange.end.toLocaleDateString() : 'Now'}`
+                ) : 'Date'}
+              </Text>
+            </TouchableOpacity>
+          </View>
           <View style={{ width: 300 }}>
             <TextInput
               style={styles.searchBar}
@@ -627,6 +744,7 @@ const styles = StyleSheet.create({
     paddingTop: IS_WEB ? 16 : 0,
     borderBottomWidth: 1,
     borderBottomColor: IS_WEB ? '#E0E0E0' : 'rgba(0,234,107,0.15)',
+    zIndex: 1000,
   },
   webHeader: {
     paddingTop: 16,
@@ -971,6 +1089,191 @@ const styles = StyleSheet.create({
     marginTop: 20,
     marginBottom: 40,
     letterSpacing: 1,
+  },
+  dateFilterBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 8,
+    alignSelf: 'center',
+  },
+  dateFilterBtnActive: {
+    borderColor: '#10b981',
+    backgroundColor: '#F0FDF4',
+  },
+  dateFilterText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B7280',
+    fontFamily: 'Inter',
+  },
+  dateFilterTextActive: {
+    color: '#059669',
+    fontWeight: '700',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  dateModalContent: {
+    width: '100%',
+    maxWidth: 400,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  dateModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  dateModalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    fontFamily: 'Inter',
+  },
+  dateModalBody: {
+    padding: 20,
+  },
+  quickRangeList: {
+    gap: 8,
+  },
+  quickRangeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    gap: 10,
+  },
+  quickRangeLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#4B5563',
+    fontFamily: 'Inter',
+  },
+  dateModalFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    padding: 16,
+    backgroundColor: '#F9FAFB',
+    gap: 12,
+  },
+  modalCancelBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  modalCancelBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  modalApplyBtn: {
+    backgroundColor: '#10b981',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  modalApplyBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6B7280',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
+  dropdownContainer: {
+    position: 'relative',
+    zIndex: 100,
+    alignSelf: 'center',
+  },
+  dropdownTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 6,
+  },
+  dropdownTriggerActive: {
+    borderColor: '#10b981',
+    backgroundColor: '#F0FDF4',
+  },
+  dropdownLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#6B7280',
+    fontFamily: 'Inter',
+  },
+  dropdownValue: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#111827',
+    fontFamily: 'Inter',
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    marginTop: 4,
+    minWidth: 160,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    padding: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+    zIndex: 2000,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  dropdownItemActive: {
+    backgroundColor: '#F0FDF4',
+  },
+  dropdownItemText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#374151',
+    fontFamily: 'Inter',
+  },
+  dropdownItemTextActive: {
+    color: '#059669',
+    fontWeight: '700',
   },
 });
 
