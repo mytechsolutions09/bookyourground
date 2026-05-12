@@ -519,6 +519,7 @@ export default function GroundDetailsPrettyUrlScreen() {
                         lightAppTheme
                         lockSlot={lock === 'true'}
                         onFinalAmountChange={setCurrentTotal}
+                        initialGround={ground}
                       />
                     </View>
                   </Card>
@@ -619,6 +620,7 @@ export default function GroundDetailsPrettyUrlScreen() {
                     hideTitle
                     groundPageAccent
                     lockSlot={lock === 'true'}
+                    initialGround={ground}
                   />
                 </View>
               </View>
@@ -767,7 +769,7 @@ function CustomMarker({ position }: { position: { lat: number, lng: number } }) 
 
     // Center map on marker
     map.setCenter(position);
-    map.setZoom(16);
+    map.setZoom(12);
 
     return () => {
       newMarker.setMap(null);
@@ -784,7 +786,7 @@ function MapHandler({ coords }: { coords: { lat: number, lng: number } | null })
   useEffect(() => {
     if (map && coords) {
       map.panTo(coords);
-      map.setZoom(15);
+      map.setZoom(12);
     }
   }, [map, coords]);
 
@@ -899,11 +901,12 @@ function WebMap({ ground, mapsUrl }: { ground: GroundWithImages, mapsUrl: string
         <Map
           defaultCenter={coords || { lat: 28.4595, lng: 77.0266 }}
           center={coords}
-          defaultZoom={15}
+          defaultZoom={12}
           mapId={MAP_ID}
           style={{ width: '100%', height: '100%', borderRadius: 16 }}
           gestureHandling={'greedy'}
           disableDefaultUI={true}
+          styles={CLEAN_MAP_STYLES}
         >
           {coords && (
             <>

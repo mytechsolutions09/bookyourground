@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, Alert, Platform, useWindowDimensions, TextInput, Pressable, Animated, Alert as RNAlert, ActivityIndicator, Share, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, Alert, Platform, useWindowDimensions, TextInput, Pressable, Animated, Alert as RNAlert, ActivityIndicator, Share, Modal, Linking } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { MapPin, Calendar, Clock, User, Users, Star, CheckCircle2, CreditCard, ShieldCheck, Info, ChevronLeft, Share2, Globe, FileText, Copy, Check } from 'lucide-react-native';
+import { MapPin, Calendar, Clock, User, Users, Star, CheckCircle2, CreditCard, ShieldCheck, Info, ChevronLeft, Share2, Globe, FileText, Copy, Check, Navigation2 } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { BookingWithDetails } from '@/types';
 import { formatCurrency, formatDate, formatTime } from '@/utils/helpers';
@@ -22,8 +22,11 @@ function getNetsTimeSlotSummary(booking: any): string {
       const slots = matchSlots[1].split(',').map(s => s.trim());
       if (slots.length > 0) {
         slots.sort();
-        const start = slots[0];
-        const last = slots[slots.length - 1];
+        const startRaw = slots[0];
+        const lastRaw = slots[slots.length - 1];
+        
+        const start = startRaw.includes('__') ? startRaw.split('__')[1] : startRaw;
+        const last = lastRaw.includes('__') ? lastRaw.split('__')[1] : lastRaw;
         
         const duration = matchDuration ? parseInt(matchDuration[1]) : 20;
         
@@ -158,7 +161,9 @@ export default function BookingDetailsScreen() {
   const { slotCount, timeSlotLabel, isNetsWithMultipleSlots } = useMemo(() => {
     if (!booking) return { slotCount: 1, timeSlotLabel: '', isNetsWithMultipleSlots: false };
     let count = 1;
-    let label = formatTime(booking.start_time);
+    let startStr = booking.start_time;
+    if (typeof startStr === 'string' && startStr.includes('__')) startStr = startStr.split('__')[1];
+    let label = formatTime(startStr);
     let multiple = false;
     const isNets = booking.ground.pitch_type?.toLowerCase().includes('nets');
     if (isNets && booking.notes) {
@@ -169,7 +174,11 @@ export default function BookingDetailsScreen() {
           count = slots.length;
           multiple = count > 1;
           slots.sort();
-          label = slots.map(s => formatTime(s)).join(', ');
+          label = slots.map(s => {
+             let t = s;
+             if (t.includes('__')) t = t.split('__')[1];
+             return formatTime(t);
+          }).join(', ');
         }
       }
     }
@@ -185,6 +194,23 @@ export default function BookingDetailsScreen() {
   const cricketTeamsLabel = useMemo(() => {
     if (!booking) return null;
     return cricketTeamsLabelFromBooking(booking.ground.pitch_type, booking.notes);
+  }, [booking]);
+
+  const mapsUrl = useMemo(() => {
+    if (!booking?.ground) return null;
+    const { latitude, longitude, address, city, state } = booking.ground;
+    const baseUrl = "https://www.google.com/maps/dir/?api=1";
+    
+    let destination;
+    if (latitude && longitude) {
+      destination = `${latitude},${longitude}`;
+    } else {
+      const parts = [address, city, state].map((v) => String(v ?? '').trim()).filter(Boolean);
+      destination = encodeURIComponent(parts.join(', '));
+    }
+    
+    if (!destination) return null;
+    return `${baseUrl}&destination=${destination}&travelmode=driving`;
   }, [booking]);
 
   if (loading) {
@@ -219,7 +245,7 @@ export default function BookingDetailsScreen() {
           </View>
           <View style={styles.heroBottom}>
             <View style={{ flex: 1, marginRight: 20 }}>
-              <Text style={styles.groundTitle} numberOfLines={1}>{booking.ground.name}</Text>
+              <Text style={[styles.groundTitle, width < 768 && { fontSize: 18, fontWeight: '600' }]}>{booking.ground.name}</Text>
               <View style={styles.groundSport}>
                 <Globe size={12} color="#FFF" />
                 <Text style={styles.sportText}>{booking.ground.pitch_type || 'Cricket'}</Text>
@@ -245,8 +271,19 @@ export default function BookingDetailsScreen() {
           <View style={styles.card}>
             <View style={styles.cardInner}>
               <View style={styles.addressRow}>
-                <MapPin size={14} color="#01C45A" />
-                <Text style={styles.addressText}>{booking.ground.address}, {booking.ground.city}</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', flex: 1, gap: 8 }}>
+                  <MapPin size={14} color="#01C45A" style={{ marginTop: 2 }} />
+                  <Text style={styles.addressText}>{booking.ground.address}, {booking.ground.city}</Text>
+                </View>
+                {mapsUrl && (
+                  <Pressable 
+                    onPress={() => Linking.openURL(mapsUrl)}
+                    style={styles.directionsBtn}
+                  >
+                    <Navigation2 size={12} color="#01C45A" />
+                    <Text style={styles.directionsBtnText}>Directions</Text>
+                  </Pressable>
+                )}
               </View>
               <View style={styles.slotGrid}>
                 <View style={styles.slotItem}>
@@ -460,7 +497,7 @@ export default function BookingDetailsScreen() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      {isWeb ? <WebLayout noCard>{content}</WebLayout> : content}
+      {isWeb ? <WebLayout hideHeader noCard>{content}</WebLayout> : content}
     </>
   );
 }
@@ -468,13 +505,13 @@ export default function BookingDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F4F6F0',
+    backgroundColor: Platform.OS === 'web' ? 'transparent' : '#F4F6F0',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F4F6F0',
+    backgroundColor: Platform.OS === 'web' ? 'transparent' : '#F4F6F0',
   },
   loadingText: {
     fontSize: 16,
@@ -641,12 +678,29 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: 'Inter',
   },
+  directionsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F4F6F0',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  directionsBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#01C45A',
+    fontFamily: 'Inter',
+  },
   slotGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
   },
   slotItem: {
     flex: 1,
+    minWidth: '46%',
     backgroundColor: '#F4F6F0',
     padding: 12,
     borderRadius: 12,

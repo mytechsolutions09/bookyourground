@@ -25,6 +25,17 @@ import WebLayout from '@/components/web/WebLayout';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { ActivityIndicator, Image } from 'react-native';
+import { 
+  APIProvider, 
+  Map as GoogleMap, 
+  Marker, 
+  useMap,
+  useMapsLibrary
+} from '@vis.gl/react-google-maps';
+
+const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+const MAP_ID = "DEMO_MAP_ID";
+
 
 const DAY_ORDER: DayOfWeek[] = [
   'monday',
@@ -65,6 +76,8 @@ export default function EditNetPage() {
     has_manual_throwdown: false,
     pricing_model: 'hours' as 'hours' | 'overs',
     surface_type: 'Turf', // Default
+    latitude: '',
+    longitude: '',
   });
 
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
@@ -160,6 +173,8 @@ export default function EditNetPage() {
           has_manual_throwdown: data.has_manual_throwdown || false,
           pricing_model: data.pricing_model || 'hours',
           surface_type: data.cricket_pitch_surface || 'Turf',
+          latitude: data.latitude ? String(data.latitude) : '',
+          longitude: data.longitude ? String(data.longitude) : '',
         });
 
         if (data.city && data.state) {
@@ -365,6 +380,8 @@ export default function EditNetPage() {
           is_indoor: formData.is_indoor,
           has_bowling_machine: formData.has_bowling_machine,
           has_manual_throwdown: formData.has_manual_throwdown,
+          latitude: formData.latitude ? parseFloat(formData.latitude) : null,
+          longitude: formData.longitude ? parseFloat(formData.longitude) : null,
         })
         .eq('id', id);
 
@@ -717,6 +734,63 @@ export default function EditNetPage() {
             placeholder="Pincode"
             keyboardType="numeric"
           />
+
+          {/* ── Map Picker ── */}
+          {Platform.OS === 'web' && (
+            <View style={styles.mapPickerContainer}>
+              <Text style={styles.mapPickerTitle}>Set Exact Location (Pin on Map)</Text>
+              <Text style={styles.mapPickerSubtitle}>
+                Click on the map to place a pin at your academy's entrance or center.
+              </Text>
+              <View style={styles.mapWrapper}>
+                <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+                  <GoogleMap
+                    defaultCenter={{ lat: 28.4595, lng: 77.0266 }}
+                    center={formData.latitude && formData.longitude ? { lat: parseFloat(formData.latitude), lng: parseFloat(formData.longitude) } : undefined}
+                    defaultZoom={13}
+                    mapId={MAP_ID}
+                    onClick={(e) => {
+                      if (e.detail.latLng) {
+                        setFormData(prev => ({
+                          ...prev,
+                          latitude: String(e.detail.latLng!.lat),
+                          longitude: String(e.detail.latLng!.lng)
+                        }));
+                      }
+                    }}
+                    style={{ width: '100%', height: '100%' }}
+                  >
+                    {formData.latitude && formData.longitude && (
+                      <Marker 
+                        position={{ lat: parseFloat(formData.latitude), lng: parseFloat(formData.longitude) }} 
+                        icon="https://maps.google.com/mapfiles/ms/icons/green-dot.png"
+                      />
+                    )}
+                  </GoogleMap>
+                </APIProvider>
+              </View>
+              <View style={styles.coordsRow}>
+                <View style={{ flex: 1 }}>
+                  <Input
+                    label="Latitude"
+                    value={formData.latitude}
+                    onChangeText={(text) => setFormData({ ...formData, latitude: text })}
+                    placeholder="0.0000"
+                    keyboardType="numeric"
+                  />
+                </View>
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Input
+                    label="Longitude"
+                    value={formData.longitude}
+                    onChangeText={(text) => setFormData({ ...formData, longitude: text })}
+                    placeholder="0.0000"
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
+            </View>
+          )}
         </Card>
 
         <Card style={styles.section}>
@@ -1201,6 +1275,37 @@ const stylesDropdown = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f9fafb',
+  },
+  mapPickerContainer: {
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+  },
+  mapPickerTitle: {
+    fontFamily: 'Inter',
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  mapPickerSubtitle: {
+    fontFamily: 'Inter',
+    fontSize: 14,
+    color: '#64748b',
+    marginBottom: 16,
+  },
+  mapWrapper: {
+    height: 300,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#f1f5f9',
+    marginBottom: 16,
+  },
+  coordsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   scrollContent: {
     paddingTop: 24,

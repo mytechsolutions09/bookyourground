@@ -37,8 +37,8 @@ export default function NativeMap({ ground }: NativeMapProps) {
       style={{ flex: 1, borderRadius: 16 }}
       initialRegion={{
         ...coords,
-        latitudeDelta: 0.005,
-        longitudeDelta: 0.005,
+        latitudeDelta: 0.02,
+        longitudeDelta: 0.02,
       }}
       scrollEnabled={false}
       zoomEnabled={false}

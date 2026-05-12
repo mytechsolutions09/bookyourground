@@ -17,7 +17,7 @@ export default function CallToAction() {
         <View style={[styles.card, isLight && styles.cardLight]}>
           <Text style={[styles.title, isLight && styles.titleLight]}>Ready to Get Started?</Text>
           <Text style={[styles.subtitle, isLight && styles.subtitleLight]}>
-            Join thousands of sports enthusiasts who book their favorite grounds with ease
+            Join thousands of sports enthusiasts who book their favorite venues with ease
           </Text>
 
           <View style={styles.buttonGroup}>
@@ -114,8 +114,8 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   primaryButton: {
-    backgroundColor: 'rgba(1, 184, 84, 0.4)',
-    borderColor: 'rgba(0, 234, 107, 0.5)',
+    backgroundColor: 'rgba(1, 230, 105, 0.4)',
+    borderColor: 'rgba(1, 230, 105, 0.5)',
     borderWidth: 1,
     paddingHorizontal: 36,
     paddingVertical: Platform.OS === 'web' ? 20 : 18,
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    shadowColor: '#00ea6b',
+    shadowColor: '#01e669',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
@@ -136,7 +136,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
     color: '#FFFFFF',
     fontSize: 17,
-    fontWeight: '800',
+    fontWeight: '600',
     letterSpacing: -0.3,
   },
   linkButton: {

@@ -12,12 +12,21 @@ import {
   Image,
   ScrollView,
 } from 'react-native';
-import { Calendar as RNCalendar } from 'react-native-calendars';
+import { Calendar as RNCalendar, LocaleConfig } from 'react-native-calendars';
+
+LocaleConfig.locales['en'] = {
+  monthNames: ['January','February','March','April','May','June','July','August','September','October','November','December'],
+  monthNamesShort: ['Jan.','Feb.','Mar.','Apr.','May','Jun.','Jul.','Aug.','Sep.','Oct.','Nov.','Dec.'],
+  dayNames: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
+  dayNamesShort: ['S','M','T','W','T','F','S'],
+  today: 'Today'
+};
+LocaleConfig.defaultLocale = 'en';
 import { useLocalSearchParams, router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '../components/MobileAppNavbar';
-import { Search, MapPin, Building2, Swords, Trophy, Star, ArrowRight, ChevronDown, Calendar, Clock } from 'lucide-react-native';
+import { Search, MapPin, Building2, Swords, Trophy, Star, ArrowRight, ChevronDown, ChevronRight, Calendar, Clock } from 'lucide-react-native';
 import GroundCard from '@/components/grounds/GroundCard';
 import { makeGroundPath } from '@/utils/groundSlug';
 import { formatCurrency } from '@/utils/helpers';
@@ -415,10 +424,27 @@ export default function SearchScreen() {
   };
 
   const combinedResults = useMemo(() => {
-    // Filter out nets from matches
-    let filteredMatches = results.matches.filter((m: any) => 
-      !String(m.ground?.pitch_type ?? '').toLowerCase().includes('nets')
-    );
+    // Filter out nets and past slots from matches
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const currentMins = now.getHours() * 60 + now.getMinutes();
+
+    let filteredMatches = results.matches.filter((m: any) => {
+      // Basic type filter
+      if (String(m.ground?.pitch_type ?? '').toLowerCase().includes('nets')) return false;
+
+      // Temporal filter: hide if date is past
+      if (m.booking_date < todayStr) return false;
+
+      // If date is today, hide if start_time is past
+      if (m.booking_date === todayStr) {
+        const [h, min] = (m.start_time || '00:00').split(':').map(Number);
+        const slotMins = h * 60 + min;
+        return slotMins > currentMins;
+      }
+
+      return true;
+    });
 
     if (dateKey !== 'All') {
       const today = new Date().toISOString().split('T')[0];
@@ -467,49 +493,124 @@ export default function SearchScreen() {
               </View>
 
               <View style={styles.sidebarSection}>
-                <Text style={styles.sidebarSectionTitle}>Categories</Text>
-                <Pressable 
-                  onPress={() => { setActiveTab('all'); setTypeKey(''); }}
-                  style={[styles.sidebarTab, activeTab === 'all' && !typeKey && styles.sidebarTabActive]}
-                >
-                  <Text style={[styles.sidebarTabText, activeTab === 'all' && !typeKey && styles.sidebarTabTextActive]}>
-                    All
+                <Text style={styles.sidebarSectionTitle}>Venue Type</Text>
+                <Pressable style={styles.filterButton} onPress={() => setShowTypeModal(!showTypeModal)}>
+                  <Building2 size={14} color="#01b854" />
+                  <Text style={styles.filterButtonText} numberOfLines={1}>
+                    {activeTab === 'matches' ? 'Find Opposition' : (typeKey || 'All Types')}
                   </Text>
+                  <ChevronDown size={12} color="#9CA3AF" />
                 </Pressable>
-                <Pressable 
-                  onPress={() => { setActiveTab('matches'); setTypeKey(''); }}
-                  style={[styles.sidebarTab, activeTab === 'matches' && styles.sidebarTabActive]}
-                >
-                  <Text style={[styles.sidebarTabText, activeTab === 'matches' && styles.sidebarTabTextActive]}>
-                    Find Opposition
-                  </Text>
-                </Pressable>
-                {types.map(t => (
-                  <Pressable 
-                    key={t.id}
-                    onPress={() => { setActiveTab('grounds'); setTypeKey(t.name); }}
-                    style={[styles.sidebarTab, activeTab === 'grounds' && typeKey === t.name && styles.sidebarTabActive]}
-                  >
-                    <Text style={[styles.sidebarTabText, activeTab === 'grounds' && typeKey === t.name && styles.sidebarTabTextActive]}>
-                      {t.label || t.name}
-                    </Text>
-                  </Pressable>
-                ))}
+                {showTypeModal && (
+                  <View style={styles.dropdownInline}>
+                    <ScrollView style={{ maxHeight: 200 }}>
+                      <Pressable 
+                        style={styles.dropdownOption} 
+                        onPress={() => { setActiveTab('matches'); setTypeKey(''); setShowTypeModal(false); }}
+                      >
+                        <Text style={styles.dropdownOptionText}>Find Opposition</Text>
+                      </Pressable>
+                      {types.map(t => (
+                        <Pressable 
+                          key={t.id} 
+                          style={styles.dropdownOption} 
+                          onPress={() => { setActiveTab('grounds'); setTypeKey(t.name); setShowTypeModal(false); }}
+                        >
+                          <Text style={styles.dropdownOptionText}>{t.label || t.name}</Text>
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
               </View>
 
                 <View style={styles.sidebarSection}>
-                  <Text style={styles.sidebarSectionTitle}>Game Date</Text>
-                  <View style={styles.pillRow}>
-                    {['All', 'Today', 'Tomorrow'].map(d => (
-                      <Pressable 
-                        key={d}
-                        onPress={() => setDateKey(d)}
-                        style={[styles.pill, dateKey === d && styles.pillActive]}
-                      >
-                        <Text style={[styles.pillText, dateKey === d && styles.pillTextActive]}>{d}</Text>
-                      </Pressable>
-                    ))}
-                  </View>
+                  <Text style={styles.sidebarSectionTitle}>Date</Text>
+                  <Pressable style={styles.filterButton} onPress={() => setShowDateModal(!showDateModal)}>
+                    <Calendar size={14} color="#01b854" />
+                    <Text style={styles.filterButtonText} numberOfLines={1}>
+                      {dateKey === 'All' || dateKey === 'Today' || dateKey === 'Tomorrow' ? dateKey : new Date(dateKey).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                    </Text>
+                    <ChevronDown size={12} color="#9CA3AF" />
+                  </Pressable>
+                  {showDateModal && (
+                    <View style={styles.dropdownInline}>
+                      <ScrollView style={{ maxHeight: 400 }}>
+                        {['All', 'Today', 'Tomorrow'].map(d => (
+                          <Pressable 
+                            key={d} 
+                            style={styles.dropdownOption} 
+                            onPress={() => { setDateKey(d); setShowDateModal(false); }}
+                          >
+                            <Text style={styles.dropdownOptionText}>{d}</Text>
+                          </Pressable>
+                        ))}
+                        <View style={styles.calendarWrapper}>
+                          <RNCalendar
+                            current={dateKey && dateKey !== 'All' && dateKey !== 'Today' && dateKey !== 'Tomorrow' ? dateKey : new Date().toISOString().split('T')[0]}
+                            minDate={new Date().toISOString().split('T')[0]}
+                            onDayPress={(day: any) => {
+                              setDateKey(day.dateString);
+                              setShowDateModal(false);
+                            }}
+                            hideArrows={false}
+                            renderArrow={(direction) => (
+                              <ChevronRight 
+                                size={14} 
+                                color="#01b854" 
+                                style={{ transform: [{ rotate: direction === 'left' ? '180deg' : '0deg' }] }} 
+                              />
+                            )}
+                            markedDates={{
+                              [dateKey && dateKey !== 'All' && dateKey !== 'Today' && dateKey !== 'Tomorrow' ? dateKey : '']: {
+                                selected: true,
+                                disableTouchEvent: true,
+                                selectedColor: '#01b854',
+                                selectedTextColor: '#ffffff'
+                              }
+                            }}
+                            theme={{
+                              todayTextColor: '#01b854',
+                              arrowColor: '#01b854',
+                              selectedDayBackgroundColor: '#01b854',
+                              selectedDayTextColor: '#ffffff',
+                              textDayFontFamily: 'Inter',
+                              textMonthFontFamily: 'Inter',
+                              textDayHeaderFontFamily: 'Inter',
+                              textDayFontWeight: '500',
+                              textMonthFontWeight: '600',
+                              textDayHeaderFontWeight: '600',
+                              textDayFontSize: 11,
+                              textMonthFontSize: 11,
+                              textDayHeaderFontSize: 10,
+                              calendarBackground: '#ffffff',
+                              monthTextColor: '#111827',
+                              dayTextColor: '#4B5563',
+                              textSectionTitleColor: '#9CA3AF',
+                              // @ts-ignore
+                              'stylesheet.calendar.header': {
+                                header: {
+                                  flexDirection: 'row',
+                                  justifyContent: 'center',
+                                  alignItems: 'center',
+                                  paddingLeft: 0,
+                                  paddingRight: 0,
+                                  marginTop: 6,
+                                  gap: 12,
+                                },
+                                monthText: {
+                                  fontSize: 11,
+                                  fontWeight: '600',
+                                  fontFamily: 'Inter',
+                                  color: '#111827',
+                                }
+                              }
+                            }}
+                          />
+                        </View>
+                      </ScrollView>
+                    </View>
+                  )}
                 </View>
 
               <View style={styles.sidebarSection}>
@@ -825,7 +926,9 @@ const styles = StyleSheet.create({
   sidebarSearchInput: {
     flex: 1,
     color: '#111827',
-    fontSize: 16,
+    fontSize: 13,
+    fontFamily: 'Inter',
+    fontWeight: '400',
     ...Platform.select({
       web: { outlineStyle: 'none' }
     }) as any,
@@ -834,12 +937,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   sidebarSectionTitle: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#9CA3AF',
+    fontSize: 10,
+    fontWeight: '500',
+    color: '#4B5563',
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: 4,
+    fontFamily: 'Inter',
   },
   sidebarTab: {
     paddingVertical: 8,
@@ -851,13 +955,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(216, 247, 157, 0.08)',
   },
   sidebarTabText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#6B7280',
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#4B5563',
+    fontFamily: 'Inter',
   },
   sidebarTabTextActive: {
     color: '#01b854',
-    fontWeight: '700',
+    fontWeight: '600',
+    fontFamily: 'Inter',
   },
   filterButton: {
     flexDirection: 'row',
@@ -871,10 +977,11 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   filterButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '500',
     color: '#111827',
     flex: 1,
+    fontFamily: 'Inter',
   },
   dropdownInline: {
     backgroundColor: '#FFFFFF',
@@ -889,8 +996,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   dropdownOptionText: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#4B5563',
+    fontFamily: 'Inter',
   },
   mobileFiltersSlider: {
     paddingHorizontal: 16,
@@ -912,7 +1020,8 @@ const styles = StyleSheet.create({
   mobileFilterPillText: {
     fontSize: 12,
     color: '#6B7280',
-    fontWeight: '600',
+    fontWeight: '500',
+    fontFamily: 'Inter',
   },
   mobileFilterPillTextActive: {
     color: '#01b854',
@@ -989,8 +1098,9 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#6B7280',
+    fontFamily: 'Inter',
   },
   tabTextActive: {
     color: '#FFFFFF',
@@ -1032,13 +1142,13 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   premiumTitle: {
-    fontSize: 32,
-    fontWeight: '900',
+    fontSize: 24,
+    fontWeight: '600',
     color: '#FFFFFF',
     textTransform: 'uppercase',
-    fontStyle: 'italic',
     textAlign: 'center',
     marginBottom: 6,
+    fontFamily: 'Inter',
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 6,
@@ -1265,8 +1375,9 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 22,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#111827',
+    fontFamily: 'Inter',
   },
   emptySubtitle: {
     fontSize: 15,
@@ -1274,5 +1385,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     maxWidth: 300,
     lineHeight: 22,
+    fontFamily: 'Inter',
   },
 });

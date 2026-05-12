@@ -153,6 +153,7 @@ export default function ShopScreen() {
   const [priceRange, setPriceRange] = useState<[number, number] | null>(null);
   const [tempSortBy, setTempSortBy] = useState('newest');
   const [tempPriceRange, setTempPriceRange] = useState<[number, number] | null>(null);
+  const [favorites, setFavorites] = useState<string[]>([]);
 
   const scrollY = useSharedValue(0);
   const headerTranslateY = useSharedValue(0);
@@ -378,8 +379,22 @@ export default function ShopScreen() {
               <RNText style={styles.tagText}>{product.tag}</RNText>
             </View>
           )}
-          <TouchableOpacity style={styles.favoriteBtn}>
-            <Heart size={18} color="#64748B" />
+          <TouchableOpacity 
+            style={styles.favoriteBtn}
+            onPress={() => {
+              const isFav = favorites.includes(product.id);
+              if (isFav) {
+                setFavorites(favorites.filter(id => id !== product.id));
+              } else {
+                setFavorites([...favorites, product.id]);
+              }
+            }}
+          >
+            <Heart 
+              size={18} 
+              color={favorites.includes(product.id) ? "#f8688a" : "#64748B"} 
+              fill={favorites.includes(product.id) ? "#f8688a" : "transparent"} 
+            />
           </TouchableOpacity>
         </View>
         <View style={styles.productInfo}>
@@ -428,7 +443,7 @@ export default function ShopScreen() {
             styles.heroTitle,
             width < 600 && { fontSize: 28, lineHeight: 32 }
           ]}>
-            {activeCategory === 'Shoes' ? 'Step Up Your Game' : (featuredProduct?.name || 'Pro Cricket Gear')}
+            {activeCategory === 'Shoes' ? 'Step Up Your Game' : 'SG CRICKET BALLS'}
           </RNText>
           {activeCategory === 'Shoes' && (
             <RNText style={[
@@ -1095,7 +1110,7 @@ const styles = StyleSheet.create({
   },
   productName: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#0F172A',
     marginBottom: 6,
     fontFamily: 'Inter',
@@ -1125,7 +1140,7 @@ const styles = StyleSheet.create({
   },
   productPrice: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0F172A',
     fontFamily: 'Inter',
   },

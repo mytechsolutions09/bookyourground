@@ -720,7 +720,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
       onTouchStart={isCompact ? onTouchStart : undefined}
       onTouchEnd={isCompact ? onTouchEnd : undefined}
     >
-      {!hideHeader && showHeroHeader && !isCheckoutPage && !(isGroundInfoPage && isCompact) && !(isSuperAdmin && isCompact) && (
+      {!hideHeader && showHeroHeader && !isCheckoutPage && (!(isGroundInfoPage && isCompact) || isLanding) && (!(isSuperAdmin && isCompact) || isLanding) && (
         <View
           style={[
             styles.heroHeader,
@@ -898,7 +898,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                                 scrolled && styles.headerPrimaryButtonTextScrolled,
                                 { color: '#dcc093' }
                               ]}>
-                                GROUNDS
+                                VENUES
                               </Text>
                             </TouchableOpacity>
 
@@ -1014,7 +1014,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                       styles.headerNavLink,
                       (cleanPath === '/grounds' || cleanPath === '/(tabs)/grounds' || cleanPath === '/book-my-ground') && styles.headerNavLinkActive
                     ]}>
-                      GROUNDS
+                      VENUES
                     </Text>
                   </TouchableOpacity>
 
@@ -1160,7 +1160,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                         <NavLink
                           href="/(admin)/grounds"
                           icon={Building2}
-                          label="Grounds"
+                          label="Venues"
                           hideLabel={sidebarCollapsed}
                         />
                         <NavLink
@@ -1191,7 +1191,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                         <NavLink
                           href="/(admin)/manage-ground-owners"
                           icon={Shield}
-                          label="Ground owners"
+                          label="Venue owners"
                           hideLabel={sidebarCollapsed}
                         />
                         <NavLink
@@ -1240,7 +1240,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                       <>
                         <View style={[styles.sidebarHeaderRow, sidebarCollapsed && { justifyContent: 'center', paddingHorizontal: 0 }]}>
                           {!sidebarCollapsed && (
-                            <Text style={styles.sidebarSectionTitle}>Ground owner</Text>
+                            <Text style={styles.sidebarSectionTitle}>Venue owner</Text>
                           )}
                         </View>
                         <NavLink href="/(owner)/owner-dashboard" icon={LayoutDashboard} label="Dashboard" isActiveOverride={cleanPath === '/(owner)/owner-dashboard' || cleanPath === '/owner-dashboard'} />
@@ -1250,7 +1250,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                           <NavLink 
                             href="/(owner)/manage-grounds" 
                             icon={MapPin} 
-                            label="My grounds" 
+                            label="My Venues" 
                             isActiveOverride={cleanPath === '/(owner)/manage-grounds' || cleanPath === '/manage-grounds'} 
                             badge={hasPayoutSetup === false ? 'Locked' : undefined}
                             disabled={hasPayoutSetup === false}

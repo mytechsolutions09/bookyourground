@@ -120,7 +120,6 @@ export default function PopularGrounds() {
     return (
       <View style={styles.container}>
         <View style={styles.content}>
-          <Text style={styles.label}>Popular grounds</Text>
           <Text style={styles.title}>Trending near you</Text>
           <ActivityIndicator
             style={{ marginTop: 24 }}
@@ -169,11 +168,6 @@ export default function PopularGrounds() {
         <View style={styles.imageWrap}>
           <Image source={{ uri: primaryImage }} style={styles.image} />
           <View style={styles.imageOverlay} />
-          {isPopularBadge && (
-            <View style={styles.popularBadge}>
-              <Text style={styles.popularBadgeText}>POPULAR</Text>
-            </View>
-          )}
           <View style={styles.imageContent}>
             <View style={styles.titleRatingRow}>
               <Text style={styles.cardTitleText} numberOfLines={1}>
@@ -235,7 +229,6 @@ export default function PopularGrounds() {
     <View style={styles.container}>
       <View style={styles.content}>
         <Animated.View style={headingAnimatedStyle}>
-          <Text style={styles.label}>Popular grounds</Text>
           <Text style={styles.title}>Trending near you</Text>
           <Text style={styles.subtitle}>
             See what other players are booking most often this week.
@@ -482,7 +475,7 @@ const styles = StyleSheet.create({
   },
   bookButtonText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#0F172A',
     textTransform: 'uppercase',
     fontFamily: 'Inter',

@@ -16,7 +16,7 @@ export default function SiteFooter() {
               resizeMode="contain"
             />
             <Text style={styles.footerBrandSubtitle}>
-              Your sport. Your ground. Booked in seconds.
+              Your sport. Your venue. Booked in seconds.
             </Text>
             <Image
               source={require('@/assets/payment_logo.png')}
@@ -31,7 +31,7 @@ export default function SiteFooter() {
               style={styles.footerLink}
               onPress={() => router.push('/book-my-ground' as any)}
             >
-              Browse grounds
+              Browse venues
             </Text>
             <Text
               style={styles.footerLink}
@@ -66,7 +66,7 @@ export default function SiteFooter() {
           </View>
 
           <View style={styles.footerColumn}>
-            <Text style={styles.footerHeading}>For ground owners</Text>
+            <Text style={styles.footerHeading}>For venue owners</Text>
             <Text
               style={styles.footerLink}
               onPress={() => router.push('/owner-signup' as any)}
@@ -141,7 +141,7 @@ export default function SiteFooter() {
 
       <View style={styles.footerBottom}>
         <Text style={styles.footerBottomText}>
-          © {new Date().getFullYear()} Book my ground. All rights reserved.
+          © {new Date().getFullYear()} Book your ground. All rights reserved.
         </Text>
       </View>
     </View>

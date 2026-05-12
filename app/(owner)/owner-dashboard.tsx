@@ -383,9 +383,9 @@ export default function OwnerDashboardScreen() {
           <View style={styles.iconCircle}>
             <Building2 size={20} color="#01b854" />
           </View>
-          <Text style={styles.statsLabel}>My grounds</Text>
+          <Text style={styles.statsLabel}>My venues</Text>
           <Text style={styles.statsValue}>{stats.totalGrounds}</Text>
-          <Text style={styles.statsCaption}>{stats.totalGrounds === 1 ? '1 active ground' : `${stats.totalGrounds} active grounds`}</Text>
+          <Text style={styles.statsCaption}>{stats.totalGrounds === 1 ? '1 active venue' : `${stats.totalGrounds} active venues`}</Text>
         </View>
       </View>
 
@@ -397,7 +397,7 @@ export default function OwnerDashboardScreen() {
           <View style={styles.iconCircle}>
             <Calendar size={20} color="#01b854" />
           </View>
-          <Text style={styles.statsLabel}>Ground Bookings</Text>
+          <Text style={styles.statsLabel}>Venue Bookings</Text>
           <Text style={styles.statsValue}>{stats.totalBookingsOnMyGrounds}</Text>
           <Text style={styles.statsCaption}>Confirmed games</Text>
         </View>
@@ -408,7 +408,7 @@ export default function OwnerDashboardScreen() {
           <View style={styles.iconCircle}>
             <Swords size={22} color="#01b854" />
           </View>
-          <Text style={styles.statsLabel}>Other ground bookings</Text>
+          <Text style={styles.statsLabel}>Other venue bookings</Text>
           <Text style={styles.statsValue}>{stats.myOwnBookingsCount}</Text>
           <Text style={styles.statsCaption}>Personal games</Text>
         </View>
@@ -454,7 +454,7 @@ export default function OwnerDashboardScreen() {
           </View>
           <Text style={styles.statsLabel}>Total spent</Text>
           <Text style={styles.statsValueSmall}>₹{stats.totalSpentOnOtherGrounds.toLocaleString('en-IN')}</Text>
-          <Text style={styles.statsCaption}>On other grounds</Text>
+          <Text style={styles.statsCaption}>On other venues</Text>
         </View>
       </View>
 
@@ -494,7 +494,7 @@ export default function OwnerDashboardScreen() {
           <View style={styles.iconCircle}>
             <PlusCircle size={22} color="#01b854" />
           </View>
-          <Text style={styles.statsLabel}>Add Ground</Text>
+          <Text style={styles.statsLabel}>Add Venue</Text>
           <Text style={styles.statsValueSmall}>Register</Text>
           <Text style={styles.statsCaption}>List new property</Text>
         </View>
@@ -754,7 +754,7 @@ export default function OwnerDashboardScreen() {
           ) : (
             <Text style={styles.statsValueSmall} numberOfLines={1}>{profile?.full_name || 'N/A'}</Text>
           )}
-          <Text style={styles.statsCaption}>Primary Account holder</Text>
+
         </View>
       </View>
 
@@ -765,7 +765,7 @@ export default function OwnerDashboardScreen() {
           </View>
           <Text style={styles.statsLabel}>Email Address</Text>
           <Text style={styles.statsValueSmall} numberOfLines={1}>{user?.email || 'N/A'}</Text>
-          <Text style={styles.statsCaption}>Login Email</Text>
+
         </View>
       </View>
 
@@ -806,7 +806,7 @@ export default function OwnerDashboardScreen() {
           ) : (
             <Text style={styles.statsValueSmall}>{profile?.phone || 'Not provided'}</Text>
           )}
-          <Text style={styles.statsCaption}>Contact information</Text>
+
         </View>
       </View>
 

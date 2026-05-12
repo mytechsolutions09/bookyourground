@@ -179,8 +179,7 @@ export default function GroundCard({
               ) : (
                 <View style={styles.glassViewDetails}>
                   <Text style={styles.glassViewDetailsText}>View Details</Text>
-                  <ChevronRight size={14} color="#64748B" strokeWidth={3} />
-
+                  <ChevronRight size={14} color="#000000" strokeWidth={3} />
                 </View>
               )}
             </View>
@@ -475,7 +474,7 @@ const styles = StyleSheet.create({
   name: {
     flex: 1,
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
@@ -498,7 +497,7 @@ const styles = StyleSheet.create({
   },
   priceValueNew: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#059669',
     fontFamily: 'Inter',
   },
@@ -559,7 +558,7 @@ const styles = StyleSheet.create({
   },
   ratingTextNew: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#FFFFFF',
     fontFamily: 'Inter',
   },
@@ -599,13 +598,13 @@ const styles = StyleSheet.create({
   utilizationTitle: {
     flex: 1,
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
   utilizationPercentage: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#059669',
     fontFamily: 'Inter',
   },
@@ -654,7 +653,7 @@ const styles = StyleSheet.create({
   },
   viewMapsText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#475569',
     fontFamily: 'Inter',
   },
@@ -670,11 +669,10 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(0, 234, 107, 0.4)',
-
-    borderColor: 'rgba(0, 234, 107, 0.5)',
+    backgroundColor: 'rgba(1, 230, 105, 0.4)',
+    borderColor: 'rgba(1, 230, 105, 0.5)',
     borderWidth: 1,
-    shadowColor: '#00ea6b',
+    shadowColor: '#01e669',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -682,7 +680,7 @@ const styles = StyleSheet.create({
   },
   bookButtonText: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#FFFFFF',
     fontFamily: 'Inter',
     letterSpacing: -0.3,
@@ -756,16 +754,16 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   nameGlass: {
-    color: '#0F172A',
-    fontSize: 16,
+    color: '#000000',
+    fontSize: 14,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     fontWeight: '500',
     fontFamily: 'Inter',
   },
   locationGlass: {
-    color: '#1E293B',
-    fontSize: 13,
+    color: '#000000',
+    fontSize: 11,
     fontWeight: '500',
     fontFamily: 'Inter',
   },
@@ -783,14 +781,14 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   priceGlass: {
-    color: '#06392e',
-    fontSize: 18,
+    color: '#000000',
+    fontSize: 16,
     fontWeight: '600',
     fontFamily: 'Inter',
   },
   priceUnitGlass: {
-    fontSize: 11,
-    color: '#1E293B',
+    fontSize: 10,
+    color: '#000000',
     fontWeight: '500',
     fontFamily: 'Inter',
   },
@@ -856,14 +854,14 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   glassRatingText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
-    color: '#0F172A',
+    color: '#000000',
     fontFamily: 'Inter',
   },
   glassReviewCount: {
-    fontSize: 11,
-    color: '#1E293B',
+    fontSize: 10,
+    color: '#000000',
     fontWeight: '500',
     fontFamily: 'Inter',
   },
@@ -894,9 +892,9 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   glassViewDetailsText: {
-    color: '#64748B',
-    fontSize: 12,
-    fontWeight: '700',
+    color: '#000000',
+    fontSize: 11,
+    fontWeight: '600',
     fontFamily: 'Inter',
   },
 });

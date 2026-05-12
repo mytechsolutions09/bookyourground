@@ -130,8 +130,9 @@ function UserSettingsInner() {
               value={fullName}
               onChangeText={setFullName}
               placeholder="Enter your full name"
-              style={styles.input}
+              style={[styles.input, { textTransform: 'uppercase' }]}
               placeholderTextColor="#9CA3AF"
+              autoCapitalize="characters"
             />
           </View>
 
@@ -365,8 +366,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     backgroundColor: '#F8FAFC',
     fontSize: 15,
-    fontWeight: '500',
+    fontWeight: '400',
     color: '#0F172A',
+    ...Platform.select({
+      web: { outlineStyle: 'none' }
+    }) as any,
   },
   actionsRow: {
     flexDirection: 'row',

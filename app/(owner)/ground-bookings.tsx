@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, Platform, TouchableOpacity, ScrollView, TextInput, useWindowDimensions, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, Platform, TouchableOpacity, ScrollView, TextInput, useWindowDimensions, Image, ActivityIndicator, Modal } from 'react-native';
 import { Calendar, Filter, X, Save, CheckCircle2, Circle, User, Clock } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -134,6 +134,8 @@ export default function OwnerBookingsScreen() {
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [isSlotModalVisible, setIsSlotModalVisible] = useState(false);
+  const [selectedSlotBookings, setSelectedSlotBookings] = useState<BookingWithDetails[]>([]);
   const PAGE_SIZE = 50;
 
   useEffect(() => {
@@ -376,6 +378,17 @@ export default function OwnerBookingsScreen() {
     }
   };
 
+  const openSlotModal = (item: BookingWithDetails) => {
+    const normStart = normalizeDbTimeToHHMM(item.start_time);
+    const currentSlotKey = `${item.ground_id}_${item.booking_date}_${normStart}`;
+    const relatedBookings = bookings.filter(b => 
+      (b.status === 'confirmed' || b.status === 'active' || b.status === 'completed') && 
+      `${b.ground_id}_${b.booking_date}_${normalizeDbTimeToHHMM(b.start_time)}` === currentSlotKey
+    );
+    setSelectedSlotBookings(relatedBookings);
+    setIsSlotModalVisible(true);
+  };
+
 
 
 
@@ -594,8 +607,8 @@ export default function OwnerBookingsScreen() {
               label="Scope" 
               value={ownerScope} 
               options={[
-                { key: 'all', label: 'All Grounds' },
-                { key: 'own', label: 'Own Grounds' },
+                { key: 'all', label: 'All Venues' },
+                { key: 'own', label: 'Own Venues' },
                 { key: 'other', label: 'Others' },
               ]} 
               onSelect={setOwnerScope} 
@@ -697,7 +710,7 @@ export default function OwnerBookingsScreen() {
                     ownerScope === 'all' && styles.tabChipTextActive,
                   ]}
                 >
-                  All grounds
+                  All venues
                 </Text>
               </TouchableOpacity>
 
@@ -714,7 +727,7 @@ export default function OwnerBookingsScreen() {
                     ownerScope === 'own' && styles.tabChipTextActive,
                   ]}
                 >
-                  Own grounds
+                  Own venues
                 </Text>
               </TouchableOpacity>
 
@@ -731,7 +744,7 @@ export default function OwnerBookingsScreen() {
                     ownerScope === 'other' && styles.tabChipTextActive,
                   ]}
                 >
-                  Other grounds
+                  Other venues
                 </Text>
               </TouchableOpacity>
             </View>
@@ -972,12 +985,18 @@ export default function OwnerBookingsScreen() {
                   </Text>
                 </View>
 
-                <View style={[styles.tableCell, styles.colDateTime]}>
-                  <Text style={styles.dateText}>{formatDateDDMMYY(item.booking_date)}</Text>
+                <TouchableOpacity 
+                  style={[styles.tableCell, styles.colDateTime]}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    openSlotModal(item);
+                  }}
+                >
+                  <Text style={[styles.dateText, { color: '#01b854', textDecorationLine: 'underline' }]}>{formatDateDDMMYY(item.booking_date)}</Text>
                   <Text style={styles.timeText}>
                     {`${formatTime12h(normalizeDbTimeToHHMM(item.start_time) || '')} – ${formatTime12h(normalizeDbTimeToHHMM(item.end_time) || '')}`}
                   </Text>
-                </View>
+                </TouchableOpacity>
 
                 {(() => {
                   const normStart = normalizeDbTimeToHHMM(item.start_time);
@@ -1247,6 +1266,46 @@ export default function OwnerBookingsScreen() {
           </View>
         }
       />
+      
+      <Modal
+        visible={isSlotModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setIsSlotModalVisible(false)}
+      >
+        <View style={styles.slotModalOverlay}>
+          <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setIsSlotModalVisible(false)} />
+          <View style={styles.slotModalContent}>
+            <View style={styles.slotModalHeader}>
+              <Text style={styles.slotModalTitle}>Bookings for this Slot</Text>
+              <TouchableOpacity onPress={() => setIsSlotModalVisible(false)}>
+                <X size={20} color="#64748B" />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={{ maxHeight: 400 }}>
+              {selectedSlotBookings.map((b) => (
+                <View key={b.id} style={styles.slotBookingItem}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.slotBookingName}>{b.user?.full_name || b.booked_for_name || 'Customer'}</Text>
+                    <Text style={styles.slotBookingId}>ID: {b.id.substring(0, 8).toUpperCase()}</Text>
+                    <Text style={styles.slotBookingDetail}>Amount: ₹{b.total_amount}</Text>
+                    <Text style={styles.slotBookingDetail}>Payment: {b.payment_method?.toUpperCase()}</Text>
+                  </View>
+                  <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(b.status)}15`, height: 24, paddingHorizontal: 8 }]}>
+                    <Text style={[styles.statusText, { color: getStatusColor(b.status), fontSize: 10 }]}>
+                      {b.status.toUpperCase()}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+              {selectedSlotBookings.length === 0 && (
+                <Text style={{ color: '#64748B', textAlign: 'center', paddingVertical: 20 }}>No active bookings for this slot.</Text>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 
@@ -1939,5 +1998,64 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     backgroundColor: '#01b854',
+  },
+  slotModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2000,
+  },
+  slotModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    width: 500,
+    maxWidth: '90%',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 15,
+    elevation: 10,
+  },
+  slotModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    paddingBottom: 12,
+  },
+  slotModalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  slotBookingItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  slotBookingName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+    marginBottom: 2,
+  },
+  slotBookingId: {
+    fontSize: 11,
+    color: '#94A3B8',
+    fontFamily: 'Inter',
+    marginBottom: 4,
+  },
+  slotBookingDetail: {
+    fontSize: 12,
+    color: '#64748B',
+    fontFamily: 'Inter',
   },
 });

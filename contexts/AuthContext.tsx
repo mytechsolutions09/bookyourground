@@ -51,9 +51,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', userId)
         .maybeSingle();
 
-      // Race against a 20-second timeout for the database call
+      // Race against a 30-second timeout for the database call
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 20000)
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 30000)
       );
 
       const { data, error } = await Promise.race([profilePromise, timeoutPromise]) as any;
@@ -72,6 +72,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       void scheduleMatchReminders(userId);
     } catch (error) {
       console.error('Error loading profile:', error);
+      // Don't leave the app in a permanent loading state on error
+      setLoading(false);
     } finally {
       setLoading(false);
     }
@@ -94,17 +96,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Clear any existing timeout
         if (profileTimeout) clearTimeout(profileTimeout);
 
-        // Set a safety timeout: don't block the app for more than 22 seconds on profile loading
+        // Set a safety timeout: don't block the app for more than 35 seconds on profile loading
         profileTimeout = setTimeout(() => {
           setLoading(false);
-        }, 22000);
+        }, 35000);
 
-        // Load profile if needed
-        if (!profile || profile.id !== newUser.id) {
-          await loadProfile(newUser.id);
-        } else {
-          setLoading(false);
-        }
+        // Load profile if needed (avoid loop by checking if we already have it)
+        // We use a local ref or just rely on the fact that loadProfile is stable
+        await loadProfile(newUser.id);
         
         // Schedule 6 AM reminders for today's matches
         void scheduleMatchReminders(newUser.id);
@@ -140,7 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         window.removeEventListener('focus', handleFocus);
       }
     };
-  }, [profile?.id, loadProfile]);
+  }, [loadProfile]);
 
   const signUp = useCallback(async (email: string, password: string, fullName: string, phone: string, role: UserRole = 'user', businessName?: string, address?: string, state?: string, teamName?: string, playerType?: string, captchaToken?: string) => {
     try {

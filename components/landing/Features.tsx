@@ -6,7 +6,7 @@ const features = [
   {
     icon: Search,
     title: 'Easy Discovery',
-    description: 'Find grounds by location, sport type, and availability with powerful search filters.',
+    description: 'Find venues by location, sport type, and availability with powerful search filters.',
   },
   {
     icon: Clock,
@@ -16,7 +16,7 @@ const features = [
   {
     icon: Shield,
     title: 'Verified Venues',
-    description: 'All grounds are verified with photos, reviews, and accurate facility information.',
+    description: 'All venues are verified with photos, reviews, and accurate facility information.',
   },
   {
     icon: Wallet,
@@ -25,8 +25,8 @@ const features = [
   },
   {
     icon: Users,
-    title: 'For Ground Owners',
-    description: 'List your ground, manage bookings, and grow your business with our platform.',
+    title: 'For Venue Owners',
+    description: 'List your venue, manage bookings, and grow your business with our platform.',
   },
   {
     icon: Star,
@@ -42,7 +42,7 @@ export default function Features() {
         <Text style={styles.label}>Features</Text>
         <Text style={styles.title}>Everything You Need</Text>
         <Text style={styles.subtitle}>
-          A complete platform for discovering, booking, and managing sports grounds
+          A complete platform for discovering, booking, and managing sports venues
         </Text>
 
         <View style={styles.grid}>

@@ -496,7 +496,7 @@ export default function GroundsNearYou() {
   if (loading) {
      return (
        <View style={styles.loader}>
-         <ActivityIndicator color="#00ea6b" />
+         <ActivityIndicator color="#01e669" />
        </View>
      );
   }
@@ -507,11 +507,10 @@ export default function GroundsNearYou() {
         <View style={[styles.headerContentRow, isSmallScreen && { flexDirection: 'column', alignItems: 'flex-start', gap: 16 }]}>
           <View style={styles.titleSection}>
             <View style={styles.iconCircle}>
-              <MapIcon size={20} color="#00ea6b" />
+              <MapIcon size={20} color="#01e669" />
             </View>
             <View>
-              <Text style={styles.title}>Grounds Near You</Text>
-              <Text style={styles.subtitle}>Discover cricket grounds in your area</Text>
+              <Text style={styles.title}>Venues Near You</Text>
             </View>
           </View>
 
@@ -555,7 +554,7 @@ export default function GroundsNearYou() {
           ) : (
             <View style={styles.nativeMapPlaceholder}>
               <View style={styles.nativeMapIcon}>
-                <Navigation size={40} color="rgba(0,234,107,0.3)" />
+                <Navigation size={40} color="rgba(1, 230, 105, 0.3)" />
               </View>
               <Text style={styles.nativeMapText}>Pinpoint locations on the dynamic map</Text>
               <Pressable 
@@ -641,8 +640,8 @@ export default function GroundsNearYou() {
             style={styles.viewMoreRow}
             onPress={() => router.push('/book-my-ground' as any)}
           >
-            <Text style={styles.viewMoreText}>View all grounds</Text>
-            <ChevronRight size={16} color="#00ea6b" />
+            <Text style={styles.viewMoreText}>View all venues</Text>
+            <ChevronRight size={16} color="#01e669" />
           </Pressable>
         </View>
       </View>
@@ -679,7 +678,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'rgba(0, 234, 107, 0.1)',
+    backgroundColor: 'rgba(1, 230, 105, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -720,10 +719,15 @@ const styles = StyleSheet.create({
   listContainer: {
     flex: 2,
     gap: 12,
+    ...Platform.select({
+      web: {
+        height: 450,
+      }
+    })
   },
   scrollContent: {
-    paddingHorizontal: Platform.OS === 'web' ? 0 : 16,
-    paddingBottom: 8,
+    paddingHorizontal: Platform.OS === 'web' ? 8 : 16,
+    paddingBottom: 12,
     gap: 12,
   },
   groundItem: {
@@ -753,7 +757,7 @@ const styles = StyleSheet.create({
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 12 },
     backgroundColor: '#FFFFFF',
-    borderColor: '#10B981',
+    borderColor: '#01e669',
     zIndex: 10,
   },
   itemImage: {
@@ -817,8 +821,8 @@ const styles = StyleSheet.create({
   },
   viewMoreText: {
     fontSize: 14,
-    fontWeight: '800',
-    color: '#10B981',
+    fontWeight: '600',
+    color: '#01e669',
     fontFamily: 'Inter',
   },
   nativeMapPlaceholder: {

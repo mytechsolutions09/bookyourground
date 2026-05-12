@@ -99,7 +99,7 @@ export default function CheckoutScreen() {
     }, [id]);
 
     const isGroundOwnerOrAdmin = profile?.role === 'super_admin' ||
-        (profile?.role === 'ground_owner' && (booking?.grounds?.owner_id === user?.id || booking?.ground_id === user?.id));
+        (profile?.role === 'ground_owner' && booking?.grounds?.owner_id === user?.id);
 
     // Pricing Calculations
     const { baseGroundPrice, platformFeeIncGst, totalPayable, totalReceivable } = React.useMemo(() => {
@@ -134,15 +134,27 @@ export default function CheckoutScreen() {
             totalTeams = booking?.team_type === 'one' ? 1 : 2;
         }
 
+        // 0. Check if owner has platform fee disabled
+        const chargePlatformFee = booking?.grounds?.owner?.charge_platform_fee !== false;
+
         // 1. Calculate User's Platform Fee
         const userPfRate = isNet ? netsUserRate : rate;
-        const userPf = discountedPrice * userPfRate;
-        const userGst = userPf * gstRate;
+        let userPf = discountedPrice * userPfRate;
+        let userGst = userPf * gstRate;
+        
+        // If owner is booking (Cash) and commission is off, don't charge user side fee
+        if (isCash && !chargePlatformFee) {
+            userPf = 0;
+            userGst = 0;
+        }
+        
         const userTotalPfGst = userPf + userGst;
 
         // 2. Calculate Owner's Platform Fee
         let ownerPf = 0;
-        if (isGroundOwnerOrAdmin || isCash) {
+        if (!chargePlatformFee) {
+            ownerPf = 0;
+        } else if (isGroundOwnerOrAdmin || isCash) {
             if (isNet) {
                 ownerPf = netsFixedFee;
             } else if (isCricket) {
@@ -188,17 +200,18 @@ export default function CheckoutScreen() {
             fetchWalletBalance();
             setContactEmail(user.email || '');
             setContactPhone(profile?.phone || user.user_metadata?.phone || '');
+            setBookedForName(profile?.full_name || user.user_metadata?.full_name || '');
         }
     }, [user, profile]);
 
     useEffect(() => {
         if (!profile || activeGateways.length === 0) return;
 
-        const isOwner = profile?.role === 'super_admin' || profile?.role === 'ground_owner';
+        const isThisGroundOwner = profile?.role === 'super_admin' || (profile?.role === 'ground_owner' && booking?.grounds?.owner_id === user?.id);
         const cash = activeGateways.find(g => g.name === 'cash');
         const razorpay = activeGateways.find(g => g.name === 'razorpay');
 
-        if (isOwner && cash) {
+        if (isThisGroundOwner && cash) {
             setSelectedGateway('cash');
         } else if (razorpay) {
             setSelectedGateway('razorpay');
@@ -343,7 +356,7 @@ export default function CheckoutScreen() {
 
             const { data: ground, error: groundError } = await supabase
                 .from('grounds')
-                .select('*, ground_images(*)')
+                .select('*, ground_images(*), owner:profiles!owner_id(charge_platform_fee)')
                 .eq('id', groundId)
                 .single();
 
@@ -415,7 +428,7 @@ export default function CheckoutScreen() {
             setLoading(true);
             const { data, error } = await supabase
                 .from('bookings')
-                .select('*, grounds(*, ground_images(*))')
+                .select('*, grounds(*, ground_images(*), owner:profiles!owner_id(charge_platform_fee))')
                 .eq('id', id)
                 .single();
 
@@ -1080,13 +1093,12 @@ export default function CheckoutScreen() {
                         <View style={styles.headerCard}>
                             <TouchableOpacity
                                 onPress={handleBack}
-                                style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20, gap: 4 }}
+                                style={{ marginBottom: 24 }}
                             >
-                                <ChevronLeft size={18} color="#94A3B8" />
-                                <RNText style={{ fontSize: 13, color: '#94A3B8', fontWeight: '600', fontFamily: 'Inter' }}>Back to ground</RNText>
+                                <RNText style={{ fontSize: 14, color: '#f8688a', fontWeight: '600', fontFamily: 'Inter' }}>{"< Back"}</RNText>
                             </TouchableOpacity>
 
-                            <RNText style={[styles.heroTitle, dynamicStyles.heroTitle, { color: '#00ea6b' }]}>
+                            <RNText style={[styles.heroTitle, dynamicStyles.heroTitle, { color: '#01e669' }]}>
                                 {(booking.grounds || booking.ground)?.name}
                             </RNText>
 
@@ -1121,7 +1133,7 @@ export default function CheckoutScreen() {
                                 >
                                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                         <View style={styles.detailIconBox}>
-                                            <Calendar size={20} color="#059669" />
+                                            <Calendar size={20} color="#01e669" />
                                         </View>
                                         <View style={[styles.detailInfoContent, { marginLeft: 12 }]}>
                                             <RNText style={styles.detailLabel}>Booking Slots & Teams</RNText>
@@ -1134,8 +1146,8 @@ export default function CheckoutScreen() {
                                         </View>
                                     </View>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 16 }}>
-                                        <RNText style={{ fontSize: 14, color: '#059669', marginRight: 4 }}>View</RNText>
-                                        <ChevronRight size={18} color="#059669" />
+                                        <RNText style={{ fontSize: 14, color: '#01e669', marginRight: 4 }}>View</RNText>
+                                        <ChevronRight size={18} color="#01e669" />
                                     </View>
                                 </TouchableOpacity>
                             </View>
@@ -1144,7 +1156,7 @@ export default function CheckoutScreen() {
                             <View style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#E2E8F0' }}>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                                     <View style={styles.policyIconBox}>
-                                        <ShieldCheck size={24} color="#059669" />
+                                        <ShieldCheck size={24} color="#01e669" />
                                     </View>
                                     <View style={{ flex: 1 }}>
                                         <RNText style={styles.policyTitle}>Cancellation Policy</RNText>
@@ -1315,6 +1327,19 @@ export default function CheckoutScreen() {
 
 
 
+                    {/* Security Trust Container */}
+                    {!isSmallScreen && (
+                        <View style={styles.mainSecurityContainer}>
+                            <View style={styles.sidebarFooterItem}>
+                                <ShieldCheck size={20} color="#64748B" />
+                                <RNText style={styles.sidebarFooterText}>Secure Payment</RNText>
+                            </View>
+                            <View style={styles.sidebarFooterItem}>
+                                <Zap size={20} color="#64748B" />
+                                <RNText style={styles.sidebarFooterText}>Instant Confirmation</RNText>
+                            </View>
+                        </View>
+                    )}
                 </View>
 
                 {/* Right Column: Order Summary */}
@@ -1338,7 +1363,7 @@ export default function CheckoutScreen() {
                                         <RNText style={{ fontSize: 14, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>Have a coupon?</RNText>
                                     </View>
                                     <TouchableOpacity onPress={() => { setIsCouponsModalVisible(true); fetchAvailableCoupons(); }}>
-                                        <RNText style={{ fontSize: 13, fontWeight: '600', color: '#06392e', fontFamily: 'Inter' }}>View Offers</RNText>
+                                        <RNText style={{ fontSize: 13, fontWeight: '600', color: '#01e669', fontFamily: 'Inter' }}>View Offers</RNText>
                                     </TouchableOpacity>
                                 </View>
                                 <View style={[styles.couponContainer, { marginBottom: 0 }]}>
@@ -1434,9 +1459,6 @@ export default function CheckoutScreen() {
                                         />
                                     </View>
                                 </View>
-                                <RNText style={[styles.contactHint, { marginTop: 8 }]}>
-                                    {isGroundOwnerOrAdmin ? 'Details for billing and confirmation receipt.' : 'Required for payment receipt and confirmation.'}
-                                </RNText>
                             </View>
                         </View>
 
@@ -1453,13 +1475,13 @@ export default function CheckoutScreen() {
                                     style={[styles.methodItemNew, selectedGateway === 'wallet' && { backgroundColor: '#F8FAFC' }]}
                                     onPress={() => setSelectedGateway('wallet')}
                                 >
-                                    <View style={styles.methodIconBoxNew}><Wallet size={20} color={selectedGateway === 'wallet' ? '#06392e' : '#64748B'} /></View>
+                                    <View style={styles.methodIconBoxNew}><Wallet size={20} color={selectedGateway === 'wallet' ? '#01e669' : '#64748B'} /></View>
                                     <View style={{ flex: 1 }}>
                                         <RNText style={[styles.methodLabelNew, selectedGateway === 'wallet' && styles.methodLabelActiveNew]}>Wallet Balance</RNText>
                                         <RNText style={styles.methodSubtitleNew}>Bal: {formatCurrency(walletBalance)}</RNText>
                                     </View>
                                     <View style={[styles.radioOuter, selectedGateway === 'wallet' && styles.radioOuterActive]}>
-                                        {selectedGateway === 'wallet' && <View style={styles.radioInner} />}
+                                        {selectedGateway === 'wallet' && <View style={[styles.radioInner, { backgroundColor: '#01e669' }]} />}
                                     </View>
                                 </TouchableOpacity>
 
@@ -1468,13 +1490,13 @@ export default function CheckoutScreen() {
                                     style={[styles.methodItemNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'upi') && { backgroundColor: '#F8FAFC' }]}
                                     onPress={() => { setSelectedGateway('razorpay'); setSelectedSubMethod('upi'); }}
                                 >
-                                    <View style={styles.methodIconBoxNew}><Smartphone size={20} color={(selectedGateway === 'razorpay' && selectedSubMethod === 'upi') ? '#06392e' : '#64748B'} /></View>
+                                    <View style={styles.methodIconBoxNew}><Smartphone size={20} color={(selectedGateway === 'razorpay' && selectedSubMethod === 'upi') ? '#01e669' : '#64748B'} /></View>
                                     <View style={{ flex: 1 }}>
                                         <RNText style={[styles.methodLabelNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'upi') && styles.methodLabelActiveNew]}>UPI (PhonePe, GPay, etc)</RNText>
                                         <RNText style={styles.methodSubtitleNew}>Instant and Secure</RNText>
                                     </View>
                                     <View style={[styles.radioOuter, (selectedGateway === 'razorpay' && selectedSubMethod === 'upi') && styles.radioOuterActive]}>
-                                        {(selectedGateway === 'razorpay' && selectedSubMethod === 'upi') && <View style={styles.radioInner} />}
+                                        {(selectedGateway === 'razorpay' && selectedSubMethod === 'upi') && <View style={[styles.radioInner, { backgroundColor: '#01e669' }]} />}
                                     </View>
                                 </TouchableOpacity>
 
@@ -1483,7 +1505,7 @@ export default function CheckoutScreen() {
                                     style={[styles.methodItemNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'card') && { backgroundColor: '#F8FAFC' }]}
                                     onPress={() => { setSelectedGateway('razorpay'); setSelectedSubMethod('card'); }}
                                 >
-                                    <View style={styles.methodIconBoxNew}><CreditCard size={20} color={(selectedGateway === 'razorpay' && selectedSubMethod === 'card') ? '#059669' : '#64748B'} /></View>
+                                    <View style={styles.methodIconBoxNew}><CreditCard size={20} color={(selectedGateway === 'razorpay' && selectedSubMethod === 'card') ? '#01e669' : '#64748B'} /></View>
                                     <View style={{ flex: 1 }}>
                                         <RNText style={[styles.methodLabelNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'card') && styles.methodLabelActiveNew]}>Cards (Credit/Debit)</RNText>
                                         <RNText style={styles.methodSubtitleNew}>Visa, Mastercard, RuPay</RNText>
@@ -1497,7 +1519,7 @@ export default function CheckoutScreen() {
                                     style={[styles.methodItemNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') && { backgroundColor: '#F8FAFC' }, !isGroundOwnerOrAdmin && { borderBottomWidth: 0 }]}
                                     onPress={() => { setSelectedGateway('razorpay'); setSelectedSubMethod('netbanking'); }}
                                 >
-                                    <View style={styles.methodIconBoxNew}><Globe size={20} color={(selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') ? '#059669' : '#64748B'} /></View>
+                                    <View style={styles.methodIconBoxNew}><Globe size={20} color={(selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') ? '#01e669' : '#64748B'} /></View>
                                     <View style={{ flex: 1 }}>
                                         <RNText style={[styles.methodLabelNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') && styles.methodLabelActiveNew]}>Net Banking</RNText>
                                         <RNText style={styles.methodSubtitleNew}>All major Indian banks</RNText>
@@ -1511,7 +1533,7 @@ export default function CheckoutScreen() {
                                         style={[styles.methodItemNew, selectedGateway === 'cash' && { backgroundColor: '#F8FAFC' }, { borderBottomWidth: 0 }]}
                                         onPress={() => setSelectedGateway('cash')}
                                     >
-                                        <View style={styles.methodIconBoxNew}><Banknote size={20} color={selectedGateway === 'cash' ? '#06392e' : '#64748B'} /></View>
+                                        <View style={styles.methodIconBoxNew}><Banknote size={20} color={selectedGateway === 'cash' ? '#01e669' : '#64748B'} /></View>
                                         <View style={{ flex: 1 }}>
                                             <RNText style={[styles.methodLabelNew, selectedGateway === 'cash' && styles.methodLabelActiveNew]}>Cash</RNText>
                                             <RNText style={styles.methodSubtitleNew}>Bypass online gateway</RNText>
@@ -1561,24 +1583,14 @@ export default function CheckoutScreen() {
                             disabled={processing}
                         >
                             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, width: '100%' }}>
-                                <ShieldCheck size={20} color="#FFFFFF" />
+                                <ShieldCheck size={20} color="#1E293B" />
                                 <RNText style={styles.confirmBtnTextNew}>
-                                    {isGroundOwnerOrAdmin ? 'Confirm' : (selectedGateway === 'cash' ? 'Confirm' : `Confirm & Pay ${formatCurrency(totalPayable)}`)}
+                                    Confirm
                                 </RNText>
                             </View>
                         </TouchableOpacity>
 
-                        {/* Sidebar Footer */}
-                        <View style={styles.sidebarFooter}>
-                            <View style={styles.sidebarFooterItem}>
-                                <ShieldCheck size={16} color="#94A3B8" />
-                                <RNText style={styles.sidebarFooterText}>Secure Payment</RNText>
-                            </View>
-                            <View style={styles.sidebarFooterItem}>
-                                <Zap size={16} color="#94A3B8" />
-                                <RNText style={styles.sidebarFooterText}>Instant Confirmation</RNText>
-                            </View>
-                        </View>
+
                     </Card>
                 </View>
             </View>
@@ -1759,12 +1771,20 @@ export default function CheckoutScreen() {
                         <TouchableOpacity onPress={() => { setShowRazorpayWebView(false); setProcessing(false); }} style={{ padding: 8 }}>
                             <X size={24} color="#333" />
                         </TouchableOpacity>
-                        <RNText style={{ fontSize: 18, fontWeight: '700', marginLeft: 16 }}>Secure Payment</RNText>
+                        <RNText style={{ fontSize: 18, fontWeight: '600', marginLeft: 16, fontFamily: 'Inter' }}>Secure Payment</RNText>
                     </View>
                     <WebView
                         source={{ html: razorpayMobileHtml }}
                         onMessage={handleRazorpayMobileMessage}
                         style={{ flex: 1 }}
+                        renderLoading={() => (
+                           <LinearGradient
+                             colors={['transparent', '#01e669', 'transparent', '#01e669', 'transparent']}
+                             start={{ x: 0, y: 0 }}
+                             end={{ x: 1, y: 1 }}
+                             style={{ flex: 1 }}
+                           />
+                        )}
                         javaScriptEnabled={true}
                         domStorageEnabled={true}
                         startInLoadingState={true}
@@ -2216,8 +2236,8 @@ const styles = StyleSheet.create({
     },
     confirmBtnTextNew: {
         fontSize: 18,
-        fontWeight: '700',
-        color: '#FFFFFF',
+        fontWeight: '600',
+        color: '#1E293B',
         fontFamily: 'Inter',
     },
     securityFooterNew: {
@@ -2248,9 +2268,10 @@ const styles = StyleSheet.create({
     contactInputRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#F8FAFC',
-        borderRadius: 12,
-        paddingHorizontal: 12,
+        backgroundColor: 'transparent',
+        borderBottomWidth: 1,
+        borderBottomColor: '#F1F5F9',
+        paddingHorizontal: 0,
         height: 48,
         gap: 12,
     },
@@ -2564,7 +2585,7 @@ const styles = StyleSheet.create({
     },
     detailValue: {
         fontSize: 15,
-        fontWeight: '800',
+        fontWeight: '600',
         color: '#0F172A',
         fontFamily: 'Inter',
         marginBottom: 2,
@@ -2754,7 +2775,7 @@ const styles = StyleSheet.create({
     },
     overviewTitle: {
         fontSize: 18,
-        fontWeight: '700',
+        fontWeight: '500',
         color: '#0F172A',
         fontFamily: 'Inter',
         marginBottom: 16,
@@ -2816,7 +2837,7 @@ const styles = StyleSheet.create({
         width: 32,
         height: 32,
         borderRadius: 8,
-        backgroundColor: '#F1F5F9',
+        backgroundColor: 'transparent',
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -2825,7 +2846,7 @@ const styles = StyleSheet.create({
     },
     amenityLabel: {
         fontSize: 13,
-        fontWeight: '600',
+        fontWeight: '500',
         color: '#0F172A',
         fontFamily: 'Inter',
     },
@@ -2860,7 +2881,7 @@ const styles = StyleSheet.create({
     },
     policyTitle: {
         fontSize: 15,
-        fontWeight: '700',
+        fontWeight: '600',
         color: '#0F172A',
         fontFamily: 'Inter',
         marginBottom: 4,
@@ -2873,8 +2894,8 @@ const styles = StyleSheet.create({
     },
     policyLink: {
         fontSize: 13,
-        fontWeight: '600',
-        color: '#059669',
+        fontWeight: '500',
+        color: '#01e669',
         fontFamily: 'Inter',
         marginTop: 8,
     },
@@ -2992,11 +3013,22 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     sidebarFooterText: {
-        fontSize: 10,
-        color: '#94A3B8',
+        fontSize: 12,
+        color: '#64748B',
         fontWeight: '600',
         fontFamily: 'Inter',
         textAlign: 'center',
+    },
+    mainSecurityContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 40,
+        backgroundColor: '#F8FAFC',
+        paddingVertical: 24,
+        paddingHorizontal: 12,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: '#F1F5F9',
     },
     headerCard: {
         backgroundColor: '#06392e',

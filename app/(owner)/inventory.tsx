@@ -510,7 +510,7 @@ export default function OwnerInventoryScreen() {
                   ) : (
                     <View style={styles.noGroundSelected}>
                       <Building2 size={48} color="#D1D5DB" />
-                      <Text style={styles.emptyText}>No ground selected or found.</Text>
+                      <Text style={styles.emptyText}>No venue selected or found.</Text>
                     </View>
                   )}
                 </View>
@@ -526,7 +526,7 @@ export default function OwnerInventoryScreen() {
              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mobileFiltersRow}>
                 <TouchableOpacity style={styles.mobileDropdown} onPress={() => setActivePicker('ground')}>
                   <Building2 size={14} color="#00ea6b" />
-                  <Text style={styles.mobileDropdownText} numberOfLines={1}>{currentGround?.name || 'Ground'}</Text>
+                  <Text style={styles.mobileDropdownText} numberOfLines={1}>{currentGround?.name || 'Venue'}</Text>
                   <ChevronDown size={14} color="#6B7280" />
                 </TouchableOpacity>
 
@@ -583,7 +583,7 @@ export default function OwnerInventoryScreen() {
                 ) : (
                   <View style={styles.noGroundSelected}>
                     <Building2 size={48} color="#D1D5DB" />
-                    <Text style={styles.emptyText}>No ground selected.</Text>
+                    <Text style={styles.emptyText}>No venue selected.</Text>
                   </View>
                 )}
               </View>
@@ -680,7 +680,7 @@ export default function OwnerInventoryScreen() {
           <Card style={styles.pickerCard}>
             <View style={styles.pickerHeader}>
               <Text style={styles.pickerTitle}>
-                {activePicker === 'ground' ? 'Select Ground' : 
+                {activePicker === 'ground' ? 'Select Venue' : 
                  activePicker === 'status' ? 'Select Status' : 'Select Range'}
               </Text>
               <TouchableOpacity onPress={() => setActivePicker(null)}>
@@ -1346,7 +1346,7 @@ const styles = StyleSheet.create({
     borderRadius: 7,
   },
   webDaysPillActive: {
-    backgroundColor: '#111827',
+    backgroundColor: '#00ea6b',
   },
   webDaysPillText: {
     fontSize: 12,
@@ -1354,6 +1354,6 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   webDaysPillTextActive: {
-    color: '#00ea6b',
+    color: '#111827',
   },
 });

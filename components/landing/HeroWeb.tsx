@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useIsCompact } from '@/hooks/useIsCompact';
 import {
   View,
@@ -99,6 +99,24 @@ export default function HeroWeb() {
     loop.start();
     return () => loop.stop();
   }, [pulseAnim]);
+
+  const formRef = useRef<View>(null);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (isLocationOpen || isTypeOpen || isDateOpen || isTimeOpen) {
+        // @ts-ignore - web specific
+        if (formRef.current && !formRef.current.contains(e.target as Node)) {
+          closeAll();
+        }
+      }
+    };
+
+    window.addEventListener('mousedown', handleOutsideClick);
+    return () => window.removeEventListener('mousedown', handleOutsideClick);
+  }, [isLocationOpen, isTypeOpen, isDateOpen, isTimeOpen]);
 
   const borderRotation = rotateAnim.interpolate({
     inputRange: [0, 1],
@@ -279,14 +297,23 @@ export default function HeroWeb() {
         />
       )}
       
-      <View style={[styles.container, !isMobile && { marginTop: width > 1200 ? 120 : 60 }]}>
-        <View style={styles.content}>
+      <View style={[
+        styles.container, 
+        !isMobile && { 
+          flexDirection: 'row', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          marginTop: width > 1200 ? 80 : 40 
+        }
+      ]}>
+        <View style={[styles.content, !isMobile && { alignItems: 'flex-start', textAlign: 'left', maxWidth: 550, paddingRight: 40 }]}>
           <Text style={[
             styles.title,
             { 
-              fontSize: width < 600 ? 32 : (width < 900 ? 48 : 64),
-              lineHeight: width < 600 ? 38 : 72,
-              marginBottom: isMobile ? 12 : 16
+              fontSize: width < 600 ? 32 : (width < 900 ? 44 : 52),
+              lineHeight: width < 600 ? 38 : 64,
+              marginBottom: isMobile ? 12 : 16,
+              textAlign: isMobile ? 'center' : 'left'
             }
           ]}>
             Elevate Your Game
@@ -297,13 +324,17 @@ export default function HeroWeb() {
               fontSize: width < 600 ? 14 : 16,
               lineHeight: width < 600 ? 20 : 26,
               maxWidth: width < 600 ? '90%' : 600,
-              marginBottom: isMobile ? 24 : 32
+              marginBottom: isMobile ? 24 : 32,
+              textAlign: isMobile ? 'center' : 'left'
             }
           ]}>
             Book premium sports venues in seconds and take your performance to the next level.
           </Text>
 
-          <View style={[styles.featuresRow, isMobile && { marginBottom: 30 }]}>
+          <View style={[
+            styles.featuresRow, 
+            isMobile ? { marginBottom: 30, justifyContent: 'center' } : { justifyContent: 'flex-start', flexWrap: 'nowrap' }
+          ]}>
             <View style={styles.featureChip}>
               <View style={styles.chipIcon}>
                 <CalendarCheck2 size={16} color="#043529" strokeWidth={2.5} />
@@ -314,7 +345,7 @@ export default function HeroWeb() {
               <View style={styles.chipIcon}>
                 <MapPin size={16} color="#043529" strokeWidth={2.5} />
               </View>
-              <Text style={styles.chipText}>Top Grounds</Text>
+              <Text style={styles.chipText}>Top Venues</Text>
             </View>
             <View style={styles.featureChip}>
               <View style={styles.chipIcon}>
@@ -323,23 +354,28 @@ export default function HeroWeb() {
               <Text style={styles.chipText}>Secure & Reliable</Text>
             </View>
           </View>
+        </View>
 
-          {/* Search Form with Rotating Border */}
-          <View style={[
+        {/* Search Form with Rotating Border */}
+        <View 
+          ref={formRef}
+          style={[
             styles.searchFormWrapper,
-            isMobile && styles.searchFormWrapperMobile
-          ]}>
+            isMobile && styles.searchFormWrapperMobile,
+            !isMobile && { maxWidth: 420, marginTop: 0 }
+          ]}
+        >
             {/* Border Layer with Clipping */}
             <View style={[
               StyleSheet.absoluteFill, 
-              { overflow: 'hidden', borderRadius: isMobile ? 26 : 100 }
+              { overflow: 'hidden', borderRadius: (isMobile || !isMobile) ? 26 : 100 }
             ]}>
               <Animated.View style={[
                 styles.animatedBorder,
                 { transform: [{ rotate: borderRotation }] }
               ]}>
                 <LinearGradient
-                  colors={['transparent', '#00ea6b', 'transparent', '#00ea6b', 'transparent']}
+                  colors={['transparent', '#01e669', 'transparent', '#01e669', 'transparent']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={{ flex: 1 }}
@@ -347,14 +383,14 @@ export default function HeroWeb() {
               </Animated.View>
             </View>
 
-            <View style={[styles.searchFormContainer, isMobile && styles.searchFormContainerMobile]}>
-            <View style={[styles.searchForm, isMobile && styles.searchFormMobile]}>
+            <View style={[styles.searchFormContainer, (isMobile || !isMobile) && styles.searchFormContainerMobile]}>
+            <View style={[styles.searchForm, (isMobile || !isMobile) && styles.searchFormMobile]}>
               
               {/* Location Selector */}
               <View style={[
                 styles.formField, 
                 styles.fieldDivider, 
-                isMobile && styles.formFieldMobile,
+                (isMobile || !isMobile) && styles.formFieldMobile,
                 isLocationOpen && { zIndex: 1000 }
               ]}>
                 <View style={styles.fieldIcon}>
@@ -400,7 +436,7 @@ export default function HeroWeb() {
               <View style={[
                 styles.formField, 
                 styles.fieldDivider, 
-                isMobile && styles.formFieldMobile,
+                (isMobile || !isMobile) && styles.formFieldMobile,
                 isTypeOpen && { zIndex: 1000 }
               ]}>
                 <View style={styles.fieldIcon}>
@@ -447,7 +483,7 @@ export default function HeroWeb() {
               <View style={[
                 styles.formField, 
                 styles.fieldDivider, 
-                isMobile && styles.formFieldMobile,
+                (isMobile || !isMobile) && styles.formFieldMobile,
                 isDateOpen && { zIndex: 1000 }
               ]}>
                 <View style={styles.fieldIcon}>
@@ -530,7 +566,7 @@ export default function HeroWeb() {
               {/* Time Selector */}
               <View style={[
                 styles.formField, 
-                isMobile && styles.formFieldMobile,
+                (isMobile || !isMobile) && styles.formFieldMobile,
                 isTimeOpen && { zIndex: 1000 }
               ]}>
                 <View style={styles.fieldIcon}>
@@ -606,18 +642,17 @@ export default function HeroWeb() {
                 style={({ pressed }) => [
                   styles.searchButton,
                   isSearchEnabled && styles.searchButtonActive,
-                  isMobile && styles.searchButtonMobile,
+                  (isMobile || !isMobile) && styles.searchButtonMobile,
                   pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }
                 ]}
                 onPress={handleSearch}
               >
-                <Text style={styles.searchButtonText}>Search Grounds</Text>
+                <Text style={styles.searchButtonText}>Search Venues</Text>
               </Pressable>
             </View>
           </View>
         </View>
       </View>
-    </View>
     </ImageBackground>
   );
 }
@@ -626,7 +661,7 @@ const styles = StyleSheet.create({
   root: {
     width: '100%',
     justifyContent: 'flex-start',
-    paddingTop: Platform.OS === 'web' ? 120 : 100,
+    paddingTop: Platform.OS === 'web' ? 80 : 100,
     alignItems: 'center',
   },
   overlay: {
@@ -679,12 +714,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.15)',
-    paddingHorizontal: 16,
+    paddingHorizontal: Platform.OS === 'web' ? 12 : 16,
     paddingVertical: 8,
     borderRadius: 100,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
-    gap: 8,
+    gap: Platform.OS === 'web' ? 6 : 8,
   },
   chipIcon: {
     width: 24,
@@ -721,7 +756,7 @@ const styles = StyleSheet.create({
   },
   searchFormContainer: {
     width: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: 'rgba(15, 23, 42, 0.85)', // Darker, more opaque to block light bleed
     borderRadius: 100,
     padding: 4,
     shadowColor: '#000',
@@ -739,7 +774,7 @@ const styles = StyleSheet.create({
   searchFormContainerMobile: {
     borderRadius: 24,
     padding: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: 'rgba(15, 23, 42, 0.85)', // Opaque background for mobile too
   },
   searchForm: {
     flexDirection: 'row',
@@ -833,7 +868,8 @@ const styles = StyleSheet.create({
   searchButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontFamily: 'Inter-Bold',
+    fontFamily: 'Inter',
+    fontWeight: '600',
     letterSpacing: -0.2,
   },
   dropdown: {
@@ -878,16 +914,17 @@ const styles = StyleSheet.create({
   },
   calendarDropdown: {
     position: 'absolute',
-    bottom: 70,
-    top: 'auto' as any,
+    top: 60,
+    bottom: 'auto' as any,
     left: 0,
     right: 0,
-    padding: 8,
-    minWidth: 320,
+    padding: 6,
+    minWidth: 260,
+    maxWidth: 280,
   },
   timeDropdown: {
-    bottom: 60,
-    top: 'auto' as any,
+    top: 60,
+    bottom: 'auto' as any,
   },
   calendarHeader: {
     flexDirection: 'row',
@@ -896,15 +933,15 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   calendarNav: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
   },
   calendarMonthTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
     color: '#1E293B',
     fontFamily: 'Inter',
@@ -916,7 +953,7 @@ const styles = StyleSheet.create({
   weekdayText: {
     flex: 1,
     textAlign: 'center',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: '#94A3B8',
     textTransform: 'uppercase',
@@ -928,7 +965,7 @@ const styles = StyleSheet.create({
   },
   calendarDay: {
     width: '14.28%',
-    height: 40,
+    height: 32,
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 6,
@@ -940,7 +977,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#01b854',
   },
   dayText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
     color: '#1E293B',
     fontFamily: 'Inter',

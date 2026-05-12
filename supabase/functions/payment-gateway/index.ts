@@ -38,8 +38,12 @@ const calculateFinalAmounts = (details: any, groundType: string | null, settings
   const PLATFORM_FEE_RATE = Number(settings?.user_platform_fee_rate ?? 0.05);
   const GST_RATE = Number(settings?.gst_rate ?? 0.18);
   const CRICKET_FIXED_FEE = Number(settings?.cricket_owner_fee_fixed ?? 100);
+  const NETS_FIXED_FEE = Number(settings?.nets_owner_fee_fixed ?? 25);
 
   const isCash = details.payment_method === 'cash' || details.paymentMethod === 'cash';
+  const pitchType = String(groundType ?? '').toLowerCase();
+  const isFullCricket = pitchType === 'cricket ground';
+  const isNet = pitchType.includes('net') || pitchType.includes('lane');
 
   console.log(`[Pricing] Input details: ${JSON.stringify(details)}, settings: ${JSON.stringify(settings)}, isCash: ${isCash}`);
   
@@ -56,7 +60,7 @@ const calculateFinalAmounts = (details: any, groundType: string | null, settings
   } else {
     console.log(`[Pricing] WARNING: Client total missing, falling back to calculation logic`);
     const hours = Number(details.total_hours ?? details.totalHours ?? 1);
-    const isBox = String(groundType ?? '').toLowerCase().includes('box');
+    const isBox = pitchType.includes('box');
     if (isBox) {
       grossAmount = priceUnit * hours;
     } else {
@@ -68,24 +72,45 @@ const calculateFinalAmounts = (details: any, groundType: string | null, settings
   
   // New breakdown logic
   const groundPrice = net;
-  const platformFeeUser = Math.round(groundPrice * PLATFORM_FEE_RATE * 100) / 100;
-  const gstUser = Math.round(platformFeeUser * GST_RATE * 100) / 100;
+  
+  let platformFeeUser = 0;
+  let gstUser = 0;
+
+  // If commission is off for owner and this is a cash booking (owner booking), skip user-side fees too
+  if (isCash && skipOwnerFee) {
+    platformFeeUser = 0;
+    gstUser = 0;
+    console.log(`[Pricing] User platform fee skipped (Cash + charge_platform_fee: false)`);
+  } else {
+    platformFeeUser = Math.round(groundPrice * PLATFORM_FEE_RATE * 100) / 100;
+    gstUser = Math.round(platformFeeUser * GST_RATE * 100) / 100;
+  }
+  
   const totalCharged = Math.round(groundPrice + platformFeeUser + gstUser); // Round to nearest zero decimals
   
   // Fee Logic:
   // - "Cricket Ground" (Full Ground) OR Cash Payment = Fixed Fee (CRICKET_FIXED_FEE per team)
   // - "Box Cricket" & Others = Percentage Fee (PLATFORM_FEE_RATE)
-  const isFullCricket = String(groundType ?? '').toLowerCase() === 'cricket ground';
+
   let platformFeeOwner = 0;
   
   if (skipOwnerFee) {
     platformFeeOwner = 0;
     console.log(`[Pricing] Owner platform fee skipped (charge_platform_fee: false)`);
-  } else if (isFullCricket || isCash) {
-    const teamType = details.team_type ?? details.teamType ?? 'both';
-    const teamCount = teamType === 'one' ? 1 : 2;
-    platformFeeOwner = CRICKET_FIXED_FEE * teamCount;
-    console.log(`[Pricing] ${isCash ? 'Cash Payment' : 'Full Cricket'} detected, using fixed owner fee: ${platformFeeOwner} (${teamCount} teams)`);
+  } else if (isCash || isFullCricket) {
+    if (isNet) {
+      platformFeeOwner = NETS_FIXED_FEE;
+      console.log(`[Pricing] ${isCash ? 'Cash Payment' : ''} Net detected, using fixed owner fee: ${platformFeeOwner}`);
+    } else if (isFullCricket) {
+      const teamType = details.team_type ?? details.teamType ?? 'both';
+      const teamCount = teamType === 'one' ? 1 : 2;
+      platformFeeOwner = CRICKET_FIXED_FEE * teamCount;
+      console.log(`[Pricing] ${isCash ? 'Cash Payment' : ''} Full Cricket detected, using fixed owner fee: ${platformFeeOwner} (${teamCount} teams)`);
+    } else {
+      // Cash payment for non-cricket/non-net (e.g. Box Cricket)
+      platformFeeOwner = Math.round(groundPrice * PLATFORM_FEE_RATE * 100) / 100;
+      console.log(`[Pricing] Cash Payment for ${groundType || 'Standard'} ground detected, using percentage fee: ${platformFeeOwner}`);
+    }
   } else {
     platformFeeOwner = Math.round(groundPrice * PLATFORM_FEE_RATE * 100) / 100;
     console.log(`[Pricing] ${groundType || 'Standard'} ground detected, using percentage fee: ${platformFeeOwner}`);
@@ -613,23 +638,50 @@ serve(async (req) => {
         const { data: ground, error: groundError } = await supabaseClient.from('grounds').select('pitch_type, owner:profiles!owner_id(charge_platform_fee)').eq('id', ground_id).single();
         if (groundError || !ground) throw new Error(`Ground not found: ${groundError?.message}`);
 
-        console.log(`[Cash] Checking availability for ground ${ground_id} on ${booking_date} at ${start_time}`);
-        const { data: availableIds, error: availError } = await supabaseClient.rpc('available_ground_ids_for_slot', {
-            p_ground_ids: [ground_id],
-            p_booking_date: booking_date,
-            p_start_time: start_time,
-        });
+        const slots = bookingDetails.slots;
 
-        if (availError) {
-          console.error(`[Cash] Availability RPC error: ${availError.message}`);
-          throw new Error(`Availability check failed: ${availError.message}`);
-        }
-        
-        const isAvailable = Array.isArray(availableIds) && availableIds.some((r: any) => r.ground_id === ground_id);
-        console.log(`[Cash] Is Available: ${isAvailable}`);
+        if (slots && Array.isArray(slots) && slots.length > 0) {
+          for (const slotStr of slots) {
+            const parts = slotStr.split('__');
+            const datePart = parts[0] || booking_date;
+            const timePart = parts[1] || slotStr;
+            
+            console.log(`[Cash] Checking availability for ground ${ground_id} on ${datePart} at ${timePart}`);
+            const { data: availableIds, error: availError } = await supabaseClient.rpc('available_ground_ids_for_slot', {
+                p_ground_ids: [ground_id],
+                p_booking_date: datePart,
+                p_start_time: timePart,
+            });
 
-        if (!isAvailable) {
-            throw new Error('This slot is no longer available.');
+            if (availError) {
+              console.error(`[Cash] Availability RPC error: ${availError.message}`);
+              throw new Error(`Availability check failed: ${availError.message}`);
+            }
+            
+            const isAvailable = Array.isArray(availableIds) && availableIds.some((r: any) => r.ground_id === ground_id);
+            if (!isAvailable) throw new Error(`Slot ${timePart} on ${datePart} is no longer available.`);
+          }
+        } else {
+          const parts = start_time.split('__');
+          const timePart = parts[1] || start_time;
+          console.log(`[Cash] Checking availability for ground ${ground_id} on ${booking_date} at ${timePart}`);
+          const { data: availableIds, error: availError } = await supabaseClient.rpc('available_ground_ids_for_slot', {
+              p_ground_ids: [ground_id],
+              p_booking_date: booking_date,
+              p_start_time: timePart,
+          });
+
+          if (availError) {
+            console.error(`[Cash] Availability RPC error: ${availError.message}`);
+            throw new Error(`Availability check failed: ${availError.message}`);
+          }
+          
+          const isAvailable = Array.isArray(availableIds) && availableIds.some((r: any) => r.ground_id === ground_id);
+          console.log(`[Cash] Is Available: ${isAvailable}`);
+
+          if (!isAvailable) {
+              throw new Error('This slot is no longer available.');
+          }
         }
 
         const { 
@@ -645,8 +697,6 @@ serve(async (req) => {
           ownerSettlement,
           bygNetRevenue
         } = calculateFinalAmounts(bookingDetails, ground?.pitch_type, settings, ground?.owner?.charge_platform_fee === false);
-
-        const slots = bookingDetails.slots;
 
         if (slots && Array.isArray(slots) && slots.length > 0) {
           console.log(`[Cash] Creating multiple bookings for slots: ${slots.join(', ')}`);
@@ -943,23 +993,28 @@ serve(async (req) => {
         
         // Availability check
         if (slots && Array.isArray(slots) && slots.length > 0) {
-          for (const slot of slots) {
+          for (const slotStr of slots) {
+            const parts = slotStr.split('__');
+            const datePart = parts[0] || booking_date;
+            const timePart = parts[1] || slotStr;
             const { data: availableIds, error: availError } = await supabaseClient.rpc('available_ground_ids_for_slot', {
                 p_ground_ids: [ground_id],
-                p_booking_date: booking_date,
-                p_start_time: slot,
+                p_booking_date: datePart,
+                p_start_time: timePart,
             });
 
             if (availError) throw new Error(`Availability check failed: ${availError.message}`);
             
             const isAvailable = Array.isArray(availableIds) && availableIds.some((r: any) => r.ground_id === ground_id);
-            if (!isAvailable) throw new Error(`Slot ${slot} no longer available.`);
+            if (!isAvailable) throw new Error(`Slot ${timePart} on ${datePart} is no longer available.`);
           }
         } else {
+          const parts = start_time.split('__');
+          const timePart = parts[1] || start_time;
           const { data: availableIds, error: availError } = await supabaseClient.rpc('available_ground_ids_for_slot', {
               p_ground_ids: [ground_id],
               p_booking_date: booking_date,
-              p_start_time: start_time,
+              p_start_time: timePart,
           });
 
           if (availError) throw new Error(`Availability check failed: ${availError.message}`);
@@ -1134,7 +1189,42 @@ serve(async (req) => {
 
       if (amountToDeduct <= 0) throw new Error('Invalid payment amount.');
 
-      // 2. Atomic Wallet Deduction
+      // 2. Availability Check before deducting wallet (if atomic creation)
+      if (!finalBookingId && details) {
+        const slots = details.slots;
+        if (slots && Array.isArray(slots) && slots.length > 0) {
+          for (const slotStr of slots) {
+            const parts = slotStr.split('__');
+            const datePart = parts[0] || details.booking_date;
+            const timePart = parts[1] || slotStr;
+            const { data: availableIds, error: availError } = await supabaseClient.rpc('available_ground_ids_for_slot', {
+                p_ground_ids: [ground_id],
+                p_booking_date: datePart,
+                p_start_time: timePart,
+            });
+
+            if (availError) throw new Error(`Availability check failed: ${availError.message}`);
+            
+            const isAvailable = Array.isArray(availableIds) && availableIds.some((r: any) => r.ground_id === ground_id);
+            if (!isAvailable) throw new Error(`Slot ${timePart} on ${datePart} is no longer available.`);
+          }
+        } else if (details.booking_date && details.start_time) {
+          const parts = details.start_time.split('__');
+          const timePart = parts[1] || details.start_time;
+          const { data: availableIds, error: availError } = await supabaseClient.rpc('available_ground_ids_for_slot', {
+              p_ground_ids: [ground_id],
+              p_booking_date: details.booking_date,
+              p_start_time: timePart,
+          });
+
+          if (availError) throw new Error(`Availability check failed: ${availError.message}`);
+          
+          const isAvailable = Array.isArray(availableIds) && availableIds.some((r: any) => r.ground_id === ground_id);
+          if (!isAvailable) throw new Error('Slot no longer available.');
+        }
+      }
+
+      // 3. Atomic Wallet Deduction
       const { data: walletRes, error: walletErr } = await supabaseClient.rpc('process_wallet_transaction', {
         p_user_id: user.id,
         p_amount: -amountToDeduct, // negative for 'used'

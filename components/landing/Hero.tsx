@@ -83,7 +83,7 @@ export default function Hero() {
           </View>
 
           <Text style={styles.title}>
-            Game-ready grounds,
+            Game-ready venues,
             {'\n'}
             <Text style={styles.titleAccent}>just a tap away.</Text>
           </Text>
@@ -181,9 +181,9 @@ export default function Hero() {
                     styles.discoveryCta,
                     pressed && { opacity: 0.8, transform: [{ scale: 0.98 }] }
                   ]}
-                  onPress={() => router.push('/book-my-ground' as any)}
+                  onPress={() => router.push('/book-my-venue' as any)}
                 >
-                  <Text style={styles.discoveryCtaText}>Explore All Grounds</Text>
+                  <Text style={styles.discoveryCtaText}>Explore All Venues</Text>
                   <ChevronRight size={18} color="#FFFFFF" />
                 </Pressable>
               </View>

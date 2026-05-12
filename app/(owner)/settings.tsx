@@ -424,7 +424,7 @@ function OwnerSettingsInner() {
         <View style={styles.rowBetween}>
           <View>
             <Text style={styles.sectionTitle}>Create New Coupon</Text>
-            <Text style={styles.sectionSubtitle}>Add a discount for all your grounds or a specific one.</Text>
+            <Text style={styles.sectionSubtitle}>Add a discount for all your venues or a specific one.</Text>
           </View>
           <Tag size={24} color="#01b854" />
         </View>
@@ -484,13 +484,13 @@ function OwnerSettingsInner() {
         </View>
 
         <View style={styles.formRow}>
-          <Text style={styles.label}>Apply to Ground</Text>
+          <Text style={styles.label}>Apply to Venue</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
             <TouchableOpacity
               onPress={() => setSelectedGroundForCoupon('all')}
               style={[styles.groundChip, selectedGroundForCoupon === 'all' && styles.groundChipActive]}
             >
-              <Text style={[styles.groundChipText, selectedGroundForCoupon === 'all' && styles.groundChipTextActive]}>All Grounds</Text>
+              <Text style={[styles.groundChipText, selectedGroundForCoupon === 'all' && styles.groundChipTextActive]}>All Venues</Text>
             </TouchableOpacity>
             {grounds.map((g) => (
               <TouchableOpacity
@@ -532,7 +532,7 @@ function OwnerSettingsInner() {
                   </Text>
                   {c.ground_id && (
                     <Text style={styles.couponTargetText}>
-                      Target: {grounds.find((g) => g.id === c.ground_id)?.name || 'Ground'}
+                      Target: {grounds.find((g) => g.id === c.ground_id)?.name || 'Venue'}
                     </Text>
                   )}
                 </View>
@@ -568,17 +568,17 @@ function OwnerSettingsInner() {
           
           <View style={styles.helpItem}>
             <Text style={styles.helpTitle}>Self</Text>
-            <Text style={styles.helpText}>Visible when you book a slot on your own ground. Typically used for personal practice or internal inventory management.</Text>
+            <Text style={styles.helpText}>Visible when you book a slot on your own venue. Typically used for personal practice or internal inventory management.</Text>
           </View>
 
           <View style={styles.helpItem}>
-            <Text style={styles.helpTitle}>Another Ground</Text>
-            <Text style={styles.helpText}>Visible when you book a slot as a player on a ground owned by someone else. These are your personal games.</Text>
+            <Text style={styles.helpTitle}>Another Venue</Text>
+            <Text style={styles.helpText}>Visible when you book a slot as a player on a venue owned by someone else. These are your personal games.</Text>
           </View>
 
           <View style={styles.helpItem}>
             <Text style={styles.helpTitle}>Customer Name (e.g. Arpit)</Text>
-            <Text style={styles.helpText}>Visible when an external player books your ground. This dynamically shows their full name for easy identification.</Text>
+            <Text style={styles.helpText}>Visible when an external player books your venue. This dynamically shows their full name for easy identification.</Text>
           </View>
         </View>
 
@@ -592,12 +592,12 @@ function OwnerSettingsInner() {
 
           <View style={styles.helpItem}>
             <Text style={styles.helpTitle}>PARTIAL</Text>
-            <Text style={styles.helpText}>Indicates 1 team is booked, but the ground is still available for another team to join (Matchmaking Mode).</Text>
+            <Text style={styles.helpText}>Indicates 1 team is booked, but the venue is still available for another team to join (Matchmaking Mode).</Text>
           </View>
 
           <View style={styles.helpItem}>
             <Text style={styles.helpTitle}>FULL</Text>
-            <Text style={styles.helpText}>The ground is fully occupied by two teams or a full-ground booking. No more slots available.</Text>
+            <Text style={styles.helpText}>The venue is fully occupied by two teams or a full-venue booking. No more slots available.</Text>
           </View>
         </View>
         <View style={[styles.helpSection, { marginTop: 24 }]}>

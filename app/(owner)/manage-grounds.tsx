@@ -561,9 +561,9 @@ export default function OwnerGroundsScreen() {
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>You haven't added any grounds yet</Text>
+            <Text style={styles.emptyText}>You haven't added any venues yet</Text>
             <Button
-              title="Add Your First Ground"
+              title="Add Your First Venue"
               onPress={() => router.push('/(owner)/add-ground')}
               style={[styles.emptyButton, { backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#01b854' }]}
               textStyle={{ color: '#01b854' }}
@@ -579,15 +579,15 @@ export default function OwnerGroundsScreen() {
     <>
       {Platform.OS !== 'web' ? (
         <MobileAppNavbar 
-          title="My Grounds" 
+          title="My Venues" 
           titleColor="#01b854" 
         />
       ) : (
         <View style={styles.webHeader}>
-          <Text style={styles.webTitle}>My Grounds</Text>
+          <Text style={styles.webTitle}>My Venues</Text>
           <View style={{ flexDirection: 'row', gap: 12 }}>
             <Button
-              title="Import Ground"
+              title="Import Venue"
               onPress={handleImportGround}
               variant="outline"
               size="small"
@@ -595,7 +595,7 @@ export default function OwnerGroundsScreen() {
               textStyle={{ color: '#16A34A' }}
             />
             <Button
-              title="Add Ground"
+              title="Add Venue"
               onPress={() => router.push('/(owner)/add-ground')}
               variant="primary"
               size="small"
@@ -618,7 +618,7 @@ export default function OwnerGroundsScreen() {
           <Card style={[styles.modalCard, { width: 400, maxWidth: '90vw' }]}>
             <View style={styles.modalHeader}>
               <View>
-                <Text style={styles.modalTitle}>Manage Ground</Text>
+                <Text style={styles.modalTitle}>Manage Venue</Text>
                 <Text style={{ fontSize: 13, color: '#64748B' }}>
                   {grounds.find(g => g.id === selectedGroundId)?.name}
                 </Text>

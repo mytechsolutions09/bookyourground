@@ -307,7 +307,7 @@ export default function UserOrdersScreen() {
 
         <View style={styles.cardActionRow}>
           <Text style={[styles.viewDetails, { color: getStatusColor(item.status) }]}>View Order Details</Text>
-          <Text style={styles.ticketNo}>Ticket no : {item.id.slice(0, 8).toUpperCase()}</Text>
+          <Text style={styles.ticketNo}>Order number : {item.id.slice(0, 8).toUpperCase()}</Text>
         </View>
       </TouchableOpacity>
     );

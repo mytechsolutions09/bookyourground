@@ -23,7 +23,7 @@ export default function AddVenuePage() {
             <LandPlot size={32} color="#00ea6b" />
           </View>
           <View style={styles.cardContent}>
-            <Text style={styles.cardTitle}>Add a Ground</Text>
+            <Text style={styles.cardTitle}>Add a Full Venue</Text>
             <Text style={styles.cardDescription}>
               List a full-size cricket ground or box cricket venue with hourly slots.
             </Text>

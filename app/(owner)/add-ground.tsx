@@ -381,8 +381,8 @@ export default function AddGroundScreen() {
 
       setCreatedGroundId(created.id as string);
       Alert.alert(
-        'Ground added',
-        'Your ground has been created. You can now adjust hours and availability below.',
+        'Venue added',
+        'Your venue has been created. You can now adjust hours and availability below.',
       );
     } catch (error: any) {
       Alert.alert('Error', error.message);
@@ -396,7 +396,7 @@ export default function AddGroundScreen() {
       if (Platform.OS !== 'web') {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-          // Alert.alert('Permission required', 'We need access to your photos to upload ground images.');
+          // Alert.alert('Permission required', 'We need access to your photos to upload venue images.');
         }
       }
     })();
@@ -502,10 +502,10 @@ export default function AddGroundScreen() {
         <Card style={styles.section}>
           <Text style={styles.sectionTitle}>Basic Information</Text>
           <Input
-            label="Ground Name *"
+            label="Venue Name *"
             value={formData.name}
             onChangeText={(text) => setFormData({ ...formData, name: text })}
-            placeholder="Enter ground name"
+            placeholder="Enter venue name"
           />
           <Input
             label="Description"
@@ -670,7 +670,7 @@ export default function AddGroundScreen() {
         </Card>
 
         <Card style={styles.section}>
-          <Text style={styles.sectionTitle}>Ground Details</Text>
+          <Text style={styles.sectionTitle}>Venue Details</Text>
           <Text style={styles.subLabel}>Type *</Text>
           <StartTimeDropdown
             value={formData.pitch_type}
@@ -685,7 +685,7 @@ export default function AddGroundScreen() {
                 cricket_pitch_surface: '',
               })
             }
-            placeholder="Select Ground Type"
+            placeholder="Select Venue Type"
           />
           {formData.pitch_type === 'Cricket Ground' ? (
             <>
@@ -711,7 +711,7 @@ export default function AddGroundScreen() {
             </>
           ) : null}
           <Input
-            label="Ground Size"
+            label="Venue Size"
             value={formData.ground_size}
             onChangeText={(text) => setFormData({ ...formData, ground_size: text })}
             placeholder="e.g., Standard, Large"
@@ -1106,7 +1106,7 @@ export default function AddGroundScreen() {
         </Card>
 
         <Button
-          title="Add Ground"
+          title="Add Venue"
           onPress={handleSubmit}
           loading={loading}
           fullWidth
@@ -1117,7 +1117,7 @@ export default function AddGroundScreen() {
           <Card style={styles.section}>
             <Text style={styles.sectionTitle}>Hours & Availability</Text>
             <Text style={styles.helperText}>
-              Add your preferred time slots first, then adjust which ones are available. You can always change this later from My grounds → Edit.
+              Add your preferred time slots first, then adjust which ones are available. You can always change this later from My venues → Edit.
             </Text>
             <TimeSlotsEditor
               ref={availabilityRef}
@@ -1133,7 +1133,7 @@ export default function AddGroundScreen() {
   );
 
   return Platform.OS === 'web' ? (
-    <WebLayout>{content}</WebLayout>
+    <WebLayout hideHeader={true}>{content}</WebLayout>
   ) : (
     <View style={styles.nativeRoot}>
       {content}
