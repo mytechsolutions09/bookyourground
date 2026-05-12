@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, Platform, TouchableOpacity, ScrollView, TextInput, useWindowDimensions, Image, ActivityIndicator, Modal } from 'react-native';
-import { Calendar, Filter, X, Save, CheckCircle2, Circle, User, Clock } from 'lucide-react-native';
+import { Calendar, Filter, X, Save, CheckCircle2, Circle, User, Clock, Users, Banknote } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { BookingWithDetails } from '@/types';
@@ -379,12 +379,21 @@ export default function OwnerBookingsScreen() {
   };
 
   const openSlotModal = (item: BookingWithDetails) => {
-    const normStart = normalizeDbTimeToHHMM(item.start_time);
-    const currentSlotKey = `${item.ground_id}_${item.booking_date}_${normStart}`;
-    const relatedBookings = bookings.filter(b => 
-      (b.status === 'confirmed' || b.status === 'active' || b.status === 'completed') && 
-      `${b.ground_id}_${b.booking_date}_${normalizeDbTimeToHHMM(b.start_time)}` === currentSlotKey
-    );
+    let relatedBookings: BookingWithDetails[] = [];
+    
+    if ((item as any).allBookingIds && (item as any).allBookingIds.length > 0) {
+      // If it's a consolidated item, show all bookings in that group
+      relatedBookings = bookings.filter(b => (item as any).allBookingIds.includes(b.id));
+    } else {
+      // Fallback for single slot items
+      const normStart = normalizeDbTimeToHHMM(item.start_time);
+      const currentSlotKey = `${item.ground_id}_${item.booking_date}_${normStart}`;
+      relatedBookings = bookings.filter(b => 
+        (b.status === 'confirmed' || b.status === 'active' || b.status === 'completed') && 
+        `${b.ground_id}_${b.booking_date}_${normalizeDbTimeToHHMM(b.start_time)}` === currentSlotKey
+      );
+    }
+    
     setSelectedSlotBookings(relatedBookings);
     setIsSlotModalVisible(true);
   };
@@ -433,8 +442,52 @@ export default function OwnerBookingsScreen() {
         return gn.includes(q) || city.includes(q) || customer.includes(q) || bfn.includes(q);
       });
 
+      // Grouping logic to consolidate multi-slot bookings (including multi-date transactions)
+      const consolidatedMap = new Map<string, BookingWithDetails & { allDates?: string[], allSlots?: string[], allBookingIds?: string[] }>();
+      base.forEach(b => {
+        const matchSlots = /\(Slots:\s*([^)]+)\)/.exec(b.notes || '');
+        const slotsKey = matchSlots ? matchSlots[1] : `single_${b.start_time}`;
+        
+        // Use created_at (truncated to minute) to group bookings from the same transaction
+        const createdAtMinute = b.created_at ? b.created_at.substring(0, 16) : 'unknown';
+        const groupKey = `${b.user_id}_${b.ground_id}_${createdAtMinute}_${slotsKey}`;
+
+        if (!consolidatedMap.has(groupKey)) {
+          consolidatedMap.set(groupKey, { 
+            ...b, 
+            allDates: [b.booking_date],
+            allSlots: matchSlots ? [matchSlots[1]] : [`${normalizeDbTimeToHHMM(b.start_time)} – ${normalizeDbTimeToHHMM(b.end_time)}`],
+            allBookingIds: [b.id]
+          });
+        } else {
+          const existing = consolidatedMap.get(groupKey)!;
+          existing.total_amount = Number(((existing.total_amount || 0) + (b.total_amount || 0)).toFixed(2));
+          existing.discount_amount = Number(((existing.discount_amount || 0) + (b.discount_amount || 0)).toFixed(2));
+          if (!existing.allDates?.includes(b.booking_date)) {
+            existing.allDates?.push(b.booking_date);
+          }
+          const slotLabel = matchSlots ? matchSlots[1] : `${normalizeDbTimeToHHMM(b.start_time)} – ${normalizeDbTimeToHHMM(b.end_time)}`;
+          if (!existing.allSlots?.includes(slotLabel)) {
+            existing.allSlots?.push(slotLabel);
+          }
+          if (!existing.allBookingIds?.includes(b.id)) {
+            existing.allBookingIds?.push(b.id);
+          }
+        }
+      });
+
+      const result = Array.from(consolidatedMap.values()).map(b => {
+        // Prepare display date range
+        let displayDate = formatDateDDMMYY(b.booking_date);
+        if (b.allDates && b.allDates.length > 1) {
+          const sortedDates = [...b.allDates].sort();
+          displayDate = `${formatDateDDMMYY(sortedDates[0])} – ${formatDateDDMMYY(sortedDates[sortedDates.length - 1])}`;
+        }
+        return { ...b, displayDate };
+      });
+
       // Sort
-      const sorted = [...base].sort((a, b) => {
+      const sorted = [...result].sort((a, b) => {
         let comparison = 0;
         if (sortKey === 'date') {
           const dateTimeA = `${a.booking_date}T${a.start_time}`;
@@ -992,10 +1045,24 @@ export default function OwnerBookingsScreen() {
                     openSlotModal(item);
                   }}
                 >
-                  <Text style={[styles.dateText, { color: '#01b854', textDecorationLine: 'underline' }]}>{formatDateDDMMYY(item.booking_date)}</Text>
-                  <Text style={styles.timeText}>
-                    {`${formatTime12h(normalizeDbTimeToHHMM(item.start_time) || '')} – ${formatTime12h(normalizeDbTimeToHHMM(item.end_time) || '')}`}
+                  <Text style={[styles.dateText, { color: '#01b854', textDecorationLine: 'underline' }]}>
+                    {(item as any).displayDate || formatDateDDMMYY(item.booking_date)}
                   </Text>
+                  {(() => {
+                    const slotsToDisplay = (item as any).allSlots && (item as any).allSlots.length > 0 
+                      ? (item as any).allSlots 
+                      : null;
+                    
+                    if (slotsToDisplay) {
+                      return <Text style={styles.timeText} numberOfLines={2}>{slotsToDisplay.join(', ')}</Text>;
+                    }
+                    
+                    return (
+                      <Text style={styles.timeText}>
+                        {`${formatTime12h(normalizeDbTimeToHHMM(item.start_time) || '')} – ${formatTime12h(normalizeDbTimeToHHMM(item.end_time) || '')}`}
+                      </Text>
+                    );
+                  })()}
                 </TouchableOpacity>
 
                 {(() => {
@@ -1133,9 +1200,24 @@ export default function OwnerBookingsScreen() {
                     {item.ground.name}
                   </Text>
                   <View style={styles.compactSlotRow}>
-                    <Text style={[styles.compactSlotTime, !isLight && styles.compactSlotTimeNative]}>
-                      {`${formatTime12h(normalizeDbTimeToHHMM(item.start_time) || '')} – ${formatTime12h(normalizeDbTimeToHHMM(item.end_time) || '')}`}
+                    <Text style={[styles.dateText, { color: '#01b854', textDecorationLine: 'underline' }]}>
+                      {(item as any).displayDate || formatDateDDMMYY(item.booking_date)}
                     </Text>
+                    {(() => {
+                      const slotsToDisplay = (item as any).allSlots && (item as any).allSlots.length > 0 
+                        ? (item as any).allSlots 
+                        : null;
+                      
+                      if (slotsToDisplay) {
+                        return <Text style={styles.timeText} numberOfLines={2}>{slotsToDisplay.join(', ')}</Text>;
+                      }
+                      
+                      return (
+                        <Text style={[styles.compactSlotTime, !isLight && styles.compactSlotTimeNative]}>
+                          {`${formatTime12h(normalizeDbTimeToHHMM(item.start_time) || '')} – ${formatTime12h(normalizeDbTimeToHHMM(item.end_time) || '')}`}
+                        </Text>
+                      );
+                    })()}
                   </View>
                   <Text style={styles.compactDateTextSub}>
                     {formatDateDDMMYY(item.booking_date)}
@@ -1283,17 +1365,43 @@ export default function OwnerBookingsScreen() {
               </TouchableOpacity>
             </View>
             
-            <ScrollView style={{ maxHeight: 400 }}>
-              {selectedSlotBookings.map((b) => (
+            <ScrollView style={{ maxHeight: 500 }}>
+              {selectedSlotBookings.sort((a, b) => `${a.booking_date}${a.start_time}` > `${b.booking_date}${b.start_time}` ? 1 : -1).map((b) => (
                 <View key={b.id} style={styles.slotBookingItem}>
                   <View style={{ flex: 1 }}>
-                    <Text style={styles.slotBookingName}>{b.user?.full_name || b.booked_for_name || 'Customer'}</Text>
-                    <Text style={styles.slotBookingId}>ID: {b.id.substring(0, 8).toUpperCase()}</Text>
-                    <Text style={styles.slotBookingDetail}>Amount: ₹{b.total_amount}</Text>
-                    <Text style={styles.slotBookingDetail}>Payment: {b.payment_method?.toUpperCase()}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                       <View style={styles.whoAvatar}><Text style={styles.whoAvatarText}>{(b.user?.full_name || b.booked_for_name || 'C')[0].toUpperCase()}</Text></View>
+                       <View>
+                         <Text style={styles.slotBookingName}>{b.user?.full_name || b.booked_for_name || 'Customer'}</Text>
+                         <Text style={styles.slotBookingId}>ID: {b.id.substring(0, 8).toUpperCase()}</Text>
+                       </View>
+                    </View>
+
+                    <View style={styles.slotDetailsGrid}>
+                       <View style={styles.slotDetailRow}>
+                         <Calendar size={14} color="#64748B" />
+                         <Text style={styles.slotBookingDetail}>{formatDateDDMMYY(b.booking_date)}</Text>
+                       </View>
+                       <View style={styles.slotDetailRow}>
+                         <Clock size={14} color="#64748B" />
+                         <Text style={styles.slotBookingDetail}>
+                           {`${formatTime12h(normalizeDbTimeToHHMM(b.start_time) || '')} – ${formatTime12h(normalizeDbTimeToHHMM(b.end_time) || '')}`}
+                         </Text>
+                       </View>
+                       <View style={styles.slotDetailRow}>
+                         <Users size={14} color="#64748B" />
+                         <Text style={styles.slotBookingDetail}>
+                           {(cricketTeamsLabelFromBooking(b.ground.pitch_type, b.notes) || '1 Team').toUpperCase()}
+                         </Text>
+                       </View>
+                       <View style={styles.slotDetailRow}>
+                         <Banknote size={14} color="#059669" />
+                         <Text style={[styles.slotBookingDetail, { color: '#059669', fontWeight: '700' }]}>₹{b.total_amount}</Text>
+                       </View>
+                    </View>
                   </View>
                   <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(b.status)}15`, height: 24, paddingHorizontal: 8 }]}>
-                    <Text style={[styles.statusText, { color: getStatusColor(b.status), fontSize: 10 }]}>
+                    <Text style={[styles.statusText, { color: getStatusColor(b.status), fontSize: 10, fontWeight: '800' }]}>
                       {b.status.toUpperCase()}
                     </Text>
                   </View>
@@ -2051,7 +2159,32 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#94A3B8',
     fontFamily: 'Inter',
-    marginBottom: 4,
+    marginBottom: 8,
+  },
+  whoAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  whoAvatarText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#64748B',
+  },
+  slotDetailsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 4,
+  },
+  slotDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   slotBookingDetail: {
     fontSize: 12,

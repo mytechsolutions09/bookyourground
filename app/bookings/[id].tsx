@@ -88,6 +88,25 @@ export default function BookingDetailsScreen() {
 
       if (error) throw error;
       
+      // Fetch related bookings if it's a multi-slot booking
+      let relatedBookings: any[] = [];
+      const matchSlots = /\(Slots:\s*([^)]+)\)/.exec(data.notes);
+      if (data.notes && matchSlots) {
+        const slotsPart = matchSlots[0];
+        const { data: related, error: relatedError } = await supabase
+          .from('bookings')
+          .select('*')
+          .eq('ground_id', data.ground_id)
+          .eq('user_id', data.user_id)
+          .ilike('notes', `%${slotsPart}%`)
+          .order('booking_date', { ascending: true })
+          .order('start_time', { ascending: true });
+          
+        if (!relatedError && related) {
+          relatedBookings = related;
+        }
+      }
+      
       // Fetch duration from ground info (time_slots)
       let calculatedDuration = null;
       try {
@@ -110,7 +129,7 @@ export default function BookingDetailsScreen() {
         console.log('Could not fetch slot duration:', e);
       }
 
-      setBooking({ ...data, calculatedDuration });
+      setBooking({ ...data, calculatedDuration, relatedBookings });
       
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -165,8 +184,7 @@ export default function BookingDetailsScreen() {
     if (typeof startStr === 'string' && startStr.includes('__')) startStr = startStr.split('__')[1];
     let label = formatTime(startStr);
     let multiple = false;
-    const isNets = booking.ground.pitch_type?.toLowerCase().includes('nets');
-    if (isNets && booking.notes) {
+    if (booking.notes) {
       const matchSlots = /\(Slots:\s*([^)]+)\)/.exec(booking.notes);
       if (matchSlots) {
         const slots = matchSlots[1].split(',').map(s => s.trim());
@@ -293,13 +311,15 @@ export default function BookingDetailsScreen() {
                   </View>
                   <Text style={styles.slotValue}>{formatDate(booking.booking_date)}</Text>
                 </View>
-                <View style={styles.slotItem}>
-                  <View style={styles.slotLabel}>
-                    <Clock size={11} color="#01C45A" strokeWidth={2.5} />
-                    <Text style={styles.slotLabelText}>{isNetsWithMultipleSlots ? 'Slots' : 'Start Time'}</Text>
+                {!isNetsWithMultipleSlots && (
+                  <View style={styles.slotItem}>
+                    <View style={styles.slotLabel}>
+                      <Clock size={11} color="#01C45A" strokeWidth={2.5} />
+                      <Text style={styles.slotLabelText}>Start Time</Text>
+                    </View>
+                    <Text style={styles.slotValue}>{timeSlotLabel}</Text>
                   </View>
-                  <Text style={styles.slotValue}>{timeSlotLabel}</Text>
-                </View>
+                )}
                 <View style={styles.slotItem}>
                   <View style={styles.slotLabel}>
                     <Clock size={11} color="#01C45A" strokeWidth={2.5} />
@@ -321,18 +341,46 @@ export default function BookingDetailsScreen() {
                     })()}
                   </Text>
                 </View>
-                <View style={styles.slotItem}>
-                  <View style={styles.slotLabel}>
-                    <Users size={11} color="#01C45A" strokeWidth={2.5} />
-                    <Text style={styles.slotLabelText}>{booking.ground.pitch_type?.toLowerCase().includes('nets') ? 'Booking' : 'Teams'}</Text>
+                {!isNetsWithMultipleSlots && (
+                  <View style={styles.slotItem}>
+                    <View style={styles.slotLabel}>
+                      <Users size={11} color="#01C45A" strokeWidth={2.5} />
+                      <Text style={styles.slotLabelText}>{booking.ground.pitch_type?.toLowerCase().includes('nets') ? 'Booking' : 'Teams'}</Text>
+                    </View>
+                    <Text style={styles.slotValue}>
+                      {booking.ground.pitch_type?.toLowerCase().includes('nets') ? 'Nets' : (cricketTeamsLabel || '1 Team')}
+                    </Text>
                   </View>
-                  <Text style={styles.slotValue}>
-                    {booking.ground.pitch_type?.toLowerCase().includes('nets') ? 'Nets' : (cricketTeamsLabel || '1 Team')}
-                  </Text>
-                </View>
+                )}
               </View>
             </View>
           </View>
+
+          {/* Slots in this Booking */}
+          {booking.relatedBookings && booking.relatedBookings.length > 1 && (
+            <View style={styles.card}>
+              <View style={styles.cardInner}>
+                <Text style={styles.sectionTitle}>Slots in this booking</Text>
+                {booking.relatedBookings.map((b: any, i: number) => {
+                  const teamTypeMatch = /Teams:\s*([^(]+)/.exec(b.notes);
+                  const teamLabel = teamTypeMatch ? teamTypeMatch[1].trim() : 'Both Teams';
+                  
+                  return (
+                    <View key={i} style={styles.slotDetailRow}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Clock size={14} color="#01C45A" />
+                        <Text style={styles.slotDetailTime}>{`${b.booking_date} | ${formatTime(b.start_time)}`}</Text>
+                        <View style={styles.teamTag}>
+                          <Text style={styles.teamTagText}>{teamLabel}</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.slotDetailPrice}>{formatCurrency(b.total_amount)}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+            </View>
+          )}
 
           {/* Venue Rules */}
           <View style={styles.card}>
@@ -368,7 +416,13 @@ export default function BookingDetailsScreen() {
                         <Text style={styles.teamTagText}>{cricketTeamsLabel || '1 team'}</Text>
                       </View>
                     </View>
-                    <Text style={styles.summaryValue}>{formatCurrency(Number(booking.ground_price || displayTotalAmount) * slotCount)}</Text>
+                    <Text style={styles.summaryValue}>
+                      {formatCurrency(
+                        booking.relatedBookings && booking.relatedBookings.length > 0
+                          ? booking.relatedBookings.reduce((acc: number, b: any) => acc + Number(b.ground_price || b.total_amount || 0), 0)
+                          : Number(booking.ground_price || displayTotalAmount) * slotCount
+                      )}
+                    </Text>
                   </View>
 
                   <View style={styles.summaryRow}>
@@ -379,14 +433,24 @@ export default function BookingDetailsScreen() {
                       </View>
                     </View>
                     <Text style={[styles.summaryValue, { color: '#EF4444' }]}>
-                      -{formatCurrency((Number(booking.platform_fee_owner || 0) + Number(booking.gst_owner || 0)) * slotCount)}
+                      -{formatCurrency(
+                        booking.relatedBookings && booking.relatedBookings.length > 0
+                          ? booking.relatedBookings.reduce((acc: number, b: any) => acc + Number(b.platform_fee_owner || 0) + Number(b.gst_owner || 0), 0)
+                          : (Number(booking.platform_fee_owner || 0) + Number(booking.gst_owner || 0)) * slotCount
+                      )}
                     </Text>
                   </View>
 
                   <View style={styles.divider} />
                   <View style={styles.totalRow}>
                     <Text style={styles.totalLabel}>Total Receivable</Text>
-                    <Text style={styles.totalValue}>{formatCurrency(Number(booking.owner_settlement || displayTotalAmount) * slotCount)}</Text>
+                    <Text style={styles.totalValue}>
+                      {formatCurrency(
+                        booking.relatedBookings && booking.relatedBookings.length > 0
+                          ? booking.relatedBookings.reduce((acc: number, b: any) => acc + Number(b.owner_settlement || b.total_amount || 0), 0)
+                          : Number(booking.owner_settlement || displayTotalAmount) * slotCount
+                      )}
+                    </Text>
                   </View>
                 </>
               ) : (
@@ -398,7 +462,13 @@ export default function BookingDetailsScreen() {
                         <Text style={styles.teamTagText}>{cricketTeamsLabel || '1 team'}</Text>
                       </View>
                     </View>
-                    <Text style={styles.summaryValue}>{formatCurrency(Number(booking.ground_price || displayTotalAmount) * slotCount)}</Text>
+                    <Text style={styles.summaryValue}>
+                      {formatCurrency(
+                        booking.relatedBookings && booking.relatedBookings.length > 0
+                          ? booking.relatedBookings.reduce((acc: number, b: any) => acc + Number(b.ground_price || b.total_amount || 0), 0)
+                          : Number(booking.ground_price || displayTotalAmount) * slotCount
+                      )}
+                    </Text>
                   </View>
 
                   {(booking.platform_fee_user > 0 || booking.gst_user > 0) ? (
@@ -409,7 +479,13 @@ export default function BookingDetailsScreen() {
                           <Text style={styles.gstTagTextSmall}>inc. GST</Text>
                         </View>
                       </View>
-                      <Text style={styles.summaryValue}>{formatCurrency((Number(booking.platform_fee_user || 0) + Number(booking.gst_user || 0)) * slotCount)}</Text>
+                      <Text style={styles.summaryValue}>
+                        {formatCurrency(
+                          booking.relatedBookings && booking.relatedBookings.length > 0
+                            ? booking.relatedBookings.reduce((acc: number, b: any) => acc + Number(b.platform_fee_user || 0) + Number(b.gst_user || 0), 0)
+                            : (Number(booking.platform_fee_user || 0) + Number(booking.gst_user || 0)) * slotCount
+                        )}
+                      </Text>
                     </View>
                   ) : (
                     <View style={styles.summaryRow}>
@@ -421,7 +497,15 @@ export default function BookingDetailsScreen() {
                   <View style={styles.divider} />
                   <View style={styles.totalRow}>
                     <Text style={styles.totalLabel}>Grand total</Text>
-                    <Text style={styles.totalValue}>{formatCurrency(Math.round(Number(booking.total_charged || displayTotalAmount) * slotCount))}</Text>
+                    <Text style={styles.totalValue}>
+                      {formatCurrency(
+                        Math.round(
+                          booking.relatedBookings && booking.relatedBookings.length > 0
+                            ? booking.relatedBookings.reduce((acc: number, b: any) => acc + Number(b.total_charged || b.total_amount || 0), 0)
+                            : Number(booking.total_charged || displayTotalAmount) * slotCount
+                        )
+                      )}
+                    </Text>
                   </View>
                 </>
               )}
@@ -973,6 +1057,26 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#8A9580',
     textTransform: 'uppercase',
+  },
+  slotDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F3EC',
+  },
+  slotDetailTime: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1A2215',
+    fontFamily: 'Inter',
+  },
+  slotDetailPrice: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#01C45A',
+    fontFamily: 'Inter',
   },
 });
 

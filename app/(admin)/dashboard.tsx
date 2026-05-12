@@ -53,7 +53,7 @@ export default function AdminDashboardScreen() {
 
   const loadStats = async () => {
     try {
-      setLoading(true);
+      if (stats.totalUsers === 0) setLoading(true);
 
       const [usersRes, groundsRes, bookingsRes, pendingRes] = await Promise.all([
         supabase.from('profiles').select('id', { count: 'exact', head: true }),
@@ -80,7 +80,7 @@ export default function AdminDashboardScreen() {
       styles.statCard,
       { minWidth: isDesktop ? '23.5%' : (isTablet || (isMobile && Platform.OS === 'web')) ? '48%' : '100%' }
     ]}>
-      <View style={[styles.iconContainer, { backgroundColor: color + '15' }]}>
+      <View style={[styles.iconContainer, { backgroundColor: 'transparent' }]}>
         <Icon size={18} color={color} />
         <Text style={styles.statValue}>{value}</Text>
       </View>
@@ -149,7 +149,7 @@ export default function AdminDashboardScreen() {
                 onPress={() => router.push(action.path as any)}
               >
                 <View style={styles.actionContent}>
-                  <View style={[styles.actionIconBox, { backgroundColor: action.color + '10' }]}>
+                  <View style={[styles.actionIconBox, { backgroundColor: 'transparent' }]}>
                     <action.icon size={20} color={action.color} />
                   </View>
                   <Text style={styles.actionText}>{action.label}</Text>
@@ -174,7 +174,7 @@ export default function AdminDashboardScreen() {
                 onPress={() => router.push(action.path as any)}
               >
                 <View style={styles.actionContent}>
-                  <View style={[styles.actionIconBox, { backgroundColor: action.color + '10' }]}>
+                  <View style={[styles.actionIconBox, { backgroundColor: 'transparent' }]}>
                     <action.icon size={20} color={action.color} />
                   </View>
                   <Text style={styles.actionText}>{action.label}</Text>
@@ -203,7 +203,7 @@ export default function AdminDashboardScreen() {
                 onPress={() => router.push(action.path as any)}
               >
                 <View style={styles.actionContent}>
-                  <View style={[styles.actionIconBox, { backgroundColor: action.color + '10' }]}>
+                  <View style={[styles.actionIconBox, { backgroundColor: 'transparent' }]}>
                     <action.icon size={20} color={action.color} />
                   </View>
                   <Text style={styles.actionText}>{action.label}</Text>
@@ -231,7 +231,7 @@ export default function AdminDashboardScreen() {
                 onPress={() => router.push(action.path as any)}
               >
                 <View style={styles.actionContent}>
-                  <View style={[styles.actionIconBox, { backgroundColor: action.color + '10' }]}>
+                  <View style={[styles.actionIconBox, { backgroundColor: 'transparent' }]}>
                     <action.icon size={20} color={action.color} />
                   </View>
                   <Text style={styles.actionText}>{action.label}</Text>

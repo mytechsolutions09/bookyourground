@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, Platform, TouchableOpacity, ScrollView, TextInput, Modal, useWindowDimensions } from 'react-native';
-import { Calendar, Filter, X, ChevronDown, CheckCircle2 } from 'lucide-react-native';
+import { Calendar, Filter, X, ChevronDown, CheckCircle2, Search, Banknote, Clock, Users } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { BookingWithDetails } from '@/types';
@@ -10,9 +10,9 @@ import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
 import { router } from 'expo-router';
 import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
-import { normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
+import { normalizeDbTimeToHHMM, formatTime12h } from '@/utils/bookingSlots';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
-import { formatDateDDMMYY, isDateInPast } from '@/utils/helpers';
+import { formatDateDDMMYY, isDateInPast, getStatusColor } from '@/utils/helpers';
 
 export default function AdminBookingsScreen() {
   const { width } = useWindowDimensions();
@@ -22,7 +22,7 @@ export default function AdminBookingsScreen() {
   const isDesktop = width >= 1024;
   const isSmallWeb = isWeb && width < 900;
 
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [bookings, setBookings] = useState<BookingWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -45,14 +45,39 @@ export default function AdminBookingsScreen() {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [types, setTypes] = useState<any[]>([]);
 
-  useEffect(() => {
-    if (user) {
-      setPage(0);
-      setHasMore(true);
-      loadBookings(0, false);
-      loadCounts();
+  const [isSlotModalVisible, setIsSlotModalVisible] = useState(false);
+  const [selectedSlotBookings, setSelectedSlotBookings] = useState<BookingWithDetails[]>([]);
+
+  const openSlotModal = (item: BookingWithDetails) => {
+    let relatedBookings: BookingWithDetails[] = [];
+    
+    if ((item as any).allBookingIds && (item as any).allBookingIds.length > 0) {
+      relatedBookings = bookings.filter(b => (item as any).allBookingIds.includes(b.id));
+    } else {
+      const normStart = normalizeDbTimeToHHMM(item.start_time);
+      const currentSlotKey = `${item.ground_id}_${item.booking_date}_${normStart}`;
+      relatedBookings = bookings.filter(b => 
+        (b.status === 'confirmed' || b.status === 'active' || b.status === 'completed') && 
+        `${b.ground_id}_${b.booking_date}_${normalizeDbTimeToHHMM(b.start_time)}` === currentSlotKey
+      );
     }
-  }, [user, dateRange, typeFilter]);
+    
+    setSelectedSlotBookings(relatedBookings);
+    setIsSlotModalVisible(true);
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (user) {
+        setPage(0);
+        setHasMore(true);
+        loadBookings(0, false);
+        loadCounts();
+      }
+    }, searchQuery ? 400 : 0);
+    
+    return () => clearTimeout(timer);
+  }, [user, dateRange, typeFilter, activeTab, searchQuery]);
 
   useEffect(() => {
     const loadTypes = async () => {
@@ -120,6 +145,68 @@ export default function AdminBookingsScreen() {
             ))}
           </View>
         )}
+        <Modal
+          visible={isSlotModalVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setIsSlotModalVisible(false)}
+        >
+          <View style={styles.slotModalOverlay}>
+            <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setIsSlotModalVisible(false)} />
+            <View style={styles.slotModalContent}>
+              <View style={styles.slotModalHeader}>
+                <Text style={styles.slotModalTitle}>Slot Breakdown</Text>
+                <TouchableOpacity onPress={() => setIsSlotModalVisible(false)}>
+                  <X size={20} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+              
+              <ScrollView style={{ maxHeight: 500 }}>
+                {selectedSlotBookings.sort((a, b) => `${a.booking_date}${a.start_time}` > `${b.booking_date}${b.start_time}` ? 1 : -1).map((b) => (
+                  <View key={b.id} style={styles.slotBookingItem}>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                         <View style={styles.whoAvatar}><Text style={styles.whoAvatarText}>{(b.user?.full_name || b.booked_for_name || 'C')[0].toUpperCase()}</Text></View>
+                         <View>
+                           <Text style={styles.slotBookingName}>{b.user?.full_name || b.booked_for_name || 'Customer'}</Text>
+                           <Text style={styles.slotBookingId}>ID: {b.id.substring(0, 8).toUpperCase()}</Text>
+                         </View>
+                      </View>
+
+                      <View style={styles.slotDetailsGrid}>
+                         <View style={styles.slotDetailRow}>
+                           <Calendar size={14} color="#64748B" />
+                           <Text style={styles.slotBookingDetail}>{formatDateDDMMYY(b.booking_date)}</Text>
+                         </View>
+                         <View style={styles.slotDetailRow}>
+                           <Clock size={14} color="#64748B" />
+                           <Text style={styles.slotBookingDetail}>
+                             {`${formatTime12h(normalizeDbTimeToHHMM(b.start_time) || '')} – ${formatTime12h(normalizeDbTimeToHHMM(b.end_time) || '')}`}
+                           </Text>
+                         </View>
+                         <View style={styles.slotDetailRow}>
+                           <Users size={14} color="#64748B" />
+                           <Text style={styles.slotBookingDetail}>
+                             {(cricketTeamsLabelFromBooking(b.ground.pitch_type, b.notes) || '1 Team').toUpperCase()}
+                           </Text>
+                         </View>
+                         <View style={styles.slotDetailRow}>
+                           <Banknote size={14} color="#059669" />
+                           <Text style={[styles.slotBookingDetail, { color: '#059669', fontWeight: '700' }]}>₹{b.total_amount}</Text>
+                         </View>
+                      </View>
+                    </View>
+                    <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(b.status)}15`, height: 24, paddingHorizontal: 8, borderRadius: 12 }]}>
+                      <Text style={[styles.statusText, { color: getStatusColor(b.status), fontSize: 10, fontWeight: '800' }]}>
+                        {b.status.toUpperCase()}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
       </View>
     );
   };
@@ -205,7 +292,23 @@ export default function AdminBookingsScreen() {
         .order('booking_date', { ascending: false });
 
       if (typeFilter !== 'all') {
-        query = query.eq('grounds.pitch_type', typeFilter);
+        // Since we alias as 'ground', we filter on the joined table's column
+        query = query.eq('ground.pitch_type', typeFilter);
+      }
+      
+      const todayIso = new Date().toISOString().split('T')[0];
+      if (activeTab === 'upcoming') {
+        query = query.gte('booking_date', todayIso);
+      } else if (activeTab === 'past') {
+        query = query.lt('booking_date', todayIso);
+      } else if (activeTab === 'cancelled') {
+        query = query.eq('status', 'cancelled');
+      }
+
+      if (searchQuery.trim()) {
+        const q = `%${searchQuery.trim().toLowerCase()}%`;
+        // Supabase allows filtering on joined tables using the dot notation
+        query = query.or(`id.ilike.${q},notes.ilike.${q},ground.name.ilike.${q},ground.city.ilike.${q},user.full_name.ilike.${q}`);
       }
 
       if (dateRange.start) {
@@ -343,43 +446,80 @@ export default function AdminBookingsScreen() {
       else Alert.alert('Error', err.message || 'Failed to update payout');
     }
   };
-  const filteredBookings = useMemo(
-    () => {
-      const d = new Date();
-      const todayIso = d.toISOString().split('T')[0];
+  const filteredBookings = useMemo(() => {
+    if (!bookings || bookings.length === 0) return [];
 
-      let filtered = bookings;
+    // Grouping logic to consolidate multi-slot bookings (including multi-date transactions)
+    const consolidatedMap = new Map<string, BookingWithDetails & { allDates?: string[], allSlots?: string[], allBookingIds?: string[] }>();
+    
+    bookings.forEach(b => {
+      // Extract (Slots: ...) from notes to use as part of the grouping key
+      const matchSlots = /\(Slots:\s*([^)]+)\)/.exec(b.notes || '');
+      const slotsKey = matchSlots ? matchSlots[1] : `single_${b.start_time}`;
+      
+      // Use created_at (truncated to minute) to group bookings from the same transaction
+      const createdAtMinute = b.created_at ? b.created_at.substring(0, 16) : 'unknown';
+      const groupKey = `${b.user_id}_${b.ground_id}_${createdAtMinute}_${slotsKey}`;
 
-      // 1. Date Filter
-      if (selectedDate) {
-        filtered = filtered.filter((b) => b.booking_date === selectedDate);
-      }
-
-      // 2. Tab Filter (only if no specific date is selected)
-      if (!selectedDate && activeTab !== 'all') {
-        filtered = activeTab === 'upcoming'
-          ? filtered.filter((b) => b.booking_date >= todayIso)
-          : activeTab === 'past'
-            ? filtered.filter((b) => b.booking_date < todayIso)
-            : filtered.filter((b) => b.status === 'cancelled');
-      }
-
-      // 3. Search Filter
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        filtered = filtered.filter((b) => {
-          const gn = (b.ground?.name || '').toLowerCase();
-          const city = (b.ground?.city || '').toLowerCase();
-          const customer = (b.user?.full_name || '').toLowerCase();
-          const bid = (b.id || '').toLowerCase();
-          return gn.includes(q) || city.includes(q) || customer.includes(q) || bid.includes(q);
+      if (!consolidatedMap.has(groupKey)) {
+        consolidatedMap.set(groupKey, { 
+          ...b, 
+          allDates: [b.booking_date],
+          allSlots: matchSlots ? [matchSlots[1]] : [`${normalizeDbTimeToHHMM(b.start_time)} – ${normalizeDbTimeToHHMM(b.end_time)}`],
+          allBookingIds: [b.id]
         });
+      } else {
+        const existing = consolidatedMap.get(groupKey)!;
+        existing.total_amount = Number(((existing.total_amount || 0) + (b.total_amount || 0)).toFixed(2));
+        existing.discount_amount = Number(((existing.discount_amount || 0) + (b.discount_amount || 0)).toFixed(2));
+        if (!existing.allDates?.includes(b.booking_date)) {
+          existing.allDates?.push(b.booking_date);
+        }
+        const slotLabel = matchSlots ? matchSlots[1] : `${normalizeDbTimeToHHMM(b.start_time)} – ${normalizeDbTimeToHHMM(b.end_time)}`;
+        if (!existing.allSlots?.includes(slotLabel)) {
+          existing.allSlots?.push(slotLabel);
+        }
+        if (!existing.allBookingIds?.includes(b.id)) {
+          existing.allBookingIds?.push(b.id);
+        }
       }
+    });
 
-      return filtered;
-    },
-    [bookings, selectedDate, activeTab, searchQuery],
-  );
+    let result = Array.from(consolidatedMap.values()).map(b => {
+      let displayDate = formatDateDDMMYY(b.booking_date);
+      if (b.allDates && b.allDates.length > 1) {
+        const sortedDates = [...b.allDates].sort();
+        displayDate = `${formatDateDDMMYY(sortedDates[0])} – ${formatDateDDMMYY(sortedDates[sortedDates.length - 1])}`;
+      }
+      return { ...b, displayDate };
+    });
+
+    // Detect matches (showing opponents)
+    const slotGroups = bookings.reduce((acc, b) => {
+      const key = `${b.ground_id}_${b.booking_date}_${b.start_time}`;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(b);
+      return acc;
+    }, {} as Record<string, BookingWithDetails[]>);
+
+    // If it's a user view (though this is admin screen, keep logic robust)
+    if (profile?.role === 'user') {
+      result = result.map(b => {
+        const key = `${b.ground_id}_${b.booking_date}_${b.start_time}`;
+        const group = slotGroups[key] || [];
+        const opponent = group.find(ob => ob.user_id !== b.user_id);
+        if (opponent) {
+          return {
+            ...b,
+            opponent: (opponent as any).profile
+          };
+        }
+        return b;
+      });
+    }
+
+    return result;
+  }, [bookings, profile?.role]);
 
   const todayIsoForCounts = useMemo(() => {
     const d = new Date();
@@ -545,14 +685,20 @@ export default function AdminBookingsScreen() {
                 </View>
               )}
 
-              <View style={{ width: isMobile ? '100%' : 200, flex: 0 }}>
+              <View style={[styles.searchContainer, { width: isMobile ? '100%' : 280 }]}>
+                <Search size={16} color="#9CA3AF" style={styles.searchIcon} />
                 <TextInput
-                  style={styles.searchBar}
-                  placeholder="Search ground, city, customer or ID..."
+                  style={styles.searchInput}
+                  placeholder="Search bookings..."
                   placeholderTextColor="#9CA3AF"
                   value={searchQuery}
                   onChangeText={setSearchQuery}
                 />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.searchClearBtn}>
+                    <X size={14} color="#9CA3AF" />
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
           </View>
@@ -606,12 +752,32 @@ export default function AdminBookingsScreen() {
                   </Text>
                 </View>
 
-                <View style={[styles.tableCell, styles.colDateTime]}>
-                  <Text style={styles.dateText}>{formatDateDDMMYY(item.booking_date)}</Text>
-                  <Text style={styles.timeText}>
-                    {`${normalizeDbTimeToHHMM(item.start_time)} – ${normalizeDbTimeToHHMM(item.end_time)}`}
+                <TouchableOpacity 
+                  style={[styles.tableCell, styles.colDateTime]}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    openSlotModal(item);
+                  }}
+                >
+                  <Text style={[styles.dateText, { color: '#01b854', textDecorationLine: 'underline' }]}>
+                    {(item as any).displayDate || formatDateDDMMYY(item.booking_date)}
                   </Text>
-                </View>
+                  {(() => {
+                    const slotsToDisplay = (item as any).allSlots && (item as any).allSlots.length > 0 
+                      ? (item as any).allSlots 
+                      : null;
+                    
+                    if (slotsToDisplay) {
+                      return <Text style={styles.timeText} numberOfLines={2}>{slotsToDisplay.join(', ')}</Text>;
+                    }
+                    
+                    return (
+                      <Text style={styles.timeText}>
+                        {`${formatTime12h(normalizeDbTimeToHHMM(item.start_time) || '')} – ${formatTime12h(normalizeDbTimeToHHMM(item.end_time) || '')}`}
+                      </Text>
+                    );
+                  })()}
+                </TouchableOpacity>
 
                 {(() => {
                   const normStart = normalizeDbTimeToHHMM(item.start_time);
@@ -765,7 +931,7 @@ export default function AdminBookingsScreen() {
               )}
             </TouchableOpacity>
           ) : bookings.length > 0 ? (
-            <Text style={styles.noMoreText}>END OF LIST</Text>
+            <Text style={styles.noMoreText}>That's all for now! No more bookings to load.</Text>
           ) : null
         )}
         ListEmptyComponent={
@@ -826,19 +992,31 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   searchContainer: {
-    flex: 1,
-    maxWidth: 400,
-  },
-  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#F3F4F6',
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    fontSize: 14,
-    fontFamily: 'Inter',
-    color: '#111827',
+    borderRadius: 8,
+    paddingHorizontal: 12,
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    height: 36,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: 'Inter',
+    color: '#111827',
+    paddingVertical: 0,
+    height: '100%',
+    ...Platform.select({
+      web: { outlineStyle: 'none' }
+    }) as any,
+  },
+  searchClearBtn: {
+    padding: 4,
   },
   list: {
     paddingBottom: 40,
@@ -927,6 +1105,100 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#01b854',
     marginTop: 4,
+    fontFamily: 'Inter',
+  },
+  slotModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  slotModalContent: {
+    width: '100%',
+    maxWidth: 500,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  slotModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    paddingBottom: 12,
+  },
+  slotModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+  },
+  slotBookingItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  slotBookingName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0F172A',
+    fontFamily: 'Inter',
+    marginBottom: 2,
+  },
+  slotBookingId: {
+    fontSize: 11,
+    color: '#94A3B8',
+    fontFamily: 'Inter',
+    marginBottom: 8,
+  },
+  whoAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  whoAvatarText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#64748B',
+  },
+  slotDetailsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 4,
+  },
+  slotDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  slotBookingDetail: {
+    fontSize: 12,
+    color: '#64748B',
+    fontFamily: 'Inter',
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
     fontFamily: 'Inter',
   },
   groundName: {

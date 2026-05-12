@@ -511,37 +511,91 @@ serve(async (req) => {
           bygNetRevenue
         } = calculateFinalAmounts(bookingDetails, ground?.pitch_type, settings, ground?.owner?.charge_platform_fee === false);
 
-        const { data: newBooking, error: insertError } = await supabaseClient
-          .from('bookings')
-          .insert({
-            user_id: user.id,
-            ground_id,
-            booking_date,
-            start_time,
-            end_time,
-            total_hours: Number(bookingDetails.total_hours ?? 1),
-            price_per_hour: pricePerHour,
-            total_amount: netAmount,
-            ground_price: groundPrice,
-            platform_fee_user: platformFeeUser,
-            platform_fee_owner: platformFeeOwner,
-            gst_user: gstUser,
-            gst_owner: gstOwner,
-            total_charged: totalCharged,
-            owner_settlement: ownerSettlement,
-            byg_net_revenue: bygNetRevenue,
-            coupon_id,
-            discount_amount: discountAmount,
-            notes: (team_type === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Paid via PayU: ${txnid})`,
-            status: 'confirmed',
-            payment_method: 'payu',
-            payment_received: true,
-          })
-          .select('id')
-          .single();
+        if (slots && Array.isArray(slots) && slots.length > 0) {
+          const slotTimesOnly = slots.map(s => s.split('__')[1] || s);
+          const bookingsToInsert = slots.map((slotStr: string, idx: number) => {
+            const parts = slotStr.split('__');
+            const datePart = parts[0] || booking_date;
+            const timePart = parts[1] || slotStr;
+            const slotTeamType = parts[2] || team_type;
+            
+            const [hours, minutes] = timePart.split(':').map(Number);
+            const duration = bookingDetails.slotDuration || 20;
+            const totalMinutes = hours * 60 + minutes + duration;
+            const endHours = Math.floor(totalMinutes / 60) % 24;
+            const endMinutes = totalMinutes % 60;
+            const endTimeStr = `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
 
-        if (insertError) throw insertError;
-        finalBookingId = newBooking.id;
+            const currentSlotPrice = (bookingDetails.slotPrices && typeof bookingDetails.slotPrices[idx] !== 'undefined') ? Number(bookingDetails.slotPrices[idx]) : (breakdown.netAmount / slots.length);
+            const totalSlotPrices = (bookingDetails.slotPrices && bookingDetails.slotPrices.length > 0) ? bookingDetails.slotPrices.reduce((a: number, b: number) => a + Number(b), 0) : breakdown.netAmount;
+            const weight = totalSlotPrices > 0 ? (currentSlotPrice / totalSlotPrices) : (1 / slots.length);
+
+            return {
+              user_id: user.id,
+              ground_id,
+              booking_date: datePart,
+              start_time: timePart,
+              end_time: endTimeStr,
+              total_hours: duration / 60,
+              price_per_hour: currentSlotPrice,
+              total_amount: Math.round(breakdown.netAmount * weight * 100) / 100,
+              ground_price: Math.round(breakdown.groundPrice * weight * 100) / 100,
+              platform_fee_user: Math.round(breakdown.platformFeeUser * weight * 100) / 100,
+              platform_fee_owner: Math.round(breakdown.platformFeeOwner * weight * 100) / 100,
+              gst_user: Math.round(breakdown.gstUser * weight * 100) / 100,
+              gst_owner: Math.round(breakdown.gstOwner * weight * 100) / 100,
+              total_charged: Math.round(breakdown.totalCharged * weight * 100) / 100,
+              owner_settlement: Math.round(breakdown.ownerSettlement * weight * 100) / 100,
+              byg_net_revenue: Math.round(breakdown.bygNetRevenue * weight * 100) / 100,
+              coupon_id,
+              discount_amount: Math.round(breakdown.discountAmount * weight * 100) / 100,
+              notes: (slotTeamType === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Slots: ${slotTimesOnly.join(', ')})` + ` (Paid via PayU: ${txnid})`,
+              status: 'confirmed',
+              payment_method: 'payu',
+              payment_received: true,
+            };
+          });
+
+          const { data: newBookings, error: insertError } = await supabaseClient
+            .from('bookings')
+            .insert(bookingsToInsert)
+            .select('id');
+
+          if (insertError) throw insertError;
+          finalBookingId = newBookings[0].id;
+        } else {
+          const { data: newBooking, error: insertError } = await supabaseClient
+            .from('bookings')
+            .insert({
+              user_id: user.id,
+              ground_id,
+              booking_date,
+              start_time,
+              end_time,
+              total_hours: Number(bookingDetails.total_hours ?? 1),
+              price_per_hour: breakdown.pricePerHour,
+              total_amount: breakdown.netAmount,
+              ground_price: breakdown.groundPrice,
+              platform_fee_user: breakdown.platformFeeUser,
+              platform_fee_owner: breakdown.platformFeeOwner,
+              gst_user: breakdown.gstUser,
+              gst_owner: breakdown.gstOwner,
+              total_charged: breakdown.totalCharged,
+              owner_settlement: breakdown.ownerSettlement,
+              byg_net_revenue: breakdown.bygNetRevenue,
+              coupon_id,
+              discount_amount: breakdown.discountAmount,
+              notes: (team_type === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Paid via PayU: ${txnid})`,
+              status: 'confirmed',
+              payment_method: 'payu',
+              payment_received: true,
+            })
+            .select('id')
+            .single();
+
+          if (insertError) throw insertError;
+          finalBookingId = newBooking.id;
+        }
       }
 
       // Record transaction
@@ -700,9 +754,23 @@ serve(async (req) => {
 
         if (slots && Array.isArray(slots) && slots.length > 0) {
           console.log(`[Cash] Creating multiple bookings for slots: ${slots.join(', ')}`);
-          const bookingsToInsert = slots.map((slotStr: string) => {
+          const slotTimesOnly = slots.map(s => s.split('__')[1] || s);
+          
+          // Pre-calculate adjusted slot prices to ensure correct weighting even if prices are 0
+          const adjustedSlotPrices = slots.map((slotStr: string, idx: number) => {
             const parts = slotStr.split('__');
-            const datePart = parts[0];
+            const slotTeamType = parts[2] || team_type;
+            let p = (bookingDetails.slotPrices && typeof bookingDetails.slotPrices[idx] !== 'undefined') ? Number(bookingDetails.slotPrices[idx]) : 0;
+            if (p === 0) {
+              p = slotTeamType === 'one' ? 0.5 : 1.0;
+            }
+            return p;
+          });
+          const totalSlotPrices = adjustedSlotPrices.reduce((a: number, b: number) => a + b, 0);
+
+          const bookingsToInsert = slots.map((slotStr: string, idx: number) => {
+            const parts = slotStr.split('__');
+            const datePart = parts[0] || booking_date;
             const timePart = parts[1] || slotStr;
             const slotTeamType = parts[2] || team_type;
             
@@ -713,6 +781,13 @@ serve(async (req) => {
             const endMinutes = totalMinutes % 60;
             const endTime = `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
             
+            const currentSlotPrice = adjustedSlotPrices[idx];
+            const weight = totalSlotPrices > 0 ? (currentSlotPrice / totalSlotPrices) : (1 / slots.length);
+            
+            // If the sum of adjusted slot prices matches the netAmount, use the prices directly
+            const useDirectPrices = Math.abs(totalSlotPrices - netAmount) < 1;
+            const slotTotalAmount = useDirectPrices ? currentSlotPrice : Math.round(netAmount * weight * 100) / 100;
+
             return {
               user_id: user.id,
               ground_id,
@@ -720,20 +795,20 @@ serve(async (req) => {
               start_time: timePart,
               end_time: endTime,
               total_hours: duration / 60,
-              price_per_hour: pricePerHour / slots.length,
-              total_amount: netAmount / slots.length,
-              ground_price: groundPrice / slots.length,
-              platform_fee_user: platformFeeUser / slots.length,
-              platform_fee_owner: platformFeeOwner / slots.length,
-              gst_user: gstUser / slots.length,
-              gst_owner: gstOwner / slots.length,
-              total_charged: totalCharged / slots.length,
-              owner_settlement: ownerSettlement / slots.length,
-              byg_net_revenue: bygNetRevenue / slots.length,
+              price_per_hour: currentSlotPrice,
+              total_amount: slotTotalAmount,
+              ground_price: Math.round(groundPrice * weight * 100) / 100,
+              platform_fee_user: Math.round(platformFeeUser * weight * 100) / 100,
+              platform_fee_owner: Math.round(platformFeeOwner * weight * 100) / 100,
+              gst_user: Math.round(gstUser * weight * 100) / 100,
+              gst_owner: Math.round(gstOwner * weight * 100) / 100,
+              total_charged: Math.round(totalCharged * weight * 100) / 100,
+              owner_settlement: Math.round(ownerSettlement * weight * 100) / 100,
+              byg_net_revenue: Math.round(bygNetRevenue * weight * 100) / 100,
               coupon_id,
-              discount_amount: discountAmount / slots.length,
+              discount_amount: Math.round(discountAmount * weight * 100) / 100,
               booked_for_name: bookingDetails.booked_for_name || bookingDetails.bookedForName,
-              notes: (slotTeamType === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Slots: ${slots.join(', ')}) (Duration: ${duration}) (Player: ${bookingDetails.booked_for_name || bookingDetails.bookedForName || 'Manual Entry'})` + ' (Cash Payment confirmed by Owner)',
+              notes: (slotTeamType === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Slots: ${slotTimesOnly.join(', ')}) (Player: ${bookingDetails.booked_for_name || bookingDetails.bookedForName || 'Manual Entry'})` + ' (Cash Payment confirmed by Owner)',
               status: 'confirmed',
               payment_method: 'cash',
             };
@@ -1041,32 +1116,58 @@ serve(async (req) => {
 
         if (slots && Array.isArray(slots) && slots.length > 0) {
           console.log(`[Razorpay] Creating multiple bookings for slots: ${slots.join(', ')}`);
-          const bookingsToInsert = slots.map((slotStr: string) => {
+          const slotTimesOnly = slots.map(s => s.split('__')[1] || s);
+          
+          // Pre-calculate adjusted slot prices to ensure correct weighting even if prices are 0
+          const adjustedSlotPrices = slots.map((slotStr: string, idx: number) => {
             const parts = slotStr.split('__');
-            const datePart = parts[0];
+            const slotTeamType = parts[2] || team_type;
+            let p = (bookingDetails.slotPrices && typeof bookingDetails.slotPrices[idx] !== 'undefined') ? Number(bookingDetails.slotPrices[idx]) : 0;
+            if (p === 0) {
+              p = slotTeamType === 'one' ? 0.5 : 1.0;
+            }
+            return p;
+          });
+          const totalSlotPrices = adjustedSlotPrices.reduce((a: number, b: number) => a + b, 0);
+
+          const bookingsToInsert = slots.map((slotStr: string, idx: number) => {
+            const parts = slotStr.split('__');
+            const datePart = parts[0] || booking_date;
             const timePart = parts[1] || slotStr;
             const slotTeamType = parts[2] || team_type;
+
+            const [hours, minutes] = timePart.split(':').map(Number);
+            const duration = bookingDetails.slotDuration || 20;
+            const totalMinutes = hours * 60 + minutes + duration;
+            const endHours = Math.floor(totalMinutes / 60) % 24;
+            const endMinutes = totalMinutes % 60;
+            const endTimeStr = `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
+
+            const currentSlotPrice = adjustedSlotPrices[idx];
+            const weight = totalSlotPrices > 0 ? (currentSlotPrice / totalSlotPrices) : (1 / slots.length);
+
             return {
               user_id: user.id,
               ground_id,
               booking_date: datePart,
               start_time: timePart,
-              total_hours: 1,
-              price_per_hour: pricePerHour / slots.length,
-              total_amount: netAmount / slots.length,
-              ground_price: groundPrice / slots.length,
-              platform_fee_user: platformFeeUser / slots.length,
-              platform_fee_owner: platformFeeOwner / slots.length,
-              gst_user: gstUser / slots.length,
-              gst_owner: gstOwner / slots.length,
-              total_charged: totalCharged / slots.length,
-              owner_settlement: ownerSettlement / slots.length,
-              byg_net_revenue: bygNetRevenue / slots.length,
+              end_time: endTimeStr,
+              total_hours: duration / 60,
+              price_per_hour: currentSlotPrice,
+              total_amount: Math.round(netAmount * weight * 100) / 100,
+              ground_price: Math.round(groundPrice * weight * 100) / 100,
+              platform_fee_user: Math.round(platformFeeUser * weight * 100) / 100,
+              platform_fee_owner: Math.round(platformFeeOwner * weight * 100) / 100,
+              gst_user: Math.round(gstUser * weight * 100) / 100,
+              gst_owner: Math.round(gstOwner * weight * 100) / 100,
+              total_charged: Math.round(totalCharged * weight * 100) / 100,
+              owner_settlement: Math.round(ownerSettlement * weight * 100) / 100,
+              byg_net_revenue: Math.round(bygNetRevenue * weight * 100) / 100,
               razorpay_order_id,
               razorpay_transfer_id: razorpayTransferId,
               coupon_id,
-              discount_amount: discountAmount / slots.length,
-              notes: (slotTeamType === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Slot: ${timePart})` + ` (Paid via Razorpay: ${razorpay_payment_id})`,
+              discount_amount: Math.round(discountAmount * weight * 100) / 100,
+              notes: (slotTeamType === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Slots: ${slotTimesOnly.join(', ')})` + ` (Paid via Razorpay: ${razorpay_payment_id})`,
               status: 'confirmed',
               payment_method: (bookingDetails.wallet_amount ?? 0) > 0 ? 'split_wallet_razorpay' : 'razorpay',
               payment_received: true,
@@ -1249,33 +1350,47 @@ serve(async (req) => {
 
         if (slots && Array.isArray(slots) && slots.length > 0) {
           console.log(`[Wallet] Creating multiple bookings for slots: ${slots.join(', ')}`);
-          const bookingsToInsert = slots.map((slotStr: string) => {
+          const slotTimesOnly = slots.map(s => s.split('__')[1] || s);
+          const bookingsToInsert = slots.map((slotStr: string, idx: number) => {
             const parts = slotStr.split('__');
-            const datePart = parts[0];
+            const datePart = parts[0] || details.booking_date;
             const timePart = parts[1] || slotStr;
             const slotTeamType = parts[2] || details.team_type;
+
+            const [hours, minutes] = timePart.split(':').map(Number);
+            const duration = details.slotDuration || 20;
+            const totalMinutes = hours * 60 + minutes + duration;
+            const endHours = Math.floor(totalMinutes / 60) % 24;
+            const endMinutes = totalMinutes % 60;
+            const endTimeStr = `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
+
+            const currentSlotPrice = (details.slotPrices && typeof details.slotPrices[idx] !== 'undefined') ? Number(details.slotPrices[idx]) : (breakdown.netAmount / slots.length);
+            const totalSlotPrices = (details.slotPrices && details.slotPrices.length > 0) ? details.slotPrices.reduce((a: number, b: number) => a + Number(b), 0) : breakdown.netAmount;
+            const weight = totalSlotPrices > 0 ? (currentSlotPrice / totalSlotPrices) : (1 / slots.length);
+
             return {
               user_id: user.id,
               ground_id: details.ground_id,
               booking_date: datePart,
               start_time: timePart,
-              total_hours: 1,
-              price_per_hour: breakdown.pricePerHour / slots.length,
-              total_amount: breakdown.netAmount / slots.length,
-              ground_price: breakdown.groundPrice / slots.length,
-              platform_fee_user: breakdown.platformFeeUser / slots.length,
-              platform_fee_owner: breakdown.platformFeeOwner / slots.length,
-              gst_user: breakdown.gstUser / slots.length,
-              gst_owner: breakdown.gstOwner / slots.length,
-              total_charged: breakdown.totalCharged / slots.length,
-              owner_settlement: breakdown.ownerSettlement / slots.length,
-              byg_net_revenue: breakdown.bygNetRevenue / slots.length,
+              end_time: endTimeStr,
+              total_hours: duration / 60,
+              price_per_hour: currentSlotPrice,
+              total_amount: Math.round(breakdown.netAmount * weight * 100) / 100,
+              ground_price: Math.round(breakdown.groundPrice * weight * 100) / 100,
+              platform_fee_user: Math.round(breakdown.platformFeeUser * weight * 100) / 100,
+              platform_fee_owner: Math.round(breakdown.platformFeeOwner * weight * 100) / 100,
+              gst_user: Math.round(breakdown.gstUser * weight * 100) / 100,
+              gst_owner: Math.round(breakdown.gstOwner * weight * 100) / 100,
+              total_charged: Math.round(breakdown.totalCharged * weight * 100) / 100,
+              owner_settlement: Math.round(breakdown.ownerSettlement * weight * 100) / 100,
+              byg_net_revenue: Math.round(breakdown.bygNetRevenue * weight * 100) / 100,
               coupon_id: details.coupon_id,
-              discount_amount: breakdown.discountAmount / slots.length,
+              discount_amount: Math.round(breakdown.discountAmount * weight * 100) / 100,
               status: 'confirmed',
               payment_method: 'wallet',
               payment_received: true,
-              notes: (slotTeamType === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Slot: ${timePart}) (Paid via Wallet)`,
+              notes: (slotTeamType === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Slots: ${slotTimesOnly.join(', ')}) (Paid via Wallet)`,
             };
           });
 

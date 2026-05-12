@@ -86,9 +86,13 @@ serve(async (req) => {
               <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);">
                 <!-- Header -->
                 <tr>
-                  <td align="center" style="background-color: ${isCancelled ? '#7f1d1d' : '#043529'}; padding: 48px 24px;">
+                  <td align="center" style="padding: 32px 24px; background-color: #ffffff; border-bottom: 1px solid #f1f5f9;">
                     <img src="https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/assets/logo.png" alt="BookYourGround" style="width: 180px; height: auto; display: block; margin: 0 auto;">
-                    <div style="margin-top: 24px; display: inline-block; background-color: ${isCancelled ? 'rgba(239, 68, 68, 0.1)' : 'rgba(2, 194, 89, 0.1)'}; border: 1px solid ${isCancelled ? '#ef4444' : '#02c259'}; border-radius: 99px; padding: 6px 16px;">
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="background-color: ${isCancelled ? '#7f1d1d' : '#043529'}; padding: 40px 24px;">
+                    <div style="display: inline-block; background-color: ${isCancelled ? 'rgba(239, 68, 68, 0.1)' : 'rgba(2, 194, 89, 0.1)'}; border: 1px solid ${isCancelled ? '#ef4444' : '#02c259'}; border-radius: 99px; padding: 6px 16px;">
                       <p style="color: ${isCancelled ? '#ef4444' : '#02c259'}; margin: 0; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;">${isCancelled ? 'Booking Cancelled' : 'Booking Confirmed'}</p>
                     </div>
                   </td>
@@ -126,11 +130,11 @@ serve(async (req) => {
                         <tr>
                           <td style="padding-bottom: 24px;">
                             <p style="color: #64748b; margin: 0 0 6px 0; font-size: 12px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Date</p>
-                            <p style="color: #111827; margin: 0; font-size: 17px; font-weight: 700;">${record.booking_date}</p>
+                            <p style="color: #111827; margin: 0; font-size: 17px; font-weight: 700;">${record.booking_date.substring(0, 10)}</p>
                           </td>
                           <td style="padding-bottom: 24px;">
                             <p style="color: #64748b; margin: 0 0 6px 0; font-size: 12px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Time</p>
-                            <p style="color: #111827; margin: 0; font-size: 17px; font-weight: 700;">${record.start_time.substring(0, 5)} - ${record.end_time.substring(0, 5)}</p>
+                            <p style="color: #111827; margin: 0; font-size: 17px; font-weight: 700;">${record.start_time.split(':').slice(0, 2).join(':')} - ${record.end_time.split(':').slice(0, 2).join(':')}</p>
                           </td>
                         </tr>
                         <tr>
@@ -203,9 +207,13 @@ serve(async (req) => {
               <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);">
                 <!-- Header -->
                 <tr>
-                  <td align="center" style="background-color: ${isCancelled ? '#7f1d1d' : '#043529'}; padding: 48px 24px;">
+                  <td align="center" style="padding: 32px 24px; background-color: #ffffff; border-bottom: 1px solid #f1f5f9;">
                     <img src="https://nwvarvvyhjkvtgijwfkc.supabase.co/storage/v1/object/public/assets/logo.png" alt="BookYourGround" style="width: 180px; height: auto; display: block; margin: 0 auto;">
-                    <div style="margin-top: 24px; display: inline-block; background-color: ${isCancelled ? 'rgba(239, 68, 68, 0.1)' : 'rgba(2, 194, 89, 0.1)'}; border: 1px solid ${isCancelled ? '#ef4444' : '#02c259'}; border-radius: 99px; padding: 6px 16px;">
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="background-color: ${isCancelled ? '#7f1d1d' : '#043529'}; padding: 40px 24px;">
+                    <div style="display: inline-block; background-color: ${isCancelled ? 'rgba(239, 68, 68, 0.1)' : 'rgba(2, 194, 89, 0.1)'}; border: 1px solid ${isCancelled ? '#ef4444' : '#02c259'}; border-radius: 99px; padding: 6px 16px;">
                       <p style="color: ${isCancelled ? '#ef4444' : '#02c259'}; margin: 0; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;">${isCancelled ? 'Booking Cancelled' : 'New Booking Alert'}</p>
                     </div>
                   </td>
@@ -238,11 +246,11 @@ serve(async (req) => {
                         <tr>
                           <td style="padding-top: 24px; border-top: 1px solid #e2e8f0;">
                             <p style="color: #64748b; margin: 0 0 6px 0; font-size: 12px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Date</p>
-                            <p style="color: #111827; margin: 0; font-size: 17px; font-weight: 700;">${record.booking_date}</p>
+                            <p style="color: #111827; margin: 0; font-size: 17px; font-weight: 700;">${record.booking_date.substring(0, 10)}</p>
                           </td>
                           <td style="padding-top: 24px; border-top: 1px solid #e2e8f0;">
                             <p style="color: #64748b; margin: 0 0 6px 0; font-size: 12px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Time</p>
-                            <p style="color: #111827; margin: 0; font-size: 17px; font-weight: 700;">${record.start_time.substring(0, 5)} - ${record.end_time.substring(0, 5)}</p>
+                            <p style="color: #111827; margin: 0; font-size: 17px; font-weight: 700;">${record.start_time.split(':').slice(0, 2).join(':')} - ${record.end_time.split(':').slice(0, 2).join(':')}</p>
                           </td>
                         </tr>
                       </table>

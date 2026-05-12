@@ -41,19 +41,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const loadingProfileRef = React.useRef<string | null>(null);
 
-  const loadProfile = useCallback(async (userId: string) => {
+  const loadProfile = useCallback(async (userId: string, retryCount = 0) => {
+    // Prevent duplicate concurrent loads for the same user
+    if (loadingProfileRef.current === userId && retryCount === 0) return;
+    loadingProfileRef.current = userId;
+
     try {
-      // Use a timeout for the profile fetch itself
+      setLoading(true);
+      
       const profilePromise = supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .maybeSingle();
 
-      // Race against a 30-second timeout for the database call
+      // Increased timeout to 25s for better reliability on slower networks
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 30000)
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 25000)
       );
 
       const { data, error } = await Promise.race([profilePromise, timeoutPromise]) as any;
@@ -62,82 +68,94 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (data) {
         setProfile(prev => {
-          if (prev && prev.id === data.id && prev.role === data.role && prev.full_name === data.full_name) {
+          if (prev && prev.id === data.id && 
+              prev.role === data.role && 
+              prev.full_name === data.full_name &&
+              prev.avatar_url === data.avatar_url &&
+              prev.business_verified === data.business_verified) {
             return prev;
           }
           return data;
         });
+      } else {
+        // If no profile found, we might want to wait a bit and retry (sometimes auth hook fires before profile trigger)
+        if (retryCount < 2) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          return loadProfile(userId, retryCount + 1);
+        }
       }
       
       void scheduleMatchReminders(userId);
-    } catch (error) {
-      console.error('Error loading profile:', error);
-      // Don't leave the app in a permanent loading state on error
-      setLoading(false);
+    } catch (error: any) {
+      const errorMsg = error?.message || String(error);
+      console.error(`AuthContext: Error loading profile (Attempt ${retryCount + 1}):`, errorMsg);
+      
+      const isRetryable = errorMsg.includes('timeout') || 
+                          errorMsg.toLowerCase().includes('fetch') || 
+                          errorMsg.toLowerCase().includes('network') ||
+                          errorMsg.toLowerCase().includes('aborted');
+
+      // Retry on timeout or common network errors
+      if (retryCount < 2 && isRetryable) {
+        const delay = (retryCount + 1) * 2000; // Exponential-ish backoff
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return loadProfile(userId, retryCount + 1);
+      }
     } finally {
+      if (loadingProfileRef.current === userId) {
+        loadingProfileRef.current = null;
+      }
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     let profileTimeout: NodeJS.Timeout;
+    let isMounted = true;
 
-    // Use onAuthStateChange for all auth state management, including initial session
+    // Use onAuthStateChange for all auth state management
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!isMounted) return;
+
       // console.log('Auth event:', event, !!session);
       
       const newUser = session?.user ?? null;
       
-      // Update session and user states
-      setSession(session);
-      setUser(newUser);
+      // Only update states if they actually changed to avoid re-render loops
+      setSession(prev => prev?.access_token === session?.access_token ? prev : session);
+      setUser(prev => prev?.id === newUser?.id ? prev : newUser);
 
       if (newUser) {
-        // Clear any existing timeout
         if (profileTimeout) clearTimeout(profileTimeout);
 
-        // Set a safety timeout: don't block the app for more than 35 seconds on profile loading
+        // Safety timeout to ensure loading always finishes (extended to match profile timeout)
         profileTimeout = setTimeout(() => {
-          setLoading(false);
-        }, 35000);
+          if (isMounted) setLoading(false);
+        }, 30000);
 
-        // Load profile if needed (avoid loop by checking if we already have it)
-        // We use a local ref or just rely on the fact that loadProfile is stable
-        await loadProfile(newUser.id);
+        // Load profile if we don't have it or if it's a new user
+        // We always try to refresh it on SIGNED_IN or INITIAL_SESSION
+        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || !profile) {
+          await loadProfile(newUser.id);
+        } else {
+          // On other events like TOKEN_REFRESHED, we just make sure loading is false
+          setLoading(false);
+        }
         
-        // Schedule 6 AM reminders for today's matches
         void scheduleMatchReminders(newUser.id);
       } else {
-        setProfile(null);
+        // Only wipe profile if the user is truly signed out
+        if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
+          setProfile(null);
+        }
         setLoading(false);
       }
     });
 
-    // Handle window focus on Web to ensure session is fresh after idleness
-    const handleFocus = async () => {
-      if (Platform.OS === 'web') {
-        try {
-          const { data: { session: currentSession } } = await supabase.auth.getSession();
-          if (currentSession) {
-            setSession(currentSession);
-            setUser(currentSession.user);
-          }
-        } catch (err) {
-          console.warn('Error refreshing session on focus:', err);
-        }
-      }
-    };
-
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      window.addEventListener('focus', handleFocus);
-    }
-
     return () => {
+      isMounted = false;
       subscription.unsubscribe();
       if (profileTimeout) clearTimeout(profileTimeout);
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        window.removeEventListener('focus', handleFocus);
-      }
     };
   }, [loadProfile]);
 

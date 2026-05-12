@@ -126,7 +126,7 @@ export default function SignupScreen() {
           
           <ScrollView contentContainerStyle={webStyles.scrollContent}>
             <View style={webStyles.formContainer}>
-              <BlurView intensity={Platform.OS === 'web' ? 25 : 90} tint="light" style={webStyles.glassCard}>
+              <BlurView intensity={Platform.OS === 'web' ? 40 : 25} tint="light" style={webStyles.glassCard}>
                 <View style={webStyles.header}>
                   <TouchableOpacity onPress={() => router.replace('/')}>
                     <Image
@@ -139,7 +139,7 @@ export default function SignupScreen() {
                 </View>
   
                 <View style={webStyles.form}>
-                  <View style={webStyles.row}>
+                  <View style={[webStyles.row, width < 600 && { flexDirection: 'column', gap: 0 }]}>
                     <View style={webStyles.col}>
                       <WebInput
                         label="First Name"
@@ -158,7 +158,7 @@ export default function SignupScreen() {
                     </View>
                   </View>
   
-                  <View style={webStyles.row}>
+                  <View style={[webStyles.row, width < 600 && { flexDirection: 'column', gap: 0 }]}>
                     <View style={webStyles.col}>
                       <WebInput
                         label="Mobile Number"
@@ -179,7 +179,7 @@ export default function SignupScreen() {
                     </View>
                   </View>
  
-                  <View style={webStyles.row}>
+                  <View style={[webStyles.row, width < 600 && { flexDirection: 'column', gap: 0 }]}>
                     <View style={webStyles.col}>
                       <WebInput
                         label="Address"
@@ -254,7 +254,7 @@ export default function SignupScreen() {
                     </View>
                   )}
   
-                  <View style={webStyles.buttonRow}>
+                  <View style={[webStyles.buttonRow, width < 400 && { flexDirection: 'column' }]}>
                     <TouchableOpacity
                       style={[webStyles.button, loading && { opacity: 0.7 }]}
                       onPress={handleSignup}
@@ -542,7 +542,7 @@ export default function SignupScreen() {
             </Pressable>
           </View>
 
-          <View style={styles.buttonRow}>
+          <View style={[styles.buttonRow, width < 400 && { flexDirection: 'column' }]}>
             <Pressable
               style={[styles.signUpBtn, loading && { opacity: 0.7 }]}
               onPress={handleSignup}
@@ -745,7 +745,7 @@ const styles = StyleSheet.create({
   logo: { width: 240, height: 60 },
   headingWrap: { alignItems: 'center', marginTop: 0, marginBottom: 16 },
   card: { 
-    backgroundColor: 'rgba(255, 255, 255, 0.2)', 
+    backgroundColor: 'rgba(255, 255, 255, 0.4)', 
     borderRadius: 32, 
     padding: 24, 
     shadowColor: '#000',
@@ -795,8 +795,8 @@ const styles = StyleSheet.create({
   buttonRow: { flexDirection: 'row', gap: 12, marginTop: 16 },
   signUpBtn: { 
     flex: 1, 
-    backgroundColor: 'rgba(1, 184, 84, 0.4)', 
-    borderColor: 'rgba(0, 234, 107, 0.5)',
+    backgroundColor: '#01b854', 
+    borderColor: '#00ea6b',
     borderWidth: 1,
     borderRadius: 100, 
     height: 46, 
@@ -878,8 +878,8 @@ const webStyles = StyleSheet.create({
   buttonRow: { flexDirection: 'row', gap: 12, marginTop: 16 },
   button: { 
     flex: 1, 
-    backgroundColor: 'rgba(1, 184, 84, 0.4)', 
-    borderColor: 'rgba(0, 234, 107, 0.5)',
+    backgroundColor: '#01b854', 
+    borderColor: '#00ea6b',
     borderWidth: 1,
     borderRadius: 100, 
     height: 48, 

@@ -23,7 +23,7 @@ import { Image as RNImage } from 'react-native';
 import WebLayout from '@/components/web/WebLayout';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
-import { formatCurrency, formatDateDDMMYYYY } from '@/utils/helpers';
+import { formatCurrency, formatDateDDMMYYYY, formatTime } from '@/utils/helpers';
 import { makeGroundPath } from '@/utils/groundSlug';
 import { CreditCard, ShieldCheck, Clock, Calendar, MapPin, ChevronLeft, ChevronRight, Wallet, Users, X, Ticket, ShoppingBag, Star, Zap, Smartphone, Globe, MessageSquare, Headphones, Banknote, Maximize, Home, Bath, Car, Shirt, Layers, Target } from 'lucide-react-native';
 import { hoursBetweenBooked, normalizeDbTimeToHHMM } from '@/utils/bookingSlots';
@@ -200,7 +200,8 @@ export default function CheckoutScreen() {
             fetchWalletBalance();
             setContactEmail(user.email || '');
             setContactPhone(profile?.phone || user.user_metadata?.phone || '');
-            setBookedForName(profile?.full_name || user.user_metadata?.full_name || '');
+            // Stop autofilling bookedForName as requested
+            setBookedForName('');
         }
     }, [user, profile]);
 
@@ -304,6 +305,7 @@ export default function CheckoutScreen() {
                         payment_method: 'cash',
                         slots: booking.slots,
                         slotDuration: booking.slotDuration,
+                        slotPrices: booking.slotPrices,
                     } : {
                         total_amount: parseFloat(customCashAmount) || booking.total_amount,
                         booked_for_name: bookedForName,
@@ -365,7 +367,7 @@ export default function CheckoutScreen() {
             const isBox = (ground.pitch_type ?? '').toLowerCase().includes('box');
             const isNets = (ground.pitch_type ?? '').toLowerCase() === 'nets';
             const slotsArray = slots ? (slots as string).split(',') : [];
-            const slotPricesArray = slotPrices ? (slotPrices as string).split(',').map(Number) : [];
+            const slotPricesArray = slotPrices ? (slotPrices as string).split(',').filter(x => x.trim()).map(Number) : [];
 
             // Use passed values from form if available, otherwise fall back to 1hr default
             let endTime = passedEndTime as string;
@@ -629,6 +631,9 @@ export default function CheckoutScreen() {
                         total_amount: booking.total_amount + (booking.discount_amount || 0),
                         discount_amount: booking.discount_amount || 0,
                         slots: booking.slots,
+                        slotDuration: booking.slotDuration,
+                        slotPrices: booking.slotPrices,
+                        booked_for_name: bookedForName,
                         wallet_amount: walletAmount,
                     } : {
                         total_amount: booking.total_amount,
@@ -711,6 +716,9 @@ export default function CheckoutScreen() {
                                     total_amount: booking.total_amount + (booking.discount_amount || 0),
                                     discount_amount: booking.discount_amount || 0,
                                     wallet_amount: walletAmount,
+                                    slots: booking.slots,
+                                    slotDuration: booking.slotDuration,
+                                    slotPrices: booking.slotPrices,
                                 } : {
                                     total_amount: booking.total_amount,
                                     wallet_amount: walletAmount,
@@ -783,6 +791,10 @@ export default function CheckoutScreen() {
                             total_amount: booking.total_amount + (booking.discount_amount || 0),
                             discount_amount: booking.discount_amount || 0,
                             wallet_amount: walletAmountUsed,
+                            slots: booking.slots,
+                            slotDuration: booking.slotDuration,
+                            slotPrices: booking.slotPrices,
+                            booked_for_name: bookedForName,
                         } : {
                             total_amount: booking.total_amount,
                             wallet_amount: walletAmountUsed,
@@ -908,6 +920,8 @@ export default function CheckoutScreen() {
                         booked_for_name: bookedForName,
                         payment_method: 'wallet',
                         slots: booking.slots,
+                        slotDuration: booking.slotDuration,
+                        slotPrices: booking.slotPrices,
                     } : {
                         total_amount: totalPayable,
                         booked_for_name: bookedForName,
@@ -1692,7 +1706,7 @@ export default function CheckoutScreen() {
                                                 <Calendar size={16} color="#059669" />
                                                 <RNText style={{ marginLeft: 8, fontSize: 14, color: '#333' }}>{formattedDate}</RNText>
                                                 <Clock size={16} color="#059669" style={{ marginLeft: 16 }} />
-                                                <RNText style={{ marginLeft: 4, fontSize: 14, color: '#333', fontWeight: '600' }}>{time}</RNText>
+                                                <RNText style={{ marginLeft: 4, fontSize: 14, color: '#333', fontWeight: '600' }}>{formatTime(time)}</RNText>
                                             </View>
                                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                                                 {!isNets && (

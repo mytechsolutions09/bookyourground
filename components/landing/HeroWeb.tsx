@@ -283,7 +283,7 @@ export default function HeroWeb() {
       source={require('@/assets/hero.png')}
       style={[
         styles.root, 
-        { height: isMobile ? '100%' : 850, minHeight: isMobile ? 580 : 850 },
+        { height: isMobile ? '100%' : 850, minHeight: isMobile ? 580 : 850, justifyContent: 'center' },
         isMobile && { paddingTop: 100, paddingBottom: 40 }
       ]}
       resizeMode="cover"
@@ -300,61 +300,15 @@ export default function HeroWeb() {
       <View style={[
         styles.container, 
         !isMobile && { 
-          flexDirection: 'row', 
-          justifyContent: 'space-between', 
+          flexDirection: 'column', 
+          justifyContent: 'center', 
           alignItems: 'center',
-          marginTop: width > 1200 ? 80 : 40 
+          marginTop: 0 
         }
       ]}>
-        <View style={[styles.content, !isMobile && { alignItems: 'flex-start', textAlign: 'left', maxWidth: 550, paddingRight: 40 }]}>
-          <Text style={[
-            styles.title,
-            { 
-              fontSize: width < 600 ? 32 : (width < 900 ? 44 : 52),
-              lineHeight: width < 600 ? 38 : 64,
-              marginBottom: isMobile ? 12 : 16,
-              textAlign: isMobile ? 'center' : 'left'
-            }
-          ]}>
-            Elevate Your Game
-          </Text>
-          <Text style={[
-            styles.subtitle,
-            {
-              fontSize: width < 600 ? 14 : 16,
-              lineHeight: width < 600 ? 20 : 26,
-              maxWidth: width < 600 ? '90%' : 600,
-              marginBottom: isMobile ? 24 : 32,
-              textAlign: isMobile ? 'center' : 'left'
-            }
-          ]}>
-            Book premium sports venues in seconds and take your performance to the next level.
-          </Text>
-
-          <View style={[
-            styles.featuresRow, 
-            isMobile ? { marginBottom: 30, justifyContent: 'center' } : { justifyContent: 'flex-start', flexWrap: 'nowrap' }
-          ]}>
-            <View style={styles.featureChip}>
-              <View style={styles.chipIcon}>
-                <CalendarCheck2 size={16} color="#043529" strokeWidth={2.5} />
-              </View>
-              <Text style={styles.chipText}>Easy Booking</Text>
-            </View>
-            <View style={styles.featureChip}>
-              <View style={styles.chipIcon}>
-                <MapPin size={16} color="#043529" strokeWidth={2.5} />
-              </View>
-              <Text style={styles.chipText}>Top Venues</Text>
-            </View>
-            <View style={styles.featureChip}>
-              <View style={styles.chipIcon}>
-                <ShieldCheck size={16} color="#043529" strokeWidth={2.5} />
-              </View>
-              <Text style={styles.chipText}>Secure & Reliable</Text>
-            </View>
-          </View>
-        </View>
+        <Text style={[styles.title, isMobile && { fontSize: 28, lineHeight: 34, marginBottom: 16 }]}>
+          Play Hard. Book Easy.
+        </Text>
 
         {/* Search Form with Rotating Border */}
         <View 
@@ -452,7 +406,7 @@ export default function HeroWeb() {
                   }}
                 >
                   <Text style={[styles.fieldText, !selectedType && styles.placeholderText]}>
-                    {selectedType ? (groundTypes.find(t => t.name === selectedType)?.label || selectedType) : 'Type'}
+                    {selectedType ? (groundTypes.find(t => t.name === selectedType)?.label || selectedType) : 'Venue Type'}
                   </Text>
                   <ChevronDown size={16} color="#64748B" />
                 </Pressable>
@@ -683,13 +637,13 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   title: {
-    fontSize: 64,
+    fontSize: 48,
     color: '#FFFFFF',
     marginBottom: 16,
     letterSpacing: -1.5,
     fontFamily: 'Inter-SemiBold',
     textAlign: 'center',
-    lineHeight: 72,
+    lineHeight: 56,
   },
   subtitle: {
     fontSize: 16,

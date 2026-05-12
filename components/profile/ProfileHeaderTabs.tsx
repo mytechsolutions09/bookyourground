@@ -25,7 +25,7 @@ export default function ProfileHeaderTabs({ themeAccent, themeText, isCompact, s
           style={[styles.tab, isActive('/profile') && { borderBottomColor: themeAccent }]} 
           onPress={() => router.push('/(tabs)/profile' as any)}
         >
-          <Text style={[styles.tabText, isActive('/profile') && { color: themeAccent, fontWeight: '700' }]}>
+          <Text style={[styles.tabText, isActive('/profile') && { color: themeAccent, fontWeight: '600' }]}>
             Overview
           </Text>
         </TouchableOpacity>
@@ -34,7 +34,7 @@ export default function ProfileHeaderTabs({ themeAccent, themeText, isCompact, s
           style={[styles.tab, isActive('/profile/notifications') && { borderBottomColor: themeAccent }]} 
           onPress={() => router.push('/(tabs)/profile/notifications' as any)}
         >
-          <Text style={[styles.tabText, isActive('/profile/notifications') && { color: themeAccent, fontWeight: '700' }]}>
+          <Text style={[styles.tabText, isActive('/profile/notifications') && { color: themeAccent, fontWeight: '600' }]}>
             Notifications
           </Text>
         </TouchableOpacity>
@@ -43,7 +43,7 @@ export default function ProfileHeaderTabs({ themeAccent, themeText, isCompact, s
           style={[styles.tab, isActive('/profile/settings') && { borderBottomColor: themeAccent }]} 
           onPress={() => router.push('/(tabs)/profile/settings' as any)}
         >
-          <Text style={[styles.tabText, isActive('/profile/settings') && { color: themeAccent, fontWeight: '700' }]}>
+          <Text style={[styles.tabText, isActive('/profile/settings') && { color: themeAccent, fontWeight: '600' }]}>
             Settings
           </Text>
         </TouchableOpacity>
@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '400',
     color: '#64748B',
     fontFamily: 'Inter',
   },

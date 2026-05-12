@@ -6,7 +6,18 @@ export function formatBookingSlotSummary(
   startTime: string,
   endTime: string,
   pitchType?: string | null,
+  notes?: string | null,
 ): string {
+  if (notes) {
+    const matchSlots = /\(Slots:\s*([^)]+)\)/.exec(notes);
+    if (matchSlots) {
+      const slots = matchSlots[1].split(',').map(s => s.trim());
+      if (slots.length > 1) {
+        return `${slots.length} Slots: ${slots.join(', ')}`;
+      }
+    }
+  }
+
   const st = normalizeDbTimeToHHMM(startTime);
   const et = normalizeDbTimeToHHMM(endTime);
   if (!st || !et) {

@@ -52,7 +52,29 @@ Re-render loops are the primary cause of "dead links" (where UI becomes unrespon
 
 ---
 
-## 4. Layout Optimization (Web)
+## 4. Session & Data Persistence (Idle Fix)
+
+We have implemented patterns to prevent data from "disappearing" when the browser tab has been idle or when the session refreshes in the background.
+
+### AuthContext Hardening
+- **Problem**: Background token refreshes were triggering auth state updates that temporarily wiped the `user` or `profile` objects.
+- **Fix**: 
+    - Added `isMounted` checks to all async auth listeners.
+    - Preserved `profile` data during `TOKEN_REFRESHED` events; only wiped on explicit `SIGNED_OUT`.
+    - Removed redundant `window.focus` listeners that caused race conditions.
+
+### Stale-While-Revalidate (SWR) Pattern
+- **Problem**: Components were showing loading spinners/blank screens every time they re-fetched data in the background.
+- **Fix**: Only set `loading: true` if the local data state is currently empty.
+- **Example**: `PopularGrounds.tsx`, `GroundsNearYou.tsx`, and `AdminDashboardScreen` now keep existing data visible while fetching updates.
+- **Standard**:
+  ```tsx
+  if (data.length === 0) setLoading(true);
+  ```
+
+---
+
+## 5. Layout Optimization (Web)
 
 ### Duplicate Layout Guard
 - **Problem**: Nested components rendering their own `WebLayout` causing duplicate scroll listeners and headers.

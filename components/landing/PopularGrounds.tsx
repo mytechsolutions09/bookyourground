@@ -33,7 +33,7 @@ export default function PopularGrounds() {
   useEffect(() => {
     const load = async () => {
       try {
-        setLoading(true);
+        if (grounds.length === 0) setLoading(true);
         const { data, error } = await supabase
           .from('grounds')
           .select(`

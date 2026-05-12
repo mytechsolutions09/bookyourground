@@ -383,7 +383,7 @@ export default function GroundDetailsPrettyUrlScreen() {
                   <Text style={styles.sectionTitle}>Details</Text>
                   {ground.pitch_type && (
                     <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>{ground.pitch_type?.toLowerCase().includes('nets') ? 'Type' : 'Ground type'}</Text>
+                      <Text style={styles.detailLabel}>Venue Type</Text>
                       <Text style={styles.detailValue}>{ground.pitch_type}</Text>
                     </View>
                   )}
@@ -634,7 +634,7 @@ export default function GroundDetailsPrettyUrlScreen() {
 
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>Details</Text>
-                {ground.pitch_type && <Text style={styles.description}>Type: {ground.pitch_type}</Text>}
+                {ground.pitch_type && <Text style={styles.description}>Venue Type: {ground.pitch_type}</Text>}
                 {ground.pitch_type?.toLowerCase().includes('nets') && (
                   <>
                     <Text style={styles.description}>

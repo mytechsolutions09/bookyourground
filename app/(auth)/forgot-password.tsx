@@ -62,7 +62,7 @@ export default function ForgotPasswordScreen() {
   if (Platform.OS === 'web') {
     return (
       <KeyboardAvoidingView behavior="height" style={webStyles.container}>
-        <View style={webStyles.scrollContent}>
+        <View style={[webStyles.scrollContent, !showHeroImage && { flexDirection: 'column' }]}>
           <View style={webStyles.heroColumn}>
             <View style={webStyles.formContainer}>
               <View style={webStyles.formCard}>
@@ -155,7 +155,7 @@ export default function ForgotPasswordScreen() {
             </View>
           </View>
 
-          <BlurView intensity={90} tint="light" style={styles.card}>
+          <BlurView intensity={Platform.OS === 'web' ? 40 : 25} tint="light" style={styles.card}>
             <View style={{ height: 8 }} />
             <Text style={styles.cardTitle}>Forgot Password</Text>
             <Text style={styles.cardSubtitle}>We'll send a reset link to your email</Text>
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
   },
   logo: { width: 240, height: 60 },
   card: { 
-    backgroundColor: 'rgba(255, 255, 255, 0.2)', 
+    backgroundColor: 'rgba(255, 255, 255, 0.4)', 
     borderRadius: 32, 
     padding: 24, 
     borderWidth: 1.5, 
@@ -319,8 +319,8 @@ const styles = StyleSheet.create({
   },
   resetBtn: { 
     marginTop: 8, 
-    backgroundColor: 'rgba(1, 184, 84, 0.4)', 
-    borderColor: 'rgba(0, 234, 107, 0.5)',
+    backgroundColor: '#01b854', 
+    borderColor: '#00ea6b',
     borderWidth: 1,
     borderRadius: 100,
     height: 46, 
@@ -400,8 +400,8 @@ const webStyles = StyleSheet.create({
   heroImage: { flex: 1, width: '50%' as any, overflow: 'hidden' },
   button: { 
     marginTop: 12, 
-    backgroundColor: 'rgba(1, 184, 84, 0.4)', 
-    borderColor: 'rgba(0, 234, 107, 0.5)',
+    backgroundColor: '#01b854', 
+    borderColor: '#00ea6b',
     borderWidth: 1,
     borderRadius: 100, 
     height: 48, 

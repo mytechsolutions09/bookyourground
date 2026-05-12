@@ -399,7 +399,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
 
   const isCricketGroundType = useMemo(() => {
     const p = (selectedGround?.pitch_type ?? typeKey ?? '').toLowerCase();
-    return p === 'cricket ground' || p.includes('cricket ground');
+    return p.includes('cricket') && !p.includes('box');
   }, [selectedGround, typeKey]);
 
   const supportMultipleSlots = useMemo(() => {
@@ -432,7 +432,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       if (p && !map.has(p)) map.set(p, p);
     });
     const options = Array.from(map.entries()).map(([key, label]) => ({ key, label }));
-    return [{ key: '', label: 'All Types' }, ...options];
+    return [{ key: '', label: 'All Venue Types' }, ...options];
   }, [groundTypeRows, grounds]);
 
   useEffect(() => {
@@ -695,7 +695,8 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
             if (hhmm < currentHHMM) return prev;
           }
           
-          return [`${bookingDate}__${hhmm}__one__0`];
+          let price = pricesByDate[bookingDate]?.[hhmm] ?? slotPriceByStartTime[hhmm] ?? (selectedGround as any)?.min_price ?? selectedGround?.base_price_per_hour ?? 0;
+          return [`${bookingDate}__${hhmm}__one__${price}`];
         }
         return prev;
       });
@@ -716,10 +717,12 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
         const time = parts[1];
         const slotTeamType = parts[2] || teamType;
         
-        let price = pricesByDate[date]?.[time] ?? slotPriceByStartTime[time] ?? (selectedGround as any)?.min_price ?? selectedGround?.base_price_per_hour ?? 0;
-        
-        if (isCricketGroundType) {
-          // Apply team type factor per slot!
+        let price = 0;
+        if (parts.length >= 4) {
+          price = Number(parts[3]);
+        } else {
+          price = pricesByDate[date]?.[time] ?? slotPriceByStartTime[time] ?? (selectedGround as any)?.min_price ?? selectedGround?.base_price_per_hour ?? 0;
+          // Apply team type factor per slot if calculating from base
           const factor = slotTeamType === 'one' ? 0.5 : 1.0;
           price = price * factor;
         }
@@ -1713,30 +1716,32 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       
       if (supportMultipleSlots) {
         params.set('slots', selectedNetsSlots.join(','));
-        
         const slotPrices = selectedNetsSlots.map(s => {
           const parts = s.split('__');
+          // If the slot string has a price part (index 3), use it.
+          // Format: date__time__team__price
+          if (parts.length >= 4) return Number(parts[3]);
+          
           const date = parts[0];
           const time = parts[1];
           const slotTeamType = parts[2];
-          let price = pricesByDate[date]?.[time] ?? slotPriceByStartTime[time] ?? selectedGround?.base_price_per_hour ?? 0;
-          if (isCricketGroundType) {
-            const factor = slotTeamType === 'one' ? 0.5 : 1.0;
-            price = price * factor;
-          }
+          let price = pricesByDate[date]?.[time] ?? slotPriceByStartTime[time] ?? (selectedGround as any)?.min_price ?? selectedGround?.base_price_per_hour ?? 0;
+          const factor = slotTeamType === 'one' ? 0.5 : 1.0;
+          price = price * factor;
           return price;
         });
-        params.set('slotPrices', slotPrices.join(','));
+        params.set('slotPrices', slotPrices.filter(p => !isNaN(p)).join(','));
 
         if (selectedNetsSlots.length > 0) {
           const firstSlot = selectedNetsSlots[0];
           const [date, time] = firstSlot.includes('__') ? firstSlot.split('__') : [bookingDate, firstSlot];
+          const [h1, m1] = time.split(':').map(Number);
           params.set('time', time);
           params.set('date', date);
           
           const endStr = endTimeByStartTime[time];
           if (endStr) {
-            const [h1, m1] = time.split(':').map(Number);
+            const slotPricesArray = slotPrices ? (slotPrices as any).filter((x: any) => x !== '').map(Number) : [];
             const [h2, m2] = endStr.split(':').map(Number);
             const duration = (h2 * 60 + m2) - (h1 * 60 + m1);
             params.set('slotDuration', duration.toString());
@@ -2003,14 +2008,14 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
               nativeTanChrome && !groundPageAccent && styles.dropdownButtonTextBookGroundNative,
               !!typeKey && (groundPageAccent ? styles.dropdownButtonTextSelectedGroundPage : styles.dropdownButtonTextSelected),
             ]}>
-              {typeOptions.find(o => o.key === typeKey)?.label || 'Type'}
+              {typeOptions.find(o => o.key === typeKey)?.label || 'Venue Type'}
             </Text>
           </Pressable>
 
           <ModalSelector
             visible={openSelectMenu === 'type'}
             onClose={() => setOpenSelectMenu(null)}
-            title="Select Type"
+            title="Select Venue Type"
             value={typeKey}
             options={typeOptions}
             onChange={(t) => {
@@ -2351,10 +2356,8 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                           const date = bookingDate;
                           const time = s.value;
                           let price = pricesByDate[date]?.[time] ?? slotPriceByStartTime[time] ?? (selectedGround as any)?.min_price ?? selectedGround?.base_price_per_hour ?? 0;
-                          if (isCricketGroundType) {
-                            const factor = teamType === 'one' ? 0.5 : 1.0;
-                            price = price * factor;
-                          }
+                          const factor = teamType === 'one' ? 0.5 : 1.0;
+                          price = price * factor;
                           const slotWithPrice = `${prefix}${teamType}__${price}`;
 
                           if (existing) {
@@ -2569,10 +2572,8 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                   const label = isCurrentDate ? formatTime(time) : `${formatDateDDMMYYYY(date)} ${formatTime(time)}`;
                   
                   let price = pricesByDate[date]?.[time] ?? slotPriceByStartTime[time] ?? (selectedGround as any)?.min_price ?? selectedGround?.base_price_per_hour ?? 0;
-                  if (isCricketGroundType) {
-                    const factor = slotTeamType === 'one' ? 0.5 : 1.0;
-                    price = price * factor;
-                  }
+                  const factor = slotTeamType === 'one' ? 0.5 : 1.0;
+                  price = price * factor;
                   
                   return (
                     <View key={s} style={{ backgroundColor: 'rgba(1, 184, 84, 0.1)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(1, 184, 84, 0.3)' }}>

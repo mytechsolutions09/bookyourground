@@ -50,7 +50,7 @@ export default function AdminSettingsIndex() {
       </View>
 
       <Text style={styles.hint}>
-        Use the subbar for Locations and Ground types used in booking filters.
+        Use the subbar for Locations and Venue types used in booking filters.
       </Text>
     </ScrollView>
   );

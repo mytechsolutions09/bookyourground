@@ -39,3 +39,7 @@ git push origin main
 
 
 each slot  booking is making a different booking in multiple booking
+42: 
+43: FIX: Data disappearing on idle. 
+44: Solution: Hardened AuthContext + implemented Stale-While-Revalidate pattern.
+45: Documentation: docs/session_persistence_fix.md & docs/web_stability_architecture.md

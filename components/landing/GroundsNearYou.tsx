@@ -341,7 +341,7 @@ export default function GroundsNearYou() {
 
   const loadGrounds = async () => {
     try {
-      setLoading(true);
+      if (grounds.length === 0) setLoading(true);
       const { data, error } = await supabase
         .from('grounds')
         .select(`

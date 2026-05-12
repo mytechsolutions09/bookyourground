@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, Platform, TextInput, TouchableOpacity, Image } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import { GroundWithImages } from '@/types';
 import GroundCard from '@/components/grounds/GroundCard';
@@ -8,6 +8,7 @@ import Card from '@/components/ui/Card';
 import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import { useLocalSearchParams } from 'expo-router';
+import { Search, X } from 'lucide-react-native';
 
 export default function ApproveGroundsScreen() {
   const params = useLocalSearchParams();
@@ -16,6 +17,7 @@ export default function ApproveGroundsScreen() {
   const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedGround, setSelectedGround] = useState<GroundWithImages | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     loadGrounds();
@@ -71,14 +73,41 @@ export default function ApproveGroundsScreen() {
     }
   };
 
+  const filteredGrounds = grounds.filter(g => {
+    const q = searchQuery.toLowerCase();
+    return g.name.toLowerCase().includes(q) || 
+           (g.owner?.business_name || '').toLowerCase().includes(q) ||
+           (g.owner?.full_name || '').toLowerCase().includes(q) ||
+           g.city.toLowerCase().includes(q);
+  });
+
   const content = (
     <View style={styles.container}>
       {Platform.OS === 'web' && (
         <View style={[styles.header, styles.webHeader]}>
-          <Text style={styles.title}>Approve Grounds</Text>
-          <Text style={styles.subtitle}>
-            {grounds.length} pending approval{grounds.length !== 1 ? 's' : ''}
-          </Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View>
+              <Text style={styles.title}>Approve Grounds</Text>
+              <Text style={styles.subtitle}>
+                {grounds.length} pending approval{grounds.length !== 1 ? 's' : ''}
+              </Text>
+            </View>
+            <View style={styles.searchContainer}>
+              <Search size={16} color="#9CA3AF" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search grounds or owners..."
+                placeholderTextColor="#9CA3AF"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.searchClearBtn}>
+                  <X size={14} color="#9CA3AF" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
         </View>
       )}
 
@@ -94,7 +123,7 @@ export default function ApproveGroundsScreen() {
       )}
 
       <FlatList
-        data={grounds}
+        data={filteredGrounds}
         renderItem={({ item }) => {
           const isSelected = selectedGround?.id === item.id;
           const primaryImage =
@@ -252,6 +281,34 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     marginTop: 4,
     fontFamily: 'Inter',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    height: 36,
+    width: 300,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: 'Inter',
+    color: '#111827',
+    paddingVertical: 0,
+    height: '100%',
+    ...Platform.select({
+      web: { outlineStyle: 'none' }
+    }) as any,
+  },
+  searchClearBtn: {
+    padding: 4,
   },
   list: {
     padding: 0,

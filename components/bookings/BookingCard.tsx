@@ -93,16 +93,19 @@ export default function BookingCard({
           <View style={styles.detailsRow}>
             <View style={styles.detail}>
               <Calendar size={16} color={iconDetail} />
-              <Text style={detailTextStyle}>{formatDate(booking.booking_date)}</Text>
+              <Text style={detailTextStyle}>{(booking as any).displayDate || formatDate(booking.booking_date)}</Text>
             </View>
             <View style={styles.detail}>
               <Clock size={16} color={iconDetail} />
               <Text style={detailTextStyle}>
-                {formatBookingSlotSummary(
-                  booking.start_time,
-                  booking.end_time,
-                  booking.ground.pitch_type,
-                )}
+                {((booking as any).allSlots && (booking as any).allSlots.length > 0)
+                  ? (booking as any).allSlots.join(', ')
+                  : formatBookingSlotSummary(
+                    booking.start_time,
+                    booking.end_time,
+                    booking.ground.pitch_type,
+                    booking.notes,
+                  )}
               </Text>
             </View>
             {((booking as any).opponent || cricketTeamsLabel) ? (
@@ -128,7 +131,9 @@ export default function BookingCard({
               <Text style={amountStyle}>{formatCurrency(booking.total_amount)}</Text>
               {booking.payment_method && (
                 <Text style={paymentMethodStyle}>
-                  Via {booking.payment_method === 'cash' ? 'Cash' : 'Online'}
+                  Via {booking.payment_method === 'cash' ? 'Cash' : 
+                      (booking.payment_method === 'split_wallet_razorpay' ? 'Wallet + Card' : 
+                      (booking.payment_method === 'razorpay' ? 'Razorpay' : 'Online'))}
                 </Text>
               )}
             </View>

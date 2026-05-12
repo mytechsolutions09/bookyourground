@@ -147,15 +147,19 @@ function AdminPayoutsInner() {
       ]}>
         <Text style={styles.title}>Payout History</Text>
         <View style={[styles.searchContainer, (isMobile || isSmallWeb) && { maxWidth: '100%' }]}>
-          <View style={styles.searchBar}>
-            <Search size={18} color="#9CA3AF" />
-            <TextInput
-              placeholder="Search by owner, ground or date..."
-              style={styles.searchInput}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-          </View>
+          <Search size={16} color="#9CA3AF" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by owner, ground or date..."
+            placeholderTextColor="#9CA3AF"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.searchClearBtn}>
+              <X size={14} color="#9CA3AF" />
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </View>
@@ -295,26 +299,33 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   searchContainer: {
-    flex: 1,
-    maxWidth: 400,
-  },
-  searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    borderRadius: 8,
+    paddingHorizontal: 12,
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    height: 36,
+    flex: 1,
+    maxWidth: 400,
+  },
+  searchIcon: {
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    marginLeft: 10,
     fontSize: 13,
-    color: '#111827',
     fontFamily: 'Inter',
-    fontWeight: '500',
+    color: '#111827',
+    paddingVertical: 0,
+    height: '100%',
+    ...Platform.select({
+      web: { outlineStyle: 'none' }
+    }) as any,
+  },
+  searchClearBtn: {
+    padding: 4,
   },
   tableHeaderContainer: {
     marginHorizontal: 16,

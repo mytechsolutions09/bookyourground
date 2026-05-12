@@ -300,13 +300,19 @@ export default function ManageGroundOwnersScreen() {
             </View>
             
             <View style={[styles.searchContainer, (isMobile || isSmallWeb) && { maxWidth: '100%' }]}>
-              <Search size={18} color="#6B7280" style={styles.searchIcon} />
+              <Search size={16} color="#9CA3AF" style={styles.searchIcon} />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search owners or business name..."
+                placeholder="Search partners..."
+                placeholderTextColor="#9CA3AF"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.searchClearBtn}>
+                  <X size={14} color="#9CA3AF" />
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         </View>
@@ -611,26 +617,33 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   searchContainer: {
-    flex: 1,
-    minWidth: 300,
-    maxWidth: 450,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 0,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    height: 36,
+    flex: 1,
+    maxWidth: 400,
   },
   searchIcon: {
-    marginRight: 10,
+    marginRight: 8,
   },
   searchInput: {
     flex: 1,
     fontSize: 13,
-    color: '#111827',
-    fontWeight: '500',
     fontFamily: 'Inter',
+    color: '#111827',
+    paddingVertical: 0,
+    height: '100%',
+    ...Platform.select({
+      web: { outlineStyle: 'none' }
+    }) as any,
+  },
+  searchClearBtn: {
+    padding: 4,
   },
   tableHeaderContainer: {
     flexDirection: 'row',

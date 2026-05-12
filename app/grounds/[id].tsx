@@ -519,7 +519,7 @@ export default function GroundDetailsScreen() {
             <Text style={styles.sectionTitle}>Details</Text>
             {ground.pitch_type && (
               <View style={styles.detailRow}>
-                <Text style={styles.detailLabel}>{ground.pitch_type?.toLowerCase().includes('nets') ? 'Type' : 'Ground type'}</Text>
+                <Text style={styles.detailLabel}>Venue Type</Text>
                 <Text style={styles.detailValue}>{ground.pitch_type}</Text>
               </View>
             )}

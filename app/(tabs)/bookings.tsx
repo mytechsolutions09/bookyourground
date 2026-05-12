@@ -412,24 +412,65 @@ export default function BookingsScreen() {
     return diffDays >= 7;
   };
 
-  /** Only confirmed / paid bookings are fetched. */
+  /** Only confirmed / paid bookings are fetched. Consolidate multi-slot bookings for better visibility. */
   const filteredBookings = useMemo(() => {
-    let result = bookings;
+    if (!bookings || bookings.length === 0) return [];
 
-    // Detect matches for users
-    const slotGroups = result.reduce((acc, b) => {
+    // 1. Group by Ground + Date + Slots list (from notes) to consolidate multi-slot bookings (including multi-date transactions)
+    const consolidatedMap = new Map<string, BookingWithDetails & { allDates?: string[], allSlots?: string[] }>();
+    
+    bookings.forEach(b => {
+      // Extract (Slots: ...) from notes to use as part of the grouping key
+      const matchSlots = /\(Slots:\s*([^)]+)\)/.exec(b.notes || '');
+      const slotsKey = matchSlots ? matchSlots[1] : `single_${b.start_time}`;
+      
+      // Use created_at (truncated to minute) to group bookings from the same transaction
+      const createdAtMinute = b.created_at ? b.created_at.substring(0, 16) : 'unknown';
+      const groupKey = `${b.user_id}_${b.ground_id}_${createdAtMinute}_${slotsKey}`;
+
+      if (!consolidatedMap.has(groupKey)) {
+        consolidatedMap.set(groupKey, { 
+          ...b, 
+          allDates: [b.booking_date],
+          allSlots: matchSlots ? [matchSlots[1]] : [`${normalizeDbTimeToHHMM(b.start_time)} – ${normalizeDbTimeToHHMM(b.end_time)}`]
+        });
+      } else {
+        const existing = consolidatedMap.get(groupKey)!;
+        existing.total_amount = (existing.total_amount || 0) + (b.total_amount || 0);
+        existing.discount_amount = (existing.discount_amount || 0) + (b.discount_amount || 0);
+        if (!existing.allDates?.includes(b.booking_date)) {
+          existing.allDates?.push(b.booking_date);
+        }
+        const slotLabel = matchSlots ? matchSlots[1] : `${normalizeDbTimeToHHMM(b.start_time)} – ${normalizeDbTimeToHHMM(b.end_time)}`;
+        if (!existing.allSlots?.includes(slotLabel)) {
+          existing.allSlots?.push(slotLabel);
+        }
+      }
+    });
+
+    let result = Array.from(consolidatedMap.values()).map(b => {
+      let displayDate = formatDateDDMMYY(b.booking_date);
+      if (b.allDates && b.allDates.length > 1) {
+        const sortedDates = [...b.allDates].sort();
+        displayDate = `${formatDateDDMMYY(sortedDates[0])} – ${formatDateDDMMYY(sortedDates[sortedDates.length - 1])}`;
+      }
+      return { ...b, displayDate };
+    });
+
+    // 2. Detect matches for users (showing opponents)
+    // We use the original bookings to detect opponents because they might be in different pages/groups
+    const slotGroups = bookings.reduce((acc, b) => {
       const key = `${b.ground_id}_${b.booking_date}_${b.start_time}`;
       if (!acc[key]) acc[key] = [];
       acc[key].push(b);
       return acc;
     }, {} as Record<string, BookingWithDetails[]>);
 
-    // If regular user, enrich with opponent info if they happen to be in the same page
     if (profile?.role === 'user') {
       result = result.map(b => {
         const key = `${b.ground_id}_${b.booking_date}_${b.start_time}`;
         const group = slotGroups[key] || [];
-        const opponent = group.find(ob => ob.id !== b.id);
+        const opponent = group.find(ob => ob.user_id !== b.user_id);
         if (opponent) {
           return {
             ...b,

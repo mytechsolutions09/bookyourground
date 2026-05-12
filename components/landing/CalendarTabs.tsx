@@ -46,7 +46,7 @@ export default function CalendarTabs() {
 
   const loadAvailability = async (date: Date) => {
     try {
-      setLoading(true);
+      if (grounds.length === 0) setLoading(true);
       const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
       const dateString = date.toISOString().split('T')[0];
 

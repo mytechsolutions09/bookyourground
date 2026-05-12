@@ -119,7 +119,7 @@ export default function OwnerSignupScreen() {
           
           <ScrollView contentContainerStyle={webStyles.scrollContent}>
             <View style={webStyles.formContainer}>
-              <BlurView intensity={25} tint="light" style={webStyles.glassCard}>
+              <BlurView intensity={Platform.OS === 'web' ? 40 : 25} tint="light" style={webStyles.glassCard}>
                 <View style={webStyles.header}>
                   <TouchableOpacity onPress={() => router.replace('/')}>
                     <Image
@@ -133,7 +133,7 @@ export default function OwnerSignupScreen() {
                 </View>
 
                 <View style={webStyles.form}>
-                  <View style={webStyles.row}>
+                  <View style={[webStyles.row, width < 600 && { flexDirection: 'column', gap: 0 }]}>
                     <View style={webStyles.col}>
                       <WebInput
                         label="Venue Name"
@@ -152,7 +152,7 @@ export default function OwnerSignupScreen() {
                     </View>
                   </View>
 
-                  <View style={webStyles.row}>
+                  <View style={[webStyles.row, width < 600 && { flexDirection: 'column', gap: 0 }]}>
                     <View style={webStyles.col}>
                       <WebInput
                         label="Email"
@@ -174,7 +174,7 @@ export default function OwnerSignupScreen() {
                     </View>
                   </View>
 
-                  <View style={webStyles.row}>
+                  <View style={[webStyles.row, width < 600 && { flexDirection: 'column', gap: 0 }]}>
                     <View style={webStyles.col}>
                       <WebInput
                         label="Password"
@@ -238,7 +238,7 @@ export default function OwnerSignupScreen() {
                     </View>
                   )}
 
-                  <View style={webStyles.buttonRow}>
+                  <View style={[webStyles.buttonRow, width < 400 && { flexDirection: 'column' }]}>
                     <TouchableOpacity
                       style={[webStyles.button, loading && { opacity: 0.7 }]}
                       onPress={handleSignup}
@@ -427,7 +427,7 @@ export default function OwnerSignupScreen() {
                 </View>
               </View>
 
-              <View style={styles.buttonRow}>
+              <View style={[styles.buttonRow, width < 400 && { flexDirection: 'column' }]}>
                 <TouchableOpacity
                   style={[styles.signupBtn, loading && { opacity: 0.7 }]}
                   onPress={handleSignup}
@@ -629,7 +629,7 @@ const styles = StyleSheet.create({
   headingWrap: { alignItems: 'center', marginBottom: 16 },
   title: { fontSize: 24, fontWeight: '800', color: '#FFFFFF', marginBottom: 4 },
   subtitle: { fontSize: 13, color: '#E2E8F0', textAlign: 'center' },
-  card: { backgroundColor: 'rgba(255, 255, 255, 0.15)', borderRadius: 24, padding: 24, overflow: 'hidden' },
+  card: { backgroundColor: 'rgba(255, 255, 255, 0.4)', borderRadius: 24, padding: 24, overflow: 'hidden' },
   fieldWrap: { marginBottom: 12 },
   fieldLabel: { fontSize: 12, fontWeight: '500', color: '#F1F5F9', marginBottom: 6, letterSpacing: 0.3 },
   inputRow: { 
@@ -647,8 +647,8 @@ const styles = StyleSheet.create({
   buttonRow: { flexDirection: 'row', gap: 12, marginTop: 16 },
   signupBtn: { 
     flex: 1, 
-    backgroundColor: 'rgba(1, 184, 84, 0.4)', 
-    borderColor: 'rgba(0, 234, 107, 0.5)',
+    backgroundColor: '#01b854', 
+    borderColor: '#00ea6b',
     borderWidth: 1,
     borderRadius: 100, 
     height: 46, 
@@ -715,14 +715,14 @@ const webStyles = StyleSheet.create({
   formTitle: { 
     fontSize: 26, 
     fontWeight: '900', 
-    color: '#FFFFFF', 
+    color: '#0F172A', 
     marginTop: 4, 
     marginBottom: 0,
     fontFamily: 'Inter',
   },
   formSubtitle: { 
     fontSize: 14, 
-    color: '#E2E8F0', 
+    color: '#475569', 
     marginTop: 4, 
     fontFamily: 'Inter' 
   },
@@ -732,8 +732,8 @@ const webStyles = StyleSheet.create({
   buttonRow: { flexDirection: 'row', gap: 12, marginTop: 12 },
   button: { 
     flex: 1, 
-    backgroundColor: 'rgba(1, 184, 84, 0.4)', 
-    borderColor: 'rgba(0, 234, 107, 0.5)',
+    backgroundColor: '#01b854', 
+    borderColor: '#00ea6b',
     borderWidth: 1,
     borderRadius: 100, 
     height: 48, 

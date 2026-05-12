@@ -159,12 +159,12 @@ export default function LoginScreen() {
           
           <ScrollView contentContainerStyle={webStyles.scrollContent}>
             <View style={webStyles.formContainer}>
-              <BlurView intensity={25} tint="light" style={webStyles.glassCard}>
+              <BlurView intensity={Platform.OS === 'web' ? 40 : 25} tint="dark" style={webStyles.glassCard}>
                 <View style={webStyles.header}>
                   <TouchableOpacity onPress={() => router.replace('/')}>
                     <Image
                       source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
-                      style={webStyles.logoImage}
+                      style={[webStyles.logoImage, width < 480 && { width: 180, height: 45 }]}
                       resizeMode="contain"
                     />
                   </TouchableOpacity>
@@ -213,7 +213,7 @@ export default function LoginScreen() {
                     <Text style={webStyles.forgotText}>Forgot password?</Text>
                   </TouchableOpacity>
   
-                  <View style={webStyles.buttonRow}>
+                  <View style={[webStyles.buttonRow, width < 400 && { flexDirection: 'column' }]}>
                     <TouchableOpacity
                       style={[webStyles.button, loading && { opacity: 0.7 }]}
                       onPress={handleLogin}
@@ -256,11 +256,11 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-        <View style={styles.cardHeaderRow}>
+        <View style={[styles.cardHeaderRow, width < 480 && { marginBottom: 32 }]}>
           <View style={styles.logoContainer}>
             <Image
               source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
-              style={styles.logo}
+              style={[styles.logo, width < 480 && { width: 200, height: 50 }]}
               resizeMode="contain"
               accessibilityLabel="BookYourGround"
             />
@@ -340,7 +340,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           {/* Action buttons */}
-          <View style={styles.buttonRow}>
+          <View style={[styles.buttonRow, width < 400 && { flexDirection: 'column' }]}>
             <Pressable
               style={({ pressed }) => [
                 styles.signInBtn,
@@ -401,23 +401,23 @@ function WebInput(props: any) {
   const { label, showToggle, onToggle, isToggled, ...rest } = props;
   return (
     <View style={{ marginBottom: 10 }}>
-      {label && <Text style={{ fontSize: 12, fontWeight: '500', color: '#0F172A', marginBottom: 4 }}>{label}</Text>}
+      {label && <Text style={{ fontSize: 12, fontWeight: '500', color: '#FFFFFF', marginBottom: 4 }}>{label}</Text>}
       <View style={{ position: 'relative', width: '100%' }}>
         <TextInput
           style={{
             borderWidth: 1.5,
-            borderColor: 'rgba(15, 23, 42, 0.2)',
+            borderColor: 'rgba(255, 255, 255, 0.2)',
             borderRadius: 8,
             paddingHorizontal: 10,
             paddingVertical: 8,
             paddingRight: showToggle ? 40 : 10,
             fontSize: 14,
-            backgroundColor: 'rgba(255, 255, 255, 0.7)',
-            color: '#0F172A',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            color: '#FFFFFF',
             fontWeight: '400',
             outlineStyle: 'none',
           } as any}
-          placeholderTextColor="#64748B"
+          placeholderTextColor="#94A3B8"
           {...rest}
         />
         {showToggle && (
@@ -425,7 +425,7 @@ function WebInput(props: any) {
             onPress={onToggle}
             style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)' }}
           >
-            {isToggled ? <EyeOff size={16} color="#475569" /> : <Eye size={16} color="#475569" />}
+            {isToggled ? <EyeOff size={16} color="#94A3B8" /> : <Eye size={16} color="#94A3B8" />}
           </TouchableOpacity>
         )}
       </View>
@@ -447,8 +447,9 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 120,
+    paddingTop: Platform.OS === 'web' ? 60 : 100,
     paddingBottom: 40,
+    justifyContent: 'center',
   },
   cardHeaderRow: {
     flexDirection: 'row',
@@ -470,9 +471,12 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   card: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.4)',
     borderRadius: 32,
     padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    alignSelf: 'center',
     gap: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 12 },
@@ -526,8 +530,8 @@ const styles = StyleSheet.create({
   },
   signInBtn: {
     flex: 1,
-    backgroundColor: 'rgba(1, 184, 84, 0.4)',
-    borderColor: 'rgba(0, 234, 107, 0.5)',
+    backgroundColor: '#01b854',
+    borderColor: '#00ea6b',
     borderWidth: 1,
     borderRadius: 100,
     height: 46,
@@ -568,9 +572,9 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   forgotText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#01b854',
     fontFamily: 'Inter',
   },
 });
@@ -591,9 +595,9 @@ const webStyles = StyleSheet.create({
   glassCard: { 
     width: '100%', 
     maxWidth: 420, 
-    backgroundColor: 'rgba(255, 255, 255, 0.8)', 
+    backgroundColor: 'rgba(15, 23, 42, 0.4)', 
     borderRadius: 32, 
-    paddingHorizontal: 32, 
+    paddingHorizontal: Platform.select({ web: 32, default: 24 }), 
     paddingVertical: 32, 
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 12 },
@@ -613,7 +617,7 @@ const webStyles = StyleSheet.create({
   },
   formSubtitle: { 
     fontSize: 14, 
-    color: '#475569', 
+    color: '#FFFFFF', 
     marginTop: 4, 
     fontFamily: 'Inter' 
   },
@@ -621,8 +625,8 @@ const webStyles = StyleSheet.create({
   buttonRow: { flexDirection: 'row', gap: 12, marginTop: 16 },
   button: { 
     flex: 1, 
-    backgroundColor: 'rgba(1, 184, 84, 0.4)', 
-    borderColor: 'rgba(0, 234, 107, 0.5)',
+    backgroundColor: '#01b854', 
+    borderColor: '#00ea6b',
     borderWidth: 1,
     borderRadius: 100, 
     height: 48, 
@@ -648,19 +652,19 @@ const webStyles = StyleSheet.create({
     borderRadius: 100, 
     height: 48, 
     borderWidth: 1.5, 
-    borderColor: '#475569', 
+    borderColor: 'rgba(255, 255, 255, 0.4)', 
     alignItems: 'center', 
     justifyContent: 'center' 
   },
   outlineButtonText: { 
     fontSize: 14, 
     fontWeight: '700', 
-    color: '#475569', 
+    color: '#FFFFFF', 
     textTransform: 'uppercase' as any,
     fontFamily: 'Inter',
   },
   forgotWrap: { alignSelf: 'flex-end', marginBottom: 16 },
-  forgotText: { fontSize: 13, fontWeight: '700', color: '#FFFFFF', fontFamily: 'Inter' },
+  forgotText: { fontSize: 13, fontWeight: '700', color: '#01b854', fontFamily: 'Inter' },
 });
 
 const modalStyles = StyleSheet.create({
