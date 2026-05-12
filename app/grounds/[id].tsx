@@ -623,10 +623,10 @@ export default function GroundDetailsScreen() {
             })()}
           </Card>
 
-          <Card style={styles.section}>
+          <Card style={[styles.section, { paddingBottom: 8 }]}>
             <Text style={styles.sectionTitle}>Location</Text>
             {Platform.OS === 'web' ? (
-              <View style={styles.webMapPlaceholder}>
+              <View style={[styles.webMapPlaceholder, { marginBottom: 0 }]}>
                 <Text style={styles.description}>
                   {ground.address}, {ground.city}, {ground.state}
                 </Text>
@@ -639,13 +639,13 @@ export default function GroundDetailsScreen() {
                         console.error('Failed to open maps URL:', err);
                       }
                     }
-                  }} style={styles.mapsLinkWrap}>
+                  }} style={[styles.mapsLinkWrap, { marginBottom: 0 }]}>
                     <Text style={styles.mapsLinkText}>Open in Google Maps</Text>
                   </Pressable>
                 )}
               </View>
             ) : (
-              <View style={{ height: 200, borderRadius: 16, overflow: 'hidden', backgroundColor: '#F1F5F9', marginBottom: 12 }}>
+              <View style={{ height: 200, borderRadius: 16, overflow: 'hidden', backgroundColor: '#F1F5F9' }}>
                 <NativeMap ground={ground} />
                 {mapsUrl && (
                   <Pressable 
@@ -789,8 +789,8 @@ export default function GroundDetailsScreen() {
               >
                 <Heart
                   size={22}
-                  color={isFavorite ? '#518167' : '#64748B'}
-                  fill={isFavorite ? '#518167' : 'none'}
+                  color={isFavorite ? '#EF4444' : '#64748B'}
+                  fill={isFavorite ? '#EF4444' : 'none'}
                   strokeWidth={2}
                 />
               </Pressable>
@@ -941,11 +941,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   section: {
-    marginBottom: 12,
+    marginBottom: 24,
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
-    padding: 20,
-    marginTop: 12,
+    padding: 24,
+    marginTop: 0,
     borderWidth: 1,
     borderColor: '#F1F5F9',
     shadowColor: '#000',

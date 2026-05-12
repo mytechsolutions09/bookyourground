@@ -78,7 +78,7 @@ export default function AdminDashboardScreen() {
   const StatCard = ({ icon: Icon, label, value, color }: any) => (
     <View style={[
       styles.statCard,
-      { minWidth: isDesktop ? '23.5%' : isTablet ? '48%' : '100%' }
+      { minWidth: isDesktop ? '23.5%' : (isTablet || (isMobile && Platform.OS === 'web')) ? '48%' : '100%' }
     ]}>
       <View style={[styles.iconContainer, { backgroundColor: color + '15' }]}>
         <Icon size={18} color={color} />
@@ -289,8 +289,8 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
   title: {
-    fontSize: 20,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '500',
     color: '#111827',
     marginBottom: 2,
   },
@@ -325,13 +325,13 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   statValue: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '500',
     color: '#111827',
   },
   statLabel: {
-    fontSize: 11,
-    fontWeight: '500',
+    fontSize: 9,
+    fontWeight: '400',
     color: '#6B7280',
     textAlign: 'center',
     textTransform: 'uppercase',
@@ -368,8 +368,8 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   actionText: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '400',
     color: '#1E293B',
   },
   headerRow: {
@@ -377,8 +377,8 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '500',
     color: '#212121',
     marginBottom: 12,
   },

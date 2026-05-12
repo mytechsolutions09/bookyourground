@@ -318,11 +318,12 @@ export default function GroundDetailsPrettyUrlScreen() {
         >
 
         <View style={[styles.content, isWeb && isCompact && { paddingTop: 12 }]}>
-          {/* ── Hero Gallery ── */}
-          {IS_WEB ? (
-            isLargeWeb ? (
-              <View style={styles.webHeroRow}>
-                <View style={styles.webHeroColumn}>
+          {/* ── Hero Gallery & Main Content ── */}
+          {IS_WEB && isLargeWeb ? (
+            <View style={styles.webTwoColumnLayout}>
+              {/* LEFT COLUMN: Gallery, Name, About, Details, Amenities, Reviews */}
+              <View style={styles.webLeftColumn}>
+                <View style={{ marginBottom: 24 }}>
                   <WebHeroGallery 
                     ground={ground} 
                     heroIdx={heroIdx} 
@@ -333,148 +334,44 @@ export default function GroundDetailsPrettyUrlScreen() {
                     favoriteLoading={favoriteLoading}
                     fullWidth={false}
                   />
-                  
-                  {/* Ground Info Card moved under image */}
-                  <Card style={[styles.section, { marginTop: 12, padding: 24 }]}>
-                    <View style={styles.infoCardHeader}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.name}>{ground.name}</Text>
-                        <View style={styles.locationRow}>
-                          <Text style={styles.location}>
-                            {ground.address}, {ground.city}, {ground.state} - {ground.pincode}
-                          </Text>
-                        </View>
-                      </View>
-                      
-                      {/* Reviews moved to the right side */}
-                      <View style={styles.starsSummaryRowCompact}>
-                        <View style={{ flexDirection: 'row', gap: 2 }}>
-                          {[1, 2, 3, 4, 5].map((i) => {
-                            const filled = reviews.length > 0 && i <= Math.round(averageRating);
-                            return (
-                              <Star
-                                key={i}
-                                size={16}
-                                color={filled ? '#dcc093' : '#E5E7EB'}
-                                fill={filled ? '#dcc093' : 'none'}
-                              />
-                            );
-                          })}
-                        </View>
-                        <Text style={styles.ratingCompact}>
-                          {reviews.length > 0
-                            ? `${averageRating.toFixed(1)} (${reviews.length} reviews)`
-                            : 'No reviews yet'}
+                </View>
+                
+                {/* Ground Info Card */}
+                <Card style={[styles.section, { marginTop: 0, padding: 24 }]}>
+                  <View style={styles.infoCardHeader}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.name}>{ground.name}</Text>
+                      <View style={styles.locationRow}>
+                        <Text style={styles.location}>
+                          {ground.address}, {ground.city}, {ground.state} - {ground.pincode}
                         </Text>
                       </View>
                     </View>
-                  </Card>
-                </View>
-                <View style={styles.webMapColumn}>
-                  <Card style={[styles.section, styles.mapSection, { marginTop: 0, flex: 1, borderRadius: 24 }]}>
-                    <View style={[styles.webMapContainer, { height: 520 }]}>
-                      <WebMap ground={ground} mapsUrl={mapsUrl} />
+                    
+                    {/* Reviews moved to the right side */}
+                    <View style={styles.starsSummaryRowCompact}>
+                      <View style={{ flexDirection: 'row', gap: 2 }}>
+                        {[1, 2, 3, 4, 5].map((i) => {
+                          const filled = reviews.length > 0 && i <= Math.round(averageRating);
+                          return (
+                            <Star
+                              key={i}
+                              size={16}
+                              color={filled ? '#dcc093' : '#E5E7EB'}
+                              fill={filled ? '#dcc093' : 'none'}
+                            />
+                          );
+                        })}
+                      </View>
+                      <Text style={styles.ratingCompact}>
+                        {reviews.length > 0
+                          ? `${averageRating.toFixed(1)} (${reviews.length} reviews)`
+                          : 'No reviews yet'}
+                      </Text>
                     </View>
-                  </Card>
+                  </View>
+                </Card>
 
-                  <Card style={[styles.section, { marginTop: 16, borderRadius: 24, padding: 0, overflow: 'hidden' }]}>
-                    <View style={styles.mapActionsContainer}>
-                      <Button
-                        title={isFavorite ? "Favourited" : "Favourite"}
-                        variant="outline"
-                        icon={Heart}
-                        iconSize={16}
-                        iconColor="#01b854"
-                        fill={isFavorite ? '#01b854' : 'none'}
-                        onPress={toggleFavorite}
-                        loading={favoriteLoading}
-                        style={styles.mapActionBtn}
-                        textStyle={{ color: '#01b854', fontSize: 12 }}
-                      />
-                      <Button
-                        title="Directions"
-                        variant="outline"
-                        icon={Navigation2}
-                        iconSize={16}
-                        onPress={async () => {
-                          if (mapsUrl) {
-                            try {
-                              await Linking.openURL(mapsUrl);
-                            } catch (err) {
-                              console.error('Failed to open maps URL:', err);
-                            }
-                          }
-                        }}
-                        style={styles.mapActionBtn}
-                        textStyle={{ color: '#01b854', fontSize: 12 }}
-                      />
-                      <Button
-                        title="Share"
-                        variant="outline"
-                        icon={Share2}
-                        iconSize={16}
-                        onPress={() => {
-                          const url = typeof window !== 'undefined' ? window.location.href : '';
-                          Share.share({
-                            message: `Check out ${ground.name} on BookYourGround!`,
-                            url: url,
-                            title: ground.name
-                          });
-                        }}
-                        style={styles.mapActionBtn}
-                        textStyle={{ color: '#01b854', fontSize: 12 }}
-                      />
-                    </View>
-                  </Card>
-                </View>
-              </View>
-            ) : (
-              <WebHeroGallery 
-                ground={ground} 
-                heroIdx={heroIdx} 
-                imageUrls={imageUrls} 
-                setHeroImageIndex={setHeroImageIndex}
-                isFavorite={isFavorite}
-                toggleFavorite={toggleFavorite}
-                favoriteLoading={favoriteLoading}
-              />
-            )
-          ) : (
-            <View style={[styles.section, styles.imageCard]}>
-              <Image
-                source={{ uri: imageUrls[heroIdx] }}
-                style={styles.heroImage}
-                resizeMode="cover"
-              />
-              {imageUrls.length > 1 ? (
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  style={styles.thumbScroll}
-                  contentContainerStyle={styles.thumbScrollContent}
-                >
-                  {imageUrls.map((uri, idx) => (
-                    <Pressable
-                      key={`${uri}-${idx}`}
-                      onPress={() => setHeroImageIndex(idx)}
-                      style={[
-                        styles.thumbPressable,
-                        idx === heroIdx && styles.thumbPressableSelected,
-                      ]}
-                    >
-                      <Image source={{ uri }} style={styles.thumbImage} resizeMode="cover" />
-                    </Pressable>
-                  ))}
-                </ScrollView>
-              ) : null}
-            </View>
-          )}
-
-          {/* webActionBar removed as requested */}
-
-          {isLargeWeb ? (
-            <View style={styles.webTwoColumnLayout}>
-              <View style={styles.webLeftColumn}>
                 {ground.description && (
                   <Card style={styles.section}>
                     <Text style={styles.sectionTitle}>About</Text>
@@ -541,7 +438,6 @@ export default function GroundDetailsPrettyUrlScreen() {
                   <AmenitiesList ground={ground} />
                 </Card>
 
-                {/* ── Customer Reviews ── */}
                 <ReviewsSection 
                   reviews={reviews} 
                   averageRating={averageRating} 
@@ -550,11 +446,65 @@ export default function GroundDetailsPrettyUrlScreen() {
                 />
               </View>
 
+              {/* RIGHT COLUMN: Sticky Map & Checkout */}
               <View style={styles.webRightColumn}>
                 <View style={styles.stickySidebar}>
-                  <Card style={styles.sidebarBookingCard}>
+                  {/* Combined Map & Actions */}
+                  <Card style={[styles.section, styles.mapSection, { marginTop: 0, height: 520, borderRadius: 24, padding: 0 }]}>
+                    <View style={{ flex: 1, overflow: 'hidden' }}>
+                      <WebMap ground={ground} mapsUrl={mapsUrl} />
+                    </View>
+                    <View style={[styles.mapActionsContainer, { borderTopWidth: 1, borderTopColor: '#F1F5F9' }]}>
+                      <Button
+                        title={isFavorite ? "Favourited" : "Favourite"}
+                        variant="outline"
+                        icon={Heart}
+                        iconSize={16}
+                        iconColor={isFavorite ? '#EF4444' : '#64748B'}
+                        fill={isFavorite ? '#EF4444' : 'none'}
+                        onPress={toggleFavorite}
+                        loading={favoriteLoading}
+                        style={styles.mapActionBtn}
+                        textStyle={{ color: '#01b854', fontSize: 12 }}
+                      />
+                      <Button
+                        title="Directions"
+                        variant="outline"
+                        icon={Navigation2}
+                        iconSize={16}
+                        onPress={async () => {
+                          if (mapsUrl) {
+                            try {
+                              await Linking.openURL(mapsUrl);
+                            } catch (err) {
+                              console.error('Failed to open maps URL:', err);
+                            }
+                          }
+                        }}
+                        style={styles.mapActionBtn}
+                        textStyle={{ color: '#01b854', fontSize: 12 }}
+                      />
+                      <Button
+                        title="Share"
+                        variant="outline"
+                        icon={Share2}
+                        iconSize={16}
+                        onPress={() => {
+                          const url = typeof window !== 'undefined' ? window.location.href : '';
+                          Share.share({
+                            message: `Check out ${ground.name} on BookYourGround!`,
+                            url: url,
+                            title: ground.name
+                          });
+                        }}
+                        style={styles.mapActionBtn}
+                        textStyle={{ color: '#01b854', fontSize: 12 }}
+                      />
+                    </View>
+                  </Card>
 
-                    
+                  {/* Checkout Card */}
+                  <Card style={styles.sidebarBookingCard}>
                     <View style={styles.formContainer}>
                       <LandingBookingForm
                         initialGroundId={String(ground.id)}
@@ -572,13 +522,53 @@ export default function GroundDetailsPrettyUrlScreen() {
                       />
                     </View>
                   </Card>
-                  
                 </View>
               </View>
             </View>
           ) : (
             <>
               {/* Mobile / Small-screen layout */}
+              {IS_WEB ? (
+                <WebHeroGallery 
+                  ground={ground} 
+                  heroIdx={heroIdx} 
+                  imageUrls={imageUrls} 
+                  setHeroImageIndex={setHeroImageIndex}
+                  isFavorite={isFavorite}
+                  toggleFavorite={toggleFavorite}
+                  favoriteLoading={favoriteLoading}
+                />
+              ) : (
+                <View style={[styles.section, styles.imageCard]}>
+                  <Image
+                    source={{ uri: imageUrls[heroIdx] }}
+                    style={styles.heroImage}
+                    resizeMode="cover"
+                  />
+                  {imageUrls.length > 1 ? (
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      style={styles.thumbScroll}
+                      contentContainerStyle={styles.thumbScrollContent}
+                    >
+                      {imageUrls.map((uri, idx) => (
+                        <Pressable
+                          key={`${uri}-${idx}`}
+                          onPress={() => setHeroImageIndex(idx)}
+                          style={[
+                            styles.thumbPressable,
+                            idx === heroIdx && styles.thumbPressableSelected,
+                          ]}
+                        >
+                          <Image source={{ uri }} style={styles.thumbImage} resizeMode="cover" />
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  ) : null}
+                </View>
+              )}
+
               <View style={styles.section}>
                 <Text style={styles.name}>{ground.name}</Text>
                 <View style={styles.locationRow}>
@@ -616,19 +606,6 @@ export default function GroundDetailsPrettyUrlScreen() {
                     <Text style={styles.mapsLinkText}>Get Directions</Text>
                   </Pressable>
                 )}
-                {(() => {
-                  const slots = (ground as any).time_slots || [];
-                  const prices = slots
-                    .filter((s: any) => s.is_available && s.custom_price != null)
-                    .map((s: any) => Number(s.custom_price));
-                  
-                  if (prices.length === 0) return null;
-                  const minPrice = Math.min(...prices);
-                  const maxPrice = Math.max(...prices);
-                  const hasVariation = minPrice !== maxPrice;
-
-                {null}
-                })()}
                 
                 <View style={styles.formContainer}>
                   <LandingBookingForm
@@ -749,8 +726,8 @@ export default function GroundDetailsPrettyUrlScreen() {
               >
                 <Heart
                   size={22}
-                  color={isFavorite ? '#01b854' : '#64748B'}
-                  fill={isFavorite ? '#01b854' : 'none'}
+                  color={isFavorite ? '#EF4444' : '#64748B'}
+                  fill={isFavorite ? '#EF4444' : 'none'}
                   strokeWidth={2}
                 />
               </Pressable>
@@ -854,7 +831,7 @@ function WebHeroGallery({
               {favoriteLoading ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
-                <Heart size={20} color="#FFFFFF" fill={isFavorite ? "#FFFFFF" : "none"} />
+                <Heart size={20} color={isFavorite ? "#EF4444" : "#FFFFFF"} fill={isFavorite ? "#EF4444" : "none"} />
               )}
             </TouchableOpacity>
           </View>
@@ -1119,7 +1096,7 @@ const styles = StyleSheet.create({
   // ── Web Shell ──────────────────────────────────────────────
   webHeroRow: {
     flexDirection: 'row',
-    gap: 20,
+    gap: 32,
     width: '100%',
     marginBottom: 24,
   },
@@ -1155,7 +1132,6 @@ const styles = StyleSheet.create({
   stickySidebar: {
     position: 'sticky' as any,
     top: 100,
-    gap: 20,
   },
   reviewsSectionCard: {
     minHeight: 480,
@@ -1163,7 +1139,7 @@ const styles = StyleSheet.create({
   sidebarBookingCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
-    padding: 16,
+    padding: 24,
     borderWidth: 1,
     borderColor: '#F1F5F9',
     shadowColor: '#000',
@@ -1522,11 +1498,11 @@ const styles = StyleSheet.create({
 
   // ── Section card ─────────────────────────────────────
   section: {
-    marginBottom: 12,
+    marginBottom: 24,
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
-    padding: 20,
-    marginTop: 12,
+    padding: 24,
+    marginTop: 0,
     borderWidth: 1,
     borderColor: '#F1F5F9',
     shadowColor: '#000',

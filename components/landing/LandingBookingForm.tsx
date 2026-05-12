@@ -1692,6 +1692,21 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       
       if (supportMultipleSlots) {
         params.set('slots', selectedNetsSlots.join(','));
+        
+        const slotPrices = selectedNetsSlots.map(s => {
+          const parts = s.split('__');
+          const date = parts[0];
+          const time = parts[1];
+          const slotTeamType = parts[2];
+          let price = pricesByDate[date]?.[time] ?? slotPriceByStartTime[time] ?? selectedGround?.base_price_per_hour ?? 0;
+          if (isCricketGroundType) {
+            const factor = slotTeamType === 'one' ? 0.5 : 1.0;
+            price = price * factor;
+          }
+          return price;
+        });
+        params.set('slotPrices', slotPrices.join(','));
+
         if (selectedNetsSlots.length > 0) {
           const firstSlot = selectedNetsSlots[0];
           const [date, time] = firstSlot.includes('__') ? firstSlot.split('__') : [bookingDate, firstSlot];
@@ -1899,7 +1914,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
         </View>
       )}
 
-      <View style={[styles.row, !!openSelectMenu && styles.sectionDropdownOpen]}>
+      <View style={[styles.row, !!openSelectMenu && styles.sectionDropdownOpen, { flexWrap: 'wrap' }]}>
         <View
           style={[
             styles.section,
@@ -1987,9 +2002,70 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
             }}
           />
         </View>
+
+        {!groundPageAccent && ((!isBoxCricket && !isNets) || (groundPageAccent && !isNets)) ? (
+          <View style={[styles.section, { flex: 2 }]}>
+            <Text style={fieldLabelStyle}>Teams</Text>
+            <View style={styles.teamToggle}>
+              <Pressable
+                disabled={lockSlot}
+                onPress={() => {
+                  if (lockSlot) return;
+                  setTeamType('one');
+                  if (useLandingSearchFlow) clearSearchState();
+                }}
+                style={[
+                  styles.teamToggleOption,
+                  nativeTanChrome && styles.teamToggleOptionBookGroundNative,
+                  teamType === 'one' && styles.teamToggleOptionActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.teamToggleText,
+                    nativeTanChrome && styles.teamToggleTextBookGroundNative,
+                    teamType === 'one' && styles.teamToggleTextActive,
+                  ]}
+                >
+                  1 Team
+                </Text>
+              </Pressable>
+              <Pressable
+                disabled={lockSlot || hideBothTeamsOption}
+                onPress={() => {
+                  if (lockSlot) return;
+                  setTeamType('both');
+                  if (useLandingSearchFlow) clearSearchState();
+                }}
+                style={[
+                  styles.teamToggleOption,
+                  nativeTanChrome && styles.teamToggleOptionBookGroundNative,
+                  hideBothTeamsOption && styles.teamToggleOptionDisabled,
+                  teamType === 'both' && !hideBothTeamsOption && styles.teamToggleOptionActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.teamToggleText,
+                    nativeTanChrome && styles.teamToggleTextBookGroundNative,
+                    teamType === 'both' && !hideBothTeamsOption && styles.teamToggleTextActive,
+                    hideBothTeamsOption && styles.teamToggleTextDisabled,
+                  ]}
+                >
+                  Both Teams
+                </Text>
+              </Pressable>
+            </View>
+            {hideBothTeamsOption ? (
+              <Text style={styles.teamToggleHint}>
+                One team slot is already booked for this time — only a single-team booking is available.
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
       </View>
 
-      {(!isBoxCricket && !isNets) || (groundPageAccent && !isNets) ? (
+      {groundPageAccent && ((!isBoxCricket && !isNets) || (groundPageAccent && !isNets)) ? (
         <View style={[styles.section, isWeb ? webFullSpanStyle : webGridSectionStyle, webSingleColumnStyle]}>
           <Text style={fieldLabelStyle}>Teams</Text>
           <View style={styles.teamToggle}>
@@ -2250,6 +2326,16 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                       if (supportMultipleSlots) {
                         setSelectedNetsSlots(prev => {
                           const existing = prev.find(v => v.startsWith(prefix));
+                          
+                          const date = bookingDate;
+                          const time = s.value;
+                          let price = pricesByDate[date]?.[time] ?? slotPriceByStartTime[time] ?? selectedGround?.base_price_per_hour ?? 0;
+                          if (isCricketGroundType) {
+                            const factor = teamType === 'one' ? 0.5 : 1.0;
+                            price = price * factor;
+                          }
+                          const slotWithPrice = `${prefix}${teamType}__${price}`;
+
                           if (existing) {
                             const [_, __, existingTeam] = existing.split('__');
                             if (existingTeam === teamType) {
@@ -2263,13 +2349,13 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                               }
                               return next;
                             } else {
-                              // Update team type
-                              return prev.map(v => v === existing ? `${prefix}${teamType}` : v);
+                              // Update team type and price
+                              return prev.map(v => v === existing ? slotWithPrice : v);
                             }
                           } else {
                             // Add new
                             setStartTime(s.value as TimeString);
-                            return [...prev, `${prefix}${teamType}`];
+                            return [...prev, slotWithPrice];
                           }
                         });
                       } else {

@@ -123,8 +123,8 @@ export default function GroundCard({
                 >
                   <Heart
                     size={18}
-                    color={isFavorite ? '#00ea6b' : '#0F172A'}
-                    fill={isFavorite ? '#00ea6b' : 'transparent'}
+                    color={isFavorite ? '#EF4444' : '#0F172A'}
+                    fill={isFavorite ? '#EF4444' : 'transparent'}
                     strokeWidth={2.5}
                   />
                 </TouchableOpacity>
@@ -179,7 +179,7 @@ export default function GroundCard({
               ) : (
                 <View style={styles.glassViewDetails}>
                   <Text style={styles.glassViewDetailsText}>View Details</Text>
-                  <ChevronRight size={14} color="#00ea6b" strokeWidth={3} />
+                  <ChevronRight size={14} color="#64748B" strokeWidth={3} />
 
                 </View>
               )}
@@ -223,8 +223,8 @@ export default function GroundCard({
             >
               <Heart
                 size={compact ? 16 : 20}
-                color={isFavorite ? '#00ea6b' : (isLight ? '#64748B' : '#f9fafb')}
-                fill={isFavorite ? '#00ea6b' : (isLight ? 'transparent' : 'rgba(0,0,0,0.3)')}
+                color={isFavorite ? '#EF4444' : (isLight ? '#64748B' : '#f9fafb')}
+                fill={isFavorite ? '#EF4444' : (isLight ? 'transparent' : 'rgba(0,0,0,0.3)')}
                 strokeWidth={2.5}
               />
             </TouchableOpacity>
@@ -760,13 +760,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    fontWeight: '600',
+    fontWeight: '500',
     fontFamily: 'Inter',
   },
   locationGlass: {
-    color: '#334155',
+    color: '#1E293B',
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '500',
     fontFamily: 'Inter',
   },
   favBtnGlass: {
@@ -785,13 +785,13 @@ const styles = StyleSheet.create({
   priceGlass: {
     color: '#06392e',
     fontSize: 18,
-    fontWeight: '900',
+    fontWeight: '600',
     fontFamily: 'Inter',
   },
   priceUnitGlass: {
     fontSize: 11,
-    color: '#475569',
-    fontWeight: '700',
+    color: '#1E293B',
+    fontWeight: '500',
     fontFamily: 'Inter',
   },
   approvalBadge: {
@@ -836,7 +836,7 @@ const styles = StyleSheet.create({
   glassPitchTypeText: {
     color: '#FFFFFF',
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '600',
     fontFamily: 'Inter',
     textTransform: 'uppercase',
     letterSpacing: 1.2,
@@ -857,14 +857,14 @@ const styles = StyleSheet.create({
   },
   glassRatingText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
   glassReviewCount: {
     fontSize: 11,
-    color: '#64748B',
-    fontWeight: '600',
+    color: '#1E293B',
+    fontWeight: '500',
     fontFamily: 'Inter',
   },
   glassBookBtn: {
@@ -894,7 +894,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   glassViewDetailsText: {
-    color: '#01b854',
+    color: '#64748B',
     fontSize: 12,
     fontWeight: '700',
     fontFamily: 'Inter',

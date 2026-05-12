@@ -647,8 +647,8 @@ export default function ProductDetailScreen() {
                 <TouchableOpacity style={styles.actionCircle} onPress={toggleFavorite}>
                   <Heart 
                     size={20} 
-                    color={isFavorited ? '#f8688a' : '#2b2f4b'} 
-                    fill={isFavorited ? '#f8688a' : 'transparent'} 
+                    color={isFavorited ? '#EF4444' : '#2b2f4b'} 
+                    fill={isFavorited ? '#EF4444' : 'transparent'} 
                   />
                 </TouchableOpacity>
               </View>

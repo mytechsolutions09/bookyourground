@@ -27,7 +27,7 @@ git stash pop      # Puts your local changes back on top
 
 push to dev
 
-in super admin activate approve bank details and add reject butoon once the details are rejected it shows on owners dashboard and asks him to put correct details, , once approved it shows approved in bank details
+on web left section ground page, make padding between container same 
 
 resend-intelligentgamerai@gmail.com
 

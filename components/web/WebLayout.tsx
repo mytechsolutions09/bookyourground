@@ -191,6 +191,21 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
   }
 
   const [scrolled, setScrolled] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [isSidebarOpenOnSmallScreen, setIsSidebarOpenOnSmallScreen] = useState(false);
+
+  const onTouchStart = useCallback((e: any) => {
+    setStartX(e.nativeEvent.pageX);
+  }, []);
+
+  const onTouchEnd = useCallback((e: any) => {
+    const endX = e.nativeEvent.pageX;
+    if (endX - startX > 50) { // Swipe right
+      setIsSidebarOpenOnSmallScreen(true);
+    } else if (startX - endX > 50) { // Swipe left
+      setIsSidebarOpenOnSmallScreen(false);
+    }
+  }, [startX]);
   const [searchQuery, setSearchQuery] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [searchFocused, setSearchFocused] = useState(false);
@@ -571,8 +586,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     cleanPath.startsWith('/settings/') ||
     cleanPath === '/add-ground' ||
     cleanPath === '/(owner)/add-ground' ||
-    cleanPath === '/matches' ||
-    cleanPath === '/find-an-opponent',
+    cleanPath === '/matches',
     [cleanPath]
   );
 
@@ -669,7 +683,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
   // Treat the presence of a Supabase `user` as authenticated even if `profile`
   // hasn't loaded yet (prevents briefly showing "Sign In").
   const isAuthenticated = !!user || !!profile || isSuperAdmin;
-  const showMenuPanel = !isPublicNoSidebar && isAuthenticated && !isCompact;
+  const showMenuPanel = !isPublicNoSidebar && isAuthenticated && (!isCompact || isSidebarOpenOnSmallScreen);
 
   const handleSignOut = async () => {
     await signOut();
@@ -703,8 +717,10 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
         styles.container,
         (isLanding || isMarketing) && styles.containerLanding,
       ]}
+      onTouchStart={isCompact ? onTouchStart : undefined}
+      onTouchEnd={isCompact ? onTouchEnd : undefined}
     >
-      {!hideHeader && showHeroHeader && !isCheckoutPage && !(isGroundInfoPage && isCompact) && (
+      {!hideHeader && showHeroHeader && !isCheckoutPage && !(isGroundInfoPage && isCompact) && !(isSuperAdmin && isCompact) && (
         <View
           style={[
             styles.heroHeader,
@@ -742,7 +758,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                 source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
                 style={[
                   styles.logoImage,
-                  isCompact && styles.logoImageCompact,
+                  (isCompact || isGroundDetails || isShop || cleanPath === '/search' || isMarketing) && styles.logoImageCompact,
                 ]}
                 resizeMode="contain"
                 accessibilityIgnoresInvertColors
@@ -959,11 +975,12 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
         </View>
       )}
 
-      {!hideHeader && !isLanding && !isMarketing && (!isGroundDetails || isOwnerGroundsDashboard) && !isCheckoutPage && !shouldHideAppHeader && (
+      {!hideHeader && !isLanding && !isMarketing && (!isGroundDetails || isOwnerGroundsDashboard) && !isCheckoutPage && !shouldHideAppHeader && !(isSuperAdmin && isCompact) && (
         <View
           style={[
             styles.header,
-            isShop && { backgroundColor: '#1a1f2e', borderBottomWidth: 0 },
+            isShop && { backgroundColor: '#1a1f2e', borderBottomWidth: 0, height: 60 },
+            cleanPath === '/search' && { height: 60 },
             isGroundOwner && !isPublicNoSidebar && styles.ownerHeader,
             isUserRoute && !isPublicNoSidebar && styles.userHeader,
             isCompact && !isNavbarVisible && { transform: [{ translateY: -100 }] },
@@ -980,7 +997,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                 source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
                 style={[
                   styles.logoImage,
-                  isCompact && styles.logoImageCompact,
+                  (isCompact || isShop || cleanPath === '/search') && styles.logoImageCompact,
                 ]}
                 resizeMode="contain"
                 accessibilityIgnoresInvertColors
@@ -1067,13 +1084,16 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
       <View style={bodyStyle}>
         {showMenuPanel ? (
           <View
-            style={isAdminLayout ? styles.sidebarContainerAdmin : styles.sidebarContainer}
+            style={[
+              isAdminLayout ? styles.sidebarContainerAdmin : styles.sidebarContainer,
+              isCompact && { position: 'absolute', left: 0, top: 0, bottom: 0, zIndex: 1000, backgroundColor: '#FFFFFF' }
+            ]}
           >
             <View
               style={[
                 styles.sidebar,
                 isLanding && styles.sidebarHeaderOffset,
-                isSuperAdmin && isAdminRoute && sidebarCollapsed && styles.sidebarCollapsed,
+                (isCompact || (isSuperAdmin && isAdminRoute && sidebarCollapsed)) && styles.sidebarCollapsed,
                 isAdminRoute && { transition: 'width 0.3s ease-in-out' } as any,
               ]}
             >
@@ -1354,7 +1374,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
         </View>
       </View>
 
-      {isCompact && !isInTabs && !isCheckoutPage && cleanPath !== '/search' && !isGroundInfoPage && (
+      {isCompact && !isInTabs && !isCheckoutPage && cleanPath !== '/search' && !isGroundInfoPage && !isSuperAdmin && (
         <View style={[
           styles.bottomBar,
           (!isBottomBarVisible || !isTabBarVisible) && { 
@@ -1464,11 +1484,13 @@ const styles = StyleSheet.create({
     position: 'fixed' as any,
     backgroundColor: '#043529',
     borderBottomWidth: 0,
+    height: 60,
   },
   heroHeaderMarketing: {
     position: 'fixed' as any,
     backgroundColor: '#043529',
     borderBottomWidth: 0,
+    height: 60,
   },
   heroHeaderScrolled: {
     backgroundColor: 'rgba(255, 255, 255, 0.12)',

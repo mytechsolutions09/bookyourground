@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, Platform, ScrollView, RefreshControl, TextInput, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Platform, ScrollView, RefreshControl, TextInput, TouchableOpacity, Dimensions, ActivityIndicator, useWindowDimensions } from 'react-native';
 import WebLayout from '@/components/web/WebLayout';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency, formatDate } from '@/utils/helpers';

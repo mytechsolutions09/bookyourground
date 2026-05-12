@@ -402,110 +402,150 @@ export default function AdminBookingsScreen() {
             justifyContent: 'space-between', 
             gap: 16 
           }}>
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false} 
-              contentContainerStyle={styles.tabRow}
-              style={[styles.tabScrollWrap, (isMobile || isSmallWeb) && { marginBottom: 8 }]}
-            >
-              <TouchableOpacity
-                onPress={() => setActiveTab('all')}
-                style={[
-                  styles.tabChip,
-                  activeTab === 'all' && styles.tabChipActive,
-                ]}
+            {/* Left Side: Tabs + Filters (on large web) */}
+            <View style={{ 
+              flexDirection: 'row', 
+              alignItems: 'center', 
+              gap: 16,
+              flex: (isMobile || isSmallWeb) ? 0 : 1,
+            }}>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                contentContainerStyle={styles.tabRow}
+                style={[styles.tabScrollWrap, (isMobile || isSmallWeb) && { marginBottom: 8 }]}
               >
-                <Text
+                <TouchableOpacity
+                  onPress={() => setActiveTab('all')}
                   style={[
-                    styles.tabChipText,
-                    activeTab === 'all' && styles.tabChipTextActive,
+                    styles.tabChip,
+                    activeTab === 'all' && styles.tabChipActive,
                   ]}
                 >
-                  {`All (${totalDbCount})`}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setActiveTab('upcoming')}
-                style={[
-                  styles.tabChip,
-                  activeTab === 'upcoming' && styles.tabChipActive,
-                ]}
-              >
-                <Text
+                  <Text
+                    style={[
+                      styles.tabChipText,
+                      activeTab === 'all' && styles.tabChipTextActive,
+                    ]}
+                  >
+                    {`All (${totalDbCount})`}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setActiveTab('upcoming')}
                   style={[
-                    styles.tabChipText,
-                    activeTab === 'upcoming' && styles.tabChipTextActive,
+                    styles.tabChip,
+                    activeTab === 'upcoming' && styles.tabChipActive,
                   ]}
                 >
-                  {`Upcoming (${upcomingDbCount})`}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setActiveTab('past')}
-                style={[
-                  styles.tabChip,
-                  activeTab === 'past' && styles.tabChipActive,
-                ]}
-              >
-                <Text
+                  <Text
+                    style={[
+                      styles.tabChipText,
+                      activeTab === 'upcoming' && styles.tabChipTextActive,
+                    ]}
+                  >
+                    {`Upcoming (${upcomingDbCount})`}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setActiveTab('past')}
                   style={[
-                    styles.tabChipText,
-                    activeTab === 'past' && styles.tabChipTextActive,
+                    styles.tabChip,
+                    activeTab === 'past' && styles.tabChipActive,
                   ]}
                 >
-                  {`Past (${pastDbCount})`}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => setActiveTab('cancelled' as any)}
-                style={[
-                  styles.tabChip,
-                  activeTab === ('cancelled' as any) && styles.tabChipActive,
-                ]}
-              >
-                <Text
+                  <Text
+                    style={[
+                      styles.tabChipText,
+                      activeTab === 'past' && styles.tabChipTextActive,
+                    ]}
+                  >
+                    {`Past (${pastDbCount})`}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setActiveTab('cancelled' as any)}
                   style={[
-                    styles.tabChipText,
-                    activeTab === ('cancelled' as any) && styles.tabChipTextActive,
+                    styles.tabChip,
+                    activeTab === ('cancelled' as any) && styles.tabChipActive,
                   ]}
                 >
-                  {`Cancelled (${cancelledDbCount})`}
-                </Text>
-              </TouchableOpacity>
-            </ScrollView>
+                  <Text
+                    style={[
+                      styles.tabChipText,
+                      activeTab === ('cancelled' as any) && styles.tabChipTextActive,
+                    ]}
+                  >
+                    {`Cancelled (${cancelledDbCount})`}
+                  </Text>
+                </TouchableOpacity>
+              </ScrollView>
 
+              {/* Filters on the left (only for large web) */}
+              {!isMobile && !isSmallWeb && (
+                <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                  <FilterDropdown 
+                    id="type" 
+                    label="Type" 
+                    value={typeFilter}
+                    options={[
+                      { key: 'all', label: 'All Types' },
+                      ...types.map(t => ({ key: t.name, label: t.label || t.name }))
+                    ]}
+                    onSelect={setTypeFilter}
+                  />
+
+                  <TouchableOpacity 
+                    style={[styles.dateFilterBtn, (dateRange.start || dateRange.end) && styles.dateFilterBtnActive]}
+                    onPress={() => setShowDateModal(true)}
+                  >
+                    <Calendar size={14} color={(dateRange.start || dateRange.end) ? "#10b981" : "#6B7280"} />
+                    <Text style={[styles.dateFilterText, (dateRange.start || dateRange.end) && styles.dateFilterTextActive]}>
+                      {dateRange.start ? (
+                         `${dateRange.start.toLocaleDateString()} - ${dateRange.end ? dateRange.end.toLocaleDateString() : 'Now'}`
+                      ) : 'Date'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+
+            {/* Right Side: Search Bar (and Filters on mobile/small web) */}
             <View style={{ 
               flexDirection: isMobile ? 'column' : 'row', 
               alignItems: 'center', 
-              gap: 8,
-              width: isMobile ? '100%' : 'auto'
+              gap: 16,
+              width: (isMobile || isSmallWeb) ? '100%' : 'auto'
             }}>
-              <View style={{ flexDirection: 'row', gap: 8, flex: isMobile ? 1 : 0, width: isMobile ? '100%' : 'auto' }}>
-                <FilterDropdown 
-                  id="type" 
-                  label="Type" 
-                  value={typeFilter}
-                  options={[
-                    { key: 'all', label: 'All Types' },
-                    ...types.map(t => ({ key: t.name, label: t.label || t.name }))
-                  ]}
-                  onSelect={setTypeFilter}
-                />
+              {/* Filters on the right (for mobile and small web) */}
+              {(isMobile || isSmallWeb) && (
+                <View style={{ flexDirection: 'row', gap: 8, width: '100%', marginBottom: isMobile ? 8 : 0 }}>
+                  <FilterDropdown 
+                    id="type" 
+                    label="Type" 
+                    value={typeFilter}
+                    options={[
+                      { key: 'all', label: 'All Types' },
+                      ...types.map(t => ({ key: t.name, label: t.label || t.name }))
+                    ]}
+                    onSelect={setTypeFilter}
+                  />
 
-                <TouchableOpacity 
-                  style={[styles.dateFilterBtn, (dateRange.start || dateRange.end) && styles.dateFilterBtnActive, { flex: isMobile ? 1 : 0 }]}
-                  onPress={() => setShowDateModal(true)}
-                >
-                  <Calendar size={14} color={(dateRange.start || dateRange.end) ? "#10b981" : "#6B7280"} />
-                  <Text style={[styles.dateFilterText, (dateRange.start || dateRange.end) && styles.dateFilterTextActive]}>
-                    {dateRange.start ? (
-                       `${dateRange.start.toLocaleDateString()} - ${dateRange.end ? dateRange.end.toLocaleDateString() : 'Now'}`
-                    ) : 'Date'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
+                  <TouchableOpacity 
+                    style={[styles.dateFilterBtn, (dateRange.start || dateRange.end) && styles.dateFilterBtnActive, { flex: isMobile ? 1 : 0 }]}
+                    onPress={() => setShowDateModal(true)}
+                  >
+                    <Calendar size={14} color={(dateRange.start || dateRange.end) ? "#10b981" : "#6B7280"} />
+                    <Text style={[styles.dateFilterText, (dateRange.start || dateRange.end) && styles.dateFilterTextActive]}>
+                      {dateRange.start ? (
+                         `${dateRange.start.toLocaleDateString()} - ${dateRange.end ? dateRange.end.toLocaleDateString() : 'Now'}`
+                      ) : 'Date'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
 
-              <View style={{ width: (isMobile || isSmallWeb) ? '100%' : 250 }}>
+              <View style={{ width: isMobile ? '100%' : 200, flex: 0 }}>
                 <TextInput
                   style={styles.searchBar}
                   placeholder="Search ground, city, customer or ID..."
@@ -949,8 +989,8 @@ const styles = StyleSheet.create({
     paddingRight: 16,
   },
   tabChip: {
-    paddingHorizontal: IS_WEB ? 11 : 16,
-    paddingVertical: IS_WEB ? 6 : 10,
+    paddingHorizontal: IS_WEB ? 8 : 16,
+    paddingVertical: IS_WEB ? 4 : 10,
     borderRadius: IS_WEB ? 8 : 10,
     borderWidth: 1.5,
     borderColor: IS_WEB ? '#E5E7EB' : 'rgba(0,234,107,0.25)',
@@ -967,7 +1007,7 @@ const styles = StyleSheet.create({
   },
   tabChipText: {
     fontFamily: 'Inter',
-    fontSize: IS_WEB ? 11.5 : 13,
+    fontSize: IS_WEB ? 10 : 13,
     fontWeight: '500',
     color: IS_WEB ? '#6B7280' : '#f9fafb',
     letterSpacing: -0.2,

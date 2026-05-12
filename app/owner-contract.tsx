@@ -634,13 +634,13 @@ export default function OwnerContractScreen() {
         const { data } = await supabase
           .from('platform_settings')
           .select('key,value')
-          .in('key', ['contract_commission_type','contract_commission_value','contract_commission_gst']);
+          .in('key', ['contract_commission_type', 'contract_commission_value', 'contract_commission_gst']);
         if (!data) return;
         const map = Object.fromEntries(data.map((r: any) => [r.key, r.value]));
         setPlatformComm({
-          type:  map['contract_commission_type'] === 'flat' ? 'flat' : 'percent',
+          type: map['contract_commission_type'] === 'flat' ? 'flat' : 'percent',
           value: String(map['contract_commission_value'] ?? '10'),
-          gst:   map['contract_commission_gst'] === true || map['contract_commission_gst'] === 'true',
+          gst: map['contract_commission_gst'] === true || map['contract_commission_gst'] === 'true',
         });
       } catch (e) { console.error(e); }
     })();
@@ -661,20 +661,20 @@ export default function OwnerContractScreen() {
     setSubmitting(true);
     try {
       const { error } = await supabase.from('contract_submissions').insert({
-        owner_name:       details.name,
-        company:          details.company,
-        venue_name:       details.venueName,
-        address:          details.address,
-        city:             details.city,
-        state:            details.state,
-        phone:            details.phone,
-        email:            details.email,
-        commission_type:  platformComm.type === 'percent' ? '%' : '₹',
+        owner_name: details.name,
+        company: details.company,
+        venue_name: details.venueName,
+        address: details.address,
+        city: details.city,
+        state: details.state,
+        phone: details.phone,
+        email: details.email,
+        commission_type: platformComm.type === 'percent' ? '%' : '₹',
         commission_value: platformComm.value,
-        gst_included:     platformComm.gst,
-        signature_data:   signatureData,
-        submitted_at:     new Date().toISOString(),
-        status:           'pending',
+        gst_included: platformComm.gst,
+        signature_data: signatureData,
+        submitted_at: new Date().toISOString(),
+        status: 'pending',
       });
       if (error) throw error;
       setSubmitted(true);
@@ -868,7 +868,7 @@ export default function OwnerContractScreen() {
                 {agreed && <Text style={styles.checkMark}>✓</Text>}
               </View>
               <Text style={styles.checkLabel}>
-                I have read and agree to the Ground Listing and Service
+                I have read and agree to the Book Your Ground Listing and Service
                 Agreement. I confirm that the information provided is accurate.
               </Text>
             </TouchableOpacity>
@@ -1022,7 +1022,7 @@ function StateSelect({ value, onChange }: { value: string; onChange: (v: string)
       </View>
     );
   }
-  
+
   return (
     <Field
       label="State *"
@@ -1046,7 +1046,7 @@ const fieldStyles = StyleSheet.create({
     color: '#111827',
     backgroundColor: '#fff',
     // @ts-ignore web only
-  outlineColor: '#00ea6b',
+    outlineColor: '#00ea6b',
   },
 });
 

@@ -1069,9 +1069,22 @@ export default function GroundsAdminScreen() {
       )}
 
       {isWeb && filteredGrounds.length > 0 && (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} bounces={false}>
-          <View style={[styles.tableHeaderContainer, (isMobile || isSmallWeb) && { minWidth: 1000, marginHorizontal: 0, paddingHorizontal: 16 }]}>
-            <View style={styles.tableHeaderRow}>
+        isSmallWeb || isMobile ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} bounces={false}>
+            <View style={[styles.tableHeaderContainer, { minWidth: 1000, marginHorizontal: 0, paddingHorizontal: 16 }]}>
+              <View style={styles.tableHeaderRow}>
+                <Text style={[styles.tableHeaderCell, styles.colGround]}>Ground</Text>
+                <Text style={[styles.tableHeaderCell, styles.colOwner]}>Owner</Text>
+                <Text style={[styles.tableHeaderCell, styles.colLocation]}>Location</Text>
+                <Text style={[styles.tableHeaderCell, styles.colPrice]}>Price & Type</Text>
+                <Text style={[styles.tableHeaderCell, styles.colStatus]}>Status</Text>
+                <Text style={[styles.tableHeaderCell, styles.colActions]}>Actions</Text>
+              </View>
+            </View>
+          </ScrollView>
+        ) : (
+          <View style={styles.tableHeaderContainer}>
+            <View style={[styles.tableHeaderRow, { width: '100%' }]}>
               <Text style={[styles.tableHeaderCell, styles.colGround]}>Ground</Text>
               <Text style={[styles.tableHeaderCell, styles.colOwner]}>Owner</Text>
               <Text style={[styles.tableHeaderCell, styles.colLocation]}>Location</Text>
@@ -1080,7 +1093,7 @@ export default function GroundsAdminScreen() {
               <Text style={[styles.tableHeaderCell, styles.colActions]}>Actions</Text>
             </View>
           </View>
-        </ScrollView>
+        )
       )}
 
       {createOpen ? (
