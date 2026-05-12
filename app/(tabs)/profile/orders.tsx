@@ -4,7 +4,7 @@ import { ShoppingBag, ChevronRight, Package, Calendar, Clock, MapPin, CreditCard
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { router, Stack } from 'expo-router';
-import { formatDate, formatDateTime } from '@/utils/helpers';
+import { formatDate, formatDateTime, slugify } from '@/utils/helpers';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import WebLayout from '@/components/web/WebLayout';
 import { StatusBar } from 'expo-status-bar';
@@ -16,6 +16,9 @@ export default function UserOrdersScreen() {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [activeTab, setActiveTab] = useState('orders');
+  const [wishlist, setWishlist] = useState<any[]>([]);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
   const [showFilterMenu, setShowFilterMenu] = useState(false);
   const [fromDate, setFromDate] = useState<string | null>(null);
   const [toDate, setToDate] = useState<string | null>(null);
@@ -24,8 +27,14 @@ export default function UserOrdersScreen() {
   const [tempToDate, setTempToDate] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user) loadOrders();
-  }, [user, statusFilter, fromDate, toDate]);
+    if (user) {
+      if (activeTab === 'orders') {
+        loadOrders();
+      } else {
+        loadWishlist();
+      }
+    }
+  }, [user, statusFilter, fromDate, toDate, activeTab]);
 
   const statuses = [
     { label: 'All Orders', value: 'all' },
@@ -72,6 +81,27 @@ export default function UserOrdersScreen() {
       console.error('Error loading orders:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadWishlist = async () => {
+    if (!user) return;
+    try {
+      setWishlistLoading(true);
+      const { data, error } = await supabase
+        .from('shop_favorites')
+        .select(`
+          id,
+          product:shop_products(*)
+        `)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      setWishlist(data?.map(item => item.product) || []);
+    } catch (err) {
+      console.error('Error loading wishlist:', err);
+    } finally {
+      setWishlistLoading(false);
     }
   };
 
@@ -313,34 +343,111 @@ export default function UserOrdersScreen() {
     );
   };
 
-  const content = (
-    <View style={styles.container}>
-      {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#dc8d3c" />
-        </View>
-      ) : (
-        <FlatList
-          data={orders}
-          renderItem={renderOrderItem}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.list}
-          ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <ShoppingBag size={64} color="#E5E7EB" />
-              <Text style={styles.emptyTitle}>No orders yet</Text>
-              <Text style={styles.emptySubtitle}>When you buy gear from our shop, your orders will appear here.</Text>
+  const renderWishlistItem = ({ item }: { item: any }) => {
+    return (
+      <TouchableOpacity 
+        style={styles.orderCard}
+        onPress={() => router.push(`/shop/${slugify(item.name)}`)}
+      >
+        <View style={{ flexDirection: 'row', gap: 16 }}>
+          <Image 
+            source={{ uri: item.images?.[0] || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=200&q=80' }} 
+            style={{ width: 80, height: 80, borderRadius: 8 }} 
+          />
+          <div style={{ flex: 1, justifyContent: 'space-between' }}>
+            <View>
+              <Text style={{ fontSize: 16, fontWeight: '600', color: '#0F1111', fontFamily: 'Inter' }}>{item.name}</Text>
+              <Text style={{ fontSize: 14, color: '#64748B', fontFamily: 'Inter' }}>{item.category?.name || 'Equipment'}</Text>
+            </View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={{ fontSize: 16, fontWeight: '700', color: '#f8688a', fontFamily: 'Inter' }}>₹{item.price.toLocaleString('en-IN')}</Text>
               <TouchableOpacity 
-                style={styles.shopBtn}
-                onPress={() => router.push('/shop')}
+                style={{ backgroundColor: '#2d3450', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 }}
+                onPress={() => router.push(`/shop/${slugify(item.name)}`)}
               >
-                <Text style={styles.shopBtnText}>Start Shopping</Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 12, fontFamily: 'Inter' }}>View Product</Text>
               </TouchableOpacity>
             </View>
-          }
-          onRefresh={loadOrders}
-          refreshing={loading}
-        />
+          </div>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const content = (
+    <View style={styles.container}>
+      {/* Tab Bar */}
+      <View style={{ flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#E5E7EB', backgroundColor: '#FFFFFF' }}>
+        <TouchableOpacity 
+          style={{ flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: activeTab === 'orders' ? '#059669' : 'transparent' }}
+          onPress={() => setActiveTab('orders')}
+        >
+          <Text style={{ fontSize: 14, fontWeight: '600', color: activeTab === 'orders' ? '#059669' : '#64748B', fontFamily: 'Inter' }}>Orders</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={{ flex: 1, paddingVertical: 12, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: activeTab === 'wishlist' ? '#059669' : 'transparent' }}
+          onPress={() => setActiveTab('wishlist')}
+        >
+          <Text style={{ fontSize: 14, fontWeight: '600', color: activeTab === 'wishlist' ? '#059669' : '#64748B', fontFamily: 'Inter' }}>Wishlist</Text>
+        </TouchableOpacity>
+      </View>
+
+      {activeTab === 'orders' ? (
+        loading ? (
+          <View style={[styles.center, { flex: 1 }]}>
+            <ActivityIndicator size="large" color="#059669" />
+          </View>
+        ) : (
+          <FlatList
+            data={orders}
+            renderItem={renderOrderItem}
+            keyExtractor={item => item.id}
+            contentContainerStyle={styles.list}
+            ListEmptyComponent={
+              <View style={styles.emptyState}>
+                <ShoppingBag size={64} color="#E5E7EB" />
+                <Text style={styles.emptyTitle}>No orders yet</Text>
+                <Text style={styles.emptySubtitle}>When you buy gear from our shop, your orders will appear here.</Text>
+                <TouchableOpacity 
+                  style={styles.shopBtn}
+                  onPress={() => router.push('/shop')}
+                >
+                  <Text style={styles.shopBtnText}>Start Shopping</Text>
+                </TouchableOpacity>
+              </View>
+            }
+            onRefresh={loadOrders}
+            refreshing={loading}
+          />
+        )
+      ) : (
+        wishlistLoading ? (
+          <View style={[styles.center, { flex: 1 }]}>
+            <ActivityIndicator size="large" color="#059669" />
+          </View>
+        ) : (
+          <FlatList
+            data={wishlist}
+            renderItem={renderWishlistItem}
+            keyExtractor={item => item.id}
+            contentContainerStyle={styles.list}
+            ListEmptyComponent={
+              <View style={styles.emptyState}>
+                <ShoppingBag size={64} color="#E5E7EB" />
+                <Text style={styles.emptyTitle}>Your wishlist is empty</Text>
+                <Text style={styles.emptySubtitle}>Save items you like to buy them later.</Text>
+                <TouchableOpacity 
+                  style={styles.shopBtn}
+                  onPress={() => router.push('/shop')}
+                >
+                  <Text style={styles.shopBtnText}>Start Shopping</Text>
+                </TouchableOpacity>
+              </View>
+            }
+            onRefresh={loadWishlist}
+            refreshing={wishlistLoading}
+          />
+        )
       )}
     </View>
   );
@@ -403,34 +510,82 @@ export default function UserOrdersScreen() {
                </View>
             </View>
             
-            {loading ? (
-              <View style={[styles.center, { paddingVertical: 100 }]}>
-                <ActivityIndicator size="large" color="#059669" />
-              </View>
-            ) : (
-              <>
-                <View style={{ gap: 20 }}>
-                  {orders.map(order => (
-                    <React.Fragment key={order.id}>
-                      {renderOrderItem({ item: order })}
-                    </React.Fragment>
-                  ))}
-                </View>
+            {/* Tab Bar */}
+            <View style={{ flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#E5E7EB', backgroundColor: '#FFFFFF', marginBottom: 24 }}>
+              <TouchableOpacity 
+                style={{ paddingVertical: 12, paddingHorizontal: 20, borderBottomWidth: 2, borderBottomColor: activeTab === 'orders' ? '#059669' : 'transparent' }}
+                onPress={() => setActiveTab('orders')}
+              >
+                <Text style={{ fontSize: 16, fontWeight: '600', color: activeTab === 'orders' ? '#059669' : '#64748B', fontFamily: 'Inter' }}>Orders</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={{ paddingVertical: 12, paddingHorizontal: 20, borderBottomWidth: 2, borderBottomColor: activeTab === 'wishlist' ? '#059669' : 'transparent' }}
+                onPress={() => setActiveTab('wishlist')}
+              >
+                <Text style={{ fontSize: 16, fontWeight: '600', color: activeTab === 'wishlist' ? '#059669' : '#64748B', fontFamily: 'Inter' }}>Wishlist</Text>
+              </TouchableOpacity>
+            </View>
 
-                {orders.length === 0 && (
-                  <View style={[styles.emptyState, { paddingVertical: 100 }]}>
-                    <ShoppingBag size={64} color="#E5E7EB" />
-                    <Text style={styles.emptyTitle}>No orders yet</Text>
-                    <Text style={styles.emptySubtitle}>When you buy gear from our shop, your orders will appear here.</Text>
-                    <TouchableOpacity 
-                      style={styles.shopBtn}
-                      onPress={() => router.push('/shop')}
-                    >
-                      <Text style={styles.shopBtnText}>Start Shopping</Text>
-                    </TouchableOpacity>
+            {activeTab === 'orders' ? (
+              loading ? (
+                <View style={[styles.center, { paddingVertical: 100 }]}>
+                  <ActivityIndicator size="large" color="#059669" />
+                </View>
+              ) : (
+                <>
+                  <View style={{ gap: 20 }}>
+                    {orders.map(order => (
+                      <React.Fragment key={order.id}>
+                        {renderOrderItem({ item: order })}
+                      </React.Fragment>
+                    ))}
                   </View>
-                )}
-              </>
+
+                  {orders.length === 0 && (
+                    <View style={[styles.emptyState, { paddingVertical: 100 }]}>
+                      <ShoppingBag size={64} color="#E5E7EB" />
+                      <Text style={styles.emptyTitle}>No orders yet</Text>
+                      <Text style={styles.emptySubtitle}>When you buy gear from our shop, your orders will appear here.</Text>
+                      <TouchableOpacity 
+                        style={styles.shopBtn}
+                        onPress={() => router.push('/shop')}
+                      >
+                        <Text style={styles.shopBtnText}>Start Shopping</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </>
+              )
+            ) : (
+              wishlistLoading ? (
+                <View style={[styles.center, { paddingVertical: 100 }]}>
+                  <ActivityIndicator size="large" color="#059669" />
+                </View>
+              ) : (
+                <>
+                  <View style={{ gap: 20 }}>
+                    {wishlist.map(item => (
+                      <React.Fragment key={item.id}>
+                        {renderWishlistItem({ item })}
+                      </React.Fragment>
+                    ))}
+                  </View>
+
+                  {wishlist.length === 0 && (
+                    <View style={[styles.emptyState, { paddingVertical: 100 }]}>
+                      <ShoppingBag size={64} color="#E5E7EB" />
+                      <Text style={styles.emptyTitle}>Your wishlist is empty</Text>
+                      <Text style={styles.emptySubtitle}>Save items you like to buy them later.</Text>
+                      <TouchableOpacity 
+                        style={styles.shopBtn}
+                        onPress={() => router.push('/shop')}
+                      >
+                        <Text style={styles.shopBtnText}>Start Shopping</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </>
+              )
             )}
 
           <Modal

@@ -390,6 +390,39 @@ export default function ProductDetailScreen() {
     });
   };
 
+  const renderTableMarkdown = (text: string) => {
+    if (!text) return null;
+    const lines = text.split('\n').filter(line => line.trim() !== '');
+    return (
+      <View style={{ gap: 8 }}>
+        {lines.map((line, index) => {
+          const parts = line.split(/(\*\*.*?\*\*)/g).map(p => p.trim()).filter(p => p !== '');
+          
+          if (parts.length < 2) {
+            return <Text key={index} style={{ fontSize: 14, color: '#0F1111', fontFamily: 'Inter' }}>{line}</Text>;
+          }
+          
+          let label = parts[0];
+          let value = parts[1];
+          
+          if (label.startsWith('**') && label.endsWith('**')) {
+            label = label.slice(2, -2);
+          }
+          if (value.startsWith('**') && value.endsWith('**')) {
+            value = value.slice(2, -2);
+          }
+          
+          return (
+            <View key={index} style={{ flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 4 }}>
+              <Text style={{ width: 180, fontSize: 14, fontWeight: '700', color: '#0F1111', fontFamily: 'Inter' }}>{label}</Text>
+              <Text style={{ flex: 1, fontSize: 14, color: '#0F1111', fontFamily: 'Inter' }}>{value}</Text>
+            </View>
+          );
+        })}
+      </View>
+    );
+  };
+
   const content = (
     <View style={{ flex: 1 }}>
       {/* Fixed Background Image */}
@@ -492,7 +525,7 @@ export default function ProductDetailScreen() {
           {/* Description */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Description</Text>
-            <Text style={styles.descriptionText}>{product.description}</Text>
+            <Text style={styles.descriptionText}>{renderMarkdown(product.description)}</Text>
           </View>
 
           {/* Features */}
@@ -503,7 +536,7 @@ export default function ProductDetailScreen() {
                 {product.features.map((feature: string, index: number) => (
                   <View key={index} style={styles.featureItem}>
                     <CheckCircle2 size={18} color="#f8688a" />
-                    <Text style={styles.featureText}>{feature}</Text>
+                    <Text style={styles.featureText}>{renderMarkdown(feature)}</Text>
                   </View>
                 ))}
               </View>
@@ -530,7 +563,7 @@ export default function ProductDetailScreen() {
                     return (
                       <View key={key} style={[styles.specRow, isLast && { borderBottomWidth: 0 }]}>
                         <Text style={styles.specKey}>{key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}</Text>
-                        <Text style={styles.specValue}>{displayValue}</Text>
+                        <Text style={styles.specValue}>{renderMarkdown(displayValue)}</Text>
                       </View>
                     );
                   })}
@@ -660,15 +693,25 @@ export default function ProductDetailScreen() {
   );
 
   const bottomActions = (
-    <View style={[styles.bottomBar, isUltraNarrow && { paddingHorizontal: 8, gap: 6 }]}>
+    <View style={[styles.bottomBar, isUltraNarrow && { paddingHorizontal: 8, gap: 6 }, { flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
       <TouchableOpacity 
-        style={[styles.addToCartSecondary, isUltraNarrow && { height: 48 }]}
+        style={{ width: 48, height: 48, borderRadius: 24, borderWidth: 1, borderColor: '#D5D9D9', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' }}
+        onPress={toggleFavorite}
+      >
+        <Heart 
+          size={20} 
+          color={isFavorited ? '#EF4444' : '#2b2f4b'} 
+          fill={isFavorited ? '#EF4444' : 'transparent'} 
+        />
+      </TouchableOpacity>
+      <TouchableOpacity 
+        style={[styles.addToCartSecondary, isUltraNarrow && { height: 48 }, { flex: 1 }]}
         onPress={addToCart}
       >
         <Text style={[styles.addToCartSecondaryText, isUltraNarrow && { fontSize: 13 }]}>Add to Cart</Text>
       </TouchableOpacity>
       <TouchableOpacity 
-        style={[styles.buyNowBtn, isUltraNarrow && { height: 48 }]}
+        style={[styles.buyNowBtn, isUltraNarrow && { height: 48 }, { flex: 1 }]}
         onPress={() => addToCart()} // Buy now also adds to cart then goes to cart
       >
         <Text style={[styles.buyNowText, isUltraNarrow && { fontSize: 13 }]}>Buy Now</Text>
@@ -826,9 +869,9 @@ export default function ProductDetailScreen() {
                       </TouchableOpacity>
                       {showHighlights && (
                         <View style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}>
-                          <Text style={{ fontSize: 14, color: '#4B5563', fontFamily: 'Inter', lineHeight: 20 }}>
-                            {renderMarkdown(product.specifications?.highlights) || 'No highlights available.'}
-                          </Text>
+                          {renderTableMarkdown(product.specifications?.highlights) || (
+                            <Text style={{ fontSize: 14, color: '#4B5563', fontFamily: 'Inter' }}>No highlights available.</Text>
+                          )}
                         </View>
                       )}
                       
@@ -841,9 +884,9 @@ export default function ProductDetailScreen() {
                       </TouchableOpacity>
                       {showStyle && (
                         <View style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}>
-                          <Text style={{ fontSize: 14, color: '#4B5563', fontFamily: 'Inter', lineHeight: 20 }}>
-                            {renderMarkdown(product.specifications?.style) || 'No style details available.'}
-                          </Text>
+                          {renderTableMarkdown(product.specifications?.style) || (
+                            <Text style={{ fontSize: 14, color: '#4B5563', fontFamily: 'Inter' }}>No style details available.</Text>
+                          )}
                         </View>
                       )}
                       
@@ -856,9 +899,9 @@ export default function ProductDetailScreen() {
                       </TouchableOpacity>
                       {showFeatures && (
                         <View style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' }}>
-                          <Text style={{ fontSize: 14, color: '#4B5563', fontFamily: 'Inter', lineHeight: 20 }}>
-                            {renderMarkdown(product.specifications?.features) || 'No features or specifications available.'}
-                          </Text>
+                          {renderTableMarkdown(product.specifications?.features) || (
+                            <Text style={{ fontSize: 14, color: '#4B5563', fontFamily: 'Inter' }}>No features or specifications available.</Text>
+                          )}
                         </View>
                       )}
                     </View>
@@ -884,7 +927,7 @@ export default function ProductDetailScreen() {
                   <View style={{ marginBottom: 16 }}>
                     <View style={{ flexDirection: 'row', marginBottom: 4 }}>
                       <Text style={{ width: 80, fontSize: 12, color: '#565959', fontFamily: 'Inter' }}>Sold by</Text>
-                      <Text style={{ fontSize: 12, color: '#007185', fontFamily: 'Inter' }}>adidas India Marketing Pvt Ltd</Text>
+                      <Text style={{ fontSize: 12, color: '#007185', fontFamily: 'Inter' }}>Book your ground</Text>
                     </View>
                     <View style={{ flexDirection: 'row', marginBottom: 4 }}>
                       <Text style={{ width: 80, fontSize: 12, color: '#565959', fontFamily: 'Inter' }}>Payment</Text>
@@ -935,8 +978,13 @@ export default function ProductDetailScreen() {
                     <Text style={{ color: '#FFFFFF', fontSize: 14, fontFamily: 'Inter', fontWeight: '500' }}>Buy Now</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity style={{ borderWidth: 1, borderColor: '#D5D9D9', borderRadius: 8, paddingVertical: 8, alignItems: 'center' }}>
-                    <Text style={{ color: '#0F1111', fontSize: 14, fontFamily: 'Inter' }}>Add to Wish List</Text>
+                  <TouchableOpacity 
+                    style={{ borderWidth: 1, borderColor: '#D5D9D9', borderRadius: 8, paddingVertical: 8, alignItems: 'center' }}
+                    onPress={toggleFavorite}
+                  >
+                    <Text style={{ color: '#0F1111', fontSize: 14, fontFamily: 'Inter', fontWeight: '500' }}>
+                      {isFavorited ? 'Remove from Wish List' : 'Add to Wish List'}
+                    </Text>
                   </TouchableOpacity>
                 </View>
               </View>

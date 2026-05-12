@@ -38,4 +38,4 @@ git push origin main
 
 
 
-once the teams and slot is selected and then teams are changes, it should not affect the selected teams and slots
+each slot  booking is making a different booking in multiple booking
