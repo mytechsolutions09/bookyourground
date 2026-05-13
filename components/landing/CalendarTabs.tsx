@@ -48,7 +48,7 @@ export default function CalendarTabs() {
     try {
       if (grounds.length === 0) setLoading(true);
       const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-      const dateString = date.toISOString().split('T')[0];
+      const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
       // 1. Fetch grounds (basic info + primary image)
       const { data: groundsData, error: groundsError } = await supabase
@@ -315,45 +315,52 @@ export default function CalendarTabs() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.resultsScroll}
           >
-            {grounds.map((ground: any) => (
-              <TouchableOpacity 
-                key={ground.id}
-                style={styles.groundTab}
-                onPress={() => router.push(makeGroundPath(ground) as any)}
-              >
-                <View style={styles.tabImageWrapper}>
-                  <Image 
-                    source={{ uri: ground.ground_images?.[0]?.image_url || 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg' }}
-                    style={styles.tabImage}
-                  />
-                </View>
-                
-                <View style={styles.priceRow}>
-                  <Text style={styles.priceRowText}>
-                    {ground._availableSlots?.length > 0
-                      ? `From ₹${Math.min(...ground._availableSlots.map((s: any) => Number(s.custom_price || 0)))}/match`
-                      : 'See Slots'}
-                  </Text>
-                </View>
-                
-                <View style={styles.tabInfo}>
-                  <Text style={styles.tabName} numberOfLines={1}>{ground.name}</Text>
-                  <View style={styles.tabMeta}>
-                    <View style={styles.ratingRow}>
-                      <Star size={10} color="#F59E0B" fill="#F59E0B" />
-                      <Text style={styles.ratingText}>{ground._avgRating.toFixed(1)}</Text>
-                    </View>
-                    <Text style={styles.tabCity}>• {ground.city}</Text>
+            {grounds.map((ground: any) => {
+              const isNetOrLane = String(ground.pitch_type ?? '').toLowerCase().includes('net') || 
+                                  String(ground.pitch_type ?? '').toLowerCase().includes('lane') ||
+                                  String(ground.name ?? '').toLowerCase().includes('lane');
+              const priceUnit = isNetOrLane ? '/slot' : String(ground.pitch_type ?? '').toLowerCase().includes('box') ? '/hr' : '/match';
+              
+              return (
+                <TouchableOpacity 
+                  key={ground.id}
+                  style={styles.groundTab}
+                  onPress={() => router.push(makeGroundPath(ground) as any)}
+                >
+                  <View style={styles.tabImageWrapper}>
+                    <Image 
+                      source={{ uri: ground.ground_images?.[0]?.image_url || 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg' }}
+                      style={styles.tabImage}
+                    />
                   </View>
                   
-                  <View style={styles.availabilityTag}>
-                    <Text style={styles.availabilityText}>
-                      {ground._availableSlots.length} slots left
+                  <View style={styles.priceRow}>
+                    <Text style={styles.priceRowText}>
+                      {ground._availableSlots?.length > 0
+                        ? `From ₹${Math.min(...ground._availableSlots.map((s: any) => Number(s.custom_price || 0)))}${priceUnit}`
+                        : 'See Slots'}
                     </Text>
                   </View>
-                </View>
-              </TouchableOpacity>
-            ))}
+                  
+                  <View style={styles.tabInfo}>
+                    <Text style={styles.tabName} numberOfLines={1}>{ground.name}</Text>
+                    <View style={styles.tabMeta}>
+                      <View style={styles.ratingRow}>
+                        <Star size={10} color="#F59E0B" fill="#F59E0B" />
+                        <Text style={styles.ratingText}>{ground._avgRating.toFixed(1)}</Text>
+                      </View>
+                      <Text style={styles.tabCity}>• {ground.city}</Text>
+                    </View>
+                    
+                    <View style={styles.availabilityTag}>
+                      <Text style={styles.availabilityText}>
+                        {ground._availableSlots.length} slots left
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
         ) : (
           <View style={styles.emptyState}>

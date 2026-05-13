@@ -303,12 +303,31 @@ export default function HeroWeb() {
           flexDirection: 'column', 
           justifyContent: 'center', 
           alignItems: 'center',
-          marginTop: 0 
+          marginTop: -250 
         }
       ]}>
-        <Text style={[styles.title, isMobile && { fontSize: 28, lineHeight: 34, marginBottom: 16 }]}>
-          Play Hard. Book Easy.
-        </Text>
+        {!isMobile ? (
+          <View style={{
+            position: 'absolute',
+            left: '50%',
+            marginLeft: -300,
+            top: '50%',
+            marginTop: -180,
+            width: 600,
+            height: 40,
+            justifyContent: 'center',
+            alignItems: 'center',
+            zIndex: 100,
+          }}>
+            <Text style={[styles.title, { fontSize: 28, lineHeight: 36, marginBottom: 0, textAlign: 'center' }]}>
+              Play Hard. Book Easy.
+            </Text>
+          </View>
+        ) : (
+          <Text style={[styles.title, isMobile && { fontSize: 28, lineHeight: 34, marginBottom: 16 }]}>
+            Play Hard. Book Easy.
+          </Text>
+        )}
 
         {/* Search Form with Rotating Border */}
         <View 
@@ -868,8 +887,8 @@ const styles = StyleSheet.create({
   },
   calendarDropdown: {
     position: 'absolute',
-    top: 60,
-    bottom: 'auto' as any,
+    bottom: 54,
+    top: 'auto' as any,
     left: 0,
     right: 0,
     padding: 6,

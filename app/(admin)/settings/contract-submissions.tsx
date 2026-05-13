@@ -2,12 +2,12 @@ import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, Platform, ScrollView,
   TouchableOpacity, RefreshControl, ActivityIndicator,
-  Modal, Image,
+  Modal, Image, TextInput, Switch, Alert,
 } from 'react-native';
 import {
   FileText, CheckCircle, Clock, XCircle, Eye,
   User, MapPin, Phone, Mail, Building2, Calendar,
-  X, Percent, IndianRupee, Settings2,
+  X, Percent, IndianRupee, Settings2, Save,
 } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -159,7 +159,9 @@ export default function ContractSubmissionsPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [selected, setSelected]     = useState<ContractSubmission | null>(null);
   const [filter, setFilter]         = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
-  const [comm, setComm]             = useState<{ type: string; value: string; gst: boolean } | null>(null);
+  
+  const [comm, setComm] = useState<{ type: 'percent' | 'flat'; value: string; gst: boolean }>({ type: 'percent', value: '10', gst: true });
+  const [savingComm, setSavingComm] = useState(false);
 
   const load = useCallback(async (isRefresh = false) => {
     isRefresh ? setRefreshing(true) : setLoading(true);
@@ -190,13 +192,35 @@ export default function ContractSubmissionsPage() {
         if (!rows) return;
         const map = Object.fromEntries(rows.map((r: any) => [r.key, r.value]));
         setComm({
-          type:  String(map['contract_commission_type'] ?? 'percent'),
-          value: String(map['contract_commission_value'] ?? '—'),
+          type:  (map['contract_commission_type'] === 'flat' ? 'flat' : 'percent'),
+          value: String(map['contract_commission_value'] ?? '10'),
           gst:   map['contract_commission_gst'] === true || map['contract_commission_gst'] === 'true',
         });
       } catch (e) { console.error(e); }
     })();
   }, [load]);
+
+  const saveCommission = async () => {
+    try {
+      setSavingComm(true);
+      const rows = [
+        { key: 'contract_commission_type',  value: comm.type,                updated_at: new Date().toISOString() },
+        { key: 'contract_commission_value', value: Number(comm.value),       updated_at: new Date().toISOString() },
+        { key: 'contract_commission_gst',   value: comm.gst,                 updated_at: new Date().toISOString() },
+      ];
+      for (const r of rows) {
+        const { error } = await supabase.from('platform_settings').update(r).eq('key', r.key);
+        if (error) throw error;
+      }
+      if (Platform.OS === 'web') alert('Commission settings saved!');
+      else Alert.alert('Saved', 'Commission settings saved!');
+    } catch (e: any) {
+      if (Platform.OS === 'web') alert(e.message || 'Save failed');
+      else Alert.alert('Error', e.message);
+    } finally {
+      setSavingComm(false);
+    }
+  };
 
   const updateStatus = async (id: string, status: 'approved' | 'rejected') => {
     try {
@@ -266,28 +290,70 @@ export default function ContractSubmissionsPage() {
 
       {/* ── Commission banner ── */}
       {comm && (
-        <View style={styles.commBanner}>
-          <View style={styles.commBannerLeft}>
-            {comm.type === 'percent'
-              ? <Percent size={14} color="#059669" />
-              : <IndianRupee size={14} color="#059669" />}
+        <View style={styles.commCard}>
+          <View style={styles.commCardHeader}>
             <View>
-              <Text style={styles.commBannerLabel}>Active Commission Rate</Text>
-              <Text style={styles.commBannerValue}>
-                {comm.type === 'percent'
-                  ? `${comm.value}% per booking`
-                  : `₹${comm.value} flat fee / booking`}
-                {comm.gst ? ' + GST' : ''}
+              <Text style={styles.commCardTitle}>Partner Commission</Text>
+              <Text style={styles.commCardSub}>Default rate shown on the venue owner contract</Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.saveCommBtn, savingComm && { opacity: 0.6 }]}
+              onPress={saveCommission}
+              disabled={savingComm}
+            >
+              <Save size={13} color="#fff" />
+              <Text style={styles.saveCommText}>{savingComm ? 'Saving…' : 'Save'}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Type toggle + value input row */}
+          <View style={styles.commRow}>
+            {/* % / ₹ toggle */}
+            <View style={styles.commToggle}>
+              <TouchableOpacity
+                style={[styles.commToggleBtn, comm.type === 'percent' && styles.commToggleBtnOn]}
+                onPress={() => setComm(p => ({ ...p, type: 'percent' }))}
+              >
+                <Text style={[styles.commToggleTxt, comm.type === 'percent' && styles.commToggleTxtOn]}>%</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.commToggleBtn, comm.type === 'flat' && styles.commToggleBtnOn]}
+                onPress={() => setComm(p => ({ ...p, type: 'flat' }))}
+              >
+                <Text style={[styles.commToggleTxt, comm.type === 'flat' && styles.commToggleTxtOn]}>₹</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* value input */}
+            <View style={styles.commInputWrap}>
+              <Text style={styles.commInputPrefix}>
+                {comm.type === 'flat' ? '₹' : ''}
+              </Text>
+              <TextInput
+                style={styles.commInput}
+                value={comm.value}
+                onChangeText={v => setComm(p => ({ ...p, value: v }))}
+                keyboardType="numeric"
+                placeholder={comm.type === 'percent' ? 'e.g. 10' : 'e.g. 500'}
+                placeholderTextColor="#9CA3AF"
+              />
+              <Text style={styles.commInputSuffix}>
+                {comm.type === 'percent' ? '% per booking' : '/ team'}
               </Text>
             </View>
           </View>
-          <TouchableOpacity
-            style={styles.commBannerBtn}
-            onPress={() => router.push('/(admin)/settings/platform-fees' as any)}
-          >
-            <Settings2 size={12} color="#059669" />
-            <Text style={styles.commBannerBtnText}>Edit</Text>
-          </TouchableOpacity>
+
+          {/* GST toggle */}
+          <View style={styles.commGstRow}>
+            <Switch
+              value={comm.gst}
+              onValueChange={v => setComm(p => ({ ...p, gst: v }))}
+              trackColor={{ false: '#E5E7EB', true: '#D1FAE5' }}
+              thumbColor={comm.gst ? '#10b981' : '#9CA3AF'}
+              style={{ transform: [{ scale: 0.8 }] }}
+            />
+            <Text style={styles.commGstLabel}>+ GST applicable on top of commission</Text>
+          </View>
         </View>
       )}
 
@@ -471,51 +537,53 @@ const styles = StyleSheet.create({
   },
   statusText: { fontSize: 10, fontWeight: '700', fontFamily: 'Inter' },
 
-  // Commission banner
-  commBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  // Commission card
+  commCard: {
+    margin: 20,
+    marginBottom: 0,
+    borderWidth: 1.5,
+    borderColor: '#D1FAE5',
+    borderRadius: 16,
     backgroundColor: '#F0FDF4',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#DCFCE7',
+    padding: 16,
   },
-  commBannerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+  commCardHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
+    marginBottom: 16,
   },
-  commBannerLabel: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#059669',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  commCardTitle: { fontSize: 14, fontWeight: '700', color: '#111827', fontFamily: 'Inter' },
+  commCardSub:   { fontSize: 12, color: '#6B7280', fontFamily: 'Inter', marginTop: 2 },
+  saveCommBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#10b981', paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: 10,
   },
-  commBannerValue: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#065F46',
-    marginTop: 1,
+  saveCommText: { fontSize: 13, fontWeight: '700', color: '#fff', fontFamily: 'Inter' },
+
+  commRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  commToggle: {
+    flexDirection: 'row', borderWidth: 1.5, borderColor: '#A7F3D0',
+    borderRadius: 10, overflow: 'hidden',
   },
-  commBannerBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#A7F3D0',
+  commToggleBtn: { paddingHorizontal: 16, paddingVertical: 8 },
+  commToggleBtnOn: { backgroundColor: '#10b981' },
+  commToggleTxt: { fontSize: 14, fontWeight: '700', color: '#9CA3AF' },
+  commToggleTxtOn: { color: '#fff' },
+  commInputWrap: {
+    flex: 1, flexDirection: 'row', alignItems: 'center',
+    borderWidth: 1.5, borderColor: '#A7F3D0', borderRadius: 10,
+    backgroundColor: '#fff', paddingHorizontal: 12,
   },
-  commBannerBtnText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#059669',
+  commInputPrefix: { fontSize: 14, fontWeight: '600', color: '#374151' },
+  commInput: {
+    flex: 1, fontSize: 14, color: '#111827', paddingVertical: 8,
+    fontFamily: 'Inter',
+    // @ts-ignore
+    outlineColor: '#10b981',
   },
+  commInputSuffix: { fontSize: 12, color: '#6B7280', fontFamily: 'Inter' },
+  commGstRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  commGstLabel: { fontSize: 13, color: '#374151', fontFamily: 'Inter' },
 });
 
 const modal = StyleSheet.create({

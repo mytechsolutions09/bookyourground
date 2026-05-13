@@ -9,7 +9,8 @@ import {
   ActivityIndicator, 
   RefreshControl,
   TextInput,
-  useWindowDimensions
+  useWindowDimensions,
+  ScrollView
 } from 'react-native';
 import WebLayout from '@/components/web/WebLayout';
 import { supabase } from '@/lib/supabase';
@@ -42,8 +43,10 @@ function AdminPayoutsInner() {
   const isMobile = width < 768;
 
   const [bookings, setBookings] = useState<any[]>([]);
+  const [withdrawals, setWithdrawals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [payoutSubTab, setPayoutSubTab] = useState<'requests' | 'history'>('requests');
 
   const loadData = async () => {
     try {
@@ -60,15 +63,34 @@ function AdminPayoutsInner() {
           payout_status,
           payout_processed_at,
           payment_method,
-          ground:grounds(name, city, owner_id),
-          user:profiles!user_id(full_name, email),
-          owner:profiles!owner_id(full_name, email)
+          ground:grounds(
+            name, 
+            city, 
+            owner_id,
+            owner:profiles!owner_id(full_name, email)
+          ),
+          user:profiles!user_id(full_name, email)
         `)
         .eq('payout_status', 'completed')
         .order('payout_processed_at', { ascending: false });
 
       if (error) throw error;
       setBookings(data || []);
+
+      const { data: withdrawalData, error: withdrawalError } = await supabase
+        .from('withdrawals')
+        .select(`
+          id,
+          created_at,
+          amount,
+          status,
+          owner_id,
+          owner:profiles!owner_id(full_name, email)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (withdrawalError) throw withdrawalError;
+      setWithdrawals(withdrawalData || []);
     } catch (e) {
       console.error('Error loading payouts:', e);
     } finally {
@@ -95,8 +117,8 @@ function AdminPayoutsInner() {
           id: key,
           payoutDate: date,
           ownerId: ownerId,
-          ownerName: b.owner?.full_name || 'Unknown',
-          ownerEmail: b.owner?.email || '',
+          ownerName: b.ground?.owner?.full_name || 'Unknown',
+          ownerEmail: b.ground?.owner?.email || '',
           groundName: groundName,
           groundCity: b.ground?.city || '',
           matchCount: 0,
@@ -126,8 +148,34 @@ function AdminPayoutsInner() {
       groups[key].bookingIds.push(b.id);
     });
 
+    // Add completed manual withdrawals to the payout history
+    withdrawals.forEach(w => {
+      if (w.status === 'completed') {
+        const date = w.created_at ? new Date(w.created_at).toISOString().split('T')[0] : 'Unknown';
+        const ownerId = w.owner_id || 'Unknown';
+        const key = `${date}_${ownerId}_withdrawal_${w.id}`;
+
+        groups[key] = {
+          id: key,
+          payoutDate: date,
+          ownerId: ownerId,
+          ownerName: w.owner?.full_name || 'Unknown',
+          ownerEmail: w.owner?.email || '',
+          groundName: 'Manual Withdrawal',
+          groundCity: '',
+          matchCount: 0,
+          onlineRevenue: 0,
+          offlineFees: 0,
+          totalFees: 0,
+          netPayout: Number(w.amount || 0),
+          status: 'completed',
+          bookingIds: []
+        };
+      }
+    });
+
     return Object.values(groups).sort((a, b) => b.payoutDate.localeCompare(a.payoutDate));
-  }, [bookings]);
+  }, [bookings, withdrawals]);
 
   const filteredGroups = useMemo(() => {
     if (!searchQuery) return payoutGroups;
@@ -139,13 +187,47 @@ function AdminPayoutsInner() {
     );
   }, [payoutGroups, searchQuery]);
 
+  const filteredWithdrawals = useMemo(() => {
+    // Only show pending and processing requests in the Requests tab
+    const list = withdrawals.filter(w => w.status === 'pending' || w.status === 'processing');
+    if (!searchQuery) return list;
+    const q = searchQuery.toLowerCase();
+    return list.filter(w => 
+      (w.owner?.full_name || '').toLowerCase().includes(q) || 
+      w.status.toLowerCase().includes(q) ||
+      new Date(w.created_at).toLocaleDateString().includes(q)
+    );
+  }, [withdrawals, searchQuery]);
+
   const renderHeader = () => (
     <View style={[styles.header, (isMobile || isSmallWeb) && { padding: 16 }]}>
       <View style={[
         styles.headerTop,
         (isMobile || isSmallWeb) && { flexDirection: 'column', alignItems: 'stretch', gap: 12 }
       ]}>
-        <Text style={styles.title}>Payout History</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 24 }}>
+          <Text style={styles.title}>Payout History</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <TouchableOpacity 
+              style={[
+                { paddingVertical: 12, paddingHorizontal: 16 }, 
+                payoutSubTab === 'requests' ? { borderBottomWidth: 3, borderBottomColor: '#10B981', backgroundColor: '#F9FAFB' } : {}
+              ]}
+              onPress={() => setPayoutSubTab('requests')}
+            >
+              <Text style={[{ fontSize: 13, fontWeight: '700', textTransform: 'uppercase' }, payoutSubTab === 'requests' ? { color: '#10B981' } : { color: '#6B7280' }]}>Payout Request</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[
+                { paddingVertical: 12, paddingHorizontal: 16 }, 
+                payoutSubTab === 'history' ? { borderBottomWidth: 3, borderBottomColor: '#10B981', backgroundColor: '#F9FAFB' } : {}
+              ]}
+              onPress={() => setPayoutSubTab('history')}
+            >
+              <Text style={[{ fontSize: 13, fontWeight: '700', textTransform: 'uppercase' }, payoutSubTab === 'history' ? { color: '#10B981' } : { color: '#6B7280' }]}>Payout</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
         <View style={[styles.searchContainer, (isMobile || isSmallWeb) && { maxWidth: '100%' }]}>
           <Search size={16} color="#9CA3AF" style={styles.searchIcon} />
           <TextInput
@@ -172,82 +254,322 @@ function AdminPayoutsInner() {
 
       {isWeb && !isSmallWeb && (
         <View style={styles.tableHeaderContainer}>
-          <View style={styles.tableHeaderRow}>
-            <Text style={[styles.tableHeaderCell, styles.colDate]}>Payout Date</Text>
-            <Text style={[styles.tableHeaderCell, styles.colOwner]}>Owner & Ground</Text>
-            <Text style={[styles.tableHeaderCell, styles.colMatches]}>Matches</Text>
-            <Text style={[styles.tableHeaderCell, styles.colAmount]}>Online Rev</Text>
-            <Text style={[styles.tableHeaderCell, styles.colAmount]}>Offline Fees</Text>
-            <Text style={[styles.tableHeaderCell, styles.colAmount]}>Net Payout</Text>
-            <Text style={[styles.tableHeaderCell, styles.colStatus]}>Status</Text>
-          </View>
+          {payoutSubTab === 'requests' ? (
+            <View style={styles.tableHeaderRow}>
+              <Text style={[styles.tableHeaderCell, { width: 130 }]}>Request Date</Text>
+              <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Owner</Text>
+              <Text style={[styles.tableHeaderCell, { width: 120 }]}>Amount</Text>
+              <Text style={[styles.tableHeaderCell, { width: 110 }]}>Status</Text>
+            </View>
+          ) : (
+            <View style={styles.tableHeaderRow}>
+              <Text style={[styles.tableHeaderCell, styles.colDate]}>Payout Date</Text>
+              <Text style={[styles.tableHeaderCell, styles.colOwner]}>Owner & Ground</Text>
+              <Text style={[styles.tableHeaderCell, styles.colMatches]}>Matches</Text>
+              <Text style={[styles.tableHeaderCell, styles.colAmount]}>Online Rev</Text>
+              <Text style={[styles.tableHeaderCell, styles.colAmount]}>Offline Fees</Text>
+              <Text style={[styles.tableHeaderCell, styles.colAmount]}>Net Payout</Text>
+              <Text style={[styles.tableHeaderCell, styles.colStatus]}>Status</Text>
+            </View>
+          )}
         </View>
       )}
 
       <FlatList
-        data={filteredGroups}
+        data={payoutSubTab === 'requests' ? filteredWithdrawals : filteredGroups}
         keyExtractor={item => item.id}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={loadData} />}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} bounces={false}>
-            <TouchableOpacity 
-              style={[styles.tableRow, (isMobile || isSmallWeb) && { minWidth: 700 }]}
-              activeOpacity={0.7}
-              onPress={() => {
-                  // Future: show details of all matches in this payout
-              }}
-            >
-              <View style={[styles.tableCell, styles.colDate]}>
-                <View style={styles.dateBadge}>
-                  <Calendar size={14} color="#6B7280" />
-                  <Text style={styles.dateText}>{formatDateDDMMYY(item.payoutDate)}</Text>
+          payoutSubTab === 'requests' ? (
+            !isSmallWeb ? (
+              <View style={[styles.tableRow]}>
+                <View style={[styles.tableCell, { width: 130 }]}>
+                  <View style={styles.dateBadge}>
+                    <Calendar size={14} color="#6B7280" />
+                    <Text style={styles.dateText}>{formatDateDDMMYY(item.created_at)}</Text>
+                  </View>
                 </View>
-              </View>
-
-              <View style={[styles.tableCell, styles.colOwner]}>
-                <Text style={styles.ownerName}>{item.ownerName}</Text>
-                <View style={styles.groundInfo}>
-                  <Building2 size={12} color="#9CA3AF" />
-                  <Text style={styles.groundName}>{item.groundName}, {item.groundCity}</Text>
+                <View style={[styles.tableCell, { flex: 2 }]}>
+                  <Text style={styles.ownerName}>{item.owner?.full_name || 'Unknown'}</Text>
+                  <Text style={styles.groundName}>{item.owner?.email || ''}</Text>
                 </View>
-              </View>
-
-              <View style={[styles.tableCell, styles.colMatches]}>
-                <View style={styles.matchBadge}>
-                  <Text style={styles.matchCountText}>{item.matchCount} Matches</Text>
+                <View style={[styles.tableCell, { width: 120 }]}>
+                  <Text style={styles.amountGross}>{formatCurrency(item.amount)}</Text>
                 </View>
-              </View>
+                <View style={[styles.tableCell, { width: 110 }]}>
+                  {Platform.OS === 'web' ? (
+                    <select
+                      value={item.status}
+                      onChange={async (e) => {
+                        const newStatus = e.target.value;
+                        
+                        if (newStatus === 'completed') {
+                          // Check if already deducted
+                          const { data: existingTx } = await supabase
+                            .from('wallet_transactions')
+                            .select('id')
+                            .eq('reference_type', 'withdrawal')
+                            .eq('reference_id', item.id)
+                            .maybeSingle();
+                            
+                          if (!existingTx) {
+                            // Deduct money from wallet
+                            const { error: walletError } = await supabase.rpc('add_money_to_wallet', {
+                              target_user_id: item.owner_id,
+                              amount_to_add: -item.amount,
+                              description_text: `Payout completed for request #${item.id.split('-')[0].toUpperCase()}`,
+                              ref_type: 'withdrawal',
+                              ref_id: item.id
+                            });
+                            
+                            if (walletError) {
+                              console.error('Failed to deduct wallet balance:', walletError);
+                              alert('Failed to update wallet balance');
+                              return;
+                            }
+                          }
+                        }
 
-              <View style={[styles.tableCell, styles.colAmount]}>
-                <Text style={styles.amountGross}>₹{Math.round(item.onlineRevenue)}</Text>
-              </View>
-
-              <View style={[styles.tableCell, styles.colAmount]}>
-                <Text style={styles.amountFees}>-₹{Math.round(item.offlineFees)}</Text>
-              </View>
-
-              <View style={[styles.tableCell, styles.colAmount]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <Text style={[styles.amountNet, item.netPayout <= 0 && { color: '#EF4444' }]}>
-                    ₹{Math.max(0, Math.round(item.netPayout))}
-                  </Text>
-                  {item.netPayout < 0 && (
-                     <View style={styles.debtBadge}>
-                       <Text style={styles.debtText}>DEBT</Text>
-                     </View>
+                        const { error } = await supabase
+                          .from('withdrawals')
+                          .update({ status: newStatus })
+                          .eq('id', item.id);
+                        if (!error) {
+                          setWithdrawals(prev => prev.map(w => w.id === item.id ? { ...w, status: newStatus } : w));
+                        } else {
+                          alert('Failed to update status');
+                        }
+                      }}
+                      style={{
+                        padding: '4px 8px',
+                        borderRadius: '20px',
+                        backgroundColor: item.status === 'completed' ? '#ECFDF5' : '#FEF3C7',
+                        color: item.status === 'completed' ? '#059669' : '#D97706',
+                        border: 'none',
+                        fontWeight: '800',
+                        fontSize: '10px',
+                        textTransform: 'uppercase',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="processing">Processing</option>
+                      <option value="completed">Completed</option>
+                    </select>
+                  ) : (
+                    <View style={[styles.statusBadge, { backgroundColor: item.status === 'completed' ? '#ECFDF5' : '#FEF3C7' }]}>
+                      {item.status === 'completed' ? <CheckCircle2 size={14} color="#10B981" /> : <AlertCircle size={14} color="#D97706" />}
+                      <Text style={[styles.statusText, { color: item.status === 'completed' ? '#059669' : '#D97706', textTransform: 'capitalize' }]}>{item.status}</Text>
+                    </View>
                   )}
                 </View>
               </View>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} bounces={false}>
+                <View style={[styles.tableRow, { minWidth: 700 }]}>
+                  <View style={[styles.tableCell, { width: 130 }]}>
+                    <View style={styles.dateBadge}>
+                      <Calendar size={14} color="#6B7280" />
+                      <Text style={styles.dateText}>{formatDateDDMMYY(item.created_at)}</Text>
+                    </View>
+                  </View>
+                  <View style={[styles.tableCell, { flex: 2 }]}>
+                    <Text style={styles.ownerName}>{item.owner?.full_name || 'Unknown'}</Text>
+                    <Text style={styles.groundName}>{item.owner?.email || ''}</Text>
+                  </View>
+                  <View style={[styles.tableCell, { width: 120 }]}>
+                    <Text style={styles.amountGross}>{formatCurrency(item.amount)}</Text>
+                  </View>
+                  <View style={[styles.tableCell, { width: 110 }]}>
+                    {Platform.OS === 'web' ? (
+                      <select
+                        value={item.status}
+                        onChange={async (e) => {
+                          const newStatus = e.target.value;
+                          
+                          if (newStatus === 'completed') {
+                            // Check if already deducted
+                            const { data: existingTx } = await supabase
+                              .from('wallet_transactions')
+                              .select('id')
+                              .eq('reference_type', 'withdrawal')
+                              .eq('reference_id', item.id)
+                              .maybeSingle();
+                              
+                            if (!existingTx) {
+                              // Deduct money from wallet
+                              const { error: walletError } = await supabase.rpc('add_money_to_wallet', {
+                                target_user_id: item.owner_id,
+                                amount_to_add: -item.amount,
+                                description_text: `Payout completed for request #${item.id.split('-')[0].toUpperCase()}`,
+                                ref_type: 'withdrawal',
+                                ref_id: item.id
+                              });
+                              
+                              if (walletError) {
+                                console.error('Failed to deduct wallet balance:', walletError);
+                                alert('Failed to update wallet balance');
+                                return;
+                              }
+                            }
+                          }
 
-              <View style={[styles.tableCell, styles.colStatus]}>
-                <View style={styles.statusBadge}>
-                  <CheckCircle2 size={14} color="#10B981" />
-                  <Text style={styles.statusText}>{item.netPayout <= 0 ? 'ADJUSTED' : 'SETTLED'}</Text>
+                          const { error } = await supabase
+                            .from('withdrawals')
+                            .update({ status: newStatus })
+                            .eq('id', item.id);
+                          if (!error) {
+                            setWithdrawals(prev => prev.map(w => w.id === item.id ? { ...w, status: newStatus } : w));
+                          } else {
+                            alert('Failed to update status');
+                          }
+                        }}
+                        style={{
+                          padding: '4px 8px',
+                          borderRadius: '20px',
+                          backgroundColor: item.status === 'completed' ? '#ECFDF5' : '#FEF3C7',
+                          color: item.status === 'completed' ? '#059669' : '#D97706',
+                          border: 'none',
+                          fontWeight: '800',
+                          fontSize: '10px',
+                          textTransform: 'uppercase',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value="pending">Pending</option>
+                        <option value="processing">Processing</option>
+                        <option value="completed">Completed</option>
+                      </select>
+                    ) : (
+                      <View style={[styles.statusBadge, { backgroundColor: item.status === 'completed' ? '#ECFDF5' : '#FEF3C7' }]}>
+                        {item.status === 'completed' ? <CheckCircle2 size={14} color="#10B981" /> : <AlertCircle size={14} color="#D97706" />}
+                        <Text style={[styles.statusText, { color: item.status === 'completed' ? '#059669' : '#D97706', textTransform: 'capitalize' }]}>{item.status}</Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
-              </View>
-            </TouchableOpacity>
-          </ScrollView>
+              </ScrollView>
+            )
+          ) : (
+            !isSmallWeb ? (
+              <TouchableOpacity 
+                style={[styles.tableRow]}
+                activeOpacity={0.7}
+                onPress={() => {
+                    // Future: show details of all matches in this payout
+                }}
+              >
+                <View style={[styles.tableCell, styles.colDate]}>
+                  <View style={styles.dateBadge}>
+                    <Calendar size={14} color="#6B7280" />
+                    <Text style={styles.dateText}>{formatDateDDMMYY(item.payoutDate)}</Text>
+                  </View>
+                </View>
+
+                <View style={[styles.tableCell, styles.colOwner]}>
+                  <Text style={styles.ownerName}>{item.ownerName}</Text>
+                  <View style={styles.groundInfo}>
+                    <Building2 size={12} color="#9CA3AF" />
+                    <Text style={styles.groundName}>{item.groundName}</Text>
+                  </View>
+                </View>
+
+                <View style={[styles.tableCell, styles.colMatches]}>
+                  <View style={styles.matchBadge}>
+                    <Text style={styles.matchCountText}>{item.matchCount} Matches</Text>
+                  </View>
+                </View>
+
+                <View style={[styles.tableCell, styles.colAmount]}>
+                  <Text style={styles.amountGross}>₹{Math.round(item.onlineRevenue)}</Text>
+                </View>
+
+                <View style={[styles.tableCell, styles.colAmount]}>
+                  <Text style={styles.amountFees}>-₹{Math.round(item.offlineFees)}</Text>
+                </View>
+
+                <View style={[styles.tableCell, styles.colAmount]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Text style={[styles.amountNet, item.netPayout <= 0 && { color: '#EF4444' }]}>
+                      ₹{Math.max(0, Math.round(item.netPayout))}
+                    </Text>
+                    {item.netPayout < 0 && (
+                       <View style={styles.debtBadge}>
+                         <Text style={styles.debtText}>DEBT</Text>
+                       </View>
+                    )}
+                  </View>
+                </View>
+
+                <View style={[styles.tableCell, styles.colStatus]}>
+                  <View style={styles.statusBadge}>
+                    <CheckCircle2 size={14} color="#10B981" />
+                    <Text style={styles.statusText}>{item.netPayout <= 0 ? 'ADJUSTED' : 'SETTLED'}</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} bounces={false}>
+                <TouchableOpacity 
+                  style={[styles.tableRow, { minWidth: 700 }]}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                      // Future: show details of all matches in this payout
+                  }}
+                >
+                  <View style={[styles.tableCell, styles.colDate]}>
+                    <View style={styles.dateBadge}>
+                      <Calendar size={14} color="#6B7280" />
+                      <Text style={styles.dateText}>{formatDateDDMMYY(item.payoutDate)}</Text>
+                    </View>
+                  </View>
+
+                  <View style={[styles.tableCell, styles.colOwner]}>
+                    <Text style={styles.ownerName}>{item.ownerName}</Text>
+                    <View style={styles.groundInfo}>
+                      <Building2 size={12} color="#9CA3AF" />
+                      <Text style={styles.groundName}>{item.groundName}</Text>
+                    </View>
+                  </View>
+
+                  <View style={[styles.tableCell, styles.colMatches]}>
+                    <View style={styles.matchBadge}>
+                      <Text style={styles.matchCountText}>{item.matchCount} Matches</Text>
+                    </View>
+                  </View>
+
+                  <View style={[styles.tableCell, styles.colAmount]}>
+                    <Text style={styles.amountGross}>₹{Math.round(item.onlineRevenue)}</Text>
+                  </View>
+
+                  <View style={[styles.tableCell, styles.colAmount]}>
+                    <Text style={styles.amountFees}>-₹{Math.round(item.offlineFees)}</Text>
+                  </View>
+
+                  <View style={[styles.tableCell, styles.colAmount]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Text style={[styles.amountNet, item.netPayout <= 0 && { color: '#EF4444' }]}>
+                        ₹{Math.max(0, Math.round(item.netPayout))}
+                      </Text>
+                      {item.netPayout < 0 && (
+                         <View style={styles.debtBadge}>
+                           <Text style={styles.debtText}>DEBT</Text>
+                         </View>
+                      )}
+                    </View>
+                  </View>
+
+                  <View style={[styles.tableCell, styles.colStatus]}>
+                    <View style={styles.statusBadge}>
+                      <CheckCircle2 size={14} color="#10B981" />
+                      <Text style={styles.statusText}>{item.netPayout <= 0 ? 'ADJUSTED' : 'SETTLED'}</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              </ScrollView>
+            )
+          )
         )}
         ListEmptyComponent={
           loading ? (

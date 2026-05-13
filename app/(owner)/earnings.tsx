@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, Platform, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Modal, TextInput as RNTextInput, useWindowDimensions } from 'react-native';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
+import { View, Text, StyleSheet, Platform, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Modal, TextInput as RNTextInput, useWindowDimensions, Animated } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import WebLayout from '@/components/web/WebLayout';
@@ -179,6 +179,25 @@ function OwnerEarningsScreenInner() {
   }, [profile]);
   const isStacking = width < 768; // Stack columns below this width
   const isUltraNarrow = width < 350;
+
+  const pulseAnim = useRef(new Animated.Value(0.3)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 0.3,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
   const isTablet = width >= 600 && width < 900;
   const [stats, setStats] = useState<EarningsStats>({
     totalEarnings: 0,
@@ -189,13 +208,16 @@ function OwnerEarningsScreenInner() {
   const [chartData, setChartData] = useState<ChartPoint[]>([]);
   const [onlineEarnings, setOnlineEarnings] = useState(0);
   const [offlineEarnings, setOfflineEarnings] = useState(0);
+  const [storeCredits, setStoreCredits] = useState(0);
   const [loading, setLoading] = useState(true);
   const [transactions, setTransactions] = useState<any[]>([]);
+  const [withdrawals, setWithdrawals] = useState<any[]>([]);
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [isBankVerified, setIsBankVerified] = useState(false);
   const [bankDetailsLoaded, setBankDetailsLoaded] = useState(false);
   const { tab } = useLocalSearchParams<{ tab: string }>();
   const [viewMode, setViewMode] = useState<'preview' | 'summary' | 'analytics' | 'payouts'>((tab as any) || 'preview');
+  const [payoutSubTab, setPayoutSubTab] = useState<'requests' | 'history'>('requests');
 
   useEffect(() => {
     if (tab && (tab === 'preview' || tab === 'summary' || tab === 'analytics' || tab === 'payouts')) {
@@ -221,6 +243,9 @@ function OwnerEarningsScreenInner() {
   const [filterPaymentMethod, setFilterPaymentMethod] = useState<'all' | 'online' | 'cash'>('all');
   const [filterDateRange, setFilterDateRange] = useState<'all' | '7days' | '30days' | 'month'>('all');
   const [ownerGrounds, setOwnerGrounds] = useState<any[]>([]);
+
+  const pendingAmount = upcomingPayouts.reduce((acc, w) => acc + (w.amount || 0), 0);
+  const withdrawableBalance = (wallet?.balance || 0) - pendingAmount;
 
   useEffect(() => {
     if (user) {
@@ -422,6 +447,7 @@ function OwnerEarningsScreenInner() {
       let total = 0;
       let onlineEarningsTotal = 0;
       let offlineEarningsTotal = 0;
+      let storeCreditsTotal = 0;
       let thisMonthTotal = 0;
       const now = new Date();
       const currentMonth = now.getMonth();
@@ -436,8 +462,10 @@ function OwnerEarningsScreenInner() {
 
         if (row.payment_method === 'cash') {
           if (row.payment_received) {
-            offlineEarningsTotal += netAmt;
+            offlineEarningsTotal += (row.total_amount || 0);
           }
+        } else if (row.payment_method === 'wallet' || row.payment_method === 'credits') {
+          storeCreditsTotal += netAmt;
         } else {
           // Online payments are considered received if they are confirmed/completed
           onlineEarningsTotal += netAmt;
@@ -483,6 +511,7 @@ function OwnerEarningsScreenInner() {
       );
       setOnlineEarnings(onlineEarningsTotal);
       setOfflineEarnings(offlineEarningsTotal);
+      setStoreCredits(storeCreditsTotal);
 
       // --- AUTOMATIC WALLET SYNC LOGIC ---
       // Calculate what the balance SHOULD be: (All Online Earnings) - (All Completed Withdrawals)
@@ -510,29 +539,25 @@ function OwnerEarningsScreenInner() {
           setWallet({ id: walletData?.id || '', balance: onlineEarningsTotal - totalWithdrawn });
       }
       // Normal Sync: If the wallet balance is out of sync (lower than expected), update it
-      else if (currentWalletBalance < expectedBalance - 0.01) {
+      else if (Math.abs(currentWalletBalance - expectedBalance) > 0.01) {
         const difference = expectedBalance - currentWalletBalance;
-        if (difference > 0.01) {
-          console.log(`Syncing wallet: Adding ${difference} to match online earnings.`);
-          
-          // Use a deterministic reference ID to prevent duplicates
-          const syncRef = user.id; 
-          
-          const { error: syncError } = await supabase.rpc('add_money_to_wallet', {
-            target_user_id: user.id,
-            amount_to_add: difference,
-            description_text: 'Automatic Wallet-Earnings Synchronization',
-            ref_type: 'system_sync',
-            ref_id: syncRef
-          });
+        console.log(`Syncing wallet: Adjusting by ${difference} to match expected balance.`);
+        
+        // Use a reference that is unique to this balance state to prevent duplicate syncs for the same state
+        const syncRef = `${user.id}_bal_${expectedBalance.toFixed(2)}`; 
+        
+        const { error: syncError } = await supabase.rpc('add_money_to_wallet', {
+          target_user_id: user.id,
+          amount_to_add: difference,
+          description_text: 'Automatic Wallet-Earnings Synchronization',
+          ref_type: 'system_sync',
+          ref_id: syncRef
+        });
 
-          if (!syncError) {
-            setWallet({ id: walletData?.id || '', balance: expectedBalance });
-          } else {
-            console.error('Wallet sync RPC failed:', syncError);
-            if (walletData) setWallet(walletData);
-          }
+        if (!syncError) {
+          setWallet({ id: walletData?.id || '', balance: expectedBalance });
         } else {
+          console.error('Wallet sync RPC failed:', syncError);
           if (walletData) setWallet(walletData);
         }
       } else if (walletData) {
@@ -579,6 +604,7 @@ function OwnerEarningsScreenInner() {
       });
 
       if (withdrawalData) {
+        setWithdrawals(withdrawalData);
         setUpcomingPayouts(withdrawalData.filter(w => w.status === 'pending' || w.status === 'processing'));
         withdrawalData.slice(0, 5).forEach(w => {
           feed.push({
@@ -805,65 +831,81 @@ function OwnerEarningsScreenInner() {
           <Text style={[styles.headerText, { width: 100, textAlign: 'right' }]}>Net</Text>
         </View>
         
-        {transactions.length === 0 ? (
-          <View style={styles.emptyTable}>
-            <Text style={styles.emptyTableText}>No confirmed earnings found.</Text>
-          </View>
-        ) : (
-          transactions.map((tx) => (
-            <View key={tx.id} style={[styles.tableRow, { paddingHorizontal: 16 }]}>
-              <View style={{ width: 100 }}>
-                <Text style={styles.cellTextMain}>
-                  {new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
-                </Text>
-                <Text style={styles.cellTextSub}>
-                  {new Date(tx.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                </Text>
-              </View>
-              
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.cellTextMain, { color: '#01b854' }]} numberOfLines={1}>
-                  {tx.ground?.name || 'Venue'}
-                </Text>
-                <Text style={[styles.cellTextSub, { fontSize: 10, color: '#94A3B8' }]} numberOfLines={1}>
-                  ID: #{tx.id.split('-')[0].toUpperCase()}
-                </Text>
-              </View>
+        {(() => {
+          const combined = [
+            ...transactions.map(tx => ({ ...tx, type: 'booking' })),
+            ...withdrawals
+              .filter(w => w.status === 'completed')
+              .map(w => ({
+                id: `w-${w.id}`,
+                created_at: w.created_at,
+                total_amount: Number(w.amount || 0),
+                payment_method: w.payment_method,
+                status: w.status,
+                type: 'withdrawal'
+              }))
+          ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-              <View style={{ width: 80 }}>
-                <View style={[
-                  styles.methodBadge, 
-                  { backgroundColor: tx.payment_method === 'cash' ? (tx.payment_received ? '#DCFCE7' : '#FEF3C7') : '#DCFCE7' }
-                ]}>
-                  <Text style={[
-                    styles.methodBadgeText,
-                    { color: tx.payment_method === 'cash' ? (tx.payment_received ? '#15803D' : '#92400E') : '#15803D' }
+          return combined.length === 0 ? (
+            <View style={styles.emptyTable}>
+              <Text style={styles.emptyTableText}>No transactions found.</Text>
+            </View>
+          ) : (
+            combined.map((item) => (
+              <View key={item.id} style={[styles.tableRow, { paddingHorizontal: 16 }]}>
+                <View style={{ width: 100 }}>
+                  <Text style={styles.cellTextMain}>
+                    {new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
+                  </Text>
+                  <Text style={styles.cellTextSub}>
+                    {new Date(item.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                </View>
+                
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.cellTextMain, item.type === 'withdrawal' ? { color: '#64748B' } : { color: '#01b854' }]} numberOfLines={1}>
+                    {item.type === 'withdrawal' ? 'Manual Withdrawal' : (item.ground?.name || 'Venue')}
+                  </Text>
+                  <Text style={[styles.cellTextSub, { fontSize: 10, color: '#94A3B8' }]} numberOfLines={1}>
+                    ID: #{item.id.split('-')[1] || item.id.split('-')[0].toUpperCase()}
+                  </Text>
+                </View>
+
+                <View style={{ width: 80 }}>
+                  <View style={[
+                    styles.methodBadge, 
+                    { backgroundColor: item.type === 'withdrawal' ? '#E0F2FE' : (item.payment_method === 'cash' ? (item.payment_received ? '#DCFCE7' : '#FEF3C7') : '#DCFCE7') }
                   ]}>
-                    {tx.payment_method === 'cash' ? (tx.payment_received ? 'PAID' : 'CASH') : 'ONLINE'}
+                    <Text style={[
+                      styles.methodBadgeText,
+                      { color: item.type === 'withdrawal' ? '#0369A1' : (item.payment_method === 'cash' ? (item.payment_received ? '#15803D' : '#92400E') : '#15803D') }
+                    ]}>
+                      {item.type === 'withdrawal' ? 'PAYOUT' : (item.payment_method === 'cash' ? (item.payment_received ? 'PAID' : 'CASH') : 'ONLINE')}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={{ width: 80, alignItems: 'flex-end' }}>
+                  <Text style={[styles.cellTextMain, { fontSize: 13, color: item.type === 'withdrawal' ? '#EF4444' : '#64748B' }]}>
+                    {item.type === 'withdrawal' ? `-${formatCurrency(item.total_amount)}` : formatCurrency(item.total_amount)}
+                  </Text>
+                </View>
+
+                <View style={{ width: 80, alignItems: 'flex-end' }}>
+                  <Text style={[styles.cellTextMain, { fontSize: 13, color: '#64748B' }]}>
+                    {item.type === 'withdrawal' ? '-' : `-${formatCurrency((Number(item.platform_fee_owner || 0) + Number(item.gst_owner || 0)))}`}
+                  </Text>
+                </View>
+
+                <View style={{ width: 100, alignItems: 'flex-end' }}>
+                  <Text style={[styles.cellTextMain, { fontSize: 15, fontWeight: '800', color: item.type === 'withdrawal' ? '#EF4444' : '#01b854' }]}>
+                    {item.type === 'withdrawal' ? `-${formatCurrency(item.total_amount)}` : formatCurrency(item.total_amount - (Number(item.platform_fee_owner || 0) + Number(item.gst_owner || 0)))}
                   </Text>
                 </View>
               </View>
-
-              <View style={{ width: 80, alignItems: 'flex-end' }}>
-                <Text style={[styles.cellTextMain, { fontSize: 13, color: '#64748B' }]}>
-                  {formatCurrency(tx.total_amount)}
-                </Text>
-              </View>
-
-              <View style={{ width: 80, alignItems: 'flex-end' }}>
-                <Text style={[styles.cellTextMain, { fontSize: 13, color: '#EF4444' }]}>
-                  -{formatCurrency((Number(tx.platform_fee_owner || 0) + Number(tx.gst_owner || 0)))}
-                </Text>
-              </View>
-
-              <View style={{ width: 100, alignItems: 'flex-end' }}>
-                <Text style={[styles.cellTextMain, { fontSize: 15, fontWeight: '800', color: '#01b854' }]}>
-                  {formatCurrency(tx.total_amount - (Number(tx.platform_fee_owner || 0) + Number(tx.gst_owner || 0)))}
-                </Text>
-              </View>
-            </View>
-          ))
-        )}
+            ))
+          );
+        })()}
         
         {hasMore && (
           <TouchableOpacity 
@@ -920,13 +962,16 @@ function OwnerEarningsScreenInner() {
                <View style={styles.bifurcationItem}>
                   <Text style={styles.bifurcationLabel}>Online</Text>
                   <Text style={[styles.bifurcationValue, { color: '#01b854' }]}>{formatCurrency(onlineEarnings)}</Text>
-                  <Text style={styles.bifurcationSubtext}>Razorpay / Wallet</Text>
                </View>
                <View style={styles.bifurcationDivider} />
                <View style={styles.bifurcationItem}>
                   <Text style={styles.bifurcationLabel}>Offline</Text>
                   <Text style={[styles.bifurcationValue, { color: '#F59E0B' }]}>{formatCurrency(offlineEarnings)}</Text>
-                  <Text style={styles.bifurcationSubtext}>Cash / Venue</Text>
+               </View>
+               <View style={styles.bifurcationDivider} />
+               <View style={styles.bifurcationItem}>
+                  <Text style={styles.bifurcationLabel}>Store Credits</Text>
+                  <Text style={[styles.bifurcationValue, { color: '#3B82F6' }]}>{formatCurrency(storeCredits)}</Text>
                </View>
             </View>
           </View>
@@ -975,71 +1020,185 @@ function OwnerEarningsScreenInner() {
           existing.fees += fee;
           existing.matches += 1;
         } else {
-          acc.push({ date, net: netContribution, fees: fee, matches: 1 });
+          acc.push({ date, net: netContribution, fees: fee, matches: 1, type: 'booking' });
         }
         return acc;
-      }, [])
-      .sort((a, b) => b.date.localeCompare(a.date));
+      }, []);
+
+    // Add completed manual withdrawals to the list
+    withdrawals.forEach(w => {
+      if (w.status === 'completed') {
+        const date = w.created_at ? new Date(w.created_at).toISOString().split('T')[0] : 'Unknown';
+        payouts.push({
+          date,
+          net: Number(w.amount || 0),
+          fees: 0,
+          matches: 0,
+          type: 'withdrawal'
+        });
+      }
+    });
+
+    // Sort by date
+    payouts.sort((a, b) => b.date.localeCompare(a.date));
 
     return (
       <View style={styles.summaryTableWrapper}>
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>Payout History</Text>
-          <Text style={styles.sectionSubtitle}>List of manual payout requests and their status.</Text>
-
-          <View style={[styles.table, { marginTop: 12 }]}>
-            <View style={[styles.tableHeader, { backgroundColor: '#F8FAFC', borderTopLeftRadius: 12, borderTopRightRadius: 12 }]}>
-              <Text style={[styles.headerText, { width: 100 }]}>Settled Date</Text>
-              <Text style={[styles.headerText, { flex: 1 }]}>Matches</Text>
-              <Text style={[styles.headerText, { width: 85, textAlign: 'right' }]}>Total Fees</Text>
-              <Text style={[styles.headerText, { width: 85, textAlign: 'right' }]}>Net Payout</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 16 }}>
+          <View style={[styles.viewToggleContainer, { flex: 1, marginBottom: 0, marginTop: 0, borderBottomWidth: 0 }]}>
+            <TouchableOpacity 
+              style={[styles.viewToggleBtn, payoutSubTab === 'requests' && styles.viewToggleBtnActive]}
+              onPress={() => setPayoutSubTab('requests')}
+            >
+              <Text style={[styles.viewToggleBtnText, payoutSubTab === 'requests' && styles.viewToggleBtnTextActive]}>Payout Request</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.viewToggleBtn, payoutSubTab === 'history' && styles.viewToggleBtnActive]}
+              onPress={() => setPayoutSubTab('history')}
+            >
+              <Text style={[styles.viewToggleBtnText, payoutSubTab === 'history' && styles.viewToggleBtnTextActive]}>Payout</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <View style={{ width: 140 }}>
+            <View style={styles.pickerContainer}>
+              {Platform.OS === 'web' ? (
+                <select
+                  value={filterDateRange}
+                  onChange={(e) => setFilterDateRange(e.target.value as any)}
+                  style={{
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    fontSize: 14,
+                    color: '#0F172A',
+                    padding: '8px 4px',
+                    width: '100%',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="all">All Time</option>
+                  <option value="7days">Last 7 Days</option>
+                  <option value="30days">Last 30 Days</option>
+                  <option value="month">This Month</option>
+                </select>
+              ) : (
+                <TouchableOpacity 
+                  style={styles.mobilePicker}
+                  onPress={() => {
+                    const periods: any[] = ['all', '7days', '30days', 'month'];
+                    const nextIdx = (periods.indexOf(filterDateRange) + 1) % periods.length;
+                    setFilterDateRange(periods[nextIdx]);
+                  }}
+                >
+                  <Text style={styles.pickerText}>
+                    {filterDateRange === 'all' ? 'ALL TIME' : filterDateRange.toUpperCase()}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
-
-            {payouts.length === 0 ? (
-              <View style={styles.emptyTable}>
-                <Text style={styles.emptyTableText}>No payout history found yet.</Text>
-              </View>
-            ) : (
-              payouts.map((p, i) => (
-                <View key={i} style={styles.tableRow}>
-                  <View style={{ width: 100 }}>
-                    <Text style={styles.cellTextMain}>
-                      {p.date === 'Processing' ? 'Processing' : new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
-                    </Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.cellTextMain, { color: '#64748B' }]}>{p.matches} {p.matches === 1 ? 'Match' : 'Matches'}</Text>
-                  </View>
-                  <View style={{ width: 85, alignItems: 'flex-end' }}>
-                    <Text style={[styles.cellTextMain, { color: '#64748B' }]}>-₹{Math.round(p.fees)}</Text>
-                  </View>
-                  <View style={{ width: 85, alignItems: 'flex-end' }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <Text style={[styles.cellTextMain, { color: p.net <= 0 ? '#94A3B8' : '#059669', fontWeight: '800' }]}>
-                        {formatCurrency(Math.max(0, p.net))}
-                      </Text>
-                      {p.net < 0 && (
-                         <View style={styles.debtBadge}>
-                           <Text style={styles.debtText}>ADJ</Text>
-                         </View>
-                      )}
-                    </View>
-                  </View>
-                </View>
-              ))
-            )}
           </View>
         </View>
+
+        {payoutSubTab === 'requests' ? (
+          <View style={{ paddingVertical: 8 }}>
+            <Text style={styles.sectionTitle}>Payout Requests</Text>
+            <View style={styles.table}>
+              <View style={styles.tableHeader}>
+                <Text style={[styles.headerText, { width: 140 }]}>Request Date</Text>
+                <Text style={[styles.headerText, { flex: 1 }]}>Amount</Text>
+                <Text style={[styles.headerText, { width: 100, textAlign: 'right' }]}>Status</Text>
+              </View>
+              {upcomingPayouts.length === 0 ? (
+                <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                  <Text style={{ color: '#64748B', fontSize: 14 }}>No payout requests found</Text>
+                </View>
+              ) : (
+                upcomingPayouts.map((p) => (
+                  <View key={p.id} style={styles.tableRow}>
+                    <Text style={[styles.cellText, { width: 140 }]}>
+                      {new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
+                    </Text>
+                    <Text style={[styles.cellText, { flex: 1 }]}>{formatCurrency(p.amount)}</Text>
+                    <View style={[styles.statusBadge, { width: 100 }]}>
+                      <View style={[styles.statusDot, { backgroundColor: p.status === 'processing' ? '#3B82F6' : '#F59E0B' }]} />
+                      <Text style={[styles.statusText, { textTransform: 'capitalize' }]}>{p.status}</Text>
+                    </View>
+                  </View>
+                ))
+              )}
+            </View>
+          </View>
+        ) : (
+          <View style={{ paddingVertical: 8 }}>
+            <Text style={styles.sectionTitle}>Payout History</Text>
+
+            <View style={[styles.table, { marginTop: 12 }]}>
+              <View style={styles.tableHeader}>
+                <Text style={[styles.headerText, { width: 120 }]}>Settled Date</Text>
+                <Text style={[styles.headerText, { flex: 1 }]}>Matches</Text>
+                <Text style={[styles.headerText, { width: 100, textAlign: 'right' }]}>Total Fees</Text>
+                <Text style={[styles.headerText, { width: 100, textAlign: 'right' }]}>Net Payout</Text>
+              </View>
+
+              {payouts.length === 0 ? (
+                <View style={styles.emptyTable}>
+                  <Text style={styles.emptyTableText}>No payout history found yet.</Text>
+                </View>
+              ) : (
+                payouts.map((p, i) => (
+                  <View key={i} style={styles.tableRow}>
+                    <View style={{ width: 120 }}>
+                      <Text style={styles.cellTextMain}>
+                        {p.date === 'Processing' ? 'Processing' : new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.cellTextMain, { color: '#64748B' }]}>
+                        {p.type === 'withdrawal' ? 'Manual Withdrawal' : `${p.matches} ${p.matches === 1 ? 'Match' : 'Matches'}`}
+                      </Text>
+                    </View>
+                    <View style={{ width: 100, alignItems: 'flex-end' }}>
+                      <Text style={[styles.cellTextMain, { color: '#64748B' }]}>
+                        {p.type === 'withdrawal' ? '-' : `-₹${Math.round(p.fees)}`}
+                      </Text>
+                    </View>
+                    <View style={{ width: 100, alignItems: 'flex-end' }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                        <Text style={[styles.cellTextMain, { color: p.net <= 0 ? '#94A3B8' : '#059669', fontWeight: '800' }]}>
+                          {formatCurrency(Math.max(0, p.net))}
+                        </Text>
+                        {p.net < 0 && (
+                           <View style={styles.debtBadge}>
+                             <Text style={styles.debtText}>ADJ</Text>
+                           </View>
+                        )}
+                      </View>
+                    </View>
+                  </View>
+                ))
+              )}
+            </View>
+          </View>
+        )}
       </View>
     );
   };
 
-  const renderLeftColumn = () => (
-    <View style={styles.leftCol}>
-      <View style={[styles.totalEarningsCard, isUltraNarrow && { padding: 20 }]}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.totalEarningsLabel}>Withdrawable Balance</Text>
-          <Text style={[styles.totalEarningsValue, isUltraNarrow && { fontSize: 28 }]}>{formatCurrency(Number(wallet?.balance || 0))}</Text>
+  const renderLeftColumn = () => {
+    return (
+      <View style={styles.leftCol}>
+        <View style={[styles.totalEarningsCard, isUltraNarrow && { padding: 20 }]}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.totalEarningsLabel}>Withdrawable Balance</Text>
+            {loading ? (
+              <Animated.Text style={[styles.totalEarningsValue, isUltraNarrow && { fontSize: 28 }, { opacity: pulseAnim }]}>
+                ...
+              </Animated.Text>
+            ) : (
+              <Text style={[styles.totalEarningsValue, isUltraNarrow && { fontSize: 28 }]}>
+                {formatCurrency(Math.max(0, withdrawableBalance))}
+              </Text>
+            )}
           <TouchableOpacity 
             style={styles.withdrawBtnInline}
             onPress={() => setShowWithdrawModal(true)}
@@ -1062,17 +1221,6 @@ function OwnerEarningsScreenInner() {
         </View>
       )}
 
-      {isBankVerified && (
-        <View style={[styles.sectionCard, { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-            <CheckCircle2 size={20} color="#059669" />
-            <Text style={[styles.sectionTitle, { color: '#065F46', marginBottom: 0 }]}>Bank Account Verified</Text>
-          </View>
-          <Text style={{ fontSize: 14, color: '#065F46', lineHeight: 20 }}>
-            Your bank details are verified. You can now request manual payouts of your transferable balance at any time.
-          </Text>
-        </View>
-      )}
   
       <View style={[styles.sectionCard, { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 }}>
@@ -1168,7 +1316,8 @@ function OwnerEarningsScreenInner() {
         </View>
       </View>
     </View>
-  );
+    );
+  };
 
   const renderRightColumn = () => (
     <View style={styles.rightCol}>
@@ -1178,7 +1327,6 @@ function OwnerEarningsScreenInner() {
            <View style={styles.bifurcationItem}>
               <Text style={styles.bifurcationLabel}>Online Earnings (Net)</Text>
               <Text style={[styles.bifurcationValue, { color: '#01b854' }]}>{formatCurrency(onlineEarnings)}</Text>
-              <Text style={styles.bifurcationSubtext}>Razorpay, PayU, Wallet</Text>
            </View>
            <View style={styles.bifurcationDivider} />
            <View style={styles.bifurcationItem}>
@@ -1374,7 +1522,7 @@ function OwnerEarningsScreenInner() {
             <View style={styles.modalHeader}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.modalTitle}>Withdraw Funds</Text>
-                <Text style={styles.modalSubtitle}>Available: {formatCurrency(wallet?.balance || 0)}</Text>
+                <Text style={styles.modalSubtitle}>Available: {formatCurrency(Math.max(0, withdrawableBalance))}</Text>
               </View>
               <TouchableOpacity onPress={() => setShowWithdrawModal(false)} style={styles.closeBtn}>
                 <X size={20} color="#64748B" />
@@ -1877,23 +2025,25 @@ const styles = StyleSheet.create({
   },
   formSectionTitle: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#0F172A',
     marginTop: 4,
     marginBottom: 2,
+    fontFamily: 'Inter',
   },
   inputGroup: {
     gap: 8,
   },
   inputLabel: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#475569',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+    fontFamily: 'Inter',
   },
   formInput: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'transparent',
     borderWidth: 1,
     borderColor: '#E2E8F0',
     borderRadius: 10,
@@ -1902,6 +2052,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#0F172A',
     fontFamily: 'Inter',
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+      }
+    })
   },
   submitBtn: {
     backgroundColor: '#01b854',
@@ -1936,6 +2091,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     alignItems: 'center',
     borderRadius: 8,
+    ...Platform.select({
+      web: {
+        outlineStyle: 'none',
+      }
+    })
   },
   methodOptionActive: {
     backgroundColor: '#FFFFFF',
@@ -1947,8 +2107,9 @@ const styles = StyleSheet.create({
   },
   methodText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#64748B',
+    fontFamily: 'Inter',
   },
   methodTextActive: {
     color: '#0F172A',

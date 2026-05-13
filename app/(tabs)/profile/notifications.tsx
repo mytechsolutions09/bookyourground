@@ -65,14 +65,20 @@ function NotificationsInner() {
     try {
       setLoading(true);
       
+      // 1. Fetch from notifications table
+      const { data: notifs, error: notifErr } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      // 2. Fetch upcoming confirmed bookings (reminders)
       const now = new Date();
       const twentyFourHoursFromNow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-      
       const nowIso = now.toISOString().split('T')[0];
       const tomorrowIso = twentyFourHoursFromNow.toISOString().split('T')[0];
 
-      // Fetch upcoming confirmed bookings
-      const { data, error } = await supabase
+      const { data: bookings, error: bookErr } = await supabase
         .from('bookings')
         .select(`
           id,
@@ -80,31 +86,31 @@ function NotificationsInner() {
           start_time,
           end_time,
           notes,
-          ground:grounds(
-            id,
-            name,
-            city,
-            state
-          )
+          ground:grounds(id, name, city)
         `)
         .eq('user_id', user.id)
         .eq('status', 'confirmed')
         .gte('booking_date', nowIso)
-        .lte('booking_date', tomorrowIso)
-        .order('booking_date', { ascending: true })
-        .order('start_time', { ascending: true });
+        .lte('booking_date', tomorrowIso);
 
-      if (error) throw error;
+      // Map bookings to look like notifications
+      const mappedBookings = (bookings || []).map(b => ({
+        id: `booking-${b.id}`,
+        title: 'Upcoming Booking',
+        body: `${b.ground?.name || 'Ground Booking'} at ${b.start_time.slice(0, 5)}`,
+        created_at: `${b.booking_date}T${b.start_time}`,
+        read: true, // Bookings are always "read" or don't have status
+        booking_id: b.id,
+      }));
 
-      // Filter to precisely 24h from *now* (including time check)
-      const filtered = (data || []).filter(b => {
-        const bookingDateTime = new Date(`${b.booking_date}T${b.start_time}`);
-        const diffMs = bookingDateTime.getTime() - now.getTime();
-        const diffHours = diffMs / (1000 * 60 * 60);
-        return diffHours >= 0 && diffHours <= 24;
-      });
+      // Filter out specific invalid notification requested by user
+      const filteredNotifs = (notifs || []).filter(n => n.id !== '50f06198-7dee-4318-b115-615442b05e9a');
+      const combined = [...filteredNotifs, ...mappedBookings];
+      
+      // Sort by date descending
+      combined.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-      setReminders(filtered);
+      setReminders(combined);
     } catch (err) {
       console.error('Error loading notifications:', err);
     } finally {
@@ -116,40 +122,42 @@ function NotificationsInner() {
     loadReminders();
   }, [user]);
 
-  const renderReminder = (b: any) => {
-    const isMatch = b.notes?.toLowerCase().includes('match') || b.notes?.toLowerCase().includes('opponent');
+  useEffect(() => {
+    setTabBarVisible(false);
+    return () => setTabBarVisible(true);
+  }, []);
+
+  const renderReminder = (item: any) => {
+    const isUnread = !item.read;
     
     return (
       <TouchableOpacity 
-        key={b.id} 
-        style={styles.reminderCard}
-        onPress={() => router.push(`/bookings/${b.id}` as any)}
+        key={item.id} 
+        style={[styles.reminderCard, isUnread && styles.unreadCard]}
+        onPress={() => {
+          if (item.booking_id && item.booking_id !== 'undefined') {
+            router.push(`/bookings/${item.booking_id}` as any);
+          } else {
+            console.warn('No valid booking_id for notification:', item.id);
+          }
+        }}
       >
-        <View style={[styles.iconWrap, isMatch ? styles.matchIcon : styles.bookingIcon]}>
-          {isMatch ? <Trophy size={18} color="#00ea6b" /> : <Calendar size={18} color="#00ea6b" />}
+        <View style={styles.iconWrap}>
+          <Bell size={18} color="#01e669" />
         </View>
         
         <View style={styles.reminderContent}>
           <View style={styles.reminderHeader}>
-            <Text style={styles.reminderType}>{isMatch ? 'Upcoming Match' : 'Upcoming Booking'}</Text>
-            <Text style={styles.timeAgo}>Starting soon</Text>
+            <Text style={[styles.reminderTitle, isUnread && { fontWeight: '700' }]}>
+              {item.title || 'Notification'}
+            </Text>
+            {isUnread && <View style={styles.unreadDot} />}
           </View>
           
-          <Text style={styles.reminderTitle}>{b.ground?.name || 'Ground Booking'}</Text>
+          <Text style={styles.alertText}>{item.body}</Text>
           
-          <View style={styles.metaRow}>
-            <View style={styles.metaItem}>
-              <Clock size={12} color="#9CA3AF" />
-              <Text style={styles.metaText}>{b.start_time.slice(0, 5)} - {b.end_time.slice(0, 5)}</Text>
-            </View>
-            <View style={styles.metaItem}>
-              <MapPin size={12} color="#9CA3AF" />
-              <Text style={styles.metaText}>{b.ground?.city}</Text>
-            </View>
-          </View>
-          
-          <Text style={styles.alertText}>
-            Join your game within 24 hours! Make sure you are ready.
+          <Text style={styles.timeAgo}>
+            {new Date(item.created_at).toLocaleDateString()}
           </Text>
         </View>
         
@@ -162,16 +170,18 @@ function NotificationsInner() {
     <ScrollView 
       style={styles.container}
       refreshControl={<RefreshControl refreshing={loading} onRefresh={loadReminders} />}
-      onScroll={onScroll}
-      scrollEventThrottle={16}
     >
       <View style={styles.inner}>
-        {IS_WEB && (
+        {IS_WEB ? (
           <ProfileHeaderTabs
             themeAccent="#00ea6b"
             themeText={IS_WEB ? '#111827' : '#0F172A'}
             isCompact={!IS_WEB}
           />
+        ) : (
+          <View style={[styles.headerRow, { justifyContent: 'center', paddingTop: 30, paddingBottom: 10 }]}>
+            <Text style={[styles.pageTitle, { textAlign: 'center' }]}>Notifications</Text>
+          </View>
         )}
 
         {loading ? (
@@ -181,7 +191,7 @@ function NotificationsInner() {
         ) : reminders.length === 0 ? (
           <View style={styles.emptyWrap}>
              <View style={styles.emptyIconCircle}>
-                <Bell size={32} color="#E5E7EB" />
+                <Bell size={32} color="#01e669" />
              </View>
              <Text style={styles.emptyTitle}>All caught up!</Text>
              <Text style={styles.emptyText}>No matches or bookings starting in the next 24 hours.</Text>
@@ -223,7 +233,7 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   nativeRoot: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
   },
   container: {
     flex: 1,
@@ -233,7 +243,6 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 1000,
     alignSelf: 'center',
-    paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 24,
   },
@@ -336,16 +345,19 @@ const styles = StyleSheet.create({
   reminderCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-    shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 2,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  unreadCard: {
+    backgroundColor: 'rgba(0, 234, 107, 0.05)',
+  },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#00ea6b',
   },
   iconWrap: {
     width: 44,

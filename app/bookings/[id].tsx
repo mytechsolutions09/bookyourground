@@ -55,6 +55,7 @@ export default function BookingDetailsScreen() {
   
   const [copied, setCopied] = useState(false);
   const [receiptOpen, setReceiptOpen] = useState(false);
+  const [platformSettings, setPlatformSettings] = useState<any>(null);
 
   const isWeb = Platform.OS === 'web';
   const isDesktop = width > 900;
@@ -87,6 +88,19 @@ export default function BookingDetailsScreen() {
         .single();
 
       if (error) throw error;
+      
+      // Fetch platform settings for fee calculation
+      try {
+        const { data: settingsData } = await supabase
+          .from('platform_settings')
+          .select('*');
+        
+        const settingsMap: Record<string, any> = {};
+        settingsData?.forEach(s => { settingsMap[s.key] = s.value; });
+        setPlatformSettings(settingsMap);
+      } catch (e) {
+        console.log('Error fetching platform settings:', e);
+      }
       
       // Fetch related bookings if it's a multi-slot booking
       let relatedBookings: any[] = [];
@@ -213,6 +227,44 @@ export default function BookingDetailsScreen() {
     if (!booking) return null;
     return cricketTeamsLabelFromBooking(booking.ground.pitch_type, booking.notes);
   }, [booking]);
+
+  const calculatedPlatformFee = useMemo(() => {
+    if (!booking || !platformSettings) return null;
+    
+    const rate = Number(platformSettings.user_platform_fee_rate ?? 0.05);
+    const gstRate = Number(platformSettings.gst_rate ?? 0.18);
+    const cricketFixedFee = Number(platformSettings.cricket_owner_fee_fixed ?? 100);
+    const netsFixedFee = Number(platformSettings.nets_owner_fee_fixed ?? 25);
+
+    const pitchType = (booking.ground?.pitch_type ?? '').toLowerCase();
+    const groundName = (booking.ground?.name ?? '').toLowerCase();
+    const isCricket = pitchType === 'cricket ground';
+    const isNet = pitchType.includes('net') || groundName.includes('net') || pitchType.includes('lane') || groundName.includes('lane');
+
+    let ownerPf = 0;
+    if (isNet) {
+      ownerPf = netsFixedFee;
+    } else if (isCricket) {
+      let totalTeams = 0;
+      if (booking.relatedBookings && booking.relatedBookings.length > 0) {
+        booking.relatedBookings.forEach((b: any) => {
+          const match = /Teams:\s*([^(]+)/.exec(b.notes);
+          const teamLabel = match ? match[1].trim() : 'Both Teams';
+          totalTeams += (teamLabel === '1 Team' || teamLabel === 'one') ? 1 : 2;
+        });
+      } else {
+        const match = /Teams:\s*([^(]+)/.exec(booking.notes);
+        const teamLabel = match ? match[1].trim() : 'Both Teams';
+        totalTeams = (teamLabel === '1 Team' || teamLabel === 'one') ? 1 : 2;
+      }
+      ownerPf = cricketFixedFee * totalTeams;
+    } else {
+      ownerPf = displayTotalAmount * rate;
+    }
+
+    const ownerGst = ownerPf * gstRate;
+    return ownerPf + ownerGst;
+  }, [booking, platformSettings, displayTotalAmount]);
 
   const mapsUrl = useMemo(() => {
     if (!booking?.ground) return null;
@@ -434,9 +486,11 @@ export default function BookingDetailsScreen() {
                     </View>
                     <Text style={[styles.summaryValue, { color: '#EF4444' }]}>
                       -{formatCurrency(
-                        booking.relatedBookings && booking.relatedBookings.length > 0
-                          ? booking.relatedBookings.reduce((acc: number, b: any) => acc + Number(b.platform_fee_owner || 0) + Number(b.gst_owner || 0), 0)
-                          : (Number(booking.platform_fee_owner || 0) + Number(booking.gst_owner || 0)) * slotCount
+                        calculatedPlatformFee !== null
+                          ? calculatedPlatformFee
+                          : (booking.relatedBookings && booking.relatedBookings.length > 0
+                            ? booking.relatedBookings.reduce((acc: number, b: any) => acc + Number(b.platform_fee_owner || 0) + Number(b.gst_owner || 0), 0)
+                            : (Number(booking.platform_fee_owner || 0) + Number(booking.gst_owner || 0)) * slotCount)
                       )}
                     </Text>
                   </View>

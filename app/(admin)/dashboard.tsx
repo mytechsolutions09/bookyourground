@@ -75,6 +75,43 @@ export default function AdminDashboardScreen() {
     }
   };
 
+  const exportBackup = async () => {
+    try {
+      setLoading(true);
+      const [profilesRes, groundsRes, bookingsRes, withdrawalsRes] = await Promise.all([
+        supabase.from('profiles').select('*'),
+        supabase.from('grounds').select('*'),
+        supabase.from('bookings').select('*'),
+        supabase.from('withdrawals').select('*'),
+      ]);
+
+      const backupData = {
+        profiles: profilesRes.data || [],
+        grounds: groundsRes.data || [],
+        bookings: bookingsRes.data || [],
+        withdrawals: withdrawalsRes.data || [],
+        exportedAt: new Date().toISOString()
+      };
+
+      if (Platform.OS === 'web') {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href",     dataStr);
+        downloadAnchorNode.setAttribute("download", `backup_${new Date().toISOString().split('T')[0]}.json`);
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+      } else {
+        alert('Export backup is only supported on web currently.');
+      }
+    } catch (error) {
+      console.error('Error exporting backup:', error);
+      alert('Failed to export backup');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const StatCard = ({ icon: Icon, label, value, color }: any) => (
     <View style={[
       styles.statCard,
@@ -256,6 +293,19 @@ export default function AdminDashboardScreen() {
               <Text style={styles.healthText}>Connected</Text>
             </View>
           </View>
+          
+          <TouchableOpacity
+            style={[styles.actionCard, { marginTop: 16 }]}
+            onPress={exportBackup}
+          >
+            <View style={styles.actionContent}>
+              <View style={[styles.actionIconBox, { backgroundColor: 'transparent' }]}>
+                <Package size={20} color="#6366F1" />
+              </View>
+              <Text style={styles.actionText}>Export Whole Data Backup</Text>
+            </View>
+            <ChevronRight size={18} color="#CBD5E1" />
+          </TouchableOpacity>
         </View>
       </View>
     </ScrollView>

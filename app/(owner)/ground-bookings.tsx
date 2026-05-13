@@ -34,11 +34,11 @@ function NameInputCell({ booking, onSave }: { booking: BookingWithDetails, onSav
 
   return (
     <View style={styles.nameInputWrapper}>
-      <TouchableOpacity 
-        activeOpacity={1} 
-        onPress={(e) => e.stopPropagation()} 
+      <TouchableOpacity
+        activeOpacity={1}
+        onPress={(e) => e.stopPropagation()}
         style={[
-          styles.nameInputRow, 
+          styles.nameInputRow,
           (isFocused || saving) && { borderColor: 'transparent', backgroundColor: '#f1f5f9' },
           saving && { opacity: 0.7 }
         ]}
@@ -82,11 +82,11 @@ function AmountInputCell({ booking, onSave }: { booking: BookingWithDetails, onS
 
   return (
     <View style={styles.nameInputWrapper}>
-      <TouchableOpacity 
-        activeOpacity={1} 
-        onPress={(e) => e.stopPropagation()} 
+      <TouchableOpacity
+        activeOpacity={1}
+        onPress={(e) => e.stopPropagation()}
         style={[
-          styles.nameInputRow, 
+          styles.nameInputRow,
           (isFocused || saving) && { borderColor: 'transparent', backgroundColor: '#f1f5f9' },
           saving && { opacity: 0.7 }
         ]}
@@ -136,6 +136,7 @@ export default function OwnerBookingsScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [isSlotModalVisible, setIsSlotModalVisible] = useState(false);
   const [selectedSlotBookings, setSelectedSlotBookings] = useState<BookingWithDetails[]>([]);
+  const [platformSettings, setPlatformSettings] = useState<any>(null);
   const PAGE_SIZE = 50;
 
   useEffect(() => {
@@ -155,6 +156,21 @@ export default function OwnerBookingsScreen() {
         setLoading(true);
         setPage(0);
         setHasMore(true);
+      }
+
+      // Fetch platform settings once
+      if (!platformSettings) {
+        try {
+          const { data: settingsData } = await supabase
+            .from('platform_settings')
+            .select('*');
+          
+          const settingsMap: Record<string, any> = {};
+          settingsData?.forEach(s => { settingsMap[s.key] = s.value; });
+          setPlatformSettings(settingsMap);
+        } catch (e) {
+          console.log('Error fetching platform settings:', e);
+        }
       }
 
       const currentPage = isLoadMore ? page + 1 : 0;
@@ -205,15 +221,15 @@ export default function OwnerBookingsScreen() {
 
       const mergedBatch = [...(ownedData || []), ...(selfData || [])];
       let uniqueBatch = mergedBatch.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
-      
+
       // 3) NEW: Fetch all "partner" bookings for the slots found in this batch.
       // This ensures that occupancy (FULL/PARTIAL) is accurate even if partners are far apart in pagination.
       if (uniqueBatch.length > 0) {
         try {
-          const slotFilters = uniqueBatch.map(b => 
+          const slotFilters = uniqueBatch.map(b =>
             `and(ground_id.eq.${b.ground_id},booking_date.eq.${b.booking_date},start_time.eq.${b.start_time})`
           );
-          
+
           // Use a smaller chunk size to avoid potential URL length limits in some environments
           const chunkSize = 15;
           const partners: any[] = [];
@@ -230,10 +246,10 @@ export default function OwnerBookingsScreen() {
               .neq('status', 'pending')
               .neq('status', 'cancelled')
               .neq('status', 'rejected');
-            
+
             if (partnerData) partners.push(...partnerData);
           }
-          
+
           if (partners.length > 0) {
             uniqueBatch = [...uniqueBatch, ...partners].filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
           }
@@ -365,13 +381,14 @@ export default function OwnerBookingsScreen() {
 
   const togglePaymentReceived = async (booking: BookingWithDetails) => {
     const newValue = !booking.payment_received;
+    const bookingIds = (booking as any).allBookingIds || [booking.id];
     try {
       const { error } = await supabase
         .from('bookings')
         .update({ payment_received: newValue })
-        .eq('id', booking.id);
+        .in('id', bookingIds);
       if (error) throw error;
-      setBookings(prev => prev.map(b => b.id === booking.id ? { ...b, payment_received: newValue } : b));
+      setBookings(prev => prev.map(b => bookingIds.includes(b.id) ? { ...b, payment_received: newValue } : b));
     } catch (err: any) {
       if (Platform.OS === 'web') alert(err.message || 'Failed to update payment status');
       else Alert.alert('Error', err.message || 'Failed to update payment status');
@@ -380,7 +397,7 @@ export default function OwnerBookingsScreen() {
 
   const openSlotModal = (item: BookingWithDetails) => {
     let relatedBookings: BookingWithDetails[] = [];
-    
+
     if ((item as any).allBookingIds && (item as any).allBookingIds.length > 0) {
       // If it's a consolidated item, show all bookings in that group
       relatedBookings = bookings.filter(b => (item as any).allBookingIds.includes(b.id));
@@ -388,12 +405,12 @@ export default function OwnerBookingsScreen() {
       // Fallback for single slot items
       const normStart = normalizeDbTimeToHHMM(item.start_time);
       const currentSlotKey = `${item.ground_id}_${item.booking_date}_${normStart}`;
-      relatedBookings = bookings.filter(b => 
-        (b.status === 'confirmed' || b.status === 'active' || b.status === 'completed') && 
+      relatedBookings = bookings.filter(b =>
+        (b.status === 'confirmed' || b.status === 'active' || b.status === 'completed') &&
         `${b.ground_id}_${b.booking_date}_${normalizeDbTimeToHHMM(b.start_time)}` === currentSlotKey
       );
     }
-    
+
     setSelectedSlotBookings(relatedBookings);
     setIsSlotModalVisible(true);
   };
@@ -425,8 +442,8 @@ export default function OwnerBookingsScreen() {
         ? byScope
         : byScope.filter((b) => b.booking_date === selectedDate);
 
-      const byStatus = activeTab === 'all' 
-        ? byDate 
+      const byStatus = activeTab === 'all'
+        ? byDate
         : activeTab === 'upcoming'
           ? byDate.filter((b) => b.booking_date >= todayIso && (b.status === 'confirmed' || b.status === 'active' || b.status === 'completed'))
           : activeTab === 'past'
@@ -443,26 +460,53 @@ export default function OwnerBookingsScreen() {
       });
 
       // Grouping logic to consolidate multi-slot bookings (including multi-date transactions)
-      const consolidatedMap = new Map<string, BookingWithDetails & { allDates?: string[], allSlots?: string[], allBookingIds?: string[] }>();
+      const calculateBRowFee = (row: any) => {
+        if (!platformSettings) return Number(row.platform_fee_owner || 0) + Number(row.gst_owner || 0);
+        const cricketFixedFee = Number(platformSettings.cricket_owner_fee_fixed ?? 100);
+        const netsFixedFee = Number(platformSettings.nets_owner_fee_fixed ?? 25);
+        const rate = Number(platformSettings.user_platform_fee_rate ?? 0.05);
+        const gstRate = Number(platformSettings.gst_rate ?? 0.18);
+        const pitchType = (row.ground?.pitch_type ?? '').toLowerCase();
+        const isCricket = pitchType === 'cricket ground';
+        const isNet = pitchType.includes('net') || pitchType.includes('lane');
+        let ownerPf = 0;
+        if (isNet) {
+          ownerPf = netsFixedFee;
+        } else if (isCricket) {
+          const label = cricketTeamsLabelFromBooking(row.ground?.pitch_type, row.notes);
+          const teams = (label?.toLowerCase() === '1 team' || label?.toLowerCase() === 'one') ? 1 : 2;
+          ownerPf = cricketFixedFee * teams;
+        } else {
+          ownerPf = (row.total_amount + (row.discount_amount || 0)) * rate;
+        }
+        return ownerPf * (1 + gstRate);
+      };
+
+      const consolidatedMap = new Map<string, BookingWithDetails & { allDates?: string[], allSlots?: string[], allBookingIds?: string[], calculated_total_fee?: number }>();
       base.forEach(b => {
         const matchSlots = /\(Slots:\s*([^)]+)\)/.exec(b.notes || '');
         const slotsKey = matchSlots ? matchSlots[1] : `single_${b.start_time}`;
-        
+
         // Use created_at (truncated to minute) to group bookings from the same transaction
         const createdAtMinute = b.created_at ? b.created_at.substring(0, 16) : 'unknown';
         const groupKey = `${b.user_id}_${b.ground_id}_${createdAtMinute}_${slotsKey}`;
 
+        const bFee = calculateBRowFee(b);
+
         if (!consolidatedMap.has(groupKey)) {
-          consolidatedMap.set(groupKey, { 
-            ...b, 
+          consolidatedMap.set(groupKey, {
+            ...b,
             allDates: [b.booking_date],
             allSlots: matchSlots ? [matchSlots[1]] : [`${normalizeDbTimeToHHMM(b.start_time)} – ${normalizeDbTimeToHHMM(b.end_time)}`],
-            allBookingIds: [b.id]
-          });
+            allBookingIds: [b.id],
+            calculated_total_fee: bFee
+          } as any);
         } else {
           const existing = consolidatedMap.get(groupKey)!;
           existing.total_amount = Number(((existing.total_amount || 0) + (b.total_amount || 0)).toFixed(2));
           existing.discount_amount = Number(((existing.discount_amount || 0) + (b.discount_amount || 0)).toFixed(2));
+          existing.calculated_total_fee = (existing.calculated_total_fee || 0) + bFee;
+
           if (!existing.allDates?.includes(b.booking_date)) {
             existing.allDates?.push(b.booking_date);
           }
@@ -539,8 +583,8 @@ export default function OwnerBookingsScreen() {
     () =>
       bookings.filter(
         (b) => {
-          const scopeMatch = ownerScope === 'all' 
-            ? true 
+          const scopeMatch = ownerScope === 'all'
+            ? true
             : ownerScope === 'own'
               ? b.ground.owner_id === user?.id
               : b.ground.owner_id !== user?.id;
@@ -554,8 +598,8 @@ export default function OwnerBookingsScreen() {
     () =>
       bookings.filter(
         (b) => {
-          const scopeMatch = ownerScope === 'all' 
-            ? true 
+          const scopeMatch = ownerScope === 'all'
+            ? true
             : ownerScope === 'own'
               ? b.ground.owner_id === user?.id
               : b.ground.owner_id !== user?.id;
@@ -579,10 +623,10 @@ export default function OwnerBookingsScreen() {
   const FilterDropdown = ({ id, label, value, options, onSelect }: any) => {
     const isOpen = activeDropdown === id;
     const selectedLabel = options.find((o: any) => o.key === value)?.label || label;
-    
+
     return (
       <View style={{ flex: 1, position: 'relative', zIndex: isOpen ? 100 : 1 }}>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={[styles.dropdownTrigger, isOpen && styles.dropdownTriggerActive, value !== 'all' && value !== null && styles.dropdownTriggerSelected]}
           onPress={() => setActiveDropdown(isOpen ? null : id)}
         >
@@ -593,16 +637,16 @@ export default function OwnerBookingsScreen() {
 
         {isOpen && (
           <>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[
                 styles.dropdownOverlay,
                 Platform.OS === 'web' && { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 } as any
-              ]} 
-              activeOpacity={1} 
-              onPress={() => setActiveDropdown(null)} 
+              ]}
+              activeOpacity={1}
+              onPress={() => setActiveDropdown(null)}
             />
             <View style={[
-              styles.dropdownMenu, 
+              styles.dropdownMenu,
               id === 'date' ? { right: 0 } : { left: 0 }
             ]}>
               <ScrollView bounces={false} style={{ maxHeight: 250 }}>
@@ -631,53 +675,53 @@ export default function OwnerBookingsScreen() {
 
   const content = (
     <View style={[styles.container, isSmallScreen && styles.containerMobile]}>
-        {isSmallScreen && (
-          <View style={styles.controlsRow}>
-            <View style={styles.searchBoxMobileWrapper}>
-              <TextInput
-                style={[styles.searchBarMobile, isUltraNarrow && { fontSize: 11, paddingHorizontal: 8 }]}
-                placeholder={isUltraNarrow ? "Search" : "Search..."}
-                placeholderTextColor="#94A3B8"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-              />
-            </View>
-            
-            <FilterDropdown 
-              id="status" 
-              label="Stat" 
-              value={activeTab} 
-              options={[
-                { key: 'all', label: 'All Status' },
-                { key: 'upcoming', label: 'Upcoming' },
-                { key: 'past', label: 'Past' },
-                { key: 'cancelled', label: 'Cancelled' },
-              ]} 
-              onSelect={setActiveTab} 
-            />
-            <FilterDropdown 
-              id="scope" 
-              label="Scope" 
-              value={ownerScope} 
-              options={[
-                { key: 'all', label: 'All Venues' },
-                { key: 'own', label: 'Own Venues' },
-                { key: 'other', label: 'Others' },
-              ]} 
-              onSelect={setOwnerScope} 
-            />
-            <FilterDropdown 
-              id="date" 
-              label="Date" 
-              value={selectedDate || 'all'} 
-              options={[
-                { key: 'all', label: 'Any Date' },
-                ...availableDates.map(d => ({ key: d, label: formatDateDDMMYY(d) }))
-              ]} 
-              onSelect={(val: string) => setSelectedDate(val === 'all' ? null : val)} 
+      {isSmallScreen && (
+        <View style={styles.controlsRow}>
+          <View style={styles.searchBoxMobileWrapper}>
+            <TextInput
+              style={[styles.searchBarMobile, isUltraNarrow && { fontSize: 11, paddingHorizontal: 8 }]}
+              placeholder={isUltraNarrow ? "Search" : "Search..."}
+              placeholderTextColor="#94A3B8"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
             />
           </View>
-        )}
+
+          <FilterDropdown
+            id="status"
+            label="Stat"
+            value={activeTab}
+            options={[
+              { key: 'all', label: 'All Status' },
+              { key: 'upcoming', label: 'Upcoming' },
+              { key: 'past', label: 'Past' },
+              { key: 'cancelled', label: 'Cancelled' },
+            ]}
+            onSelect={setActiveTab}
+          />
+          <FilterDropdown
+            id="scope"
+            label="Scope"
+            value={ownerScope}
+            options={[
+              { key: 'all', label: 'All Venues' },
+              { key: 'own', label: 'Own Venues' },
+              { key: 'other', label: 'Others' },
+            ]}
+            onSelect={setOwnerScope}
+          />
+          <FilterDropdown
+            id="date"
+            label="Date"
+            value={selectedDate || 'all'}
+            options={[
+              { key: 'all', label: 'Any Date' },
+              ...availableDates.map(d => ({ key: d, label: formatDateDDMMYY(d) }))
+            ]}
+            onSelect={(val: string) => setSelectedDate(val === 'all' ? null : val)}
+          />
+        </View>
+      )}
 
       {isWeb && !isSmallScreen && bookings.length > 0 && (
         <View style={styles.filterContainer}>
@@ -812,7 +856,7 @@ export default function OwnerBookingsScreen() {
               />
             </View>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => router.push('/(owner)/inventory')}
               style={[styles.tabChip, { backgroundColor: '#059669', borderColor: '#059669', paddingHorizontal: 12 }]}
             >
@@ -820,21 +864,21 @@ export default function OwnerBookingsScreen() {
             </TouchableOpacity>
 
             <View style={styles.dateFilterWrap}>
-              <View 
+              <View
                 style={[
-                  styles.tabChip, 
+                  styles.tabChip,
                   selectedDate && styles.tabChipActive,
                   { paddingRight: selectedDate ? 32 : 12 }
                 ]}
               >
-                <Calendar 
-                  size={14} 
-                  color={selectedDate ? '#FFFFFF' : '#64748B'} 
+                <Calendar
+                  size={14}
+                  color={selectedDate ? '#FFFFFF' : '#64748B'}
                 />
                 {selectedDate && (
-                  <Text 
+                  <Text
                     style={[
-                      styles.tabChipText, 
+                      styles.tabChipText,
                       styles.tabChipTextActive,
                       { marginLeft: 6 }
                     ]}
@@ -842,7 +886,7 @@ export default function OwnerBookingsScreen() {
                     {formatDateDDMMYY(selectedDate)}
                   </Text>
                 )}
-                
+
                 {/* Native input overlay for web picker triggering */}
                 {isWeb && (
                   // @ts-ignore web only element
@@ -868,9 +912,9 @@ export default function OwnerBookingsScreen() {
                   />
                 )}
               </View>
-              
+
               {selectedDate && (
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={() => setSelectedDate(null)}
                   style={styles.dateClearBtn}
                 >
@@ -885,7 +929,7 @@ export default function OwnerBookingsScreen() {
       {isWeb && !isSmallScreen && bookings.length > 0 && (
         <View style={styles.tableHeaderContainer}>
           <View style={styles.tableHeaderRow}>
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => {
                 if (sortKey === 'booked_at') setSortAsc(!sortAsc);
                 else { setSortKey('booked_at'); setSortAsc(true); }
@@ -898,7 +942,7 @@ export default function OwnerBookingsScreen() {
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => {
                 if (sortKey === 'ground') setSortAsc(!sortAsc);
                 else { setSortKey('ground'); setSortAsc(true); }
@@ -911,7 +955,7 @@ export default function OwnerBookingsScreen() {
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => {
                 if (sortKey === 'date') setSortAsc(!sortAsc);
                 else { setSortKey('date'); setSortAsc(true); }
@@ -924,20 +968,20 @@ export default function OwnerBookingsScreen() {
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => {
                 if (sortKey === 'teams') setSortAsc(!sortAsc);
                 else { setSortKey('teams'); setSortAsc(true); }
               }}
               style={[styles.colTeams, { flexDirection: 'row', gap: 4, alignItems: 'center', justifyContent: 'center' }]}
             >
-              <Text style={styles.tableHeaderText}>Teams</Text>
+              <Text style={styles.tableHeaderText}>Fee</Text>
               {sortKey === 'teams' && (
                 <Text style={{ fontSize: 10, color: '#10b981' }}>{sortAsc ? '▲' : '▼'}</Text>
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => {
                 if (sortKey === 'status') setSortAsc(!sortAsc);
                 else { setSortKey('status'); setSortAsc(true); }
@@ -950,7 +994,7 @@ export default function OwnerBookingsScreen() {
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => {
                 if (sortKey === 'amount') setSortAsc(!sortAsc);
                 else { setSortKey('amount'); setSortAsc(true); }
@@ -967,7 +1011,7 @@ export default function OwnerBookingsScreen() {
               <Text style={styles.tableHeaderText}>Payment</Text>
             </View>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => {
                 if (sortKey === 'name') setSortAsc(!sortAsc);
                 else { setSortKey('name'); setSortAsc(true); }
@@ -980,7 +1024,7 @@ export default function OwnerBookingsScreen() {
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => {
                 if (sortKey === 'paid') setSortAsc(!sortAsc);
                 else { setSortKey('paid'); setSortAsc(true); }
@@ -1006,12 +1050,12 @@ export default function OwnerBookingsScreen() {
             isOwnGround && isSelfBooking
               ? 'Self booking on your ground'
               : isOwnGround
-              ? 'Customer booking'
-              : 'Your personal booking';
-          const whoTitle = isSelfBooking 
-            ? (isOwnGround ? 'Self' : 'Another Ground') 
+                ? 'Customer booking'
+                : 'Your personal booking';
+          const whoTitle = isSelfBooking
+            ? (isOwnGround ? 'Self' : 'Another Ground')
             : (item.user?.full_name || 'Customer');
-          
+
           if (isWeb && !isSmallScreen) {
             return (
               <TouchableOpacity
@@ -1026,9 +1070,6 @@ export default function OwnerBookingsScreen() {
                   <Text style={styles.bookedTimeText}>
                     {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </Text>
-                  <Text style={styles.bookingIdTable}>
-                    ID: {item.id.substring(0, 8).toUpperCase()}
-                  </Text>
                 </View>
 
                 <View style={[styles.tableCell, styles.colGround]}>
@@ -1038,7 +1079,7 @@ export default function OwnerBookingsScreen() {
                   </Text>
                 </View>
 
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={[styles.tableCell, styles.colDateTime]}
                   onPress={(e) => {
                     e.stopPropagation();
@@ -1049,14 +1090,14 @@ export default function OwnerBookingsScreen() {
                     {(item as any).displayDate || formatDateDDMMYY(item.booking_date)}
                   </Text>
                   {(() => {
-                    const slotsToDisplay = (item as any).allSlots && (item as any).allSlots.length > 0 
-                      ? (item as any).allSlots 
+                    const slotsToDisplay = (item as any).allSlots && (item as any).allSlots.length > 0
+                      ? (item as any).allSlots
                       : null;
-                    
+
                     if (slotsToDisplay) {
                       return <Text style={styles.timeText} numberOfLines={2}>{slotsToDisplay.join(', ')}</Text>;
                     }
-                    
+
                     return (
                       <Text style={styles.timeText}>
                         {`${formatTime12h(normalizeDbTimeToHHMM(item.start_time) || '')} – ${formatTime12h(normalizeDbTimeToHHMM(item.end_time) || '')}`}
@@ -1066,67 +1107,31 @@ export default function OwnerBookingsScreen() {
                 </TouchableOpacity>
 
                 {(() => {
-                  const normStart = normalizeDbTimeToHHMM(item.start_time);
-                  const currentSlotKey = `${item.ground_id}_${item.booking_date}_${normStart}`;
-                  const slotOccupancy = bookings.filter(b => 
-                    (b.status === 'confirmed' || b.status === 'active' || b.status === 'completed') && 
-                    `${b.ground_id}_${b.booking_date}_${normalizeDbTimeToHHMM(b.start_time)}` === currentSlotKey
-                  ).reduce((sum, b) => {
-                    if (b.team_type === 'one') return sum + 1;
-                    if (b.team_type === 'both') return sum + 2;
-
-                    const label = cricketTeamsLabelFromBooking(b.ground.pitch_type, b.notes);
-                    if (label === '1 team') return sum + 1;
-                    if (label === 'Both teams') return sum + 2;
-                    
-                    return sum + 2;
-                  }, 0);
-
-                  const isTrulyFull = slotOccupancy >= 2;
+                  const totalFee = (item as any).calculated_total_fee || 0;
 
                   return (
-                    <View style={[styles.tableCell, styles.colTeams]}>
-                      {isOwnGround ? (
-                        <>
-                          {!isTrulyFull ? (
-                            <TouchableOpacity 
-                              onPress={(e) => {
-                                e.stopPropagation();
-                                router.push(`/grounds/${item.ground.id}?date=${item.booking_date}&time=${normalizeDbTimeToHHMM(item.start_time)}&teams=one`);
-                              }}
-                              style={styles.partialBadge}
-                            >
-                              <Text style={styles.partialBadgeText}>ADD TEAM 2</Text>
-                            </TouchableOpacity>
-                          ) : (
-                            <View style={styles.fullMatchBadge}>
-                              <Text style={styles.fullMatchBadgeText}>FULL</Text>
-                            </View>
-                          )}
-                        </>
-                      ) : (
-                        <Text style={styles.teamsText}>
-                          {(cricketTeamsLabelFromBooking(item.ground.pitch_type, item.notes) || '1 Team').toUpperCase()}
-                        </Text>
-                      )}
+                    <View style={[styles.tableCell, styles.colTeams, { alignItems: 'center' }]}>
+                      <Text style={[styles.teamsText, { color: '#EF4444', fontWeight: '700' }]}>
+                        {formatCurrency(totalFee)}
+                      </Text>
                     </View>
                   );
                 })()}
 
                 <View style={[styles.tableCell, styles.colStatus]}>
-                   <TouchableOpacity 
-                     onPress={() => item.status === 'confirmed' && handleCancelBooking(item)}
-                     disabled={item.status !== 'confirmed'}
-                   >
-                      <Text style={[
-                        styles.statusBadgeText,
-                        item.status === 'confirmed' 
-                          ? (isDateInPast(item.booking_date) ? styles.statusDone : styles.statusConfirmed) 
-                          : styles.statusCancelled
-                      ]}>
-                        {item.status === 'confirmed' ? (isDateInPast(item.booking_date) ? 'DONE' : 'ACTIVE') : item.status.toUpperCase()}
-                      </Text>
-                   </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => item.status === 'confirmed' && handleCancelBooking(item)}
+                    disabled={item.status !== 'confirmed'}
+                  >
+                    <Text style={[
+                      styles.statusBadgeText,
+                      item.status === 'confirmed'
+                        ? (isDateInPast(item.booking_date) ? styles.statusDone : styles.statusConfirmed)
+                        : styles.statusCancelled
+                    ]}>
+                      {item.status === 'confirmed' ? (isDateInPast(item.booking_date) ? 'DONE' : 'ACTIVE') : item.status.toUpperCase()}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
 
                 <View style={[styles.tableCell, styles.colAmount]}>
@@ -1156,7 +1161,7 @@ export default function OwnerBookingsScreen() {
                 </View>
 
                 <View style={[styles.tableCell, styles.colPaymentReceived]}>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={(e) => {
                       e.stopPropagation();
                       togglePaymentReceived(item);
@@ -1182,19 +1187,19 @@ export default function OwnerBookingsScreen() {
           }
 
           return (
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => router.push(`/bookings/${item.id}`)}
               style={[styles.compactRow, !isLight && styles.compactRowNative]}
               activeOpacity={0.7}
             >
               <View style={styles.compactTopRow}>
-                <Image 
-                  source={{ 
+                <Image
+                  source={{
                     uri: item.ground.ground_images?.[0]?.image_url || 'https://images.pexels.com/photos/1661950/pexels-photo-1661950.jpeg'
-                  }} 
-                  style={styles.compactGroundImage} 
+                  }}
+                  style={styles.compactGroundImage}
                 />
-                
+
                 <View style={styles.compactMainInfo}>
                   <Text style={[styles.compactGroundName, !isLight && styles.compactGroundNameNative]} numberOfLines={1}>
                     {item.ground.name}
@@ -1204,14 +1209,14 @@ export default function OwnerBookingsScreen() {
                       {(item as any).displayDate || formatDateDDMMYY(item.booking_date)}
                     </Text>
                     {(() => {
-                      const slotsToDisplay = (item as any).allSlots && (item as any).allSlots.length > 0 
-                        ? (item as any).allSlots 
+                      const slotsToDisplay = (item as any).allSlots && (item as any).allSlots.length > 0
+                        ? (item as any).allSlots
                         : null;
-                      
+
                       if (slotsToDisplay) {
                         return <Text style={styles.timeText} numberOfLines={2}>{slotsToDisplay.join(', ')}</Text>;
                       }
-                      
+
                       return (
                         <Text style={[styles.compactSlotTime, !isLight && styles.compactSlotTimeNative]}>
                           {`${formatTime12h(normalizeDbTimeToHHMM(item.start_time) || '')} – ${formatTime12h(normalizeDbTimeToHHMM(item.end_time) || '')}`}
@@ -1234,30 +1239,30 @@ export default function OwnerBookingsScreen() {
                       </Text>
                     )}
                   </View>
-                    <TouchableOpacity 
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        if (item.status === 'confirmed' && !isDateInPast(item.booking_date)) {
-                          handleCancelBooking(item);
-                        }
-                      }}
-                      disabled={item.status !== 'confirmed' || isDateInPast(item.booking_date)}
-                      style={[
-                        styles.statusBadgeCompact,
-                        item.status === 'confirmed' 
-                          ? (isDateInPast(item.booking_date) ? styles.statusDone : styles.statusConfirmed) 
-                          : styles.statusCancelled
-                      ]}
-                    >
-                      <Text style={[
-                        styles.statusBadgeText,
-                        item.status === 'confirmed' 
-                          ? (isDateInPast(item.booking_date) ? styles.statusDone : styles.statusConfirmed) 
-                          : styles.statusCancelled
-                      ]}>
-                        {item.status === 'confirmed' ? (isDateInPast(item.booking_date) ? 'DONE' : 'ACTIVE') : 'CANCEL'}
-                      </Text>
-                    </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      if (item.status === 'confirmed' && !isDateInPast(item.booking_date)) {
+                        handleCancelBooking(item);
+                      }
+                    }}
+                    disabled={item.status !== 'confirmed' || isDateInPast(item.booking_date)}
+                    style={[
+                      styles.statusBadgeCompact,
+                      item.status === 'confirmed'
+                        ? (isDateInPast(item.booking_date) ? styles.statusDone : styles.statusConfirmed)
+                        : styles.statusCancelled
+                    ]}
+                  >
+                    <Text style={[
+                      styles.statusBadgeText,
+                      item.status === 'confirmed'
+                        ? (isDateInPast(item.booking_date) ? styles.statusDone : styles.statusConfirmed)
+                        : styles.statusCancelled
+                    ]}>
+                      {item.status === 'confirmed' ? (isDateInPast(item.booking_date) ? 'DONE' : 'ACTIVE') : 'CANCEL'}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               </View>
 
@@ -1266,12 +1271,12 @@ export default function OwnerBookingsScreen() {
               <View style={styles.compactBottomRow}>
                 <View style={styles.compactBottomLeft}>
                   <NameInputCell booking={item} onSave={saveBookingName} />
-                  
+
                   {(() => {
                     const normStart = normalizeDbTimeToHHMM(item.start_time);
                     const currentSlotKey = `${item.ground_id}_${item.booking_date}_${normStart}`;
-                    const slotOccupancy = bookings.filter(b => 
-                      (b.status === 'confirmed' || b.status === 'active' || b.status === 'completed') && 
+                    const slotOccupancy = bookings.filter(b =>
+                      (b.status === 'confirmed' || b.status === 'active' || b.status === 'completed') &&
                       `${b.ground_id}_${b.booking_date}_${normalizeDbTimeToHHMM(b.start_time)}` === currentSlotKey
                     ).reduce((sum, b) => {
                       if (b.team_type === 'one') return sum + 1;
@@ -1280,14 +1285,14 @@ export default function OwnerBookingsScreen() {
                       const label = cricketTeamsLabelFromBooking(b.ground.pitch_type, b.notes);
                       if (label === '1 team') return sum + 1;
                       if (label === 'Both teams') return sum + 2;
-                      
+
                       return sum + 2;
                     }, 0);
 
                     const isTrulyFull = slotOccupancy >= 2;
 
                     return isOwnGround && (
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         onPress={(e) => {
                           e.stopPropagation();
                           if (!isTrulyFull) {
@@ -1306,7 +1311,7 @@ export default function OwnerBookingsScreen() {
                 </View>
 
                 <View style={styles.compactBottomRight}>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={(e) => {
                       e.stopPropagation();
                       togglePaymentReceived(item);
@@ -1314,10 +1319,10 @@ export default function OwnerBookingsScreen() {
                     style={styles.compactPaymentToggle}
                   >
                     <View style={{ alignItems: 'flex-end', marginRight: 8 }}>
-                       <Text style={[styles.paymentLabel, { color: isLight ? '#64748B' : '#dcc093' }]}>PAID</Text>
-                       {(item.payment_received || (item.payment_method !== 'cash' && item.status === 'confirmed')) && (
-                         <Text style={styles.receivedAmountTextCompact}>{formatCurrency(item.total_amount)}</Text>
-                       )}
+                      <Text style={[styles.paymentLabel, { color: isLight ? '#64748B' : '#dcc093' }]}>PAID</Text>
+                      {(item.payment_received || (item.payment_method !== 'cash' && item.status === 'confirmed')) && (
+                        <Text style={styles.receivedAmountTextCompact}>{formatCurrency(item.total_amount)}</Text>
+                      )}
                     </View>
                     {(item.payment_received || (item.payment_method !== 'cash' && item.status === 'confirmed')) ? (
                       <CheckCircle2 size={24} color="#00ea6b" />
@@ -1348,7 +1353,7 @@ export default function OwnerBookingsScreen() {
           </View>
         }
       />
-      
+
       <Modal
         visible={isSlotModalVisible}
         transparent={true}
@@ -1364,15 +1369,14 @@ export default function OwnerBookingsScreen() {
                 <X size={20} color="#64748B" />
               </TouchableOpacity>
             </View>
-            
+
             <ScrollView style={{ maxHeight: 500 }}>
               {selectedSlotBookings.sort((a, b) => `${a.booking_date}${a.start_time}` > `${b.booking_date}${b.start_time}` ? 1 : -1).map((b) => (
                 <View key={b.id} style={styles.slotBookingItem}>
                   <View style={{ flex: 1 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                       <View style={styles.whoAvatar}><Text style={styles.whoAvatarText}>{(b.user?.full_name || b.booked_for_name || 'C')[0].toUpperCase()}</Text></View>
                        <View>
-                         <Text style={styles.slotBookingName}>{b.user?.full_name || b.booked_for_name || 'Customer'}</Text>
+                         <Text style={styles.slotBookingName}>{(b.user?.full_name || b.booked_for_name || 'Customer').toUpperCase()}</Text>
                          <Text style={styles.slotBookingId}>ID: {b.id.substring(0, 8).toUpperCase()}</Text>
                        </View>
                     </View>
@@ -1394,16 +1398,18 @@ export default function OwnerBookingsScreen() {
                            {(cricketTeamsLabelFromBooking(b.ground.pitch_type, b.notes) || '1 Team').toUpperCase()}
                          </Text>
                        </View>
-                       <View style={styles.slotDetailRow}>
-                         <Banknote size={14} color="#059669" />
-                         <Text style={[styles.slotBookingDetail, { color: '#059669', fontWeight: '700' }]}>₹{b.total_amount}</Text>
-                       </View>
                     </View>
                   </View>
-                  <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(b.status)}15`, height: 24, paddingHorizontal: 8 }]}>
-                    <Text style={[styles.statusText, { color: getStatusColor(b.status), fontSize: 10, fontWeight: '800' }]}>
-                      {b.status.toUpperCase()}
-                    </Text>
+                  <View style={{ alignItems: 'flex-end', gap: 8 }}>
+                    <View style={[styles.statusBadge, { backgroundColor: 'transparent', height: 24, paddingHorizontal: 0 }]}>
+                      <Text style={[styles.statusText, { color: getStatusColor(b.status), fontSize: 10, fontWeight: '800' }]}>
+                        {b.status.toUpperCase()}
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Banknote size={14} color="#059669" />
+                      <Text style={{ color: '#059669', fontWeight: '700', fontSize: 14 }}>₹{b.total_amount}</Text>
+                    </View>
                   </View>
                 </View>
               ))}
@@ -2071,7 +2077,7 @@ const styles = StyleSheet.create({
     minWidth: 140,
     overflow: 'hidden',
   },
-   dropdownOverlay: {
+  dropdownOverlay: {
     position: 'absolute',
     top: -1000,
     left: -1000,
@@ -2150,7 +2156,7 @@ const styles = StyleSheet.create({
   },
   slotBookingName: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#0F172A',
     fontFamily: 'Inter',
     marginBottom: 2,

@@ -24,9 +24,6 @@ export default function PlatformFeesSettings() {
   const [saving, setSaving]           = useState(false);
   const [localValues, setLocalValues] = useState<Record<string, string>>({});
 
-  // Commission
-  const [comm, setComm]           = useState<CommissionConfig>({ type: 'percent', value: '10', gst: true });
-  const [savingComm, setSavingComm] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     cricket: true,
     nets: true,
@@ -35,7 +32,6 @@ export default function PlatformFeesSettings() {
 
   useEffect(() => {
     loadSettings();
-    loadCommission();
   }, []);
 
   const loadSettings = async () => {
@@ -84,44 +80,6 @@ export default function PlatformFeesSettings() {
     }
   };
 
-  const loadCommission = async () => {
-    try {
-      const { data } = await supabase
-        .from('platform_settings')
-        .select('key,value')
-        .in('key', ['contract_commission_type', 'contract_commission_value', 'contract_commission_gst']);
-      if (!data) return;
-      const map = Object.fromEntries(data.map(r => [r.key, r.value]));
-      setComm({
-        type:  (map['contract_commission_type']  === 'flat' ? 'flat' : 'percent'),
-        value: String(map['contract_commission_value'] ?? '10'),
-        gst:   map['contract_commission_gst'] === true || map['contract_commission_gst'] === 'true',
-      });
-    } catch (e) { console.error(e); }
-  };
-
-  const saveCommission = async () => {
-    try {
-      setSavingComm(true);
-      const rows = [
-        { key: 'contract_commission_type',  value: comm.type,                updated_at: new Date().toISOString() },
-        { key: 'contract_commission_value', value: Number(comm.value),       updated_at: new Date().toISOString() },
-        { key: 'contract_commission_gst',   value: comm.gst,                 updated_at: new Date().toISOString() },
-      ];
-      for (const r of rows) {
-        const { error } = await supabase.from('platform_settings').update(r).eq('key', r.key);
-        if (error) throw error;
-      }
-      if (Platform.OS === 'web') alert('Commission settings saved!');
-      else Alert.alert('Saved', 'Commission settings saved!');
-    } catch (e: any) {
-      if (Platform.OS === 'web') alert(e.message || 'Save failed');
-      else Alert.alert('Error', e.message);
-    } finally {
-      setSavingComm(false);
-    }
-  };
-
   const handleSave = async () => {
     try {
       setSaving(true);
@@ -159,73 +117,6 @@ export default function PlatformFeesSettings() {
 
   const renderListHeader = () => (
     <View>
-      {/* ── Partner Commission Card ── */}
-      <View style={styles.commCard}>
-        <View style={styles.commCardHeader}>
-          <View>
-            <Text style={styles.commCardTitle}>Partner Commission</Text>
-            <Text style={styles.commCardSub}>Default rate shown on the venue owner contract</Text>
-          </View>
-          <TouchableOpacity
-            style={[styles.saveCommBtn, savingComm && { opacity: 0.6 }]}
-            onPress={saveCommission}
-            disabled={savingComm}
-          >
-            <Save size={13} color="#fff" />
-            <Text style={styles.saveCommText}>{savingComm ? 'Saving…' : 'Save'}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Type toggle + value input row */}
-        <View style={styles.commRow}>
-          {/* % / ₹ toggle */}
-          <View style={styles.commToggle}>
-            <TouchableOpacity
-              style={[styles.commToggleBtn, comm.type === 'percent' && styles.commToggleBtnOn]}
-              onPress={() => setComm(p => ({ ...p, type: 'percent' }))}
-            >
-              <Text style={[styles.commToggleTxt, comm.type === 'percent' && styles.commToggleTxtOn]}>%</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.commToggleBtn, comm.type === 'flat' && styles.commToggleBtnOn]}
-              onPress={() => setComm(p => ({ ...p, type: 'flat' }))}
-            >
-              <Text style={[styles.commToggleTxt, comm.type === 'flat' && styles.commToggleTxtOn]}>₹</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* value input */}
-          <View style={styles.commInputWrap}>
-            <Text style={styles.commInputPrefix}>
-              {comm.type === 'flat' ? '₹' : ''}
-            </Text>
-            <TextInput
-              style={styles.commInput}
-              value={comm.value}
-              onChangeText={v => setComm(p => ({ ...p, value: v }))}
-              keyboardType="numeric"
-              placeholder={comm.type === 'percent' ? 'e.g. 10' : 'e.g. 500'}
-              placeholderTextColor="#9CA3AF"
-            />
-            <Text style={styles.commInputSuffix}>
-              {comm.type === 'percent' ? '% per booking' : '/ team'}
-            </Text>
-          </View>
-        </View>
-
-        {/* GST toggle */}
-        <View style={styles.commGstRow}>
-          <Switch
-            value={comm.gst}
-            onValueChange={v => setComm(p => ({ ...p, gst: v }))}
-            trackColor={{ false: '#E5E7EB', true: '#D1FAE5' }}
-            thumbColor={comm.gst ? '#10b981' : '#9CA3AF'}
-            style={{ transform: [{ scale: 0.8 }] }}
-          />
-          <Text style={styles.commGstLabel}>+ GST applicable on top of commission</Text>
-        </View>
-      </View>
-
       {/* Divider before existing fees table */}
       <View style={styles.header}>
         <View style={styles.headerTop}>

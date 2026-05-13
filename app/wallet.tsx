@@ -75,7 +75,18 @@ export default function WalletScreen() {
         .single();
       
       if (walletData) {
-        setBalance(walletData.balance);
+        let pendingAmount = 0;
+        if (isOwner) {
+          const { data: pendingWithdrawals } = await supabase
+            .from('withdrawals')
+            .select('amount')
+            .eq('owner_id', user.id)
+            .in('status', ['pending', 'processing']);
+            
+          pendingAmount = (pendingWithdrawals || []).reduce((acc, w) => acc + (w.amount || 0), 0);
+        }
+        
+        setBalance(walletData.balance - pendingAmount);
         
         // 2. Fetch Wallet Transactions
         let query = supabase

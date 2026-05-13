@@ -47,6 +47,7 @@ import LandingScrollContent from '@/components/landing/LandingScrollContent';
 import LandingBookingForm from '@/components/landing/LandingBookingForm';
 import { useAuth } from '@/contexts/AuthContext';
 import HomeScreenSkeleton from '@/components/landing/HomeScreenSkeleton';
+import HeroMobile from '@/components/landing/HeroMobile';
 import ProfileScreen from './profile';
 import { Gesture, GestureDetector, Directions } from 'react-native-gesture-handler';
 
@@ -112,11 +113,7 @@ function GroundCardMobile({ ground, index }: { ground: any; index: number }) {
       <View style={styles.groundImageWrap}>
         <Image source={{ uri: primaryImage }} style={styles.groundImage} />
         <View style={styles.groundImageOverlay} />
-        {isTop && (
-          <View style={styles.popularBadge}>
-            <Text style={styles.popularBadgeText}>🔥 Popular</Text>
-          </View>
-        )}
+
         <View style={styles.groundImageContent}>
           <Text style={styles.groundName} numberOfLines={1}>
             {ground.name}
@@ -148,7 +145,12 @@ function GroundCardMobile({ ground, index }: { ground: any; index: number }) {
                 ? `₹${Math.min(...ground.time_slots.filter((s: any) => s.is_available && s.custom_price != null).map((s: any) => Number(s.custom_price)))}`
                 : 'See Slots')}
             <Text style={styles.groundPriceUnit}>
-              {String(ground.pitch_type ?? '').toLowerCase().includes('box') ? '/hr' : '/match'}
+              {(() => {
+                const isNetOrLane = String(ground.pitch_type ?? '').toLowerCase().includes('net') || 
+                                    String(ground.pitch_type ?? '').toLowerCase().includes('lane') ||
+                                    String(ground.name ?? '').toLowerCase().includes('lane');
+                return isNetOrLane ? '/slot' : String(ground.pitch_type ?? '').toLowerCase().includes('box') ? '/hr' : '/match';
+              })()}
             </Text>
           </Text>
           <View style={styles.bookNowBtn}>
@@ -276,6 +278,13 @@ export default function HomeScreen() {
     return scored.slice(0, 8);
   }, [grounds]);
 
+  const cricketGrounds = useMemo(() => {
+    return grounds.filter((g: any) => 
+      (g.pitch_type || '').toLowerCase().includes('cricket') ||
+      (g.name || '').toLowerCase().includes('cricket')
+    ).slice(0, 8);
+  }, [grounds]);
+
   const filteredGrounds = useMemo(() => {
     return grounds.filter((g: any) => {
       const q = searchQuery.toLowerCase().trim();
@@ -330,6 +339,10 @@ export default function HomeScreen() {
     transform: [{ translateX: slideAnim.value }],
   }));
 
+  const mainContentAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: (slideAnim.value - width) * 0.75 }],
+  }));
+
   const backdropAnimatedStyle = useAnimatedStyle(() => {
     const opacity = isFocused 
       ? withTiming(showProfileModal ? 1 : 0, { duration: 300 })
@@ -368,7 +381,7 @@ export default function HomeScreen() {
         <Animated.ScrollView
         onScroll={Platform.OS === 'web' ? undefined : verticalScrollHandler}
         scrollEventThrottle={16}
-        style={styles.scroll}
+        style={[styles.scroll, mainContentAnimatedStyle]}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -382,105 +395,17 @@ export default function HomeScreen() {
         }
       >
         {/* ── Immersive Hero Section ─────────────────────────── */}
-        <View style={styles.premiumHero}>
-          <View style={styles.heroGlowPrimary} />
-          <View style={styles.heroGlowSecondary} />
-          
-          <View style={[styles.heroPadding, { paddingTop: insets.top + 20 }]}>
-            <View style={styles.heroHeaderRow}>
-              <Pressable 
-                style={styles.locationBadgeSmall}
-                onPress={refreshLocation}
-              >
-                <MapPin size={10} color="rgba(255,255,255,0.7)" fill="rgba(255,255,255,0.1)" />
-                <Text style={styles.locationTextSmall}>{cityName}</Text>
-              </Pressable>
-              <TouchableOpacity 
-                onPress={() => setShowProfileModal(true)}
-                style={styles.profileButton}
-                activeOpacity={0.7}
-              >
-                <Image 
-                  source={profile?.avatar_url ? { uri: profile.avatar_url } : require('../../assets/avatar.png')} 
-                  style={styles.profileImage} 
-                />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.heroMainTitle}>
-              Game-ready grounds,{'\n'}
-              <Text style={{ color: '#00ea6b' }}>just a tap away.</Text>
-            </Text>
-
-            <Text style={styles.heroCopy}>
-              Find, book, and play at curated venues near you with instant confirmation.
-            </Text>
-
-            <View style={styles.heroStatsContainer}>
-              <View style={styles.heroStatBox}>
-                <Text style={styles.heroStatValue}>4.9/5</Text>
-                <Text style={styles.heroStatLabel}>Player Rating</Text>
-              </View>
-              <View style={styles.heroStatDivider} />
-              <View style={styles.heroStatBox}>
-                <Text style={styles.heroStatValue}>10k+</Text>
-                <Text style={styles.heroStatLabel}>Hours Booked</Text>
-              </View>
-              <View style={styles.heroStatDivider} />
-              <View style={styles.heroStatBox}>
-                <Text style={styles.heroStatValue}>50+</Text>
-                <Text style={styles.heroStatLabel}>Venues</Text>
-              </View>
-            </View>
-
-            <View style={styles.floatingSearchContainer}>
-              <TouchableOpacity onPress={handleSearch}>
-                <Search size={18} color="#94A3B8" strokeWidth={2.5} />
-              </TouchableOpacity>
-              <TextInput
-                style={styles.floatingSearchInput}
-                placeholder="Search grounds, city..."
-                placeholderTextColor="#94A3B8"
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                onSubmitEditing={handleSearch}
-                returnKeyType="search"
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <Text style={{ color: '#94A3B8', fontWeight: '600' }}>Clear</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.heroCategories}
-            >
-              {SPORT_CATEGORIES.map((cat) => (
-                <TouchableOpacity
-                  key={cat.value}
-                  activeOpacity={0.8}
-                  onPress={() => setSportFilter(cat.value)}
-                  style={[
-                    styles.heroCatChip,
-                    sportFilter === cat.value && styles.heroCatChipActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.heroCatText,
-                      sportFilter === cat.value && styles.heroCatTextActive,
-                    ]}
-                  >
-                    {cat.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
+        <HeroMobile
+          cityName={cityName}
+          refreshLocation={refreshLocation}
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          handleSearch={handleSearch}
+          sportFilter={sportFilter}
+          setSportFilter={setSportFilter}
+          profile={profile}
+          setShowProfileModal={setShowProfileModal}
+        />
 
 
 
@@ -587,69 +512,77 @@ export default function HomeScreen() {
           )}
         </View>
 
-
-
-
-
-
-
-
-
-        {/* ── CTA Banner ───────────────────────────────── */}
-        <View style={styles.ctaBanner}>
-          <View style={styles.ctaBannerGlow} />
-          <Text style={[styles.ctaTitle, isWide && { fontSize: 36 }]}>Ready to play?</Text>
-          <Text style={[styles.ctaSubtitle, isWide && { maxWidth: 500 }]}>
-            Join thousands booking their favourite grounds every day.
-          </Text>
-          <Pressable
-            style={({ pressed }) => [styles.ctaButton, pressed && { opacity: 0.85 }]}
-            onPress={() => router.push(primaryCta as any)}
-          >
-            <Text style={styles.ctaButtonText}>
-              {user ? 'Book a Venue' : 'Get Started Free'}
-            </Text>
-            <ArrowRight size={18} color="#FFFFFF" strokeWidth={2.5} />
-          </Pressable>
-          {!user && (
-            <Pressable onPress={() => router.push('/(auth)/login' as any)} style={styles.ctaSignIn}>
-              <Text style={styles.ctaSignInText}>Already have an account? Sign in</Text>
+        {/* ── Cricket Grounds ───────────────────────────── */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View>
+              <Text style={styles.sectionLabel}>Cricket Grounds</Text>
+              <Text style={styles.sectionTitle}>Best for Cricket</Text>
+            </View>
+            <Pressable
+              style={styles.seeAllBtn}
+              onPress={() => router.push('/(tabs)/grounds' as any)}
+            >
+              <Text style={styles.seeAllText}>See all</Text>
+              <ChevronRight size={14} color="#01b854" strokeWidth={2.5} />
             </Pressable>
+          </View>
+
+          {loading ? (
+            <ActivityIndicator color="#01b854" style={{ marginTop: 24, marginBottom: 8 }} />
+          ) : cricketGrounds.length === 0 ? (
+            <Text style={styles.emptyText}>No cricket grounds found</Text>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalList}
+            >
+              {cricketGrounds.map((g: any, i: number) => (
+                <View key={g.id} style={[styles.horizontalItem, isWide && { width: 300 }]}>
+                  <GroundCardMobile ground={g} index={i} />
+                </View>
+              ))}
+            </ScrollView>
           )}
         </View>
+        <View style={{ height: 30 }} />
+
+
+
+
+
+
+
+
+
+
 
         <View style={{ height: 32 }} />
       </Animated.ScrollView>
 
-      {/* Profile Modal Overlay */}
-      {Platform.OS !== 'web' && (
-        <Modal
-          visible={isModalActive}
-          transparent
-          animationType="none"
-          onRequestClose={() => setShowProfileModal(false)}
-        >
-          <View style={StyleSheet.absoluteFill}>
-            <Animated.View 
-              style={[styles.modalBackdrop, backdropAnimatedStyle]}
-            >
-              <TouchableOpacity 
-                style={{ flex: 1 }} 
-                activeOpacity={1} 
-                onPress={() => setShowProfileModal(false)} 
-              />
-            </Animated.View>
-            <Animated.View 
-              style={[
-                styles.profileModalContainer, 
-                profileAnimatedStyle,
-                { width: width * 0.75, height: '100%' }
-              ]}
-            >
-              <ProfileScreen isModal onClose={() => setShowProfileModal(false)} />
-            </Animated.View>
-          </View>
-        </Modal>
+      {/* Profile Drawer Overlay */}
+      {Platform.OS !== 'web' && isModalActive && (
+        <View style={StyleSheet.absoluteFill}>
+          <Animated.View 
+            style={[styles.modalBackdrop, backdropAnimatedStyle]}
+          >
+            <TouchableOpacity 
+              style={{ flex: 1 }} 
+              activeOpacity={1} 
+              onPress={() => setShowProfileModal(false)} 
+            />
+          </Animated.View>
+          <Animated.View 
+            style={[
+              styles.profileModalContainer, 
+              profileAnimatedStyle,
+              { width: width * 0.75, height: '100%' }
+            ]}
+          >
+            <ProfileScreen isModal onClose={() => setShowProfileModal(false)} />
+          </Animated.View>
+        </View>
       )}
       </View>
     </GestureDetector>

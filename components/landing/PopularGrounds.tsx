@@ -210,7 +210,12 @@ export default function PopularGrounds() {
                 : 'See Slots'}
             </Text>
             <Text style={styles.priceUnitText}>
-              {String(g.pitch_type ?? '').toLowerCase().includes('box') ? '/hour' : '/match'}
+              {(() => {
+                const isNetOrLane = String(g.pitch_type ?? '').toLowerCase().includes('net') || 
+                                    String(g.pitch_type ?? '').toLowerCase().includes('lane') ||
+                                    String(g.name ?? '').toLowerCase().includes('lane');
+                return isNetOrLane ? '/slot' : String(g.pitch_type ?? '').toLowerCase().includes('box') ? '/hour' : '/match';
+              })()}
             </Text>
           </View>
           <TouchableOpacity

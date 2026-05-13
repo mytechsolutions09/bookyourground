@@ -228,8 +228,13 @@ export default function ProfileScreen({
       )}
 
       {/* 1. PROFILE CARD */}
-      <View style={[styles.profileCardNew, isModal && styles.noContainer, isUltraNarrow && { padding: 16, marginBottom: 20 }]}>
-        <View style={styles.profileCardContent}>
+      <View style={[
+        styles.profileCardNew, 
+        (profile?.role === 'ground_owner' || isSuperAdmin) && styles.profileCardOwner,
+        isModal && styles.noContainer, 
+        isUltraNarrow && { padding: 16, marginBottom: 20 }
+      ]}>
+        <View style={[styles.profileCardContent, (profile?.role === 'ground_owner' || isSuperAdmin) && { gap: 8 }]}>
           <TouchableOpacity 
             activeOpacity={0.8} 
             onPress={pickImage} 
@@ -238,21 +243,37 @@ export default function ProfileScreen({
           >
             <Image
               source={profile?.avatar_url ? { uri: profile.avatar_url } : require('../../assets/avatar.png')}
-              style={[styles.avatarNew, isUltraNarrow && { width: 64, height: 64, borderRadius: 32 }]}
+              style={[
+                styles.avatarNew, 
+                (profile?.role === 'ground_owner' || isSuperAdmin) && styles.avatarOwner,
+                isUltraNarrow && { width: 64, height: 64, borderRadius: 32 }
+              ]}
             />
             {uploading ? (
               <View style={styles.avatarOverlayNew}>
                 <ActivityIndicator color="#FFFFFF" size="small" />
               </View>
             ) : (
-              <View style={[styles.avatarOverlayNew, isUltraNarrow && { width: 22, height: 22, borderRadius: 11 }]}>
-                <Camera size={isUltraNarrow ? 12 : 16} color="#FFFFFF" />
+              <View style={[
+                styles.avatarOverlayNew, 
+                (profile?.role === 'ground_owner' || isSuperAdmin) && { width: 16, height: 16, borderRadius: 8, borderWidth: 1.5 },
+                isUltraNarrow && { width: 22, height: 22, borderRadius: 11 }
+              ]}>
+                <Camera size={(profile?.role === 'ground_owner' || isSuperAdmin) ? 8 : (isUltraNarrow ? 12 : 16)} color="#FFFFFF" />
               </View>
             )}
           </TouchableOpacity>
           <View style={styles.profileTextContainer}>
-            <RNText style={[styles.nameNew, isUltraNarrow && { fontSize: 16 }]}>{getFormattedName(profile?.full_name)}</RNText>
-            <RNText style={[styles.roleNew, isUltraNarrow && { fontSize: 12 }]}>
+            <RNText style={[
+              styles.nameNew, 
+              (profile?.role === 'ground_owner' || isSuperAdmin) && styles.nameOwner,
+              isUltraNarrow && { fontSize: 16 }
+            ]}>{getFormattedName(profile?.full_name)}</RNText>
+            <RNText style={[
+              styles.roleNew, 
+              (profile?.role === 'ground_owner' || isSuperAdmin) && { fontSize: 10, marginBottom: 0 },
+              isUltraNarrow && { fontSize: 12 }
+            ]}>
               {profile?.role === 'ground_owner' ? 'Venue Owner & Player' : 'Player'}
             </RNText>
             
@@ -393,15 +414,6 @@ export default function ProfileScreen({
       <View style={styles.venueOwnerSection}>
         {!isModal ? (
           <>
-            <View style={styles.venueOwnerHeader}>
-              <View style={styles.venueOwnerHeaderIcon}>
-                <Store size={24} color="#00ea6b" />
-              </View>
-              <View style={styles.venueOwnerHeaderText}>
-                <RNText style={styles.venueOwnerTitle}>Venue Owner Hub</RNText>
-                <RNText style={styles.venueOwnerSubtitle}>Manage your venues, bookings, and business all in one place.</RNText>
-              </View>
-            </View>
 
             <View style={styles.venueOwnerGrid}>
               <TouchableOpacity 
@@ -409,7 +421,7 @@ export default function ProfileScreen({
                 onPress={() => router.push('/(owner)/owner-dashboard' as any)}
               >
                 <View style={styles.venueOwnerCardIconBg}>
-                  <LayoutGrid size={28} color="#00ea6b" />
+                  <LayoutGrid size={20} color="#00ea6b" />
                 </View>
                 <RNText style={styles.venueOwnerCardTitle}>Dashboard</RNText>
                 <RNText style={styles.venueOwnerCardDesc}>Overview of your venues, bookings, and performance.</RNText>
@@ -420,7 +432,7 @@ export default function ProfileScreen({
                 onPress={() => router.push('/(owner)/manage-grounds' as any)}
               >
                 <View style={styles.venueOwnerCardIconBg}>
-                  <MapPin size={28} color="#00ea6b" />
+                  <MapPin size={20} color="#00ea6b" />
                 </View>
                 <RNText style={styles.venueOwnerCardTitle}>My Grounds</RNText>
                 <RNText style={styles.venueOwnerCardDesc}>View and manage your grounds and venues.</RNText>
@@ -431,7 +443,7 @@ export default function ProfileScreen({
                 onPress={() => router.push('/(owner)/ground-bookings' as any)}
               >
                 <View style={styles.venueOwnerCardIconBg}>
-                  <Calendar size={28} color="#00ea6b" />
+                  <Calendar size={20} color="#00ea6b" />
                 </View>
                 <RNText style={styles.venueOwnerCardTitle}>Bookings</RNText>
                 <RNText style={styles.venueOwnerCardDesc}>Manage bookings, availability, and reservations.</RNText>
@@ -442,7 +454,7 @@ export default function ProfileScreen({
                 onPress={() => router.push('/(owner)/earnings' as any)}
               >
                 <View style={styles.venueOwnerCardIconBg}>
-                  <IndianRupee size={28} color="#00ea6b" />
+                  <IndianRupee size={20} color="#00ea6b" />
                 </View>
                 <RNText style={styles.venueOwnerCardTitle}>Earnings</RNText>
                 <RNText style={styles.venueOwnerCardDesc}>Track your earnings, transactions, and payouts.</RNText>
@@ -453,7 +465,7 @@ export default function ProfileScreen({
                 onPress={() => router.push('/(owner)/inventory' as any)}
               >
                 <View style={styles.venueOwnerCardIconBg}>
-                  <Package size={28} color="#00ea6b" />
+                  <Package size={20} color="#00ea6b" />
                 </View>
                 <RNText style={styles.venueOwnerCardTitle}>Inventory</RNText>
                 <RNText style={styles.venueOwnerCardDesc}>Manage your inventory, equipment, and stock.</RNText>
@@ -464,7 +476,7 @@ export default function ProfileScreen({
                 onPress={() => router.push('/(owner)/settings' as any)}
               >
                 <View style={styles.venueOwnerCardIconBg}>
-                  <Settings size={28} color="#00ea6b" />
+                  <Settings size={20} color="#00ea6b" />
                 </View>
                 <RNText style={styles.venueOwnerCardTitle}>Settings</RNText>
                 <RNText style={styles.venueOwnerCardDesc}>Update your profile, preferences, and account settings.</RNText>
@@ -912,6 +924,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(0, 234, 107, 0.05)',
   },
+  profileCardOwner: {
+    position: 'absolute',
+    top: 0,
+    right: 16,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    shadowOpacity: 0,
+    elevation: 0,
+    padding: 0,
+    marginBottom: 0,
+    zIndex: 10,
+  },
   noContainer: {
     backgroundColor: 'transparent',
     borderWidth: 0,
@@ -929,6 +953,11 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
     backgroundColor: '#F1F5F9',
+  },
+  avatarOwner: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
   },
   avatarWrapperNew: {
     position: 'relative',
@@ -957,6 +986,10 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     marginBottom: 2,
     letterSpacing: -0.2,
+  },
+  nameOwner: {
+    fontSize: 14,
+    fontWeight: '600',
     fontFamily: 'Inter',
   },
   roleNew: {
@@ -1147,38 +1180,38 @@ const styles = StyleSheet.create({
   },
   venueOwnerCard: {
     backgroundColor: '#ffffff',
-    borderRadius: 24,
-    padding: 24,
+    borderRadius: 16,
+    padding: 16,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#f1f5f9',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.04,
-    shadowRadius: 16,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 12,
+    elevation: 2,
   },
   venueOwnerCardIconBg: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: 12,
   },
   venueOwnerCardTitle: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '700',
     color: '#0f172a',
     fontFamily: 'Inter',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   venueOwnerCardDesc: {
-    fontSize: 13,
+    fontSize: 11,
     color: '#64748b',
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: 16,
     fontFamily: 'Inter',
     fontWeight: '400',
   },
