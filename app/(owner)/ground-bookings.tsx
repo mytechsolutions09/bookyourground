@@ -395,6 +395,28 @@ export default function OwnerBookingsScreen() {
     }
   };
 
+  const calculateBRowFee = (row: any) => {
+    if (!platformSettings) return Number(row.platform_fee_owner || 0) + Number(row.gst_owner || 0);
+    const cricketFixedFee = Number(platformSettings.cricket_owner_fee_fixed ?? 100);
+    const netsFixedFee = Number(platformSettings.nets_owner_fee_fixed ?? 25);
+    const rate = Number(platformSettings.user_platform_fee_rate ?? 0.05);
+    const gstRate = Number(platformSettings.gst_rate ?? 0.18);
+    const pitchType = (row.ground?.pitch_type ?? '').toLowerCase();
+    const isCricket = pitchType === 'cricket ground';
+    const isNet = pitchType.includes('net') || pitchType.includes('lane');
+    let ownerPf = 0;
+    if (isNet) {
+      ownerPf = netsFixedFee;
+    } else if (isCricket) {
+      const label = cricketTeamsLabelFromBooking(row.ground?.pitch_type, row.notes);
+      const teams = (label?.toLowerCase() === '1 team' || label?.toLowerCase() === 'one') ? 1 : 2;
+      ownerPf = cricketFixedFee * teams;
+    } else {
+      ownerPf = (row.total_amount + (row.discount_amount || 0)) * rate;
+    }
+    return ownerPf * (1 + gstRate);
+  };
+
   const openSlotModal = (item: BookingWithDetails) => {
     let relatedBookings: BookingWithDetails[] = [];
 
@@ -460,28 +482,7 @@ export default function OwnerBookingsScreen() {
       });
 
       // Grouping logic to consolidate multi-slot bookings (including multi-date transactions)
-      const calculateBRowFee = (row: any) => {
-        if (!platformSettings) return Number(row.platform_fee_owner || 0) + Number(row.gst_owner || 0);
-        const cricketFixedFee = Number(platformSettings.cricket_owner_fee_fixed ?? 100);
-        const netsFixedFee = Number(platformSettings.nets_owner_fee_fixed ?? 25);
-        const rate = Number(platformSettings.user_platform_fee_rate ?? 0.05);
-        const gstRate = Number(platformSettings.gst_rate ?? 0.18);
-        const pitchType = (row.ground?.pitch_type ?? '').toLowerCase();
-        const isCricket = pitchType === 'cricket ground';
-        const isNet = pitchType.includes('net') || pitchType.includes('lane');
-        let ownerPf = 0;
-        if (isNet) {
-          ownerPf = netsFixedFee;
-        } else if (isCricket) {
-          const label = cricketTeamsLabelFromBooking(row.ground?.pitch_type, row.notes);
-          const teams = (label?.toLowerCase() === '1 team' || label?.toLowerCase() === 'one') ? 1 : 2;
-          ownerPf = cricketFixedFee * teams;
-        } else {
-          ownerPf = (row.total_amount + (row.discount_amount || 0)) * rate;
-        }
-        return ownerPf * (1 + gstRate);
-      };
-
+      // Moved calculateBRowFee outside useMemo to be accessible by modal
       const consolidatedMap = new Map<string, BookingWithDetails & { allDates?: string[], allSlots?: string[], allBookingIds?: string[], calculated_total_fee?: number }>();
       base.forEach(b => {
         const matchSlots = /\(Slots:\s*([^)]+)\)/.exec(b.notes || '');
@@ -1173,7 +1174,7 @@ export default function OwnerBookingsScreen() {
                         <>
                           <CheckCircle2 size={20} color="#00ea6b" />
                           <Text style={[styles.receivedAmountText, { maxWidth: 60 }]} numberOfLines={1}>
-                            {formatCurrency(item.total_amount)}
+                            {formatCurrency(item.total_amount - ((item as any).calculated_total_fee || 0))}
                           </Text>
                         </>
                       ) : (
@@ -1321,7 +1322,7 @@ export default function OwnerBookingsScreen() {
                     <View style={{ alignItems: 'flex-end', marginRight: 8 }}>
                       <Text style={[styles.paymentLabel, { color: isLight ? '#64748B' : '#dcc093' }]}>PAID</Text>
                       {(item.payment_received || (item.payment_method !== 'cash' && item.status === 'confirmed')) && (
-                        <Text style={styles.receivedAmountTextCompact}>{formatCurrency(item.total_amount)}</Text>
+                        <Text style={styles.receivedAmountTextCompact}>{formatCurrency(item.total_amount - ((item as any).calculated_total_fee || 0))}</Text>
                       )}
                     </View>
                     {(item.payment_received || (item.payment_method !== 'cash' && item.status === 'confirmed')) ? (
@@ -1408,7 +1409,9 @@ export default function OwnerBookingsScreen() {
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                       <Banknote size={14} color="#059669" />
-                      <Text style={{ color: '#059669', fontWeight: '700', fontSize: 14 }}>₹{b.total_amount}</Text>
+                      <Text style={{ color: '#059669', fontWeight: '700', fontSize: 14 }}>
+                        ₹{b.total_amount - calculateBRowFee(b)}
+                      </Text>
                     </View>
                   </View>
                 </View>

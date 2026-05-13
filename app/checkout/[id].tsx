@@ -169,7 +169,7 @@ export default function CheckoutScreen() {
         const ownerGst = ownerPf * gstRate;
         const ownerTotalPfGst = ownerPf + ownerGst;
 
-        const tp = Math.round(discountedPrice + (isCash ? 0 : userTotalPfGst));
+        const tp = Math.round(discountedPrice + ((isCash || isGroundOwnerOrAdmin) ? 0 : userTotalPfGst));
         const tr = Math.round(discountedPrice - ownerTotalPfGst);
 
         return {
@@ -257,12 +257,31 @@ export default function CheckoutScreen() {
     const fetchWalletBalance = async () => {
         if (!user) return;
         try {
-            const { data, error } = await supabase
+            const { data: walletData, error: walletError } = await supabase
                 .from('wallets')
                 .select('balance')
                 .eq('user_id', user.id)
                 .single();
-            if (data) setWalletBalance(data.balance);
+            
+            if (walletError) throw walletError;
+
+            // Subtract pending withdrawals to get actual available balance
+            const { data: withdrawals, error: withdrawalError } = await supabase
+                .from('withdrawals')
+                .select('amount')
+                .eq('owner_id', user.id)
+                .in('status', ['pending', 'processing']);
+
+            if (withdrawalError) {
+                console.error('Error fetching pending withdrawals:', withdrawalError);
+                if (walletData) setWalletBalance(walletData.balance);
+                return;
+            }
+
+            const pendingAmount = (withdrawals || []).reduce((acc, w) => acc + (Number(w.amount) || 0), 0);
+            const availableBalance = (walletData?.balance || 0) - pendingAmount;
+            
+            setWalletBalance(availableBalance);
         } catch (e) {
             console.error('Error fetching wallet balance:', e);
         }
@@ -1146,8 +1165,8 @@ export default function CheckoutScreen() {
                                     onPress={() => setIsSlotsModalVisible(true)}
                                 >
                                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                        <View style={styles.detailIconBox}>
-                                            <Calendar size={20} color="#01e669" />
+                                        <View style={[styles.detailIconBox, { backgroundColor: 'transparent', borderWidth: 0 }]}>
+                                            <Calendar size={20} color="#475569" />
                                         </View>
                                         <View style={[styles.detailInfoContent, { marginLeft: 12 }]}>
                                             <RNText style={styles.detailLabel}>Booking Slots & Teams</RNText>
@@ -1160,8 +1179,8 @@ export default function CheckoutScreen() {
                                         </View>
                                     </View>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 16 }}>
-                                        <RNText style={{ fontSize: 14, color: '#01e669', marginRight: 4 }}>View</RNText>
-                                        <ChevronRight size={18} color="#01e669" />
+                                        <RNText style={{ fontSize: 14, color: '#475569', marginRight: 4 }}>View</RNText>
+                                        <ChevronRight size={18} color="#475569" />
                                     </View>
                                 </TouchableOpacity>
                             </View>
@@ -1169,8 +1188,8 @@ export default function CheckoutScreen() {
                             {/* Cancellation Policy Container */}
                             <View style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#E2E8F0' }}>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                                    <View style={styles.policyIconBox}>
-                                        <ShieldCheck size={24} color="#01e669" />
+                                    <View style={[styles.policyIconBox, { backgroundColor: 'transparent', borderWidth: 0 }]}>
+                                        <ShieldCheck size={24} color="#475569" />
                                     </View>
                                     <View style={{ flex: 1 }}>
                                         <RNText style={styles.policyTitle}>Cancellation Policy</RNText>
@@ -1363,8 +1382,8 @@ export default function CheckoutScreen() {
                             <View style={{ flex: 1 }}>
                                 <RNText style={styles.summaryTitleNew}>Order Summary</RNText>
                             </View>
-                            <View style={styles.secureBadge}>
-                                <ShieldCheck size={20} color="#06392e" />
+                            <View style={[styles.secureBadge, { backgroundColor: 'transparent' }]}>
+                                <ShieldCheck size={20} color="#475569" />
                             </View>
                         </View>
 
@@ -1377,7 +1396,7 @@ export default function CheckoutScreen() {
                                         <RNText style={{ fontSize: 14, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>Have a coupon?</RNText>
                                     </View>
                                     <TouchableOpacity onPress={() => { setIsCouponsModalVisible(true); fetchAvailableCoupons(); }}>
-                                        <RNText style={{ fontSize: 13, fontWeight: '600', color: '#01e669', fontFamily: 'Inter' }}>View Offers</RNText>
+                                        <RNText style={{ fontSize: 13, fontWeight: '600', color: '#475569', fontFamily: 'Inter' }}>View Offers</RNText>
                                     </TouchableOpacity>
                                 </View>
                                 <View style={[styles.couponContainer, { marginBottom: 0 }]}>
@@ -1492,56 +1511,61 @@ export default function CheckoutScreen() {
                                     <View style={styles.methodIconBoxNew}><Wallet size={20} color={selectedGateway === 'wallet' ? '#01e669' : '#64748B'} /></View>
                                     <View style={{ flex: 1 }}>
                                         <RNText style={[styles.methodLabelNew, selectedGateway === 'wallet' && styles.methodLabelActiveNew]}>Wallet Balance</RNText>
-                                        <RNText style={styles.methodSubtitleNew}>Bal: {formatCurrency(walletBalance)}</RNText>
+                                        <RNText style={styles.methodSubtitleNew}>Available: {formatCurrency(walletBalance)}</RNText>
                                     </View>
                                     <View style={[styles.radioOuter, selectedGateway === 'wallet' && styles.radioOuterActive]}>
                                         {selectedGateway === 'wallet' && <View style={[styles.radioInner, { backgroundColor: '#01e669' }]} />}
                                     </View>
                                 </TouchableOpacity>
 
-                                {/* UPI */}
-                                <TouchableOpacity
-                                    style={[styles.methodItemNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'upi') && { backgroundColor: '#F8FAFC' }]}
-                                    onPress={() => { setSelectedGateway('razorpay'); setSelectedSubMethod('upi'); }}
-                                >
-                                    <View style={styles.methodIconBoxNew}><Smartphone size={20} color={(selectedGateway === 'razorpay' && selectedSubMethod === 'upi') ? '#01e669' : '#64748B'} /></View>
-                                    <View style={{ flex: 1 }}>
-                                        <RNText style={[styles.methodLabelNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'upi') && styles.methodLabelActiveNew]}>UPI (PhonePe, GPay, etc)</RNText>
-                                        <RNText style={styles.methodSubtitleNew}>Instant and Secure</RNText>
-                                    </View>
-                                    <View style={[styles.radioOuter, (selectedGateway === 'razorpay' && selectedSubMethod === 'upi') && styles.radioOuterActive]}>
-                                        {(selectedGateway === 'razorpay' && selectedSubMethod === 'upi') && <View style={[styles.radioInner, { backgroundColor: '#01e669' }]} />}
-                                    </View>
-                                </TouchableOpacity>
+                                {!isGroundOwnerOrAdmin && (
+                                    <>
+                                        {/* UPI */}
+                                        <TouchableOpacity
+                                            style={[styles.methodItemNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'upi') && { backgroundColor: '#F8FAFC' }]}
+                                            onPress={() => { setSelectedGateway('razorpay'); setSelectedSubMethod('upi'); }}
+                                        >
+                                            <View style={styles.methodIconBoxNew}><Smartphone size={20} color={(selectedGateway === 'razorpay' && selectedSubMethod === 'upi') ? '#01e669' : '#64748B'} /></View>
+                                            <View style={{ flex: 1 }}>
+                                                <RNText style={[styles.methodLabelNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'upi') && styles.methodLabelActiveNew]}>UPI (PhonePe, GPay, etc)</RNText>
+                                                <RNText style={styles.methodSubtitleNew}>Instant and Secure</RNText>
+                                            </View>
+                                            <View style={[styles.radioOuter, (selectedGateway === 'razorpay' && selectedSubMethod === 'upi') && styles.radioOuterActive]}>
+                                                {(selectedGateway === 'razorpay' && selectedSubMethod === 'upi') && <View style={[styles.radioInner, { backgroundColor: '#01e669' }]} />}
+                                            </View>
+                                        </TouchableOpacity>
 
-                                {/* Cards */}
-                                <TouchableOpacity
-                                    style={[styles.methodItemNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'card') && { backgroundColor: '#F8FAFC' }]}
-                                    onPress={() => { setSelectedGateway('razorpay'); setSelectedSubMethod('card'); }}
-                                >
-                                    <View style={styles.methodIconBoxNew}><CreditCard size={20} color={(selectedGateway === 'razorpay' && selectedSubMethod === 'card') ? '#01e669' : '#64748B'} /></View>
-                                    <View style={{ flex: 1 }}>
-                                        <RNText style={[styles.methodLabelNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'card') && styles.methodLabelActiveNew]}>Cards (Credit/Debit)</RNText>
-                                        <RNText style={styles.methodSubtitleNew}>Visa, Mastercard, RuPay</RNText>
-                                    </View>
-                                    <View style={[styles.radioOuter, (selectedGateway === 'razorpay' && selectedSubMethod === 'card') && styles.radioOuterActive]}>
-                                        {(selectedGateway === 'razorpay' && selectedSubMethod === 'card') && <View style={styles.radioInner} />}
-                                    </View>
-                                </TouchableOpacity>
-                                {/* Net Banking */}
-                                <TouchableOpacity
-                                    style={[styles.methodItemNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') && { backgroundColor: '#F8FAFC' }, !isGroundOwnerOrAdmin && { borderBottomWidth: 0 }]}
-                                    onPress={() => { setSelectedGateway('razorpay'); setSelectedSubMethod('netbanking'); }}
-                                >
-                                    <View style={styles.methodIconBoxNew}><Globe size={20} color={(selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') ? '#01e669' : '#64748B'} /></View>
-                                    <View style={{ flex: 1 }}>
-                                        <RNText style={[styles.methodLabelNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') && styles.methodLabelActiveNew]}>Net Banking</RNText>
-                                        <RNText style={styles.methodSubtitleNew}>All major Indian banks</RNText>
-                                    </View>
-                                    <View style={[styles.radioOuter, (selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') && styles.radioOuterActive]}>
-                                        {(selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') && <View style={styles.radioInner} />}
-                                    </View>
-                                </TouchableOpacity>
+                                        {/* Cards */}
+                                        <TouchableOpacity
+                                            style={[styles.methodItemNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'card') && { backgroundColor: '#F8FAFC' }]}
+                                            onPress={() => { setSelectedGateway('razorpay'); setSelectedSubMethod('card'); }}
+                                        >
+                                            <View style={styles.methodIconBoxNew}><CreditCard size={20} color={(selectedGateway === 'razorpay' && selectedSubMethod === 'card') ? '#01e669' : '#64748B'} /></View>
+                                            <View style={{ flex: 1 }}>
+                                                <RNText style={[styles.methodLabelNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'card') && styles.methodLabelActiveNew]}>Cards (Credit/Debit)</RNText>
+                                                <RNText style={styles.methodSubtitleNew}>Visa, Mastercard, RuPay</RNText>
+                                            </View>
+                                            <View style={[styles.radioOuter, (selectedGateway === 'razorpay' && selectedSubMethod === 'card') && styles.radioOuterActive]}>
+                                                {(selectedGateway === 'razorpay' && selectedSubMethod === 'card') && <View style={styles.radioInner} />}
+                                            </View>
+                                        </TouchableOpacity>
+
+                                        {/* Net Banking */}
+                                        <TouchableOpacity
+                                            style={[styles.methodItemNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') && { backgroundColor: '#F8FAFC' }]}
+                                            onPress={() => { setSelectedGateway('razorpay'); setSelectedSubMethod('netbanking'); }}
+                                        >
+                                            <View style={styles.methodIconBoxNew}><Globe size={20} color={(selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') ? '#01e669' : '#64748B'} /></View>
+                                            <View style={{ flex: 1 }}>
+                                                <RNText style={[styles.methodLabelNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') && styles.methodLabelActiveNew]}>Net Banking</RNText>
+                                                <RNText style={styles.methodSubtitleNew}>All major Indian banks</RNText>
+                                            </View>
+                                            <View style={[styles.radioOuter, (selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') && styles.radioOuterActive]}>
+                                                {(selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') && <View style={styles.radioInner} />}
+                                            </View>
+                                        </TouchableOpacity>
+                                    </>
+                                )}
                                 {isGroundOwnerOrAdmin && (
                                     <TouchableOpacity
                                         style={[styles.methodItemNew, selectedGateway === 'cash' && { backgroundColor: '#F8FAFC' }, { borderBottomWidth: 0 }]}
@@ -1733,7 +1757,7 @@ export default function CheckoutScreen() {
                             style={{ backgroundColor: '#059669', paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 16 }}
                             onPress={() => setIsSlotsModalVisible(false)}
                         >
-                            <RNText style={{ color: '#FFF', fontWeight: '700' }}>Close</RNText>
+                            <RNText style={{ color: '#FFF', fontWeight: '600', fontFamily: 'Inter' }}>Close</RNText>
                         </TouchableOpacity>
                     </View>
                 </Pressable>
@@ -1751,7 +1775,7 @@ export default function CheckoutScreen() {
                 >
                     <View style={{ backgroundColor: '#FFF', borderRadius: 16, padding: 24, width: '90%', maxWidth: 500 }}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                            <RNText style={{ fontSize: 18, fontWeight: '700', color: '#333' }}>Cancellation Policy</RNText>
+                            <RNText style={{ fontSize: 18, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>Cancellation Policy</RNText>
                         </View>
 
                         <ScrollView style={{ maxHeight: 300 }}>
@@ -1773,7 +1797,7 @@ export default function CheckoutScreen() {
                             style={{ backgroundColor: '#059669', paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 16 }}
                             onPress={() => setIsPolicyModalVisible(false)}
                         >
-                            <RNText style={{ color: '#FFF', fontWeight: '700' }}>Close</RNText>
+                            <RNText style={{ color: '#FFF', fontWeight: '600', fontFamily: 'Inter' }}>Close</RNText>
                         </TouchableOpacity>
                     </View>
                 </Pressable>
@@ -2121,7 +2145,7 @@ const styles = StyleSheet.create({
     },
     totalLabelNew: {
         fontSize: 14,
-        fontWeight: '500',
+        fontWeight: '600',
         color: '#0F172A',
         fontFamily: 'Inter',
     },
@@ -2133,7 +2157,7 @@ const styles = StyleSheet.create({
     totalValueNew: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#06392e',
+        color: '#0F172A',
         fontFamily: 'Inter',
     },
     paymentSectionNew: {
@@ -2909,7 +2933,7 @@ const styles = StyleSheet.create({
     policyLink: {
         fontSize: 13,
         fontWeight: '500',
-        color: '#01e669',
+        color: '#475569',
         fontFamily: 'Inter',
         marginTop: 8,
     },
@@ -3037,7 +3061,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         marginTop: 40,
-        backgroundColor: '#F8FAFC',
+        backgroundColor: '#FFFFFF',
         paddingVertical: 24,
         paddingHorizontal: 12,
         borderRadius: 20,

@@ -13,6 +13,7 @@ import {
   useWindowDimensions,
   TouchableOpacity,
 } from 'react-native';
+import Svg, { Path, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import { useIsCompact } from '@/hooks/useIsCompact';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { MapPin, Star, ArrowLeft, Phone, Navigation2, CheckCircle2, Heart, ChevronRight, Share2, Map as MapIcon } from 'lucide-react-native';
@@ -45,6 +46,25 @@ const GOOGLE_MAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || '';
 const IS_WEB = Platform.OS === 'web';
 const Section = IS_WEB ? Card : View;
 
+const HeartIcon = ({ filled, size = 20 }: { filled: boolean; size?: number }) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Defs>
+      <SvgGradient id="heartGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+        <Stop offset="0%" stopColor="#01b854" />
+        <Stop offset="100%" stopColor="#a5ff8a" />
+      </SvgGradient>
+    </Defs>
+    <Path
+      d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+      fill={filled ? "url(#heartGrad)" : "none"}
+      stroke={filled ? "url(#heartGrad)" : "#64748B"}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
 const CLEAN_MAP_STYLES = [
   {
     featureType: "all",
@@ -70,6 +90,7 @@ export default function GroundDetailsPrettyUrlScreen() {
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   const [reviewSortOrder, setReviewSortOrder] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>('newest');
   const [currentTotal, setCurrentTotal] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<'info' | 'amenities' | 'details' | 'book' | 'reviews'>('info');
 
   const isCompact = useIsCompact();
   const isWeb = Platform.OS === 'web';
@@ -313,17 +334,17 @@ export default function GroundDetailsPrettyUrlScreen() {
 
         <ScrollView
           style={styles.container}
-          contentContainerStyle={isLargeWeb ? undefined : { paddingBottom: 32 }}
+          contentContainerStyle={isLargeWeb 
+            ? styles.content 
+            : [styles.content, { paddingTop: 0, paddingHorizontal: 12 }]}
           showsVerticalScrollIndicator={false}
         >
-
-        <View style={[styles.content, isWeb && isCompact && { paddingTop: 12 }]}>
-          {/* ── Hero Gallery & Main Content ── */}
-          {IS_WEB && isLargeWeb ? (
-            <View style={styles.webTwoColumnLayout}>
-              {/* LEFT COLUMN: Gallery, Name, About, Details, Amenities, Reviews */}
-              <View style={styles.webLeftColumn}>
-                <View style={{ marginBottom: 24 }}>
+          {isLargeWeb ? (
+            <View style={styles.webNewLayout}>
+              {/* TOP SECTION: IMAGE & MAP - EDGE TO EDGE */}
+              <View style={styles.webTopRow}>
+                {/* Image Column */}
+                <View style={styles.webImageCol}>
                   <WebHeroGallery 
                     ground={ground} 
                     heroIdx={heroIdx} 
@@ -332,180 +353,143 @@ export default function GroundDetailsPrettyUrlScreen() {
                     isFavorite={isFavorite}
                     toggleFavorite={toggleFavorite}
                     favoriteLoading={favoriteLoading}
-                    fullWidth={false}
                   />
                 </View>
-                
-                {/* Ground Info Card */}
-                <Card style={[styles.section, { marginTop: 0, padding: 24 }]}>
-                  <View style={styles.infoCardHeader}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.name}>{ground.name}</Text>
-                      <View style={styles.locationRow}>
-                        <Text style={styles.location}>
-                          {ground.address}, {ground.city}, {ground.state} - {ground.pincode}
-                        </Text>
-                      </View>
-                    </View>
-                    
-                    {/* Reviews moved to the right side */}
-                    <View style={styles.starsSummaryRowCompact}>
-                      <View style={{ flexDirection: 'row', gap: 2 }}>
-                        {[1, 2, 3, 4, 5].map((i) => {
-                          const filled = reviews.length > 0 && i <= Math.round(averageRating);
-                          return (
-                            <Star
-                              key={i}
-                              size={16}
-                              color={filled ? '#dcc093' : '#E5E7EB'}
-                              fill={filled ? '#dcc093' : 'none'}
-                            />
-                          );
-                        })}
-                      </View>
-                      <Text style={styles.ratingCompact}>
-                        {reviews.length > 0
-                          ? `${averageRating.toFixed(1)} (${reviews.length} reviews)`
-                          : 'No reviews yet'}
-                      </Text>
-                    </View>
+
+                {/* Map Column */}
+                <View style={styles.webMapCol}>
+                  <View style={styles.webMapBox}>
+                    <WebMap ground={ground} mapsUrl={mapsUrl} />
                   </View>
-                </Card>
-
-                {ground.description && (
-                  <Card style={styles.section}>
-                    <Text style={styles.sectionTitle}>About</Text>
-                    <Text style={styles.description}>{ground.description}</Text>
-                  </Card>
-                )}
-
-                <Card style={styles.section}>
-                  <Text style={styles.sectionTitle}>Details</Text>
-                  {ground.pitch_type && (
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Venue Type</Text>
-                      <Text style={styles.detailValue}>{ground.pitch_type}</Text>
-                    </View>
-                  )}
-                  {ground.pitch_type?.toLowerCase().includes('nets') && (
-                    <>
-                      <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>{ground.pricing_model === 'overs' ? 'Overs per slot' : 'Time per slot'}</Text>
-                        <Text style={styles.detailValue}>
-                          {ground.pricing_model === 'overs' 
-                            ? (ground.time_slots?.find((s: any) => s.overs_count != null)?.overs_count || '—')
-                            : '1 Hour'}
-                        </Text>
-                      </View>
-                      <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Duration</Text>
-                        <Text style={styles.detailValue}>
-                          {(() => {
-                            const slot = ground.time_slots?.[0];
-                            if (!slot?.start_time || !slot?.end_time) return '—';
-                            const [h1, m1] = slot.start_time.split(':').map(Number);
-                            const [h2, m2] = slot.end_time.split(':').map(Number);
-                            let diff = (h2 * 60 + m2) - (h1 * 60 + m1);
-                            if (diff < 0) diff += 24 * 60;
-                            const hrs = Math.floor(diff / 60);
-                            const mins = diff % 60;
-                            if (hrs > 0 && mins > 0) return `${hrs} hr ${mins} min`;
-                            if (hrs > 0) return `${hrs} ${hrs === 1 ? 'hr' : 'hrs'}`;
-                            return `${mins} min`;
-                          })()}
-                        </Text>
-                      </View>
-                    </>
-                  )}
-                  {isCricketGroundType(ground.pitch_type) ? (
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Pitch surface</Text>
-                      <Text style={[styles.detailValue, !String(ground.cricket_pitch_surface ?? '').trim() && styles.detailValueMuted]}>
-                        {String(ground.cricket_pitch_surface ?? '').trim() ? String(ground.cricket_pitch_surface) : '—'}
-                      </Text>
-                    </View>
-                  ) : null}
-                  {ground.ground_size && (
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Ground Size</Text>
-                      <Text style={styles.detailValue}>{ground.ground_size}</Text>
-                    </View>
-                  )}
-                </Card>
-
-                <Card style={styles.section}>
-                  <Text style={styles.sectionTitle}>Amenities</Text>
-                  <AmenitiesList ground={ground} />
-                </Card>
-
-                <ReviewsSection 
-                  reviews={reviews} 
-                  averageRating={averageRating} 
-                  reviewSortOrder={reviewSortOrder} 
-                  setReviewSortOrder={setReviewSortOrder} 
-                />
+                  <View style={styles.webMapActionsRow}>
+                    <TouchableOpacity 
+                      style={[styles.webActionIconButton]}
+                      onPress={toggleFavorite}
+                    >
+                      <HeartIcon filled={isFavorite} size={20} />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.webActionIconButton}
+                      onPress={async () => {
+                        if (mapsUrl) {
+                          try {
+                            await Linking.openURL(mapsUrl);
+                          } catch (err) {
+                            console.error('Failed to open maps URL:', err);
+                          }
+                        }
+                      }}
+                    >
+                      <Navigation2 size={20} color="#64748B" />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.webActionIconButton}
+                      onPress={() => {
+                        const url = typeof window !== 'undefined' ? window.location.href : '';
+                        Share.share({
+                          message: `Check out ${ground.name} on BookYourGround!`,
+                          url: url,
+                          title: ground.name
+                        });
+                      }}
+                    >
+                      <Share2 size={20} color="#64748B" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
               </View>
 
-              {/* RIGHT COLUMN: Sticky Map & Checkout */}
-              <View style={styles.webRightColumn}>
-                <View style={styles.stickySidebar}>
-                  {/* Combined Map & Actions */}
-                  <Card style={[styles.section, styles.mapSection, { marginTop: 0, height: 520, borderRadius: 24, padding: 0 }]}>
-                    <View style={{ flex: 1, overflow: 'hidden' }}>
-                      <WebMap ground={ground} mapsUrl={mapsUrl} />
-                    </View>
-                    <View style={[styles.mapActionsContainer, { borderTopWidth: 1, borderTopColor: '#F1F5F9' }]}>
-                      <Button
-                        title={isFavorite ? "Favourited" : "Favourite"}
-                        variant="outline"
-                        icon={Heart}
-                        iconSize={16}
-                        iconColor={isFavorite ? '#EF4444' : '#64748B'}
-                        fill={isFavorite ? '#EF4444' : 'none'}
-                        onPress={toggleFavorite}
-                        loading={favoriteLoading}
-                        style={styles.mapActionBtn}
-                        textStyle={{ color: '#01b854', fontSize: 12 }}
-                      />
-                      <Button
-                        title="Directions"
-                        variant="outline"
-                        icon={Navigation2}
-                        iconSize={16}
-                        onPress={async () => {
-                          if (mapsUrl) {
-                            try {
-                              await Linking.openURL(mapsUrl);
-                            } catch (err) {
-                              console.error('Failed to open maps URL:', err);
-                            }
-                          }
-                        }}
-                        style={styles.mapActionBtn}
-                        textStyle={{ color: '#01b854', fontSize: 12 }}
-                      />
-                      <Button
-                        title="Share"
-                        variant="outline"
-                        icon={Share2}
-                        iconSize={16}
-                        onPress={() => {
-                          const url = typeof window !== 'undefined' ? window.location.href : '';
-                          Share.share({
-                            message: `Check out ${ground.name} on BookYourGround!`,
-                            url: url,
-                            title: ground.name
-                          });
-                        }}
-                        style={styles.mapActionBtn}
-                        textStyle={{ color: '#01b854', fontSize: 12 }}
-                      />
-                    </View>
-                  </Card>
+              {/* TAB BAR SECTION */}
+              <View style={styles.webTabsWrapper}>
+                <View style={styles.webTabsContainer}>
+                  {[
+                    { id: 'info', label: 'INFO' },
+                    { id: 'book', label: 'BOOK NOW' },
+                    { id: 'amenities', label: 'AMENITIES' },
+                    { id: 'details', label: 'VENUE DETAILS' },
+                    { id: 'reviews', label: 'REVIEWS' }
+                  ].map((tab) => (
+                    <TouchableOpacity 
+                      key={tab.id}
+                      onPress={() => setActiveTab(tab.id as any)}
+                      style={[styles.webTabBtn, activeTab === tab.id && styles.webTabBtnActive]}
+                    >
+                      <Text style={[styles.webTabBtnText, activeTab === tab.id && styles.webTabBtnTextActive]}>
+                        {tab.label}
+                      </Text>
+                      {activeTab === tab.id && <View style={styles.webTabIndicator} />}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
 
-                  {/* Checkout Card */}
-                  <Card style={styles.sidebarBookingCard}>
-                    <View style={styles.formContainer}>
+              {/* TAB CONTENT - NO CONTAINERS */}
+              <View style={styles.webTabContentArea}>
+                {activeTab === 'info' && (
+                  <View style={styles.webInfoGrid}>
+                    <View style={styles.webInfoMain}>
+                      <View style={styles.webInfoSectionFlat}>
+                        <Text style={styles.webGroundNameLarge}>{ground.name}</Text>
+                        <View style={styles.webLocationRowLarge}>
+                          <MapPin size={16} color="#64748B" />
+                          <Text style={styles.webLocationTextLarge}>
+                            {ground.address}, {ground.city}, {ground.state} - {ground.pincode}
+                          </Text>
+                        </View>
+                        
+                        {ground.description && (
+                          <View style={{ marginTop: 40 }}>
+                            <Text style={styles.webSubTitle}>About the Venue</Text>
+                            <Text style={styles.webDescriptionText}>{ground.description}</Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  </View>
+                )}
+
+                {activeTab === 'amenities' && (
+                  <View style={[styles.webInfoGrid, { maxWidth: 800 }]}>
+                    <View style={styles.webInfoMain}>
+                      <View style={styles.webInfoSectionFlat}>
+                        <Text style={styles.webSubTitle}>Amenities & Facilities</Text>
+                        <AmenitiesList ground={ground} />
+                      </View>
+                    </View>
+                  </View>
+                )}
+
+                {activeTab === 'details' && (
+                  <View style={[styles.webInfoGrid, { maxWidth: 800 }]}>
+                    <View style={styles.webInfoMain}>
+                      <View style={styles.webInfoSectionFlat}>
+                        <Text style={styles.webSubTitle}>Technical Specifications</Text>
+                        <View style={styles.webDetailRow}>
+                          <Text style={styles.webDetailLabel}>Venue Type</Text>
+                          <Text style={styles.webDetailValue}>{ground.pitch_type || 'N/A'}</Text>
+                        </View>
+                        <View style={styles.webDetailRow}>
+                          <Text style={styles.webDetailLabel}>Ground Size</Text>
+                          <Text style={styles.webDetailValue}>{ground.ground_size || 'Standard'}</Text>
+                        </View>
+                        {isCricketGroundType(ground.pitch_type) && (
+                          <View style={styles.webDetailRow}>
+                            <Text style={styles.webDetailLabel}>Pitch Surface</Text>
+                            <Text style={styles.webDetailValue}>{ground.cricket_pitch_surface || 'Turf'}</Text>
+                          </View>
+                        )}
+                        <View style={styles.webDetailRow}>
+                          <Text style={styles.webDetailLabel}>Operational Status</Text>
+                          <Text style={styles.webDetailValue}>Active & Verified</Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+                )}
+
+                {activeTab === 'book' && (
+                  <View style={styles.webBookingContainerFlat}>
+                    <View style={styles.webBookingCardFullFlat}>
                       <LandingBookingForm
                         initialGroundId={String(ground.id)}
                         hideGroundPicker
@@ -522,8 +506,19 @@ export default function GroundDetailsPrettyUrlScreen() {
                         initialGround={ground}
                       />
                     </View>
-                  </Card>
-                </View>
+                  </View>
+                )}
+
+                {activeTab === 'reviews' && (
+                  <View style={styles.webReviewsContainerFlat}>
+                    <ReviewsSection 
+                      reviews={reviews} 
+                      averageRating={averageRating} 
+                      reviewSortOrder={reviewSortOrder} 
+                      setReviewSortOrder={setReviewSortOrder} 
+                    />
+                  </View>
+                )}
               </View>
             </View>
           ) : (
@@ -627,13 +622,18 @@ export default function GroundDetailsPrettyUrlScreen() {
 
               {ground.description && (
                 <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>About</Text>
+                  <Text style={styles.sectionTitle}>About the Venue</Text>
                   <Text style={styles.description}>{ground.description}</Text>
                 </View>
               )}
 
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Details</Text>
+                <Text style={styles.sectionTitle}>Amenities & Facilities</Text>
+                <AmenitiesList ground={ground} />
+              </View>
+
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Venue Details</Text>
                 {ground.pitch_type && <Text style={styles.description}>Venue Type: {ground.pitch_type}</Text>}
                 {ground.pitch_type?.toLowerCase().includes('nets') && (
                   <>
@@ -696,11 +696,8 @@ export default function GroundDetailsPrettyUrlScreen() {
               />
             </>
           )}
-
-          {/* Reviews section moved to top of left column */}
-        </View>
-      </ScrollView>
-    </>
+        </ScrollView>
+      </>
     );
   }
 
@@ -726,12 +723,7 @@ export default function GroundDetailsPrettyUrlScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
               >
-                <Heart
-                  size={22}
-                  color={isFavorite ? '#EF4444' : '#64748B'}
-                  fill={isFavorite ? '#EF4444' : 'none'}
-                  strokeWidth={2}
-                />
+                <HeartIcon filled={isFavorite} size={24} />
               </Pressable>
             ) : null
           )
@@ -826,14 +818,14 @@ function WebHeroGallery({
             </TouchableOpacity>
             
             <TouchableOpacity 
-              style={[styles.webHeroFloatingBtn, isFavorite && { backgroundColor: '#10b981' }]}
+              style={[styles.webHeroFloatingBtn]}
               onPress={toggleFavorite}
               disabled={favoriteLoading}
             >
               {favoriteLoading ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
-                <Heart size={20} color={isFavorite ? "#EF4444" : "#FFFFFF"} fill={isFavorite ? "#EF4444" : "none"} />
+                <HeartIcon filled={isFavorite} size={20} />
               )}
             </TouchableOpacity>
           </View>
@@ -1008,8 +1000,13 @@ function AmenitiesList({ ground }: { ground: GroundWithImages }) {
 }
 
 function ReviewsSection({ reviews, averageRating, reviewSortOrder, setReviewSortOrder }: any) {
+  const isWeb = Platform.OS === 'web';
   return (
-    <Section style={[styles.section, styles.reviewsSectionCard]}>
+    <View style={[
+      !isWeb && styles.section, 
+      !isWeb && styles.reviewsSectionCard,
+      isWeb && { padding: 0, backgroundColor: 'transparent' }
+    ]}>
       <View style={styles.reviewHeaderMain}>
         <Text style={styles.sectionTitle}>Customer Reviews</Text>
         
@@ -1089,7 +1086,7 @@ function ReviewsSection({ reviews, averageRating, reviewSortOrder, setReviewSort
           ))}
         </View>
       )}
-    </Section>
+    </View>
   );
 }
 
@@ -1111,9 +1108,7 @@ const styles = StyleSheet.create({
   },
   webGalleryWrapper: {
     width: '100%',
-    height: 520,
-    borderRadius: 24,
-    overflow: 'hidden',
+    height: '100%',
     backgroundColor: '#E2E8F0',
   },
   webGalleryMain: {
@@ -1415,11 +1410,11 @@ const styles = StyleSheet.create({
   content: {
     ...Platform.select({
       web: {
-        padding: 16,
-        paddingTop: 112, // Increased from 80 to clear navbar with extra space
-        maxWidth: 1120,
-        marginHorizontal: 'auto',
+        paddingHorizontal: 80,
+        paddingTop: 80,
+        paddingBottom: 100, // Added bottom padding
         width: '100%',
+        maxWidth: 'none',
       },
       default: {
         paddingHorizontal: 16,
@@ -1655,32 +1650,22 @@ const styles = StyleSheet.create({
     color: '#6b7280',
   },
   amenitiesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+    flexDirection: 'column', // Changed to column for rows
+    gap: 12,
   },
   amenityChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 100,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
+    gap: 12,
+    paddingVertical: 4,
+    backgroundColor: 'transparent', // Removed background
+    borderWidth: 0, // Removed border
   },
   amenityText: {
     fontFamily: 'Inter',
-    fontSize: 13,
-    color: '#06392e',
-    fontWeight: '800',
-    letterSpacing: 0.2,
+    fontSize: 14,
+    color: '#334155',
+    fontWeight: '500', // Reduced weight
   },
 
   // ── Reviews ───────────────────────────────────────────
@@ -1893,6 +1878,215 @@ const styles = StyleSheet.create({
   bookButton: {
     marginTop: 8,
     marginBottom: 32,
+  },
+
+  // ── New Web Redesign Styles ──────────────────────────
+  webNewLayout: {
+    width: '100%',
+    gap: 0, // Gap removed for edge-to-edge feel if needed, or keep for spacing
+  },
+  webTopRow: {
+    flexDirection: 'row',
+    gap: 32, // Added spacing between image and map
+    height: 250,
+  },
+  webImageCol: {
+    flex: 2.0, // Increased width
+    borderRadius: 24, // Restored rounded corners
+    overflow: 'hidden',
+    backgroundColor: 'transparent',
+  },
+  webMapCol: {
+    flex: 1,
+    gap: 0,
+  },
+  webMapBox: {
+    flex: 1,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: 'hidden',
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    borderBottomWidth: 0,
+  },
+  webMapActionsRow: {
+    flexDirection: 'row',
+    gap: 0,
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    borderTopWidth: 0,
+  },
+  webActionIconButton: {
+    flex: 1,
+    height: 44, // Reduced from 60
+    borderRadius: 0,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 0,
+    borderRightWidth: 1,
+    borderRightColor: '#F1F5F9',
+  },
+  webActionIconButtonActive: {
+    backgroundColor: '#FFFFFF', // Keep same as unselected
+  },
+  webTabsWrapper: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    backgroundColor: 'transparent', // Removed background
+    marginTop: 20, // Reduced from 40
+  },
+  webTabsContainer: {
+    flexDirection: 'row',
+    gap: 40, // Reduced gap slightly for left alignment
+    justifyContent: 'flex-start', // Moved to left
+  },
+  webTabBtn: {
+    paddingVertical: 16,
+    position: 'relative',
+    alignItems: 'center',
+  },
+  webTabBtnActive: {
+    // Active state styles
+  },
+  webTabBtnText: {
+    fontFamily: 'Inter',
+    fontSize: 12, // Reduced from 14
+    fontWeight: '600', // Reduced from 700
+    color: '#94A3B8',
+    letterSpacing: 1.0, // Adjusted
+    textTransform: 'uppercase',
+  },
+  webTabBtnTextActive: {
+    color: '#0F172A', // Slightly darker slate
+    fontWeight: '600',
+  },
+  webTabIndicator: {
+    position: 'absolute',
+    bottom: -1,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: '#01b854',
+    borderRadius: 3,
+  },
+  webTabContentArea: {
+    paddingTop: 12, // Reduced from 32
+    minHeight: 400,
+  },
+  webInfoGrid: {
+    flexDirection: 'row',
+    gap: 24,
+    marginTop: 20, // Added margin here to keep name heading balanced
+  },
+  webInfoMain: {
+    flex: 1.8,
+    gap: 24,
+  },
+  webInfoSidebar: {
+    flex: 1,
+    gap: 24,
+  },
+  webInfoSection: {
+    padding: 32,
+    borderRadius: 24,
+  },
+  webGroundNameLarge: {
+    fontFamily: 'Inter',
+    fontSize: 22, // Further reduced from 24
+    fontWeight: '500', // Reduced from 600
+    color: '#0F172A',
+    letterSpacing: -0.4,
+    marginBottom: 4,
+  },
+  webLocationRowLarge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  webLocationTextLarge: {
+    fontFamily: 'Inter',
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '400',
+  },
+  webSubTitle: {
+    fontFamily: 'Inter',
+    fontSize: 14, // Reduced from 16
+    fontWeight: '500', // Reduced from 600
+    color: '#0F172A',
+    marginBottom: 16,
+    letterSpacing: -0.1,
+  },
+  webDescriptionText: {
+    fontFamily: 'Inter',
+    fontSize: 16,
+    color: '#475569',
+    lineHeight: 28,
+  },
+  webDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  webDetailLabel: {
+    fontFamily: 'Inter',
+    fontSize: 13, // Reduced from 14
+    color: '#64748B',
+    fontWeight: '400',
+  },
+  webDetailValue: {
+    fontFamily: 'Inter',
+    fontSize: 13, // Reduced from 14
+    color: '#0F172A',
+    fontWeight: '500', // Reduced from 600
+  },
+  webBookingContainer: {
+    maxWidth: 700,
+    marginHorizontal: 'auto',
+    width: '100%',
+  },
+  webBookingCardFull: {
+    padding: 40,
+    borderRadius: 32,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.1,
+    shadowRadius: 40,
+    elevation: 10,
+  },
+  webReviewsContainerFlat: {
+    maxWidth: 'none',
+    width: '100%',
+    paddingHorizontal: 0, // Removed horizontal padding to align with tabs
+    paddingVertical: 8,
+    backgroundColor: 'transparent',
+  },
+  webInfoSectionFlat: {
+    padding: 0,
+    backgroundColor: 'transparent',
+    marginBottom: 60,
+  },
+  webBookingContainerFlat: {
+    width: '100%',
+    maxWidth: 'none',
+    paddingHorizontal: 0, // Removed horizontal padding to align with tabs
+    paddingVertical: 8,
+    backgroundColor: '#F8FAFC',
+  },
+  webBookingCardFullFlat: {
+    padding: 0,
+    backgroundColor: 'transparent',
   },
 });
 

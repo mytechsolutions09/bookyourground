@@ -462,7 +462,7 @@ function OwnerEarningsScreenInner() {
 
         if (row.payment_method === 'cash') {
           if (row.payment_received) {
-            offlineEarningsTotal += (row.total_amount || 0);
+            offlineEarningsTotal += netAmt;
           }
         } else if (row.payment_method === 'wallet' || row.payment_method === 'credits') {
           storeCreditsTotal += netAmt;
