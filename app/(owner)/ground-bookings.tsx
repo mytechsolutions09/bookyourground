@@ -164,7 +164,7 @@ export default function OwnerBookingsScreen() {
           const { data: settingsData } = await supabase
             .from('platform_settings')
             .select('*');
-          
+
           const settingsMap: Record<string, any> = {};
           settingsData?.forEach(s => { settingsMap[s.key] = s.value; });
           setPlatformSettings(settingsMap);
@@ -1375,29 +1375,29 @@ export default function OwnerBookingsScreen() {
                 <View key={b.id} style={styles.slotBookingItem}>
                   <View style={{ flex: 1 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                       <View>
-                         <Text style={styles.slotBookingName}>{(b.user?.full_name || b.booked_for_name || 'Customer').toUpperCase()}</Text>
-                         <Text style={styles.slotBookingId}>ID: {b.id.substring(0, 8).toUpperCase()}</Text>
-                       </View>
+                      <View>
+                        <Text style={styles.slotBookingName}>{(b.user?.full_name || b.booked_for_name || 'Customer').toUpperCase()}</Text>
+                        <Text style={styles.slotBookingId}>ID: {b.id.substring(0, 8).toUpperCase()}</Text>
+                      </View>
                     </View>
 
                     <View style={styles.slotDetailsGrid}>
-                       <View style={styles.slotDetailRow}>
-                         <Calendar size={14} color="#64748B" />
-                         <Text style={styles.slotBookingDetail}>{formatDateDDMMYY(b.booking_date)}</Text>
-                       </View>
-                       <View style={styles.slotDetailRow}>
-                         <Clock size={14} color="#64748B" />
-                         <Text style={styles.slotBookingDetail}>
-                           {`${formatTime12h(normalizeDbTimeToHHMM(b.start_time) || '')} – ${formatTime12h(normalizeDbTimeToHHMM(b.end_time) || '')}`}
-                         </Text>
-                       </View>
-                       <View style={styles.slotDetailRow}>
-                         <Users size={14} color="#64748B" />
-                         <Text style={styles.slotBookingDetail}>
-                           {(cricketTeamsLabelFromBooking(b.ground.pitch_type, b.notes) || '1 Team').toUpperCase()}
-                         </Text>
-                       </View>
+                      <View style={styles.slotDetailRow}>
+                        <Calendar size={14} color="#64748B" />
+                        <Text style={styles.slotBookingDetail}>{formatDateDDMMYY(b.booking_date)}</Text>
+                      </View>
+                      <View style={styles.slotDetailRow}>
+                        <Clock size={14} color="#64748B" />
+                        <Text style={styles.slotBookingDetail}>
+                          {`${formatTime12h(normalizeDbTimeToHHMM(b.start_time) || '')} – ${formatTime12h(normalizeDbTimeToHHMM(b.end_time) || '')}`}
+                        </Text>
+                      </View>
+                      <View style={styles.slotDetailRow}>
+                        <Users size={14} color="#64748B" />
+                        <Text style={styles.slotBookingDetail}>
+                          {(cricketTeamsLabelFromBooking(b.ground.pitch_type, b.notes) || '1 Team').toUpperCase()}
+                        </Text>
+                      </View>
                     </View>
                   </View>
                   <View style={{ alignItems: 'flex-end', gap: 8 }}>
