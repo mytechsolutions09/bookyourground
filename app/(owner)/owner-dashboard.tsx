@@ -818,7 +818,7 @@ export default function OwnerDashboardScreen() {
 
   if (Platform.OS === 'web' && !isCompact) {
     return (
-      <WebLayout>
+      <WebLayout defaultSidebarOpen={true}>
         <ScrollView
           style={styles.container}
           contentContainerStyle={styles.scrollContent}

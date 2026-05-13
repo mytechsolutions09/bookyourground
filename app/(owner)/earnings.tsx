@@ -17,7 +17,7 @@ import {
   YAxis,
   Tooltip as RechartsTooltip,
   CartesianGrid,
-} from "recharts/lib";
+} from "recharts";
 
 const IS_WEB = Platform.OS === 'web';
 

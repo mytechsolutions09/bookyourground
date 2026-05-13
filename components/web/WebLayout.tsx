@@ -71,6 +71,7 @@ interface WebLayoutProps {
   viewMode?: 'products' | 'categories';
   showAddForm?: boolean;
   isPublicNoSidebar?: boolean;
+  defaultSidebarOpen?: boolean;
 }
 
 const NavLink = React.memo(({
@@ -176,7 +177,7 @@ const NavLink = React.memo(({
   );
 });
 
-export default function WebLayout({ children, noCard, hideHeader, viewMode, showAddForm, isPublicNoSidebar: propIsPublicNoSidebar }: WebLayoutProps) {
+export default function WebLayout({ children, noCard, hideHeader, viewMode, showAddForm, isPublicNoSidebar: propIsPublicNoSidebar, defaultSidebarOpen }: WebLayoutProps) {
   const isCompact = useIsCompact();
   const { profile, signOut, user } = useAuth();
   const params = useLocalSearchParams();
@@ -207,7 +208,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     }
   }, [startX]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(!defaultSidebarOpen);
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchResults, setSearchResults] = useState<{ grounds: any[], matches: any[] }>({ grounds: [], matches: [] });
   const [isSearching, setIsSearching] = useState(false);

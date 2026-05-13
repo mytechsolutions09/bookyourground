@@ -12,7 +12,7 @@ import {
   YAxis,
   Tooltip as RechartsTooltip,
   CartesianGrid,
-} from "recharts/lib";
+} from "recharts";
 
 export default function OccupancyDashboard() {
   const { width } = useWindowDimensions();
