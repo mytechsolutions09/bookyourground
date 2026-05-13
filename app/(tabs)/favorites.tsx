@@ -265,7 +265,7 @@ export default function FavoritesScreen() {
 
   return (
     <View style={styles.nativeWrapper}>
-      <MobileAppNavbar title="Favorites" titleColor="#043529" lightBg />
+      <MobileAppNavbar title="Favorites" titleColor="#01b854" lightBg />
       {content}
     </View>
   );

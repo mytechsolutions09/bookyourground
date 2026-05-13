@@ -1061,7 +1061,7 @@ export default function CheckoutScreen() {
                         <TouchableOpacity onPress={handleBack} style={styles.checkoutMiniBackBtn}>
                             <ChevronLeft size={20} color="#0F172A" />
                         </TouchableOpacity>
-                        <RNText style={styles.checkoutMiniTitle}>Checkout</RNText>
+                        <RNText style={[styles.checkoutMiniTitle, { color: '#01b854' }]}>Checkout</RNText>
                         <View style={{ width: 36 }} />
                     </View>
 
@@ -1123,7 +1123,7 @@ export default function CheckoutScreen() {
 
                     {/* Header Section (Web) */}
                     {isLargeWebScreen && (
-                        <View style={styles.headerCard}>
+                        <View style={[styles.headerCard, { marginTop: 0 }]}>
                             <TouchableOpacity
                                 onPress={handleBack}
                                 style={{ marginBottom: 24 }}
@@ -1377,7 +1377,7 @@ export default function CheckoutScreen() {
 
                 {/* Right Column: Order Summary */}
                 <View style={[styles.sideColumn, !isDesktop && Platform.OS !== 'web' && styles.sideColumnMobile, dynamicStyles.sideColumn as any]}>
-                    <Card style={[styles.summaryCard, dynamicStyles.summaryCard]}>
+                    <Card style={[styles.summaryCard, dynamicStyles.summaryCard, { marginTop: 0 }]}>
                         <View style={[styles.summaryHeaderRow, { marginBottom: 12 }]}>
                             <View style={{ flex: 1 }}>
                                 <RNText style={styles.summaryTitleNew}>Order Summary</RNText>
@@ -1994,16 +1994,16 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     summaryCard: {
-        padding: 20,
-        borderRadius: 0,
-        backgroundColor: 'transparent',
-        borderWidth: 0,
-        borderColor: 'transparent',
-        shadowColor: 'transparent',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0,
-        shadowRadius: 0,
-        elevation: 0,
+        padding: 24,
+        borderRadius: 24,
+        backgroundColor: '#FFFFFF',
+        borderWidth: 1,
+        borderColor: '#F1F5F9',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.04,
+        shadowRadius: 12,
+        elevation: 3,
     },
     summaryHeaderRow: {
         flexDirection: 'row',
@@ -2297,11 +2297,11 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
     contactInfoCard: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        padding: 16,
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
+        backgroundColor: 'transparent',
+        borderRadius: 0,
+        padding: 0,
+        borderWidth: 0,
+        borderColor: 'transparent',
     },
     contactInputRow: {
         flexDirection: 'row',

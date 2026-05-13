@@ -65,7 +65,7 @@ const CustomTabBar = ({ state, descriptors, navigation, router, insets, isTabBar
 
         return (
           <Pressable key={route.key} onPress={onPress} style={styles.tabItem}>
-            {Icon && Icon({ color: isFocused ? (route.name === 'shop' ? '#f8688a' : '#00ea6b') : '#9ca3af', size: 22 })}
+            {Icon && Icon({ color: isFocused ? (route.name === 'shop' ? '#f8688a' : '#00ea6b') : '#9ca3af', size: 18 })}
             <RNText
               numberOfLines={1}
               style={[styles.tabLabel, { color: isFocused ? (route.name === 'shop' ? '#f8688a' : '#00ea6b') : '#9ca3af' }]}
@@ -294,8 +294,8 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   tabLabel: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '600',
-    marginTop: 4,
+    marginTop: 2,
   },
 });

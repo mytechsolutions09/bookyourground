@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency } from '@/utils/helpers';
 import { useUI } from '@/contexts/UIContext';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const THEME_BG = '#043529';
 const ACCENT = '#00ea6b'; 
@@ -24,7 +25,8 @@ export default function WalletScreen() {
     spent: 0, 
     refunded: 0,
     referrals: 0,
-    promos: 0
+    promos: 0,
+    payouts: 0
   });
   const [limit, setLimit] = useState(15);
   const [hasMore, setHasMore] = useState(true);
@@ -107,11 +109,35 @@ export default function WalletScreen() {
           .order('created_at', { ascending: false })
           .limit(newLimit + 1);
 
+        // 3. Fetch Withdrawals (Payouts) if Owner
+        let payouts: any[] = [];
+        if (isOwner) {
+          let pQuery = supabase
+            .from('withdrawals')
+            .select('*')
+            .eq('owner_id', user.id);
+            
+          if (fromDate) pQuery = pQuery.gte('created_at', fromDate);
+          if (toDate) {
+            const endOfDay = new Date(toDate);
+            endOfDay.setHours(23, 59, 59, 999);
+            pQuery = pQuery.lte('created_at', endOfDay.toISOString());
+          }
+          
+          const { data: pData } = await pQuery
+            .order('created_at', { ascending: false })
+            .limit(newLimit);
+          payouts = pData || [];
+        }
+
         const processedTx = (wtxData || []).map(tx => {
           let title = tx.description || 'Wallet Transaction';
-          let sub = 'System Credit';
+          let sub = 'Credit';
           
-          if (tx.type === 'refund') {
+          if (title === 'Admin System Credit' || title === 'Credit') {
+            title = 'Credit';
+            sub = 'System Credit';
+          } else if (tx.type === 'refund') {
             title = 'Refund Credited';
             sub = tx.booking?.ground?.name ? `Booking at ${tx.booking.ground.name}` : 'Booking Refund';
           } else if (tx.type === 'referral') {
@@ -137,8 +163,37 @@ export default function WalletScreen() {
           };
         });
 
-        setHasMore(processedTx.length > newLimit);
-        setTransactions(processedTx.slice(0, newLimit));
+        const processedPayouts = payouts.map(p => {
+          let title = 'Payout Request';
+          let statusText = '';
+          
+          if (p.status === 'completed') {
+            title = 'Payout Approved';
+          } else if (p.status === 'processing') {
+            title = 'Payout Processing';
+            statusText = ' • Processing';
+          } else {
+            statusText = ' • Pending';
+          }
+
+          return {
+            id: p.id,
+            type: 'payout',
+            title,
+            sub: (p.payment_method === 'bank_transfer' ? 'Bank Transfer' : 'UPI') + statusText,
+            amount: p.amount,
+            date: new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) + ', ' + new Date(p.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+            isPositive: false,
+            rawDate: new Date(p.created_at),
+            status: p.status
+          };
+        });
+
+        const combined = [...processedTx, ...processedPayouts]
+          .sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime());
+
+        setHasMore(combined.length > newLimit);
+        setTransactions(combined.slice(0, newLimit));
 
         // Calculate Summary
         let earned = 0;
@@ -158,12 +213,20 @@ export default function WalletScreen() {
           }
         });
 
+        let totalPayouts = 0;
+        payouts.forEach(p => {
+          if (p.status === 'completed') {
+            totalPayouts += p.amount;
+          }
+        });
+
         setSummary({
           added: earned,
           spent: spent,
           refunded: refunded,
           referrals,
-          promos
+          promos,
+          payouts: totalPayouts
         });
       }
     } catch (err) {
@@ -356,6 +419,12 @@ export default function WalletScreen() {
           <Text style={styles.summaryLabel}>Promotional Credits</Text>
           <Text style={styles.summaryValue}>{formatCurrency(summary.promos)}</Text>
         </View>
+        {isOwner && (
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Total Payouts</Text>
+            <Text style={styles.summaryValue}>{formatCurrency(summary.payouts)}</Text>
+          </View>
+        )}
         <View style={[styles.summaryRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
           <Text style={styles.summaryLabel}>Total Spent</Text>
           <Text style={[styles.summaryValue, { color: '#dc2626' }]}>{formatCurrency(summary.spent)}</Text>
@@ -395,7 +464,12 @@ export default function WalletScreen() {
     >
       <View style={styles.mainLayout}>
         <View style={styles.centerContent}>
-          <View style={styles.balanceCard}>
+          <LinearGradient 
+            colors={['#00ea6b', '#a5ff8a']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.balanceCard}
+          >
             <View style={styles.balanceInfo}>
               <Text style={styles.balanceLabel}>Wallet Balance</Text>
               <Text style={styles.balanceAmount}>{formatCurrency(balance)}</Text>
@@ -404,7 +478,7 @@ export default function WalletScreen() {
             <View style={styles.walletIconBox}>
                <CreditCard size={32} color="#043529" />
             </View>
-          </View>
+          </LinearGradient>
 
           {isCompact && (
             <View style={styles.mobileTabs}>
@@ -620,7 +694,7 @@ export default function WalletScreen() {
 
   return (
     <View style={styles.nativeWrapper}>
-      <MobileAppNavbar title="Wallet" titleColor="#043529" lightBg />
+      <MobileAppNavbar title="Wallet" titleColor="#01b854" lightBg />
       {content}
       {datePickerModal}
 
@@ -733,14 +807,13 @@ const styles = StyleSheet.create({
     gap: 24,
   },
   balanceCard: {
-    backgroundColor: ACCENT,
     borderRadius: 24,
     padding: 24,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 32,
-    shadowColor: ACCENT,
+    shadowColor: '#00ea6b',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.2,
     shadowRadius: 20,
@@ -750,8 +823,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   balanceLabel: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
     color: '#043529',
     marginBottom: 4,
     fontFamily: 'Inter',
@@ -759,12 +832,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   balanceAmount: {
-    fontSize: Platform.OS === 'web' ? 42 : 32,
-    fontWeight: '800',
+    fontSize: Platform.OS === 'web' ? 32 : 24,
+    fontWeight: '600',
     color: '#043529',
     marginBottom: 4,
     fontFamily: 'Inter',
-    letterSpacing: -1,
+    letterSpacing: -0.5,
   },
   balanceSub: {
     fontSize: 13,

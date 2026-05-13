@@ -13,6 +13,93 @@ import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
 import { normalizeDbTimeToHHMM, formatTime12h } from '@/utils/bookingSlots';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import { formatCurrency, formatDate, formatDateDDMMYY, getStatusColor, isDateInPast } from '@/utils/helpers';
+import { Animated } from 'react-native';
+
+const SkeletonItem = ({ style }: { style?: any }) => {
+  const opacity = React.useRef(new Animated.Value(0.3)).current;
+
+  React.useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, {
+          toValue: 0.7,
+          duration: 800,
+          useNativeDriver: Platform.OS !== 'web',
+        }),
+        Animated.timing(opacity, {
+          toValue: 0.3,
+          duration: 800,
+          useNativeDriver: Platform.OS !== 'web',
+        }),
+      ])
+    ).start();
+  }, [opacity]);
+
+  return <Animated.View style={[{ backgroundColor: '#F1F5F9', borderRadius: 8 }, { opacity }, style]} />;
+};
+
+function BookingListSkeleton({ isWeb, isSmallScreen }: { isWeb: boolean, isSmallScreen: boolean }) {
+  const rows = Array.from({ length: 8 });
+
+  if (isWeb && !isSmallScreen) {
+    return (
+      <View style={{ padding: 24, gap: 16 }}>
+        {/* Filter Bar Skeleton */}
+        <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
+          <SkeletonItem style={{ width: 120, height: 40, borderRadius: 20 }} />
+          <SkeletonItem style={{ width: 120, height: 40, borderRadius: 20 }} />
+          <SkeletonItem style={{ width: 120, height: 40, borderRadius: 20 }} />
+          <View style={{ flex: 1 }} />
+          <SkeletonItem style={{ width: 250, height: 40, borderRadius: 12 }} />
+        </View>
+
+        {/* Table Rows Skeleton */}
+        {rows.map((_, i) => (
+          <View key={i} style={{ flexDirection: 'row', padding: 20, backgroundColor: '#FFFFFF', borderRadius: 16, borderWeight: 1, borderColor: '#F1F5F9', gap: 20 }}>
+            <View style={{ width: 100 }}><SkeletonItem style={{ height: 16, width: 80, marginBottom: 8 }} /><SkeletonItem style={{ height: 12, width: 60 }} /></View>
+            <View style={{ flex: 1.5 }}><SkeletonItem style={{ height: 16, width: '70%', marginBottom: 8 }} /><SkeletonItem style={{ height: 12, width: '40%' }} /></View>
+            <View style={{ flex: 1 }}><SkeletonItem style={{ height: 16, width: 90, marginBottom: 8 }} /><SkeletonItem style={{ height: 12, width: 70 }} /></View>
+            <View style={{ width: 80 }}><SkeletonItem style={{ height: 24, borderRadius: 12 }} /></View>
+            <View style={{ width: 100 }}><SkeletonItem style={{ height: 24, borderRadius: 12 }} /></View>
+            <View style={{ width: 80 }}><SkeletonItem style={{ height: 16, width: 60 }} /></View>
+            <View style={{ width: 80 }}><SkeletonItem style={{ height: 24, borderRadius: 12 }} /></View>
+          </View>
+        ))}
+      </View>
+    );
+  }
+
+  return (
+    <View style={{ padding: 16, gap: 16 }}>
+      {/* Search/Filter Mobile Skeleton */}
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+        <SkeletonItem style={{ flex: 2, height: 40, borderRadius: 12 }} />
+        <SkeletonItem style={{ flex: 1, height: 40, borderRadius: 12 }} />
+        <SkeletonItem style={{ flex: 1, height: 40, borderRadius: 12 }} />
+      </View>
+      
+      {/* Mobile Card Skeletons */}
+      {rows.map((_, i) => (
+        <View key={i} style={{ padding: 16, backgroundColor: '#FFFFFF', borderRadius: 20, borderWidth: 1, borderColor: '#F1F5F9', gap: 12 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <SkeletonItem style={{ height: 14, width: 100 }} />
+            <SkeletonItem style={{ height: 20, width: 80, borderRadius: 10 }} />
+          </View>
+          <SkeletonItem style={{ height: 18, width: '60%' }} />
+          <View style={{ flexDirection: 'row', gap: 12 }}>
+            <SkeletonItem style={{ height: 14, width: 80 }} />
+            <SkeletonItem style={{ height: 14, width: 80 }} />
+          </View>
+          <View style={{ height: 1, backgroundColor: '#F1F5F9', marginVertical: 4 }} />
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <SkeletonItem style={{ height: 16, width: 120 }} />
+            <SkeletonItem style={{ height: 24, width: 24, borderRadius: 12 }} />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
 
 function NameInputCell({ booking, onSave }: { booking: BookingWithDetails, onSave: (id: string, name: string) => Promise<void> }) {
   const [localName, setLocalName] = useState(booking.booked_for_name || '');
@@ -673,6 +760,21 @@ export default function OwnerBookingsScreen() {
       </View>
     );
   };
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: isSmallScreen ? '#F8FAFC' : '#FFFFFF' }}>
+        {isSmallScreen && <MobileAppNavbar title="Bookings" titleColor="#0F172A" />}
+        {isWeb && !isSmallScreen ? (
+          <WebLayout>
+             <BookingListSkeleton isWeb={isWeb} isSmallScreen={isSmallScreen} />
+          </WebLayout>
+        ) : (
+          <BookingListSkeleton isWeb={isWeb} isSmallScreen={isSmallScreen} />
+        )}
+      </View>
+    );
+  }
 
   const content = (
     <View style={[styles.container, isSmallScreen && styles.containerMobile]}>

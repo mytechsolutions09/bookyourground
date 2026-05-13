@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, Platform, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Modal, TextInput as RNTextInput, useWindowDimensions, Animated } from 'react-native';
+import { View, Text, StyleSheet, Platform, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Modal, TextInput as RNTextInput, useWindowDimensions, Animated, Pressable } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import WebLayout from '@/components/web/WebLayout';
@@ -7,7 +7,17 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { formatCurrency } from '@/utils/helpers';
 import { TrendingUp, Download, ArrowRight, Wallet, History, Info, ChevronRight, X, CheckCircle2, AlertCircle } from 'lucide-react-native';
-import Svg, { Path, Circle, Defs, LinearGradient, Stop, Text as SvgText } from 'react-native-svg';
+import Svg, { Path, Circle, Defs, LinearGradient as SvgGradient, Stop, Text as SvgText } from 'react-native-svg';
+import { LinearGradient } from 'expo-linear-gradient';
+import {
+  ResponsiveContainer,
+  LineChart as RechartsLineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip as RechartsTooltip,
+  CartesianGrid,
+} from "recharts/lib";
 
 const IS_WEB = Platform.OS === 'web';
 
@@ -36,6 +46,40 @@ interface WalletData {
 function LineChart({ data, height = 150 }: { data: ChartPoint[], height?: number }) {
   const [containerWidth, setContainerWidth] = useState(300);
   if (data.length === 0) return null;
+
+  if (Platform.OS === 'web') {
+    return (
+      <View style={{ height, width: '100%' }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <RechartsLineChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#dfe7e2" />
+            <XAxis dataKey="label" tick={{ fill: "#6b7280", fontSize: 10 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: "#6b7280", fontSize: 10 }} axisLine={false} tickLine={false} />
+            <RechartsTooltip
+              formatter={(value: any) => `₹${Number(value).toFixed(2)}`}
+              contentStyle={{
+                borderRadius: "12px",
+                border: "1px solid #e5ece7",
+                backgroundColor: "#ffffff",
+                fontSize: 11,
+                padding: "8px 12px",
+              }}
+              itemStyle={{ fontSize: 11, padding: 0 }}
+              labelStyle={{ fontSize: 11, fontWeight: 'bold', marginBottom: 2 }}
+            />
+            <Line
+              type="monotone"
+              dataKey="value"
+              stroke="#01b854"
+              strokeWidth={2}
+              dot={{ r: 4, fill: "#a5ff8a", stroke: "#01b854", strokeWidth: 1.5 }}
+              activeDot={{ r: 6 }}
+            />
+          </RechartsLineChart>
+        </ResponsiveContainer>
+      </View>
+    );
+  }
 
   const padding = { top: 24, bottom: 36, left: 0, right: 16 };
 
@@ -105,10 +149,10 @@ function LineChart({ data, height = 150 }: { data: ChartPoint[], height?: number
       >
         <Svg width={containerWidth} height={height}>
           <Defs>
-            <LinearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+            <SvgGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
               <Stop offset="0%" stopColor="#01b854" stopOpacity="0.18" />
               <Stop offset="100%" stopColor="#01b854" stopOpacity="0" />
-            </LinearGradient>
+            </SvgGradient>
           </Defs>
 
           {/* Grid lines */}
@@ -218,6 +262,7 @@ function OwnerEarningsScreenInner() {
   const { tab } = useLocalSearchParams<{ tab: string }>();
   const [viewMode, setViewMode] = useState<'preview' | 'summary' | 'analytics' | 'payouts'>((tab as any) || 'preview');
   const [payoutSubTab, setPayoutSubTab] = useState<'requests' | 'history'>('requests');
+  const [analyticsFilter, setAnalyticsFilter] = useState<'hours' | 'days' | 'weeks'>('days');
 
   useEffect(() => {
     if (tab && (tab === 'preview' || tab === 'summary' || tab === 'analytics' || tab === 'payouts')) {
@@ -264,7 +309,7 @@ function OwnerEarningsScreenInner() {
     if (user) {
       loadEarnings(limit, filterVenueId, filterPaymentMethod, filterDateRange);
     }
-  }, [filterVenueId, filterPaymentMethod, filterDateRange]);
+  }, [filterVenueId, filterPaymentMethod, filterDateRange, analyticsFilter]);
 
   const handleDownloadReport = async () => {
     if (!user) return;
@@ -439,7 +484,7 @@ function OwnerEarningsScreenInner() {
 
       const { data: allData } = await supabase
         .from('bookings')
-        .select('total_amount, platform_fee_owner, gst_owner, created_at, payment_method, payment_received, ground:grounds!inner(name, city, owner_id)')
+        .select('total_amount, platform_fee_owner, gst_owner, created_at, payment_method, payment_received, status, ground_price, ground:grounds!inner(name, city, owner_id)')
         .eq('ground.owner_id', user.id)
         .in('status', ['confirmed', 'completed']);
 
@@ -455,9 +500,13 @@ function OwnerEarningsScreenInner() {
 
       const venueMap = new Map<string, number>();
       const dayMap = new Map<number, number>();
+      const hourMap = new Map<number, number>();
+      const weekMap = new Map<number, number>();
 
+      let withdrawablePool = 0;
       allRows.forEach((row) => {
         const netAmt = (row.total_amount || 0) - (Number(row.platform_fee_owner || 0) + Number(row.gst_owner || 0));
+        const fee = (Number(row.platform_fee_owner || 0) + Number(row.gst_owner || 0));
         total += netAmt;
 
         if (row.payment_method === 'cash') {
@@ -470,8 +519,22 @@ function OwnerEarningsScreenInner() {
           // Online payments are considered received if they are confirmed/completed
           onlineEarningsTotal += netAmt;
         }
+
+        // Withdrawable balance calculation: only for "completed" events
+        if (row.status === 'completed') {
+          const isOnline = row.payment_method && row.payment_method !== 'cash';
+          const revenue = Number(row.ground_price || row.total_amount || 0);
+          
+          if (isOnline) {
+            withdrawablePool += (revenue - fee);
+          } else {
+            // Offline event: deduct fee from online pool
+            withdrawablePool -= fee;
+          }
+        }
         
         const date = new Date(row.created_at);
+        const h = date.getHours();
         const d = date.getDate();
         const m = date.getMonth();
         const y = date.getFullYear();
@@ -479,6 +542,11 @@ function OwnerEarningsScreenInner() {
         if (m === currentMonth && y === currentYear) {
           thisMonthTotal += netAmt;
           dayMap.set(d, (dayMap.get(d) || 0) + netAmt);
+          
+          hourMap.set(h, (hourMap.get(h) || 0) + netAmt);
+          
+          const week = Math.ceil(d / 7);
+          weekMap.set(week, (weekMap.get(week) || 0) + netAmt);
         }
 
         let groundName = 'Other';
@@ -522,7 +590,7 @@ function OwnerEarningsScreenInner() {
         .eq('status', 'completed');
       
       const totalWithdrawn = (completedWithdrawals || []).reduce((acc, w) => acc + (w.amount || 0), 0);
-      const expectedBalance = onlineEarningsTotal - totalWithdrawn;
+      const expectedBalance = withdrawablePool - totalWithdrawn;
       
       const currentWalletBalance = walletData?.balance || 0;
 
@@ -568,13 +636,33 @@ function OwnerEarningsScreenInner() {
       const trend: ChartPoint[] = [];
       const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
       const todayDay = now.getDate();
-      let runningTotal = 0;
-      for (let i = 1; i <= daysInMonth; i++) {
-        runningTotal += (dayMap.get(i) || 0);
-        // Only add points up to today
-        if (i <= todayDay) {
+      
+      if (analyticsFilter === 'days') {
+        let runningTotal = 0;
+        for (let i = 1; i <= daysInMonth; i++) {
+          runningTotal += (dayMap.get(i) || 0);
+          if (i <= todayDay) {
+            trend.push({
+              label: i.toString(),
+              value: runningTotal
+            });
+          }
+        }
+      } else if (analyticsFilter === 'weeks') {
+        let runningTotal = 0;
+        for (let i = 1; i <= 5; i++) {
+          runningTotal += (weekMap.get(i) || 0);
           trend.push({
-            label: i.toString(),
+            label: `Week ${i}`,
+            value: runningTotal
+          });
+        }
+      } else if (analyticsFilter === 'hours') {
+        let runningTotal = 0;
+        for (let i = 0; i < 24; i++) {
+          runningTotal += (hourMap.get(i) || 0);
+          trend.push({
+            label: `${i}:00`,
             value: runningTotal
           });
         }
@@ -833,8 +921,8 @@ function OwnerEarningsScreenInner() {
         
         {(() => {
           const combined = [
-            ...transactions.map(tx => ({ ...tx, type: 'booking' })),
-            ...withdrawals
+            ...(transactions || []).map(tx => ({ ...tx, type: 'booking' })),
+            ...(withdrawals || [])
               .filter(w => w.status === 'completed')
               .map(w => ({
                 id: `w-${w.id}`,
@@ -863,22 +951,22 @@ function OwnerEarningsScreenInner() {
                 </View>
                 
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.cellTextMain, item.type === 'withdrawal' ? { color: '#64748B' } : { color: '#01b854' }]} numberOfLines={1}>
+                  <Text style={[styles.cellTextMain, item.type === 'withdrawal' ? { color: '#64748B' } : { color: '#1E293B' }]} numberOfLines={1}>
                     {item.type === 'withdrawal' ? 'Manual Withdrawal' : (item.ground?.name || 'Venue')}
                   </Text>
                   <Text style={[styles.cellTextSub, { fontSize: 10, color: '#94A3B8' }]} numberOfLines={1}>
-                    ID: #{item.id.split('-')[1] || item.id.split('-')[0].toUpperCase()}
+                    ID: #{item.id.startsWith('w-') ? item.id.split('-')[1] : item.id.split('-')[0]}
                   </Text>
                 </View>
 
                 <View style={{ width: 80 }}>
                   <View style={[
                     styles.methodBadge, 
-                    { backgroundColor: item.type === 'withdrawal' ? '#E0F2FE' : (item.payment_method === 'cash' ? (item.payment_received ? '#DCFCE7' : '#FEF3C7') : '#DCFCE7') }
+                    { backgroundColor: item.type === 'withdrawal' ? '#E0F2FE' : (item.payment_method === 'cash' ? (item.payment_received ? '#F1F5F9' : '#FEF3C7') : '#F1F5F9') }
                   ]}>
                     <Text style={[
                       styles.methodBadgeText,
-                      { color: item.type === 'withdrawal' ? '#0369A1' : (item.payment_method === 'cash' ? (item.payment_received ? '#15803D' : '#92400E') : '#15803D') }
+                      { color: item.type === 'withdrawal' ? '#0369A1' : (item.payment_method === 'cash' ? (item.payment_received ? '#475569' : '#92400E') : '#475569') }
                     ]}>
                       {item.type === 'withdrawal' ? 'PAYOUT' : (item.payment_method === 'cash' ? (item.payment_received ? 'PAID' : 'CASH') : 'ONLINE')}
                     </Text>
@@ -898,7 +986,7 @@ function OwnerEarningsScreenInner() {
                 </View>
 
                 <View style={{ width: 100, alignItems: 'flex-end' }}>
-                  <Text style={[styles.cellTextMain, { fontSize: 15, fontWeight: '800', color: item.type === 'withdrawal' ? '#EF4444' : '#01b854' }]}>
+                  <Text style={[styles.cellTextMain, { fontSize: 13, fontWeight: '500', color: item.type === 'withdrawal' ? '#EF4444' : '#1E293B' }]}>
                     {item.type === 'withdrawal' ? `-${formatCurrency(item.total_amount)}` : formatCurrency(item.total_amount - (Number(item.platform_fee_owner || 0) + Number(item.gst_owner || 0)))}
                   </Text>
                 </View>
@@ -928,11 +1016,30 @@ function OwnerEarningsScreenInner() {
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <View>
                 <Text style={styles.sectionTitle}>Earnings Analytics</Text>
-                <Text style={styles.sectionSubtitle}>Daily revenue trends for this month</Text>
+                <Text style={styles.sectionSubtitle}>Revenue trends based on selection</Text>
               </View>
-              <TrendingUp size={20} color="#01b854" />
+              
+              <View style={styles.filterContainer}>
+                {['hours', 'days', 'weeks'].map((f) => (
+                  <TouchableOpacity
+                    key={f}
+                    style={[
+                      styles.filterButton,
+                      analyticsFilter === f && styles.filterButtonActive
+                    ]}
+                    onPress={() => setAnalyticsFilter(f as 'hours' | 'days' | 'weeks')}
+                  >
+                    <Text style={[
+                      styles.filterButtonText,
+                      analyticsFilter === f && styles.filterButtonTextActive
+                    ]}>
+                      {f.charAt(0).toUpperCase() + f.slice(1)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
-            <LineChart data={chartData} height={250} totalDays={new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()} />
+            <LineChart data={chartData || []} height={250} />
           </View>
 
           <View style={styles.sectionCard}>
@@ -1187,7 +1294,12 @@ function OwnerEarningsScreenInner() {
   const renderLeftColumn = () => {
     return (
       <View style={styles.leftCol}>
-        <View style={[styles.totalEarningsCard, isUltraNarrow && { padding: 20 }]}>
+        <LinearGradient 
+          colors={['#00ea6b', '#a5ff8a']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={[styles.totalEarningsCard, isUltraNarrow && { padding: 20 }]}
+        >
           <View style={{ flex: 1 }}>
             <Text style={styles.totalEarningsLabel}>Withdrawable Balance</Text>
             {loading ? (
@@ -1199,15 +1311,18 @@ function OwnerEarningsScreenInner() {
                 {formatCurrency(Math.max(0, withdrawableBalance))}
               </Text>
             )}
-          <TouchableOpacity 
-            style={styles.withdrawBtnInline}
+          <Pressable 
+            style={({ hovered }: { hovered: boolean }) => [
+              styles.withdrawBtnInline,
+              hovered && { backgroundColor: 'rgba(255, 255, 255, 0.4)', transform: [{ scale: 1.02 }] }
+            ]}
             onPress={() => setShowWithdrawModal(true)}
           >
             <Text style={styles.withdrawBtnTextInline}>Request Payout</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
         {!isUltraNarrow && <Wallet size={64} color="#043529" strokeWidth={1} style={{ opacity: 0.2 }} />}
-      </View>
+      </LinearGradient>
 
       {!isBankVerified && bankDetailsLoaded && (
         <View style={[styles.sectionCard, { backgroundColor: '#FEF2F2', borderColor: '#FECACA' }]}>
@@ -1222,20 +1337,6 @@ function OwnerEarningsScreenInner() {
       )}
 
   
-      <View style={[styles.sectionCard, { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-           <History size={20} color="#92400E" />
-           <Text style={[styles.sectionTitle, { color: '#92400E', marginBottom: 0 }]}>Cash Received (Offline)</Text>
-        </View>
-        <View style={{ alignItems: 'center', paddingVertical: 10 }}>
-          <Text style={{ fontSize: 36, fontWeight: '800', color: '#92400E' }}>{formatCurrency(offlineEarnings)}</Text>
-          <Text style={{ fontSize: 14, color: '#B45309', fontWeight: '600', marginTop: 8 }}>Total collection at venue</Text>
-          <View style={{ height: 1, backgroundColor: '#FDE68A', width: '100%', marginVertical: 16 }} />
-          <Text style={{ fontSize: 12, color: '#D97706', textAlign: 'center', fontStyle: 'italic' }}>
-            Note: This amount is collected directly by you and is not part of the platform's transferable balance.
-          </Text>
-        </View>
-      </View>
 
       <View style={styles.sectionCard}>
         <Text style={styles.sectionTitle}>Recent Transactions</Text>
@@ -1260,7 +1361,7 @@ function OwnerEarningsScreenInner() {
                   <Text style={[styles.cellText, { flex: 1 }]} numberOfLines={1}>
                     {tx.ground?.name || 'Venue'}
                   </Text>
-                  <Text style={[styles.cellText, { width: 80, textAlign: 'right', fontWeight: '700', color: '#01b854' }]}>
+                  <Text style={[styles.cellText, { width: 80, textAlign: 'right', fontWeight: '400', color: '#1E293B' }]}>
                     {formatCurrency(netTx)}
                   </Text>
                 </View>
@@ -1346,7 +1447,7 @@ function OwnerEarningsScreenInner() {
           <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Earnings Analytics</Text>
           <ChevronRight size={20} color="#64748B" />
         </View>
-        <LineChart data={chartData} totalDays={new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()} />
+        <LineChart data={chartData || []} />
         
         <View style={styles.divider} />
         
@@ -1388,7 +1489,7 @@ function OwnerEarningsScreenInner() {
               <View key={item.id} style={styles.activityItem}>
                 <View style={[styles.activityDot, { backgroundColor: item.color }]} />
                 <Text style={styles.activityText}>
-                  <Text style={{ fontWeight: '700' }}>
+                  <Text style={{ fontWeight: '500' }}>
                     {new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, {new Date(item.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}:
                   </Text>{' '}
                   {item.text}
@@ -1737,7 +1838,7 @@ export default function OwnerEarningsScreen() {
 
   return (
     <View style={styles.nativeContainer}>
-      <MobileAppNavbar title="Earnings" titleColor="#043529" lightBg />
+      <MobileAppNavbar title="Earnings" titleColor="#01b854" lightBg />
       <OwnerEarningsScreenInner />
     </View>
   );
@@ -1779,7 +1880,6 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   totalEarningsCard: {
-    backgroundColor: '#d9f99d', // Light lime green
     borderRadius: 24,
     padding: 20,
     flexDirection: 'row',
@@ -1815,7 +1915,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#0F172A',
     marginBottom: 16,
     fontFamily: 'Inter',
@@ -1853,13 +1953,13 @@ const styles = StyleSheet.create({
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: 6,
     borderBottomWidth: 1,
     borderBottomColor: '#F8FAFC',
   },
   cellText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '400',
     color: '#1E293B',
     fontFamily: 'Inter',
   },
@@ -1902,7 +2002,7 @@ const styles = StyleSheet.create({
   },
   downloadBtnText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#043529',
     fontFamily: 'Inter',
   },
@@ -1924,13 +2024,13 @@ const styles = StyleSheet.create({
   },
   venueName: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '400',
     color: '#1E293B',
     flex: 1,
   },
   venueAmount: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#1E293B',
   },
   progressBg: {
@@ -2116,7 +2216,7 @@ const styles = StyleSheet.create({
   },
   cellTextMain: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '400',
     color: '#1E293B',
     fontFamily: 'Inter',
   },
@@ -2149,15 +2249,18 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontFamily: 'Inter',
   },
-  withdrawBtnInline: {
-    flex: 1,
+   withdrawBtnInline: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+    paddingVertical: 8,
+    paddingHorizontal: 24,
+    borderRadius: 100,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: 16,
-    backgroundColor: '#d9f99d',
   },
   withdrawBtnTextInline: {
     fontSize: 13,
@@ -2196,12 +2299,12 @@ const styles = StyleSheet.create({
   bifurcationLabel: {
     fontSize: 12,
     color: '#64748B',
-    fontWeight: '600',
+    fontWeight: '400',
     marginBottom: 4,
   },
   bifurcationValue: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '500',
     marginBottom: 4,
     fontFamily: 'Inter',
   },
@@ -2360,6 +2463,33 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#0F172A',
     fontWeight: '700',
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    padding: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e7ece8',
+  },
+  filterButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterButtonActive: {
+    backgroundColor: '#01b854',
+  },
+  filterButtonText: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  filterButtonTextActive: {
+    color: '#FFFFFF',
   },
 });
 

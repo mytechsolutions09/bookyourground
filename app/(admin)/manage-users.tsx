@@ -283,7 +283,7 @@ export default function ManageUsersScreen() {
       const { data, error } = await supabase.rpc('add_money_to_wallet', {
           target_user_id: userId,
           amount_to_add: amount,
-          description_text: 'Admin System Credit'
+          description_text: 'Credit'
       });
       
       if (error) throw error;

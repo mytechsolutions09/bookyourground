@@ -82,6 +82,15 @@ const SPORT_CATEGORIES = [
   { label: 'Multi-Sport', value: 'multi' },
 ];
 
+const SPORT_SUFFIXES: Record<string, string> = {
+  football: 'football fields',
+  cricket: 'cricket grounds',
+  box: 'box cricket venues',
+  multi: 'multi-sport venues',
+  nets: 'nets',
+  all: 'grounds'
+};
+
 const FEATURES = [
   { icon: Search, label: 'Easy Discovery', desc: 'Find by sport, location, price' },
   { icon: Clock, label: 'Live Slots', desc: 'Real-time availability' },
@@ -417,7 +426,9 @@ export default function HomeScreen() {
             <View style={styles.sectionHeader}>
               <View>
                 <Text style={styles.sectionLabel}>Search Results</Text>
-                <Text style={styles.sectionTitle}>{filteredGrounds.length} grounds found</Text>
+                <Text style={styles.sectionTitle}>
+                  {filteredGrounds.length} {SPORT_SUFFIXES[sportFilter] || 'grounds'} found
+                </Text>
               </View>
             </View>
 

@@ -1095,7 +1095,7 @@ export default function BookingsScreen() {
   const isCompact = width < 900;
 
   return (Platform.OS === 'web' && !isCompact) ? (
-    <WebLayout>
+    <WebLayout hideHeader={true}>
       {content}
       {datePickerModal}
       <Modal
@@ -1145,7 +1145,7 @@ export default function BookingsScreen() {
     </WebLayout>
   ) : (
     <View style={styles.nativeScreen}>
-      <MobileAppNavbar title="My Bookings" titleColor="#111827" lightBg />
+      <MobileAppNavbar title="My Bookings" titleColor="#01b854" lightBg />
       <View style={styles.nativeBody}>
         {content}
         {datePickerModal}
@@ -1742,7 +1742,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 32,
-    paddingTop: 32,
+    paddingTop: 16,
     flex: 1,
   },
   webLeft: {

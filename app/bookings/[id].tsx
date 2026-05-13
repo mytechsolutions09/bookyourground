@@ -285,18 +285,24 @@ export default function BookingDetailsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#01C45A" />
-      </View>
+      <>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#01C45A" />
+        </View>
+      </>
     );
   }
 
   if (!booking) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Booking not found.</Text>
-        <Button title="Go Back" onPress={() => router.back()} style={{ marginTop: 20 }} />
-      </View>
+      <>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Booking not found.</Text>
+          <Button title="Go Back" onPress={() => router.back()} style={{ marginTop: 20 }} />
+        </View>
+      </>
     );
   }
 
@@ -643,13 +649,13 @@ export default function BookingDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Platform.OS === 'web' ? 'transparent' : '#F4F6F0',
+    backgroundColor: Platform.OS === 'web' ? 'transparent' : '#FFFFFF',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Platform.OS === 'web' ? 'transparent' : '#F4F6F0',
+    backgroundColor: Platform.OS === 'web' ? 'transparent' : '#FFFFFF',
   },
   loadingText: {
     fontSize: 16,
@@ -782,7 +788,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     padding: 24,
     gap: 20,
-    marginTop: 40,
+    marginTop: 20,
   },
   pageBodyDesktop: {
     flexDirection: 'row',
@@ -839,7 +845,6 @@ const styles = StyleSheet.create({
   slotItem: {
     flex: 1,
     minWidth: '46%',
-    backgroundColor: '#F4F6F0',
     padding: 12,
     borderRadius: 12,
   },
@@ -903,15 +908,16 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   teamTag: {
-    backgroundColor: '#F4F6F0',
     paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 4,
+    backgroundColor: 'transparent',
   },
   teamTagText: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#5A6555',
+    fontFamily: 'Inter',
   },
   summaryValue: {
     fontSize: 13,
@@ -940,8 +946,8 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   totalValue: {
-    fontSize: 28,
-    fontWeight: '900',
+    fontSize: 18,
+    fontWeight: '600',
     color: '#01A34B',
     letterSpacing: -0.5,
     fontFamily: 'Inter',
@@ -1122,13 +1128,13 @@ const styles = StyleSheet.create({
   },
   slotDetailTime: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '400',
     color: '#1A2215',
     fontFamily: 'Inter',
   },
   slotDetailPrice: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '400',
     color: '#01C45A',
     fontFamily: 'Inter',
   },

@@ -589,7 +589,7 @@ function DashboardContent() {
   return (
     <View style={styles.nativeWrapper}>
       <Animated.View style={headerAnimatedStyle}>
-        <MobileAppNavbar title="Dashboard" titleColor={THEME_TEXT} />
+        <MobileAppNavbar title="Dashboard" titleColor="#01b854" />
         <View style={[styles.tabContainer, Platform.OS === 'web' && { backgroundColor: 'transparent', borderWidth: 0 } as any]}>
           <GlassButton
             variant={activeTab === 'overview' ? 'white' : 'clear'}

@@ -43,7 +43,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const loadingProfileRef = React.useRef<string | null>(null);
 
-  const loadProfile = useCallback(async (userId: string, retryCount = 0) => {
+  const loadProfile = useCallback(async (userObj: User, retryCount = 0) => {
+    const userId = userObj.id;
     // Prevent duplicate concurrent loads for the same user
     if (loadingProfileRef.current === userId && retryCount === 0) return;
     loadingProfileRef.current = userId;
@@ -57,9 +58,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', userId)
         .maybeSingle();
 
-      // Increased timeout to 25s for better reliability on slower networks
+      // Reduced timeout to 5s to avoid long hangs, relying on fallback
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 25000)
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
       );
 
       const { data, error } = await Promise.race([profilePromise, timeoutPromise]) as any;
@@ -81,8 +82,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // If no profile found, we might want to wait a bit and retry (sometimes auth hook fires before profile trigger)
         if (retryCount < 2) {
           await new Promise(resolve => setTimeout(resolve, 1000));
-          return loadProfile(userId, retryCount + 1);
+          return loadProfile(userObj, retryCount + 1);
         }
+        throw new Error('Profile not found');
       }
       
       void scheduleMatchReminders(userId);
@@ -99,7 +101,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (retryCount < 2 && isRetryable) {
         const delay = (retryCount + 1) * 2000; // Exponential-ish backoff
         await new Promise(resolve => setTimeout(resolve, delay));
-        return loadProfile(userId, retryCount + 1);
+        return loadProfile(userObj, retryCount + 1);
+      } else {
+        // Fallback profile if all retries failed or not retryable
+        console.warn('AuthContext: Using fallback profile from metadata due to error:', errorMsg);
+        setProfile({
+          id: userId,
+          role: (userObj.user_metadata?.role as UserRole) || 'user',
+          full_name: userObj.user_metadata?.full_name || 'User',
+          phone: userObj.user_metadata?.phone || null,
+          phone_verified: false,
+          avatar_url: userObj.user_metadata?.avatar_url || null,
+          business_name: userObj.user_metadata?.business_name || null,
+          business_verified: false,
+          address: userObj.user_metadata?.address || null,
+          state: userObj.user_metadata?.state || null,
+          team_name: userObj.user_metadata?.team_name || null,
+          player_type: userObj.user_metadata?.player_type || null,
+          dob: userObj.user_metadata?.dob || null,
+        });
       }
     } finally {
       if (loadingProfileRef.current === userId) {
@@ -136,7 +156,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Load profile if we don't have it or if it's a new user
         // We always try to refresh it on SIGNED_IN or INITIAL_SESSION
         if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || !profile) {
-          await loadProfile(newUser.id);
+          await loadProfile(newUser);
         } else {
           // On other events like TOKEN_REFRESHED, we just make sure loading is false
           setLoading(false);

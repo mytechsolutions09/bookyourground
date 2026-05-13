@@ -13,6 +13,7 @@ import {
   useWindowDimensions,
   ActivityIndicator,
   Image,
+  DeviceEventEmitter,
 } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { router } from 'expo-router';
@@ -273,6 +274,23 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
   const [searching, setSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [searchPage, setSearchPage] = useState(0);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    if (!isWeb || !separateSearchResults) return;
+    
+    const subscription = DeviceEventEmitter.addListener('mainScroll', (data: { y: number }) => {
+      if (data.y > 150) {
+        setIsScrolled(true);
+      } else if (data.y <= 5) {
+        setIsScrolled(false);
+      }
+    });
+    
+    return () => {
+      subscription.remove();
+    };
+  }, [isWeb, separateSearchResults]);
   const [hasMore, setHasMore] = useState(true);
   // For landing search results: custom price for the chosen slot per ground (if any).
   const [searchSlotPriceByGroundId, setSearchSlotPriceByGroundId] = useState<
@@ -1834,7 +1852,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                   key={g.id}
                   style={[
                     styles.searchResultTile,
-                    isSearchTwoColumn && styles.searchResultTileWeb,
+                    isSearchTwoColumn && (separateSearchResults && !isScrolled ? styles.searchResultTileHalf : styles.searchResultTileWeb),
                   ]}
                 >
                    <GroundCard
@@ -2486,6 +2504,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
 
   const ContainerComponent: React.ComponentType<any> =
     noCard ? View : Card;
+  const ColumnComponent: React.ComponentType<any> = View;
   const mainCardStyle = [
     !noCard && styles.card,
     !noCard && isWeb && styles.cardWeb,
@@ -2516,7 +2535,33 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
         isWeb && windowWidth < 640 && styles.wrapperMobileTight,
       ]}
     >
-      <ContainerComponent style={mainCardStyle}>
+      <View style={[
+        isWeb && windowWidth >= 900 && separateSearchResults && !isScrolled && { flexDirection: 'row', gap: 24 }
+      ]}>
+        <ColumnComponent
+          style={[
+            isWeb && windowWidth >= 900 && separateSearchResults && !isScrolled && { flex: 1 },
+            isWeb && windowWidth >= 900 && separateSearchResults && isScrolled && { position: 'sticky', top: 0, zIndex: 10, backgroundColor: '#FFFFFF', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
+          {isScrolled ? (
+            <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', paddingHorizontal: 16 }}>
+              <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                <Text style={{ fontSize: 12, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>{locationOptions.find(o => o.key === locationKey)?.label || locationKey?.replace('__', ', ') || 'Location'}</Text>
+              </View>
+              <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                <Text style={{ fontSize: 12, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>{typeKey || 'Type'}</Text>
+              </View>
+              <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                <Text style={{ fontSize: 12, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>{bookingDate || 'Date'}</Text>
+              </View>
+              <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                <Text style={{ fontSize: 12, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>{startTime || 'Time'}</Text>
+              </View>
+            </View>
+          ) : (
+            <ContainerComponent style={mainCardStyle}>
 
 
         {isWeb && groundPageAccent && !isCompact ? (
@@ -2736,31 +2781,46 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
             </View>
           </>
         )}
-      </ContainerComponent>
+            </ContainerComponent>
+          )}
+        </ColumnComponent>
 
-      {separateSearchResults && searchResultsBody ? (
-        <ContainerComponent
-          style={[
-            styles.searchResultsCard,
-            isWeb && styles.cardWeb,
-            noCard && styles.cardPlain,
-            noCard && { marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F1F5F9' }
-          ]}
-        >
-          <View style={styles.searchResultsHeader}>
-            <View>
-
-              <Text style={styles.searchResultsSubtitle}>
-                Found {searchResults.length} results
-              </Text>
-            </View>
-            <View style={styles.resultsBadge}>
-              <Text style={styles.resultsBadgeText}>PREMIUM SELECTION</Text>
-            </View>
-          </View>
-          {searchResultsBody}
-        </ContainerComponent>
-      ) : null}
+        {separateSearchResults ? (
+          <ColumnComponent
+            style={[
+              isWeb && windowWidth >= 900 && separateSearchResults && !isScrolled && { flex: 1 },
+              isWeb && windowWidth >= 900 && separateSearchResults && isScrolled && { width: '100%', marginTop: 24 }
+            ]}
+            showsVerticalScrollIndicator={false}
+          >
+            <ContainerComponent
+              style={[
+                styles.searchResultsCard,
+                isWeb && windowWidth >= 900 && separateSearchResults && { marginTop: 0 },
+                isWeb && styles.cardWeb,
+                noCard && styles.cardPlain,
+                noCard && { marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F1F5F9' }
+              ]}
+            >
+              <View style={styles.searchResultsHeader}>
+                <View>
+                  <Text style={styles.searchResultsSubtitle}>
+                    Found {searchResults.length} results
+                  </Text>
+                </View>
+                <View style={styles.resultsBadge}>
+                  <Text style={styles.resultsBadgeText}>PREMIUM SELECTION</Text>
+                </View>
+              </View>
+              {searchResultsBody || (
+                <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 40 }}>
+                  <Text style={{ color: '#64748B', fontFamily: 'Inter' }}>Results will appear here</Text>
+                </View>
+              )}
+            </ContainerComponent>
+          </ColumnComponent>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -3331,7 +3391,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     width: (windowWidth >= 1200 ? '23.5%' : windowWidth >= 900 ? '31.5%' : '48.5%') as any,
   },
   searchResultTileHalf: {
-    width: '48.5%',
+    width: 'calc(50% - 10px)' as any,
   },
   smallMuted: {
     fontSize: 13,

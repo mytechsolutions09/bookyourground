@@ -230,7 +230,7 @@ export default function ProfileScreen({
       {/* 1. PROFILE CARD */}
       <View style={[
         styles.profileCardNew, 
-        (profile?.role === 'ground_owner' || isSuperAdmin) && styles.profileCardOwner,
+        (profile?.role === 'ground_owner' || isSuperAdmin) && !isCompact && styles.profileCardOwner,
         isModal && styles.noContainer, 
         isUltraNarrow && { padding: 16, marginBottom: 20 }
       ]}>
@@ -648,7 +648,7 @@ export default function ProfileScreen({
     <View style={styles.nativeScreen}>
       <MobileAppNavbar 
         title="PROFILE" 
-        titleColor="#0F172A"
+        titleColor="#01b854"
         smallerTitle
         rightAction={
           <TouchableOpacity onPress={() => router.push('/(tabs)/profile/notifications' as any)}>

@@ -90,7 +90,7 @@ export default function GroundDetailsPrettyUrlScreen() {
   const [favoriteLoading, setFavoriteLoading] = useState(false);
   const [reviewSortOrder, setReviewSortOrder] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>('newest');
   const [currentTotal, setCurrentTotal] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<'info' | 'amenities' | 'details' | 'book' | 'reviews'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'amenities' | 'details' | 'book' | 'reviews'>('book');
 
   const isCompact = useIsCompact();
   const isWeb = Platform.OS === 'web';
@@ -710,7 +710,7 @@ export default function GroundDetailsPrettyUrlScreen() {
             fontFamily: 'Inter', 
             fontSize: 16, 
             fontWeight: '700', 
-            color: '#111827',
+            color: '#01b854',
             letterSpacing: 1.2,
           },
           headerLeft: () => null,
@@ -1891,8 +1891,8 @@ const styles = StyleSheet.create({
     height: 250,
   },
   webImageCol: {
-    flex: 2.0, // Increased width
-    borderRadius: 24, // Restored rounded corners
+    flex: 2.0,
+    borderRadius: 24,
     overflow: 'hidden',
     backgroundColor: 'transparent',
   },
