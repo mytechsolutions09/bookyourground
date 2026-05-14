@@ -47,24 +47,28 @@ export default function WalletScreen() {
   const [isTypeFilterVisible, setIsTypeFilterVisible] = useState(false);
 
   const onScroll = (event: any) => {
-    if (Platform.OS === 'web') return;
-    const currentY = event.nativeEvent.contentOffset.y;
-    const diff = currentY - lastScrollY.current;
-
-    if (diff > 10 && currentY > 50) {
-      setTabBarVisible(false);
-    } else if (diff < -10) {
-      setTabBarVisible(true);
-    }
-    lastScrollY.current = currentY;
+    // Scroll behavior for tab bar visibility is now disabled on this page as we want it hidden
+    lastScrollY.current = event.nativeEvent.contentOffset.y;
   };
 
   const isOwner = profile?.role === 'ground_owner';
 
   useEffect(() => {
+    // Hide bottom tab bar on mobile when entering wallet
+    if (Platform.OS !== 'web') {
+      setTabBarVisible(false);
+    }
+    
     if (user) {
       loadWalletData();
     }
+
+    return () => {
+      // Restore bottom tab bar when leaving
+      if (Platform.OS !== 'web') {
+        setTabBarVisible(true);
+      }
+    };
   }, [user, profile?.role, fromDate, toDate]);
 
   const loadWalletData = async (newLimit = limit) => {
@@ -276,8 +280,9 @@ export default function WalletScreen() {
           .sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime());
 
         // Calculate wallet balance accordingly (sum of all displayed transactions)
+        // For regular users, use the actual wallet balance from DB to avoid truncation errors
         const calculatedBalance = combined.reduce((acc, tx) => acc + (tx.isPositive ? tx.amount : -tx.amount), 0);
-        setBalance(calculatedBalance);
+        setBalance(isOwner ? calculatedBalance : (walletData?.balance || 0));
 
         setHasMore(combined.length > newLimit);
         setTransactions(combined.slice(0, newLimit));
@@ -610,21 +615,21 @@ export default function WalletScreen() {
                 </View>
               ) : (
                 <View style={styles.transactionsList}>
-                  <View style={styles.listHeader}>
+                  <View style={[styles.listHeader, isCompact && { flexDirection: 'column', alignItems: 'flex-start', gap: 12 }]}>
                      <Text style={styles.sectionTitleInside}>Transaction History</Text>
-                     <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                     <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', width: isCompact ? '100%' : 'auto', flexWrap: 'wrap' }}>
                        {/* Type Filter Dropdown */}
                        <View style={{ position: 'relative', zIndex: 20 }}>
                          <TouchableOpacity 
-                           style={styles.exportBtn}
+                           style={[styles.exportBtn, isCompact && { paddingHorizontal: 8 }]}
                            onPress={() => setIsTypeFilterVisible(!isTypeFilterVisible)}
                          >
                            <Filter size={14} color="#64748B" />
                            <Text style={styles.exportBtnText}>
                              {filterType === 'all' ? 'All' : 
-                              filterType === 'booking_cash_fee' ? 'Cash Fees' :
-                              filterType === 'payout' ? 'Payouts' :
-                              filterType === 'refund' ? 'Refunds' : 'Referrals'}
+                               filterType === 'booking_cash_fee' ? 'Cash Fees' :
+                               filterType === 'payout' ? 'Payouts' :
+                               filterType === 'refund' ? 'Refunds' : 'Referrals'}
                            </Text>
                            <ChevronDown size={14} color="#64748B" />
                          </TouchableOpacity>
@@ -656,23 +661,23 @@ export default function WalletScreen() {
                        </View>
 
                        <TouchableOpacity 
-                         style={styles.exportBtn}
+                         style={[styles.exportBtn, isCompact && { paddingHorizontal: 8 }]}
                          onPress={handleExport}
                        >
-                         <Download size={18} color="#64748B" />
-                         <Text style={styles.exportBtnText}>Export</Text>
+                         <Download size={16} color="#64748B" />
+                         {!isCompact && <Text style={styles.exportBtnText}>Export</Text>}
                        </TouchableOpacity>
                        <TouchableOpacity 
-                         style={styles.filterByDateBtn}
+                         style={[styles.filterByDateBtn, isCompact && { paddingHorizontal: 8, flex: isCompact ? 1 : 0 }]}
                          onPress={() => {
                            setTempFromDate(fromDate);
                            setTempToDate(toDate);
                            setIsDatePickerVisible(true);
                          }}
                        >
-                         <Calendar size={18} color="#64748B" />
-                         <Text style={styles.filterByDateText}>Filter by Date</Text>
-                         <Filter size={14} color="#64748B" />
+                         <Calendar size={16} color="#64748B" />
+                         <Text style={styles.filterByDateText}>{isCompact ? 'Date' : 'Filter by Date'}</Text>
+                         <Filter size={12} color="#64748B" />
                        </TouchableOpacity>
                      </View>
                   </View>
@@ -682,7 +687,7 @@ export default function WalletScreen() {
                      const isLast = index === transactions.length - 1;
                      return (
                        <View key={tx.id} style={[styles.txCard, isLast && { borderBottomWidth: 0 }]}>
-                          <View style={{ width: 90, justifyContent: 'center' }}>
+                          <View style={{ width: isCompact ? 70 : 90, justifyContent: 'center' }}>
                              <Text style={styles.txDate}>{tx.date}</Text>
                           </View>
                           <View style={styles.txInfo}>
@@ -1366,7 +1371,7 @@ const styles = StyleSheet.create({
   },
   dpMain: {
     flexDirection: Platform.OS === 'web' ? 'row' : 'column',
-    minHeight: 400,
+    minHeight: Platform.OS === 'web' ? 400 : 500,
   },
   dpSidebar: {
     width: Platform.OS === 'web' ? 200 : '100%',
@@ -1410,8 +1415,9 @@ const styles = StyleSheet.create({
   dpInputsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
-    marginBottom: 24,
+    gap: 12,
+    marginBottom: 20,
+    flexWrap: 'wrap',
   },
   dpInputBox: {
     flex: 1,

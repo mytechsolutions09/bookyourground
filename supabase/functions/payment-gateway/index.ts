@@ -43,95 +43,92 @@ const calculateFinalAmounts = (details: any, groundType: string | null, settings
   const isCash = details.payment_method === 'cash' || details.paymentMethod === 'cash';
   const pitchType = String(groundType ?? '').toLowerCase();
   const isFullCricket = pitchType === 'cricket ground';
-  const isNet = pitchType.includes('net') || pitchType.includes('lane');
+  const groundName = String(details.ground_name ?? details.groundName ?? '').toLowerCase();
+  const isNet = pitchType.includes('net') || pitchType.includes('lane') || groundName.includes('net') || groundName.includes('lane');
 
-  console.log(`[Pricing] Input details: ${JSON.stringify(details)}, settings: ${JSON.stringify(settings)}, isCash: ${isCash}`);
-  
-  let discount = Number(details.discount_amount ?? details.discountAmount ?? 0);
-  const priceUnit = Number(details.price_per_hour ?? details.pricePerHour ?? 0);
-  
-  // CRITICAL: Prioritize client-provided total (check multiple possible keys)
-  const clientTotal = Number(details.total_amount ?? details.totalAmount ?? details.amount ?? 0);
 
-  let grossAmount = 0;
-  if (clientTotal > 0) {
-    console.log(`[Pricing] Using authoritative client-provided total: ${clientTotal}`);
-    grossAmount = clientTotal + discount;
-  } else {
-    console.log(`[Pricing] WARNING: Client total missing, falling back to calculation logic`);
+  
+  const groundPrice = Number(details.ground_price ?? details.groundPrice ?? 0);
+  const discountAmount = Number(details.discount_amount ?? details.discountAmount ?? 0);
+  let platformFeeUser = Number(details.platform_fee_user ?? details.platformFeeUser ?? 0);
+  let gstUser = Number(details.gst_user ?? details.gstUser ?? 0);
+
+  // Fallback to calculation ONLY if groundPrice is 0 AND no fees are provided (indicating a legacy or manual call)
+  let rawGroundPrice = groundPrice;
+  if (rawGroundPrice === 0 && platformFeeUser === 0) {
+    console.log(`[Pricing] WARNING: ground_price and fees missing, falling back to calculation logic`);
+    const priceUnit = Number(details.price_per_hour ?? details.pricePerHour ?? 0);
     const hours = Number(details.total_hours ?? details.totalHours ?? 1);
     const isBox = pitchType.includes('box');
+    
     if (isBox) {
-      grossAmount = priceUnit * hours;
+      rawGroundPrice = priceUnit * hours;
     } else {
-      grossAmount = (details.team_type === 'one' || details.teamType === 'one') ? (priceUnit / 2) : priceUnit;
+      rawGroundPrice = (details.team_type === 'one' || details.teamType === 'one') && !isNet ? (priceUnit / 2) : priceUnit;
+      // If multiple slots for Nets, we might need to multiply by slots count here if priceUnit is per slot
+      if (isNet && details.slots && Array.isArray(details.slots) && details.slots.length > 1 && rawGroundPrice === priceUnit) {
+         rawGroundPrice = priceUnit * details.slots.length;
+         console.log(`[Pricing] Net detected with multiple slots, multiplied rawGroundPrice: ${rawGroundPrice}`);
+      }
     }
+  } else if (rawGroundPrice === 0 && platformFeeUser > 0) {
+     // If fees are provided but ground_price is 0, something is wrong with the payload
+     // We should try to derive ground_price from total_amount if possible, but 
+     // for now, let's assume the client just forgot ground_price but total_amount is correct.
+     rawGroundPrice = Number(details.total_amount ?? 0) - platformFeeUser - gstUser;
+     console.log(`[Pricing] derived rawGroundPrice from total_amount: ${rawGroundPrice}`);
   }
-  
-  const net = Math.round((grossAmount - discount) * 100) / 100;
-  
-  // New breakdown logic
-  const groundPrice = net;
-  
-  let platformFeeUser = 0;
-  let gstUser = 0;
 
-  // If this is an owner booking (Cash or owner using wallet) or commission is off, skip user-side fees
-  if (isOwnerBooking || (isCash && skipOwnerFee)) {
-    platformFeeUser = 0;
-    gstUser = 0;
-    console.log(`[Pricing] User platform fee skipped (isOwnerBooking: ${isOwnerBooking} or Cash + charge_platform_fee: false)`);
-  } else {
-    platformFeeUser = Math.round(groundPrice * PLATFORM_FEE_RATE * 100) / 100;
+  const discountedGroundPrice = Math.round((rawGroundPrice - discountAmount) * 100) / 100;
+
+  // Authoritative Fee Calculation for User
+  const netsUserRate = Number(settings?.nets_user_fee_rate ?? 0.10);
+  const userRate = isNet ? netsUserRate : PLATFORM_FEE_RATE;
+
+  // Fallback to calculation for fees if they are zero and it's not an owner booking
+  if (platformFeeUser === 0 && !isOwnerBooking && !(isCash && skipOwnerFee)) {
+    platformFeeUser = Math.round(discountedGroundPrice * userRate * 100) / 100;
     gstUser = Math.round(platformFeeUser * GST_RATE * 100) / 100;
+    console.log(`[Pricing] Fees missing, calculated at rate ${userRate} -> platformFeeUser: ${platformFeeUser}, gstUser: ${gstUser}`);
   }
-  
-  const totalCharged = Math.round(groundPrice + platformFeeUser + gstUser); // Round to nearest zero decimals
-  
-  // Fee Logic:
-  // - "Cricket Ground" (Full Ground) OR Cash Payment = Fixed Fee (CRICKET_FIXED_FEE per team)
-  // - "Box Cricket" & Others = Percentage Fee (PLATFORM_FEE_RATE)
 
+  const totalAmount = Math.round((discountedGroundPrice + platformFeeUser + gstUser) * 100) / 100;
+
+  // Fee Logic for Owner
   let platformFeeOwner = 0;
   
   if (skipOwnerFee) {
     platformFeeOwner = 0;
-    console.log(`[Pricing] Owner platform fee skipped (charge_platform_fee: false)`);
   } else if (isCash || isFullCricket) {
     if (isNet) {
-      platformFeeOwner = NETS_FIXED_FEE;
-      console.log(`[Pricing] ${isCash ? 'Cash Payment' : ''} Net detected, using fixed owner fee: ${platformFeeOwner}`);
+      platformFeeOwner = NETS_FIXED_FEE * (details.slots?.length || 1);
     } else if (isFullCricket) {
       const teamType = details.team_type ?? details.teamType ?? 'both';
       const teamCount = teamType === 'one' ? 1 : 2;
       platformFeeOwner = CRICKET_FIXED_FEE * teamCount;
-      console.log(`[Pricing] ${isCash ? 'Cash Payment' : ''} Full Cricket detected, using fixed owner fee: ${platformFeeOwner} (${teamCount} teams)`);
     } else {
-      // Cash payment for non-cricket/non-net (e.g. Box Cricket)
-      platformFeeOwner = Math.round(groundPrice * PLATFORM_FEE_RATE * 100) / 100;
-      console.log(`[Pricing] Cash Payment for ${groundType || 'Standard'} ground detected, using percentage fee: ${platformFeeOwner}`);
+      platformFeeOwner = Math.round(discountedGroundPrice * PLATFORM_FEE_RATE * 100) / 100;
     }
   } else {
-    platformFeeOwner = Math.round(groundPrice * PLATFORM_FEE_RATE * 100) / 100;
-    console.log(`[Pricing] ${groundType || 'Standard'} ground detected, using percentage fee: ${platformFeeOwner}`);
+    // Regular user booking - owner commission
+    platformFeeOwner = isNet ? (discountedGroundPrice * netsUserRate) : (discountedGroundPrice * PLATFORM_FEE_RATE);
   }
 
   const gstOwner = Math.round(platformFeeOwner * GST_RATE * 100) / 100;
-  const ownerSettlement = Math.round((groundPrice - platformFeeOwner - gstOwner) * 100) / 100;
-  
+  const ownerSettlement = Math.round((discountedGroundPrice - platformFeeOwner - gstOwner) * 100) / 100;
   const bygNetRevenue = Math.round((platformFeeUser + platformFeeOwner) * 100) / 100;
 
-  console.log(`[Pricing] Result -> Unit: ${priceUnit}, Gross: ${grossAmount}, Net: ${net}, TotalCharged: ${totalCharged}, OwnerSettlement: ${ownerSettlement}`);
+  console.log(`[Pricing] Result -> Raw: ${rawGroundPrice}, Net: ${discountedGroundPrice}, TotalCharged: ${totalAmount}, OwnerSettlement: ${ownerSettlement}`);
   
   return {
-    pricePerHour: priceUnit,
-    totalAmount: grossAmount,
-    discountAmount: discount,
-    netAmount: net,
-    groundPrice,
+    pricePerHour: Number(details.price_per_hour ?? 0),
+    totalAmount: rawGroundPrice,
+    discountAmount: discountAmount,
+    netAmount: discountedGroundPrice,
+    groundPrice: discountedGroundPrice,
     platformFeeUser,
     gstUser,
-    totalCharged,
+    totalCharged: totalAmount,
     platformFeeOwner,
     gstOwner,
     ownerSettlement,
@@ -1284,12 +1281,19 @@ serve(async (req) => {
       const { bookingId, bookingDetails } = body;
       const finalBookingId = bookingId === 'pending' ? null : bookingId;
 
-      // 1. Fetch details for atomic creation if needed
+      // 1. Fetch details and ground info
       const details = bookingDetails || {};
       const ground_id = details.ground_id;
-      const amountToDeduct = Number(details.total_amount ?? 0);
+      
+      const { data: ground } = await supabaseClient.from('grounds').select('pitch_type, owner_id, owner:profiles!owner_id(charge_platform_fee)').eq('id', ground_id).single();
+      const isOwnerBooking = ground?.owner_id === user.id;
+      
+      const breakdown = calculateFinalAmounts(details, ground?.pitch_type, settings, ground?.owner?.charge_platform_fee === false, isOwnerBooking);
+      
+      // If owner booking his own ground, only deduct platform fee + gst from wallet
+      const amountToDeduct = isOwnerBooking ? (breakdown.platformFeeOwner + breakdown.gstOwner) : Number(details.total_amount ?? 0);
 
-      if (amountToDeduct <= 0) throw new Error('Invalid payment amount.');
+      if (amountToDeduct < 0) throw new Error('Invalid payment amount.');
 
       // 2. Availability Check before deducting wallet (if atomic creation)
       if (!finalBookingId && details) {
@@ -1331,7 +1335,7 @@ serve(async (req) => {
         p_user_id: user.id,
         p_amount: -amountToDeduct, // negative for 'used'
         p_type: 'used',
-        p_description: `Payment for booking at ground ID: ${ground_id}`,
+        p_description: isOwnerBooking ? `Platform fee for self-booking at ${ground?.name || 'ground'}` : `Payment for booking at ground ID: ${ground_id}`,
         p_booking_id: finalBookingId
       });
 
@@ -1339,13 +1343,16 @@ serve(async (req) => {
         throw new Error(walletRes?.error || walletErr?.message || 'Wallet deduction failed.');
       }
 
+
       let actualBookingId = finalBookingId;
 
       // 3. Create/Update Booking
       if (!actualBookingId) {
         const { data: ground } = await supabaseClient.from('grounds').select('pitch_type, owner_id, owner:profiles!owner_id(charge_platform_fee)').eq('id', ground_id).single();
+        const isNet = (ground?.pitch_type ?? '').toLowerCase().includes('net') || (ground?.pitch_type ?? '').toLowerCase().includes('lane');
         
         const breakdown = calculateFinalAmounts(details, ground?.pitch_type, settings, ground?.owner?.charge_platform_fee === false, ground?.owner_id === user.id);
+
 
         const slots = details.slots;
 
@@ -1367,7 +1374,15 @@ serve(async (req) => {
 
             const currentSlotPrice = (details.slotPrices && typeof details.slotPrices[idx] !== 'undefined') ? Number(details.slotPrices[idx]) : (breakdown.netAmount / slots.length);
             const totalSlotPrices = (details.slotPrices && details.slotPrices.length > 0) ? details.slotPrices.reduce((a: number, b: number) => a + Number(b), 0) : breakdown.netAmount;
-            const weight = totalSlotPrices > 0 ? (currentSlotPrice / totalSlotPrices) : (1 / slots.length);
+            
+            // Normalize weights based on slotPrices sent by client.
+            // If the client sent prices that include fees, weight will still be correct (ratio-wise).
+            let weight = 1 / slots.length;
+            if (totalSlotPrices > 0) {
+              weight = currentSlotPrice / totalSlotPrices;
+            }
+            
+            console.log(`[SlotDebug] Slot ${idx} ID: ${finalBookingId}, currentSlotPrice: ${currentSlotPrice}, totalSlotPrices: ${totalSlotPrices}, weight: ${weight}`);
 
             return {
               user_id: user.id,
@@ -1391,7 +1406,7 @@ serve(async (req) => {
               status: 'confirmed',
               payment_method: 'wallet',
               payment_received: true,
-              notes: (slotTeamType === 'one' ? 'Teams: 1 Team' : 'Teams: Both Teams') + ` (Slots: ${slotTimesOnly.join(', ')}) (Paid via Wallet)`,
+              notes: (isNet ? '' : (slotTeamType === 'one' ? 'Teams: 1 Team ' : 'Teams: Both Teams ')) + `(Slots: ${slotTimesOnly.join(', ')}) (Paid via Wallet)`,
             };
           });
 

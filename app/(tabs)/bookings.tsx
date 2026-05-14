@@ -311,6 +311,13 @@ export default function BookingsScreen() {
     const bDay = new Date(bDate.getFullYear(), bDate.getMonth(), bDate.getDate());
     const diffDays = Math.ceil((bDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
+    console.log('[CancelDebug] handleCancelBooking called');
+    console.log('[CancelDebug] Booking ID:', booking.id);
+    console.log('[CancelDebug] Booking Date:', booking.booking_date);
+    console.log('[CancelDebug] Today:', today.toISOString());
+    console.log('[CancelDebug] Diff Days:', diffDays);
+    console.log('[CancelDebug] Cancellation Days Limit:', cancellationDays);
+
     if (diffDays < cancellationDays) {
       const msg = `Bookings can only be cancelled at least ${cancellationDays} days before the slot time. For urgent queries, please contact support.`;
       if (Platform.OS === 'web') alert(msg);
@@ -329,6 +336,10 @@ export default function BookingsScreen() {
     try {
       setCancelling(true);
       
+      console.log('[CancelDebug] confirmCancel called');
+      console.log('[CancelDebug] Booking to cancel:', bookingToCancel.id);
+      console.log('[CancelDebug] Invoking payment-gateway...');
+
       // Invoke the refund-to-wallet edge function
       const { data, error } = await supabase.functions.invoke('payment-gateway', {
         body: {
@@ -338,8 +349,13 @@ export default function BookingsScreen() {
         }
       });
 
+      console.log('[CancelDebug] Response data:', data);
+      console.log('[CancelDebug] Response error:', error);
+
       if (error) throw error;
       if (data && data.success) {
+        // Wallet transaction record is handled by the database trigger 'on_booking_cancelled' via 'process_wallet_transaction' RPC.
+
         setBookings(prev => prev.map(b => 
           b.id === bookingToCancel.id ? { ...b, status: 'cancelled' as any } : b
         ));

@@ -58,9 +58,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', userId)
         .maybeSingle();
 
-      // Reduced timeout to 5s to avoid long hangs, relying on fallback
+      // Reduced timeout to 3s to avoid long hangs, relying on fallback
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Profile fetch timeout')), 5000)
+        setTimeout(() => reject(new Error('Profile fetch timeout')), 3000)
       );
 
       const { data, error } = await Promise.race([profilePromise, timeoutPromise]) as any;
@@ -80,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       } else {
         // If no profile found, we might want to wait a bit and retry (sometimes auth hook fires before profile trigger)
-        if (retryCount < 2) {
+        if (retryCount < 1) {
           await new Promise(resolve => setTimeout(resolve, 1000));
           return loadProfile(userObj, retryCount + 1);
         }
@@ -97,29 +97,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                           errorMsg.toLowerCase().includes('network') ||
                           errorMsg.toLowerCase().includes('aborted');
 
-      // Retry on timeout or common network errors
-      if (retryCount < 2 && isRetryable) {
+      // Retry on timeout or common network errors (reduced to 1 retry)
+      // Retry on timeout or common network errors (reduced to 1 retry)
+      if (retryCount < 1 && isRetryable) {
         const delay = (retryCount + 1) * 2000; // Exponential-ish backoff
         await new Promise(resolve => setTimeout(resolve, delay));
         return loadProfile(userObj, retryCount + 1);
       } else {
-        // Fallback profile if all retries failed or not retryable
-        console.warn('AuthContext: Using fallback profile from metadata due to error:', errorMsg);
-        setProfile({
-          id: userId,
-          role: (userObj.user_metadata?.role as UserRole) || 'user',
-          full_name: userObj.user_metadata?.full_name || 'User',
-          phone: userObj.user_metadata?.phone || null,
-          phone_verified: false,
-          avatar_url: userObj.user_metadata?.avatar_url || null,
-          business_name: userObj.user_metadata?.business_name || null,
-          business_verified: false,
-          address: userObj.user_metadata?.address || null,
-          state: userObj.user_metadata?.state || null,
-          team_name: userObj.user_metadata?.team_name || null,
-          player_type: userObj.user_metadata?.player_type || null,
-          dob: userObj.user_metadata?.dob || null,
-        });
+        console.warn('AuthContext: Profile fetch failed after all attempts. Profile will remain null.');
       }
     } finally {
       if (loadingProfileRef.current === userId) {
@@ -133,41 +118,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let profileTimeout: NodeJS.Timeout;
     let isMounted = true;
 
+    // Check for stale session on mount
+    const checkInitialSession = async () => {
+      try {
+        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.warn('AuthContext: Initial session check error:', error.message);
+          // If the refresh token is invalid/not found, force a sign out to clear storage
+          if (error.message.includes('Refresh Token Not Found') || error.message.includes('invalid_grant')) {
+            await supabase.auth.signOut();
+          }
+        }
+        if (isMounted && initialSession?.user) {
+          setUser(initialSession.user);
+          setSession(initialSession);
+          await loadProfile(initialSession.user);
+        } else if (isMounted) {
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('AuthContext: Error in checkInitialSession:', err);
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    checkInitialSession();
+
     // Use onAuthStateChange for all auth state management
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!isMounted) return;
 
-      // console.log('Auth event:', event, !!session);
+      // Handle session errors that might come through the event stream
+      if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
+          setProfile(null);
+          setUser(null);
+          setSession(null);
+          setLoading(false);
+          return;
+      }
       
       const newUser = session?.user ?? null;
       
-      // Only update states if they actually changed to avoid re-render loops
       setSession(prev => prev?.access_token === session?.access_token ? prev : session);
       setUser(prev => prev?.id === newUser?.id ? prev : newUser);
 
       if (newUser) {
         if (profileTimeout) clearTimeout(profileTimeout);
 
-        // Safety timeout to ensure loading always finishes (extended to match profile timeout)
         profileTimeout = setTimeout(() => {
           if (isMounted) setLoading(false);
         }, 30000);
 
-        // Load profile if we don't have it or if it's a new user
-        // We always try to refresh it on SIGNED_IN or INITIAL_SESSION
         if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || !profile) {
           await loadProfile(newUser);
         } else {
-          // On other events like TOKEN_REFRESHED, we just make sure loading is false
           setLoading(false);
         }
         
         void scheduleMatchReminders(newUser.id);
       } else {
-        // Only wipe profile if the user is truly signed out
-        if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
-          setProfile(null);
-        }
         setLoading(false);
       }
     });
@@ -178,6 +187,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (profileTimeout) clearTimeout(profileTimeout);
     };
   }, [loadProfile]);
+
 
   const signUp = useCallback(async (email: string, password: string, fullName: string, phone: string, role: UserRole = 'user', businessName?: string, address?: string, state?: string, teamName?: string, playerType?: string, captchaToken?: string) => {
     try {

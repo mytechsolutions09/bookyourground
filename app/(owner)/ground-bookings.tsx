@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, Platform, TouchableOpacity, ScrollView, TextInput, useWindowDimensions, Image, ActivityIndicator, Modal } from 'react-native';
-import { Calendar, Filter, X, Save, CheckCircle2, Circle, User, Clock, Users, Banknote } from 'lucide-react-native';
+import { Calendar, Filter, X, Save, CheckCircle2, Circle, User, Clock, Users, Banknote, LandPlot } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { BookingWithDetails } from '@/types';
@@ -1253,9 +1253,9 @@ export default function OwnerBookingsScreen() {
                   ]}>
                     <Text style={[
                       styles.paymentBadgeText,
-                      item.payment_method === 'cash' ? styles.paymentCash : styles.paymentOnline
+                      item.payment_method === 'cash' ? styles.paymentCash : (item.payment_method === 'wallet' ? styles.paymentWallet : styles.paymentOnline)
                     ]}>
-                      {item.payment_method === 'cash' ? 'CASH' : (item.payment_method === 'razorpay' ? 'RAZORPAY' : 'ONLINE')}
+                      {item.payment_method === 'cash' ? 'CASH' : (item.payment_method === 'wallet' ? 'WALLET' : (item.payment_method === 'razorpay' ? 'RAZORPAY' : 'ONLINE'))}
                     </Text>
                   </View>
                 </View>
@@ -1308,7 +1308,13 @@ export default function OwnerBookingsScreen() {
                   <Text style={[styles.compactGroundName, !isLight && styles.compactGroundNameNative]} numberOfLines={1}>
                     {item.ground.name}
                   </Text>
-                  <View style={styles.compactSlotRow}>
+                  <TouchableOpacity 
+                    style={styles.compactSlotRow}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      openSlotModal(item);
+                    }}
+                  >
                     <Text style={[styles.dateText, { color: '#01b854', textDecorationLine: 'underline' }]}>
                       {(item as any).displayDate || formatDateDDMMYY(item.booking_date)}
                     </Text>
@@ -1327,22 +1333,10 @@ export default function OwnerBookingsScreen() {
                         </Text>
                       );
                     })()}
-                  </View>
-                  <Text style={styles.compactDateTextSub}>
-                    {formatDateDDMMYY(item.booking_date)}
-                  </Text>
+                  </TouchableOpacity>
                 </View>
 
                 <View style={styles.compactStatusInfoAx}>
-                  <View style={{ width: 100 }}>
-                    {isOwnGround ? (
-                      <AmountInputCell booking={item} onSave={saveBookingAmount} />
-                    ) : (
-                      <Text style={[styles.compactAmount, !isLight && styles.compactAmountNative]}>
-                        {formatCurrency(item.total_amount)}
-                      </Text>
-                    )}
-                  </View>
                   <TouchableOpacity
                     onPress={(e) => {
                       e.stopPropagation();
@@ -1374,44 +1368,18 @@ export default function OwnerBookingsScreen() {
 
               <View style={styles.compactBottomRow}>
                 <View style={styles.compactBottomLeft}>
-                  <NameInputCell booking={item} onSave={saveBookingName} />
-
-                  {(() => {
-                    const normStart = normalizeDbTimeToHHMM(item.start_time);
-                    const currentSlotKey = `${item.ground_id}_${item.booking_date}_${normStart}`;
-                    const slotOccupancy = bookings.filter(b =>
-                      (b.status === 'confirmed' || b.status === 'active' || b.status === 'completed') &&
-                      `${b.ground_id}_${b.booking_date}_${normalizeDbTimeToHHMM(b.start_time)}` === currentSlotKey
-                    ).reduce((sum, b) => {
-                      if (b.team_type === 'one') return sum + 1;
-                      if (b.team_type === 'both') return sum + 2;
-
-                      const label = cricketTeamsLabelFromBooking(b.ground.pitch_type, b.notes);
-                      if (label === '1 team') return sum + 1;
-                      if (label === 'Both teams') return sum + 2;
-
-                      return sum + 2;
-                    }, 0);
-
-                    const isTrulyFull = slotOccupancy >= 2;
-
-                    return isOwnGround && (
-                      <TouchableOpacity
-                        onPress={(e) => {
-                          e.stopPropagation();
-                          if (!isTrulyFull) {
-                            router.push(`/grounds/${item.ground.id}?date=${item.booking_date}&time=${normalizeDbTimeToHHMM(item.start_time)}&teams=one`);
-                          }
-                        }}
-                        disabled={isTrulyFull}
-                        style={isTrulyFull ? styles.fullMatchBadge : styles.partialBadge}
-                      >
-                        <Text style={isTrulyFull ? styles.fullMatchBadgeText : styles.partialBadgeText}>
-                          {isTrulyFull ? 'FULL' : 'PARTIAL'}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })()}
+                  <View style={{ width: 120 }}>
+                    <NameInputCell booking={item} onSave={saveBookingName} />
+                  </View>
+                  <View style={{ width: 120, marginTop: 6 }}>
+                    {isOwnGround ? (
+                      <AmountInputCell booking={item} onSave={saveBookingAmount} />
+                    ) : (
+                      <Text style={[styles.compactAmount, !isLight && styles.compactAmountNative]}>
+                        {formatCurrency(item.total_amount)}
+                      </Text>
+                    )}
+                  </View>
                 </View>
 
                 <View style={styles.compactBottomRight}>
@@ -1423,13 +1391,23 @@ export default function OwnerBookingsScreen() {
                     style={styles.compactPaymentToggle}
                   >
                     <View style={{ alignItems: 'flex-end', marginRight: 8 }}>
-                      <Text style={[styles.paymentLabel, { color: isLight ? '#64748B' : '#dcc093' }]}>PAID</Text>
-                      {(item.payment_received || (item.payment_method !== 'cash' && item.status === 'confirmed')) && (
-                        <Text style={styles.receivedAmountTextCompact}>{formatCurrency(item.total_amount - ((item as any).calculated_total_fee || 0))}</Text>
+                      <Text style={[
+                        styles.paymentLabel, 
+                        { color: (item.status === 'cancelled' && item.payment_method !== 'cash') ? '#EF4444' : (isLight ? '#64748B' : '#dcc093') }
+                      ]}>
+                        {(item.status === 'cancelled' && item.payment_method !== 'cash') ? 'REFUNDED' : 'PAID'}
+                      </Text>
+                      {((item.payment_received || (item.payment_method !== 'cash' && item.status === 'confirmed')) || (item.status === 'cancelled' && item.payment_method !== 'cash')) && (
+                        <Text style={[
+                          styles.receivedAmountTextCompact,
+                          (item.status === 'cancelled' && item.payment_method !== 'cash') && { color: '#EF4444' }
+                        ]}>
+                          {formatCurrency(item.total_amount - (item.status === 'cancelled' ? 0 : ((item as any).calculated_total_fee || 0)))}
+                        </Text>
                       )}
                     </View>
-                    {(item.payment_received || (item.payment_method !== 'cash' && item.status === 'confirmed')) ? (
-                      <CheckCircle2 size={24} color="#00ea6b" />
+                    {(item.payment_received || (item.payment_method !== 'cash' && (item.status === 'confirmed' || item.status === 'cancelled'))) ? (
+                      <CheckCircle2 size={24} color={(item.status === 'cancelled' && item.payment_method !== 'cash') ? '#EF4444' : "#00ea6b"} />
                     ) : (
                       <Circle size={24} color="#9CA3AF" />
                     )}
@@ -1468,59 +1446,103 @@ export default function OwnerBookingsScreen() {
           <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setIsSlotModalVisible(false)} />
           <View style={styles.slotModalContent}>
             <View style={styles.slotModalHeader}>
-              <Text style={styles.slotModalTitle}>Bookings for this Slot</Text>
+              <View>
+                <Text style={styles.slotModalTitle}>Bookings for this Slot</Text>
+              </View>
               <TouchableOpacity onPress={() => setIsSlotModalVisible(false)}>
                 <X size={20} color="#64748B" />
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={{ maxHeight: 500 }}>
-              {selectedSlotBookings.sort((a, b) => `${a.booking_date}${a.start_time}` > `${b.booking_date}${b.start_time}` ? 1 : -1).map((b) => (
-                <View key={b.id} style={styles.slotBookingItem}>
-                  <View style={{ flex: 1 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
-                      <View>
-                        <Text style={styles.slotBookingName}>{(b.user?.full_name || b.booked_for_name || 'Customer').toUpperCase()}</Text>
-                        <Text style={styles.slotBookingId}>ID: {b.id.substring(0, 8).toUpperCase()}</Text>
-                      </View>
-                    </View>
+            <ScrollView style={{ maxHeight: 600 }}>
+              {(() => {
+                const totalOccupancy = selectedSlotBookings.reduce((sum, b) => {
+                  if (b.status === 'cancelled' || b.status === 'rejected') return sum;
+                  const label = (cricketTeamsLabelFromBooking(b.ground?.pitch_type, b.notes) || '').toLowerCase();
+                  return sum + (label === '1 team' ? 1 : 2);
+                }, 0);
+                const isSlotFull = totalOccupancy >= 2;
 
-                    <View style={styles.slotDetailsGrid}>
-                      <View style={styles.slotDetailRow}>
-                        <Calendar size={14} color="#64748B" />
-                        <Text style={styles.slotBookingDetail}>{formatDateDDMMYY(b.booking_date)}</Text>
+                return selectedSlotBookings.sort((a, b) => `${a.booking_date}${a.start_time}` > `${b.booking_date}${b.start_time}` ? 1 : -1).map((b) => {
+                  const pitchType = (b.ground?.pitch_type || '').toLowerCase();
+                  const isNet = pitchType.includes('net') || pitchType.includes('lane');
+                  const isCricket = pitchType === 'cricket ground';
+
+                  return (
+                    <View key={b.id} style={styles.slotBookingItem}>
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                           <View style={[styles.typeBadge, { backgroundColor: isNet ? '#FEF3C7' : '#DCFCE7' }]}>
+                              <Text style={[styles.typeBadgeText, { color: isNet ? '#92400E' : '#166534' }]}>
+                                {isNet ? 'NET BOOKING' : 'GROUND BOOKING'}
+                              </Text>
+                           </View>
+                           <Text style={styles.slotBookingId}>#{(b.id || '').toString().substring(0, 8).toUpperCase()}</Text>
+                        </View>
+
+                        <Text style={styles.slotBookingName}>{(b.booked_for_name || b.user?.full_name || 'Customer').toUpperCase()}</Text>
+                        <Text style={styles.slotCustomerPhone}>{b.user?.phone || 'No phone provided'}</Text>
+
+                        <View style={styles.slotDetailsGrid}>
+                          <View style={styles.slotDetailRow}>
+                            <Calendar size={14} color="#64748B" />
+                            <Text style={styles.slotBookingDetail}>{formatDateDDMMYY(b.booking_date)}</Text>
+                          </View>
+                          <View style={styles.slotDetailRow}>
+                            <Clock size={14} color="#64748B" />
+                            <Text style={styles.slotBookingDetail}>
+                              {`${formatTime12h(normalizeDbTimeToHHMM(b.start_time) || '')} – ${formatTime12h(normalizeDbTimeToHHMM(b.end_time) || '')}`}
+                            </Text>
+                          </View>
+                          {isCricket && (
+                            <View style={styles.slotDetailRow}>
+                              <Users size={14} color="#64748B" />
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                <Text style={styles.slotBookingDetail}>
+                                  {(cricketTeamsLabelFromBooking(b.ground.pitch_type, b.notes) || '1 Team').toUpperCase()}
+                                </Text>
+                                <View style={[styles.typeBadge, { backgroundColor: isSlotFull ? '#DCFCE7' : '#FEF3C7', paddingVertical: 2, paddingHorizontal: 6, marginRight: 0 }]}>
+                                  <Text style={[styles.typeBadgeText, { color: isSlotFull ? '#166534' : '#92400E', fontSize: 8 }]}>
+                                    {isSlotFull ? 'FULL' : 'PARTIAL'}
+                                  </Text>
+                                </View>
+                              </View>
+                            </View>
+                          )}
+                          {isNet && (
+                            <View style={styles.slotDetailRow}>
+                              <LandPlot size={14} color="#64748B" />
+                              <Text style={styles.slotBookingDetail}>
+                                {b.ground.name.toUpperCase()}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
                       </View>
-                      <View style={styles.slotDetailRow}>
-                        <Clock size={14} color="#64748B" />
-                        <Text style={styles.slotBookingDetail}>
-                          {`${formatTime12h(normalizeDbTimeToHHMM(b.start_time) || '')} – ${formatTime12h(normalizeDbTimeToHHMM(b.end_time) || '')}`}
-                        </Text>
-                      </View>
-                      <View style={styles.slotDetailRow}>
-                        <Users size={14} color="#64748B" />
-                        <Text style={styles.slotBookingDetail}>
-                          {(cricketTeamsLabelFromBooking(b.ground.pitch_type, b.notes) || '1 Team').toUpperCase()}
-                        </Text>
+                      <View style={{ alignItems: 'flex-end', gap: 8, justifyContent: 'space-between' }}>
+                        <View style={[styles.statusBadge, { backgroundColor: b.status === 'confirmed' ? '#DCFCE7' : '#F1F5F9', height: 24, paddingHorizontal: 8, borderRadius: 6 }]}>
+                          <Text style={[styles.statusText, { color: getStatusColor(b.status), fontSize: 10, fontWeight: '800' }]}>
+                            {b.status.toUpperCase()}
+                          </Text>
+                        </View>
+                        
+                        <View style={{ alignItems: 'flex-end' }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            <Banknote size={16} color="#059669" />
+                            <Text style={{ color: '#059669', fontWeight: '800', fontSize: 18 }}>
+                              ₹{(b.total_amount - calculateBRowFee(b)).toLocaleString()}
+                            </Text>
+                          </View>
+                        </View>
                       </View>
                     </View>
-                  </View>
-                  <View style={{ alignItems: 'flex-end', gap: 8 }}>
-                    <View style={[styles.statusBadge, { backgroundColor: 'transparent', height: 24, paddingHorizontal: 0 }]}>
-                      <Text style={[styles.statusText, { color: getStatusColor(b.status), fontSize: 10, fontWeight: '800' }]}>
-                        {b.status.toUpperCase()}
-                      </Text>
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                      <Banknote size={14} color="#059669" />
-                      <Text style={{ color: '#059669', fontWeight: '700', fontSize: 14 }}>
-                        ₹{b.total_amount - calculateBRowFee(b)}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              ))}
+                  );
+                });
+              })()}
               {selectedSlotBookings.length === 0 && (
-                <Text style={{ color: '#64748B', textAlign: 'center', paddingVertical: 20 }}>No active bookings for this slot.</Text>
+                <View style={{ padding: 40, alignItems: 'center' }}>
+                  <Text style={{ color: '#64748B', fontWeight: '500' }}>No active bookings for this slot.</Text>
+                </View>
               )}
             </ScrollView>
           </View>
@@ -1857,6 +1879,9 @@ const styles = StyleSheet.create({
   paymentOnline: {
     color: '#1E40AF',
   },
+  paymentWallet: {
+    color: '#7E22CE',
+  },
   statusBadgeText: {
     fontSize: 10,
     fontWeight: '800',
@@ -2043,10 +2068,10 @@ const styles = StyleSheet.create({
     color: '#0F172A',
   },
   compactSlotRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 2,
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 2,
+    marginTop: 4,
   },
   compactSlotTime: {
     fontFamily: 'Inter',
@@ -2255,23 +2280,24 @@ const styles = StyleSheet.create({
   slotBookingItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
+    alignItems: 'flex-start',
+    paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
   slotBookingName: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 15,
+    fontWeight: '700',
     color: '#0F172A',
     fontFamily: 'Inter',
-    marginBottom: 2,
+    marginBottom: 4,
+    letterSpacing: -0.3,
   },
   slotBookingId: {
     fontSize: 11,
     color: '#94A3B8',
     fontFamily: 'Inter',
-    marginBottom: 8,
+    fontWeight: '600',
   },
   whoAvatar: {
     width: 32,
@@ -2302,5 +2328,30 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#64748B',
     fontFamily: 'Inter',
+  },
+  typeBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginRight: 8,
+  },
+  typeBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  slotCustomerPhone: {
+    fontSize: 12,
+    color: '#475569',
+    fontFamily: 'Inter',
+    marginBottom: 10,
+    fontWeight: '500',
+  },
+  feeLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#94A3B8',
+    letterSpacing: 1,
+    marginBottom: 2,
   },
 });

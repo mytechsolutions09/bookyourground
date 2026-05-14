@@ -113,6 +113,8 @@ export default function OwnerInventoryScreen() {
   useFocusEffect(
     useCallback(() => {
       if (user) loadData();
+      setTabBarVisible(false);
+      return () => setTabBarVisible(true);
     }, [selectedDateFilter, daysToShow, user, selectedGroundId])
   );
 
@@ -275,20 +277,24 @@ export default function OwnerInventoryScreen() {
           const occupancy = getOccupancy(ground.id, dateStr, s.start_time, ground.pitch_type);
           const statusText = getSlotStatus(occupancy);
           
-          let statusColor = 'transparent'; // Empty
+          let statusColor = '#FFFFFF'; 
           let textColor = '#6B7280';
+          let borderColor = '#E2E8F0';
           let displayStatus = statusText;
 
           if (isSlotInPast) {
-            statusColor = 'transparent';
+            statusColor = '#F9FAFB';
+            borderColor = '#F3F4F6';
             textColor = '#9CA3AF';
             displayStatus = 'PAST';
           } else if (statusText === 'FULL') {
-            statusColor = 'transparent';
-            textColor = '#03543F';
+            statusColor = '#F0FDF4';
+            borderColor = '#10B981';
+            textColor = '#047857';
           } else if (statusText === 'PARTIAL') {
-            statusColor = 'transparent';
-            textColor = '#92400E';
+            statusColor = '#FFFBEB';
+            borderColor = '#F59E0B';
+            textColor = '#B45309';
           }
 
           const isClickable = !isSlotInPast && statusText !== 'FULL';
@@ -296,8 +302,13 @@ export default function OwnerInventoryScreen() {
           return (
             <TouchableOpacity 
               key={s.id} 
-              style={[styles.slotChip, isUltraNarrow && { minWidth: 75, paddingHorizontal: 6 }, { backgroundColor: statusColor }]}
+              style={[
+                styles.slotChip, 
+                isUltraNarrow && { minWidth: 75, paddingHorizontal: 6 }, 
+                { backgroundColor: statusColor, borderColor: borderColor }
+              ]}
               disabled={!isClickable}
+
               onPress={() => {
                 const startHHMM = normalizeDbTimeToHHMM(s.start_time);
                 const endHHMM = normalizeDbTimeToHHMM(s.end_time);
@@ -1130,6 +1141,8 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 4,
     paddingHorizontal: 2,
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   mobileFilterItem: {
     minWidth: 120,

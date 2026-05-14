@@ -31,6 +31,7 @@ import {
   Users,
   Store,
   Package,
+  Wallet,
 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -274,7 +275,7 @@ export default function ProfileScreen({
               (profile?.role === 'ground_owner' || isSuperAdmin) && { fontSize: 10, marginBottom: 0 },
               isUltraNarrow && { fontSize: 12 }
             ]}>
-              {profile?.role === 'ground_owner' ? 'Venue Owner & Player' : 'Player'}
+              {profile?.role === 'ground_owner' ? 'Venue Owner' : 'Player'}
             </RNText>
             
           </View>
@@ -313,7 +314,7 @@ export default function ProfileScreen({
             <View style={styles.hubIconCircle}>
               <MapPin size={24} color="#00ea6b" />
             </View>
-            <RNText style={styles.hubCardText}>Grounds</RNText>
+            <RNText style={styles.hubCardText}>Venues</RNText>
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -434,8 +435,19 @@ export default function ProfileScreen({
                 <View style={styles.venueOwnerCardIconBg}>
                   <MapPin size={20} color="#00ea6b" />
                 </View>
-                <RNText style={styles.venueOwnerCardTitle}>My Grounds</RNText>
-                <RNText style={styles.venueOwnerCardDesc}>View and manage your grounds and venues.</RNText>
+                <RNText style={styles.venueOwnerCardTitle}>Venues</RNText>
+                <RNText style={styles.venueOwnerCardDesc}>View and manage your venues and facilities.</RNText>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.venueOwnerCard, { width: (width > 1200) ? '31.5%' : (width > 700 ? '48.5%' : '100%') }]}
+                onPress={() => router.push('/(tabs)/profile/orders' as any)}
+              >
+                <View style={styles.venueOwnerCardIconBg}>
+                  <ShoppingBag size={20} color="#00ea6b" />
+                </View>
+                <RNText style={styles.venueOwnerCardTitle}>Orders</RNText>
+                <RNText style={styles.venueOwnerCardDesc}>Track your equipment and shop purchases.</RNText>
               </TouchableOpacity>
 
               <TouchableOpacity 
@@ -473,6 +485,28 @@ export default function ProfileScreen({
 
               <TouchableOpacity 
                 style={[styles.venueOwnerCard, { width: (width > 1200) ? '31.5%' : (width > 700 ? '48.5%' : '100%') }]}
+                onPress={() => router.push('/wallet' as any)}
+              >
+                <View style={styles.venueOwnerCardIconBg}>
+                  <Wallet size={20} color="#00ea6b" />
+                </View>
+                <RNText style={styles.venueOwnerCardTitle}>Wallet</RNText>
+                <RNText style={styles.venueOwnerCardDesc}>Manage your balance, add funds, and view history.</RNText>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.venueOwnerCard, { width: (width > 1200) ? '31.5%' : (width > 700 ? '48.5%' : '100%') }]}
+                onPress={() => router.push('/(tabs)/support' as any)}
+              >
+                <View style={styles.venueOwnerCardIconBg}>
+                  <LifeBuoy size={20} color="#00ea6b" />
+                </View>
+                <RNText style={styles.venueOwnerCardTitle}>Contact Us</RNText>
+                <RNText style={styles.venueOwnerCardDesc}>Get help, report issues, or provide feedback.</RNText>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.venueOwnerCard, { width: (width > 1200) ? '31.5%' : (width > 700 ? '48.5%' : '100%') }]}
                 onPress={() => router.push('/(owner)/settings' as any)}
               >
                 <View style={styles.venueOwnerCardIconBg}>
@@ -503,7 +537,17 @@ export default function ProfileScreen({
               >
                 <View style={styles.rowLeft}>
                   <MapPin size={20} color="#00ea6b" />
-                  <RNText style={styles.rowText}>My Grounds</RNText>
+                  <RNText style={styles.rowText}>Venues</RNText>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.rowItem}
+                onPress={() => router.push('/(tabs)/profile/orders' as any)}
+              >
+                <View style={styles.rowLeft}>
+                  <ShoppingBag size={20} color="#00ea6b" />
+                  <RNText style={styles.rowText}>Orders</RNText>
                 </View>
               </TouchableOpacity>
 
@@ -539,6 +583,26 @@ export default function ProfileScreen({
 
               <TouchableOpacity 
                 style={styles.rowItem}
+                onPress={() => router.push('/wallet' as any)}
+              >
+                <View style={styles.rowLeft}>
+                  <Wallet size={20} color="#00ea6b" />
+                  <RNText style={styles.rowText}>Wallet</RNText>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.rowItem}
+                onPress={() => router.push('/(tabs)/support' as any)}
+              >
+                <View style={styles.rowLeft}>
+                  <LifeBuoy size={20} color="#00ea6b" />
+                  <RNText style={styles.rowText}>Contact Us</RNText>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.rowItem}
                 onPress={() => router.push('/(owner)/settings' as any)}
               >
                 <View style={styles.rowLeft}>
@@ -553,8 +617,10 @@ export default function ProfileScreen({
     )}
 
     {/* 3. PLAYER DASHBOARD (Rows) */}
-    <View style={styles.sectionContainer}>
-      <RNText style={styles.sectionTitle}>{profile?.role === 'ground_owner' ? 'PLAYER ACCESS' : 'QUICK ACCESS'}</RNText>
+    {/* 3. PLAYER DASHBOARD (Rows) - Hidden for ground owners as they have the Venue Owner Hub */}
+    {profile?.role !== 'ground_owner' && (
+      <View style={styles.sectionContainer}>
+        <RNText style={styles.sectionTitle}>QUICK ACCESS</RNText>
       <View style={[styles.rowList, isModal && styles.noContainer]}>
         <TouchableOpacity 
           style={styles.rowItem}
@@ -592,7 +658,7 @@ export default function ProfileScreen({
         >
           <View style={styles.rowLeft}>
             <ShoppingBag size={20} color="#00ea6b" />
-            <RNText style={styles.rowText}>My Orders</RNText>
+            <RNText style={styles.rowText}>Orders</RNText>
           </View>
         </TouchableOpacity>
 
@@ -612,7 +678,7 @@ export default function ProfileScreen({
         >
           <View style={styles.rowLeft}>
             <IndianRupee size={20} color="#00ea6b" />
-            <RNText style={styles.rowText}>My Wallet</RNText>
+            <RNText style={styles.rowText}>Wallet</RNText>
           </View>
         </TouchableOpacity>
 
@@ -627,6 +693,7 @@ export default function ProfileScreen({
         </TouchableOpacity>
         </View>
       </View>
+    )}
 
       <TouchableOpacity
         onPress={handleSignOut}

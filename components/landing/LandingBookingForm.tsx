@@ -740,8 +740,8 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
           price = Number(parts[3]);
         } else {
           price = pricesByDate[date]?.[time] ?? slotPriceByStartTime[time] ?? (selectedGround as any)?.min_price ?? selectedGround?.base_price_per_hour ?? 0;
-          // Apply team type factor per slot if calculating from base
-          const factor = slotTeamType === 'one' ? 0.5 : 1.0;
+          // Apply team type factor per slot if calculating from base (skip for Nets)
+          const factor = isNets ? 1.0 : (slotTeamType === 'one' ? 0.5 : 1.0);
           price = price * factor;
         }
         
@@ -1744,7 +1744,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
           const time = parts[1];
           const slotTeamType = parts[2];
           let price = pricesByDate[date]?.[time] ?? slotPriceByStartTime[time] ?? (selectedGround as any)?.min_price ?? selectedGround?.base_price_per_hour ?? 0;
-          const factor = slotTeamType === 'one' ? 0.5 : 1.0;
+          const factor = isNets ? 1.0 : (slotTeamType === 'one' ? 0.5 : 1.0);
           price = price * factor;
           return price;
         });
@@ -2378,7 +2378,8 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                           const date = bookingDate;
                           const time = s.value;
                           let price = pricesByDate[date]?.[time] ?? slotPriceByStartTime[time] ?? (selectedGround as any)?.min_price ?? selectedGround?.base_price_per_hour ?? 0;
-                          const factor = teamType === 'one' ? 0.5 : 1.0;
+                          // Apply team type factor per slot if calculating from base (skip for Nets)
+                          const factor = isNets ? 1.0 : (teamType === 'one' ? 0.5 : 1.0);
                           price = price * factor;
                           const slotWithPrice = `${prefix}${teamType}__${price}`;
 
@@ -2606,7 +2607,8 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                           const label = isCurrentDate ? formatTime(time) : `${formatDateDDMMYYYY(date)} ${formatTime(time)}`;
                           
                           let price = pricesByDate[date]?.[time] ?? slotPriceByStartTime[time] ?? (selectedGround as any)?.min_price ?? selectedGround?.base_price_per_hour ?? 0;
-                          const factor = slotTeamType === 'one' ? 0.5 : 1.0;
+                          // Apply team type factor per slot if calculating from base (skip for Nets)
+                          const factor = isNets ? 1.0 : (slotTeamType === 'one' ? 0.5 : 1.0);
                           price = price * factor;
                           
                           return (

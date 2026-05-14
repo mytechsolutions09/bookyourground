@@ -753,7 +753,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
               onPress={() => router.replace('/')}
               style={styles.logo}
               accessibilityRole="link"
-              accessibilityLabel="Book my ground — home"
+              accessibilityLabel="Book my venues — home"
             >
               <Image
                 source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
@@ -992,7 +992,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
               onPress={() => router.replace('/')}
               style={styles.logo}
               accessibilityRole="link"
-              accessibilityLabel="Book My Ground — home"
+              accessibilityLabel="Book My Venues — home"
             >
               <Image
                 source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
@@ -1103,7 +1103,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                   onPress={() => router.replace('/')}
                   style={[styles.logo, { marginBottom: 32, paddingHorizontal: 4 }]}
                   accessibilityRole="link"
-                  accessibilityLabel="Book My Ground — home"
+                  accessibilityLabel="Book My Venues — home"
                 >
                   <Image
                     source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
@@ -1261,7 +1261,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                           <NavLink 
                             href="/(owner)/manage-grounds" 
                             icon={MapPin} 
-                            label="My Venues" 
+                            label="Venues" 
                             isActiveOverride={cleanPath === '/(owner)/manage-grounds' || cleanPath === '/manage-grounds'} 
                             badge={hasPayoutSetup === false ? 'Locked' : undefined}
                             disabled={hasPayoutSetup === false}
@@ -1273,7 +1273,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                           <NavLink 
                             href="/profile/orders" 
                             icon={ShoppingBag} 
-                            label="My Orders" 
+                            label="Orders" 
                             isActiveOverride={cleanPath === '/profile/orders'}
                             disabled={hasPayoutSetup === false} 
                             hideLabel={sidebarCollapsed}

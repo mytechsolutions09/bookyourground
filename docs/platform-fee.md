@@ -7,6 +7,7 @@ When a ground owner enters a booking manually (Cash) via the owner dashboard:
 - **Platform Fee (Fixed)**: ₹100 per team (₹100 for a partial match, ₹200 for a full match).
 - **GST**: 18% of the service fee.
 - **Admin Revenue**: ₹100/₹200 + GST.
+- **Exception**: If the platform fee is turned off by the admin for the owner (i.e., `charge_platform_fee` is set to false in the owner's profile), the fee should be **₹0** on the booking ID page for ground owner cash bookings.
 
 ## 2. Online Booking (User Booking via App/Web)
 When a user books and pays online, the platform collects revenue from both the user and the owner.

@@ -228,7 +228,7 @@ export default function HomeScreen() {
     try {
       const { data, error } = await supabase
         .from('grounds')
-        .select(`*, ground_images(*), reviews(rating), time_slots(custom_price, is_available)`)
+        .select(`*, ground_images(*), reviews(rating), time_slots(custom_price, is_available, day_of_week)`)
         .eq('active', true)
         .eq('approved', true)
         .order('created_at', { ascending: false });
@@ -292,6 +292,18 @@ export default function HomeScreen() {
       (g.pitch_type || '').toLowerCase().includes('cricket') ||
       (g.name || '').toLowerCase().includes('cricket')
     ).slice(0, 8);
+  }, [grounds]);
+
+  const bookTodayGrounds = useMemo(() => {
+    const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+    console.log('Today is:', today);
+    return grounds.filter((g: any) => {
+      const hasSlotsToday = (g.time_slots || []).some((s: any) => 
+        String(s.day_of_week || '').toLowerCase() === today && 
+        (s.is_available === true || s.is_available === null)
+      );
+      return hasSlotsToday;
+    }).slice(0, 8);
   }, [grounds]);
 
   const filteredGrounds = useMemo(() => {
@@ -415,6 +427,41 @@ export default function HomeScreen() {
           profile={profile}
           setShowProfileModal={setShowProfileModal}
         />
+
+        {/* ── Book for Today ───────────────────────────── */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View>
+              <Text style={styles.sectionLabel}>Quick Play</Text>
+              <Text style={styles.sectionTitle}>Book for today</Text>
+            </View>
+            <Pressable
+              style={styles.seeAllBtn}
+              onPress={() => router.push('/(tabs)/grounds' as any)}
+            >
+              <Text style={styles.seeAllText}>View All</Text>
+              <ChevronRight size={14} color="#01b854" strokeWidth={2.5} />
+            </Pressable>
+          </View>
+
+          {loading ? (
+            <ActivityIndicator color="#01b854" style={{ marginTop: 24, marginBottom: 8 }} />
+          ) : bookTodayGrounds.length === 0 ? (
+            <Text style={styles.emptyText}>No grounds available today</Text>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalList}
+            >
+              {bookTodayGrounds.map((g: any, i: number) => (
+                <View key={g.id} style={[styles.horizontalItem, isWide && { width: 300 }]}>
+                  <GroundCardMobile ground={g} index={i} />
+                </View>
+              ))}
+            </ScrollView>
+          )}
+        </View>
 
 
 

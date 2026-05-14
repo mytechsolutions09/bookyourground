@@ -528,48 +528,53 @@ export default function ProductDetailScreen() {
             <Text style={styles.descriptionText}>{renderMarkdown(product.description)}</Text>
           </View>
 
-          {/* Features */}
-          {product.features && product.features.length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Key Features</Text>
-              <View style={styles.featureList}>
-                {product.features.map((feature: string, index: number) => (
-                  <View key={index} style={styles.featureItem}>
-                    <CheckCircle2 size={18} color="#f8688a" />
-                    <Text style={styles.featureText}>{renderMarkdown(feature)}</Text>
-                  </View>
-                ))}
+          {/* Product Details Section (Dropdowns) */}
+          <View style={[styles.section, { borderTopWidth: 1, borderTopColor: '#E5E7EB', paddingTop: 8 }]}>
+            <TouchableOpacity 
+              style={styles.dropdownHeader}
+              onPress={() => setShowHighlights(!showHighlights)}
+            >
+              <Text style={styles.dropdownTitle}>Top highlights</Text>
+              {showHighlights ? <ChevronUp size={20} color="#0F1111" /> : <ChevronDown size={20} color="#0F1111" />}
+            </TouchableOpacity>
+            {showHighlights && (
+              <View style={styles.dropdownContent}>
+                {renderTableMarkdown(product.specifications?.highlights) || (
+                  <Text style={styles.dropdownPlaceholder}>No highlights available.</Text>
+                )}
               </View>
-            </View>
-          )}
-
-          {/* Specifications */}
-          {product.specifications && Object.keys(product.specifications).length > 0 && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Specifications</Text>
-              <View style={styles.specTable}>
-                {Object.entries(product.specifications)
-                  .filter(([key]) => !['images', 'features'].includes(key))
-                  .map(([key, value]: [string, any], index, array) => {
-                    const isLast = index === array.length - 1;
-                    let displayValue = String(value);
-                    
-                    if (Array.isArray(value)) {
-                      displayValue = value.map(v => (typeof v === 'object' && v !== null) ? (v.name || v.label || JSON.stringify(v)) : String(v)).join(', ');
-                    } else if (typeof value === 'object' && value !== null) {
-                      displayValue = JSON.stringify(value);
-                    }
-
-                    return (
-                      <View key={key} style={[styles.specRow, isLast && { borderBottomWidth: 0 }]}>
-                        <Text style={styles.specKey}>{key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')}</Text>
-                        <Text style={styles.specValue}>{renderMarkdown(displayValue)}</Text>
-                      </View>
-                    );
-                  })}
+            )}
+            
+            <TouchableOpacity 
+              style={styles.dropdownHeader}
+              onPress={() => setShowStyle(!showStyle)}
+            >
+              <Text style={styles.dropdownTitle}>Style</Text>
+              {showStyle ? <ChevronUp size={20} color="#0F1111" /> : <ChevronDown size={20} color="#0F1111" />}
+            </TouchableOpacity>
+            {showStyle && (
+              <View style={styles.dropdownContent}>
+                {renderTableMarkdown(product.specifications?.style) || (
+                  <Text style={styles.dropdownPlaceholder}>No style details available.</Text>
+                )}
               </View>
-            </View>
-          )}
+            )}
+            
+            <TouchableOpacity 
+              style={styles.dropdownHeader}
+              onPress={() => setShowFeatures(!showFeatures)}
+            >
+              <Text style={styles.dropdownTitle}>Features & Specs</Text>
+              {showFeatures ? <ChevronUp size={20} color="#0F1111" /> : <ChevronDown size={20} color="#0F1111" />}
+            </TouchableOpacity>
+            {showFeatures && (
+              <View style={styles.dropdownContent}>
+                {renderTableMarkdown(product.specifications?.features) || (
+                  <Text style={styles.dropdownPlaceholder}>No features or specifications available.</Text>
+                )}
+              </View>
+            )}
+          </View>
 
           {/* Related Products */}
           {relatedProducts.length > 0 && (
@@ -1303,6 +1308,30 @@ const styles = StyleSheet.create({
   },
   footerGap: {
     height: 140,
+  },
+  dropdownHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  dropdownTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#0F1111',
+    fontFamily: 'Inter',
+  },
+  dropdownContent: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  dropdownPlaceholder: {
+    fontSize: 14,
+    color: '#4B5563',
+    fontFamily: 'Inter',
   },
   bottomBar: {
     position: 'absolute',

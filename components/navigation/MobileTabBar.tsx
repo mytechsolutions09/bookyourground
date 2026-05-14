@@ -145,7 +145,7 @@ export default function MobileTabBar() {
 
   const activeTab = getActiveTab(segments as string[]);
   const { setTabAnimation } = useUI();
-  const size = 24;
+  const size = 20;
 
   const isSuperAdmin = profile?.role === 'super_admin' || (user?.email?.toLowerCase() === 'invirtualcoin@gmail.com');
   const showInventoryTab = isOwner || isSuperAdmin;

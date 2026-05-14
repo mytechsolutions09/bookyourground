@@ -101,8 +101,13 @@ export default function CheckoutScreen() {
     const isGroundOwnerOrAdmin = profile?.role === 'super_admin' ||
         (profile?.role === 'ground_owner' && booking?.grounds?.owner_id === user?.id);
 
+    const isWallet = selectedGateway === 'wallet';
+    const isCash = selectedGateway === 'cash';
+
+
     // Pricing Calculations
-    const { baseGroundPrice, platformFeeIncGst, totalPayable, totalReceivable } = React.useMemo(() => {
+    const { baseGroundPrice, discountAmount, platformFeeUser, gstUser, ownerPlatformFee, totalPayable, totalReceivable } = React.useMemo(() => {
+
         const originalPrice = (booking?.total_amount || 0) + (booking?.discount_amount || 0);
         const discountedPrice = ((selectedGateway === 'cash' || (selectedGateway === 'wallet' && isGroundOwnerOrAdmin)) && customCashAmount && !isNaN(parseFloat(customCashAmount)))
             ? parseFloat(customCashAmount)
@@ -120,7 +125,7 @@ export default function CheckoutScreen() {
         const groundName = (booking?.grounds?.name ?? '').toLowerCase();
         const isCricket = pitchType === 'cricket ground';
         const isNet = pitchType.includes('net') || groundName.includes('net') || pitchType.includes('lane') || groundName.includes('lane');
-        const isCash = selectedGateway === 'cash';
+
 
         // Calculate total teams across all slots
         let totalTeams = 0;
@@ -156,12 +161,13 @@ export default function CheckoutScreen() {
             ownerPf = 0;
         } else if (isGroundOwnerOrAdmin || isCash) {
             if (isNet) {
-                ownerPf = netsFixedFee;
+                ownerPf = netsFixedFee * (booking?.slots?.length || 1);
             } else if (isCricket) {
                 ownerPf = cricketFixedFee * totalTeams;
             } else {
                 ownerPf = discountedPrice * rate;
             }
+
         } else {
             // Regular user booking - owner commission
             ownerPf = isNet ? (discountedPrice * netsUserRate) : (discountedPrice * rate);
@@ -169,16 +175,40 @@ export default function CheckoutScreen() {
         const ownerGst = ownerPf * gstRate;
         const ownerTotalPfGst = ownerPf + ownerGst;
 
-        const tp = Math.round(discountedPrice + ((isCash || isGroundOwnerOrAdmin) ? 0 : userTotalPfGst));
+        const tp = Math.round(
+            isGroundOwnerOrAdmin 
+                ? (isWallet ? ownerTotalPfGst : discountedPrice) 
+                : (isCash ? discountedPrice : (discountedPrice + userTotalPfGst))
+        );
+
         const tr = Math.round(discountedPrice - ownerTotalPfGst);
+
+        if (isGroundOwnerOrAdmin) {
+            console.log('[Checkout Debug] Owner Booking:', {
+                pitchType: booking?.grounds?.pitch_type,
+                isNet,
+                slots: booking?.slots?.length,
+                netsFixedFee,
+                discountedPrice,
+                ownerPf,
+                ownerGst,
+                ownerTotalFee: ownerTotalPfGst,
+                totalReceivable: tr,
+                userPfTotal: userTotalPfGst
+            });
+        }
 
         return {
             baseGroundPrice: originalPrice,
-            platformFeeIncGst: (isCash || isGroundOwnerOrAdmin) ? ownerTotalPfGst : userTotalPfGst,
+            discountAmount: booking?.discount_amount || 0,
+            platformFeeUser: userPf,
+            gstUser: userGst,
+            ownerPlatformFee: ownerTotalPfGst,
             totalPayable: tp,
             totalReceivable: tr
         };
     }, [selectedGateway, customCashAmount, booking?.total_amount, booking?.discount_amount, booking?.team_type, booking?.grounds?.pitch_type, booking?.grounds?.name, platformSettings, isGroundOwnerOrAdmin]);
+
 
     const [showRazorpayWebView, setShowRazorpayWebView] = useState(false);
     const [razorpayOrderData, setRazorpayOrderData] = useState<any>(null);
@@ -311,8 +341,11 @@ export default function CheckoutScreen() {
                     bookingId: booking.isNew ? null : booking.id,
                     bookingDetails: booking.isNew ? {
                         price_per_hour: Number(booking.price_per_hour),
-                        total_amount: Number(parseFloat(customCashAmount) || (booking.total_amount + (booking.discount_amount || 0))),
-                        discount_amount: Number(booking.discount_amount || 0),
+                        ground_price: baseGroundPrice,
+                        discount_amount: discountAmount,
+                        platform_fee_user: platformFeeUser,
+                        gst_user: gstUser,
+                        total_amount: totalPayable,
                         total_hours: Number(booking.total_hours || 1),
                         ground_id: booking.ground_id,
                         booking_date: booking.booking_date,
@@ -326,7 +359,11 @@ export default function CheckoutScreen() {
                         slotDuration: booking.slotDuration,
                         slotPrices: booking.slotPrices,
                     } : {
-                        total_amount: parseFloat(customCashAmount) || booking.total_amount,
+                        total_amount: parseFloat(customCashAmount) || totalPayable,
+                        ground_price: parseFloat(customCashAmount) || baseGroundPrice,
+                        discount_amount: discountAmount,
+                        platform_fee_user: platformFeeUser,
+                        gst_user: gstUser,
                         booked_for_name: bookedForName,
                         payment_method: 'cash',
                     },
@@ -647,15 +684,22 @@ export default function CheckoutScreen() {
                         coupon_id: booking.coupon_id,
                         total_hours: booking.total_hours,
                         price_per_hour: booking.price_per_hour,
-                        total_amount: booking.total_amount + (booking.discount_amount || 0),
-                        discount_amount: booking.discount_amount || 0,
+                        ground_price: baseGroundPrice,
+                        discount_amount: discountAmount,
+                        platform_fee_user: platformFeeUser,
+                        gst_user: gstUser,
+                        total_amount: totalPayable,
                         slots: booking.slots,
                         slotDuration: booking.slotDuration,
                         slotPrices: booking.slotPrices,
                         booked_for_name: bookedForName,
                         wallet_amount: walletAmount,
                     } : {
-                        total_amount: booking.total_amount,
+                        total_amount: totalPayable,
+                        ground_price: baseGroundPrice,
+                        discount_amount: discountAmount,
+                        platform_fee_user: platformFeeUser,
+                        gst_user: gstUser,
                         wallet_amount: walletAmount,
                     },
                 },
@@ -901,16 +945,20 @@ export default function CheckoutScreen() {
 
     const handleWalletPayment = async () => {
         if (!booking) return;
-        if (walletBalance < totalPayable) {
+        if (walletAmountUsed === 0) {
+            Alert.alert('Error', 'Please enter an amount of wallet credit to use');
+            return;
+        }
+
+        if (walletAmountUsed < totalPayable) {
             Alert.alert(
                 'Split Payment',
-                `Your wallet balance of ${formatCurrency(walletBalance)} is insufficient. Would you like to use it and pay the remaining ${formatCurrency(totalPayable - walletBalance)} online?`,
+                `You are using ${formatCurrency(walletAmountUsed)} from wallet. Would you like to pay the remaining ${formatCurrency(totalPayable - walletAmountUsed)} online?`,
                 [
                     { text: 'Cancel', style: 'cancel' },
                     {
                         text: 'Pay Online', onPress: () => {
-                            setWalletAmountUsed(walletBalance);
-                            handleRazorpay(walletBalance);
+                            handleRazorpay(walletAmountUsed);
                         }
                     }
                 ]
@@ -934,8 +982,11 @@ export default function CheckoutScreen() {
                         coupon_id: booking.coupon_id,
                         total_hours: booking.total_hours,
                         price_per_hour: booking.price_per_hour,
+                        ground_price: baseGroundPrice,
+                        discount_amount: discountAmount,
+                        platform_fee_user: platformFeeUser,
+                        gst_user: gstUser,
                         total_amount: totalPayable,
-                        discount_amount: booking.discount_amount || 0,
                         booked_for_name: bookedForName,
                         payment_method: 'wallet',
                         slots: booking.slots,
@@ -943,6 +994,10 @@ export default function CheckoutScreen() {
                         slotPrices: booking.slotPrices,
                     } : {
                         total_amount: totalPayable,
+                        ground_price: baseGroundPrice,
+                        discount_amount: discountAmount,
+                        platform_fee_user: platformFeeUser,
+                        gst_user: gstUser,
                         booked_for_name: bookedForName,
                         payment_method: 'wallet'
                     },
@@ -952,6 +1007,8 @@ export default function CheckoutScreen() {
             if (error) throw error;
 
             if (data && data.success) {
+                // Wallet transaction record is handled by the edge function 'payment-gateway' via 'process_wallet_transaction' RPC.
+
                 Alert.alert('Success', 'Payment successful using Wallet balance!');
                 router.replace(`/bookings/${data.bookingId}` as any);
             } else {
@@ -1432,8 +1489,11 @@ export default function CheckoutScreen() {
                                     <RNText style={styles.breakdownLabelNew}>Platform Fee</RNText>
                                     <View style={styles.gstBadgeNew}><RNText style={styles.gstBadgeTextNew}>Inc. GST</RNText></View>
                                 </View>
-                                <RNText style={styles.breakdownValueNew}>{formatCurrency(platformFeeIncGst)}</RNText>
+                                <RNText style={styles.breakdownValueNew}>
+                                    {formatCurrency(isGroundOwnerOrAdmin ? ownerPlatformFee : (platformFeeUser + gstUser))}
+                                </RNText>
                             </View>
+
 
                             {isGroundOwnerOrAdmin && (
                                 <View style={[styles.breakdownRowNew, { backgroundColor: '#F8FAFC', marginHorizontal: -12, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, marginTop: 4 }]}>
@@ -1451,15 +1511,16 @@ export default function CheckoutScreen() {
 
                             <View style={styles.dashedLine} />
 
-                            {!isGroundOwnerOrAdmin && (
+                            {(!isGroundOwnerOrAdmin || (isGroundOwnerOrAdmin && isWallet)) && (
                                 <View style={styles.totalRowNew}>
                                     <View>
-                                        <RNText style={styles.totalLabelNew}>Total Payable</RNText>
+                                        <RNText style={styles.totalLabelNew}>{isGroundOwnerOrAdmin && isWallet ? 'Wallet Deduction' : 'Total Payable'}</RNText>
                                         <RNText style={styles.totalSubtitleNew}>Incl. all taxes</RNText>
                                     </View>
                                     <RNText style={styles.totalValueNew}>{formatCurrency(totalPayable)}</RNText>
                                 </View>
                             )}
+
                         </View>
 
                         <View style={{ marginBottom: 24 }}>
@@ -1506,7 +1567,10 @@ export default function CheckoutScreen() {
                                 {/* Wallet Option */}
                                 <TouchableOpacity
                                     style={[styles.methodItemNew, selectedGateway === 'wallet' && { backgroundColor: '#F8FAFC' }]}
-                                    onPress={() => setSelectedGateway('wallet')}
+                                    onPress={() => {
+                                        setSelectedGateway('wallet');
+                                        setWalletAmountUsed(Math.min(walletBalance, totalPayable));
+                                    }}
                                 >
                                     <View style={styles.methodIconBoxNew}><Wallet size={20} color={selectedGateway === 'wallet' ? '#01e669' : '#64748B'} /></View>
                                     <View style={{ flex: 1 }}>
