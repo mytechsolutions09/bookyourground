@@ -194,7 +194,7 @@ export default function FindAnOpponentScreen({ hideHeader = false, externalScrol
 
   const loadOpenSlots = async () => {
     try {
-      setLoading(true);
+      if (matches.length === 0) setLoading(true);
       const todayISO = new Date().toISOString().split('T')[0];
 
       const { data: { user } } = await supabase.auth.getUser();

@@ -565,7 +565,8 @@ export default function OwnerBookingsScreen() {
         const city = (b.ground?.city || '').toLowerCase();
         const customer = (b.user?.full_name || '').toLowerCase();
         const bfn = (b.booked_for_name || '').toLowerCase();
-        return gn.includes(q) || city.includes(q) || customer.includes(q) || bfn.includes(q);
+        const bid = (b.id || '').toLowerCase();
+        return gn.includes(q) || city.includes(q) || customer.includes(q) || bfn.includes(q) || bid.includes(q);
       });
 
       // Grouping logic to consolidate multi-slot bookings (including multi-date transactions)

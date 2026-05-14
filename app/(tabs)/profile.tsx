@@ -640,6 +640,34 @@ export default function ProfileScreen({
     </View>
   );
 
+  if (!profile) {
+    return (
+      <View style={styles.nativeScreen}>
+        <MobileAppNavbar title="PROFILE" titleColor="#01b854" smallerTitle />
+        <ScrollView style={styles.container} contentContainerStyle={styles.nativeScrollContent}>
+          <View style={{ padding: 16, gap: 16 }}>
+            {/* Profile Card Skeleton */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, padding: 16, backgroundColor: '#FFFFFF', borderRadius: 16 }}>
+              <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#E2E8F0' }} />
+              <View style={{ flex: 1, gap: 8 }}>
+                <View style={{ width: '60%', height: 16, backgroundColor: '#E2E8F0', borderRadius: 4 }} />
+                <View style={{ width: '40%', height: 12, backgroundColor: '#E2E8F0', borderRadius: 4 }} />
+              </View>
+            </View>
+            
+            {/* Tabs Skeleton */}
+            <View style={{ height: 200, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, gap: 12 }}>
+              <View style={{ width: '30%', height: 16, backgroundColor: '#E2E8F0', borderRadius: 4 }} />
+              <View style={{ height: 40, backgroundColor: '#F1F5F9', borderRadius: 8 }} />
+              <View style={{ height: 40, backgroundColor: '#F1F5F9', borderRadius: 8 }} />
+              <View style={{ height: 40, backgroundColor: '#F1F5F9', borderRadius: 8 }} />
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
+
   return (Platform.OS === 'web' && !isCompact) ? (
     <WebLayout noCard>
       <ScrollView style={[styles.container, { backgroundColor: 'transparent' }]}>{profileBody}</ScrollView>

@@ -41,7 +41,7 @@ export default function MyMatchesScreen() {
   const loadMyMatches = async () => {
     if (!user) return;
     try {
-      setLoading(true);
+      if (matches.length === 0) setLoading(true);
       const todayISO = new Date().toISOString().split('T')[0];
       
       // Step 1: Fetch all bookings for future dates where current user is involved

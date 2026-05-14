@@ -9,6 +9,7 @@ import { formatCurrency } from '@/utils/helpers';
 import { TrendingUp, Download, ArrowRight, Wallet, History, Info, ChevronRight, X, CheckCircle2, AlertCircle } from 'lucide-react-native';
 import Svg, { Path, Circle, Defs, LinearGradient as SvgGradient, Stop, Text as SvgText } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
+import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
 import {
   ResponsiveContainer,
   LineChart as RechartsLineChart,
@@ -17,6 +18,8 @@ import {
   YAxis,
   Tooltip as RechartsTooltip,
   CartesianGrid,
+  BarChart,
+  Bar,
 } from "recharts";
 
 const IS_WEB = Platform.OS === 'web';
@@ -211,6 +214,44 @@ function LineChart({ data, height = 150 }: { data: ChartPoint[], height?: number
   );
 }
 
+function CustomBarChart({ data, height = 200 }: { data: any[], height?: number }) {
+  if (data.length === 0) return null;
+
+  if (Platform.OS === 'web') {
+    return (
+      <View style={{ height, width: '100%' }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#dfe7e2" />
+            <XAxis dataKey="label" tick={{ fill: "#6b7280", fontSize: 10 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: "#6b7280", fontSize: 10 }} axisLine={false} tickLine={false} />
+            <RechartsTooltip
+              formatter={(value: any, name: string) => [`₹${Number(value).toFixed(2)}`, name === 'sales' ? 'Sales' : 'Platform Fee']}
+              contentStyle={{
+                borderRadius: "12px",
+                border: "1px solid #e5ece7",
+                backgroundColor: "#ffffff",
+                fontSize: 11,
+                padding: "8px 12px",
+              }}
+              itemStyle={{ fontSize: 11, padding: 0 }}
+              labelStyle={{ fontSize: 11, fontWeight: 'bold', marginBottom: 2 }}
+            />
+            <Bar dataKey="sales" fill="#01b854" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="fee" fill="#FF8042" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </View>
+    );
+  }
+
+  return (
+    <View style={{ height, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 12 }}>
+      <Text style={{ color: '#64748B', fontSize: 12 }}>Bar chart available on Web</Text>
+    </View>
+  );
+}
+
 function OwnerEarningsScreenInner() {
   const { user, profile } = useAuth();
   const { width } = useWindowDimensions();
@@ -250,6 +291,7 @@ function OwnerEarningsScreenInner() {
   });
   const [venueBreakdown, setVenueBreakdown] = useState<VenueBreakdown[]>([]);
   const [chartData, setChartData] = useState<ChartPoint[]>([]);
+  const [barChartData, setBarChartData] = useState<any[]>([]);
   const [onlineEarnings, setOnlineEarnings] = useState(0);
   const [offlineEarnings, setOfflineEarnings] = useState(0);
   const [storeCredits, setStoreCredits] = useState(0);
@@ -257,6 +299,7 @@ function OwnerEarningsScreenInner() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
   const [wallet, setWallet] = useState<WalletData | null>(null);
+  const [calculatedBalance, setCalculatedBalance] = useState(0);
   const [isBankVerified, setIsBankVerified] = useState(false);
   const [bankDetailsLoaded, setBankDetailsLoaded] = useState(false);
   const { tab } = useLocalSearchParams<{ tab: string }>();
@@ -290,7 +333,7 @@ function OwnerEarningsScreenInner() {
   const [ownerGrounds, setOwnerGrounds] = useState<any[]>([]);
 
   const pendingAmount = upcomingPayouts.reduce((acc, w) => acc + (w.amount || 0), 0);
-  const withdrawableBalance = (wallet?.balance || 0) - pendingAmount;
+  const withdrawableBalance = calculatedBalance;
 
   useEffect(() => {
     if (user) {
@@ -406,6 +449,14 @@ function OwnerEarningsScreenInner() {
         .eq('user_id', user.id)
         .single();
 
+      // Fetch platform settings
+      const { data: settingsData } = await supabase
+        .from('platform_settings')
+        .select('*');
+
+      const settingsMap: Record<string, any> = {};
+      settingsData?.forEach(s => { settingsMap[s.key] = s.value; });
+
       // Check bank verification status
       const { data: bankData } = await supabase
         .from('owner_bank_details')
@@ -484,7 +535,7 @@ function OwnerEarningsScreenInner() {
 
       const { data: allData } = await supabase
         .from('bookings')
-        .select('total_amount, platform_fee_owner, gst_owner, created_at, payment_method, payment_received, status, ground_price, ground:grounds!inner(name, city, owner_id)')
+        .select('total_amount, platform_fee_owner, gst_owner, created_at, payment_method, payment_received, status, ground_price, notes, team_type, ground:grounds!inner(name, city, owner_id, pitch_type)')
         .eq('ground.owner_id', user.id)
         .in('status', ['confirmed', 'completed']);
 
@@ -502,14 +553,44 @@ function OwnerEarningsScreenInner() {
       const dayMap = new Map<number, number>();
       const hourMap = new Map<number, number>();
       const weekMap = new Map<number, number>();
+      const dailySalesMap = new Map<number, number>();
+      const dailyFeeMap = new Map<number, number>();
 
       let withdrawablePool = 0;
       allRows.forEach((row) => {
-        const netAmt = (row.total_amount || 0) - (Number(row.platform_fee_owner || 0) + Number(row.gst_owner || 0));
-        const fee = (Number(row.platform_fee_owner || 0) + Number(row.gst_owner || 0));
+        const ground = Array.isArray(row.ground) ? row.ground[0] : row.ground;
+        const pitchType = (ground?.pitch_type ?? '').toLowerCase();
+        
+        // Calculate fee using platform settings if DB fee is missing or for cash bookings
+        let fee = Number(row.platform_fee_owner || 0) + Number(row.gst_owner || 0);
+        if (settingsMap && Object.keys(settingsMap).length > 0) {
+          const cricketFixedFee = Number(settingsMap.cricket_owner_fee_fixed ?? 100);
+          const netsFixedFee = Number(settingsMap.nets_owner_fee_fixed ?? 25);
+          const rate = Number(settingsMap.user_platform_fee_rate ?? 0.05);
+          const gstRate = Number(settingsMap.gst_rate ?? 0.18);
+          
+          const isCricket = pitchType === 'cricket ground';
+          const isNet = pitchType.includes('net') || pitchType.includes('lane');
+          
+          let ownerPf = 0;
+          if (isNet) {
+            ownerPf = netsFixedFee;
+          } else if (isCricket) {
+            const label = cricketTeamsLabelFromBooking(ground?.pitch_type, row.notes);
+            const teams = (label?.toLowerCase() === '1 team' || label?.toLowerCase() === 'one') ? 1 : 2;
+            ownerPf = cricketFixedFee * teams;
+          } else {
+            ownerPf = (row.total_amount + (row.discount_amount || 0)) * rate;
+          }
+          
+          const ownerPfGst = ownerPf * gstRate;
+          fee = ownerPf + ownerPfGst;
+        }
+
+        const netAmt = (row.total_amount || 0) - fee;
         total += netAmt;
 
-        if (row.payment_method === 'cash') {
+        if (row.payment_method && row.payment_method.toLowerCase() === 'cash') {
           if (row.payment_received) {
             offlineEarningsTotal += netAmt;
           }
@@ -520,10 +601,10 @@ function OwnerEarningsScreenInner() {
           onlineEarningsTotal += netAmt;
         }
 
-        // Withdrawable balance calculation: only for "completed" events
-        if (row.status === 'completed') {
-          const isOnline = row.payment_method && row.payment_method !== 'cash';
-          const revenue = Number(row.ground_price || row.total_amount || 0);
+        // Withdrawable balance calculation: for "completed" and "confirmed" events
+        if (row.status === 'completed' || row.status === 'confirmed') {
+          const isOnline = row.payment_method && row.payment_method.toLowerCase() !== 'cash';
+          const revenue = Number(row.total_amount || 0);
           
           if (isOnline) {
             withdrawablePool += (revenue - fee);
@@ -542,6 +623,8 @@ function OwnerEarningsScreenInner() {
         if (m === currentMonth && y === currentYear) {
           thisMonthTotal += netAmt;
           dayMap.set(d, (dayMap.get(d) || 0) + netAmt);
+          dailySalesMap.set(d, (dailySalesMap.get(d) || 0) + (row.total_amount || 0));
+          dailyFeeMap.set(d, (dailyFeeMap.get(d) || 0) + fee);
           
           hourMap.set(h, (hourMap.get(h) || 0) + netAmt);
           
@@ -582,15 +665,23 @@ function OwnerEarningsScreenInner() {
       setStoreCredits(storeCreditsTotal);
 
       // --- AUTOMATIC WALLET SYNC LOGIC ---
-      // Calculate what the balance SHOULD be: (All Online Earnings) - (All Completed Withdrawals)
-      const { data: completedWithdrawals } = await supabase
+      // Calculate what the balance SHOULD be: (All Online Earnings) - (All Completed/Pending Withdrawals) + (Wallet Transactions)
+      const { data: withdrawalsData } = await supabase
         .from('withdrawals')
-        .select('amount')
+        .select('amount, status')
         .eq('owner_id', user.id)
-        .eq('status', 'completed');
+        .neq('status', 'rejected');
       
-      const totalWithdrawn = (completedWithdrawals || []).reduce((acc, w) => acc + (w.amount || 0), 0);
-      const expectedBalance = withdrawablePool - totalWithdrawn;
+      const { data: wtxData } = await supabase
+        .from('wallet_transactions')
+        .select('amount')
+        .eq('user_id', user.id);
+      
+      const totalWithdrawn = (withdrawalsData || []).reduce((acc, w) => acc + (w.amount || 0), 0);
+      const totalWtx = (wtxData || []).reduce((acc, tx) => acc + (tx.amount || 0), 0);
+      
+      const expectedBalance = withdrawablePool - totalWithdrawn + totalWtx;
+      setCalculatedBalance(expectedBalance);
       
       const currentWalletBalance = walletData?.balance || 0;
 
@@ -611,15 +702,12 @@ function OwnerEarningsScreenInner() {
         const difference = expectedBalance - currentWalletBalance;
         console.log(`Syncing wallet: Adjusting by ${difference} to match expected balance.`);
         
-        // Use a reference that is unique to this balance state to prevent duplicate syncs for the same state
-        const syncRef = `${user.id}_bal_${expectedBalance.toFixed(2)}`; 
-        
         const { error: syncError } = await supabase.rpc('add_money_to_wallet', {
           target_user_id: user.id,
           amount_to_add: difference,
           description_text: 'Automatic Wallet-Earnings Synchronization',
           ref_type: 'system_sync',
-          ref_id: syncRef
+          ref_id: user.id
         });
 
         if (!syncError) {
@@ -668,6 +756,18 @@ function OwnerEarningsScreenInner() {
         }
       }
       setChartData(trend);
+
+      const barData: any[] = [];
+      for (let i = 1; i <= daysInMonth; i++) {
+        if (i <= todayDay) {
+          barData.push({
+            label: i.toString(),
+            sales: dailySalesMap.get(i) || 0,
+            fee: dailyFeeMap.get(i) || 0
+          });
+        }
+      }
+      setBarChartData(barData);
 
       const { data: withdrawalData } = await supabase
         .from('withdrawals')
@@ -1042,6 +1142,18 @@ function OwnerEarningsScreenInner() {
             <LineChart data={chartData || []} height={250} />
           </View>
 
+          <TouchableOpacity 
+            style={styles.sectionCard}
+            onPress={() => setShowChartModal(true)}
+            activeOpacity={0.7}
+          >
+            <View style={{ marginBottom: 20 }}>
+              <Text style={styles.sectionTitle}>Daily Sales & Platform Fee</Text>
+              <Text style={styles.sectionSubtitle}>Breakdown of daily gross sales and fees</Text>
+            </View>
+            <CustomBarChart data={barChartData || []} height={250} />
+          </TouchableOpacity>
+
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>Breakdown by Venue</Text>
             <View style={[styles.venueList, { marginTop: 12 }]}>
@@ -1308,7 +1420,7 @@ function OwnerEarningsScreenInner() {
               </Animated.Text>
             ) : (
               <Text style={[styles.totalEarningsValue, isUltraNarrow && { fontSize: 28 }]}>
-                {formatCurrency(Math.max(0, withdrawableBalance))}
+                {withdrawableBalance < 0 ? `₹-(${formatCurrency(Math.abs(withdrawableBalance)).replace('₹', '')})` : formatCurrency(withdrawableBalance)}
               </Text>
             )}
           <Pressable 
@@ -1507,40 +1619,44 @@ function OwnerEarningsScreenInner() {
         animationType="fade"
         onRequestClose={() => setShowChartModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <TouchableOpacity 
-            style={styles.modalBackdrop} 
-            activeOpacity={1} 
-            onPress={() => setShowChartModal(false)} 
-          />
-          <View style={[styles.modalContent, { maxWidth: 900, width: '95%' }]}>
-            <View style={styles.modalHeader}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.modalTitle}>Detailed Earnings Analytics</Text>
-                <Text style={styles.modalSubtitle}>Daily revenue trends for the current month</Text>
-              </View>
-              <TouchableOpacity onPress={() => setShowChartModal(false)} style={styles.closeBtn}>
-                <X size={20} color="#64748B" />
-              </TouchableOpacity>
+        <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+          <View style={[styles.modalHeader, { padding: 20, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.modalTitle}>Detailed Earnings Analytics</Text>
+              <Text style={styles.modalSubtitle}>Performance overview and daily trends</Text>
             </View>
-            
-            <View style={{ padding: 24, paddingBottom: 40 }}>
+            <TouchableOpacity onPress={() => setShowChartModal(false)} style={styles.closeBtn}>
+              <X size={20} color="#64748B" />
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
+            <View style={{ marginBottom: 32 }}>
+              <Text style={[styles.sectionTitle, { marginBottom: 12 }]}>Cumulative Earnings Trend</Text>
               <LineChart 
                 data={chartData} 
-                height={350} 
+                height={250} 
                 totalDays={new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()} 
               />
-              
-              <View style={{ marginTop: 40, padding: 16, backgroundColor: '#F8FAFC', borderRadius: 12 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Info size={16} color="#64748B" />
-                  <Text style={{ fontSize: 13, color: '#64748B', fontWeight: '500' }}>
-                    Showing performance overview based on confirmed bookings.
-                  </Text>
-                </View>
+            </View>
+
+            <View style={{ marginBottom: 32 }}>
+              <Text style={[styles.sectionTitle, { marginBottom: 12 }]}>Daily Sales & Platform Fee</Text>
+              <CustomBarChart 
+                data={barChartData} 
+                height={250} 
+              />
+            </View>
+            
+            <View style={{ padding: 16, backgroundColor: '#F8FAFC', borderRadius: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Info size={16} color="#64748B" />
+                <Text style={{ fontSize: 13, color: '#64748B', fontWeight: '500' }}>
+                  Showing performance overview based on confirmed bookings.
+                </Text>
               </View>
             </View>
-          </View>
+          </ScrollView>
         </View>
       </Modal>
     </View>
@@ -1623,7 +1739,7 @@ function OwnerEarningsScreenInner() {
             <View style={styles.modalHeader}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.modalTitle}>Withdraw Funds</Text>
-                <Text style={styles.modalSubtitle}>Available: {formatCurrency(Math.max(0, withdrawableBalance))}</Text>
+                <Text style={styles.modalSubtitle}>Available: {formatCurrency(withdrawableBalance)}</Text>
               </View>
               <TouchableOpacity onPress={() => setShowWithdrawModal(false)} style={styles.closeBtn}>
                 <X size={20} color="#64748B" />
@@ -1894,8 +2010,8 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   totalEarningsValue: {
-    fontSize: 36,
-    fontWeight: '700',
+    fontSize: 28,
+    fontWeight: '500',
     color: '#043529',
     marginBottom: 8,
     fontFamily: 'Inter',

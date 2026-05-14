@@ -208,7 +208,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     }
   }, [startX]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(!defaultSidebarOpen);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(defaultSidebarOpen !== undefined ? !defaultSidebarOpen : false);
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchResults, setSearchResults] = useState<{ grounds: any[], matches: any[] }>({ grounds: [], matches: [] });
   const [isSearching, setIsSearching] = useState(false);

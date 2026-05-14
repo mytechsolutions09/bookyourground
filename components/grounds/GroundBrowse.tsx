@@ -127,7 +127,7 @@ export default function GroundBrowse(props: { title?: string }) {
 
   const loadGrounds = async () => {
     try {
-      setLoading(true);
+      if (grounds.length === 0) setLoading(true);
       const { data, error } = await supabase
         .from('grounds')
         .select(

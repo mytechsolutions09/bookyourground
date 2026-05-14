@@ -83,6 +83,12 @@ const CLEAN_MAP_STYLES = [
 export default function GroundDetailsPrettyUrlScreen() {
   const { city, slug, date, time, teams, lock } = useLocalSearchParams();
   const { user } = useAuth();
+
+  const effectiveDate = useMemo(() => {
+    if (typeof date === 'string') return date;
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  }, [date]);
   const [ground, setGround] = useState<GroundWithImages | null>(null);
   const [loading, setLoading] = useState(true);
   const [heroImageIndex, setHeroImageIndex] = useState(0);
@@ -493,7 +499,7 @@ export default function GroundDetailsPrettyUrlScreen() {
                       <LandingBookingForm
                         initialGroundId={String(ground.id)}
                         hideGroundPicker
-                        initialDate={typeof date === 'string' ? date : undefined}
+                        initialDate={effectiveDate}
                         initialStartTime={typeof time === 'string' ? time : undefined}
                         initialTeamType={teams === 'one' || teams === 'both' ? (teams as 'one' | 'both') : undefined}
                         fullWidth
@@ -607,7 +613,7 @@ export default function GroundDetailsPrettyUrlScreen() {
                   <LandingBookingForm
                     initialGroundId={String(ground.id)}
                     hideGroundPicker
-                    initialDate={typeof date === 'string' ? date : undefined}
+                    initialDate={effectiveDate}
                     initialStartTime={typeof time === 'string' ? time : undefined}
                     initialTeamType={teams === 'one' || teams === 'both' ? (teams as 'one' | 'both') : undefined}
                     fullWidth
