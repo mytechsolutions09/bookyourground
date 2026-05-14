@@ -19,6 +19,15 @@ When a user books and pays online, the platform collects revenue from both the u
 - **For Full Cricket Grounds**: Fixed ₹100/₹200 + GST (deducted from owner settlement).
 - **For Box Cricket & Others**: 5% of ground price + GST (deducted from owner settlement).
 
+### C. Payout Amount (Owner Settlement)
+For online bookings, the payout amount transferred to the ground owner will be calculated as:
+`Payout Amount = Ground Price - Platform Fee (including GST)`
+
+- **Ground Price**: This is the base price set by the owner (excluding platform fee and GST charged to the user).
+- **Platform Fee (including GST)**: This is the commission charged to the owner (Fixed or Percentage) plus the applicable GST on that fee.
+- This rule applies if the platform fee is active from the admin (i.e., `charge_platform_fee` is not set to false for the owner).
+
+
 ---
 
 ## Example Calculation
