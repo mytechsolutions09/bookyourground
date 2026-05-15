@@ -241,7 +241,7 @@ export default function CheckoutScreen() {
           setLoading(false);
         }
       },
-      theme: { color: '#f8688a' }
+      theme: { color: '#ff3564' }
     };
 
     const rzp = new (window as any).Razorpay(options);
@@ -306,7 +306,7 @@ export default function CheckoutScreen() {
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
         <style>
           body { background-color: #f8fafc; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: -apple-system, system-ui; }
-          .loader { border: 4px solid #f3f3f3; border-top: 4px solid #f8688a; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+          .loader { border: 4px solid #f3f3f3; border-top: 4px solid #ff3564; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
           @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         </style>
       </head>
@@ -325,7 +325,7 @@ export default function CheckoutScreen() {
               "name": "${fullName}",
               "contact": "${phoneNumber}"
             },
-            "theme": { "color": "#f8688a" },
+            "theme": { "color": "#ff3564" },
             "handler": function (response) {
               window.ReactNativeWebView.postMessage(JSON.stringify({
                 status: 'success',
@@ -361,7 +361,7 @@ export default function CheckoutScreen() {
         <MobileAppNavbar 
           title="Checkout" 
           titleColor="#FFFFFF"
-          bgColor="#f8688a"
+          bgColor="#ff3564"
         />
       )}
 
@@ -511,7 +511,7 @@ export default function CheckoutScreen() {
                   onPress={() => setUseWallet(!useWallet)}
                 >
                   <View style={styles.walletInfo}>
-                    <ShoppingBag size={20} color={useWallet ? '#f8688a' : '#64748B'} />
+                    <ShoppingBag size={20} color={useWallet ? '#ff3564' : '#64748B'} />
                     <View>
                       <Text style={styles.walletTitle}>Use Wallet Balance</Text>
                       <Text style={styles.walletSubtitle}>Available: ₹{walletBalance.toLocaleString('en-IN')}</Text>
@@ -531,7 +531,7 @@ export default function CheckoutScreen() {
                       style={[styles.paymentCard, paymentMethod === 'upi' && styles.paymentCardActive]}
                       onPress={() => setPaymentMethod('upi')}
                     >
-                      <Smartphone size={20} color={paymentMethod === 'upi' ? '#f8688a' : '#9CA3AF'} />
+                      <Smartphone size={20} color={paymentMethod === 'upi' ? '#ff3564' : '#9CA3AF'} />
                       <Text style={[styles.paymentText, paymentMethod === 'upi' && styles.paymentTextActive]}>UPI</Text>
                     </TouchableOpacity>
                     
@@ -539,7 +539,7 @@ export default function CheckoutScreen() {
                       style={[styles.paymentCard, paymentMethod === 'card' && styles.paymentCardActive]}
                       onPress={() => setPaymentMethod('card')}
                     >
-                      <CreditCard size={20} color={paymentMethod === 'card' ? '#f8688a' : '#9CA3AF'} />
+                      <CreditCard size={20} color={paymentMethod === 'card' ? '#ff3564' : '#9CA3AF'} />
                       <Text style={[styles.paymentText, paymentMethod === 'card' && styles.paymentTextActive]}>Card</Text>
                     </TouchableOpacity>
 
@@ -547,7 +547,7 @@ export default function CheckoutScreen() {
                       style={[styles.paymentCard, paymentMethod === 'netbanking' && styles.paymentCardActive]}
                       onPress={() => setPaymentMethod('netbanking')}
                     >
-                      <Globe size={20} color={paymentMethod === 'netbanking' ? '#f8688a' : '#9CA3AF'} />
+                      <Globe size={20} color={paymentMethod === 'netbanking' ? '#ff3564' : '#9CA3AF'} />
                       <Text style={[styles.paymentText, paymentMethod === 'netbanking' && styles.paymentTextActive]}>Net Banking</Text>
                     </TouchableOpacity>
                   </View>
@@ -569,7 +569,7 @@ export default function CheckoutScreen() {
                 </View>
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Shipping</Text>
-                  <Text style={[styles.summaryValue, { color: '#f8688a' }]}>FREE</Text>
+                  <Text style={[styles.summaryValue, { color: '#ff3564' }]}>FREE</Text>
                 </View>
                 <View style={styles.divider} />
                 <View style={styles.totalRow}>
@@ -801,12 +801,12 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: '#f8688a',
+    borderColor: '#ff3564',
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxChecked: {
-    backgroundColor: '#f8688a',
+    backgroundColor: '#ff3564',
   },
   checkboxLabel: {
     fontSize: 13,
@@ -820,7 +820,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   termsLink: {
-    color: '#f8688a',
+    color: '#ff3564',
     textDecorationLine: 'underline',
   },
   mobileTermsContainer: {
@@ -845,7 +845,7 @@ const styles = StyleSheet.create({
   },
   smallTermsLink: {
     fontSize: 11,
-    color: '#f8688a',
+    color: '#ff3564',
     fontWeight: '600',
     textDecorationLine: 'underline',
   },
@@ -877,7 +877,7 @@ const styles = StyleSheet.create({
     color: '#2b2f4b',
   },
   closeBtnText: {
-    color: '#f8688a',
+    color: '#ff3564',
     fontWeight: '600',
     fontSize: 14,
   },
@@ -893,7 +893,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   stateItemTextActive: {
-    color: '#f8688a',
+    color: '#ff3564',
     fontWeight: '600',
   },
   paymentOptions: {
@@ -911,7 +911,7 @@ const styles = StyleSheet.create({
     borderColor: '#F1F5F9',
   },
   walletToggleActive: {
-    borderColor: '#f8688a',
+    borderColor: '#ff3564',
     backgroundColor: 'rgba(248, 104, 138, 0.05)',
   },
   walletInfo: {
@@ -950,7 +950,7 @@ const styles = StyleSheet.create({
     borderColor: '#F1F5F9',
   },
   paymentCardActive: {
-    borderColor: '#f8688a',
+    borderColor: '#ff3564',
     backgroundColor: 'rgba(248, 104, 138, 0.05)',
   },
   paymentText: {
@@ -959,7 +959,7 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
   },
   paymentTextActive: {
-    color: '#f8688a',
+    color: '#ff3564',
   },
   upiIcon: {
     fontSize: 18,
@@ -967,7 +967,7 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
   },
   upiIconActive: {
-    color: '#f8688a',
+    color: '#ff3564',
   },
   summaryCard: {
     backgroundColor: '#2b2f4b',
@@ -1004,7 +1004,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   totalValue: {
-    color: '#f8688a',
+    color: '#ff3564',
     fontSize: 20,
     fontWeight: '600',
   },
@@ -1032,12 +1032,12 @@ const styles = StyleSheet.create({
     paddingBottom: Platform.OS === 'ios' ? 24 : 12,
   },
   placeOrderBtn: {
-    backgroundColor: '#f8688a',
+    backgroundColor: '#ff3564',
     height: 52,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#f8688a',
+    shadowColor: '#ff3564',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

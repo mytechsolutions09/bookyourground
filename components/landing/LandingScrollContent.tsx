@@ -37,6 +37,7 @@ const SPORT_CATEGORIES = [
   { label: 'Cricket', value: 'cricket' },
   { label: 'Box Cricket', value: 'box' },
   { label: 'Multi-Sport', value: 'multi' },
+  { label: 'Find an Opposition', value: 'opponent' },
 ];
 
 type Variant = 'web' | 'native';
@@ -100,12 +101,16 @@ export default function LandingScrollContent({
                     <TouchableOpacity
                       key={cat.value}
                       style={styles.mobileCatChip}
-                      onPress={() =>
-                        expoRouter.push({
-                          pathname: '/grounds',
-                          params: { type: cat.value },
-                        } as any)
-                      }
+                      onPress={() => {
+                        if (cat.value === 'opponent') {
+                          expoRouter.push('/find-an-opponent' as any);
+                        } else {
+                          expoRouter.push({
+                            pathname: '/book-my-ground',
+                            params: { type: cat.value },
+                          } as any);
+                        }
+                      }}
                     >
                       <Text style={styles.mobileCatText}>{cat.label}</Text>
                     </TouchableOpacity>

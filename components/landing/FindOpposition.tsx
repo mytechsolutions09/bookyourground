@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Pressable, Platform, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Platform, useWindowDimensions, TouchableOpacity } from 'react-native';
 import { Users, Sword, Trophy, ArrowRight, Star } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -72,15 +72,14 @@ export default function FindOpposition() {
               animatedTextStyle,
               isMobile && { alignItems: 'center' }
             ]}>
-              <LinearGradient
-                colors={['#F0FDF4', '#DCFCE7']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
+
+              <TouchableOpacity 
                 style={[styles.badge, isMobile && { alignSelf: 'center' }]}
+                onPress={() => router.push('/find-an-opponent' as any)}
               >
                 <Users size={14} color="#01b854" strokeWidth={3} />
-                <Text style={styles.badgeText}>MATCHMAKING</Text>
-              </LinearGradient>
+                <Text style={styles.badgeText}>FIND AN OPPOSITION</Text>
+              </TouchableOpacity>
               
               <Text style={[styles.title, isMobile && { textAlign: 'center' }]}>Find an{"\n"}<Text style={{ color: '#01b854' }}>Opposition</Text></Text>
               <Text style={[styles.subtitle, isMobile && { textAlign: 'center' }]}>

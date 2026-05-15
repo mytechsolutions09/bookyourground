@@ -91,8 +91,12 @@ export default function OwnerSignupScreen() {
     setLoading(false);
 
     if (error) {
-      if (Platform.OS === 'web') alert('Error: ' + error.message);
-      else Alert.alert('Error', error.message);
+      let msg = error.message;
+      if (msg.includes('confirmation email')) {
+        msg = 'Error sending confirmation email. This usually means the email provider is not configured correctly in the backend or rate limits were exceeded. Please check your Supabase SMTP settings.';
+      }
+      if (Platform.OS === 'web') alert('Error: ' + msg);
+      else Alert.alert('Error', msg);
     } else {
       const msg = 'Application submitted! Please check your email to verify your account.';
       if (Platform.OS === 'web') {

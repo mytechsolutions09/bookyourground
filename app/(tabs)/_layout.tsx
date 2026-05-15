@@ -65,10 +65,10 @@ const CustomTabBar = ({ state, descriptors, navigation, router, insets, isTabBar
 
         return (
           <Pressable key={route.key} onPress={onPress} style={styles.tabItem}>
-            {Icon && Icon({ color: isFocused ? (route.name === 'shop' ? '#f8688a' : '#00ea6b') : '#9ca3af', size: 18 })}
+            {Icon && Icon({ color: isFocused ? (route.name === 'shop' ? '#ff3564' : '#00ea6b') : '#9ca3af', size: 18 })}
             <RNText
               numberOfLines={1}
-              style={[styles.tabLabel, { color: isFocused ? (route.name === 'shop' ? '#f8688a' : '#00ea6b') : '#9ca3af' }]}
+              style={[styles.tabLabel, { color: isFocused ? (route.name === 'shop' ? '#ff3564' : '#00ea6b') : '#9ca3af' }]}
             >
               {options.title}
             </RNText>
@@ -205,6 +205,13 @@ export default function TabLayout() {
             options={{
               title: 'Cricket',
               tabBarIcon: ({ color, size }) => <Trophy size={size} color={color} />,
+            }}
+          />
+
+          <Tabs.Screen
+            name="book-my-ground"
+            options={{
+              href: null,
             }}
           />
 

@@ -1,15 +1,16 @@
-#dc8d3c
-#2b2f4b
-#043529
-#00ea6b
-#06392e
-#01e669
-#02c259
-#01b854
-#a5ff8a
-#dcc093
-#2d3450
-#f8688a pink
+#dc8d3c #orange 
+#2b2f4b #dark-blue
+#043529 #dark-green
+#00ea6b #green
+#06392e #dark-green
+#01e669 #green
+#02c259 #green
+#01b854 #green
+#a5ff8a #lime-green
+#dcc093 #warm-beige
+#2d3450 #dark-navy
+#f8688a #pink
+#ff3564 #pink
 
 
 npx expo start

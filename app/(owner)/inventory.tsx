@@ -37,7 +37,7 @@ import {
   X,
   Check
 } from 'lucide-react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { GroundWithImages, BookingWithDetails } from '@/types';
@@ -57,11 +57,12 @@ function toLocalIsoDate(d: Date): string {
 
 export default function OwnerInventoryScreen() {
   const { user } = useAuth();
+  const params = useLocalSearchParams();
   const [grounds, setGrounds] = useState<GroundWithImages[]>([]);
   const [bookings, setBookings] = useState<BookingWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   
-  const [selectedGroundId, setSelectedGroundId] = useState<string | null>(null);
+  const [selectedGroundId, setSelectedGroundId] = useState<string | null>((params.id as string) || null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [selectedDateFilter, setSelectedDateFilter] = useState<string | null>(new Date().toISOString().split('T')[0]);

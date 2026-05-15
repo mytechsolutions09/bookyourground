@@ -27,7 +27,7 @@ export default function CallToAction() {
                 onPress={() => router.push('/(tabs)/bookings')}
               >
                 <Text style={styles.primaryButtonText}>My Bookings</Text>
-                <ArrowRight size={20} color="#FFFFFF" strokeWidth={2.5} />
+                <ArrowRight size={20} color="#043529" strokeWidth={2.5} />
               </Pressable>
             ) : (
               <>
@@ -36,7 +36,7 @@ export default function CallToAction() {
                   onPress={() => router.push('/(auth)/signup')}
                 >
                   <Text style={styles.primaryButtonText}>Create Free Account</Text>
-                  <ArrowRight size={20} color="#FFFFFF" strokeWidth={2.5} />
+                  <ArrowRight size={20} color="#043529" strokeWidth={2.5} />
                 </Pressable>
 
                 <Pressable
@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   card: {
-    backgroundColor: '#0F172A',
+    backgroundColor: '#043529',
     borderRadius: 32,
     padding: Platform.OS === 'web' ? 64 : 40,
     alignItems: 'center',
@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
     fontSize: Platform.OS === 'web' ? 42 : 32,
     fontWeight: '800',
     fontFamily: 'Inter',
-    color: '#FFFFFF',
+    color: '#a5ff8a',
     textAlign: 'center',
     marginBottom: 16,
     letterSpacing: -1,
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 18,
     fontFamily: 'Inter',
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#a5ff8a',
     textAlign: 'center',
     lineHeight: 28,
     marginBottom: 40,
@@ -114,8 +114,8 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   primaryButton: {
-    backgroundColor: 'rgba(1, 230, 105, 0.4)',
-    borderColor: 'rgba(1, 230, 105, 0.5)',
+    backgroundColor: '#00ea6b',
+    borderColor: '#00ea6b',
     borderWidth: 1,
     paddingHorizontal: 36,
     paddingVertical: Platform.OS === 'web' ? 20 : 18,
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    shadowColor: '#01e669',
+    shadowColor: '#00ea6b',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     fontFamily: 'Inter',
-    color: '#FFFFFF',
+    color: '#043529',
     fontSize: 17,
     fontWeight: '600',
     letterSpacing: -0.3,
@@ -149,6 +149,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   linkButtonTextLight: {
-    color: '#10B981',
+    color: '#00ea6b',
   },
 });

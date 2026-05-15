@@ -614,71 +614,81 @@ export default function OwnerGroundsScreen() {
         onRequestClose={() => setSelectedGroundId(null)}
       >
         <Pressable style={styles.modalOverlay} onPress={() => setSelectedGroundId(null)} />
-        <View style={styles.modalWrap}>
-          <Card style={[styles.modalCard, { width: 400, maxWidth: '90vw' }]}>
-            <View style={styles.modalHeader}>
-              <View>
-                <Text style={styles.modalTitle}>Manage Venue</Text>
-                <Text style={{ fontSize: 13, color: '#64748B' }}>
-                  {grounds.find(g => g.id === selectedGroundId)?.name}
-                </Text>
+        <Pressable style={styles.modalWrap} onPress={() => setSelectedGroundId(null)}>
+          <Pressable onPress={() => {}}>
+            <Card style={[styles.modalCard, { width: 400, maxWidth: '90vw' }]}>
+              <View style={styles.modalHeader}>
+                <View>
+                  <Text style={styles.modalTitle}>Manage Venue</Text>
+                  <Text style={{ fontSize: 13, color: '#64748B' }}>
+                    {grounds.find(g => g.id === selectedGroundId)?.name}
+                  </Text>
+                </View>
+
               </View>
-              <TouchableOpacity onPress={() => setSelectedGroundId(null)}>
-                <Text style={{ color: '#64748B', fontWeight: '800' }}>CLOSE</Text>
-              </TouchableOpacity>
-            </View>
 
-            <View style={{ padding: 16, gap: 8 }}>
-              <TouchableOpacity 
-                style={styles.compactModalBtn} 
-                onPress={() => {
-                  const ground = grounds.find(g => g.id === selectedGroundId);
-                  if (ground) {
-                    if ((ground.pitch_type ?? '').toLowerCase() === 'nets') {
-                      setSelectedGroundId(null);
-                      router.push(`/(owner)/edit-net?id=${ground.id}`);
-                    } else {
-                      startEditGround(ground);
+              <View style={{ padding: 16, gap: 8 }}>
+                <TouchableOpacity 
+                  style={styles.compactModalBtn} 
+                  onPress={() => {
+                    const ground = grounds.find(g => g.id === selectedGroundId);
+                    if (ground) {
+                      if ((ground.pitch_type ?? '').toLowerCase() === 'nets') {
+                        setSelectedGroundId(null);
+                        router.push(`/(owner)/edit-net?id=${ground.id}`);
+                      } else {
+                        startEditGround(ground);
+                        setSelectedGroundId(null);
+                      }
                     }
-                  }
-                }}
-              >
-                <Pencil size={18} color="#0F172A" />
-                <Text style={styles.compactModalBtnText}>Edit Venue & Pricing</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={styles.compactModalBtn} 
-                onPress={() => {
-                  const ground = grounds.find(g => g.id === selectedGroundId);
-                  if (ground) router.push(makeGroundPath(ground) as any);
-                }}
-              >
-                <Eye size={18} color="#0F172A" />
-                <Text style={styles.compactModalBtnText}>View Public Page</Text>
-              </TouchableOpacity>
+                  }}
+                >
+                  <Pencil size={18} color="#0F172A" />
+                  <Text style={styles.compactModalBtnText}>Edit Venue & Pricing</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.compactModalBtn} 
+                  onPress={() => {
+                    const ground = grounds.find(g => g.id === selectedGroundId);
+                    if (ground) {
+                      router.push(makeGroundPath(ground) as any);
+                      setSelectedGroundId(null);
+                    }
+                  }}
+                >
+                  <Eye size={18} color="#0F172A" />
+                  <Text style={styles.compactModalBtnText}>View Public Page</Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity 
-                style={styles.compactModalBtn} 
-                onPress={() => router.push('/(owner)/bookings')}
-              >
-                <Calendar size={18} color="#0F172A" />
-                <Text style={styles.compactModalBtnText}>Manage Bookings</Text>
-              </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.compactModalBtn} 
+                  onPress={() => {
+                    router.push(`/(owner)/inventory?id=${selectedGroundId}`);
+                    setSelectedGroundId(null);
+                  }}
+                >
+                  <Calendar size={18} color="#0F172A" />
+                  <Text style={styles.compactModalBtnText}>Manage Bookings</Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity 
-                style={styles.compactModalBtn} 
-                onPress={() => {
-                  const ground = grounds.find(g => g.id === selectedGroundId);
-                  if (ground) handleExportGround(ground);
-                }}
-              >
-                <Download size={18} color="#0F172A" />
-                <Text style={styles.compactModalBtnText}>Export Data (JSON)</Text>
-              </TouchableOpacity>
-            </View>
-          </Card>
-        </View>
+                <TouchableOpacity 
+                  style={styles.compactModalBtn} 
+                  onPress={() => {
+                    const ground = grounds.find(g => g.id === selectedGroundId);
+                    if (ground) {
+                      handleExportGround(ground);
+                      setSelectedGroundId(null);
+                    }
+                  }}
+                >
+                  <Download size={18} color="#0F172A" />
+                  <Text style={styles.compactModalBtnText}>Export Data (JSON)</Text>
+                </TouchableOpacity>
+              </View>
+            </Card>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       <Modal
@@ -689,13 +699,21 @@ export default function OwnerGroundsScreen() {
       >
         <Pressable style={styles.modalOverlay} onPress={closeEditModal} />
         <View style={styles.modalWrap}>
-          <Card style={[styles.modalCard, IS_WEB && { width: 1200, maxWidth: '98vw' }, isUltraNarrow && { padding: 12 }]}>
+          <Card style={[styles.modalCard, IS_WEB && { width: '95vw', maxWidth: 1400, height: '95vh' }, isUltraNarrow && { padding: 12 }]}>
             <View style={[styles.modalHeader, isUltraNarrow && { marginBottom: 6 }]}>
               <View>
                 <Text style={styles.modalTitle}>Edit Venue</Text>
                 <Text style={{ fontSize: 11, color: '#64748B' }}>Managing {editForm?.name}</Text>
               </View>
-              <Button title="Close" onPress={closeEditModal} variant="outline" size="small" />
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Button
+                  title={(editLoading || savingAvailability) ? 'Saving...' : 'Save'}
+                  onPress={handleSaveEdit}
+                  loading={editLoading || savingAvailability}
+                  size="small"
+                />
+                <Button title="Close" onPress={closeEditModal} variant="outline" size="small" />
+              </View>
             </View>
 
             <ScrollView style={styles.modalScroll} keyboardShouldPersistTaps="handled">
@@ -921,15 +939,7 @@ export default function OwnerGroundsScreen() {
               </View>
             </ScrollView>
 
-            <View style={styles.modalFooter}>
-              <Button
-                title={(editLoading || savingAvailability) ? 'Saving...' : 'Save'}
-                onPress={handleSaveEdit}
-                loading={editLoading || savingAvailability}
-                fullWidth
-                size="large"
-              />
-            </View>
+
           </Card>
         </View>
       </Modal>
@@ -1077,7 +1087,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontFamily: 'Inter',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#0F172A',
     flex: 1,
     letterSpacing: -0.5,
@@ -1296,7 +1306,7 @@ const styles = StyleSheet.create({
   compactSectionTitle: {
     fontFamily: 'Inter',
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#1E293B',
     marginBottom: 6,
     textTransform: 'uppercase',
@@ -1430,7 +1440,7 @@ const styles = StyleSheet.create({
   },
   compactModalBtnText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '400',
     color: '#1E293B',
     fontFamily: 'Inter',
   },
