@@ -97,6 +97,9 @@ export default function GroundDetailsPrettyUrlScreen() {
   const [reviewSortOrder, setReviewSortOrder] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>('newest');
   const [currentTotal, setCurrentTotal] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<'info' | 'amenities' | 'details' | 'book' | 'reviews'>('book');
+  const [aboutExpanded, setAboutExpanded] = useState(false);
+  const [amenitiesExpanded, setAmenitiesExpanded] = useState(false);
+  const [detailsExpanded, setDetailsExpanded] = useState(false);
 
   const isCompact = useIsCompact();
   const isWeb = Platform.OS === 'web';
@@ -342,7 +345,7 @@ export default function GroundDetailsPrettyUrlScreen() {
           style={styles.container}
           contentContainerStyle={isLargeWeb 
             ? styles.content 
-            : [styles.content, { paddingTop: 0, paddingHorizontal: 12 }]}
+            : [styles.content, { paddingTop: 0, paddingHorizontal: 12 }, isWeb && isCompact && { paddingBottom: 100 }]}
           showsVerticalScrollIndicator={false}
         >
           {isLargeWeb ? (
@@ -372,7 +375,7 @@ export default function GroundDetailsPrettyUrlScreen() {
                       style={[styles.webActionIconButton]}
                       onPress={toggleFavorite}
                     >
-                      <HeartIcon filled={isFavorite} size={20} />
+                      <Heart size={20} color={isFavorite ? "#01b854" : "#64748B"} fill={isFavorite ? "#01b854" : "none"} />
                     </TouchableOpacity>
                     <TouchableOpacity 
                       style={styles.webActionIconButton}
@@ -626,43 +629,69 @@ export default function GroundDetailsPrettyUrlScreen() {
                 </View>
               </View>
 
-              {ground.description && (
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>About the Venue</Text>
-                  <Text style={styles.description}>{ground.description}</Text>
-                </View>
-              )}
-
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Amenities & Facilities</Text>
-                <AmenitiesList ground={ground} />
-              </View>
-
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Venue Details</Text>
-                {ground.pitch_type && <Text style={styles.description}>Venue Type: {ground.pitch_type}</Text>}
-                {ground.pitch_type?.toLowerCase().includes('nets') && (
-                  <>
-                    <Text style={styles.description}>
-                      {ground.pricing_model === 'overs' ? 'Overs per slot' : 'Time per slot'}: {ground.pricing_model === 'overs' ? (ground.time_slots?.find((s: any) => s.overs_count != null)?.overs_count || '—') : '1 Hour'}
-                    </Text>
-                    <Text style={styles.description}>
-                      Duration: {(() => {
-                        const slot = ground.time_slots?.[0];
-                        if (!slot?.start_time || !slot?.end_time) return '—';
-                        const [h1, m1] = slot.start_time.split(':').map(Number);
-                        const [h2, m2] = slot.end_time.split(':').map(Number);
-                        let diff = (h2 * 60 + m2) - (h1 * 60 + m1);
-                        if (diff < 0) diff += 24 * 60;
-                        const hrs = Math.floor(diff / 60);
-                        const mins = diff % 60;
-                        if (hrs > 0 && mins > 0) return `${hrs} hr ${mins} min`;
-                        if (hrs > 0) return `${hrs} ${hrs === 1 ? 'hr' : 'hrs'}`;
-                        return `${mins} min`;
-                      })()}
-                    </Text>
-                  </>
+                {ground.description && (
+                  <View style={{ borderBottomWidth: 1, borderBottomColor: '#F1F5F9', paddingBottom: 16, marginBottom: 16 }}>
+                    <TouchableOpacity 
+                      onPress={() => setAboutExpanded(!aboutExpanded)} 
+                      style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: aboutExpanded ? 12 : 0 }}
+                    >
+                      <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>About the Venue</Text>
+                      <ChevronRight size={20} color="#64748B" style={aboutExpanded && { transform: [{ rotate: '90deg' }] }} />
+                    </TouchableOpacity>
+                    {aboutExpanded && (
+                      <Text style={styles.description}>{ground.description}</Text>
+                    )}
+                  </View>
                 )}
+
+                <View style={{ borderBottomWidth: 1, borderBottomColor: '#F1F5F9', paddingBottom: 16, marginBottom: 16 }}>
+                  <TouchableOpacity 
+                    onPress={() => setAmenitiesExpanded(!amenitiesExpanded)} 
+                    style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: amenitiesExpanded ? 12 : 0 }}
+                  >
+                    <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Amenities & Facilities</Text>
+                    <ChevronRight size={20} color="#64748B" style={amenitiesExpanded && { transform: [{ rotate: '90deg' }] }} />
+                  </TouchableOpacity>
+                  {amenitiesExpanded && <AmenitiesList ground={ground} />}
+                </View>
+
+                <View>
+                  <TouchableOpacity 
+                    onPress={() => setDetailsExpanded(!detailsExpanded)} 
+                    style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: detailsExpanded ? 12 : 0 }}
+                  >
+                    <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Venue Details</Text>
+                    <ChevronRight size={20} color="#64748B" style={detailsExpanded && { transform: [{ rotate: '90deg' }] }} />
+                  </TouchableOpacity>
+                  {detailsExpanded && (
+                    <>
+                      {ground.pitch_type && <Text style={styles.description}>Venue Type: {ground.pitch_type}</Text>}
+                      {ground.pitch_type?.toLowerCase().includes('nets') && (
+                        <>
+                          <Text style={styles.description}>
+                            {ground.pricing_model === 'overs' ? 'Overs per slot' : 'Time per slot'}: {ground.pricing_model === 'overs' ? (ground.time_slots?.find((s: any) => s.overs_count != null)?.overs_count || '—') : '1 Hour'}
+                          </Text>
+                          <Text style={styles.description}>
+                            Duration: {(() => {
+                              const slot = ground.time_slots?.[0];
+                              if (!slot?.start_time || !slot?.end_time) return '—';
+                              const [h1, m1] = slot.start_time.split(':').map(Number);
+                              const [h2, m2] = slot.end_time.split(':').map(Number);
+                              let diff = (h2 * 60 + m2) - (h1 * 60 + m1);
+                              if (diff < 0) diff += 24 * 60;
+                              const hrs = Math.floor(diff / 60);
+                              const mins = diff % 60;
+                              if (hrs > 0 && mins > 0) return `${hrs} hr ${mins} min`;
+                              if (hrs > 0) return `${hrs} ${hrs === 1 ? 'hr' : 'hrs'}`;
+                              return `${mins} min`;
+                            })()}
+                          </Text>
+                        </>
+                      )}
+                    </>
+                  )}
+                </View>
               </View>
               
               <View style={styles.section}>
@@ -729,7 +758,7 @@ export default function GroundDetailsPrettyUrlScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
               >
-                <HeartIcon filled={isFavorite} size={24} />
+                <Heart size={24} color={isFavorite ? "#01b854" : "#64748B"} fill={isFavorite ? "#01b854" : "none"} />
               </Pressable>
             ) : null
           )
@@ -805,7 +834,7 @@ function WebHeroGallery({
   const isSmall = width < 768;
 
   return (
-    <View style={[styles.webGalleryWrapper, isSmall && { height: 320, borderRadius: 20 }]}>
+    <View style={[styles.webGalleryWrapper, isSmall && { height: 320, borderRadius: 20, overflow: 'hidden' }]}>
       <View style={styles.webGalleryMain}>
         <Image
           source={{ uri: imageUrls[heroIdx] }}

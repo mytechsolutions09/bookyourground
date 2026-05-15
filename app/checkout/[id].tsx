@@ -62,6 +62,7 @@ export default function CheckoutScreen() {
     const [activeGateways, setActiveGateways] = useState<any[]>([]);
     const [selectedGateway, setSelectedGateway] = useState<string | null>(null);
     const [couponCode, setCouponCode] = useState('');
+    const [isCouponFocused, setIsCouponFocused] = useState(false);
     const [isCouponsModalVisible, setIsCouponsModalVisible] = useState(false);
     const [isSlotsModalVisible, setIsSlotsModalVisible] = useState(false);
     const [isPolicyModalVisible, setIsPolicyModalVisible] = useState(false);
@@ -1073,6 +1074,7 @@ export default function CheckoutScreen() {
         content: {
             padding: isCompactCheckout ? 16 : 24,
             paddingTop: isCompactCheckout ? 0 : 24,
+            paddingHorizontal: isCompactCheckout ? 4 : 12,
         },
         layout: {
             gap: isLargeWebScreen ? (width > 1200 ? 40 : 24) : 0,
@@ -1106,7 +1108,7 @@ export default function CheckoutScreen() {
     const content = (
         <ScrollView
             style={[styles.container, { backgroundColor: themeBg }]}
-            contentContainerStyle={[styles.content, dynamicStyles.content]}
+            contentContainerStyle={[styles.content, dynamicStyles.content, Platform.OS === 'web' && !isDesktop && { paddingBottom: 100 }]}
         >
             {/* ── Compact layout: native mobile + small web (<768px) ── */}
             {isCompactCheckout && (
@@ -1447,7 +1449,12 @@ export default function CheckoutScreen() {
                         {/* Coupon Section */}
                         {!isGroundOwnerOrAdmin && (
                             <View style={{ marginBottom: 24, marginTop: 12 }}>
-                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                                <View style={{ 
+                                    flexDirection: 'row', 
+                                    justifyContent: 'space-between', 
+                                    alignItems: 'center', 
+                                    marginBottom: 12 
+                                }}>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                                         <Ticket size={18} color="#06392e" />
                                         <RNText style={{ fontSize: 14, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>Have a coupon?</RNText>
@@ -1456,7 +1463,7 @@ export default function CheckoutScreen() {
                                         <RNText style={{ fontSize: 13, fontWeight: '600', color: '#475569', fontFamily: 'Inter' }}>View Offers</RNText>
                                     </TouchableOpacity>
                                 </View>
-                                <View style={[styles.couponContainer, { marginBottom: 0 }]}>
+                                <View style={[styles.couponContainer, { borderColor: isCouponFocused ? '#01b854' : '#F1F5F9' }]}>
                                     <RNTextInput
                                         style={styles.couponInputNew}
                                         placeholder="Enter coupon code"
@@ -1464,6 +1471,8 @@ export default function CheckoutScreen() {
                                         value={couponCode}
                                         onChangeText={setCouponCode}
                                         autoCapitalize="characters"
+                                        onFocus={() => setIsCouponFocused(true)}
+                                        onBlur={() => setIsCouponFocused(false)}
                                     />
                                     <TouchableOpacity
                                         style={[styles.applyBtnNew, applyingCoupon && { opacity: 0.7 }, booking.coupon_id && { backgroundColor: '#FEE2E2' }]}
@@ -1809,7 +1818,7 @@ export default function CheckoutScreen() {
                                 })
                             ) : (
                                 <View style={{ paddingVertical: 20, alignItems: 'center' }}>
-                                    <RNText style={{ color: '#666' }}>No slots selected or single slot booking.</RNText>
+                                    <RNText style={{ color: '#059669', fontWeight: '600' }}>1 Team</RNText>
                                     <RNText style={{ color: '#333', fontWeight: '600', marginTop: 4 }}>
                                         {formatDateDDMMYYYY(booking.booking_date)} | {booking.start_time.substring(0, 5)} – {booking.end_time.substring(0, 5)} | {formatCurrency(baseGroundPrice)}
                                     </RNText>
@@ -2128,7 +2137,8 @@ const styles = StyleSheet.create({
         fontSize: 13,
         fontFamily: 'Inter',
         color: '#0F172A',
-        ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
+        borderWidth: 0,
+        ...(Platform.OS === 'web' ? { outlineStyle: 'none', borderStyle: 'none' } : {}),
     },
     applyBtnNew: {
         height: 30,

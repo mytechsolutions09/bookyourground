@@ -250,6 +250,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
   const [loadingSlots, setLoadingSlots] = useState(false);
 
   const [couponCode, setCouponCode] = useState('');
+  const [isCouponFocused, setIsCouponFocused] = useState(false);
   const [validatingCoupon, setValidatingCoupon] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState<any | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
@@ -2443,55 +2444,75 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
 
       {/* Coupon Code Section */}
       {user && (!useLandingSearchFlow || groundSelectedFromSearch) && (
-        <View style={[styles.section, webGridSectionStyle, webSingleColumnStyle]}>
-          <Text style={fieldLabelStyle}>Coupon Code</Text>
-          <View style={styles.couponRow}>
-            <TextInput
-              style={[
-                styles.input,
-                { flex: 1 },
-                nativeTanChrome && styles.inputBookGroundNative,
-                appliedCoupon && styles.couponInputApplied,
-              ]}
-              placeholder="Enter coupon code"
-              placeholderTextColor={Platform.OS === 'web' ? '#9CA3AF' : '#9ca3af'}
-              value={couponCode}
-              onChangeText={(text) => {
-                setCouponCode(text.toUpperCase());
-                setAppliedCoupon(null);
-                setCouponError(null);
-              }}
-              autoCapitalize="characters"
-              autoCorrect={false}
-              editable={!validatingCoupon}
-            />
-            <Pressable
-              onPress={handleApplyCoupon}
-              disabled={!couponCode || !!appliedCoupon || validatingCoupon || !computed}
-              style={({ pressed }) => [
-                styles.applyBtn,
-                (!couponCode || !!appliedCoupon || validatingCoupon || !computed) && styles.applyBtnDisabled,
-                appliedCoupon && styles.applyBtnApplied,
-                pressed && { opacity: 0.8 },
-              ]}
-            >
-              {validatingCoupon ? (
-                <ActivityIndicator size="small" color="#FFF" />
-              ) : (
-                <Text style={[styles.applyBtnText, appliedCoupon && styles.applyBtnTextApplied]}>
-                  {appliedCoupon ? 'Applied' : 'Apply'}
-                </Text>
+        <View style={[styles.section, webGridSectionStyle, webSingleColumnStyle, isWeb && !isCompact && { flexDirection: 'row', alignItems: 'center', gap: 16 }]}>
+          {!(isWeb && !isCompact) && (
+            <Text style={fieldLabelStyle}>Coupon Code</Text>
+          )}
+          <View style={{ flex: (isWeb && !isCompact) ? 1 : undefined }}>
+            <View style={styles.couponRow}>
+              <TextInput
+                style={[
+                  styles.input,
+                  { flex: 1 },
+                  isWeb && !isCompact && { height: 40, minHeight: 40 },
+                  isCouponFocused && { borderColor: '#01b854', ...Platform.select({ web: { outlineStyle: 'none' } }) },
+                  nativeTanChrome && styles.inputBookGroundNative,
+                  appliedCoupon && styles.couponInputApplied,
+                ]}
+                placeholder="Enter coupon code"
+                placeholderTextColor={Platform.OS === 'web' ? '#9CA3AF' : '#9ca3af'}
+                value={couponCode}
+                onChangeText={(text) => {
+                  setCouponCode(text.toUpperCase());
+                  setAppliedCoupon(null);
+                  setCouponError(null);
+                }}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                editable={!validatingCoupon}
+                onFocus={() => setIsCouponFocused(true)}
+                onBlur={() => setIsCouponFocused(false)}
+              />
+              <Pressable
+                onPress={handleApplyCoupon}
+                disabled={!couponCode || !!appliedCoupon || validatingCoupon || !computed}
+                style={({ pressed }) => [
+                  styles.applyBtn,
+                  isWeb && !isCompact && { height: 40, minHeight: 40 },
+                  (!couponCode || !!appliedCoupon || validatingCoupon || !computed) && styles.applyBtnDisabled,
+                  appliedCoupon && styles.applyBtnApplied,
+                  pressed && { opacity: 0.8 },
+                ]}
+              >
+                {validatingCoupon ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Text style={[styles.applyBtnText, appliedCoupon && styles.applyBtnTextApplied]}>
+                    {appliedCoupon ? 'Applied' : 'Apply'}
+                  </Text>
+                )}
+              </Pressable>
+              {isWeb && groundPageAccent && !isCompact && (
+                <Button
+                  title={submitting ? 'Processing...' : 'Checkout'}
+                  onPress={handleBook}
+                  disabled={submitting}
+                  loading={submitting}
+                  size="large"
+                  style={[styles.premiumGlassButton, { height: 40, borderRadius: 16, paddingHorizontal: 20, marginTop: 0 }]}
+                  textStyle={[styles.premiumGlassButtonText, { fontSize: 13 }]}
+                />
               )}
-            </Pressable>
+            </View>
+            {appliedCoupon && (
+              <Text style={styles.couponSuccess}>
+                Coupon applied! You saved {formatCurrency(discountAmount)}
+              </Text>
+            )}
+            {couponError && (
+              <Text style={styles.couponError}>{couponError}</Text>
+            )}
           </View>
-          {appliedCoupon && (
-            <Text style={styles.couponSuccess}>
-              Coupon applied! You saved {formatCurrency(discountAmount)}
-            </Text>
-          )}
-          {couponError && (
-            <Text style={styles.couponError}>{couponError}</Text>
-          )}
         </View>
       )}
 
@@ -2569,23 +2590,6 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
           <View style={{ flexDirection: 'row', gap: 48, alignItems: 'flex-start' }}>
             <View style={{ flex: 2 }}>
               <View style={styles.formFieldsWeb}>{formFields}</View>
-              <View
-                style={[
-                  styles.actions,
-                  { marginTop: 32, paddingBottom: 0, borderTopWidth: 0 }
-                ]}
-              >
-                <Button
-                  title={submitting ? 'Processing...' : 'Checkout'}
-                  onPress={handleBook}
-                  disabled={submitting}
-                  loading={submitting}
-                  fullWidth
-                  size="large"
-                  style={styles.premiumGlassButton}
-                  textStyle={styles.premiumGlassButtonText}
-                />
-              </View>
             </View>
 
             <View style={{ flex: 1, backgroundColor: '#F8FAFC', padding: 24, borderRadius: 20, borderWidth: 1, borderColor: '#F1F5F9' }}>

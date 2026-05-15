@@ -160,7 +160,7 @@ export default function ProductDetailScreen() {
       if (finalProduct.specifications?.colors && finalProduct.specifications.colors.length > 0) {
         setSelectedColor(finalProduct.specifications.colors[0]);
       } else {
-        setSelectedColor({ name: 'Red Rush', hex: '#f8688a' });
+        setSelectedColor({ name: 'Red Rush', hex: '#ff3564' });
       }
 
       // Auto-select first size
@@ -374,7 +374,7 @@ export default function ProductDetailScreen() {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' }}>
         <Text style={{ color: '#2b2f4b' }}>Product not found</Text>
-        <TouchableOpacity onPress={() => router.back()}><Text style={{ color: '#f8688a', marginTop: 12 }}>Go Back</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => router.back()}><Text style={{ color: '#ff3564', marginTop: 12 }}>Go Back</Text></TouchableOpacity>
       </View>
     );
   }
@@ -453,8 +453,8 @@ export default function ProductDetailScreen() {
                 <Star 
                   key={i} 
                   size={16} 
-                  color={i < Math.floor(product.rating || 0) ? "#f8688a" : "#D1D5DB"} 
-                  fill={i < Math.floor(product.rating || 0) ? "#f8688a" : "none"} 
+                  color={i < Math.floor(product.rating || 0) ? "#ff3564" : "#D1D5DB"} 
+                  fill={i < Math.floor(product.rating || 0) ? "#ff3564" : "none"} 
                 />
               ))}
               <Text style={styles.reviewsText}>{Number(product.rating || 0).toFixed(1)} ({product.review_count || 0} reviews)</Text>
@@ -489,7 +489,7 @@ export default function ProductDetailScreen() {
               <Text style={styles.shoesSectionTitle}>COLORS</Text>
               <View style={styles.shoesColorRow}>
                 {((product.specifications?.colors && product.specifications.colors.length > 0) ? product.specifications.colors : [
-                  { name: 'Red Rush', hex: '#f8688a' },
+                  { name: 'Red Rush', hex: '#ff3564' },
                   { name: 'Midnight', hex: '#2b2f4b' },
                   { name: 'Lime', hex: '#bef264' },
                   { name: 'Pure', hex: '#ffffff' }
@@ -595,7 +595,7 @@ export default function ProductDetailScreen() {
                     </View>
                     <View style={{ padding: 12 }}>
                       <Text style={{ fontSize: 12, color: '#2b2f4b', marginBottom: 4, fontFamily: 'Inter', minHeight: 30 }} numberOfLines={2}>{item.name}</Text>
-                      <Text style={{ fontSize: 14, color: '#f8688a', fontWeight: '700', fontFamily: 'Inter' }}>₹{item.price.toLocaleString('en-IN')}</Text>
+                      <Text style={{ fontSize: 14, color: '#ff3564', fontWeight: '700', fontFamily: 'Inter' }}>₹{item.price.toLocaleString('en-IN')}</Text>
                     </View>
                   </TouchableOpacity>
                 ))}
@@ -869,9 +869,7 @@ export default function ProductDetailScreen() {
                                 );
                               })}
                             </View>
-                            <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 24 }}>
-                              <Text style={{ fontSize: 14, color: '#007185', fontFamily: 'Inter' }}>Size Chart</Text>
-                            </TouchableOpacity>
+
                           </>
                         )}
                       </>
@@ -995,7 +993,7 @@ export default function ProductDetailScreen() {
                   </TouchableOpacity>
                   
                   <TouchableOpacity 
-                    style={{ backgroundColor: '#f8688a', borderRadius: 100, paddingVertical: 12, alignItems: 'center', marginBottom: 16 }}
+                    style={{ backgroundColor: '#ff3564', borderRadius: 100, paddingVertical: 12, alignItems: 'center', marginBottom: 16 }}
                     onPress={addToCart}
                   >
                     <Text style={{ color: '#FFFFFF', fontSize: 14, fontFamily: 'Inter', fontWeight: '500' }}>Buy Now</Text>
@@ -1141,7 +1139,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   heroTagText: {
-    color: '#f8688a',
+    color: '#ff3564',
     fontWeight: '300',
     fontSize: 12,
     fontFamily: 'Inter',
@@ -1159,7 +1157,7 @@ const styles = StyleSheet.create({
   },
   categoryText: {
     fontSize: 12,
-    color: '#f8688a',
+    color: '#ff3564',
     fontWeight: '300',
     letterSpacing: 1.5,
     textTransform: 'uppercase',
@@ -1211,7 +1209,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   discountText: {
-    color: '#f8688a',
+    color: '#ff3564',
     fontSize: 12,
     fontWeight: '300',
     fontFamily: 'Inter',
@@ -1370,7 +1368,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#f8688a',
+    backgroundColor: '#ff3564',
     borderWidth: 1.5,
     borderColor: '#F3F4F6',
   },
@@ -1378,7 +1376,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 5,
     right: 5,
-    backgroundColor: '#f8688a',
+    backgroundColor: '#ff3564',
     width: 16,
     height: 16,
     borderRadius: 8,
@@ -1412,10 +1410,10 @@ const styles = StyleSheet.create({
     flex: 1.5,
     height: 54,
     borderRadius: 16,
-    backgroundColor: '#f8688a',
+    backgroundColor: '#ff3564',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#f8688a',
+    shadowColor: '#ff3564',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
@@ -1469,7 +1467,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 20,
     right: 20,
-    backgroundColor: '#f8688a',
+    backgroundColor: '#ff3564',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 10,
@@ -1496,7 +1494,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9FAFB',
   },
   webThumbActive: {
-    borderColor: '#f8688a',
+    borderColor: '#ff3564',
   },
   webThumbImage: {
     width: '100%',
@@ -1507,7 +1505,7 @@ const styles = StyleSheet.create({
     flex: 1.2,
   },
   webCategory: {
-    color: '#f8688a',
+    color: '#ff3564',
     fontSize: 14,
     fontWeight: '300',
     letterSpacing: 2,
@@ -1563,7 +1561,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   webDiscountText: {
-    color: '#f8688a',
+    color: '#ff3564',
     fontSize: 14,
     fontWeight: '300',
     fontFamily: 'Inter',
@@ -1610,7 +1608,7 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 100,
     gap: 12,
-    shadowColor: '#f8688a',
+    shadowColor: '#ff3564',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 16,
@@ -1740,7 +1738,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   newSeasonBadge: {
-    backgroundColor: '#f8688a',
+    backgroundColor: '#ff3564',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
@@ -1764,7 +1762,7 @@ const styles = StyleSheet.create({
   },
   shoesSubtitle: {
     fontSize: 18,
-    color: '#f8688a',
+    color: '#ff3564',
     fontWeight: '300',
     marginBottom: 8,
     fontFamily: 'Inter',
@@ -1847,8 +1845,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   sizeBoxActive: {
-    backgroundColor: '#f8688a',
-    borderColor: '#f8688a',
+    backgroundColor: '#ff3564',
+    borderColor: '#ff3564',
   },
   sizeBoxText: {
     fontSize: 15,
@@ -1871,7 +1869,7 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#f8688a',
+    shadowColor: '#ff3564',
     shadowOpacity: 0.3,
     shadowRadius: 15,
     shadowOffset: { width: 0, height: 8 },
@@ -1899,7 +1897,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#f8688a',
+    backgroundColor: '#ff3564',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1923,7 +1921,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   webTabActive: {
-    borderBottomColor: '#f8688a',
+    borderBottomColor: '#ff3564',
   },
   webTabText: {
     fontSize: 14,
@@ -1980,7 +1978,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   mobileThumbActive: {
-    borderColor: '#f8688a',
+    borderColor: '#ff3564',
   },
   mobileThumbImage: {
     width: '100%',

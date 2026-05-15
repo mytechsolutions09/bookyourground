@@ -98,7 +98,7 @@ export default function CartScreen() {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {loading ? (
-          <ActivityIndicator color="#f8688a" style={{ marginTop: 100 }} />
+          <ActivityIndicator color="#ff3564" style={{ marginTop: 100 }} />
         ) : cartItems.length === 0 ? (
           <View style={styles.emptyContainer}>
             <ShoppingBag size={80} color="#D1D5DB" strokeWidth={1} />
@@ -178,7 +178,7 @@ export default function CartScreen() {
               </View>
               <View style={styles.summaryRow}>
                 <Text style={styles.summaryLabel}>Delivery</Text>
-                <Text style={[styles.summaryValue, { color: '#f8688a' }]}>FREE</Text>
+                <Text style={[styles.summaryValue, { color: '#ff3564' }]}>FREE</Text>
               </View>
               <View style={styles.divider} />
               <View style={styles.totalRow}>
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
     fontSize: 14,
     fontWeight: '500',
-    color: '#f8688a',
+    color: '#ff3564',
     marginBottom: 8,
   },
   qtyRow: {
@@ -409,12 +409,12 @@ const styles = StyleSheet.create({
   },
   totalValue: {
     fontFamily: 'Inter',
-    color: '#f8688a',
+    color: '#ff3564',
     fontSize: 18,
     fontWeight: '600',
   },
   checkoutBtn: {
-    backgroundColor: '#f8688a',
+    backgroundColor: '#ff3564',
     height: 52,
     borderRadius: 12,
     flexDirection: 'row',

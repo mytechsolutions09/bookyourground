@@ -106,8 +106,12 @@ export default function SignupScreen() {
     setLoading(false);
 
     if (error) {
-      if (Platform.OS === 'web') alert('Signup Failed: ' + error.message);
-      else Alert.alert('Signup Failed', error.message);
+      let msg = error.message;
+      if (msg.includes('confirmation email')) {
+        msg = 'Error sending confirmation email. This usually means the email provider is not configured correctly in the backend or rate limits were exceeded. Please check your Supabase SMTP settings.';
+      }
+      if (Platform.OS === 'web') alert('Signup Failed: ' + msg);
+      else Alert.alert('Signup Failed', msg);
     } else {
       setShowSuccessModal(true);
     }
@@ -573,10 +577,10 @@ export default function SignupScreen() {
               style={modalStyles.button}
               onPress={() => {
                 setShowSuccessModal(false);
-                router.replace('/(tabs)/home_tab');
+                router.replace('/(auth)/login');
               }}
             >
-              <Text style={modalStyles.buttonText}>GET STARTED</Text>
+              <Text style={modalStyles.buttonText}>SIGN IN</Text>
             </TouchableOpacity>
           </View>
         </View>

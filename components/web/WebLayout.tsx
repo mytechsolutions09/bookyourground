@@ -1033,7 +1033,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                       onPress={() => router.push('/shop/cart')}
                       style={{ paddingHorizontal: 4 }}
                     >
-                      <ShoppingCart size={22} color="#f8688a" />
+                      <ShoppingCart size={22} color="#ff3564" />
                     </TouchableOpacity>
                   )}
 
@@ -1072,7 +1072,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                     onPress={() => router.push('/shop/cart')}
                     style={{ paddingHorizontal: 12 }}
                   >
-                    <ShoppingCart size={24} color="#f8688a" />
+                    <ShoppingCart size={24} color="#ff3564" />
                   </TouchableOpacity>
                 </View>
               )}
@@ -1572,7 +1572,7 @@ const styles = StyleSheet.create({
   headerSearchInput: {
     flex: 1,
     height: 32,
-    color: '#111827',
+    color: '#dcc093',
     fontSize: 13,
     fontFamily: 'Inter',
     backgroundColor: 'transparent',

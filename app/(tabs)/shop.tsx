@@ -392,8 +392,8 @@ export default function ShopScreen() {
           >
             <Heart 
               size={18} 
-              color={favorites.includes(product.id) ? "#f8688a" : "#64748B"} 
-              fill={favorites.includes(product.id) ? "#f8688a" : "transparent"} 
+              color={favorites.includes(product.id) ? "#ff3564" : "#64748B"} 
+              fill={favorites.includes(product.id) ? "#ff3564" : "transparent"} 
             />
           </TouchableOpacity>
         </View>
@@ -402,7 +402,7 @@ export default function ShopScreen() {
           <RNText style={styles.productName} numberOfLines={1}>{product.name}</RNText>
           
           <View style={styles.ratingRow}>
-            <Star size={14} color="#f8688a" fill="#f8688a" />
+            <Star size={14} color="#ff3564" fill="#ff3564" />
             <RNText style={styles.ratingText}>{Number(product.rating || 4.5).toFixed(1)}</RNText>
             <RNText style={styles.reviewCount}>({product.review_count || 12})</RNText>
           </View>
@@ -434,7 +434,7 @@ export default function ShopScreen() {
         />
         <View style={[styles.heroContent, { paddingTop: insets.top + 60 }]}>
           <View style={styles.trendingBadge}>
-            <TrendingUp size={14} color="#f8688a" />
+            <TrendingUp size={14} color="#ff3564" />
             <RNText style={styles.trendingText}>
               {activeCategory === 'Shoes' ? 'PERFORMANCE FOOTWEAR' : 'NEW ARRIVAL'}
             </RNText>
@@ -470,8 +470,20 @@ export default function ShopScreen() {
             
             if (diff > 10 && currentY > 100) {
               setTabBarVisible(false);
+              if (headerTranslateY.value === 0) {
+                headerTranslateY.value = withTiming(-HEADER_HEIGHT - insets.top, { 
+                  duration: 400,
+                  easing: Easing.out(Easing.quad)
+                });
+              }
             } else if (diff < -15 || currentY < 50) {
               setTabBarVisible(true);
+              if (headerTranslateY.value < 0) {
+                headerTranslateY.value = withTiming(0, { 
+                  duration: 400,
+                  easing: Easing.out(Easing.quad)
+                });
+              }
             }
             lastScrollY.value = currentY;
             
@@ -487,65 +499,146 @@ export default function ShopScreen() {
           {isSmall ? <View style={{ height: 420 }} /> : renderHero()}
 
           <View style={[styles.stickyHeader, isSmall && { backgroundColor: '#F8FAFC', borderTopLeftRadius: 32, borderTopRightRadius: 32, marginTop: -30, paddingTop: 20 }]}>
-            {/* Search Bar Floating */}
-            <View style={[styles.searchSection, width < 350 && { marginTop: -20 }]}>
-              <View style={[styles.searchBar, width < 350 && { height: 44, borderRadius: 12 }]}>
-                <Search size={width < 350 ? 18 : 20} color="#94A3B8" />
-                <RNTextInput 
-                  style={[styles.searchInput, width < 350 && { fontSize: 12 }]}
-                  placeholder={width < 350 ? "Search..." : "Search gear, brands, accessories..."}
-                  placeholderTextColor="#94A3B8"
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                />
-                <TouchableOpacity 
-                  style={[styles.filterBtn, width < 350 && { width: 36, height: 36 }]}
-                  onPress={() => {
-                    setTempSortBy(sortBy);
-                    setTempPriceRange(priceRange);
-                    setIsFilterVisible(true);
-                  }}
-                >
-                  <Filter size={width < 350 ? 18 : 20} color="#0F172A" />
-                  {(sortBy !== 'newest' || priceRange) && (
-                    <View style={styles.filterBadge} />
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Categories Pills */}
-            <View style={styles.categoriesSection}>
-              {loading ? (
-                <CategorySkeleton />
-              ) : (
-                <ScrollView 
-                  horizontal 
-                  showsHorizontalScrollIndicator={false} 
-                  contentContainerStyle={styles.categoryList}
-                >
-                  <TouchableOpacity 
-                    style={[styles.categoryPill, activeCategory === 'all' && styles.categoryPillActive]}
-                    onPress={() => setActiveCategory('all')}
-                  >
-                    <RNText style={[styles.categoryPillText, activeCategory === 'all' && styles.categoryPillTextActive]}>
-                      All Gear
-                    </RNText>
-                  </TouchableOpacity>
-                  {categories.map(cat => (
+            {isSmall ? (
+              // Mobile Layout: 2 rows
+              <>
+                {/* Search Bar Floating */}
+                <View style={[styles.searchSection, { marginTop: 15 }, width < 350 && { marginTop: -20 }]}>
+                  <View style={[styles.searchBar, width < 350 && { height: 44, borderRadius: 12 }]}>
+                    <Search size={width < 350 ? 18 : 20} color="#94A3B8" />
+                    <RNTextInput 
+                      style={[styles.searchInput, width < 350 && { fontSize: 12 }]}
+                      placeholder={width < 350 ? "Search..." : "Search gear, brands, accessories..."}
+                      placeholderTextColor="#94A3B8"
+                      value={searchQuery}
+                      onChangeText={setSearchQuery}
+                    />
                     <TouchableOpacity 
-                      key={cat.id} 
-                      style={[styles.categoryPill, activeCategory === cat.name && styles.categoryPillActive]}
-                      onPress={() => setActiveCategory(cat.name)}
+                      style={[styles.filterBtn, width < 350 && { width: 36, height: 36 }]}
+                      onPress={() => {
+                        setTempSortBy(sortBy);
+                        setTempPriceRange(priceRange);
+                        setIsFilterVisible(true);
+                      }}
                     >
-                      <RNText style={[styles.categoryPillText, activeCategory === cat.name && styles.categoryPillTextActive]}>
-                        {cat.name}
-                      </RNText>
+                      <Filter size={width < 350 ? 18 : 20} color="#FFFFFF" />
+                      {(sortBy !== 'newest' || priceRange) && (
+                        <View style={styles.filterBadge} />
+                      )}
                     </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              )}
-            </View>
+                  </View>
+                </View>
+
+                {/* Categories Pills */}
+                <View style={styles.categoriesSection}>
+                  {loading ? (
+                    <CategorySkeleton />
+                  ) : (
+                    <ScrollView 
+                      horizontal 
+                      showsHorizontalScrollIndicator={false} 
+                      contentContainerStyle={{ paddingHorizontal: 20 }}
+                    >
+                      <View style={styles.toggleButtonGroup}>
+                        <TouchableOpacity 
+                          style={[styles.toggleButton, activeCategory === 'all' && styles.toggleButtonActive]}
+                          onPress={() => setActiveCategory('all')}
+                        >
+                          <RNText style={[styles.toggleButtonText, activeCategory === 'all' && styles.toggleButtonTextActive]}>
+                            All Gear
+                          </RNText>
+                        </TouchableOpacity>
+                        {categories.map((cat, index) => (
+                          <TouchableOpacity 
+                            key={cat.id} 
+                            style={[
+                              styles.toggleButton, 
+                              activeCategory === cat.name && styles.toggleButtonActive,
+                              index === categories.length - 1 && { borderRightWidth: 0 }
+                            ]}
+                            onPress={() => setActiveCategory(cat.name)}
+                          >
+                            <RNText style={[styles.toggleButtonText, activeCategory === cat.name && styles.toggleButtonTextActive]}>
+                              {cat.name}
+                            </RNText>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </ScrollView>
+                  )}
+                </View>
+              </>
+            ) : (
+              // Desktop Layout: 1 row
+              <View style={{ 
+                flexDirection: 'row', 
+                alignItems: 'center', 
+                gap: 16,
+                paddingHorizontal: 20,
+                marginBottom: 24,
+                marginTop: 15
+              }}>
+                {/* Search Bar */}
+                <View style={[styles.searchBar, { flex: 1 }]}>
+                  <Search size={20} color="#94A3B8" />
+                  <RNTextInput 
+                    style={styles.searchInput}
+                    placeholder="Search gear, brands, accessories..."
+                    placeholderTextColor="#94A3B8"
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                  />
+                  <TouchableOpacity 
+                    style={styles.filterBtn}
+                    onPress={() => {
+                      setTempSortBy(sortBy);
+                      setTempPriceRange(priceRange);
+                      setIsFilterVisible(true);
+                    }}
+                  >
+                    <Filter size={20} color="#FFFFFF" />
+                    {(sortBy !== 'newest' || priceRange) && (
+                      <View style={styles.filterBadge} />
+                    )}
+                  </TouchableOpacity>
+                </View>
+
+                {/* Categories */}
+                <View style={{ flexShrink: 0 }}>
+                  {loading ? (
+                    <CategorySkeleton />
+                  ) : (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                      <View style={styles.toggleButtonGroup}>
+                        <TouchableOpacity 
+                          style={[styles.toggleButton, activeCategory === 'all' && styles.toggleButtonActive]}
+                          onPress={() => setActiveCategory('all')}
+                        >
+                          <RNText style={[styles.toggleButtonText, activeCategory === 'all' && styles.toggleButtonTextActive]}>
+                            All Gear
+                          </RNText>
+                        </TouchableOpacity>
+                        {categories.map((cat, index) => (
+                          <TouchableOpacity 
+                            key={cat.id} 
+                            style={[
+                              styles.toggleButton, 
+                              activeCategory === cat.name && styles.toggleButtonActive,
+                              index === categories.length - 1 && { borderRightWidth: 0 }
+                            ]}
+                            onPress={() => setActiveCategory(cat.name)}
+                          >
+                            <RNText style={[styles.toggleButtonText, activeCategory === cat.name && styles.toggleButtonTextActive]}>
+                              {cat.name}
+                            </RNText>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </ScrollView>
+                  )}
+                </View>
+              </View>
+            )}
           </View>
 
           {/* Products Grid */}
@@ -564,7 +657,7 @@ export default function ShopScreen() {
               }}
             >
               <RNText style={styles.viewAllText}>View All</RNText>
-              <ChevronRight size={16} color="#f8688a" />
+              <ChevronRight size={16} color="#ff3564" />
             </TouchableOpacity>
           </View>
           
@@ -690,7 +783,7 @@ export default function ShopScreen() {
                 style={styles.cartIcon}
                 onPress={() => router.push('/shop/cart')}
               >
-                <ShoppingCart size={22} color="#2b2f4b" strokeWidth={2} />
+                <ShoppingCart size={22} color="#ff3564" strokeWidth={2} />
                 {cartCount > 0 && (
                   <View style={styles.cartBadge}>
                     <RNText style={styles.cartBadgeText}>{cartCount}</RNText>
@@ -713,7 +806,7 @@ export default function ShopScreen() {
           style={styles.cartIcon}
           onPress={() => router.push('/shop/cart')}
         >
-          <ShoppingCart size={22} color="#2b2f4b" strokeWidth={2} />
+          <ShoppingCart size={22} color="#ff3564" strokeWidth={2} />
           {cartCount > 0 && (
             <View style={styles.cartBadge}>
               <RNText style={styles.cartBadgeText}>{cartCount}</RNText>
@@ -769,7 +862,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 5,
     right: 5,
-    backgroundColor: '#f8688a',
+    backgroundColor: '#ff3564',
     width: 16,
     height: 16,
     borderRadius: 8,
@@ -817,7 +910,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   trendingText: {
-    color: '#f8688a',
+    color: '#ff3564',
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 1,
@@ -860,7 +953,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   heroBtnIcon: {
-    backgroundColor: '#f8688a',
+    backgroundColor: '#ff3564',
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -877,6 +970,7 @@ const styles = StyleSheet.create({
   searchSection: {
     paddingHorizontal: 20,
     marginBottom: 24,
+    marginTop: 15,
   },
   searchBar: {
     flexDirection: 'row',
@@ -900,17 +994,20 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     fontWeight: '600',
     fontFamily: 'Inter',
+    ...Platform.select({
+      web: { outlineStyle: 'none' }
+    }),
   },
   filterBtn: {
     width: 40,
     height: 40,
-    backgroundColor: 'rgba(248, 104, 138, 0.4)',
-    borderColor: 'rgba(248, 104, 138, 0.5)',
+    backgroundColor: '#ff3564',
+    borderColor: '#ff3564',
     borderWidth: 1,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#f8688a',
+    shadowColor: '#ff3564',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -922,47 +1019,34 @@ const styles = StyleSheet.create({
   categoriesSection: {
     marginBottom: 24,
   },
-  categoryList: {
-    paddingHorizontal: 20,
-    gap: 8,
-  },
-  categoryPill: {
+  toggleButtonGroup: {
     flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    height: 56,
+  },
+  toggleButton: {
     paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 100,
-    borderWidth: 1.5,
-    borderColor: '#F1F5F9',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRightWidth: 1,
+    borderRightColor: '#E2E8F0',
   },
-  categoryPillActive: {
-    backgroundColor: 'rgba(248, 104, 138, 0.4)',
-    borderColor: 'rgba(248, 104, 138, 0.5)',
-    borderWidth: 1.5,
-    shadowColor: '#f8688a',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 4,
-    ...Platform.select({
-      web: { backdropFilter: 'blur(12px)' }
-    }) as any,
+  toggleButtonActive: {
+    backgroundColor: '#ff3564',
   },
-  categoryPillText: {
+  toggleButtonText: {
     fontSize: 14,
     fontWeight: '700',
     color: '#64748B',
     fontFamily: 'Inter',
     letterSpacing: -0.2,
   },
-  categoryPillTextActive: {
-    color: '#0F172A',
+  toggleButtonTextActive: {
+    color: '#FFFFFF',
   },
   promoSection: {
     paddingHorizontal: 20,
@@ -977,7 +1061,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F5F9',
   },
   promoTitle: {
-    color: '#f8688a',
+    color: '#ff3564',
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 1,
@@ -1031,7 +1115,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   viewAllText: {
-    color: '#f8688a',
+    color: '#ff3564',
     fontWeight: '600',
     fontSize: 14,
     fontFamily: 'Inter',
@@ -1079,7 +1163,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   tagText: {
-    color: '#f8688a',
+    color: '#ff3564',
     fontSize: 9,
     fontWeight: '700',
     fontFamily: 'Inter',
@@ -1123,7 +1207,7 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     fontSize: 12,
-    color: '#f8688a',
+    color: '#ff3564',
     fontWeight: '600',
     fontFamily: 'Inter',
   },
@@ -1160,7 +1244,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#f8688a',
+    shadowColor: '#ff3564',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -1184,7 +1268,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   resetText: {
-    color: '#f8688a',
+    color: '#ff3564',
     fontWeight: '600',
     fontSize: 14,
     fontFamily: 'Inter',
@@ -1198,7 +1282,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     backgroundColor: '#0F172A',
     borderWidth: 2,
-    borderColor: '#f8688a',
+    borderColor: '#ff3564',
   },
   modalOverlay: {
     flex: 1,
@@ -1268,8 +1352,8 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
   modalOptionActive: {
-    backgroundColor: '#f8688a',
-    borderColor: '#f8688a',
+    backgroundColor: '#ff3564',
+    borderColor: '#ff3564',
   },
   modalOptionText: {
     fontSize: 15,
@@ -1308,7 +1392,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(248, 104, 138, 0.4)',
     borderColor: 'rgba(248, 104, 138, 0.5)',
     borderWidth: 1,
-    shadowColor: '#f8688a',
+    shadowColor: '#ff3564',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 10,

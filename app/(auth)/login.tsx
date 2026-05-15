@@ -43,6 +43,7 @@ export default function LoginScreen() {
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
+  const [showEmailNotConfirmedModal, setShowEmailNotConfirmedModal] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const emailRef = React.useRef<TextInput>(null);
   const passwordRef = React.useRef<TextInput>(null);
@@ -78,7 +79,9 @@ export default function LoginScreen() {
     setLoading(false);
 
     if (error) {
-      if (Platform.OS === 'web') {
+      if (error.message.toLowerCase().includes('email not confirmed')) {
+        setShowEmailNotConfirmedModal(true);
+      } else if (Platform.OS === 'web') {
         alert('Login Failed: ' + error.message);
       } else {
         Alert.alert('Login Failed', error.message);
@@ -234,6 +237,29 @@ export default function LoginScreen() {
             </View>
           </ScrollView>
         </ImageBackground>
+
+        {/* Email Not Confirmed Modal */}
+        <Modal
+          visible={showEmailNotConfirmedModal}
+          transparent
+          animationType="fade"
+        >
+          <View style={modalStyles.overlay}>
+            <View style={modalStyles.card}>
+              <View style={[modalStyles.iconBg, { backgroundColor: 'rgba(0, 234, 107, 0.1)' }]}>
+                <Mail size={40} color="#00ea6b" strokeWidth={2.5} />
+              </View>
+              <Text style={modalStyles.title}>Login Failed!</Text>
+              <Text style={modalStyles.message}>Email not confirmed. Please check your inbox for the confirmation link.</Text>
+              <TouchableOpacity
+                style={[modalStyles.button, { backgroundColor: '#06392e' }]}
+                onPress={() => setShowEmailNotConfirmedModal(false)}
+              >
+                <Text style={[modalStyles.buttonText, { color: '#00ea6b' }]}>GOT IT</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </View>
     );
   }
@@ -386,6 +412,29 @@ export default function LoginScreen() {
               onPress={() => setShowResetModal(false)}
             >
               <Text style={modalStyles.buttonText}>GOT IT</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Email Not Confirmed Modal */}
+      <Modal
+        visible={showEmailNotConfirmedModal}
+        transparent
+        animationType="fade"
+      >
+        <View style={modalStyles.overlay}>
+          <View style={modalStyles.card}>
+            <View style={[modalStyles.iconBg, { backgroundColor: 'rgba(0, 234, 107, 0.1)' }]}>
+              <Mail size={40} color="#00ea6b" strokeWidth={2.5} />
+            </View>
+            <Text style={modalStyles.title}>Login Failed!</Text>
+            <Text style={modalStyles.message}>Email not confirmed. Please check your inbox for the confirmation link.</Text>
+            <TouchableOpacity
+              style={[modalStyles.button, { backgroundColor: '#06392e' }]}
+              onPress={() => setShowEmailNotConfirmedModal(false)}
+            >
+              <Text style={[modalStyles.buttonText, { color: '#00ea6b' }]}>GOT IT</Text>
             </TouchableOpacity>
           </View>
         </View>
