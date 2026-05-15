@@ -65,6 +65,12 @@ export default function BookingDetailsScreen() {
     return booking.ground?.owner_id === user.id || profile?.role === 'super_admin';
   }, [booking, user, profile]);
 
+  const isPlatformFeeOff = useMemo(() => {
+    if (!booking) return false;
+    const ownerProfile = Array.isArray(booking.ground?.owner) ? booking.ground.owner[0] : booking.ground?.owner;
+    return ownerProfile?.charge_platform_fee === false && booking.payment_method === 'cash';
+  }, [booking]);
+
   useEffect(() => {
     if (bookingId) {
       loadBooking();
@@ -80,7 +86,8 @@ export default function BookingDetailsScreen() {
           *,
           ground:grounds(
             *,
-            ground_images(*)
+            ground_images(*),
+            owner:profiles!owner_id(charge_platform_fee)
           ),
           user:profiles(full_name, phone)
         `)
@@ -223,6 +230,13 @@ export default function BookingDetailsScreen() {
     return getBookingDisplayAmount(booking);
   }, [booking, storedTotal]);
 
+  const isNetBooking = useMemo(() => {
+    if (!booking?.ground) return false;
+    const pitchType = (booking.ground.pitch_type ?? '').toLowerCase();
+    const groundName = (booking.ground.name ?? '').toLowerCase();
+    return pitchType.includes('net') || groundName.includes('net') || pitchType.includes('lane') || groundName.includes('lane');
+  }, [booking]);
+
   const cricketTeamsLabel = useMemo(() => {
     if (!booking) return null;
     return cricketTeamsLabelFromBooking(booking.ground.pitch_type, booking.notes);
@@ -230,6 +244,15 @@ export default function BookingDetailsScreen() {
 
   const calculatedPlatformFee = useMemo(() => {
     if (!booking || !platformSettings) return null;
+    
+    console.log('[BookingDebug] Calculating platform fee for booking:', booking.id);
+    console.log('[BookingDebug] booking.notes:', booking.notes);
+    console.log('[BookingDebug] booking.relatedBookings count:', booking.relatedBookings?.length);
+    
+    if (isPlatformFeeOff) {
+      console.log('[BookingDebug] Platform fee is OFF');
+      return 0;
+    }
     
     const rate = Number(platformSettings.user_platform_fee_rate ?? 0.05);
     const gstRate = Number(platformSettings.gst_rate ?? 0.18);
@@ -243,7 +266,7 @@ export default function BookingDetailsScreen() {
 
     let ownerPf = 0;
     if (isNet) {
-      ownerPf = netsFixedFee;
+      ownerPf = netsFixedFee * (booking.relatedBookings?.length || 1);
     } else if (isCricket) {
       let totalTeams = 0;
       if (booking.relatedBookings && booking.relatedBookings.length > 0) {
@@ -263,8 +286,76 @@ export default function BookingDetailsScreen() {
     }
 
     const ownerGst = ownerPf * gstRate;
+    console.log('[BookingDebug] Calculated ownerPf:', ownerPf);
+    console.log('[BookingDebug] Calculated ownerGst:', ownerGst);
+    console.log('[BookingDebug] Total calculatedPlatformFee:', ownerPf + ownerGst);
+    
     return ownerPf + ownerGst;
-  }, [booking, platformSettings, displayTotalAmount]);
+  }, [booking, platformSettings, displayTotalAmount, isPlatformFeeOff]);
+
+  const debugVenuePrice = useMemo(() => {
+    if (!booking) return 0;
+    const items = booking.relatedBookings && booking.relatedBookings.length > 0 ? booking.relatedBookings : [booking];
+    
+    const val = items.reduce((sum, b) => {
+      let price = Number(b.ground_price || b.total_amount || 0);
+      // If ground_price matches total_charged, fees were bundled. Subtract them.
+      if (b.platform_fee_user > 0 && Math.abs(price - b.total_charged) < 1) {
+        price = price - b.platform_fee_user - (b.gst_user || 0);
+      }
+      return sum + price;
+    }, 0);
+      
+    return val;
+  }, [booking]);
+
+  const debugOwnerPlatformFee = useMemo(() => {
+    if (!booking) return 0;
+    
+    const pitchType = (booking.ground?.pitch_type ?? '').toLowerCase();
+    const isNet = pitchType.includes('net') || pitchType.includes('lane');
+
+    // 1. For Nets, prioritize calculation for remediation of legacy incorrect data
+    if (isNet && calculatedPlatformFee !== null) {
+        console.log('[BookingDebug] Prioritizing calculated Nets fee:', calculatedPlatformFee);
+        return calculatedPlatformFee;
+    }
+
+    // 2. Prefer stored values from related bookings if available
+    if (booking.relatedBookings && booking.relatedBookings.length > 0) {
+      const val = booking.relatedBookings.reduce((acc: number, b: any) => acc + Number(b.platform_fee_owner || 0) + Number(b.gst_owner || 0), 0);
+      console.log('[BookingDebug] Using stored owner fee from relatedBookings:', val);
+      return val;
+    }
+    
+    // 3. Fallback to stored values on the booking itself if slotCount is used
+    if ((booking.platform_fee_owner > 0 || booking.gst_owner > 0) && slotCount > 1) {
+      const val = (Number(booking.platform_fee_owner || 0) + Number(booking.gst_owner || 0)) * slotCount;
+      console.log('[BookingDebug] Using stored owner fee from booking * slotCount:', val);
+      return val;
+    }
+
+    // 4. Use calculated value if available and stored values are missing
+    if (calculatedPlatformFee !== null) {
+      console.log('[BookingDebug] Using calculated owner platform fee:', calculatedPlatformFee);
+      return calculatedPlatformFee;
+    }
+
+    // 5. Final fallback to stored value on the booking itself
+    const val = Number(booking.platform_fee_owner || 0) + Number(booking.gst_owner || 0);
+    console.log('[BookingDebug] Using fallback stored owner fee:', val);
+    return val;
+  }, [booking, calculatedPlatformFee, slotCount]);
+
+  const debugUserPlatformFee = useMemo(() => {
+    if (!booking) return 0;
+    const val = booking.relatedBookings && booking.relatedBookings.length > 0
+      ? booking.relatedBookings.reduce((acc: number, b: any) => acc + Number(b.platform_fee_user || 0) + Number(b.gst_user || 0), 0)
+      : (Number(booking.platform_fee_user || 0) + Number(booking.gst_user || 0)) * slotCount;
+      
+    console.log('[BookingDebug] Rendered User Platform Fee:', val);
+    return val;
+  }, [booking, slotCount]);
 
   const mapsUrl = useMemo(() => {
     if (!booking?.ground) return null;
@@ -285,18 +376,24 @@ export default function BookingDetailsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#01C45A" />
-      </View>
+      <>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#01C45A" />
+        </View>
+      </>
     );
   }
 
   if (!booking) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Booking not found.</Text>
-        <Button title="Go Back" onPress={() => router.back()} style={{ marginTop: 20 }} />
-      </View>
+      <>
+        <Stack.Screen options={{ headerShown: false }} />
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Booking not found.</Text>
+          <Button title="Go Back" onPress={() => router.back()} style={{ marginTop: 20 }} />
+        </View>
+      </>
     );
   }
 
@@ -417,16 +514,26 @@ export default function BookingDetailsScreen() {
                   const teamTypeMatch = /Teams:\s*([^(]+)/.exec(b.notes);
                   const teamLabel = teamTypeMatch ? teamTypeMatch[1].trim() : 'Both Teams';
                   
+                  // For display, prioritize ground_price. 
+                  // If ground_price matches total_charged, it means fees were accidentally bundled (the bug we're fixing).
+                  // In that case, we subtract them for display.
+                  let displayPrice = b.ground_price || b.total_amount || 0;
+                  if (b.platform_fee_user > 0 && Math.abs(displayPrice - b.total_charged) < 1) {
+                     displayPrice = displayPrice - b.platform_fee_user - (b.gst_user || 0);
+                  }
+                  
                   return (
                     <View key={i} style={styles.slotDetailRow}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <Clock size={14} color="#01C45A" />
                         <Text style={styles.slotDetailTime}>{`${b.booking_date} | ${formatTime(b.start_time)}`}</Text>
-                        <View style={styles.teamTag}>
-                          <Text style={styles.teamTagText}>{teamLabel}</Text>
-                        </View>
+                        {!isNetBooking && (
+                          <View style={styles.teamTag}>
+                            <Text style={styles.teamTagText}>{teamLabel}</Text>
+                          </View>
+                        )}
                       </View>
-                      <Text style={styles.slotDetailPrice}>{formatCurrency(b.total_amount)}</Text>
+                      <Text style={styles.slotDetailPrice}>{formatCurrency(displayPrice)}</Text>
                     </View>
                   );
                 })}
@@ -464,16 +571,14 @@ export default function BookingDetailsScreen() {
                   <View style={styles.summaryRow}>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <Text style={styles.summaryLabel}>Venue price</Text>
-                      <View style={[styles.teamTag, { marginLeft: 6 }]}>
-                        <Text style={styles.teamTagText}>{cricketTeamsLabel || '1 team'}</Text>
-                      </View>
+                      {!isNetBooking && (
+                        <View style={[styles.teamTag, { marginLeft: 6 }]}>
+                          <Text style={styles.teamTagText}>{cricketTeamsLabel || '1 team'}</Text>
+                        </View>
+                      )}
                     </View>
                     <Text style={styles.summaryValue}>
-                      {formatCurrency(
-                        booking.relatedBookings && booking.relatedBookings.length > 0
-                          ? booking.relatedBookings.reduce((acc: number, b: any) => acc + Number(b.ground_price || b.total_amount || 0), 0)
-                          : Number(booking.ground_price || displayTotalAmount) * slotCount
-                      )}
+                      {formatCurrency(debugVenuePrice)}
                     </Text>
                   </View>
 
@@ -485,13 +590,7 @@ export default function BookingDetailsScreen() {
                       </View>
                     </View>
                     <Text style={[styles.summaryValue, { color: '#EF4444' }]}>
-                      -{formatCurrency(
-                        calculatedPlatformFee !== null
-                          ? calculatedPlatformFee
-                          : (booking.relatedBookings && booking.relatedBookings.length > 0
-                            ? booking.relatedBookings.reduce((acc: number, b: any) => acc + Number(b.platform_fee_owner || 0) + Number(b.gst_owner || 0), 0)
-                            : (Number(booking.platform_fee_owner || 0) + Number(booking.gst_owner || 0)) * slotCount)
-                      )}
+                      -{formatCurrency(debugOwnerPlatformFee)}
                     </Text>
                   </View>
 
@@ -499,11 +598,7 @@ export default function BookingDetailsScreen() {
                   <View style={styles.totalRow}>
                     <Text style={styles.totalLabel}>Total Receivable</Text>
                     <Text style={styles.totalValue}>
-                      {formatCurrency(
-                        booking.relatedBookings && booking.relatedBookings.length > 0
-                          ? booking.relatedBookings.reduce((acc: number, b: any) => acc + Number(b.owner_settlement || b.total_amount || 0), 0)
-                          : Number(booking.owner_settlement || displayTotalAmount) * slotCount
-                      )}
+                      {formatCurrency(debugVenuePrice - (isPlatformFeeOff ? 0 : debugOwnerPlatformFee))}
                     </Text>
                   </View>
                 </>
@@ -512,20 +607,22 @@ export default function BookingDetailsScreen() {
                   <View style={styles.summaryRow}>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                       <Text style={styles.summaryLabel}>Venue price</Text>
-                      <View style={[styles.teamTag, { marginLeft: 6 }]}>
-                        <Text style={styles.teamTagText}>{cricketTeamsLabel || '1 team'}</Text>
-                      </View>
+                      {!booking.ground?.pitch_type?.toLowerCase().includes('nets') && (
+                        <View style={[styles.teamTag, { marginLeft: 6 }]}>
+                          <Text style={styles.teamTagText}>{cricketTeamsLabel || '1 team'}</Text>
+                        </View>
+                      )}
                     </View>
                     <Text style={styles.summaryValue}>
                       {formatCurrency(
                         booking.relatedBookings && booking.relatedBookings.length > 0
                           ? booking.relatedBookings.reduce((acc: number, b: any) => acc + Number(b.ground_price || b.total_amount || 0), 0)
-                          : Number(booking.ground_price || displayTotalAmount) * slotCount
+                          : (booking.ground_price || debugVenuePrice)
                       )}
                     </Text>
                   </View>
 
-                  {(booking.platform_fee_user > 0 || booking.gst_user > 0) ? (
+                  {(booking.platform_fee_user > 0 || booking.gst_user > 0 || (booking.relatedBookings && booking.relatedBookings.length > 0)) ? (
                     <View style={styles.summaryRow}>
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <Text style={styles.summaryLabel}>Platform fee</Text>
@@ -537,7 +634,7 @@ export default function BookingDetailsScreen() {
                         {formatCurrency(
                           booking.relatedBookings && booking.relatedBookings.length > 0
                             ? booking.relatedBookings.reduce((acc: number, b: any) => acc + Number(b.platform_fee_user || 0) + Number(b.gst_user || 0), 0)
-                            : (Number(booking.platform_fee_user || 0) + Number(booking.gst_user || 0)) * slotCount
+                            : ((booking.platform_fee_user || booking.gst_user) ? (Number(booking.platform_fee_user || 0) + Number(booking.gst_user || 0)) : debugUserPlatformFee)
                         )}
                       </Text>
                     </View>
@@ -643,13 +740,13 @@ export default function BookingDetailsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Platform.OS === 'web' ? 'transparent' : '#F4F6F0',
+    backgroundColor: Platform.OS === 'web' ? 'transparent' : '#FFFFFF',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Platform.OS === 'web' ? 'transparent' : '#F4F6F0',
+    backgroundColor: Platform.OS === 'web' ? 'transparent' : '#FFFFFF',
   },
   loadingText: {
     fontSize: 16,
@@ -782,7 +879,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     padding: 24,
     gap: 20,
-    marginTop: 40,
+    marginTop: 20,
   },
   pageBodyDesktop: {
     flexDirection: 'row',
@@ -839,7 +936,6 @@ const styles = StyleSheet.create({
   slotItem: {
     flex: 1,
     minWidth: '46%',
-    backgroundColor: '#F4F6F0',
     padding: 12,
     borderRadius: 12,
   },
@@ -903,15 +999,16 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   teamTag: {
-    backgroundColor: '#F4F6F0',
     paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 4,
+    backgroundColor: 'transparent',
   },
   teamTagText: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#5A6555',
+    fontFamily: 'Inter',
   },
   summaryValue: {
     fontSize: 13,
@@ -940,8 +1037,8 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   totalValue: {
-    fontSize: 28,
-    fontWeight: '900',
+    fontSize: 18,
+    fontWeight: '600',
     color: '#01A34B',
     letterSpacing: -0.5,
     fontFamily: 'Inter',
@@ -1122,13 +1219,13 @@ const styles = StyleSheet.create({
   },
   slotDetailTime: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '400',
     color: '#1A2215',
     fontFamily: 'Inter',
   },
   slotDetailPrice: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '400',
     color: '#01C45A',
     fontFamily: 'Inter',
   },

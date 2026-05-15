@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator, Alert, TextInput } from 'react-native';
 import { supabase } from '@/lib/supabase';
-import { ShoppingBag, Plus, Search, Edit2, Trash2, Package, ClipboardList, X, Image as ImageIcon, Upload, Bold, Italic, List, Eye, Code, Type, Link, Quote, Smile, Undo, Trash, FileText, Star, MessageSquare, CheckCircle } from 'lucide-react-native';
+import { ShoppingBag, Plus, Search, Edit2, Trash2, Package, ClipboardList, X, Image as ImageIcon, Upload, Bold, Italic, List, Eye, Code, Type, Link, Quote, Smile, Undo, Trash, FileText, Star, MessageSquare, CheckCircle, Copy } from 'lucide-react-native';
 import Card from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import WebLayout from '@/components/web/WebLayout';
@@ -30,6 +30,7 @@ export default function AdminProductsScreen() {
   const [newProduct, setNewProduct] = useState({
     name: '',
     price: '',
+    discount_price: '',
     stock_quantity: '',
     category_id: '',
     description: '',
@@ -76,6 +77,17 @@ export default function AdminProductsScreen() {
     }
 
     setNewProduct({ ...newProduct, description: formattedText });
+  };
+
+  const insertRowTemplateToField = (fieldName: string) => {
+    const specs = newProduct.specifications || {};
+    const currentText = specs[fieldName] || '';
+    const formattedText = currentText + (currentText ? '\n' : '') + '**Label:** Value';
+    
+    setNewProduct({
+      ...newProduct,
+      specifications: { ...specs, [fieldName]: formattedText }
+    });
   };
 
   const applyBoldToField = (fieldName: string) => {
@@ -320,6 +332,7 @@ export default function AdminProductsScreen() {
         const updatePayload = {
           name: newProduct.name,
           price: parseFloat(newProduct.price),
+          discount_price: newProduct.discount_price ? parseFloat(newProduct.discount_price) : null,
           stock_quantity: parseInt(newProduct.stock_quantity) || 0,
           category_id: newProduct.category_id,
           description: newProduct.description,
@@ -362,6 +375,7 @@ export default function AdminProductsScreen() {
           .insert([{
             name: newProduct.name,
             price: parseFloat(newProduct.price),
+            discount_price: newProduct.discount_price ? parseFloat(newProduct.discount_price) : null,
             stock_quantity: parseInt(newProduct.stock_quantity) || 0,
             category_id: newProduct.category_id,
             description: newProduct.description,
@@ -403,6 +417,22 @@ export default function AdminProductsScreen() {
     setNewProduct({
       name: product.name,
       price: product.price.toString(),
+      discount_price: product.discount_price?.toString() || '',
+      stock_quantity: product.stock_quantity?.toString() || '0',
+      category_id: product.category_id,
+      description: product.description || '',
+      images: product.images || [],
+      specifications: product.specifications || {}
+    });
+    setShowAddForm(true);
+  };
+
+  const handleDuplicateProduct = (product: any) => {
+    setEditingProduct(null);
+    setNewProduct({
+      name: `Copy of ${product.name}`,
+      price: product.price.toString(),
+      discount_price: product.discount_price?.toString() || '',
       stock_quantity: product.stock_quantity?.toString() || '0',
       category_id: product.category_id,
       description: product.description || '',
@@ -709,6 +739,18 @@ export default function AdminProductsScreen() {
                   </View>
 
                   <View style={styles.formGroup}>
+                    <Text style={styles.label}>Original Price (M.R.P.) (₹)</Text>
+                    <TextInput 
+                      style={styles.input}
+                      placeholder="0.00"
+                      keyboardType="numeric"
+                      value={newProduct.discount_price}
+                      onChangeText={(val) => setNewProduct({...newProduct, discount_price: val})}
+                    />
+                    <Text style={styles.helperText}>Leave blank to auto-calculate (60% off)</Text>
+                  </View>
+
+                  <View style={styles.formGroup}>
                     <Text style={styles.label}>Category</Text>
                     <View style={styles.pickerContainer}>
                       <select 
@@ -838,12 +880,17 @@ export default function AdminProductsScreen() {
                   <View style={styles.formGroup}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                       <Text style={styles.label}>Top Highlights</Text>
-                      <TouchableOpacity style={{ padding: 4 }} onPress={() => applyBoldToField('highlights')}>
-                        <Bold size={14} color="#4B5563" />
-                      </TouchableOpacity>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <TouchableOpacity style={{ padding: 4 }} onPress={() => applyBoldToField('highlights')}>
+                          <Bold size={14} color="#4B5563" />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={{ padding: 4, marginLeft: 8 }} onPress={() => insertRowTemplateToField('highlights')}>
+                          <List size={14} color="#4B5563" />
+                        </TouchableOpacity>
+                      </View>
                     </View>
                     <TextInput 
-                      style={[styles.input, { minHeight: 60, textAlignVertical: 'top', paddingTop: 8 }]}
+                      style={[styles.input, { minHeight: 120, textAlignVertical: 'top', paddingTop: 8 }]}
                       placeholder="Enter key highlights..."
                       multiline
                       value={newProduct.specifications?.highlights || ''}
@@ -853,17 +900,23 @@ export default function AdminProductsScreen() {
                       })}
                       onSelectionChange={(e) => setFieldSelections({ ...fieldSelections, highlights: e.nativeEvent.selection })}
                     />
+                    <Text style={styles.helperText}>Use **Label:** Value format or click the list icon to create rows.</Text>
                   </View>
 
                   <View style={styles.formGroup}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                       <Text style={styles.label}>Style</Text>
-                      <TouchableOpacity style={{ padding: 4 }} onPress={() => applyBoldToField('style')}>
-                        <Bold size={14} color="#4B5563" />
-                      </TouchableOpacity>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <TouchableOpacity style={{ padding: 4 }} onPress={() => applyBoldToField('style')}>
+                          <Bold size={14} color="#4B5563" />
+                        </TouchableOpacity>
+                        <TouchableOpacity style={{ padding: 4, marginLeft: 8 }} onPress={() => insertRowTemplateToField('style')}>
+                          <List size={14} color="#4B5563" />
+                        </TouchableOpacity>
+                      </View>
                     </View>
                     <TextInput 
-                      style={[styles.input, { minHeight: 60, textAlignVertical: 'top', paddingTop: 8 }]}
+                      style={[styles.input, { minHeight: 120, textAlignVertical: 'top', paddingTop: 8 }]}
                       placeholder="Enter style details..."
                       multiline
                       value={newProduct.specifications?.style || ''}
@@ -873,18 +926,24 @@ export default function AdminProductsScreen() {
                       })}
                       onSelectionChange={(e) => setFieldSelections({ ...fieldSelections, style: e.nativeEvent.selection })}
                     />
+                    <Text style={styles.helperText}>Use **Label:** Value format or click the list icon to create rows.</Text>
                   </View>
                 </View>
 
                 <View style={styles.formGroup}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                     <Text style={styles.label}>Features & Specs</Text>
-                    <TouchableOpacity style={{ padding: 4 }} onPress={() => applyBoldToField('features')}>
-                      <Bold size={14} color="#4B5563" />
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <TouchableOpacity style={{ padding: 4 }} onPress={() => applyBoldToField('features')}>
+                        <Bold size={14} color="#4B5563" />
+                      </TouchableOpacity>
+                      <TouchableOpacity style={{ padding: 4, marginLeft: 8 }} onPress={() => insertRowTemplateToField('features')}>
+                        <List size={14} color="#4B5563" />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                   <TextInput 
-                    style={[styles.input, { minHeight: 60, textAlignVertical: 'top', paddingTop: 8 }]}
+                    style={[styles.input, { minHeight: 120, textAlignVertical: 'top', paddingTop: 8 }]}
                     placeholder="Enter technical features and specifications..."
                     multiline
                     value={newProduct.specifications?.features || ''}
@@ -894,6 +953,7 @@ export default function AdminProductsScreen() {
                     })}
                     onSelectionChange={(e) => setFieldSelections({ ...fieldSelections, features: e.nativeEvent.selection })}
                   />
+                  <Text style={styles.helperText}>Use **Label:** Value format or click the list icon to create rows.</Text>
                 </View>
 
 
@@ -1162,13 +1222,24 @@ export default function AdminProductsScreen() {
                         </Text>
                       </View>
                     </View>
-                    <View style={[styles.tableCell, { flex: 0.5, alignItems: 'flex-end' }]}>
+                    <View style={[styles.tableCell, { flex: 0.8, flexDirection: 'row', justifyContent: 'flex-end', gap: 8 }]}>
+                      <TouchableOpacity 
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          handleDuplicateProduct(product);
+                        }}
+                        style={{ padding: 8, borderRadius: 8, backgroundColor: '#F3F4F6' }}
+                        title="Duplicate Product"
+                      >
+                        <Copy size={16} color="#4B5563" />
+                      </TouchableOpacity>
                       <TouchableOpacity 
                         onPress={(e) => {
                           e.stopPropagation();
                           handleDeleteProduct(product.id);
                         }}
                         style={styles.deleteActionBtn}
+                        title="Delete Product"
                       >
                         <Trash2 size={16} color="#EF4444" />
                       </TouchableOpacity>

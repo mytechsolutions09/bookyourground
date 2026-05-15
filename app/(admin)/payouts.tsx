@@ -314,6 +314,18 @@ function AdminPayoutsInner() {
                             .maybeSingle();
                             
                           if (!existingTx) {
+                            // Check wallet balance first to ensure it never goes negative
+                            const { data: wallet } = await supabase
+                              .from('wallets')
+                              .select('balance')
+                              .eq('user_id', item.owner_id)
+                              .single();
+                              
+                            if (wallet && wallet.balance < item.amount) {
+                              alert('Error: Insufficient wallet balance to complete this payout.');
+                              return;
+                            }
+
                             // Deduct money from wallet
                             const { error: walletError } = await supabase.rpc('add_money_to_wallet', {
                               target_user_id: item.owner_id,
@@ -398,6 +410,18 @@ function AdminPayoutsInner() {
                               .maybeSingle();
                               
                             if (!existingTx) {
+                              // Check wallet balance first to ensure it never goes negative
+                              const { data: wallet } = await supabase
+                                .from('wallets')
+                                .select('balance')
+                                .eq('user_id', item.owner_id)
+                                .single();
+                                
+                              if (wallet && wallet.balance < item.amount) {
+                                alert('Error: Insufficient wallet balance to complete this payout.');
+                                return;
+                              }
+
                               // Deduct money from wallet
                               const { error: walletError } = await supabase.rpc('add_money_to_wallet', {
                                 target_user_id: item.owner_id,

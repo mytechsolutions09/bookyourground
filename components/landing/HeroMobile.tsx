@@ -68,9 +68,15 @@ export default function HeroMobile({
 
       {/* Greeting */}
       <View style={styles.greetingContainer}>
-        <Text style={styles.greetingSub}>GOOD MORNING</Text>
+        <Text style={styles.greetingSub}>
+          {new Date().getHours() < 12 
+            ? 'GOOD MORNING' 
+            : new Date().getHours() < 16 
+              ? 'GOOD AFTERNOON' 
+              : 'GOOD EVENING'}
+        </Text>
         <Text style={styles.greetingMain}>
-          Hey, {(profile?.full_name?.split(' ')[0] || profile?.username || 'Albie').toUpperCase()} <Text style={styles.greenDot}>.</Text>
+          Hey, {(profile?.full_name?.split(' ')[0] || profile?.username || 'Albie').toUpperCase()}
         </Text>
       </View>
 
@@ -97,7 +103,6 @@ export default function HeroMobile({
         contentContainerStyle={styles.categoriesContainer}
       >
         {SPORT_CATEGORIES.map((cat) => {
-          const Icon = cat.icon;
           const isActive = sportFilter === cat.value;
           return (
             <Pressable
@@ -108,7 +113,6 @@ export default function HeroMobile({
                 isActive ? styles.categoryChipActive : styles.categoryChipInactive,
               ]}
             >
-              <Icon size={16} color={isActive ? '#FFFFFF' : '#0F172A'} />
               <Text style={[styles.categoryText, isActive ? styles.categoryTextActive : styles.categoryTextInactive]}>
                 {cat.label}
               </Text>
@@ -124,7 +128,7 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: '#06392e', // Dark green background
     paddingTop: 60,
-    paddingBottom: 40,
+    paddingBottom: 60,
     paddingHorizontal: 20,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
@@ -222,7 +226,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   greetingContainer: {
-    marginBottom: 15,
+    marginBottom: 45,
   },
   greetingSub: {
     color: '#00EA6B',
@@ -233,7 +237,7 @@ const styles = StyleSheet.create({
   },
   greetingMain: {
     color: '#FFFFFF',
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: 'bold',
     fontFamily: 'Inter',
     marginTop: 4,
@@ -282,7 +286,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    marginBottom: 20,
+    marginBottom: 30,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,

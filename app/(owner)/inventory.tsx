@@ -113,6 +113,8 @@ export default function OwnerInventoryScreen() {
   useFocusEffect(
     useCallback(() => {
       if (user) loadData();
+      setTabBarVisible(false);
+      return () => setTabBarVisible(true);
     }, [selectedDateFilter, daysToShow, user, selectedGroundId])
   );
 
@@ -275,20 +277,24 @@ export default function OwnerInventoryScreen() {
           const occupancy = getOccupancy(ground.id, dateStr, s.start_time, ground.pitch_type);
           const statusText = getSlotStatus(occupancy);
           
-          let statusColor = '#F3F4F6'; // Empty
+          let statusColor = '#FFFFFF'; 
           let textColor = '#6B7280';
+          let borderColor = '#E2E8F0';
           let displayStatus = statusText;
 
           if (isSlotInPast) {
             statusColor = '#F9FAFB';
+            borderColor = '#F3F4F6';
             textColor = '#9CA3AF';
             displayStatus = 'PAST';
           } else if (statusText === 'FULL') {
-            statusColor = '#DEF7EC';
-            textColor = '#03543F';
+            statusColor = '#F0FDF4';
+            borderColor = '#10B981';
+            textColor = '#047857';
           } else if (statusText === 'PARTIAL') {
-            statusColor = '#FEF3C7';
-            textColor = '#92400E';
+            statusColor = '#FFFBEB';
+            borderColor = '#F59E0B';
+            textColor = '#B45309';
           }
 
           const isClickable = !isSlotInPast && statusText !== 'FULL';
@@ -296,8 +302,13 @@ export default function OwnerInventoryScreen() {
           return (
             <TouchableOpacity 
               key={s.id} 
-              style={[styles.slotChip, isUltraNarrow && { minWidth: 75, paddingHorizontal: 6 }, { backgroundColor: statusColor }]}
+              style={[
+                styles.slotChip, 
+                isUltraNarrow && { minWidth: 75, paddingHorizontal: 6 }, 
+                { backgroundColor: statusColor, borderColor: borderColor }
+              ]}
               disabled={!isClickable}
+
               onPress={() => {
                 const startHHMM = normalizeDbTimeToHHMM(s.start_time);
                 const endHHMM = normalizeDbTimeToHHMM(s.end_time);
@@ -520,7 +531,7 @@ export default function OwnerInventoryScreen() {
         </WebLayout>
       ) : (
         <View style={{ flex: 1 }}>
-          <MobileAppNavbar title="Inventory" titleColor="#00ea6b" />
+          <MobileAppNavbar title="Inventory" titleColor="#01b854" />
           
           <View style={styles.pageHeader}>
              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mobileFiltersRow}>
@@ -775,7 +786,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#111827',
     letterSpacing: -0.5,
   },
@@ -986,14 +997,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dateDay: {
+    fontFamily: 'Inter',
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#6B7280',
     textTransform: 'uppercase',
   },
   dateNum: {
+    fontFamily: 'Inter',
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#111827',
   },
   slotsWrapper: {
@@ -1067,24 +1080,26 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   choiceTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'Inter',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#0F172A',
     textAlign: 'center',
   },
   choiceSubtitle: {
-    fontSize: 14,
+    fontFamily: 'Inter',
+    fontSize: 12,
     color: '#64748B',
     textAlign: 'center',
     marginTop: 4,
-    marginBottom: 24,
+    marginBottom: 20,
   },
   choiceButtons: {
     gap: 12,
   },
   choiceBtn: {
-    padding: 16,
-    borderRadius: 16,
+    padding: 14,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     flexDirection: 'row',
@@ -1096,33 +1111,38 @@ const styles = StyleSheet.create({
     borderColor: '#01b854',
   },
   choiceBtnText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: '500',
     color: '#0F172A',
   },
   choiceBtnTextWhite: {
     color: '#FFFFFF',
   },
   choiceBtnPrice: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: '600',
     color: '#01b854',
   },
   choiceCancel: {
-    marginTop: 20,
+    marginTop: 16,
     alignItems: 'center',
     padding: 8,
   },
   choiceCancelText: {
+    fontFamily: 'Inter',
     color: '#94A3B8',
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '500',
   },
   mobileFiltersRow: {
     flexDirection: 'row',
     gap: 8,
     paddingVertical: 4,
     paddingHorizontal: 2,
+    flexGrow: 1,
+    justifyContent: 'center',
   },
   mobileFilterItem: {
     minWidth: 120,

@@ -2,11 +2,13 @@ import { View, Text, StyleSheet, Platform, TouchableOpacity, useWindowDimensions
 import React, { useState, useEffect, useRef } from 'react';
 import WebLayout from '@/components/web/WebLayout';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
-import { ArrowUp, ArrowDown, CreditCard, Calendar, Filter, X, Download } from 'lucide-react-native';
+import { ArrowUp, ArrowDown, CreditCard, Calendar, Filter, X, Download, Info, ChevronDown } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency } from '@/utils/helpers';
+import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
 import { useUI } from '@/contexts/UIContext';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const THEME_BG = '#043529';
 const ACCENT = '#00ea6b'; 
@@ -24,7 +26,8 @@ export default function WalletScreen() {
     spent: 0, 
     refunded: 0,
     referrals: 0,
-    promos: 0
+    promos: 0,
+    payouts: 0
   });
   const [limit, setLimit] = useState(15);
   const [hasMore, setHasMore] = useState(true);
@@ -39,26 +42,33 @@ export default function WalletScreen() {
 
   const { setTabBarVisible } = useUI();
   const lastScrollY = useRef(0);
+  const [isInfoVisible, setIsInfoVisible] = useState(false);
+  const [filterType, setFilterType] = useState('all');
+  const [isTypeFilterVisible, setIsTypeFilterVisible] = useState(false);
 
   const onScroll = (event: any) => {
-    if (Platform.OS === 'web') return;
-    const currentY = event.nativeEvent.contentOffset.y;
-    const diff = currentY - lastScrollY.current;
-
-    if (diff > 10 && currentY > 50) {
-      setTabBarVisible(false);
-    } else if (diff < -10) {
-      setTabBarVisible(true);
-    }
-    lastScrollY.current = currentY;
+    // Scroll behavior for tab bar visibility is now disabled on this page as we want it hidden
+    lastScrollY.current = event.nativeEvent.contentOffset.y;
   };
 
   const isOwner = profile?.role === 'ground_owner';
 
   useEffect(() => {
+    // Hide bottom tab bar on mobile when entering wallet
+    if (Platform.OS !== 'web') {
+      setTabBarVisible(false);
+    }
+    
     if (user) {
       loadWalletData();
     }
+
+    return () => {
+      // Restore bottom tab bar when leaving
+      if (Platform.OS !== 'web') {
+        setTabBarVisible(true);
+      }
+    };
   }, [user, profile?.role, fromDate, toDate]);
 
   const loadWalletData = async (newLimit = limit) => {
@@ -86,8 +96,6 @@ export default function WalletScreen() {
           pendingAmount = (pendingWithdrawals || []).reduce((acc, w) => acc + (w.amount || 0), 0);
         }
         
-        setBalance(walletData.balance - pendingAmount);
-        
         // 2. Fetch Wallet Transactions
         let query = supabase
           .from('wallet_transactions')
@@ -107,11 +115,115 @@ export default function WalletScreen() {
           .order('created_at', { ascending: false })
           .limit(newLimit + 1);
 
+        // 3. Fetch Withdrawals (Payouts) if Owner
+        let payouts: any[] = [];
+        if (isOwner) {
+          let pQuery = supabase
+            .from('withdrawals')
+            .select('*')
+            .eq('owner_id', user.id);
+            
+          if (fromDate) pQuery = pQuery.gte('created_at', fromDate);
+          if (toDate) {
+            const endOfDay = new Date(toDate);
+            endOfDay.setHours(23, 59, 59, 999);
+            pQuery = pQuery.lte('created_at', endOfDay.toISOString());
+          }
+          
+          const { data: pData } = await pQuery
+            .order('created_at', { ascending: false })
+            .limit(newLimit);
+          payouts = pData || [];
+        }
+
+        // 4. Fetch Bookings if Owner to show related transactions
+        let ownerBookingTx: any[] = [];
+        if (isOwner) {
+          // Fetch platform settings
+          const { data: settingsData } = await supabase
+            .from('platform_settings')
+            .select('*');
+
+          const settingsMap: Record<string, any> = {};
+          settingsData?.forEach(s => { settingsMap[s.key] = s.value; });
+
+          const { data: bData } = await supabase
+            .from('bookings')
+            .select('*, ground:grounds(name, owner_id, pitch_type)')
+            .in('status', ['confirmed', 'completed']);
+            
+          const ownerBookings = (bData || []).filter(b => {
+            const ground = Array.isArray(b.ground) ? b.ground[0] : b.ground;
+            return ground?.owner_id === user.id;
+          });
+          
+          ownerBookingTx = ownerBookings.map(b => {
+            const ground = Array.isArray(b.ground) ? b.ground[0] : b.ground;
+            
+            // Calculate fee using platform settings
+            let fee = Number(b.platform_fee_owner || 0) + Number(b.gst_owner || 0);
+            if (settingsData && settingsData.length > 0) {
+              const cricketFixedFee = Number(settingsMap.cricket_owner_fee_fixed ?? 100);
+              const netsFixedFee = Number(settingsMap.nets_owner_fee_fixed ?? 25);
+              const rate = Number(settingsMap.user_platform_fee_rate ?? 0.05);
+              const gstRate = Number(settingsMap.gst_rate ?? 0.18);
+              
+              const pitchType = (ground?.pitch_type ?? '').toLowerCase();
+              const isCricket = pitchType === 'cricket ground';
+              const isNet = pitchType.includes('net') || pitchType.includes('lane');
+              
+              let ownerPf = 0;
+              if (isNet) {
+                ownerPf = netsFixedFee;
+              } else if (isCricket) {
+                const label = cricketTeamsLabelFromBooking(ground?.pitch_type, b.notes);
+                const teams = (label?.toLowerCase() === '1 team' || label?.toLowerCase() === 'one') ? 1 : 2;
+                ownerPf = cricketFixedFee * teams;
+              } else {
+                ownerPf = (b.total_amount + (b.discount_amount || 0)) * rate;
+              }
+              fee = ownerPf * (1 + gstRate);
+            }
+            const isOnline = b.payment_method && b.payment_method.toLowerCase() !== 'cash';
+            
+            if (isOnline) {
+              return {
+                id: `booking_${b.id}`,
+                type: 'booking_online',
+                title: 'Online Booking Payment',
+                sub: `Venue: ${ground?.name || 'Unknown'}`,
+                amount: (b.total_amount || 0) - fee,
+                date: new Date(b.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) + ', ' + new Date(b.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+                isPositive: true,
+                rawDate: new Date(b.created_at),
+                bookingId: b.id
+              };
+            } else {
+              return {
+                id: `booking_${b.id}`,
+                type: 'booking_cash_fee',
+                title: 'Cash Booking platform Fee',
+                sub: `Venue: ${ground?.name || 'Unknown'}`,
+                amount: fee,
+                date: new Date(b.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) + ', ' + new Date(b.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+                isPositive: false,
+                rawDate: new Date(b.created_at),
+                bookingId: b.id
+              };
+            }
+          });
+        }
+
+        // Balance will be calculated below from combined transactions
+
         const processedTx = (wtxData || []).map(tx => {
           let title = tx.description || 'Wallet Transaction';
-          let sub = 'System Credit';
+          let sub = 'Credit';
           
-          if (tx.type === 'refund') {
+          if (title === 'Admin System Credit' || title === 'Credit') {
+            title = 'Credit';
+            sub = 'System Credit';
+          } else if (tx.type === 'refund') {
             title = 'Refund Credited';
             sub = tx.booking?.ground?.name ? `Booking at ${tx.booking.ground.name}` : 'Booking Refund';
           } else if (tx.type === 'referral') {
@@ -133,12 +245,47 @@ export default function WalletScreen() {
             amount: Math.abs(tx.amount),
             date: new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) + ', ' + new Date(tx.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
             isPositive: tx.amount > 0,
-            rawDate: new Date(tx.created_at)
+            rawDate: new Date(tx.created_at),
+            bookingId: tx.booking?.id
           };
         });
 
-        setHasMore(processedTx.length > newLimit);
-        setTransactions(processedTx.slice(0, newLimit));
+        const processedPayouts = payouts.map(p => {
+          let title = 'Payout Request';
+          let statusText = '';
+          
+          if (p.status === 'completed') {
+            title = 'Payout Approved';
+          } else if (p.status === 'processing') {
+            title = 'Payout Processing';
+            statusText = ' • Processing';
+          } else {
+            statusText = ' • Pending';
+          }
+
+          return {
+            id: p.id,
+            type: 'payout',
+            title,
+            sub: (p.payment_method === 'bank_transfer' ? 'Bank Transfer' : 'UPI') + statusText,
+            amount: p.amount,
+            date: new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) + ', ' + new Date(p.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+            isPositive: false,
+            rawDate: new Date(p.created_at),
+            status: p.status
+          };
+        });
+
+        const combined = [...processedTx.filter(tx => tx.title !== 'Automatic Wallet-Earnings Synchronization'), ...processedPayouts, ...ownerBookingTx]
+          .sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime());
+
+        // Calculate wallet balance accordingly (sum of all displayed transactions)
+        // For regular users, use the actual wallet balance from DB to avoid truncation errors
+        const calculatedBalance = combined.reduce((acc, tx) => acc + (tx.isPositive ? tx.amount : -tx.amount), 0);
+        setBalance(isOwner ? calculatedBalance : (walletData?.balance || 0));
+
+        setHasMore(combined.length > newLimit);
+        setTransactions(combined.slice(0, newLimit));
 
         // Calculate Summary
         let earned = 0;
@@ -158,12 +305,20 @@ export default function WalletScreen() {
           }
         });
 
+        let totalPayouts = 0;
+        payouts.forEach(p => {
+          if (p.status === 'completed') {
+            totalPayouts += p.amount;
+          }
+        });
+
         setSummary({
           added: earned,
           spent: spent,
           refunded: refunded,
           referrals,
-          promos
+          promos,
+          payouts: totalPayouts
         });
       }
     } catch (err) {
@@ -356,34 +511,23 @@ export default function WalletScreen() {
           <Text style={styles.summaryLabel}>Promotional Credits</Text>
           <Text style={styles.summaryValue}>{formatCurrency(summary.promos)}</Text>
         </View>
+        {isOwner && (
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Total Payouts</Text>
+            <Text style={styles.summaryValue}>{formatCurrency(summary.payouts)}</Text>
+          </View>
+        )}
         <View style={[styles.summaryRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
           <Text style={styles.summaryLabel}>Total Spent</Text>
           <Text style={[styles.summaryValue, { color: '#dc2626' }]}>{formatCurrency(summary.spent)}</Text>
         </View>
       </View>
 
-      <View style={styles.panelCard}>
-        <Text style={styles.panelTitle}>How it works</Text>
-        <Text style={styles.infoText}>
-          BookYourGround Wallet is a credit-only wallet. Money enters through refunds, referrals, and rewards.
-        </Text>
-        <View style={styles.infoList}>
-          <View style={styles.infoItem}>
-            <View style={styles.infoDot} />
-            <Text style={styles.infoItemText}>Instant refunds on cancellations</Text>
-          </View>
-          <View style={styles.infoItem}>
-            <View style={styles.infoDot} />
-            <Text style={styles.infoItemText}>₹50 bonus for each referral</Text>
-          </View>
-          <View style={styles.infoItem}>
-            <View style={styles.infoDot} />
-            <Text style={styles.infoItemText}>Use for any booking or order</Text>
-          </View>
-        </View>
-      </View>
+
     </View>
   );
+
+  const filteredTx = transactions.filter(tx => filterType === 'all' || tx.type === filterType);
 
   const content = (
     <ScrollView
@@ -395,15 +539,55 @@ export default function WalletScreen() {
     >
       <View style={styles.mainLayout}>
         <View style={styles.centerContent}>
-          <View style={styles.balanceCard}>
-            <View style={styles.balanceInfo}>
-              <Text style={styles.balanceLabel}>Wallet Balance</Text>
-              <Text style={styles.balanceAmount}>{formatCurrency(balance)}</Text>
-              <Text style={styles.balanceSub}>100% Secure Platform Credits</Text>
-            </View>
-            <View style={styles.walletIconBox}>
-               <CreditCard size={32} color="#043529" />
-            </View>
+          <View style={{ position: 'relative', zIndex: 10 }}>
+            <LinearGradient 
+              colors={['#00ea6b', '#a5ff8a']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.balanceCard}
+            >
+              <Pressable 
+                style={styles.infoIconWrapper}
+                onMouseEnter={() => setIsInfoVisible(true)}
+                onMouseLeave={() => setIsInfoVisible(false)}
+              >
+                <Info size={18} color="#043529" />
+              </Pressable>
+  
+              <View style={styles.balanceInfo}>
+                <Text style={styles.balanceLabel}>Wallet Balance</Text>
+                <Text style={styles.balanceAmount}>
+                  {balance < 0 ? `₹-(${formatCurrency(Math.abs(balance)).replace('₹', '')})` : formatCurrency(balance)}
+                </Text>
+                <Text style={styles.balanceSub}>100% Secure Platform Credits</Text>
+              </View>
+              <View style={styles.walletIconBox}>
+                 <CreditCard size={32} color="#043529" />
+              </View>
+            </LinearGradient>
+  
+            {isInfoVisible && (
+              <View style={styles.infoModal}>
+                <Text style={styles.infoModalTitle}>How it works</Text>
+                <Text style={styles.infoModalText}>
+                  BookYourGround Wallet is a credit-only wallet. Money enters through refunds, referrals, and rewards.
+                </Text>
+                <View style={styles.infoModalList}>
+                  <View style={styles.infoModalListItem}>
+                    <View style={styles.infoModalDot} />
+                    <Text style={styles.infoModalListText}>Instant refunds on cancellations</Text>
+                  </View>
+                  <View style={styles.infoModalListItem}>
+                    <View style={styles.infoModalDot} />
+                    <Text style={styles.infoModalListText}>₹50 bonus for each referral</Text>
+                  </View>
+                  <View style={styles.infoModalListItem}>
+                    <View style={styles.infoModalDot} />
+                    <Text style={styles.infoModalListText}>Use for any booking or order</Text>
+                  </View>
+                </View>
+              </View>
+            )}
           </View>
 
           {isCompact && (
@@ -431,48 +615,94 @@ export default function WalletScreen() {
                 </View>
               ) : (
                 <View style={styles.transactionsList}>
-                  <View style={styles.listHeader}>
+                  <View style={[styles.listHeader, isCompact && { flexDirection: 'column', alignItems: 'flex-start', gap: 12 }]}>
                      <Text style={styles.sectionTitleInside}>Transaction History</Text>
-                     <View style={{ flexDirection: 'row', gap: 10 }}>
+                     <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', width: isCompact ? '100%' : 'auto', flexWrap: 'wrap' }}>
+                       {/* Type Filter Dropdown */}
+                       <View style={{ position: 'relative', zIndex: 20 }}>
+                         <TouchableOpacity 
+                           style={[styles.exportBtn, isCompact && { paddingHorizontal: 8 }]}
+                           onPress={() => setIsTypeFilterVisible(!isTypeFilterVisible)}
+                         >
+                           <Filter size={14} color="#64748B" />
+                           <Text style={styles.exportBtnText}>
+                             {filterType === 'all' ? 'All' : 
+                               filterType === 'booking_cash_fee' ? 'Cash Fees' :
+                               filterType === 'payout' ? 'Payouts' :
+                               filterType === 'refund' ? 'Refunds' : 'Referrals'}
+                           </Text>
+                           <ChevronDown size={14} color="#64748B" />
+                         </TouchableOpacity>
+
+                         {isTypeFilterVisible && (
+                           <View style={styles.dropdownMenu}>
+                             {[
+                               { id: 'all', label: 'All Transactions' },
+                               { id: 'booking_cash_fee', label: 'Cash Fees' },
+                               { id: 'payout', label: 'Payouts' },
+                               { id: 'refund', label: 'Refunds' },
+                               { id: 'referral', label: 'Referrals' },
+                             ].map(item => (
+                               <TouchableOpacity
+                                 key={item.id}
+                                 style={styles.dropdownItem}
+                                 onPress={() => {
+                                   setFilterType(item.id);
+                                   setIsTypeFilterVisible(false);
+                                 }}
+                               >
+                                 <Text style={[styles.dropdownItemText, filterType === item.id && styles.dropdownItemTextActive]}>
+                                   {item.label}
+                                 </Text>
+                               </TouchableOpacity>
+                             ))}
+                           </View>
+                         )}
+                       </View>
+
                        <TouchableOpacity 
-                         style={styles.exportBtn}
+                         style={[styles.exportBtn, isCompact && { paddingHorizontal: 8 }]}
                          onPress={handleExport}
                        >
-                         <Download size={18} color="#64748B" />
-                         <Text style={styles.exportBtnText}>Export</Text>
+                         <Download size={16} color="#64748B" />
+                         {!isCompact && <Text style={styles.exportBtnText}>Export</Text>}
                        </TouchableOpacity>
                        <TouchableOpacity 
-                         style={styles.filterByDateBtn}
+                         style={[styles.filterByDateBtn, isCompact && { paddingHorizontal: 8, flex: isCompact ? 1 : 0 }]}
                          onPress={() => {
                            setTempFromDate(fromDate);
                            setTempToDate(toDate);
                            setIsDatePickerVisible(true);
                          }}
                        >
-                         <Calendar size={18} color="#00ea6b" />
-                         <Text style={styles.filterByDateText}>Filter by Date</Text>
-                         <Filter size={14} color="#64748B" />
+                         <Calendar size={16} color="#64748B" />
+                         <Text style={styles.filterByDateText}>{isCompact ? 'Date' : 'Filter by Date'}</Text>
+                         <Filter size={12} color="#64748B" />
                        </TouchableOpacity>
                      </View>
                   </View>
 
-                  {transactions.map((tx, index) => {
+                  {filteredTx.map((tx, index) => {
                      const isPos = tx.isPositive;
                      const isLast = index === transactions.length - 1;
                      return (
                        <View key={tx.id} style={[styles.txCard, isLast && { borderBottomWidth: 0 }]}>
-                          <View style={[styles.txIconBox, isPos ? styles.txIconBoxPos : styles.txIconBoxNeg]}>
-                             {isPos ? <ArrowUp size={20} color="#00ea6b" /> : <ArrowDown size={20} color="#dc2626" />}
+                          <View style={{ width: isCompact ? 70 : 90, justifyContent: 'center' }}>
+                             <Text style={styles.txDate}>{tx.date}</Text>
                           </View>
                           <View style={styles.txInfo}>
-                             <Text style={styles.txTitle}>{tx.title}</Text>
+                             <Text style={[styles.txTitle, tx.type === 'booking_cash_fee' && { fontWeight: '300' }]}>{tx.title}</Text>
                              <Text style={styles.txSub}>{tx.sub}</Text>
                           </View>
                           <View style={styles.txValues}>
                              <Text style={[styles.txAmount, isPos ? styles.txAmountPos : styles.txAmountNeg]}>
                                {isPos ? '+' : '-'}{formatCurrency(tx.amount)}
                              </Text>
-                             <Text style={styles.txDate}>{tx.date}</Text>
+                             {tx.bookingId && (
+                               <Text style={styles.txBookingId}>
+                                 Booking ID: {tx.bookingId.substring(0, 8).toUpperCase()}
+                               </Text>
+                             )}
                           </View>
                        </View>
                      );
@@ -620,7 +850,7 @@ export default function WalletScreen() {
 
   return (
     <View style={styles.nativeWrapper}>
-      <MobileAppNavbar title="Wallet" titleColor="#043529" lightBg />
+      <MobileAppNavbar title="Wallet" titleColor="#01b854" lightBg />
       {content}
       {datePickerModal}
 
@@ -733,14 +963,13 @@ const styles = StyleSheet.create({
     gap: 24,
   },
   balanceCard: {
-    backgroundColor: ACCENT,
     borderRadius: 24,
     padding: 24,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 32,
-    shadowColor: ACCENT,
+    shadowColor: '#00ea6b',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.2,
     shadowRadius: 20,
@@ -750,25 +979,25 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   balanceLabel: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '500',
     color: '#043529',
-    marginBottom: 4,
+    marginBottom: 8,
     fontFamily: 'Inter',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   balanceAmount: {
-    fontSize: Platform.OS === 'web' ? 42 : 32,
-    fontWeight: '800',
+    fontSize: Platform.OS === 'web' ? 24 : 20,
+    fontWeight: '400',
     color: '#043529',
-    marginBottom: 4,
+    marginBottom: 12,
     fontFamily: 'Inter',
-    letterSpacing: -1,
+    letterSpacing: -0.5,
   },
   balanceSub: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#043529',
     opacity: 0.7,
     fontFamily: 'Inter',
@@ -783,7 +1012,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#0F172A',
     marginBottom: 16,
     fontFamily: 'Inter',
@@ -798,8 +1027,9 @@ const styles = StyleSheet.create({
     elevation: 3,
     borderWidth: 1,
     borderColor: '#F1F5F9',
-    overflow: 'hidden',
     marginTop: 24,
+    zIndex: 5,
+    position: 'relative',
   },
   listHeader: {
     flexDirection: 'row',
@@ -810,10 +1040,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
     backgroundColor: '#FAFAFA',
+    zIndex: 10,
+    position: 'relative',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
   },
   sectionTitleInside: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
@@ -835,17 +1069,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   txIconBoxPos: {
-    backgroundColor: '#DCFCE7',
+    backgroundColor: 'transparent',
   },
   txIconBoxNeg: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: 'transparent',
   },
   txInfo: {
     flex: 1,
   },
   txTitle: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '400',
     color: '#0F172A',
     fontFamily: 'Inter',
     marginBottom: 1,
@@ -861,12 +1095,12 @@ const styles = StyleSheet.create({
   },
   txAmount: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '500',
     fontFamily: 'Inter',
     marginBottom: 1,
   },
   txAmountPos: {
-    color: '#00ea6b',
+    color: '#0F172A',
   },
   txAmountNeg: {
     color: '#dc2626',
@@ -876,6 +1110,67 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     fontFamily: 'Inter',
     fontWeight: '400',
+  },
+  txBookingId: {
+    fontSize: 10,
+    color: '#94A3B8',
+    fontFamily: 'Inter',
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  infoIconWrapper: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 10,
+  },
+  infoModal: {
+    position: 'absolute',
+    top: 40,
+    right: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    width: 280,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 5,
+    zIndex: 20,
+  },
+  infoModalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 8,
+    fontFamily: 'Inter',
+  },
+  infoModalText: {
+    fontSize: 13,
+    color: '#64748B',
+    lineHeight: 18,
+    marginBottom: 12,
+    fontFamily: 'Inter',
+  },
+  infoModalList: {
+    gap: 8,
+  },
+  infoModalListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  infoModalDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#00ea6b',
+  },
+  infoModalListText: {
+    fontSize: 13,
+    color: '#0F172A',
+    fontFamily: 'Inter',
   },
   viewAllWrapper: {
     alignItems: 'center',
@@ -909,7 +1204,7 @@ const styles = StyleSheet.create({
   },
   panelTitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#0F172A',
     marginBottom: 16,
     fontFamily: 'Inter',
@@ -929,7 +1224,7 @@ const styles = StyleSheet.create({
   },
   summaryValue: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
@@ -956,7 +1251,7 @@ const styles = StyleSheet.create({
   },
   infoItemText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#1E293B',
     fontFamily: 'Inter',
   },
@@ -1007,8 +1302,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   exportBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '400',
     color: '#64748B',
     fontFamily: 'Inter',
   },
@@ -1024,10 +1319,41 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   filterByDateText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#0F172A',
+    fontSize: 12,
+    fontWeight: '400',
+    color: '#64748B',
     fontFamily: 'Inter',
+  },
+  dropdownMenu: {
+    position: 'absolute',
+    top: 35,
+    left: 0,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    width: 140,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+    zIndex: 30,
+  },
+  dropdownItem: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  dropdownItemText: {
+    fontSize: 12,
+    color: '#64748B',
+    fontFamily: 'Inter',
+  },
+  dropdownItemTextActive: {
+    color: '#00ea6b',
+    fontWeight: '400',
   },
   datePickerModalWrap: {
     backgroundColor: '#FFFFFF',
@@ -1045,7 +1371,7 @@ const styles = StyleSheet.create({
   },
   dpMain: {
     flexDirection: Platform.OS === 'web' ? 'row' : 'column',
-    minHeight: 400,
+    minHeight: Platform.OS === 'web' ? 400 : 500,
   },
   dpSidebar: {
     width: Platform.OS === 'web' ? 200 : '100%',
@@ -1089,8 +1415,9 @@ const styles = StyleSheet.create({
   dpInputsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
-    marginBottom: 24,
+    gap: 12,
+    marginBottom: 20,
+    flexWrap: 'wrap',
   },
   dpInputBox: {
     flex: 1,

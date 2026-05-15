@@ -704,7 +704,7 @@ export default function UserOrdersScreen() {
       <StatusBar style="dark" />
       <MobileAppNavbar 
         title="My Orders" 
-        titleColor="#111827"
+        titleColor="#01b854"
         lightBg
       />
       {content}

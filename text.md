@@ -39,6 +39,9 @@ git push origin main
 
 
 
-on ground owners dont show  
 
-data is not visible if it is idle fro less than a minute, check md for fixes
+on book-my-ground page on web big screen on scroll ,selected filter options should be pinned to top  and hide complete form on scroll and show cards on whole screen width, be precise
+
+
+
+in summary show wallet when paid with wallet and show correct fee, fee is incorrect and wallet in payment when paid via wallet 

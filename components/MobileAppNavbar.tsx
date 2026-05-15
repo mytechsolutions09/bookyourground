@@ -55,7 +55,7 @@ export default function MobileAppNavbar({
           source={require('../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
           style={styles.logo}
           resizeMode="contain"
-          accessibilityLabel="Book my ground"
+          accessibilityLabel="Book my venues"
         />
       )}
       {rightAction && <View style={styles.rightActionContainer}>{rightAction}</View>}

@@ -61,7 +61,7 @@ export default function OwnerGroundsScreen() {
   const { width } = useWindowDimensions();
   const isUltraNarrow = width < 350;
   const isTablet = width >= 600 && width < 900;
-  const numColumns = Platform.OS === 'web' ? (width > 1100 ? 3 : (width > 768 ? 2 : 1)) : 1;
+  const numColumns = Platform.OS === 'web' ? (width >= 1024 ? 3 : (width >= 768 ? 2 : 1)) : 1;
   const [selectedGroundId, setSelectedGroundId] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [editLoading, setEditLoading] = useState(false);

@@ -13,6 +13,7 @@ import {
   useWindowDimensions,
   ActivityIndicator,
   Image,
+  DeviceEventEmitter,
 } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { router } from 'expo-router';
@@ -273,6 +274,23 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
   const [searching, setSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [searchPage, setSearchPage] = useState(0);
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    if (!isWeb || !separateSearchResults) return;
+    
+    const subscription = DeviceEventEmitter.addListener('mainScroll', (data: { y: number }) => {
+      if (data.y > 150) {
+        setIsScrolled(true);
+      } else if (data.y <= 5) {
+        setIsScrolled(false);
+      }
+    });
+    
+    return () => {
+      subscription.remove();
+    };
+  }, [isWeb, separateSearchResults]);
   const [hasMore, setHasMore] = useState(true);
   // For landing search results: custom price for the chosen slot per ground (if any).
   const [searchSlotPriceByGroundId, setSearchSlotPriceByGroundId] = useState<
@@ -722,8 +740,8 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
           price = Number(parts[3]);
         } else {
           price = pricesByDate[date]?.[time] ?? slotPriceByStartTime[time] ?? (selectedGround as any)?.min_price ?? selectedGround?.base_price_per_hour ?? 0;
-          // Apply team type factor per slot if calculating from base
-          const factor = slotTeamType === 'one' ? 0.5 : 1.0;
+          // Apply team type factor per slot if calculating from base (skip for Nets)
+          const factor = isNets ? 1.0 : (slotTeamType === 'one' ? 0.5 : 1.0);
           price = price * factor;
         }
         
@@ -1726,7 +1744,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
           const time = parts[1];
           const slotTeamType = parts[2];
           let price = pricesByDate[date]?.[time] ?? slotPriceByStartTime[time] ?? (selectedGround as any)?.min_price ?? selectedGround?.base_price_per_hour ?? 0;
-          const factor = slotTeamType === 'one' ? 0.5 : 1.0;
+          const factor = isNets ? 1.0 : (slotTeamType === 'one' ? 0.5 : 1.0);
           price = price * factor;
           return price;
         });
@@ -1834,7 +1852,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                   key={g.id}
                   style={[
                     styles.searchResultTile,
-                    isSearchTwoColumn && styles.searchResultTileWeb,
+                    isSearchTwoColumn && (separateSearchResults && !isScrolled ? styles.searchResultTileHalf : styles.searchResultTileWeb),
                   ]}
                 >
                    <GroundCard
@@ -1941,93 +1959,97 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
       )}
 
       <View style={[styles.row, !!openSelectMenu && styles.sectionDropdownOpen, { flexWrap: 'wrap' }]}>
-        <View
-          style={[
-            styles.section,
-            styles.flex1,
-          ]}
-        >
-          <Text style={fieldLabelStyle}>Location</Text>
-          <Pressable
-            onPress={() => setOpenSelectMenu('location')}
-            disabled={lockSlot || isLockedByInitialGround || loadingGrounds}
+        {!(isWeb && groundPageAccent) && (
+          <View
             style={[
-              styles.dropdownButton,
-              groundPageAccent && styles.dropdownButtonGroundPage,
-              nativeTanChrome && !groundPageAccent && styles.dropdownButtonBookGroundNative,
-              !!locationKey && !loadingGrounds && (groundPageAccent ? styles.dropdownButtonSelectedGroundPage : styles.dropdownButtonSelected),
+              styles.section,
+              styles.flex1,
             ]}
           >
-            <Text style={[
-              styles.dropdownButtonText,
-              groundPageAccent && styles.dropdownButtonTextGroundPage,
-              nativeTanChrome && !groundPageAccent && styles.dropdownButtonTextBookGroundNative,
-              !!locationKey && (groundPageAccent ? styles.dropdownButtonTextSelectedGroundPage : styles.dropdownButtonTextSelected),
-            ]}>
-              {locationOptions.find(o => o.key === locationKey)?.label || 'Location'}
-            </Text>
-          </Pressable>
+            <Text style={fieldLabelStyle}>Location</Text>
+            <Pressable
+              onPress={() => setOpenSelectMenu('location')}
+              disabled={lockSlot || isLockedByInitialGround || loadingGrounds}
+              style={[
+                styles.dropdownButton,
+                groundPageAccent && styles.dropdownButtonGroundPage,
+                nativeTanChrome && !groundPageAccent && styles.dropdownButtonBookGroundNative,
+                !!locationKey && !loadingGrounds && (groundPageAccent ? styles.dropdownButtonSelectedGroundPage : styles.dropdownButtonSelected),
+              ]}
+            >
+              <Text style={[
+                styles.dropdownButtonText,
+                groundPageAccent && styles.dropdownButtonTextGroundPage,
+                nativeTanChrome && !groundPageAccent && styles.dropdownButtonTextBookGroundNative,
+                !!locationKey && (groundPageAccent ? styles.dropdownButtonTextSelectedGroundPage : styles.dropdownButtonTextSelected),
+              ]}>
+                {locationOptions.find(o => o.key === locationKey)?.label || 'Location'}
+              </Text>
+            </Pressable>
 
-          <ModalSelector
-            visible={openSelectMenu === 'location'}
-            onClose={() => setOpenSelectMenu(null)}
-            title="Select Location"
-            value={locationKey}
-            options={locationOptions}
-            onChange={(k) => {
-              setLocationKey(k);
-              if (useLandingSearchFlow) {
-                clearSearchState();
-              } else {
-                selectGroundByLocationAndType(k, typeKey);
-              }
-            }}
-          />
-        </View>
+            <ModalSelector
+              visible={openSelectMenu === 'location'}
+              onClose={() => setOpenSelectMenu(null)}
+              title="Select Location"
+              value={locationKey}
+              options={locationOptions}
+              onChange={(k) => {
+                setLocationKey(k);
+                if (useLandingSearchFlow) {
+                  clearSearchState();
+                } else {
+                  selectGroundByLocationAndType(k, typeKey);
+                }
+              }}
+            />
+          </View>
+        )}
 
-        <View
-          style={[
-            styles.section,
-            styles.flex1,
-          ]}
-        >
-          <Text style={fieldLabelStyle}>Type</Text>
-          <Pressable
-            onPress={() => setOpenSelectMenu('type')}
-            disabled={lockSlot || isLockedByInitialGround || loadingGrounds}
+        {!(isWeb && groundPageAccent) && (
+          <View
             style={[
-              styles.dropdownButton,
-              groundPageAccent && styles.dropdownButtonGroundPage,
-              nativeTanChrome && !groundPageAccent && styles.dropdownButtonBookGroundNative,
-              !!typeKey && !loadingGrounds && (groundPageAccent ? styles.dropdownButtonSelectedGroundPage : styles.dropdownButtonSelected),
+              styles.section,
+              styles.flex1,
             ]}
           >
-            <Text style={[
-              styles.dropdownButtonText,
-              groundPageAccent && styles.dropdownButtonTextGroundPage,
-              nativeTanChrome && !groundPageAccent && styles.dropdownButtonTextBookGroundNative,
-              !!typeKey && (groundPageAccent ? styles.dropdownButtonTextSelectedGroundPage : styles.dropdownButtonTextSelected),
-            ]}>
-              {typeOptions.find(o => o.key === typeKey)?.label || 'Venue Type'}
-            </Text>
-          </Pressable>
+            <Text style={fieldLabelStyle}>Type</Text>
+            <Pressable
+              onPress={() => setOpenSelectMenu('type')}
+              disabled={lockSlot || isLockedByInitialGround || loadingGrounds}
+              style={[
+                styles.dropdownButton,
+                groundPageAccent && styles.dropdownButtonGroundPage,
+                nativeTanChrome && !groundPageAccent && styles.dropdownButtonBookGroundNative,
+                !!typeKey && !loadingGrounds && (groundPageAccent ? styles.dropdownButtonSelectedGroundPage : styles.dropdownButtonSelected),
+              ]}
+            >
+              <Text style={[
+                styles.dropdownButtonText,
+                groundPageAccent && styles.dropdownButtonTextGroundPage,
+                nativeTanChrome && !groundPageAccent && styles.dropdownButtonTextBookGroundNative,
+                !!typeKey && (groundPageAccent ? styles.dropdownButtonTextSelectedGroundPage : styles.dropdownButtonTextSelected),
+              ]}>
+                {typeOptions.find(o => o.key === typeKey)?.label || 'Venue Type'}
+              </Text>
+            </Pressable>
 
-          <ModalSelector
-            visible={openSelectMenu === 'type'}
-            onClose={() => setOpenSelectMenu(null)}
-            title="Select Venue Type"
-            value={typeKey}
-            options={typeOptions}
-            onChange={(t) => {
-              setTypeKey(t);
-              if (useLandingSearchFlow) {
-                clearSearchState();
-              } else {
-                selectGroundByLocationAndType(locationKey, t);
-              }
-            }}
-          />
-        </View>
+            <ModalSelector
+              visible={openSelectMenu === 'type'}
+              onClose={() => setOpenSelectMenu(null)}
+              title="Select Venue Type"
+              value={typeKey}
+              options={typeOptions}
+              onChange={(t) => {
+                setTypeKey(t);
+                if (useLandingSearchFlow) {
+                  clearSearchState();
+                } else {
+                  selectGroundByLocationAndType(locationKey, t);
+                }
+              }}
+            />
+          </View>
+        )}
 
         {!groundPageAccent && ((!isBoxCricket && !isNets) || (groundPageAccent && !isNets)) ? (
           <View style={[styles.section, { flex: 2 }]}>
@@ -2356,7 +2378,8 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                           const date = bookingDate;
                           const time = s.value;
                           let price = pricesByDate[date]?.[time] ?? slotPriceByStartTime[time] ?? (selectedGround as any)?.min_price ?? selectedGround?.base_price_per_hour ?? 0;
-                          const factor = teamType === 'one' ? 0.5 : 1.0;
+                          // Apply team type factor per slot if calculating from base (skip for Nets)
+                          const factor = isNets ? 1.0 : (teamType === 'one' ? 0.5 : 1.0);
                           price = price * factor;
                           const slotWithPrice = `${prefix}${teamType}__${price}`;
 
@@ -2482,6 +2505,7 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
 
   const ContainerComponent: React.ComponentType<any> =
     noCard ? View : Card;
+  const ColumnComponent: React.ComponentType<any> = View;
   const mainCardStyle = [
     !noCard && styles.card,
     !noCard && isWeb && styles.cardWeb,
@@ -2512,104 +2536,45 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
         isWeb && windowWidth < 640 && styles.wrapperMobileTight,
       ]}
     >
-      <ContainerComponent style={mainCardStyle}>
-
-
-        {isWeb && !isCompact ? (
-          <View style={styles.formFieldsWeb}>{formFields}</View>
-        ) : isWeb ? (
-          <View style={styles.formFieldsNative}>{formFields}</View>
-        ) : (
-          <Animated.ScrollView
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={[styles.formFieldsNative, { paddingTop: contentPaddingTop }]}
-            onScroll={onScroll}
-            scrollEventThrottle={scrollEventThrottle}
-          >
-            {formFields}
-          </Animated.ScrollView>
-        )}
-
-        {computed && (!useLandingSearchFlow || groundSelectedFromSearch) && (
-          <View
-            style={[
-              styles.summary,
-              groundPageAccent && !isWeb && styles.summaryGroundPageMobile,
-            ]}
-          >
-            <Text
-              style={[
-                styles.summaryText,
-                groundPageAccent && !isWeb && styles.summaryTextGroundMobile,
-              ]}
-            >
-              Total:{' '}
-              <Text
-                style={[
-                  styles.summaryAccent,
-                  groundPageAccent && !isWeb && styles.summaryAccentGroundMobile,
-                ]}
-              >
-                {formatCurrency(finalAmount)}
-              </Text>
-              {discountAmount > 0 && (
-                <Text style={styles.originalAmountLineThrough}>
-                  {' '}{formatCurrency(computed.totalAmount)}
-                </Text>
-              )}
-            </Text>
-            {supportMultipleSlots ? (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginTop: 4 }}>
-                <Text style={[styles.summaryMuted, groundPageAccent && !isWeb && styles.summaryMutedGroundMobile, { marginTop: 0 }]}>{isNets ? 'Nets: ' : 'Slots: '}</Text>
-                {selectedNetsSlots.map(s => {
-                  const parts = s.split('__');
-                  const date = parts[0];
-                  const time = parts[1];
-                  const slotTeamType = parts[2] || teamType;
-                  
-                  const isCurrentDate = date === bookingDate;
-                  const label = isCurrentDate ? formatTime(time) : `${formatDateDDMMYYYY(date)} ${formatTime(time)}`;
-                  
-                  let price = pricesByDate[date]?.[time] ?? slotPriceByStartTime[time] ?? (selectedGround as any)?.min_price ?? selectedGround?.base_price_per_hour ?? 0;
-                  const factor = slotTeamType === 'one' ? 0.5 : 1.0;
-                  price = price * factor;
-                  
-                  return (
-                    <View key={s} style={{ backgroundColor: 'rgba(1, 184, 84, 0.1)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(1, 184, 84, 0.3)' }}>
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: '#01b854' }}>
-                        {`${label}${!isNets ? ` (${slotTeamType === 'one' ? '1 Team' : 'Both'})` : ''} (${formatCurrency(price)})`}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </View>
-            ) : (
-              <Text
-                style={[
-                  styles.summaryMuted,
-                  groundPageAccent && !isWeb && styles.summaryMutedGroundMobile,
-                ]}
-              >
-                {isBoxCricket
-                  ? `Duration: ${computed.totalHours} hours @ ${formatCurrency(
-                    computed.pricePerUnit,
-                  )}/hr`
-                  : `Cricket ground: ${teamType === 'one' ? '1 team' : 'Both teams'} • ${formatCurrency(teamType === 'one' ? computed.pricePerUnit / 2 : computed.pricePerUnit)} ${teamType === 'one' ? 'per team' : 'per match'}`}
-              </Text>
-            )}
-          </View>
-        )}
-
-        <View
+      <View style={[
+        isWeb && windowWidth >= 900 && separateSearchResults && !isScrolled && { flexDirection: 'row', gap: 24 }
+      ]}>
+        <ColumnComponent
           style={[
-            styles.actions,
-            groundPageAccent && !isWeb && styles.actionsGroundPageNative,
+            isWeb && windowWidth >= 900 && separateSearchResults && !isScrolled && { flex: 1 },
+            isWeb && windowWidth >= 900 && separateSearchResults && isScrolled && { position: 'sticky', top: 0, zIndex: 10, backgroundColor: '#FFFFFF', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }
           ]}
+          showsVerticalScrollIndicator={false}
         >
-          {useLandingSearchFlow ? (
-            groundSelectedFromSearch ? (
-              <View style={styles.actionsColumn}>
+          {isScrolled ? (
+            <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', paddingHorizontal: 16 }}>
+              <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                <Text style={{ fontSize: 12, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>{locationOptions.find(o => o.key === locationKey)?.label || locationKey?.replace('__', ', ') || 'Location'}</Text>
+              </View>
+              <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                <Text style={{ fontSize: 12, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>{typeKey || 'Type'}</Text>
+              </View>
+              <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                <Text style={{ fontSize: 12, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>{bookingDate || 'Date'}</Text>
+              </View>
+              <View style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                <Text style={{ fontSize: 12, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>{startTime || 'Time'}</Text>
+              </View>
+            </View>
+          ) : (
+            <ContainerComponent style={mainCardStyle}>
+
+
+        {isWeb && groundPageAccent && !isCompact ? (
+          <View style={{ flexDirection: 'row', gap: 48, alignItems: 'flex-start' }}>
+            <View style={{ flex: 2 }}>
+              <View style={styles.formFieldsWeb}>{formFields}</View>
+              <View
+                style={[
+                  styles.actions,
+                  { marginTop: 32, paddingBottom: 0, borderTopWidth: 0 }
+                ]}
+              >
                 <Button
                   title={submitting ? 'Processing...' : 'Checkout'}
                   onPress={handleBook}
@@ -2620,64 +2585,244 @@ export default function LandingBookingForm(props: LandingBookingFormProps) {
                   style={styles.premiumGlassButton}
                   textStyle={styles.premiumGlassButtonText}
                 />
-                <Pressable
-                  onPress={() => setSelectedGroundId(null)}
-                  style={styles.changeGroundPress}
-                  disabled={submitting}
-                >
-                  <Text style={styles.changeGroundText}>Choose a different ground</Text>
-                </Pressable>
               </View>
-            ) : !hasSearched || searchResults.length === 0 ? (
-              <Button
-                title="Search"
-                onPress={handleSearch}
-                disabled={submitting || searching || !canRunSearch}
-                loading={searching}
-                fullWidth
-                size="large"
-                style={styles.premiumGlassButton}
-                textStyle={styles.premiumGlassButtonText}
-              />
-            ) : null
-          ) : (
-            <Button
-              title={submitting ? 'Processing...' : 'Checkout'}
-              onPress={handleBook}
-              disabled={submitting}
-              loading={submitting}
-              fullWidth
-              size={groundPageAccent && !isWeb ? 'small' : 'large'}
-              style={styles.premiumGlassButton}
-              textStyle={styles.premiumGlassButtonText}
-            />
-          )}
-        </View>
-      </ContainerComponent>
-
-      {separateSearchResults && searchResultsBody ? (
-        <ContainerComponent
-          style={[
-            styles.searchResultsCard,
-            isWeb && styles.cardWeb,
-            noCard && styles.cardPlain,
-            noCard && { marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F1F5F9' }
-          ]}
-        >
-          <View style={styles.searchResultsHeader}>
-            <View>
-
-              <Text style={styles.searchResultsSubtitle}>
-                Found {searchResults.length} results
-              </Text>
             </View>
-            <View style={styles.resultsBadge}>
-              <Text style={styles.resultsBadgeText}>PREMIUM SELECTION</Text>
+
+            <View style={{ flex: 1, backgroundColor: '#F8FAFC', padding: 24, borderRadius: 20, borderWidth: 1, borderColor: '#F1F5F9' }}>
+              {computed && (!useLandingSearchFlow || groundSelectedFromSearch) ? (
+                <View style={[styles.summary, { marginTop: 0, paddingBottom: 0, borderTopWidth: 0, flex: 1 }]}>
+                  {supportMultipleSlots && selectedNetsSlots.length > 0 && (
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.fieldLabel, { marginBottom: 12, fontSize: 12, color: '#64748B', fontWeight: '600', textTransform: 'uppercase' }]}>
+                        {isNets ? 'Selected Nets' : 'Selected Slots'}
+                      </Text>
+                      <View style={{ gap: 0 }}>
+                        {selectedNetsSlots.map((s, index) => {
+                          const parts = s.split('__');
+                          const date = parts[0];
+                          const time = parts[1];
+                          const slotTeamType = parts[2] || teamType;
+                          
+                          const isCurrentDate = date === bookingDate;
+                          const label = isCurrentDate ? formatTime(time) : `${formatDateDDMMYYYY(date)} ${formatTime(time)}`;
+                          
+                          let price = pricesByDate[date]?.[time] ?? slotPriceByStartTime[time] ?? (selectedGround as any)?.min_price ?? selectedGround?.base_price_per_hour ?? 0;
+                          // Apply team type factor per slot if calculating from base (skip for Nets)
+                          const factor = isNets ? 1.0 : (slotTeamType === 'one' ? 0.5 : 1.0);
+                          price = price * factor;
+                          
+                          return (
+                            <View key={s} style={{ paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <View>
+                                <Text style={{ fontSize: 13, fontWeight: '500', color: '#1E293B' }}>{label}</Text>
+                                {!isNets && <Text style={{ fontSize: 11, color: '#64748B' }}>{slotTeamType === 'one' ? '1 Team' : 'Both Teams'}</Text>}
+                              </View>
+                              <Text style={{ fontSize: 13, fontWeight: '600', color: '#0F172A' }}>{formatCurrency(price)}</Text>
+                            </View>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  )}
+
+                  <View style={{ marginTop: 'auto', paddingTop: 16, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={[styles.summaryText, { fontSize: 16, fontWeight: '600' }]}>
+                      Total
+                    </Text>
+                    <Text style={[{ fontSize: 16, fontWeight: '600', color: '#0F172A' }]}>
+                      {formatCurrency(finalAmount)}
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 40 }}>
+                  <Text style={{ fontSize: 14, color: '#64748B', textAlign: 'center' }}>Select slots to see price summary</Text>
+                </View>
+              )}
             </View>
           </View>
-          {searchResultsBody}
-        </ContainerComponent>
-      ) : null}
+        ) : (
+          <>
+            {isWeb && !isCompact ? (
+              <View style={styles.formFieldsWeb}>{formFields}</View>
+            ) : isWeb ? (
+              <View style={styles.formFieldsNative}>{formFields}</View>
+            ) : (
+              <Animated.ScrollView
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={[styles.formFieldsNative, { paddingTop: contentPaddingTop }]}
+                onScroll={onScroll}
+                scrollEventThrottle={scrollEventThrottle}
+              >
+                {formFields}
+              </Animated.ScrollView>
+            )}
+
+            {computed && (!useLandingSearchFlow || groundSelectedFromSearch) && (
+              <View
+                style={[
+                  styles.summary,
+                  groundPageAccent && !isWeb && styles.summaryGroundPageMobile,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.summaryText,
+                    groundPageAccent && !isWeb && styles.summaryTextGroundMobile,
+                  ]}
+                >
+                  Total:{' '}
+                  <Text
+                    style={[
+                      styles.summaryAccent,
+                      groundPageAccent && !isWeb && styles.summaryAccentGroundMobile,
+                    ]}
+                  >
+                    {formatCurrency(finalAmount)}
+                  </Text>
+                  {discountAmount > 0 && (
+                    <Text style={styles.originalAmountLineThrough}>
+                      {' '}{formatCurrency(computed.totalAmount)}
+                    </Text>
+                  )}
+                </Text>
+                {supportMultipleSlots ? (
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginTop: 4 }}>
+                    <Text style={[styles.summaryMuted, groundPageAccent && !isWeb && styles.summaryMutedGroundMobile, { marginTop: 0 }]}>{isNets ? 'Nets: ' : 'Slots: '}</Text>
+                    {selectedNetsSlots.map(s => {
+                      const parts = s.split('__');
+                      const date = parts[0];
+                      const time = parts[1];
+                      const slotTeamType = parts[2] || teamType;
+                      
+                      const isCurrentDate = date === bookingDate;
+                      const label = isCurrentDate ? formatTime(time) : `${formatDateDDMMYYYY(date)} ${formatTime(time)}`;
+                      
+                      let price = pricesByDate[date]?.[time] ?? slotPriceByStartTime[time] ?? (selectedGround as any)?.min_price ?? selectedGround?.base_price_per_hour ?? 0;
+                      const factor = slotTeamType === 'one' ? 0.5 : 1.0;
+                      price = price * factor;
+                      
+                      return (
+                        <View key={s} style={{ backgroundColor: 'rgba(1, 184, 84, 0.1)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(1, 184, 84, 0.3)' }}>
+                          <Text style={{ fontSize: 11, fontWeight: '700', color: '#01b854' }}>
+                            {`${label}${!isNets ? ` (${slotTeamType === 'one' ? '1 Team' : 'Both'})` : ''} (${formatCurrency(price)})`}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  <Text
+                    style={[
+                      styles.summaryMuted,
+                      groundPageAccent && !isWeb && styles.summaryMutedGroundMobile,
+                    ]}
+                  >
+                    {isBoxCricket
+                      ? `Duration: ${computed.totalHours} hours @ ${formatCurrency(
+                        computed.pricePerUnit,
+                      )}/hr`
+                      : `Cricket ground: ${teamType === 'one' ? '1 team' : 'Both teams'} • ${formatCurrency(teamType === 'one' ? computed.pricePerUnit / 2 : computed.pricePerUnit)} ${teamType === 'one' ? 'per team' : 'per match'}`}
+                  </Text>
+                )}
+              </View>
+            )}
+
+            <View
+              style={[
+                styles.actions,
+                groundPageAccent && !isWeb && styles.actionsGroundPageNative,
+              ]}
+            >
+              {useLandingSearchFlow ? (
+                groundSelectedFromSearch ? (
+                  <View style={styles.actionsColumn}>
+                    <Button
+                      title={submitting ? 'Processing...' : 'Checkout'}
+                      onPress={handleBook}
+                      disabled={submitting}
+                      loading={submitting}
+                      fullWidth
+                      size="large"
+                      style={styles.premiumGlassButton}
+                      textStyle={styles.premiumGlassButtonText}
+                    />
+                    <Pressable
+                      onPress={() => setSelectedGroundId(null)}
+                      style={styles.changeGroundPress}
+                      disabled={submitting}
+                    >
+                      <Text style={styles.changeGroundText}>Choose a different ground</Text>
+                    </Pressable>
+                  </View>
+                ) : !hasSearched || searchResults.length === 0 ? (
+                  <Button
+                    title="Search"
+                    onPress={handleSearch}
+                    disabled={submitting || searching || !canRunSearch}
+                    loading={searching}
+                    fullWidth
+                    size="large"
+                    style={styles.premiumGlassButton}
+                    textStyle={styles.premiumGlassButtonText}
+                  />
+                ) : null
+              ) : (
+                <Button
+                  title={submitting ? 'Processing...' : 'Checkout'}
+                  onPress={handleBook}
+                  disabled={submitting}
+                  loading={submitting}
+                  fullWidth
+                  size={groundPageAccent && !isWeb ? 'small' : 'large'}
+                  style={styles.premiumGlassButton}
+                  textStyle={styles.premiumGlassButtonText}
+                />
+              )}
+            </View>
+          </>
+        )}
+            </ContainerComponent>
+          )}
+        </ColumnComponent>
+
+        {separateSearchResults ? (
+          <ColumnComponent
+            style={[
+              isWeb && windowWidth >= 900 && separateSearchResults && !isScrolled && { flex: 1 },
+              isWeb && windowWidth >= 900 && separateSearchResults && isScrolled && { width: '100%', marginTop: 24 }
+            ]}
+            showsVerticalScrollIndicator={false}
+          >
+            <ContainerComponent
+              style={[
+                styles.searchResultsCard,
+                isWeb && windowWidth >= 900 && separateSearchResults && { marginTop: 0 },
+                isWeb && styles.cardWeb,
+                noCard && styles.cardPlain,
+                noCard && { marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#F1F5F9' }
+              ]}
+            >
+              <View style={styles.searchResultsHeader}>
+                <View>
+                  <Text style={styles.searchResultsSubtitle}>
+                    Found {searchResults.length} results
+                  </Text>
+                </View>
+                <View style={styles.resultsBadge}>
+                  <Text style={styles.resultsBadgeText}>PREMIUM SELECTION</Text>
+                </View>
+              </View>
+              {searchResultsBody || (
+                <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 40 }}>
+                  <Text style={{ color: '#64748B', fontFamily: 'Inter' }}>Results will appear here</Text>
+                </View>
+              )}
+            </ContainerComponent>
+          </ColumnComponent>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -2954,8 +3099,8 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     backgroundColor: '#FFFFFF',
   },
   groundChipActive: {
-    borderColor: '#F1F5F9',
-    backgroundColor: 'rgba(216, 247, 157, 0.08)',
+    borderColor: '#01b854',
+    backgroundColor: 'transparent',
   },
   groundChipText: {
     fontSize: 13,
@@ -3006,8 +3151,8 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     lineHeight: 18,
   },
   teamToggleOptionActive: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#059669',
+    backgroundColor: 'transparent',
+    borderColor: '#01b854',
     borderWidth: 1.5,
   },
   teamToggleText: {
@@ -3248,7 +3393,7 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     width: (windowWidth >= 1200 ? '23.5%' : windowWidth >= 900 ? '31.5%' : '48.5%') as any,
   },
   searchResultTileHalf: {
-    width: '48.5%',
+    width: 'calc(50% - 10px)' as any,
   },
   smallMuted: {
     fontSize: 13,
@@ -3514,8 +3659,8 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     gap: 2,
   },
   dateChipActive: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#059669',
+    backgroundColor: 'transparent',
+    borderColor: '#01b854',
     borderWidth: 1.5,
   },
   dateChipDisabled: {
@@ -3647,8 +3792,8 @@ const getStyles = (isWeb: boolean, isLight: boolean, noCard: boolean = false, wi
     paddingHorizontal: 8,
   },
   timeSlotChipActive: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#059669',
+    backgroundColor: 'transparent',
+    borderColor: '#01b854',
     borderWidth: 1.5,
   },
   timeSlotChipDisabled: {

@@ -425,7 +425,10 @@ export default function OwnerDashboardScreen() {
         </View>
       </View>
 
-      <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]}>
+      <TouchableOpacity 
+        style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]} 
+        onPress={() => router.push('/(owner)/occupancy' as any)}
+      >
         <View style={[styles.statBox, isUltraNarrow && { paddingVertical: 16, paddingHorizontal: 12, borderRadius: 20 }]}>
           <View style={styles.iconCircle}>
             <PieChart size={20} color="#01b854" />
@@ -434,7 +437,7 @@ export default function OwnerDashboardScreen() {
           <Text style={styles.statsValue}>{stats.occupancyRate}%</Text>
           <Text style={styles.statsCaption}>Monthly utilization</Text>
         </View>
-      </View>
+      </TouchableOpacity>
 
       <View style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]}>
         <View style={[styles.statBox, isUltraNarrow && { paddingVertical: 16, paddingHorizontal: 12, borderRadius: 20 }]}>
@@ -488,7 +491,7 @@ export default function OwnerDashboardScreen() {
 
       <TouchableOpacity 
         style={[styles.statBoxWrapper, { width: width > 900 ? '23.5%' : (isTablet ? '31.5%' : (isUltraNarrow ? '100%' : '48.5%')) }]} 
-        onPress={() => router.push('/(owner)/add-ground' as any)}
+        onPress={() => router.push('/(owner)/add-venue' as any)}
       >
         <View style={[styles.statBox, isUltraNarrow && { paddingVertical: 16, paddingHorizontal: 12, borderRadius: 20 }]}>
           <View style={styles.iconCircle}>
@@ -815,7 +818,7 @@ export default function OwnerDashboardScreen() {
 
   if (Platform.OS === 'web' && !isCompact) {
     return (
-      <WebLayout>
+      <WebLayout defaultSidebarOpen={true}>
         <ScrollView
           style={styles.container}
           contentContainerStyle={styles.scrollContent}
@@ -1039,7 +1042,7 @@ const styles = StyleSheet.create({
     maxWidth: 1000,
     alignSelf: 'center',
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 0,
   },
   sectionTitle: {
     fontFamily: 'Inter',
@@ -1056,7 +1059,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: 'transparent',
     paddingHorizontal: 16,
-    marginBottom: 20,
+    marginBottom: 12,
     width: '100%',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,0,0,0.05)',
@@ -1065,9 +1068,10 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
+    paddingVertical: 8,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
+    gap: 4,
   },
   activeTabButton: {
     borderBottomColor: '#01b854',

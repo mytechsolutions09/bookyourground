@@ -214,7 +214,7 @@ export default function SupportScreen() {
       {activeTab === 'activity' && (
         <View>
           {loading ? (
-            <ActivityIndicator style={{ marginTop: 40 }} color="#00ea6b" />
+            <ActivityIndicator style={{ marginTop: 40 }} color="#02c259" />
 
           ) : tickets.length === 0 ? (
             <Card style={styles.card}>
@@ -233,7 +233,7 @@ export default function SupportScreen() {
                 >
                   <View style={styles.ticketHeader}>
                     <View style={styles.ticketSubjectContainer}>
-                      <MessageSquare size={16} color="#00ea6b" />
+                      <MessageSquare size={16} color="#02c259" />
 
                       <Text style={styles.ticketSubject}>{ticket.subject || 'Support Request'}</Text>
                     </View>
@@ -267,7 +267,7 @@ export default function SupportScreen() {
             onPress={() => Linking.openURL('mailto:support@bookyourground.com')}
           >
             <View style={styles.iconCircle}>
-              <Mail size={20} color="#00ea6b" />
+              <Mail size={20} color="#02c259" />
 
             </View>
             <View>
@@ -347,7 +347,7 @@ export default function SupportScreen() {
     </WebLayout>
   ) : (
     <View style={styles.nativeScreen}>
-      <MobileAppNavbar title="Contact Us" titleColor="#0F172A" />
+      <MobileAppNavbar title="Contact Us" titleColor="#01b854" />
       <View style={styles.nativeBody}>{mainContent}</View>
     </View>
   );
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
   activeTab: {
-    borderBottomColor: '#00ea6b',
+    borderBottomColor: '#02c259',
   },
   tabText: {
     fontSize: 14,
@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   activeTabText: {
-    color: '#00ea6b',
+    color: '#02c259',
     fontWeight: '700',
   },
   card: {
@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   submitBtn: {
-    backgroundColor: '#00ea6b',
+    backgroundColor: '#02c259',
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
@@ -484,7 +484,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFBEB',
   },
   resolvedBadge: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: 'rgba(2, 194, 89, 0.1)',
   },
   statusText: {
     fontSize: 12,
@@ -495,7 +495,7 @@ const styles = StyleSheet.create({
     color: '#D97706',
   },
   resolvedText: {
-    color: '#059669',
+    color: '#02c259',
   },
   ticketMessage: {
     fontSize: 15,
@@ -540,7 +540,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#ECFDF5',
+    backgroundColor: 'rgba(2, 194, 89, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -588,7 +588,7 @@ const styles = StyleSheet.create({
   },
   convTicketNum: {
     fontSize: 12,
-    color: '#059669',
+    color: '#02c259',
     fontWeight: '700',
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     letterSpacing: 1,
@@ -621,12 +621,12 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   userBubble: {
-    backgroundColor: '#059669',
+    backgroundColor: '#02c259',
     padding: 16,
     borderRadius: 20,
     borderBottomRightRadius: 4,
     maxWidth: '85%',
-    shadowColor: '#059669',
+    shadowColor: '#02c259',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
@@ -667,7 +667,7 @@ const styles = StyleSheet.create({
   adminBubbleLabel: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#059669',
+    color: '#02c259',
     textTransform: 'uppercase',
     marginBottom: 6,
     letterSpacing: 0.5,

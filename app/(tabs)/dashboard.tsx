@@ -54,7 +54,7 @@ import GlassButton from '@/components/web/GlassButton';
 
 const THEME_BG = '#F8FAFC';
 const THEME_CARD_BG = '#FFFFFF';
-const THEME_ACCENT = '#00ea6b';
+const THEME_ACCENT = '#01b854';
 const THEME_TEXT = '#0F172A';
 const THEME_MUTED = '#64748B';
 const THEME_BORDER = '#F1F5F9';
@@ -327,64 +327,7 @@ function DashboardContent() {
   const renderRightPanel = () => (
     <View style={[styles.rightPanel, isCompact && { width: '100%', paddingLeft: 24 }, isUltraNarrow && { paddingLeft: 12, paddingRight: 12 }]}>
       <View style={[styles.panelCard, styles.noContainer]}>
-        <View style={styles.panelHeader}>
-          <Text style={styles.panelTitle}>Quick Book</Text>
-          <View style={styles.calendarNav}>
-            <ChevronRight size={16} color="#64748B" style={{ transform: [{ rotate: '180deg' }] }} />
-            <ChevronRight size={16} color="#64748B" />
-          </View>
-        </View>
-        <Text style={styles.panelMonth}>
-          {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}
-        </Text>
-        <View style={styles.calendarGrid}>
-          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
-            <Text key={i} style={styles.calendarDayLabel}>{day}</Text>
-          ))}
-          {(() => {
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = now.getMonth();
-            const firstDay = new Date(year, month, 1).getDay();
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            const today = now.getDate();
 
-            const items = [];
-            // Padding for first day
-            for (let p = 0; p < firstDay; p++) {
-              items.push(<View key={`pad-${p}`} style={styles.calendarDay} />);
-            }
-            // Real days
-            for (let d = 1; d <= daysInMonth; d++) {
-              const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-              const isToday = d === today;
-              const isBooked = bookedDates.has(dateStr);
-              items.push(
-                <TouchableOpacity 
-                  key={d} 
-                  style={[
-                    styles.calendarDay,
-                    isToday && styles.calendarDayToday,
-                    isBooked && styles.calendarDayBooked
-                  ]}
-                  onPress={() => {
-                    router.push({
-                      pathname: '/(tabs)/grounds',
-                      params: { date: dateStr }
-                    });
-                  }}
-                >
-                  <Text style={[
-                    styles.calendarDayText,
-                    isToday && styles.calendarDayTextToday,
-                    isBooked && styles.calendarDayTextBooked
-                  ]}>{d}</Text>
-                </TouchableOpacity>
-              );
-            }
-            return items;
-          })()}
-        </View>
 
         <Text style={styles.panelSubTitle}>Popular slots today</Text>
         {popularSlots.length > 0 ? popularSlots.map((slot) => (
@@ -493,41 +436,35 @@ function DashboardContent() {
                 <View style={styles.contentCardLarge}>
                   <View style={styles.cardHeader}>
                     <Text style={styles.cardHeaderTitle}>Upcoming Booking</Text>
-                    {nextBooking && (
-                      <TouchableOpacity onPress={() => router.push('/(tabs)/bookings')}>
-                        <Text style={styles.cardActionText}>Cancel</Text>
-                      </TouchableOpacity>
-                    )}
+
                   </View>
                   {nextBooking ? (
                     <>
                       <Text style={styles.bookingTime}>
                         {new Date(nextBooking.booking_date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} • {nextBooking.start_time?.slice(0, 5)}
                       </Text>
-                      <View style={styles.bookingImagePlaceholder}>
-                        {nextBooking.ground?.ground_images?.[0]?.image_url ? (
-                          <Image 
-                            source={{ uri: nextBooking.ground.ground_images[0].image_url }} 
-                            style={StyleSheet.absoluteFill}
-                            resizeMode="cover"
-                          />
-                        ) : (
-                          <LayoutDashboard size={48} color="#CBD5E1" />
-                        )}
-                      </View>
-                      <View style={styles.bookingFooter}>
-                        <View>
-                          <Text style={styles.bookingName}>{nextBooking.ground?.name}</Text>
-                          <Text style={styles.bookingMeta}>{nextBooking.ground?.city}, {nextBooking.ground?.state}</Text>
+                      <TouchableOpacity 
+                        onPress={() => router.push(`/(tabs)/bookings` as any)}
+                        style={{ width: '100%' }}
+                      >
+                        <View style={styles.bookingImagePlaceholder}>
+                          {nextBooking.ground?.ground_images?.[0]?.image_url ? (
+                            <Image 
+                              source={{ uri: nextBooking.ground.ground_images[0].image_url }} 
+                              style={StyleSheet.absoluteFill}
+                              resizeMode="cover"
+                            />
+                          ) : (
+                            <LayoutDashboard size={48} color="#CBD5E1" />
+                          )}
                         </View>
-                        <TouchableOpacity 
-                          style={styles.qrButton}
-                          onPress={() => router.push(`/(tabs)/bookings` as any)}
-                        >
-                          <QrCode size={18} color="#FFFFFF" />
-                          <Text style={styles.qrButtonText}>View Ticket</Text>
-                        </TouchableOpacity>
-                      </View>
+                        <View style={styles.bookingFooter}>
+                          <View>
+                            <Text style={styles.bookingName}>{nextBooking.ground?.name}</Text>
+                            <Text style={styles.bookingMeta}>{nextBooking.ground?.city}, {nextBooking.ground?.state}</Text>
+                          </View>
+                        </View>
+                      </TouchableOpacity>
                     </>
                   ) : (
                     <TouchableOpacity 
@@ -589,7 +526,7 @@ function DashboardContent() {
   return (
     <View style={styles.nativeWrapper}>
       <Animated.View style={headerAnimatedStyle}>
-        <MobileAppNavbar title="Dashboard" titleColor={THEME_TEXT} />
+        <MobileAppNavbar title="Dashboard" titleColor="#01b854" />
         <View style={[styles.tabContainer, Platform.OS === 'web' && { backgroundColor: 'transparent', borderWidth: 0 } as any]}>
           <GlassButton
             variant={activeTab === 'overview' ? 'white' : 'clear'}
@@ -660,30 +597,28 @@ function DashboardContent() {
                       <Text style={styles.bookingTime}>
                         {new Date(nextBooking.booking_date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })} • {nextBooking.start_time?.slice(0, 5)}
                       </Text>
-                      <View style={styles.bookingImagePlaceholder}>
-                        {nextBooking.ground?.ground_images?.[0]?.image_url ? (
-                          <Image 
-                            source={{ uri: nextBooking.ground.ground_images[0].image_url }} 
-                            style={StyleSheet.absoluteFill}
-                            resizeMode="cover"
-                          />
-                        ) : (
-                          <LayoutDashboard size={48} color="#CBD5E1" />
-                        )}
-                      </View>
-                      <View style={styles.bookingFooter}>
-                        <View>
-                          <Text style={styles.bookingName}>{nextBooking.ground?.name}</Text>
-                          <Text style={styles.bookingMeta}>{nextBooking.ground?.city}</Text>
+                      <TouchableOpacity 
+                        onPress={() => router.push(`/(tabs)/bookings` as any)}
+                        style={{ width: '100%' }}
+                      >
+                        <View style={styles.bookingImagePlaceholder}>
+                          {nextBooking.ground?.ground_images?.[0]?.image_url ? (
+                            <Image 
+                              source={{ uri: nextBooking.ground.ground_images[0].image_url }} 
+                              style={StyleSheet.absoluteFill}
+                              resizeMode="cover"
+                            />
+                          ) : (
+                            <LayoutDashboard size={48} color="#CBD5E1" />
+                          )}
                         </View>
-                        <TouchableOpacity 
-                          style={styles.qrButton}
-                          onPress={() => router.push(`/(tabs)/bookings` as any)}
-                        >
-                          <QrCode size={18} color="#FFFFFF" />
-                          <Text style={styles.qrButtonText}>View Ticket</Text>
-                        </TouchableOpacity>
-                      </View>
+                        <View style={styles.bookingFooter}>
+                          <View>
+                            <Text style={styles.bookingName}>{nextBooking.ground?.name}</Text>
+                            <Text style={styles.bookingMeta}>{nextBooking.ground?.city}</Text>
+                          </View>
+                        </View>
+                      </TouchableOpacity>
                     </>
                   ) : (
                     <TouchableOpacity 
@@ -1224,7 +1159,7 @@ const styles = StyleSheet.create({
   },
   panelSubTitle: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0F172A',
     marginTop: 24,
     marginBottom: 12,
@@ -1234,9 +1169,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: '#F8FAFC',
     padding: 12,
-    borderRadius: 16,
   },
   slotTimeBox: {
     alignItems: 'center',
@@ -1247,14 +1180,14 @@ const styles = StyleSheet.create({
   },
   slotTime: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
   slotAmPm: {
     fontSize: 9,
     color: '#64748B',
-    fontWeight: '700',
+    fontWeight: '500',
     textTransform: 'uppercase',
     fontFamily: 'Inter',
   },
@@ -1263,14 +1196,14 @@ const styles = StyleSheet.create({
   },
   slotName: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#0F172A',
     fontFamily: 'Inter',
   },
   slotStatus: {
     fontSize: 11,
     color: THEME_ACCENT,
-    fontWeight: '600',
+    fontWeight: '500',
     marginTop: 1,
     fontFamily: 'Inter',
   },
@@ -1284,7 +1217,7 @@ const styles = StyleSheet.create({
   },
   slotActionText: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0F172A',
     fontFamily: 'Inter',
   },

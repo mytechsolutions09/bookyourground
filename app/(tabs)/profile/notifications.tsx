@@ -170,20 +170,25 @@ function NotificationsInner() {
     <ScrollView 
       style={styles.container}
       refreshControl={<RefreshControl refreshing={loading} onRefresh={loadReminders} />}
+      stickyHeaderIndices={[0]}
     >
-      <View style={styles.inner}>
-        {IS_WEB ? (
-          <ProfileHeaderTabs
-            themeAccent="#00ea6b"
-            themeText={IS_WEB ? '#111827' : '#0F172A'}
-            isCompact={!IS_WEB}
-          />
-        ) : (
-          <View style={[styles.headerRow, { justifyContent: 'center', paddingTop: 30, paddingBottom: 10 }]}>
-            <Text style={[styles.pageTitle, { textAlign: 'center' }]}>Notifications</Text>
-          </View>
-        )}
+      <View style={{ backgroundColor: '#FFFFFF' }}>
+        <View style={styles.inner}>
+          {IS_WEB ? (
+            <ProfileHeaderTabs
+              themeAccent="#00ea6b"
+              themeText={IS_WEB ? '#111827' : '#0F172A'}
+              isCompact={!IS_WEB}
+            />
+          ) : (
+            <View style={[styles.headerRow, { justifyContent: 'center', paddingTop: 0, paddingBottom: 0 }]}>
+              <Text style={[styles.pageTitle, { textAlign: 'center', top: 35, color: '#01b854' }]}>Notifications</Text>
+            </View>
+          )}
+        </View>
+      </View>
 
+      <View style={styles.inner}>
         {loading ? (
           <View style={styles.loader}>
             <ActivityIndicator size="large" color="#00ea6b" />

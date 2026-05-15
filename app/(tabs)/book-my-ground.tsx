@@ -264,7 +264,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 64,
   },
   tabContainer: {
     flexDirection: 'row',

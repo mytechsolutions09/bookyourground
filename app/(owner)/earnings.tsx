@@ -1,13 +1,27 @@
 import React, { useEffect, useState, useMemo, useRef } from 'react';
-import { View, Text, StyleSheet, Platform, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Modal, TextInput as RNTextInput, useWindowDimensions, Animated } from 'react-native';
+import { View, Text, StyleSheet, Platform, ScrollView, RefreshControl, TouchableOpacity, Dimensions, Modal, TextInput as RNTextInput, useWindowDimensions, Animated, Pressable, InteractionManager } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import MobileAppNavbar from '@/components/MobileAppNavbar';
 import WebLayout from '@/components/web/WebLayout';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUI } from '@/contexts/UIContext';
 import { formatCurrency } from '@/utils/helpers';
 import { TrendingUp, Download, ArrowRight, Wallet, History, Info, ChevronRight, X, CheckCircle2, AlertCircle } from 'lucide-react-native';
-import Svg, { Path, Circle, Defs, LinearGradient, Stop, Text as SvgText } from 'react-native-svg';
+import Svg, { Path, Circle, Defs, LinearGradient as SvgGradient, Stop, Text as SvgText } from 'react-native-svg';
+import { LinearGradient } from 'expo-linear-gradient';
+import { cricketTeamsLabelFromBooking } from '@/utils/cricketGround';
+import {
+  ResponsiveContainer,
+  LineChart as RechartsLineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip as RechartsTooltip,
+  CartesianGrid,
+  BarChart,
+  Bar,
+} from "recharts";
 
 const IS_WEB = Platform.OS === 'web';
 
@@ -36,6 +50,40 @@ interface WalletData {
 function LineChart({ data, height = 150 }: { data: ChartPoint[], height?: number }) {
   const [containerWidth, setContainerWidth] = useState(300);
   if (data.length === 0) return null;
+
+  if (Platform.OS === 'web') {
+    return (
+      <View style={{ height, width: '100%' }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <RechartsLineChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#dfe7e2" />
+            <XAxis dataKey="label" tick={{ fill: "#6b7280", fontSize: 10 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: "#6b7280", fontSize: 10 }} axisLine={false} tickLine={false} />
+            <RechartsTooltip
+              formatter={(value: any) => `₹${Number(value).toFixed(2)}`}
+              contentStyle={{
+                borderRadius: "12px",
+                border: "1px solid #e5ece7",
+                backgroundColor: "#ffffff",
+                fontSize: 11,
+                padding: "8px 12px",
+              }}
+              itemStyle={{ fontSize: 11, padding: 0 }}
+              labelStyle={{ fontSize: 11, fontWeight: 'bold', marginBottom: 2 }}
+            />
+            <Line
+              type="monotone"
+              dataKey="value"
+              stroke="#01b854"
+              strokeWidth={2}
+              dot={{ r: 4, fill: "#a5ff8a", stroke: "#01b854", strokeWidth: 1.5 }}
+              activeDot={{ r: 6 }}
+            />
+          </RechartsLineChart>
+        </ResponsiveContainer>
+      </View>
+    );
+  }
 
   const padding = { top: 24, bottom: 36, left: 0, right: 16 };
 
@@ -105,10 +153,10 @@ function LineChart({ data, height = 150 }: { data: ChartPoint[], height?: number
       >
         <Svg width={containerWidth} height={height}>
           <Defs>
-            <LinearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+            <SvgGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
               <Stop offset="0%" stopColor="#01b854" stopOpacity="0.18" />
               <Stop offset="100%" stopColor="#01b854" stopOpacity="0" />
-            </LinearGradient>
+            </SvgGradient>
           </Defs>
 
           {/* Grid lines */}
@@ -167,6 +215,44 @@ function LineChart({ data, height = 150 }: { data: ChartPoint[], height?: number
   );
 }
 
+function CustomBarChart({ data, height = 200 }: { data: any[], height?: number }) {
+  if (data.length === 0) return null;
+
+  if (Platform.OS === 'web') {
+    return (
+      <View style={{ height, width: '100%' }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#dfe7e2" />
+            <XAxis dataKey="label" tick={{ fill: "#6b7280", fontSize: 10 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: "#6b7280", fontSize: 10 }} axisLine={false} tickLine={false} />
+            <RechartsTooltip
+              formatter={(value: any, name: string) => [`₹${Number(value).toFixed(2)}`, name === 'sales' ? 'Sales' : 'Platform Fee']}
+              contentStyle={{
+                borderRadius: "12px",
+                border: "1px solid #e5ece7",
+                backgroundColor: "#ffffff",
+                fontSize: 11,
+                padding: "8px 12px",
+              }}
+              itemStyle={{ fontSize: 11, padding: 0 }}
+              labelStyle={{ fontSize: 11, fontWeight: 'bold', marginBottom: 2 }}
+            />
+            <Bar dataKey="sales" fill="#01b854" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="fee" fill="#FF8042" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </View>
+    );
+  }
+
+  return (
+    <View style={{ height, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 12 }}>
+      <Text style={{ color: '#64748B', fontSize: 12 }}>Bar chart available on Web</Text>
+    </View>
+  );
+}
+
 function OwnerEarningsScreenInner() {
   const { user, profile } = useAuth();
   const { width } = useWindowDimensions();
@@ -206,6 +292,7 @@ function OwnerEarningsScreenInner() {
   });
   const [venueBreakdown, setVenueBreakdown] = useState<VenueBreakdown[]>([]);
   const [chartData, setChartData] = useState<ChartPoint[]>([]);
+  const [barChartData, setBarChartData] = useState<any[]>([]);
   const [onlineEarnings, setOnlineEarnings] = useState(0);
   const [offlineEarnings, setOfflineEarnings] = useState(0);
   const [storeCredits, setStoreCredits] = useState(0);
@@ -213,11 +300,104 @@ function OwnerEarningsScreenInner() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [withdrawals, setWithdrawals] = useState<any[]>([]);
   const [wallet, setWallet] = useState<WalletData | null>(null);
+  const [calculatedBalance, setCalculatedBalance] = useState(0);
   const [isBankVerified, setIsBankVerified] = useState(false);
   const [bankDetailsLoaded, setBankDetailsLoaded] = useState(false);
   const { tab } = useLocalSearchParams<{ tab: string }>();
   const [viewMode, setViewMode] = useState<'preview' | 'summary' | 'analytics' | 'payouts'>((tab as any) || 'preview');
   const [payoutSubTab, setPayoutSubTab] = useState<'requests' | 'history'>('requests');
+  const [analyticsFilter, setAnalyticsFilter] = useState<'hours' | 'days' | 'weeks'>('days');
+  const { setTabBarVisible } = useUI();
+  
+  // Animation for tab transitions
+  const tabFadeAnim = useRef(new Animated.Value(1)).current;
+  const tabSlideAnim = useRef(new Animated.Value(0)).current;
+
+  const modes: ('preview' | 'summary' | 'analytics' | 'payouts')[] = ['preview', 'summary', 'analytics', 'payouts'];
+  const currentIdx = modes.indexOf(viewMode);
+
+  const switchTab = (newMode: 'preview' | 'summary' | 'analytics' | 'payouts', direction: 'left' | 'right') => {
+    if (newMode === viewMode) return;
+
+    // Animate out
+    Animated.parallel([
+      Animated.timing(tabFadeAnim, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(tabSlideAnim, {
+        toValue: direction === 'right' ? -50 : 50, // Going next? Slide old page left
+        duration: 150,
+        useNativeDriver: true,
+      })
+    ]).start(() => {
+      // Use setParams instead of push to avoid triggering a new stack animation
+      router.setParams({ tab: newMode });
+      
+      // Animate in
+      tabSlideAnim.setValue(direction === 'right' ? 50 : -50); // New page starts from right if going next
+      Animated.parallel([
+        Animated.timing(tabFadeAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(tabSlideAnim, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        })
+      ]).start();
+    });
+  };
+
+  const onSwipeLeft = () => {
+    if (currentIdx < modes.length - 1) {
+      switchTab(modes[currentIdx + 1], 'right');
+    }
+  };
+
+  const onSwipeRight = () => {
+    if (currentIdx > 0) {
+      switchTab(modes[currentIdx - 1], 'left');
+    }
+  };
+
+  // Simple swipe detection for ScrollView
+  const touchStart = useRef(0);
+  const touchEnd = useRef(0);
+
+  const handleTouchStart = (e: any) => {
+    touchStart.current = e.nativeEvent.pageX;
+  };
+
+  const handleTouchEnd = (e: any) => {
+    touchEnd.current = e.nativeEvent.pageX;
+    const distance = touchStart.current - touchEnd.current;
+    
+    // Threshold for swipe
+    if (Math.abs(distance) > 80) {
+      if (distance > 0) {
+        onSwipeLeft();
+      } else {
+        onSwipeRight();
+      }
+    }
+  };
+
+  useEffect(() => {
+    // Hide bottom tab bar on mobile when entering earnings
+    if (Platform.OS !== 'web') {
+      setTabBarVisible(false);
+    }
+    return () => {
+      // Restore bottom tab bar when leaving
+      if (Platform.OS !== 'web') {
+        setTabBarVisible(true);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (tab && (tab === 'preview' || tab === 'summary' || tab === 'analytics' || tab === 'payouts')) {
@@ -245,7 +425,7 @@ function OwnerEarningsScreenInner() {
   const [ownerGrounds, setOwnerGrounds] = useState<any[]>([]);
 
   const pendingAmount = upcomingPayouts.reduce((acc, w) => acc + (w.amount || 0), 0);
-  const withdrawableBalance = (wallet?.balance || 0) - pendingAmount;
+  const withdrawableBalance = calculatedBalance;
 
   useEffect(() => {
     if (user) {
@@ -264,7 +444,7 @@ function OwnerEarningsScreenInner() {
     if (user) {
       loadEarnings(limit, filterVenueId, filterPaymentMethod, filterDateRange);
     }
-  }, [filterVenueId, filterPaymentMethod, filterDateRange]);
+  }, [filterVenueId, filterPaymentMethod, filterDateRange, analyticsFilter]);
 
   const handleDownloadReport = async () => {
     if (!user) return;
@@ -298,21 +478,53 @@ function OwnerEarningsScreenInner() {
         return;
       }
 
-      // Generate CSV
+      // Fetch settings for accurate fee calculation in report
+      const { data: settingsData } = await supabase.from('platform_settings').select('*');
+      const settingsMap: Record<string, any> = {};
+      settingsData?.forEach(s => { settingsMap[s.key] = s.value; });
+
       const headers = ['Date', 'Venue', 'Location', 'Payment Method', 'Gross Amount', 'Platform Fee & GST', 'Net Earnings'];
       const rows = data.map(tx => {
-        const fees = Number(tx.platform_fee_owner || 0) + Number(tx.gst_owner || 0);
-        const net = tx.total_amount - fees;
+        let fee = Number(tx.platform_fee_owner || 0) + Number(tx.gst_owner || 0);
+        
+        if (settingsMap && Object.keys(settingsMap).length > 0) {
+          const ground = Array.isArray(tx.ground) ? tx.ground[0] : tx.ground;
+          const pitchType = (ground?.pitch_type ?? '').toLowerCase();
+          const netsFixedFee = Number(settingsMap.nets_owner_fee_fixed ?? 25);
+          const cricketFixedFee = Number(settingsMap.cricket_owner_fee_fixed ?? 100);
+          const gstRate = Number(settingsMap.gst_rate ?? 0.18);
+          const rate = Number(settingsMap.user_platform_fee_rate ?? 0.05);
+
+          let ownerPf = 0;
+          if (pitchType.includes('net') || pitchType.includes('lane')) {
+            let slotsCount = 1;
+            if (tx.notes) {
+              const match = tx.notes.match(/Slots: ([^)]+)/);
+              if (match) slotsCount = match[1].split(',').length;
+            }
+            ownerPf = netsFixedFee * slotsCount;
+          } else if (pitchType === 'cricket ground') {
+            const label = cricketTeamsLabelFromBooking(ground?.pitch_type, tx.notes);
+            const teams = (label?.toLowerCase() === '1 team' || label?.toLowerCase() === 'one') ? 1 : 2;
+            ownerPf = cricketFixedFee * teams;
+          } else {
+            ownerPf = (tx.total_amount + (tx.discount_amount || 0)) * rate;
+          }
+          fee = ownerPf * (1 + gstRate);
+        }
+
+        const net = tx.total_amount - fee;
         return [
           new Date(tx.created_at).toLocaleDateString(),
-          tx.ground?.name || 'Unknown',
-          tx.ground?.city || 'N/A',
+          (Array.isArray(tx.ground) ? tx.ground[0]?.name : tx.ground?.name) || 'Unknown',
+          (Array.isArray(tx.ground) ? tx.ground[0]?.city : tx.ground?.city) || 'N/A',
           tx.payment_method || 'Online',
           tx.total_amount.toString(),
-          fees.toString(),
-          net.toString()
+          fee.toFixed(2),
+          net.toFixed(2)
         ];
       });
+
 
       const csvContent = [
         headers.join(','),
@@ -360,6 +572,14 @@ function OwnerEarningsScreenInner() {
         .select('id, balance')
         .eq('user_id', user.id)
         .single();
+
+      // Fetch platform settings
+      const { data: settingsData } = await supabase
+        .from('platform_settings')
+        .select('*');
+
+      const settingsMap: Record<string, any> = {};
+      settingsData?.forEach(s => { settingsMap[s.key] = s.value; });
 
       // Check bank verification status
       const { data: bankData } = await supabase
@@ -433,13 +653,52 @@ function OwnerEarningsScreenInner() {
       if (error) throw error;
 
       const rows = (data ?? []) as any[];
+      
+      // Enrich paginated rows with calculated fees/nets
+      rows.forEach(row => {
+        const ground = Array.isArray(row.ground) ? row.ground[0] : row.ground;
+        const pitchType = (ground?.pitch_type ?? '').toLowerCase();
+        const normalizedName = (ground?.name ?? '').toLowerCase();
+        const isNet = pitchType.includes('net') || pitchType.includes('lane') || normalizedName.includes('net') || normalizedName.includes('lane');
+
+
+        
+        let fee = Number(row.platform_fee_owner || 0) + Number(row.gst_owner || 0);
+        if (settingsMap && Object.keys(settingsMap).length > 0) {
+          const netsFixedFee = Number(settingsMap.nets_owner_fee_fixed ?? 25);
+          const cricketFixedFee = Number(settingsMap.cricket_owner_fee_fixed ?? 100);
+          const gstRate = Number(settingsMap.gst_rate ?? 0.18);
+          const rate = Number(settingsMap.user_platform_fee_rate ?? 0.05);
+
+          let ownerPf = 0;
+          if (isNet) {
+            let slotsCount = 1;
+            if (row.notes) {
+              const match = row.notes.match(/Slots: ([^)]+)/);
+              if (match) slotsCount = match[1].split(',').length;
+            }
+            ownerPf = netsFixedFee * slotsCount;
+          } else if (pitchType === 'cricket ground') {
+            const label = cricketTeamsLabelFromBooking(ground?.pitch_type, row.notes);
+            const teams = (label?.toLowerCase() === '1 team' || label?.toLowerCase() === 'one') ? 1 : 2;
+            ownerPf = cricketFixedFee * teams;
+          } else {
+            ownerPf = (row.total_amount + (row.discount_amount || 0)) * rate;
+          }
+          fee = ownerPf * (1 + gstRate);
+        }
+        row.calculated_fee = fee;
+        row.calculated_net = (row.total_amount || 0) - fee;
+      });
+
       const limitedRows = rows.slice(0, newLimit);
       setHasMore(rows.length > newLimit);
       setTransactions(limitedRows);
 
+
       const { data: allData } = await supabase
         .from('bookings')
-        .select('total_amount, platform_fee_owner, gst_owner, created_at, payment_method, payment_received, ground:grounds!inner(name, city, owner_id)')
+        .select('total_amount, platform_fee_owner, gst_owner, created_at, payment_method, payment_received, status, ground_price, notes, team_type, ground:grounds!inner(name, city, owner_id, pitch_type)')
         .eq('ground.owner_id', user.id)
         .in('status', ['confirmed', 'completed']);
 
@@ -455,23 +714,88 @@ function OwnerEarningsScreenInner() {
 
       const venueMap = new Map<string, number>();
       const dayMap = new Map<number, number>();
+      const hourMap = new Map<number, number>();
+      const weekMap = new Map<number, number>();
+      const dailySalesMap = new Map<number, number>();
+      const dailyFeeMap = new Map<number, number>();
+
+      let withdrawablePool = 0;
+      const enrichedRows: any[] = [];
 
       allRows.forEach((row) => {
-        const netAmt = (row.total_amount || 0) - (Number(row.platform_fee_owner || 0) + Number(row.gst_owner || 0));
+        const ground = Array.isArray(row.ground) ? row.ground[0] : row.ground;
+        const pitchType = (ground?.pitch_type ?? '').toLowerCase();
+        const normalizedName = (ground?.name ?? '').toLowerCase();
+        const isNet = pitchType.includes('net') || pitchType.includes('lane') || normalizedName.includes('net') || normalizedName.includes('lane');
+
+
+        
+        // Calculate fee using platform settings if DB fee is missing or for accurate tracking
+        let fee = Number(row.platform_fee_owner || 0) + Number(row.gst_owner || 0);
+        
+        if (settingsMap && Object.keys(settingsMap).length > 0) {
+          const cricketFixedFee = Number(settingsMap.cricket_owner_fee_fixed ?? 100);
+          const netsFixedFee = Number(settingsMap.nets_owner_fee_fixed ?? 25);
+          const rate = Number(settingsMap.user_platform_fee_rate ?? 0.05);
+          const gstRate = Number(settingsMap.gst_rate ?? 0.18);
+          
+          const isCricket = pitchType === 'cricket ground';
+          
+          let ownerPf = 0;
+          if (isNet) {
+            // Check notes for multi-slot count
+            let slotsCount = 1;
+            if (row.notes) {
+              const match = row.notes.match(/Slots: ([^)]+)/);
+              if (match) {
+                slotsCount = match[1].split(',').length;
+              }
+            }
+            ownerPf = netsFixedFee * slotsCount;
+          } else if (isCricket) {
+            const label = cricketTeamsLabelFromBooking(ground?.pitch_type, row.notes);
+            const teams = (label?.toLowerCase() === '1 team' || label?.toLowerCase() === 'one') ? 1 : 2;
+            ownerPf = cricketFixedFee * teams;
+          } else {
+            ownerPf = (row.total_amount + (row.discount_amount || 0)) * rate;
+          }
+          
+          const ownerPfGst = ownerPf * gstRate;
+          fee = ownerPf + ownerPfGst;
+        }
+
+        // Attach calculated fee to row for UI consistency
+        row.calculated_fee = fee;
+        const netAmt = (row.total_amount || 0) - fee;
+        row.calculated_net = netAmt;
+
         total += netAmt;
 
-        if (row.payment_method === 'cash') {
+        if (row.payment_method && row.payment_method.toLowerCase() === 'cash') {
           if (row.payment_received) {
-            offlineEarningsTotal += (row.total_amount || 0);
+            offlineEarningsTotal += netAmt;
           }
-        } else if (row.payment_method === 'wallet' || row.payment_method === 'credits') {
-          storeCreditsTotal += netAmt;
         } else {
-          // Online payments are considered received if they are confirmed/completed
+          // Wallet, Credits, and Online Gateway payments are all considered 'Online' for bifurcation
           onlineEarningsTotal += netAmt;
+          if (row.payment_method === 'wallet' || row.payment_method === 'credits') {
+            storeCreditsTotal += netAmt;
+          }
         }
+
+
+        if (row.status === 'completed' || row.status === 'confirmed') {
+          const isOnline = row.payment_method && row.payment_method.toLowerCase() !== 'cash';
+          if (isOnline) {
+            withdrawablePool += netAmt;
+          } else {
+            withdrawablePool -= fee;
+          }
+        }
+
         
         const date = new Date(row.created_at);
+        const h = date.getHours();
         const d = date.getDate();
         const m = date.getMonth();
         const y = date.getFullYear();
@@ -479,6 +803,13 @@ function OwnerEarningsScreenInner() {
         if (m === currentMonth && y === currentYear) {
           thisMonthTotal += netAmt;
           dayMap.set(d, (dayMap.get(d) || 0) + netAmt);
+          dailySalesMap.set(d, (dailySalesMap.get(d) || 0) + (row.total_amount || 0));
+          dailyFeeMap.set(d, (dailyFeeMap.get(d) || 0) + fee);
+          
+          hourMap.set(h, (hourMap.get(h) || 0) + netAmt);
+          
+          const week = Math.ceil(d / 7);
+          weekMap.set(week, (weekMap.get(week) || 0) + netAmt);
         }
 
         let groundName = 'Other';
@@ -514,15 +845,23 @@ function OwnerEarningsScreenInner() {
       setStoreCredits(storeCreditsTotal);
 
       // --- AUTOMATIC WALLET SYNC LOGIC ---
-      // Calculate what the balance SHOULD be: (All Online Earnings) - (All Completed Withdrawals)
-      const { data: completedWithdrawals } = await supabase
+      // Calculate what the balance SHOULD be: (All Online Earnings) - (All Completed/Pending Withdrawals) + (Wallet Transactions)
+      const { data: withdrawalsData } = await supabase
         .from('withdrawals')
-        .select('amount')
+        .select('amount, status')
         .eq('owner_id', user.id)
-        .eq('status', 'completed');
+        .neq('status', 'rejected');
       
-      const totalWithdrawn = (completedWithdrawals || []).reduce((acc, w) => acc + (w.amount || 0), 0);
-      const expectedBalance = onlineEarningsTotal - totalWithdrawn;
+      const { data: wtxData } = await supabase
+        .from('wallet_transactions')
+        .select('amount')
+        .eq('user_id', user.id);
+      
+      const totalWithdrawn = (withdrawalsData || []).reduce((acc, w) => acc + (w.amount || 0), 0);
+      const totalWtx = (wtxData || []).reduce((acc, tx) => acc + (tx.amount || 0), 0);
+      
+      const expectedBalance = withdrawablePool - totalWithdrawn + totalWtx;
+      setCalculatedBalance(expectedBalance);
       
       const currentWalletBalance = walletData?.balance || 0;
 
@@ -543,15 +882,12 @@ function OwnerEarningsScreenInner() {
         const difference = expectedBalance - currentWalletBalance;
         console.log(`Syncing wallet: Adjusting by ${difference} to match expected balance.`);
         
-        // Use a reference that is unique to this balance state to prevent duplicate syncs for the same state
-        const syncRef = `${user.id}_bal_${expectedBalance.toFixed(2)}`; 
-        
         const { error: syncError } = await supabase.rpc('add_money_to_wallet', {
           target_user_id: user.id,
           amount_to_add: difference,
           description_text: 'Automatic Wallet-Earnings Synchronization',
           ref_type: 'system_sync',
-          ref_id: syncRef
+          ref_id: user.id
         });
 
         if (!syncError) {
@@ -568,18 +904,50 @@ function OwnerEarningsScreenInner() {
       const trend: ChartPoint[] = [];
       const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
       const todayDay = now.getDate();
-      let runningTotal = 0;
-      for (let i = 1; i <= daysInMonth; i++) {
-        runningTotal += (dayMap.get(i) || 0);
-        // Only add points up to today
-        if (i <= todayDay) {
+      
+      if (analyticsFilter === 'days') {
+        let runningTotal = 0;
+        for (let i = 1; i <= daysInMonth; i++) {
+          runningTotal += (dayMap.get(i) || 0);
+          if (i <= todayDay) {
+            trend.push({
+              label: i.toString(),
+              value: runningTotal
+            });
+          }
+        }
+      } else if (analyticsFilter === 'weeks') {
+        let runningTotal = 0;
+        for (let i = 1; i <= 5; i++) {
+          runningTotal += (weekMap.get(i) || 0);
           trend.push({
-            label: i.toString(),
+            label: `Week ${i}`,
+            value: runningTotal
+          });
+        }
+      } else if (analyticsFilter === 'hours') {
+        let runningTotal = 0;
+        for (let i = 0; i < 24; i++) {
+          runningTotal += (hourMap.get(i) || 0);
+          trend.push({
+            label: `${i}:00`,
             value: runningTotal
           });
         }
       }
       setChartData(trend);
+
+      const barData: any[] = [];
+      for (let i = 1; i <= daysInMonth; i++) {
+        if (i <= todayDay) {
+          barData.push({
+            label: i.toString(),
+            sales: dailySalesMap.get(i) || 0,
+            fee: dailyFeeMap.get(i) || 0
+          });
+        }
+      }
+      setBarChartData(barData);
 
       const { data: withdrawalData } = await supabase
         .from('withdrawals')
@@ -593,14 +961,15 @@ function OwnerEarningsScreenInner() {
         if (b.ground) {
           gName = Array.isArray(b.ground) ? (b.ground[0]?.name || 'Venue') : (b.ground.name || 'Venue');
         }
-        const netB = (b.total_amount || 0) - (Number(b.platform_fee_owner || 0) + Number(b.gst_owner || 0));
+        const netB = b.calculated_net || 0;
         feed.push({
           id: `b-${b.id}`,
           type: 'booking',
           date: b.created_at,
-          text: `New booking received for ${gName} (₹${netB})`,
+          text: `New booking received for ${gName} (${formatCurrency(netB)})`,
           color: '#3B82F6'
         });
+
       });
 
       if (withdrawalData) {
@@ -692,230 +1061,257 @@ function OwnerEarningsScreenInner() {
 
   const renderSummaryTable = () => (
     <View style={styles.summaryTableWrapper}>
-      <View style={styles.filterRow}>
-        <View style={styles.filterGroup}>
-          <Text style={styles.filterLabel}>Venue</Text>
-          <View style={styles.pickerContainer}>
-            {Platform.OS === 'web' ? (
-              <select
-                value={filterVenueId || ''}
-                onChange={(e) => setFilterVenueId(e.target.value || null)}
-                style={{
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  fontSize: 14,
-                  color: '#0F172A',
-                  padding: '8px 4px',
-                  width: '100%',
-                  outline: 'none'
-                }}
-              >
-                <option value="">All Venues</option>
-                {ownerGrounds.map(g => (
-                  <option key={g.id} value={g.id}>{g.name}</option>
-                ))}
-              </select>
-            ) : (
-              <TouchableOpacity 
-                style={styles.mobilePicker}
-                onPress={() => {
-                  const nextIdx = ownerGrounds.findIndex(g => g.id === filterVenueId) + 1;
-                  if (nextIdx >= ownerGrounds.length) setFilterVenueId(null);
-                  else setFilterVenueId(ownerGrounds[nextIdx].id);
-                }}
-              >
-                <Text style={styles.pickerText}>
-                  {ownerGrounds.find(g => g.id === filterVenueId)?.name || 'All Venues'}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-
-        <View style={styles.filterGroup}>
-          <Text style={styles.filterLabel}>Method</Text>
-          <View style={styles.pickerContainer}>
-            {Platform.OS === 'web' ? (
-              <select
-                value={filterPaymentMethod}
-                onChange={(e) => setFilterPaymentMethod(e.target.value as any)}
-                style={{
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  fontSize: 14,
-                  color: '#0F172A',
-                  padding: '8px 4px',
-                  width: '100%',
-                  outline: 'none'
-                }}
-              >
-                <option value="all">All Methods</option>
-                <option value="online">Online</option>
-                <option value="cash">Cash</option>
-              </select>
-            ) : (
-              <TouchableOpacity 
-                style={styles.mobilePicker}
-                onPress={() => {
-                  const methods: any[] = ['all', 'online', 'cash'];
-                  const nextIdx = (methods.indexOf(filterPaymentMethod) + 1) % methods.length;
-                  setFilterPaymentMethod(methods[nextIdx]);
-                }}
-              >
-                <Text style={styles.pickerText}>
-                  {filterPaymentMethod.toUpperCase()}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-
-        <View style={styles.filterGroup}>
-          <Text style={styles.filterLabel}>Period</Text>
-          <View style={styles.pickerContainer}>
-            {Platform.OS === 'web' ? (
-              <select
-                value={filterDateRange}
-                onChange={(e) => setFilterDateRange(e.target.value as any)}
-                style={{
-                  backgroundColor: 'transparent',
-                  border: 'none',
-                  fontSize: 14,
-                  color: '#0F172A',
-                  padding: '8px 4px',
-                  width: '100%',
-                  outline: 'none'
-                }}
-              >
-                <option value="all">All Time</option>
-                <option value="7days">Last 7 Days</option>
-                <option value="30days">Last 30 Days</option>
-                <option value="month">This Month</option>
-              </select>
-            ) : (
-              <TouchableOpacity 
-                style={styles.mobilePicker}
-                onPress={() => {
-                  const periods: any[] = ['all', '7days', '30days', 'month'];
-                  const nextIdx = (periods.indexOf(filterDateRange) + 1) % periods.length;
-                  setFilterDateRange(periods[nextIdx]);
-                }}
-              >
-                <Text style={styles.pickerText}>
-                  {filterDateRange === 'all' ? 'ALL TIME' : filterDateRange.toUpperCase()}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-
-        <View style={[styles.filterGroup, { flex: 0.6, minWidth: 140, justifyContent: 'flex-end' }]}>
-          <TouchableOpacity 
-            style={[styles.downloadReportBtn, { height: 42, justifyContent: 'center' }]} 
-            onPress={handleDownloadReport}
-            disabled={loading}
-          >
-            <Download size={16} color="#043529" />
-            <Text style={styles.downloadReportBtnText}>Download CSV</Text>
-          </TouchableOpacity>
-        </View>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <Text style={styles.sectionTitle}>Transaction Summary</Text>
+        <TouchableOpacity 
+          style={styles.expandBtn}
+          onPress={() => setShowStatementModal(true)}
+        >
+          <TrendingUp size={16} color="#01b854" />
+          <Text style={styles.expandBtnText}>Full View</Text>
+        </TouchableOpacity>
       </View>
 
-      <View style={styles.table}>
-        <View style={[styles.tableHeader, { borderTopLeftRadius: 12, borderTopRightRadius: 12, paddingHorizontal: 16 }]}>
-          <Text style={[styles.headerText, { width: 100 }]}>Date & Time</Text>
-          <Text style={[styles.headerText, { flex: 1 }]}>Venue & Customer</Text>
-          <Text style={[styles.headerText, { width: 80 }]}>Payment</Text>
-          <Text style={[styles.headerText, { width: 80, textAlign: 'right' }]}>Gross</Text>
-          <Text style={[styles.headerText, { width: 80, textAlign: 'right' }]}>Fee</Text>
-          <Text style={[styles.headerText, { width: 100, textAlign: 'right' }]}>Net</Text>
-        </View>
-        
-        {(() => {
-          const combined = [
-            ...transactions.map(tx => ({ ...tx, type: 'booking' })),
-            ...withdrawals
-              .filter(w => w.status === 'completed')
-              .map(w => ({
-                id: `w-${w.id}`,
-                created_at: w.created_at,
-                total_amount: Number(w.amount || 0),
-                payment_method: w.payment_method,
-                status: w.status,
-                type: 'withdrawal'
-              }))
-          ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
-          return combined.length === 0 ? (
-            <View style={styles.emptyTable}>
-              <Text style={styles.emptyTableText}>No transactions found.</Text>
+      <View onStartShouldSetResponder={() => true}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={[styles.filterRow, { flexDirection: 'row', gap: 12, alignItems: 'flex-end', flexWrap: 'nowrap' }]}
+          style={{ marginBottom: 16 }}
+        >
+          {/* ... existing filter content ... */}
+          <View style={[styles.filterGroup, { minWidth: 140 }]}>
+            <Text style={styles.filterLabel}>Venue</Text>
+            <View style={styles.pickerContainer}>
+              {Platform.OS === 'web' ? (
+                <select
+                  value={filterVenueId || ''}
+                  onChange={(e) => setFilterVenueId(e.target.value || null)}
+                  style={{
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    fontSize: 14,
+                    color: '#0F172A',
+                    padding: '8px 4px',
+                    width: '100%',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="">All Venues</option>
+                  {ownerGrounds.map(g => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </select>
+              ) : (
+                <TouchableOpacity 
+                  style={styles.mobilePicker}
+                  onPress={() => {
+                    const nextIdx = ownerGrounds.findIndex(g => g.id === filterVenueId) + 1;
+                    if (nextIdx >= ownerGrounds.length) setFilterVenueId(null);
+                    else setFilterVenueId(ownerGrounds[nextIdx].id);
+                  }}
+                >
+                  <Text style={styles.pickerText}>
+                    {ownerGrounds.find(g => g.id === filterVenueId)?.name || 'All Venues'}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
-          ) : (
-            combined.map((item) => (
-              <View key={item.id} style={[styles.tableRow, { paddingHorizontal: 16 }]}>
-                <View style={{ width: 100 }}>
-                  <Text style={styles.cellTextMain}>
-                    {new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
-                  </Text>
-                  <Text style={styles.cellTextSub}>
-                    {new Date(item.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-                  </Text>
-                </View>
-                
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.cellTextMain, item.type === 'withdrawal' ? { color: '#64748B' } : { color: '#01b854' }]} numberOfLines={1}>
-                    {item.type === 'withdrawal' ? 'Manual Withdrawal' : (item.ground?.name || 'Venue')}
-                  </Text>
-                  <Text style={[styles.cellTextSub, { fontSize: 10, color: '#94A3B8' }]} numberOfLines={1}>
-                    ID: #{item.id.split('-')[1] || item.id.split('-')[0].toUpperCase()}
-                  </Text>
-                </View>
+          </View>
 
-                <View style={{ width: 80 }}>
-                  <View style={[
-                    styles.methodBadge, 
-                    { backgroundColor: item.type === 'withdrawal' ? '#E0F2FE' : (item.payment_method === 'cash' ? (item.payment_received ? '#DCFCE7' : '#FEF3C7') : '#DCFCE7') }
-                  ]}>
-                    <Text style={[
-                      styles.methodBadgeText,
-                      { color: item.type === 'withdrawal' ? '#0369A1' : (item.payment_method === 'cash' ? (item.payment_received ? '#15803D' : '#92400E') : '#15803D') }
-                    ]}>
-                      {item.type === 'withdrawal' ? 'PAYOUT' : (item.payment_method === 'cash' ? (item.payment_received ? 'PAID' : 'CASH') : 'ONLINE')}
-                    </Text>
+          <View style={[styles.filterGroup, { minWidth: 100 }]}>
+            <Text style={styles.filterLabel}>Method</Text>
+            <View style={styles.pickerContainer}>
+              {Platform.OS === 'web' ? (
+                <select
+                  value={filterPaymentMethod}
+                  onChange={(e) => setFilterPaymentMethod(e.target.value as any)}
+                  style={{
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    fontSize: 14,
+                    color: '#0F172A',
+                    padding: '8px 4px',
+                    width: '100%',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="all">All Methods</option>
+                  <option value="online">Online</option>
+                  <option value="cash">Cash</option>
+                </select>
+              ) : (
+                <TouchableOpacity 
+                  style={styles.mobilePicker}
+                  onPress={() => {
+                    const methods: any[] = ['all', 'online', 'cash'];
+                    const nextIdx = (methods.indexOf(filterPaymentMethod) + 1) % methods.length;
+                    setFilterPaymentMethod(methods[nextIdx]);
+                  }}
+                >
+                  <Text style={styles.pickerText}>
+                    {filterPaymentMethod.toUpperCase()}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          <View style={[styles.filterGroup, { minWidth: 100 }]}>
+            <Text style={styles.filterLabel}>Period</Text>
+            <View style={styles.pickerContainer}>
+              {Platform.OS === 'web' ? (
+                <select
+                  value={filterDateRange}
+                  onChange={(e) => setFilterDateRange(e.target.value as any)}
+                  style={{
+                    backgroundColor: 'transparent',
+                    border: 'none',
+                    fontSize: 14,
+                    color: '#0F172A',
+                    padding: '8px 4px',
+                    width: '100%',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="all">All Time</option>
+                  <option value="7days">Last 7 Days</option>
+                  <option value="30days">Last 30 Days</option>
+                  <option value="month">This Month</option>
+                </select>
+              ) : (
+                <TouchableOpacity 
+                  style={styles.mobilePicker}
+                  onPress={() => {
+                    const periods: any[] = ['all', '7days', '30days', 'month'];
+                    const nextIdx = (periods.indexOf(filterDateRange) + 1) % periods.length;
+                    setFilterDateRange(periods[nextIdx]);
+                  }}
+                >
+                  <Text style={styles.pickerText}>
+                    {filterDateRange === 'all' ? 'ALL TIME' : filterDateRange.toUpperCase()}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+
+          <View style={[styles.filterGroup, { minWidth: 100, justifyContent: 'flex-end' }]}>
+            <TouchableOpacity 
+              style={[styles.downloadReportBtn, { height: 42, justifyContent: 'center' }]} 
+              onPress={handleDownloadReport}
+              disabled={loading}
+            >
+              <Download size={16} color="#043529" />
+              <Text style={styles.downloadReportBtnText}>CSV</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </View>
+
+      <View onStartShouldSetResponder={() => true}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          style={styles.tableScroll}
+        >
+          <View style={[styles.table, { minWidth: isCompact ? 600 : '100%' }]}>
+            <View style={[styles.tableHeader, { borderTopLeftRadius: 12, borderTopRightRadius: 12, paddingHorizontal: 16 }]}>
+              <Text style={[styles.headerText, { width: 100 }]}>Date & Time</Text>
+              <Text style={[styles.headerText, { flex: 1 }]}>Venue & Customer</Text>
+              <Text style={[styles.headerText, { width: 80 }]}>Payment</Text>
+              <Text style={[styles.headerText, { width: 80, textAlign: 'right' }]}>Gross</Text>
+              <Text style={[styles.headerText, { width: 80, textAlign: 'right' }]}>Fee</Text>
+              <Text style={[styles.headerText, { width: 100, textAlign: 'right' }]}>Net</Text>
+            </View>
+            
+            {(() => {
+              const combined = [
+                ...(transactions || []).map(tx => ({ ...tx, type: 'booking' })),
+                ...(withdrawals || [])
+                  .filter(w => w.status === 'completed')
+                  .map(w => ({
+                    id: `w-${w.id}`,
+                    created_at: w.created_at,
+                    total_amount: Number(w.amount || 0),
+                    payment_method: w.payment_method,
+                    status: w.status,
+                    type: 'withdrawal'
+                  }))
+              ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+              return combined.length === 0 ? (
+                <View style={styles.emptyTable}>
+                  <Text style={styles.emptyTableText}>No transactions found.</Text>
+                </View>
+              ) : (
+                combined.map((item) => (
+                  <View key={item.id} style={[styles.tableRow, { paddingHorizontal: 16 }]}>
+                    <View style={{ width: 100 }}>
+                      <Text style={styles.cellTextMain}>
+                        {new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit' })}
+                      </Text>
+                      <Text style={styles.cellTextSub}>
+                        {new Date(item.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                      </Text>
+                    </View>
+                    
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.cellTextMain, item.type === 'withdrawal' ? { color: '#64748B' } : { color: '#1E293B' }]} numberOfLines={1}>
+                        {item.type === 'withdrawal' ? 'Manual Withdrawal' : (item.ground?.name || 'Venue')}
+                      </Text>
+                      <Text style={[styles.cellTextSub, { fontSize: 10, color: '#94A3B8' }]} numberOfLines={1}>
+                        ID: #{item.id.startsWith('w-') ? item.id.split('-')[1] : item.id.split('-')[0]}
+                      </Text>
+                    </View>
+
+                    <View style={{ width: 80 }}>
+                      <View style={[
+                        styles.methodBadge, 
+                        { backgroundColor: item.type === 'withdrawal' ? '#E0F2FE' : (item.payment_method === 'cash' ? (item.payment_received ? '#F1F5F9' : '#FEF3C7') : '#F1F5F9') }
+                      ]}>
+                        <Text style={[
+                          styles.methodBadgeText,
+                          { color: item.type === 'withdrawal' ? '#0369A1' : (item.payment_method === 'cash' ? (item.payment_received ? '#475569' : '#92400E') : '#475569') }
+                        ]}>
+                          {item.type === 'withdrawal' ? 'PAYOUT' : (item.payment_method === 'cash' ? (item.payment_received ? 'PAID' : 'CASH') : 'ONLINE')}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <View style={{ width: 80, alignItems: 'flex-end' }}>
+                      <Text style={[styles.cellTextMain, { fontSize: 13, color: item.type === 'withdrawal' ? '#EF4444' : '#64748B' }]}>
+                        {item.type === 'withdrawal' ? `-${formatCurrency(item.total_amount)}` : formatCurrency(item.total_amount)}
+                      </Text>
+                    </View>
+
+                    <View style={{ width: 80, alignItems: 'flex-end' }}>
+                      <Text style={[styles.cellTextMain, { fontSize: 13, color: '#64748B' }]}>
+                        {item.type === 'withdrawal' ? '-' : `-${formatCurrency((Number(item.platform_fee_owner || 0) + Number(item.gst_owner || 0)))}`}
+                      </Text>
+                    </View>
+
+                    <View style={{ width: 100, alignItems: 'flex-end' }}>
+                      <Text style={[styles.cellTextMain, { fontSize: 13, fontWeight: '500', color: item.type === 'withdrawal' ? '#EF4444' : '#1E293B' }]}>
+                        {item.type === 'withdrawal' ? `-${formatCurrency(item.total_amount)}` : formatCurrency(item.total_amount - (Number(item.platform_fee_owner || 0) + Number(item.gst_owner || 0)))}
+                      </Text>
+                    </View>
                   </View>
-                </View>
-
-                <View style={{ width: 80, alignItems: 'flex-end' }}>
-                  <Text style={[styles.cellTextMain, { fontSize: 13, color: item.type === 'withdrawal' ? '#EF4444' : '#64748B' }]}>
-                    {item.type === 'withdrawal' ? `-${formatCurrency(item.total_amount)}` : formatCurrency(item.total_amount)}
-                  </Text>
-                </View>
-
-                <View style={{ width: 80, alignItems: 'flex-end' }}>
-                  <Text style={[styles.cellTextMain, { fontSize: 13, color: '#64748B' }]}>
-                    {item.type === 'withdrawal' ? '-' : `-${formatCurrency((Number(item.platform_fee_owner || 0) + Number(item.gst_owner || 0)))}`}
-                  </Text>
-                </View>
-
-                <View style={{ width: 100, alignItems: 'flex-end' }}>
-                  <Text style={[styles.cellTextMain, { fontSize: 15, fontWeight: '800', color: item.type === 'withdrawal' ? '#EF4444' : '#01b854' }]}>
-                    {item.type === 'withdrawal' ? `-${formatCurrency(item.total_amount)}` : formatCurrency(item.total_amount - (Number(item.platform_fee_owner || 0) + Number(item.gst_owner || 0)))}
-                  </Text>
-                </View>
-              </View>
-            ))
-          );
-        })()}
-        
-        {hasMore && (
-          <TouchableOpacity 
-            style={[styles.statementBtn, { marginTop: 12, borderStyle: 'dashed' }]}
-            onPress={loadMore}
-            disabled={loading}
-          >
-            <Text style={styles.statementBtnText}>{loading ? 'Loading...' : 'Load More Transactions'}</Text>
-          </TouchableOpacity>
-        )}
+                ))
+              );
+            })()}
+            
+            {hasMore && (
+              <TouchableOpacity 
+                style={[styles.statementBtn, { marginTop: 12, borderStyle: 'dashed' }]}
+                onPress={loadMore}
+                disabled={loading}
+              >
+                <Text style={styles.statementBtnText}>{loading ? 'Loading...' : 'Load More Transactions'}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </ScrollView>
       </View>
     </View>
   );
@@ -925,15 +1321,55 @@ function OwnerEarningsScreenInner() {
       <View style={[styles.layoutRow, isStacking && { flexDirection: 'column', gap: 16 }]}>
         <View style={[styles.leftCol, isStacking && { paddingRight: 0 }]}>
           <View style={styles.sectionCard}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+            <View style={{ 
+              flexDirection: isCompact ? 'column' : 'row', 
+              justifyContent: 'space-between', 
+              alignItems: isCompact ? 'flex-start' : 'center', 
+              marginBottom: 20,
+              gap: 12
+            }}>
               <View>
                 <Text style={styles.sectionTitle}>Earnings Analytics</Text>
-                <Text style={styles.sectionSubtitle}>Daily revenue trends for this month</Text>
+                <Text style={styles.sectionSubtitle}>Revenue trends based on selection</Text>
               </View>
-              <TrendingUp size={20} color="#01b854" />
+              
+              <View style={[styles.filterContainer, isCompact && { width: '100%', justifyContent: 'space-between' }]}>
+                {['hours', 'days', 'weeks'].map((f) => (
+                  <TouchableOpacity
+                    key={f}
+                    style={[
+                      styles.filterButton,
+                      analyticsFilter === f && styles.filterButtonActive,
+                      isCompact && { flex: 1, alignItems: 'center' }
+                    ]}
+                    onPress={() => setAnalyticsFilter(f as 'hours' | 'days' | 'weeks')}
+                  >
+                    <Text style={[
+                      styles.filterButtonText,
+                      analyticsFilter === f && styles.filterButtonTextActive
+                    ]}>
+                      {f.charAt(0).toUpperCase() + f.slice(1)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
-            <LineChart data={chartData} height={250} totalDays={new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()} />
+            <LineChart data={chartData || []} height={250} />
           </View>
+
+          {Platform.OS === 'web' && (
+            <TouchableOpacity 
+              style={styles.sectionCard}
+              onPress={() => setShowChartModal(true)}
+              activeOpacity={0.7}
+            >
+              <View style={{ marginBottom: 20 }}>
+                <Text style={styles.sectionTitle}>Daily Sales & Platform Fee</Text>
+                <Text style={styles.sectionSubtitle}>Breakdown of daily gross sales and fees</Text>
+              </View>
+              <CustomBarChart data={barChartData || []} height={250} />
+            </TouchableOpacity>
+          )}
 
           <View style={styles.sectionCard}>
             <Text style={styles.sectionTitle}>Breakdown by Venue</Text>
@@ -1130,54 +1566,58 @@ function OwnerEarningsScreenInner() {
           </View>
         ) : (
           <View style={{ paddingVertical: 8 }}>
-            <Text style={styles.sectionTitle}>Payout History</Text>
-
-            <View style={[styles.table, { marginTop: 12 }]}>
-              <View style={styles.tableHeader}>
-                <Text style={[styles.headerText, { width: 120 }]}>Settled Date</Text>
-                <Text style={[styles.headerText, { flex: 1 }]}>Matches</Text>
-                <Text style={[styles.headerText, { width: 100, textAlign: 'right' }]}>Total Fees</Text>
-                <Text style={[styles.headerText, { width: 100, textAlign: 'right' }]}>Net Payout</Text>
-              </View>
-
-              {payouts.length === 0 ? (
-                <View style={styles.emptyTable}>
-                  <Text style={styles.emptyTableText}>No payout history found yet.</Text>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              style={styles.tableScroll}
+            >
+              <View style={[styles.table, { minWidth: isCompact ? 500 : '100%', marginTop: 12 }]}>
+                <View style={styles.tableHeader}>
+                  <Text style={[styles.headerText, { width: 120 }]}>Settled Date</Text>
+                  <Text style={[styles.headerText, { flex: 1 }]}>Matches</Text>
+                  <Text style={[styles.headerText, { width: 100, textAlign: 'right' }]}>Total Fees</Text>
+                  <Text style={[styles.headerText, { width: 100, textAlign: 'right' }]}>Net Payout</Text>
                 </View>
-              ) : (
-                payouts.map((p, i) => (
-                  <View key={i} style={styles.tableRow}>
-                    <View style={{ width: 120 }}>
-                      <Text style={styles.cellTextMain}>
-                        {p.date === 'Processing' ? 'Processing' : new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
-                      </Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.cellTextMain, { color: '#64748B' }]}>
-                        {p.type === 'withdrawal' ? 'Manual Withdrawal' : `${p.matches} ${p.matches === 1 ? 'Match' : 'Matches'}`}
-                      </Text>
-                    </View>
-                    <View style={{ width: 100, alignItems: 'flex-end' }}>
-                      <Text style={[styles.cellTextMain, { color: '#64748B' }]}>
-                        {p.type === 'withdrawal' ? '-' : `-₹${Math.round(p.fees)}`}
-                      </Text>
-                    </View>
-                    <View style={{ width: 100, alignItems: 'flex-end' }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                        <Text style={[styles.cellTextMain, { color: p.net <= 0 ? '#94A3B8' : '#059669', fontWeight: '800' }]}>
-                          {formatCurrency(Math.max(0, p.net))}
+
+                {payouts.length === 0 ? (
+                  <View style={styles.emptyTable}>
+                    <Text style={styles.emptyTableText}>No payout history found yet.</Text>
+                  </View>
+                ) : (
+                  payouts.map((p, i) => (
+                    <View key={i} style={styles.tableRow}>
+                      <View style={{ width: 120 }}>
+                        <Text style={styles.cellTextMain}>
+                          {p.date === 'Processing' ? 'Processing' : new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
                         </Text>
-                        {p.net < 0 && (
-                           <View style={styles.debtBadge}>
-                             <Text style={styles.debtText}>ADJ</Text>
-                           </View>
-                        )}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.cellTextMain, { color: '#64748B' }]}>
+                          {p.type === 'withdrawal' ? 'Manual Withdrawal' : `${p.matches} ${p.matches === 1 ? 'Match' : 'Matches'}`}
+                        </Text>
+                      </View>
+                      <View style={{ width: 100, alignItems: 'flex-end' }}>
+                        <Text style={[styles.cellTextMain, { color: '#64748B' }]}>
+                          {p.type === 'withdrawal' ? '-' : `-₹${Math.round(p.fees)}`}
+                        </Text>
+                      </View>
+                      <View style={{ width: 100, alignItems: 'flex-end' }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                          <Text style={[styles.cellTextMain, { color: p.net <= 0 ? '#94A3B8' : '#059669', fontWeight: '800' }]}>
+                            {formatCurrency(Math.max(0, p.net))}
+                          </Text>
+                          {p.net < 0 && (
+                             <View style={styles.debtBadge}>
+                               <Text style={styles.debtText}>ADJ</Text>
+                             </View>
+                          )}
+                        </View>
                       </View>
                     </View>
-                  </View>
-                ))
-              )}
-            </View>
+                  ))
+                )}
+              </View>
+            </ScrollView>
           </View>
         )}
       </View>
@@ -1187,7 +1627,12 @@ function OwnerEarningsScreenInner() {
   const renderLeftColumn = () => {
     return (
       <View style={styles.leftCol}>
-        <View style={[styles.totalEarningsCard, isUltraNarrow && { padding: 20 }]}>
+        <LinearGradient 
+          colors={['#00ea6b', '#a5ff8a']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={[styles.totalEarningsCard, isUltraNarrow && { padding: 20 }]}
+        >
           <View style={{ flex: 1 }}>
             <Text style={styles.totalEarningsLabel}>Withdrawable Balance</Text>
             {loading ? (
@@ -1196,18 +1641,21 @@ function OwnerEarningsScreenInner() {
               </Animated.Text>
             ) : (
               <Text style={[styles.totalEarningsValue, isUltraNarrow && { fontSize: 28 }]}>
-                {formatCurrency(Math.max(0, withdrawableBalance))}
+                {withdrawableBalance < 0 ? `₹-(${formatCurrency(Math.abs(withdrawableBalance)).replace('₹', '')})` : formatCurrency(withdrawableBalance)}
               </Text>
             )}
-          <TouchableOpacity 
-            style={styles.withdrawBtnInline}
+          <Pressable 
+            style={({ hovered }: { hovered: boolean }) => [
+              styles.withdrawBtnInline,
+              hovered && { backgroundColor: 'rgba(255, 255, 255, 0.4)', transform: [{ scale: 1.02 }] }
+            ]}
             onPress={() => setShowWithdrawModal(true)}
           >
             <Text style={styles.withdrawBtnTextInline}>Request Payout</Text>
-          </TouchableOpacity>
+          </Pressable>
         </View>
         {!isUltraNarrow && <Wallet size={64} color="#043529" strokeWidth={1} style={{ opacity: 0.2 }} />}
-      </View>
+      </LinearGradient>
 
       {!isBankVerified && bankDetailsLoaded && (
         <View style={[styles.sectionCard, { backgroundColor: '#FEF2F2', borderColor: '#FECACA' }]}>
@@ -1222,20 +1670,6 @@ function OwnerEarningsScreenInner() {
       )}
 
   
-      <View style={[styles.sectionCard, { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-           <History size={20} color="#92400E" />
-           <Text style={[styles.sectionTitle, { color: '#92400E', marginBottom: 0 }]}>Cash Received (Offline)</Text>
-        </View>
-        <View style={{ alignItems: 'center', paddingVertical: 10 }}>
-          <Text style={{ fontSize: 36, fontWeight: '800', color: '#92400E' }}>{formatCurrency(offlineEarnings)}</Text>
-          <Text style={{ fontSize: 14, color: '#B45309', fontWeight: '600', marginTop: 8 }}>Total collection at venue</Text>
-          <View style={{ height: 1, backgroundColor: '#FDE68A', width: '100%', marginVertical: 16 }} />
-          <Text style={{ fontSize: 12, color: '#D97706', textAlign: 'center', fontStyle: 'italic' }}>
-            Note: This amount is collected directly by you and is not part of the platform's transferable balance.
-          </Text>
-        </View>
-      </View>
 
       <View style={styles.sectionCard}>
         <Text style={styles.sectionTitle}>Recent Transactions</Text>
@@ -1245,9 +1679,7 @@ function OwnerEarningsScreenInner() {
             <Text style={[styles.headerText, { flex: 1 }]}>Description</Text>
             <Text style={[styles.headerText, { width: 80, textAlign: 'right' }]}>Amount</Text>
           </View>
-            {transactions.map((tx) => {
-              const netTx = (tx.total_amount || 0) - (Number(tx.platform_fee_owner || 0) + Number(tx.gst_owner || 0));
-              return (
+            {transactions.map((tx) => (
                 <View key={tx.id} style={styles.tableRow}>
                   <View style={{ width: 120 }}>
                     <Text style={styles.cellTextMain}>
@@ -1260,12 +1692,12 @@ function OwnerEarningsScreenInner() {
                   <Text style={[styles.cellText, { flex: 1 }]} numberOfLines={1}>
                     {tx.ground?.name || 'Venue'}
                   </Text>
-                  <Text style={[styles.cellText, { width: 80, textAlign: 'right', fontWeight: '700', color: '#01b854' }]}>
-                    {formatCurrency(netTx)}
+                  <Text style={[styles.cellText, { width: 80, textAlign: 'right', fontWeight: '400', color: '#1E293B' }]}>
+                    {formatCurrency(tx.calculated_net || 0)}
                   </Text>
                 </View>
-              );
-            })}
+            ))}
+
           {hasMore && (
             <TouchableOpacity 
               style={[styles.statementBtn, { marginTop: 12, borderStyle: 'dashed' }]}
@@ -1346,7 +1778,7 @@ function OwnerEarningsScreenInner() {
           <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Earnings Analytics</Text>
           <ChevronRight size={20} color="#64748B" />
         </View>
-        <LineChart data={chartData} totalDays={new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()} />
+        <LineChart data={chartData || []} />
         
         <View style={styles.divider} />
         
@@ -1388,7 +1820,7 @@ function OwnerEarningsScreenInner() {
               <View key={item.id} style={styles.activityItem}>
                 <View style={[styles.activityDot, { backgroundColor: item.color }]} />
                 <Text style={styles.activityText}>
-                  <Text style={{ fontWeight: '700' }}>
+                  <Text style={{ fontWeight: '500' }}>
                     {new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}, {new Date(item.date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}:
                   </Text>{' '}
                   {item.text}
@@ -1406,40 +1838,46 @@ function OwnerEarningsScreenInner() {
         animationType="fade"
         onRequestClose={() => setShowChartModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <TouchableOpacity 
-            style={styles.modalBackdrop} 
-            activeOpacity={1} 
-            onPress={() => setShowChartModal(false)} 
-          />
-          <View style={[styles.modalContent, { maxWidth: 900, width: '95%' }]}>
-            <View style={styles.modalHeader}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.modalTitle}>Detailed Earnings Analytics</Text>
-                <Text style={styles.modalSubtitle}>Daily revenue trends for the current month</Text>
-              </View>
-              <TouchableOpacity onPress={() => setShowChartModal(false)} style={styles.closeBtn}>
-                <X size={20} color="#64748B" />
-              </TouchableOpacity>
+        <View style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
+          <View style={[styles.modalHeader, { padding: 20, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.modalTitle}>Detailed Earnings Analytics</Text>
+              <Text style={styles.modalSubtitle}>Performance overview and daily trends</Text>
             </View>
-            
-            <View style={{ padding: 24, paddingBottom: 40 }}>
+            <TouchableOpacity onPress={() => setShowChartModal(false)} style={styles.closeBtn}>
+              <X size={20} color="#64748B" />
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20 }}>
+            <View style={{ marginBottom: 32 }}>
+              <Text style={[styles.sectionTitle, { marginBottom: 12 }]}>Cumulative Earnings Trend</Text>
               <LineChart 
                 data={chartData} 
-                height={350} 
+                height={250} 
                 totalDays={new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate()} 
               />
-              
-              <View style={{ marginTop: 40, padding: 16, backgroundColor: '#F8FAFC', borderRadius: 12 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Info size={16} color="#64748B" />
-                  <Text style={{ fontSize: 13, color: '#64748B', fontWeight: '500' }}>
-                    Showing performance overview based on confirmed bookings.
-                  </Text>
-                </View>
+            </View>
+
+            {Platform.OS === 'web' && (
+              <View style={{ marginBottom: 32 }}>
+                <Text style={[styles.sectionTitle, { marginBottom: 12 }]}>Daily Sales & Platform Fee</Text>
+                <CustomBarChart 
+                  data={barChartData} 
+                  height={250} 
+                />
+              </View>
+            )}
+            
+            <View style={{ padding: 16, backgroundColor: '#F8FAFC', borderRadius: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Info size={16} color="#64748B" />
+                <Text style={{ fontSize: 13, color: '#64748B', fontWeight: '500' }}>
+                  Showing performance overview based on confirmed bookings.
+                </Text>
               </View>
             </View>
-          </View>
+          </ScrollView>
         </View>
       </Modal>
     </View>
@@ -1454,55 +1892,72 @@ function OwnerEarningsScreenInner() {
       contentContainerStyle={[
         styles.scrollContent,
         { flexGrow: 1, paddingBottom: 24 },
-        Platform.OS === 'web' && { scrollbarWidth: 'none', msOverflowStyle: 'none' } as any
+        Platform.OS === 'web' && { scrollbarWidth: 'none', msOverflowStyle: 'none' } as any,
+        viewMode === 'summary' && Platform.OS === 'web' && { maxWidth: '100%', paddingHorizontal: isCompact ? 16 : 40 }
       ]}
     >
-      <View style={[styles.viewToggleContainer, isUltraNarrow && { marginHorizontal: 12, padding: 4 }]}>
-        <TouchableOpacity 
-          style={[styles.viewToggleBtn, viewMode === 'preview' && styles.viewToggleBtnActive]}
-          onPress={() => router.push('/(owner)/earnings?tab=preview')}
+      <View style={styles.viewToggleOuter}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={[styles.viewToggleContainer, isUltraNarrow && { marginHorizontal: 12, padding: 4 }]}
         >
-          <Text style={[styles.viewToggleBtnText, viewMode === 'preview' && styles.viewToggleBtnTextActive]}>Preview</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.viewToggleBtn, viewMode === 'summary' && styles.viewToggleBtnActive]}
-          onPress={() => router.push('/(owner)/earnings?tab=summary')}
-        >
-          <Text style={[styles.viewToggleBtnText, viewMode === 'summary' && styles.viewToggleBtnTextActive]}>Summary</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.viewToggleBtn, viewMode === 'analytics' && styles.viewToggleBtnActive]}
-          onPress={() => router.push('/(owner)/earnings?tab=analytics')}
-        >
-          <Text style={[styles.viewToggleBtnText, viewMode === 'analytics' && styles.viewToggleBtnTextActive]}>Analytics</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.viewToggleBtn, viewMode === 'payouts' && styles.viewToggleBtnActive]}
-          onPress={() => router.push('/(owner)/earnings?tab=payouts')}
-        >
-          <Text style={[styles.viewToggleBtnText, viewMode === 'payouts' && styles.viewToggleBtnTextActive]}>Payouts</Text>
-        </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.viewToggleBtn, viewMode === 'preview' && styles.viewToggleBtnActive]}
+            onPress={() => router.push('/(owner)/earnings?tab=preview')}
+          >
+            <Text style={[styles.viewToggleBtnText, viewMode === 'preview' && styles.viewToggleBtnTextActive]}>Preview</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.viewToggleBtn, viewMode === 'summary' && styles.viewToggleBtnActive]}
+            onPress={() => router.push('/(owner)/earnings?tab=summary')}
+          >
+            <Text style={[styles.viewToggleBtnText, viewMode === 'summary' && styles.viewToggleBtnTextActive]}>Summary</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.viewToggleBtn, viewMode === 'analytics' && styles.viewToggleBtnActive]}
+            onPress={() => router.push('/(owner)/earnings?tab=analytics')}
+          >
+            <Text style={[styles.viewToggleBtnText, viewMode === 'analytics' && styles.viewToggleBtnTextActive]}>Analytics</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.viewToggleBtn, viewMode === 'payouts' && styles.viewToggleBtnActive]}
+            onPress={() => router.push('/(owner)/earnings?tab=payouts')}
+          >
+            <Text style={[styles.viewToggleBtnText, viewMode === 'payouts' && styles.viewToggleBtnTextActive]}>Payouts</Text>
+          </TouchableOpacity>
+        </ScrollView>
       </View>
 
-        {viewMode === 'preview' ? (
-          <View style={[
-            styles.layoutRow, 
-            isStacking && { flexDirection: 'column', gap: 16 }
-          ]}>
-            <View style={[styles.leftCol, isStacking && { paddingRight: 0, paddingTop: 16 }]}>
-              {renderLeftColumn()}
+        <Animated.View 
+          style={{ 
+            opacity: tabFadeAnim,
+            transform: [{ translateX: tabSlideAnim }],
+            flex: 1
+          }}
+          onTouchStart={Platform.OS !== 'web' ? handleTouchStart : undefined}
+          onTouchEnd={Platform.OS !== 'web' ? handleTouchEnd : undefined}
+        >
+          {viewMode === 'preview' ? (
+            <View style={[
+              styles.layoutRow, 
+              isStacking && { flexDirection: 'column', gap: 16 }
+            ]}>
+              <View style={[styles.leftCol, isStacking && { paddingRight: 0, paddingTop: 16 }]}>
+                {renderLeftColumn()}
+              </View>
+              <View style={[styles.rightCol, isStacking && { paddingTop: 0 }]}>
+                {renderRightColumn()}
+              </View>
             </View>
-            <View style={[styles.rightCol, isStacking && { paddingTop: 0 }]}>
-              {renderRightColumn()}
-            </View>
-          </View>
-        ) : viewMode === 'summary' ? (
-          renderSummaryTable()
-        ) : viewMode === 'analytics' ? (
-          renderAnalyticsView()
-        ) : (
-          renderPayoutsHistory()
-        )}
+          ) : viewMode === 'summary' ? (
+            renderSummaryTable()
+          ) : viewMode === 'analytics' ? (
+            renderAnalyticsView()
+          ) : (
+            renderPayoutsHistory()
+          )}
+        </Animated.View>
       </ScrollView>
 
       {/* Withdrawal Modal */}
@@ -1522,7 +1977,7 @@ function OwnerEarningsScreenInner() {
             <View style={styles.modalHeader}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.modalTitle}>Withdraw Funds</Text>
-                <Text style={styles.modalSubtitle}>Available: {formatCurrency(Math.max(0, withdrawableBalance))}</Text>
+                <Text style={styles.modalSubtitle}>Available: {formatCurrency(withdrawableBalance)}</Text>
               </View>
               <TouchableOpacity onPress={() => setShowWithdrawModal(false)} style={styles.closeBtn}>
                 <X size={20} color="#64748B" />
@@ -1643,69 +2098,124 @@ function OwnerEarningsScreenInner() {
             activeOpacity={1} 
             onPress={() => setShowStatementModal(false)} 
           />
-          <View style={[styles.modalContent, { maxWidth: 800, height: '80%' }]}>
+          <View style={[styles.modalContent, { maxWidth: 1000, height: '90%', width: '98%' }]}>
             <View style={styles.modalHeader}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.modalTitle}>Financial Statement</Text>
-                <Text style={styles.modalSubtitle}>All confirmed bookings and earnings</Text>
+                <Text style={styles.modalSubtitle}>Detailed breakdown of all earnings and fees</Text>
               </View>
               <TouchableOpacity onPress={() => setShowStatementModal(false)} style={styles.closeBtn}>
                 <X size={20} color="#64748B" />
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={{ flex: 1, padding: 24 }}>
-              <View style={styles.table}>
-                <View style={styles.tableHeader}>
-                  <Text style={[styles.headerText, { width: 120 }]}>Date & Time</Text>
-                  <Text style={[styles.headerText, { flex: 1 }]}>Ground / Details</Text>
-                  <Text style={[styles.headerText, { width: 100 }]}>Payment</Text>
-                  <Text style={[styles.headerText, { width: 80, textAlign: 'right' }]}>Amount</Text>
+            <View style={{ flex: 1 }}>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+              >
+                <View style={{ minWidth: 900 }}>
+                  {/* Sticky Header Row */}
+                  <View style={[styles.tableHeader, { paddingHorizontal: 24, backgroundColor: '#F8FAFC', borderTopWidth: 1, borderTopColor: '#E2E8F0', paddingVertical: 14, marginBottom: 0 }]}>
+                    <Text style={[styles.headerText, { width: 120 }]}>Date & Time</Text>
+                    <Text style={[styles.headerText, { width: 220 }]}>Venue & Details</Text>
+                    <Text style={[styles.headerText, { width: 100 }]}>Payment</Text>
+                    <Text style={[styles.headerText, { width: 100, textAlign: 'right' }]}>Gross</Text>
+                    <Text style={[styles.headerText, { width: 100, textAlign: 'right' }]}>Fee</Text>
+                    <Text style={[styles.headerText, { width: 120, textAlign: 'right' }]}>Net Earning</Text>
+                  </View>
+
+                  {/* Vertical Scrollable Content */}
+                  <ScrollView style={{ flex: 1 }}>
+                    <View style={{ paddingBottom: 40 }}>
+                      {(() => {
+                        const combined = [
+                          ...(transactions || []).map(tx => ({ ...tx, type: 'booking' })),
+                          ...(withdrawals || [])
+                            .filter(w => w.status === 'completed')
+                            .map(w => ({
+                              id: `w-${w.id}`,
+                              created_at: w.created_at,
+                              total_amount: Number(w.amount || 0),
+                              payment_method: w.payment_method,
+                              status: w.status,
+                              type: 'withdrawal'
+                            }))
+                        ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+                        return combined.length === 0 ? (
+                          <View style={{ padding: 60, alignItems: 'center' }}>
+                            <Text style={{ color: '#64748B' }}>No transactions found</Text>
+                          </View>
+                        ) : (
+                          combined.map((item) => (
+                            <View key={item.id} style={[styles.tableRow, { paddingHorizontal: 24, paddingVertical: 14 }]}>
+                              <View style={{ width: 120 }}>
+                                <Text style={styles.cellTextMain}>
+                                  {new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
+                                </Text>
+                                <Text style={styles.cellTextSub}>
+                                  {new Date(item.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                                </Text>
+                              </View>
+                              
+                              <View style={{ width: 220 }}>
+                                <Text style={[styles.cellTextMain, item.type === 'withdrawal' ? { color: '#64748B' } : { color: '#1E293B', fontWeight: '600' }]} numberOfLines={1}>
+                                  {item.type === 'withdrawal' ? 'Manual Withdrawal' : (item.ground?.name || 'Venue')}
+                                </Text>
+                                <Text style={styles.cellTextSub}>ID: #{item.id.toString().slice(0, 8)}</Text>
+                              </View>
+
+                              <View style={{ width: 100 }}>
+                                <View style={[
+                                  styles.methodBadge, 
+                                  { backgroundColor: item.type === 'withdrawal' ? '#E0F2FE' : (item.payment_method === 'cash' ? (item.payment_received ? '#F1F5F9' : '#FEF3C7') : '#F1F5F9') }
+                                ]}>
+                                  <Text style={[
+                                    styles.methodBadgeText,
+                                    { color: item.type === 'withdrawal' ? '#0369A1' : (item.payment_method === 'cash' ? (item.payment_received ? '#475569' : '#92400E') : '#475569') }
+                                  ]}>
+                                    {item.type === 'withdrawal' ? 'PAYOUT' : (item.payment_method === 'cash' ? (item.payment_received ? 'PAID' : 'CASH') : 'ONLINE')}
+                                  </Text>
+                                </View>
+                              </View>
+
+                              <View style={{ width: 100, alignItems: 'flex-end' }}>
+                                <Text style={[styles.cellTextMain, { color: item.type === 'withdrawal' ? '#EF4444' : '#64748B' }]}>
+                                  {item.type === 'withdrawal' ? `-${formatCurrency(item.total_amount)}` : formatCurrency(item.total_amount)}
+                                </Text>
+                              </View>
+
+                              <View style={{ width: 100, alignItems: 'flex-end' }}>
+                                <Text style={[styles.cellTextMain, { color: '#64748B' }]}>
+                                  {item.type === 'withdrawal' ? '-' : `-${formatCurrency((Number(item.platform_fee_owner || 0) + Number(item.gst_owner || 0)))}`}
+                                </Text>
+                              </View>
+
+                              <View style={{ width: 120, alignItems: 'flex-end' }}>
+                                <Text style={[styles.cellTextMain, { fontWeight: '700', color: item.type === 'withdrawal' ? '#EF4444' : '#059669' }]}>
+                                  {item.type === 'withdrawal' ? `-${formatCurrency(item.total_amount)}` : formatCurrency(item.total_amount - (Number(item.platform_fee_owner || 0) + Number(item.gst_owner || 0)))}
+                                </Text>
+                              </View>
+                            </View>
+                          ))
+                        );
+                      })()}
+
+                      {hasMore && (
+                        <TouchableOpacity 
+                          style={[styles.statementBtn, { marginHorizontal: 24, marginTop: 24, borderStyle: 'dashed' }]}
+                          onPress={loadMore}
+                          disabled={loading}
+                        >
+                          <Text style={styles.statementBtnText}>{loading ? 'Loading...' : 'Load More Transactions'}</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  </ScrollView>
                 </View>
-                
-                {transactions.map((tx) => (
-                  <View key={tx.id} style={styles.tableRow}>
-                    <View style={{ width: 120 }}>
-                      <Text style={styles.cellTextMain}>
-                        {new Date(tx.created_at).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })}
-                      </Text>
-                      <Text style={styles.cellTextSub}>
-                        {new Date(tx.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })}
-                      </Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.cellTextMain}>{tx.ground?.name || 'Venue'}</Text>
-                      <Text style={styles.cellTextSub}>{tx.ground?.city || 'Location'}</Text>
-                    </View>
-                    <View style={{ width: 100 }}>
-                      <Text style={[styles.cellTextMain, { textTransform: 'capitalize' }]}>{tx.payment_method || 'Other'}</Text>
-                      <Text style={[styles.cellTextSub, { color: tx.payment_received ? '#22C55E' : '#64748B' }]}>
-                        {tx.payment_received ? 'Payment Received' : (tx.payment_method === 'cash' ? 'Pending Cash' : 'Confirmed')}
-                      </Text>
-                    </View>
-                    <Text style={[styles.cellTextMain, { width: 80, textAlign: 'right', fontWeight: '700', color: '#01b854' }]}>
-                      {formatCurrency((tx.total_amount || 0) - (Number(tx.platform_fee_owner || 0) + Number(tx.gst_owner || 0)))}
-                    </Text>
-                  </View>
-                ))}
-
-                {hasMore && (
-                  <TouchableOpacity 
-                    style={[styles.statementBtn, { marginTop: 12, borderStyle: 'dashed' }]}
-                    onPress={loadMore}
-                    disabled={loading}
-                  >
-                    <Text style={styles.statementBtnText}>{loading ? 'Loading...' : 'Load More Transactions'}</Text>
-                  </TouchableOpacity>
-                )}
-
-                {transactions.length === 0 && (
-                  <View style={{ padding: 40, alignItems: 'center' }}>
-                    <Text style={{ color: '#64748B' }}>No transactions found</Text>
-                  </View>
-                )}
-              </View>
-            </ScrollView>
+              </ScrollView>
+            </View>
 
             <View style={styles.modalFooter}>
                <TouchableOpacity 
@@ -1715,7 +2225,7 @@ function OwnerEarningsScreenInner() {
                >
                  <Download size={18} color="#043529" />
                  <Text style={styles.downloadBtnFullText}>
-                   {loading ? 'Exporting...' : 'Export as PDF (CSV)'}
+                   {loading ? 'Exporting...' : 'Export Full Statement (CSV)'}
                  </Text>
                </TouchableOpacity>
             </View>
@@ -1737,7 +2247,7 @@ export default function OwnerEarningsScreen() {
 
   return (
     <View style={styles.nativeContainer}>
-      <MobileAppNavbar title="Earnings" titleColor="#043529" lightBg />
+      <MobileAppNavbar title="Earnings" titleColor="#01b854" lightBg />
       <OwnerEarningsScreenInner />
     </View>
   );
@@ -1779,7 +2289,6 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   totalEarningsCard: {
-    backgroundColor: '#d9f99d', // Light lime green
     borderRadius: 24,
     padding: 20,
     flexDirection: 'row',
@@ -1794,8 +2303,8 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter',
   },
   totalEarningsValue: {
-    fontSize: 36,
-    fontWeight: '700',
+    fontSize: 28,
+    fontWeight: '500',
     color: '#043529',
     marginBottom: 8,
     fontFamily: 'Inter',
@@ -1815,7 +2324,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#0F172A',
     marginBottom: 16,
     fontFamily: 'Inter',
@@ -1853,13 +2362,13 @@ const styles = StyleSheet.create({
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
+    paddingVertical: 6,
     borderBottomWidth: 1,
     borderBottomColor: '#F8FAFC',
   },
   cellText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '400',
     color: '#1E293B',
     fontFamily: 'Inter',
   },
@@ -1902,7 +2411,7 @@ const styles = StyleSheet.create({
   },
   downloadBtnText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#043529',
     fontFamily: 'Inter',
   },
@@ -1924,13 +2433,13 @@ const styles = StyleSheet.create({
   },
   venueName: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '400',
     color: '#1E293B',
     flex: 1,
   },
   venueAmount: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#1E293B',
   },
   progressBg: {
@@ -2116,7 +2625,7 @@ const styles = StyleSheet.create({
   },
   cellTextMain: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '400',
     color: '#1E293B',
     fontFamily: 'Inter',
   },
@@ -2149,15 +2658,18 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontFamily: 'Inter',
   },
-  withdrawBtnInline: {
-    flex: 1,
+   withdrawBtnInline: {
+    marginTop: 12,
+    alignSelf: 'flex-start',
+    paddingVertical: 8,
+    paddingHorizontal: 24,
+    borderRadius: 100,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.4)',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: 16,
-    backgroundColor: '#d9f99d',
   },
   withdrawBtnTextInline: {
     fontSize: 13,
@@ -2196,12 +2708,12 @@ const styles = StyleSheet.create({
   bifurcationLabel: {
     fontSize: 12,
     color: '#64748B',
-    fontWeight: '600',
+    fontWeight: '400',
     marginBottom: 4,
   },
   bifurcationValue: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '500',
     marginBottom: 4,
     fontFamily: 'Inter',
   },
@@ -2332,6 +2844,20 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontFamily: 'Inter',
   },
+  expandBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 100,
+  },
+  expandBtnText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#01b854',
+  },
   analyticsWrapper: {
     paddingHorizontal: 8,
     paddingTop: 16,
@@ -2360,6 +2886,41 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#0F172A',
     fontWeight: '700',
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    padding: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#e7ece8',
+  },
+  filterButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterButtonActive: {
+    backgroundColor: '#01b854',
+  },
+  filterButtonText: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  filterButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  tableScroll: {
+    width: '100%',
+  },
+  viewToggleOuter: {
+    width: '100%',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
   },
 });
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, RefreshControl, Alert, Platform, TouchableOpacity, ScrollView, TextInput, Modal, useWindowDimensions } from 'react-native';
-import { Calendar, Filter, X, ChevronDown, CheckCircle2, Search, Banknote, Clock, Users } from 'lucide-react-native';
+import { Calendar, Filter, X, ChevronDown, CheckCircle2, Search, Banknote, Clock, Users, Circle } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { BookingWithDetails } from '@/types';
@@ -37,6 +37,8 @@ export default function AdminBookingsScreen() {
   const [upcomingDbCount, setUpcomingDbCount] = useState(0);
   const [pastDbCount, setPastDbCount] = useState(0);
   const [cancelledDbCount, setCancelledDbCount] = useState(0);
+  const [platformSettings, setPlatformSettings] = useState<any>(null);
+
 
   const [showDateModal, setShowDateModal] = useState(false);
   const [dateRange, setDateRange] = useState<{start: Date | null, end: Date | null}>({start: null, end: null});
@@ -111,6 +113,47 @@ export default function AdminBookingsScreen() {
     }
   };
 
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const { data } = await supabase.from('platform_settings').select('*');
+        const settings: Record<string, any> = {};
+        data?.forEach(s => { settings[s.key] = s.value; });
+        setPlatformSettings(settings);
+      } catch (e) {
+        console.error('Error fetching settings:', e);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const calculateBRowFee = (row: any) => {
+    if (!platformSettings) return Number(row.platform_fee_owner || 0) + Number(row.gst_owner || 0);
+    
+    const pitchType = (row.ground?.pitch_type ?? '').toLowerCase();
+    const isNet = pitchType.includes('net') || pitchType.includes('lane');
+    const isCricket = pitchType === 'cricket ground';
+    
+    const cricketFixedFee = Number(platformSettings.cricket_owner_fee_fixed ?? 100);
+    const netsFixedFee = Number(platformSettings.nets_owner_fee_fixed ?? 25);
+    const rate = Number(platformSettings.user_platform_fee_rate ?? 0.05);
+    const gstRate = Number(platformSettings.gst_rate ?? 0.18);
+    
+    let ownerPf = 0;
+    if (isNet) {
+      ownerPf = netsFixedFee;
+    } else if (isCricket) {
+      const label = cricketTeamsLabelFromBooking(row.ground?.pitch_type, row.notes);
+      const teams = (label?.toLowerCase() === '1 team' || label?.toLowerCase() === 'one') ? 1 : 2;
+      ownerPf = cricketFixedFee * teams;
+    } else {
+      ownerPf = (row.total_amount + (row.discount_amount || 0)) * rate;
+    }
+    
+    return ownerPf * (1 + gstRate);
+  };
+
+
   const FilterDropdown = ({ id, label, value, options, onSelect }: any) => {
     const isOpen = activeDropdown === id;
     const selectedOption = options.find((o: any) => o.key === value);
@@ -184,12 +227,14 @@ export default function AdminBookingsScreen() {
                              {`${formatTime12h(normalizeDbTimeToHHMM(b.start_time) || '')} – ${formatTime12h(normalizeDbTimeToHHMM(b.end_time) || '')}`}
                            </Text>
                          </View>
-                         <View style={styles.slotDetailRow}>
-                           <Users size={14} color="#64748B" />
-                           <Text style={styles.slotBookingDetail}>
-                             {(cricketTeamsLabelFromBooking(b.ground.pitch_type, b.notes) || '1 Team').toUpperCase()}
-                           </Text>
-                         </View>
+                         {!(b.ground.pitch_type.toLowerCase().includes('net') || b.ground.pitch_type.toLowerCase().includes('lane')) && (
+                           <View style={styles.slotDetailRow}>
+                             <Users size={14} color="#64748B" />
+                             <Text style={styles.slotBookingDetail}>
+                               {(cricketTeamsLabelFromBooking(b.ground.pitch_type, b.notes) || '1 Team').toUpperCase()}
+                             </Text>
+                           </View>
+                         )}
                          <View style={styles.slotDetailRow}>
                            <Banknote size={14} color="#059669" />
                            <Text style={[styles.slotBookingDetail, { color: '#059669', fontWeight: '700' }]}>₹{b.total_amount}</Text>
@@ -429,6 +474,22 @@ export default function AdminBookingsScreen() {
     );
   };
 
+  const togglePaymentReceived = async (booking: BookingWithDetails) => {
+    const newValue = !booking.payment_received;
+    const bookingIds = (booking as any).allBookingIds || [booking.id];
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ payment_received: newValue })
+        .in('id', bookingIds);
+      if (error) throw error;
+      setBookings(prev => prev.map(b => bookingIds.includes(b.id) ? { ...b, payment_received: newValue } : b));
+    } catch (err: any) {
+      if (Platform.OS === 'web') alert(err.message || 'Failed to update payment status');
+      else Alert.alert('Error', err.message || 'Failed to update payment status');
+    }
+  };
+
   const handleTogglePayout = async (bookingId: string, currentEnabled: boolean) => {
     try {
       const { error } = await supabase
@@ -461,17 +522,22 @@ export default function AdminBookingsScreen() {
       const createdAtMinute = b.created_at ? b.created_at.substring(0, 16) : 'unknown';
       const groupKey = `${b.user_id}_${b.ground_id}_${createdAtMinute}_${slotsKey}`;
 
+      const bFee = calculateBRowFee(b);
+
       if (!consolidatedMap.has(groupKey)) {
         consolidatedMap.set(groupKey, { 
           ...b, 
           allDates: [b.booking_date],
           allSlots: matchSlots ? [matchSlots[1]] : [`${normalizeDbTimeToHHMM(b.start_time)} – ${normalizeDbTimeToHHMM(b.end_time)}`],
-          allBookingIds: [b.id]
+          allBookingIds: [b.id],
+          calculated_total_fee: bFee
         });
       } else {
         const existing = consolidatedMap.get(groupKey)!;
         existing.total_amount = Number(((existing.total_amount || 0) + (b.total_amount || 0)).toFixed(2));
         existing.discount_amount = Number(((existing.discount_amount || 0) + (b.discount_amount || 0)).toFixed(2));
+        (existing as any).calculated_total_fee = ((existing as any).calculated_total_fee || 0) + bFee;
+
         if (!existing.allDates?.includes(b.booking_date)) {
           existing.allDates?.push(b.booking_date);
         }
@@ -713,8 +779,10 @@ export default function AdminBookingsScreen() {
             <Text style={[styles.tableHeaderCell, styles.colDateTime]}>Slot Date & time</Text>
             <Text style={[styles.tableHeaderCell, styles.colTeams]}>Teams</Text>
             <Text style={[styles.tableHeaderCell, styles.colStatus]}>Status</Text>
+            <Text style={[styles.tableHeaderCell, styles.colFee]}>Fee</Text>
             <Text style={[styles.tableHeaderCell, styles.colAmount]}>Amount</Text>
             <Text style={[styles.tableHeaderCell, styles.colPayment]}>Payment</Text>
+            <Text style={[styles.tableHeaderCell, styles.colPaid]}>Paid</Text>
             <Text style={[styles.tableHeaderCell, styles.colPayout]}>Payout</Text>
             <Text style={[styles.tableHeaderCell, styles.colWho]}>Customer</Text>
           </View>
@@ -799,20 +867,24 @@ export default function AdminBookingsScreen() {
 
                   return (
                     <View style={[styles.tableCell, styles.colTeams]}>
-                      {!isTrulyFull ? (
-                        <TouchableOpacity 
-                          onPress={(e) => {
-                            e.stopPropagation();
-                            router.push(`/grounds/${item.ground.id}?date=${item.booking_date}&time=${normalizeDbTimeToHHMM(item.start_time)}&teams=one`);
-                          }}
-                          style={styles.partialBadge}
-                        >
-                          <Text style={styles.partialBadgeText}>ADD TEAM 2</Text>
-                        </TouchableOpacity>
+                      {!(item.ground?.pitch_type?.toLowerCase().includes('net') || item.ground?.pitch_type?.toLowerCase().includes('lane')) ? (
+                        !isTrulyFull ? (
+                          <TouchableOpacity 
+                            onPress={(e) => {
+                              e.stopPropagation();
+                              router.push(`/grounds/${item.ground.id}?date=${item.booking_date}&time=${normalizeDbTimeToHHMM(item.start_time)}&teams=one`);
+                            }}
+                            style={styles.partialBadge}
+                          >
+                            <Text style={styles.partialBadgeText}>ADD TEAM 2</Text>
+                          </TouchableOpacity>
+                        ) : (
+                          <View style={styles.fullMatchBadge}>
+                            <Text style={styles.fullMatchBadgeText}>FULL</Text>
+                          </View>
+                        )
                       ) : (
-                        <View style={styles.fullMatchBadge}>
-                          <Text style={styles.fullMatchBadgeText}>FULL</Text>
-                        </View>
+                        <Text style={[styles.teamsText, { color: '#6B7280', opacity: 0.5 }]}>—</Text>
                       )}
                     </View>
                   );
@@ -833,6 +905,11 @@ export default function AdminBookingsScreen() {
                    </TouchableOpacity>
                 </View>
 
+                 <View style={[styles.tableCell, styles.colFee]}>
+                   <Text style={[styles.feeText, { color: '#EF4444', fontWeight: '700' }]}>
+                     ₹{((item as any).calculated_total_fee || 0).toFixed(2)}
+                   </Text>
+                 </View>
 
                 <View style={[styles.tableCell, styles.colAmount]}>
                   <Text style={styles.amount}>₹{item.total_amount}</Text>
@@ -840,10 +917,29 @@ export default function AdminBookingsScreen() {
 
 
                  <View style={[styles.tableCell, styles.colPayment]}>
-                    <Text style={[styles.paymentBadgeText, item.payment_method === 'cash' ? styles.paymentCash : styles.paymentOnline]}>
-                       {item.payment_method === 'cash' ? 'CASH' : 'ONLINE'}
+                    <Text style={[styles.paymentBadgeText, item.payment_method === 'cash' ? styles.paymentCash : (item.payment_method === 'wallet' ? styles.paymentWallet : styles.paymentOnline)]}>
+                       {item.payment_method === 'cash' ? 'CASH' : (item.payment_method === 'wallet' ? 'WALLET' : 'ONLINE')}
                     </Text>
                  </View>
+
+                 <View style={[styles.tableCell, styles.colPaid]}>
+                   <TouchableOpacity
+                     onPress={(e) => {
+                       e.stopPropagation();
+                       togglePaymentReceived(item);
+                     }}
+                     style={styles.paymentToggle}
+                   >
+                     <View style={{ alignItems: 'center', width: '100%' }}>
+                       {(item.payment_received || (item.payment_method !== 'cash' && item.status === 'confirmed')) ? (
+                         <CheckCircle2 size={18} color="#00ea6b" />
+                       ) : (
+                         <Circle size={18} color="#9CA3AF" />
+                       )}
+                     </View>
+                   </TouchableOpacity>
+                 </View>
+
 
                  <View style={[styles.tableCell, styles.colPayout]}>
                    {item.payment_method !== 'cash' ? (
@@ -1072,13 +1168,21 @@ const styles = StyleSheet.create({
     width: 100,
   },
   colStatus: {
-    width: 100,
+    width: 80,
+  },
+  colFee: {
+    width: 70,
+    alignItems: 'center',
   },
   colAmount: {
-    width: 100,
+    width: 80,
   },
   colPayment: {
-    width: 90,
+    width: 80,
+  },
+  colPaid: {
+    width: 60,
+    alignItems: 'center',
   },
   colPayout: {
     width: 80,
@@ -1245,6 +1349,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
   },
+  feeText: {
+    fontFamily: 'Inter',
+    fontSize: 13,
+    fontWeight: '600',
+  },
   whoPrimaryText: {
     fontFamily: 'Inter',
     fontSize: 12,
@@ -1322,6 +1431,10 @@ const styles = StyleSheet.create({
   paymentOnline: {
     backgroundColor: '#DBEAFE',
     color: '#1E40AF',
+  },
+  paymentWallet: {
+    backgroundColor: '#F3E8FF',
+    color: '#7E22CE',
   },
   statusBadgeText: {
     fontSize: 10,
@@ -1608,6 +1721,11 @@ const styles = StyleSheet.create({
   dropdownItemTextActive: {
     color: '#059669',
     fontWeight: '700',
+  },
+  paymentToggle: {
+    paddingVertical: 4,
+    width: '100%',
+    alignItems: 'center',
   },
 });
 

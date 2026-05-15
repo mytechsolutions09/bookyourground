@@ -71,6 +71,7 @@ interface WebLayoutProps {
   viewMode?: 'products' | 'categories';
   showAddForm?: boolean;
   isPublicNoSidebar?: boolean;
+  defaultSidebarOpen?: boolean;
 }
 
 const NavLink = React.memo(({
@@ -119,7 +120,7 @@ const NavLink = React.memo(({
   const activeStyle = styles.navLinkActive;
 
   return (
-    <TouchableOpacity
+    <Pressable
       style={[
         styles.navLink,
         isActive && activeStyle,
@@ -139,14 +140,14 @@ const NavLink = React.memo(({
           router.push(href as any);
         }
       }}
+      onHoverIn={() => setHovered(true)}
+      onHoverOut={() => setHovered(false)}
       {...(Platform.OS === 'web' ? {
-        onMouseEnter: () => setHovered(true),
-        onMouseLeave: () => setHovered(false),
         title: hideLabel ? label : undefined,
       } : {})}
     >
       <Icon size={18} color={iconColor} />
-      {!isCompact && hideLabel && Platform.OS === 'web' && (
+      {hideLabel && Platform.OS === 'web' && (
         <View style={[styles.tooltip, { opacity: hovered ? 1 : 0 }]}>
           <Text style={styles.tooltipText}>{label}</Text>
         </View>
@@ -172,11 +173,11 @@ const NavLink = React.memo(({
       {meta !== undefined && !hideLabel && (
         <Text style={styles.navLinkMeta}>{meta}</Text>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 });
 
-export default function WebLayout({ children, noCard, hideHeader, viewMode, showAddForm, isPublicNoSidebar: propIsPublicNoSidebar }: WebLayoutProps) {
+export default function WebLayout({ children, noCard, hideHeader, viewMode, showAddForm, isPublicNoSidebar: propIsPublicNoSidebar, defaultSidebarOpen }: WebLayoutProps) {
   const isCompact = useIsCompact();
   const { profile, signOut, user } = useAuth();
   const params = useLocalSearchParams();
@@ -207,7 +208,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
     }
   }, [startX]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(defaultSidebarOpen !== undefined ? !defaultSidebarOpen : false);
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchResults, setSearchResults] = useState<{ grounds: any[], matches: any[] }>({ grounds: [], matches: [] });
   const [isSearching, setIsSearching] = useState(false);
@@ -752,7 +753,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
               onPress={() => router.replace('/')}
               style={styles.logo}
               accessibilityRole="link"
-              accessibilityLabel="Book my ground — home"
+              accessibilityLabel="Book my venues — home"
             >
               <Image
                 source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
@@ -991,7 +992,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
               onPress={() => router.replace('/')}
               style={styles.logo}
               accessibilityRole="link"
-              accessibilityLabel="Book My Ground — home"
+              accessibilityLabel="Book My Venues — home"
             >
               <Image
                 source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
@@ -1093,16 +1094,16 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
               style={[
                 styles.sidebar,
                 isLanding && styles.sidebarHeaderOffset,
-                (isCompact || (isSuperAdmin && isAdminRoute && sidebarCollapsed)) && styles.sidebarCollapsed,
-                isAdminRoute && { transition: 'width 0.3s ease-in-out' } as any,
+                (isCompact || sidebarCollapsed) && styles.sidebarCollapsed,
+                { transition: 'width 0.3s ease-in-out' } as any,
               ]}
             >
-              {(shouldHideAppHeader || isGroundOwner) && !(isSuperAdmin && isAdminRoute && sidebarCollapsed) && (
+              {(shouldHideAppHeader || isGroundOwner) && !sidebarCollapsed && (
                 <TouchableOpacity
                   onPress={() => router.replace('/')}
                   style={[styles.logo, { marginBottom: 32, paddingHorizontal: 4 }]}
                   accessibilityRole="link"
-                  accessibilityLabel="Book My Ground — home"
+                  accessibilityLabel="Book My Venues — home"
                 >
                   <Image
                     source={require('../../assets/BOOK_MY_GROUND__6_-removebg-preview.png')}
@@ -1116,7 +1117,7 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                 showsHorizontalScrollIndicator={false}
                 overScrollMode="never"
                 bounces={false}
-                contentContainerStyle={{ paddingBottom: 20 }}
+                contentContainerStyle={[{ paddingBottom: 20 }, sidebarCollapsed && { alignItems: 'center' }]}
                 style={Platform.OS === 'web' ? { overflow: 'visible' } : undefined}
               >
                 {isAuthenticated && !isPublicNoSidebar && (
@@ -1242,32 +1243,44 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
                           {!sidebarCollapsed && (
                             <Text style={styles.sidebarSectionTitle}>Venue owner</Text>
                           )}
+                          <TouchableOpacity
+                            style={styles.collapseButton}
+                            onPress={() => setSidebarCollapsed((prev) => !prev)}
+                          >
+                            {sidebarCollapsed ? (
+                              <PanelLeftOpen size={16} color="#00ea6b" />
+                            ) : (
+                              <PanelLeftClose size={16} color="#9CA3AF" />
+                            )}
+                          </TouchableOpacity>
                         </View>
-                        <NavLink href="/(owner)/owner-dashboard" icon={LayoutDashboard} label="Dashboard" isActiveOverride={cleanPath === '/(owner)/owner-dashboard' || cleanPath === '/owner-dashboard'} />
+                        <NavLink href="/(owner)/owner-dashboard" icon={LayoutDashboard} label="Dashboard" isActiveOverride={cleanPath === '/(owner)/owner-dashboard' || cleanPath === '/owner-dashboard'} hideLabel={sidebarCollapsed} />
                         
                         <View style={{ opacity: hasPayoutSetup === false ? 0.4 : 1 }}>
-                          <NavLink href="/(owner)/add-venue" icon={PlusCircle} label="Add Venue" isActiveOverride={cleanPath === '/(owner)/add-venue' || cleanPath === '/add-venue'} disabled={hasPayoutSetup === false} />
+                          <NavLink href="/(owner)/add-venue" icon={PlusCircle} label="Add Venue" isActiveOverride={cleanPath === '/(owner)/add-venue' || cleanPath === '/add-venue'} disabled={hasPayoutSetup === false} hideLabel={sidebarCollapsed} />
                           <NavLink 
                             href="/(owner)/manage-grounds" 
                             icon={MapPin} 
-                            label="My Venues" 
+                            label="Venues" 
                             isActiveOverride={cleanPath === '/(owner)/manage-grounds' || cleanPath === '/manage-grounds'} 
                             badge={hasPayoutSetup === false ? 'Locked' : undefined}
                             disabled={hasPayoutSetup === false}
+                            hideLabel={sidebarCollapsed}
                           />
-                          <NavLink href="/(owner)/inventory" icon={Package} label="Inventory" isActiveOverride={cleanPath === '/(owner)/inventory' || cleanPath === '/inventory'} disabled={hasPayoutSetup === false} />
-                          <NavLink href="/wallet" icon={Wallet} label="Wallet" disabled={hasPayoutSetup === false} />
-                          <NavLink href="/(owner)/ground-bookings" icon={ClipboardList} label="Bookings" isActiveOverride={cleanPath === '/(owner)/ground-bookings' || cleanPath === '/ground-bookings'} disabled={hasPayoutSetup === false} />
+                          <NavLink href="/(owner)/inventory" icon={Package} label="Inventory" isActiveOverride={cleanPath === '/(owner)/inventory' || cleanPath === '/inventory'} disabled={hasPayoutSetup === false} hideLabel={sidebarCollapsed} />
+                          <NavLink href="/wallet" icon={Wallet} label="Wallet" disabled={hasPayoutSetup === false} hideLabel={sidebarCollapsed} />
+                          <NavLink href="/(owner)/ground-bookings" icon={ClipboardList} label="Bookings" isActiveOverride={cleanPath === '/(owner)/ground-bookings' || cleanPath === '/ground-bookings'} disabled={hasPayoutSetup === false} hideLabel={sidebarCollapsed} />
                           <NavLink 
                             href="/profile/orders" 
                             icon={ShoppingBag} 
-                            label="My Orders" 
+                            label="Orders" 
                             isActiveOverride={cleanPath === '/profile/orders'}
                             disabled={hasPayoutSetup === false} 
+                            hideLabel={sidebarCollapsed}
                           />
-                          <NavLink href="/(owner)/earnings" icon={IndianRupee} label="Earnings" isActiveOverride={cleanPath === '/(owner)/earnings' || cleanPath === '/earnings'} disabled={hasPayoutSetup === false} />
-                          <NavLink href="/(owner)/settings" icon={Settings} label="Settings" isActiveOverride={cleanPath === '/(owner)/settings' || cleanPath === '/settings'} disabled={hasPayoutSetup === false} />
-                          <NavLink href="/(tabs)/support" icon={Phone} label="Contact Us" disabled={hasPayoutSetup === false} />
+                          <NavLink href="/(owner)/earnings" icon={IndianRupee} label="Earnings" isActiveOverride={cleanPath === '/(owner)/earnings' || cleanPath === '/earnings'} disabled={hasPayoutSetup === false} hideLabel={sidebarCollapsed} />
+                          <NavLink href="/(owner)/settings" icon={Settings} label="Settings" isActiveOverride={cleanPath === '/(owner)/settings' || cleanPath === '/settings'} disabled={hasPayoutSetup === false} hideLabel={sidebarCollapsed} />
+                          <NavLink href="/(tabs)/support" icon={Phone} label="Contact Us" disabled={hasPayoutSetup === false} hideLabel={sidebarCollapsed} />
                         </View>
 
                         {hasPayoutSetup === false && (
@@ -1280,11 +1293,11 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
 
                         <View style={styles.sidebarDivider} />
                         <TouchableOpacity
-                          style={styles.signOutButton}
+                          style={[styles.signOutButton, sidebarCollapsed && { justifyContent: 'center', paddingHorizontal: 0 }]}
                           onPress={handleSignOut}
                         >
                           <LogOut size={18} color="#01b854" />
-                          <Text style={styles.signOutText}>Sign out</Text>
+                          {!sidebarCollapsed && <Text style={styles.signOutText}>Sign out</Text>}
                         </TouchableOpacity>
                       </>
                     ) : (
@@ -1344,11 +1357,11 @@ export default function WebLayout({ children, noCard, hideHeader, viewMode, show
 
                         <View style={styles.sidebarDivider} />
                         <TouchableOpacity
-                          style={styles.signOutButton}
+                          style={[styles.signOutButton, sidebarCollapsed && { justifyContent: 'center', paddingHorizontal: 0 }]}
                           onPress={handleSignOut}
                         >
                           <LogOut size={18} color="#00ea6b" />
-                          <Text style={styles.signOutText}>Sign out</Text>
+                          {!sidebarCollapsed && <Text style={styles.signOutText}>Sign out</Text>}
                         </TouchableOpacity>
                       </>
                     )}
@@ -1759,6 +1772,7 @@ const styles = StyleSheet.create({
   navLinkCollapsed: {
     justifyContent: 'center',
     paddingHorizontal: 0,
+    width: '100%',
   },
   navLinkActive: {
     backgroundColor: 'rgba(255, 255, 255, 0.15)',

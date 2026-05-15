@@ -20,8 +20,8 @@ BEGIN
             );
 
             -- B. REVENUE REVERSAL FROM OWNER
-            -- We only reverse if the owner was likely credited (i.e. status was confirmed/active/completed)
-            IF (OLD.status IN ('confirmed', 'active', 'completed') AND NEW.owner_settlement > 0) THEN
+            -- We only reverse if the owner was likely credited (i.e. status was confirmed/completed)
+            IF (OLD.status IN ('confirmed', 'completed') AND NEW.owner_settlement > 0) THEN
                 SELECT owner_id INTO v_owner_id FROM grounds WHERE id = NEW.ground_id;
                 IF v_owner_id IS NOT NULL THEN
                     PERFORM public.process_wallet_transaction(

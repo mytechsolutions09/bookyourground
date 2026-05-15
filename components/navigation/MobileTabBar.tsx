@@ -38,6 +38,13 @@ function getActiveTab(
   if (root === 'bookings') return 'bookings';
   if (root === 'favorites') return 'favorites';
   if (root === 'shop') return 'shop';
+  // Also check if we are in (owner) or (admin) inventory / bookings
+  if (segments.includes('(owner)') && segments.includes('inventory')) return 'inventory';
+  if (segments.includes('(admin)') && segments.includes('inventory')) return 'inventory';
+  if (segments.includes('(owner)') && segments.includes('ground-bookings')) return 'bookings';
+  if (segments.includes('(admin)') && segments.includes('ground-bookings')) return 'bookings';
+  if (segments.includes('ground-bookings')) return 'bookings';
+
   if (root !== '(tabs)') return 'home';
   const tab = segments[1] ?? 'index';
   if (tab === 'index' || tab === 'home_tab') return 'home';
@@ -50,13 +57,6 @@ function getActiveTab(
   if (tab === 'shop') return 'shop';
   if (tab === 'inventory' || segments.includes('inventory')) return 'inventory';
   if (tab === 'select-sport') return 'find';
-  
-  // Also check if we are in (owner) or (admin) inventory / bookings
-  if (segments.includes('(owner)') && segments.includes('inventory')) return 'inventory';
-  if (segments.includes('(admin)') && segments.includes('inventory')) return 'inventory';
-  if (segments.includes('(owner)') && segments.includes('ground-bookings')) return 'bookings';
-  if (segments.includes('(admin)') && segments.includes('ground-bookings')) return 'bookings';
-  if (segments.includes('ground-bookings')) return 'bookings';
   
   return 'home';
 }
@@ -145,7 +145,7 @@ export default function MobileTabBar() {
 
   const activeTab = getActiveTab(segments as string[]);
   const { setTabAnimation } = useUI();
-  const size = 24;
+  const size = 20;
 
   const isSuperAdmin = profile?.role === 'super_admin' || (user?.email?.toLowerCase() === 'invirtualcoin@gmail.com');
   const showInventoryTab = isOwner || isSuperAdmin;

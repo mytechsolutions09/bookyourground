@@ -101,8 +101,13 @@ export default function CheckoutScreen() {
     const isGroundOwnerOrAdmin = profile?.role === 'super_admin' ||
         (profile?.role === 'ground_owner' && booking?.grounds?.owner_id === user?.id);
 
+    const isWallet = selectedGateway === 'wallet';
+    const isCash = selectedGateway === 'cash';
+
+
     // Pricing Calculations
-    const { baseGroundPrice, platformFeeIncGst, totalPayable, totalReceivable } = React.useMemo(() => {
+    const { baseGroundPrice, discountAmount, platformFeeUser, gstUser, ownerPlatformFee, totalPayable, totalReceivable } = React.useMemo(() => {
+
         const originalPrice = (booking?.total_amount || 0) + (booking?.discount_amount || 0);
         const discountedPrice = ((selectedGateway === 'cash' || (selectedGateway === 'wallet' && isGroundOwnerOrAdmin)) && customCashAmount && !isNaN(parseFloat(customCashAmount)))
             ? parseFloat(customCashAmount)
@@ -120,7 +125,7 @@ export default function CheckoutScreen() {
         const groundName = (booking?.grounds?.name ?? '').toLowerCase();
         const isCricket = pitchType === 'cricket ground';
         const isNet = pitchType.includes('net') || groundName.includes('net') || pitchType.includes('lane') || groundName.includes('lane');
-        const isCash = selectedGateway === 'cash';
+
 
         // Calculate total teams across all slots
         let totalTeams = 0;
@@ -156,12 +161,13 @@ export default function CheckoutScreen() {
             ownerPf = 0;
         } else if (isGroundOwnerOrAdmin || isCash) {
             if (isNet) {
-                ownerPf = netsFixedFee;
+                ownerPf = netsFixedFee * (booking?.slots?.length || 1);
             } else if (isCricket) {
                 ownerPf = cricketFixedFee * totalTeams;
             } else {
                 ownerPf = discountedPrice * rate;
             }
+
         } else {
             // Regular user booking - owner commission
             ownerPf = isNet ? (discountedPrice * netsUserRate) : (discountedPrice * rate);
@@ -169,16 +175,40 @@ export default function CheckoutScreen() {
         const ownerGst = ownerPf * gstRate;
         const ownerTotalPfGst = ownerPf + ownerGst;
 
-        const tp = Math.round(discountedPrice + (isCash ? 0 : userTotalPfGst));
+        const tp = Math.round(
+            isGroundOwnerOrAdmin 
+                ? (isWallet ? ownerTotalPfGst : discountedPrice) 
+                : (isCash ? discountedPrice : (discountedPrice + userTotalPfGst))
+        );
+
         const tr = Math.round(discountedPrice - ownerTotalPfGst);
+
+        if (isGroundOwnerOrAdmin) {
+            console.log('[Checkout Debug] Owner Booking:', {
+                pitchType: booking?.grounds?.pitch_type,
+                isNet,
+                slots: booking?.slots?.length,
+                netsFixedFee,
+                discountedPrice,
+                ownerPf,
+                ownerGst,
+                ownerTotalFee: ownerTotalPfGst,
+                totalReceivable: tr,
+                userPfTotal: userTotalPfGst
+            });
+        }
 
         return {
             baseGroundPrice: originalPrice,
-            platformFeeIncGst: (isCash || isGroundOwnerOrAdmin) ? ownerTotalPfGst : userTotalPfGst,
+            discountAmount: booking?.discount_amount || 0,
+            platformFeeUser: userPf,
+            gstUser: userGst,
+            ownerPlatformFee: ownerTotalPfGst,
             totalPayable: tp,
             totalReceivable: tr
         };
     }, [selectedGateway, customCashAmount, booking?.total_amount, booking?.discount_amount, booking?.team_type, booking?.grounds?.pitch_type, booking?.grounds?.name, platformSettings, isGroundOwnerOrAdmin]);
+
 
     const [showRazorpayWebView, setShowRazorpayWebView] = useState(false);
     const [razorpayOrderData, setRazorpayOrderData] = useState<any>(null);
@@ -257,12 +287,31 @@ export default function CheckoutScreen() {
     const fetchWalletBalance = async () => {
         if (!user) return;
         try {
-            const { data, error } = await supabase
+            const { data: walletData, error: walletError } = await supabase
                 .from('wallets')
                 .select('balance')
                 .eq('user_id', user.id)
                 .single();
-            if (data) setWalletBalance(data.balance);
+            
+            if (walletError) throw walletError;
+
+            // Subtract pending withdrawals to get actual available balance
+            const { data: withdrawals, error: withdrawalError } = await supabase
+                .from('withdrawals')
+                .select('amount')
+                .eq('owner_id', user.id)
+                .in('status', ['pending', 'processing']);
+
+            if (withdrawalError) {
+                console.error('Error fetching pending withdrawals:', withdrawalError);
+                if (walletData) setWalletBalance(walletData.balance);
+                return;
+            }
+
+            const pendingAmount = (withdrawals || []).reduce((acc, w) => acc + (Number(w.amount) || 0), 0);
+            const availableBalance = (walletData?.balance || 0) - pendingAmount;
+            
+            setWalletBalance(availableBalance);
         } catch (e) {
             console.error('Error fetching wallet balance:', e);
         }
@@ -292,8 +341,11 @@ export default function CheckoutScreen() {
                     bookingId: booking.isNew ? null : booking.id,
                     bookingDetails: booking.isNew ? {
                         price_per_hour: Number(booking.price_per_hour),
-                        total_amount: Number(parseFloat(customCashAmount) || (booking.total_amount + (booking.discount_amount || 0))),
-                        discount_amount: Number(booking.discount_amount || 0),
+                        ground_price: baseGroundPrice,
+                        discount_amount: discountAmount,
+                        platform_fee_user: platformFeeUser,
+                        gst_user: gstUser,
+                        total_amount: totalPayable,
                         total_hours: Number(booking.total_hours || 1),
                         ground_id: booking.ground_id,
                         booking_date: booking.booking_date,
@@ -307,7 +359,11 @@ export default function CheckoutScreen() {
                         slotDuration: booking.slotDuration,
                         slotPrices: booking.slotPrices,
                     } : {
-                        total_amount: parseFloat(customCashAmount) || booking.total_amount,
+                        total_amount: parseFloat(customCashAmount) || totalPayable,
+                        ground_price: parseFloat(customCashAmount) || baseGroundPrice,
+                        discount_amount: discountAmount,
+                        platform_fee_user: platformFeeUser,
+                        gst_user: gstUser,
                         booked_for_name: bookedForName,
                         payment_method: 'cash',
                     },
@@ -628,15 +684,22 @@ export default function CheckoutScreen() {
                         coupon_id: booking.coupon_id,
                         total_hours: booking.total_hours,
                         price_per_hour: booking.price_per_hour,
-                        total_amount: booking.total_amount + (booking.discount_amount || 0),
-                        discount_amount: booking.discount_amount || 0,
+                        ground_price: baseGroundPrice,
+                        discount_amount: discountAmount,
+                        platform_fee_user: platformFeeUser,
+                        gst_user: gstUser,
+                        total_amount: totalPayable,
                         slots: booking.slots,
                         slotDuration: booking.slotDuration,
                         slotPrices: booking.slotPrices,
                         booked_for_name: bookedForName,
                         wallet_amount: walletAmount,
                     } : {
-                        total_amount: booking.total_amount,
+                        total_amount: totalPayable,
+                        ground_price: baseGroundPrice,
+                        discount_amount: discountAmount,
+                        platform_fee_user: platformFeeUser,
+                        gst_user: gstUser,
                         wallet_amount: walletAmount,
                     },
                 },
@@ -882,16 +945,20 @@ export default function CheckoutScreen() {
 
     const handleWalletPayment = async () => {
         if (!booking) return;
-        if (walletBalance < totalPayable) {
+        if (walletAmountUsed === 0) {
+            Alert.alert('Error', 'Please enter an amount of wallet credit to use');
+            return;
+        }
+
+        if (walletAmountUsed < totalPayable) {
             Alert.alert(
                 'Split Payment',
-                `Your wallet balance of ${formatCurrency(walletBalance)} is insufficient. Would you like to use it and pay the remaining ${formatCurrency(totalPayable - walletBalance)} online?`,
+                `You are using ${formatCurrency(walletAmountUsed)} from wallet. Would you like to pay the remaining ${formatCurrency(totalPayable - walletAmountUsed)} online?`,
                 [
                     { text: 'Cancel', style: 'cancel' },
                     {
                         text: 'Pay Online', onPress: () => {
-                            setWalletAmountUsed(walletBalance);
-                            handleRazorpay(walletBalance);
+                            handleRazorpay(walletAmountUsed);
                         }
                     }
                 ]
@@ -915,8 +982,11 @@ export default function CheckoutScreen() {
                         coupon_id: booking.coupon_id,
                         total_hours: booking.total_hours,
                         price_per_hour: booking.price_per_hour,
+                        ground_price: baseGroundPrice,
+                        discount_amount: discountAmount,
+                        platform_fee_user: platformFeeUser,
+                        gst_user: gstUser,
                         total_amount: totalPayable,
-                        discount_amount: booking.discount_amount || 0,
                         booked_for_name: bookedForName,
                         payment_method: 'wallet',
                         slots: booking.slots,
@@ -924,6 +994,10 @@ export default function CheckoutScreen() {
                         slotPrices: booking.slotPrices,
                     } : {
                         total_amount: totalPayable,
+                        ground_price: baseGroundPrice,
+                        discount_amount: discountAmount,
+                        platform_fee_user: platformFeeUser,
+                        gst_user: gstUser,
                         booked_for_name: bookedForName,
                         payment_method: 'wallet'
                     },
@@ -933,6 +1007,8 @@ export default function CheckoutScreen() {
             if (error) throw error;
 
             if (data && data.success) {
+                // Wallet transaction record is handled by the edge function 'payment-gateway' via 'process_wallet_transaction' RPC.
+
                 Alert.alert('Success', 'Payment successful using Wallet balance!');
                 router.replace(`/bookings/${data.bookingId}` as any);
             } else {
@@ -1042,7 +1118,7 @@ export default function CheckoutScreen() {
                         <TouchableOpacity onPress={handleBack} style={styles.checkoutMiniBackBtn}>
                             <ChevronLeft size={20} color="#0F172A" />
                         </TouchableOpacity>
-                        <RNText style={styles.checkoutMiniTitle}>Checkout</RNText>
+                        <RNText style={[styles.checkoutMiniTitle, { color: '#01b854' }]}>Checkout</RNText>
                         <View style={{ width: 36 }} />
                     </View>
 
@@ -1104,7 +1180,7 @@ export default function CheckoutScreen() {
 
                     {/* Header Section (Web) */}
                     {isLargeWebScreen && (
-                        <View style={styles.headerCard}>
+                        <View style={[styles.headerCard, { marginTop: 0 }]}>
                             <TouchableOpacity
                                 onPress={handleBack}
                                 style={{ marginBottom: 24 }}
@@ -1146,8 +1222,8 @@ export default function CheckoutScreen() {
                                     onPress={() => setIsSlotsModalVisible(true)}
                                 >
                                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                        <View style={styles.detailIconBox}>
-                                            <Calendar size={20} color="#01e669" />
+                                        <View style={[styles.detailIconBox, { backgroundColor: 'transparent', borderWidth: 0 }]}>
+                                            <Calendar size={20} color="#475569" />
                                         </View>
                                         <View style={[styles.detailInfoContent, { marginLeft: 12 }]}>
                                             <RNText style={styles.detailLabel}>Booking Slots & Teams</RNText>
@@ -1160,8 +1236,8 @@ export default function CheckoutScreen() {
                                         </View>
                                     </View>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 16 }}>
-                                        <RNText style={{ fontSize: 14, color: '#01e669', marginRight: 4 }}>View</RNText>
-                                        <ChevronRight size={18} color="#01e669" />
+                                        <RNText style={{ fontSize: 14, color: '#475569', marginRight: 4 }}>View</RNText>
+                                        <ChevronRight size={18} color="#475569" />
                                     </View>
                                 </TouchableOpacity>
                             </View>
@@ -1169,8 +1245,8 @@ export default function CheckoutScreen() {
                             {/* Cancellation Policy Container */}
                             <View style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#E2E8F0' }}>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                                    <View style={styles.policyIconBox}>
-                                        <ShieldCheck size={24} color="#01e669" />
+                                    <View style={[styles.policyIconBox, { backgroundColor: 'transparent', borderWidth: 0 }]}>
+                                        <ShieldCheck size={24} color="#475569" />
                                     </View>
                                     <View style={{ flex: 1 }}>
                                         <RNText style={styles.policyTitle}>Cancellation Policy</RNText>
@@ -1358,13 +1434,13 @@ export default function CheckoutScreen() {
 
                 {/* Right Column: Order Summary */}
                 <View style={[styles.sideColumn, !isDesktop && Platform.OS !== 'web' && styles.sideColumnMobile, dynamicStyles.sideColumn as any]}>
-                    <Card style={[styles.summaryCard, dynamicStyles.summaryCard]}>
+                    <Card style={[styles.summaryCard, dynamicStyles.summaryCard, { marginTop: 0 }]}>
                         <View style={[styles.summaryHeaderRow, { marginBottom: 12 }]}>
                             <View style={{ flex: 1 }}>
                                 <RNText style={styles.summaryTitleNew}>Order Summary</RNText>
                             </View>
-                            <View style={styles.secureBadge}>
-                                <ShieldCheck size={20} color="#06392e" />
+                            <View style={[styles.secureBadge, { backgroundColor: 'transparent' }]}>
+                                <ShieldCheck size={20} color="#475569" />
                             </View>
                         </View>
 
@@ -1377,7 +1453,7 @@ export default function CheckoutScreen() {
                                         <RNText style={{ fontSize: 14, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>Have a coupon?</RNText>
                                     </View>
                                     <TouchableOpacity onPress={() => { setIsCouponsModalVisible(true); fetchAvailableCoupons(); }}>
-                                        <RNText style={{ fontSize: 13, fontWeight: '600', color: '#01e669', fontFamily: 'Inter' }}>View Offers</RNText>
+                                        <RNText style={{ fontSize: 13, fontWeight: '600', color: '#475569', fontFamily: 'Inter' }}>View Offers</RNText>
                                     </TouchableOpacity>
                                 </View>
                                 <View style={[styles.couponContainer, { marginBottom: 0 }]}>
@@ -1413,8 +1489,11 @@ export default function CheckoutScreen() {
                                     <RNText style={styles.breakdownLabelNew}>Platform Fee</RNText>
                                     <View style={styles.gstBadgeNew}><RNText style={styles.gstBadgeTextNew}>Inc. GST</RNText></View>
                                 </View>
-                                <RNText style={styles.breakdownValueNew}>{formatCurrency(platformFeeIncGst)}</RNText>
+                                <RNText style={styles.breakdownValueNew}>
+                                    {formatCurrency(isGroundOwnerOrAdmin ? ownerPlatformFee : (platformFeeUser + gstUser))}
+                                </RNText>
                             </View>
+
 
                             {isGroundOwnerOrAdmin && (
                                 <View style={[styles.breakdownRowNew, { backgroundColor: '#F8FAFC', marginHorizontal: -12, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, marginTop: 4 }]}>
@@ -1432,15 +1511,16 @@ export default function CheckoutScreen() {
 
                             <View style={styles.dashedLine} />
 
-                            {!isGroundOwnerOrAdmin && (
+                            {(!isGroundOwnerOrAdmin || (isGroundOwnerOrAdmin && isWallet)) && (
                                 <View style={styles.totalRowNew}>
                                     <View>
-                                        <RNText style={styles.totalLabelNew}>Total Payable</RNText>
+                                        <RNText style={styles.totalLabelNew}>{isGroundOwnerOrAdmin && isWallet ? 'Wallet Deduction' : 'Total Payable'}</RNText>
                                         <RNText style={styles.totalSubtitleNew}>Incl. all taxes</RNText>
                                     </View>
                                     <RNText style={styles.totalValueNew}>{formatCurrency(totalPayable)}</RNText>
                                 </View>
                             )}
+
                         </View>
 
                         <View style={{ marginBottom: 24 }}>
@@ -1487,61 +1567,69 @@ export default function CheckoutScreen() {
                                 {/* Wallet Option */}
                                 <TouchableOpacity
                                     style={[styles.methodItemNew, selectedGateway === 'wallet' && { backgroundColor: '#F8FAFC' }]}
-                                    onPress={() => setSelectedGateway('wallet')}
+                                    onPress={() => {
+                                        setSelectedGateway('wallet');
+                                        setWalletAmountUsed(Math.min(walletBalance, totalPayable));
+                                    }}
                                 >
                                     <View style={styles.methodIconBoxNew}><Wallet size={20} color={selectedGateway === 'wallet' ? '#01e669' : '#64748B'} /></View>
                                     <View style={{ flex: 1 }}>
                                         <RNText style={[styles.methodLabelNew, selectedGateway === 'wallet' && styles.methodLabelActiveNew]}>Wallet Balance</RNText>
-                                        <RNText style={styles.methodSubtitleNew}>Bal: {formatCurrency(walletBalance)}</RNText>
+                                        <RNText style={styles.methodSubtitleNew}>Available: {formatCurrency(walletBalance)}</RNText>
                                     </View>
                                     <View style={[styles.radioOuter, selectedGateway === 'wallet' && styles.radioOuterActive]}>
                                         {selectedGateway === 'wallet' && <View style={[styles.radioInner, { backgroundColor: '#01e669' }]} />}
                                     </View>
                                 </TouchableOpacity>
 
-                                {/* UPI */}
-                                <TouchableOpacity
-                                    style={[styles.methodItemNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'upi') && { backgroundColor: '#F8FAFC' }]}
-                                    onPress={() => { setSelectedGateway('razorpay'); setSelectedSubMethod('upi'); }}
-                                >
-                                    <View style={styles.methodIconBoxNew}><Smartphone size={20} color={(selectedGateway === 'razorpay' && selectedSubMethod === 'upi') ? '#01e669' : '#64748B'} /></View>
-                                    <View style={{ flex: 1 }}>
-                                        <RNText style={[styles.methodLabelNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'upi') && styles.methodLabelActiveNew]}>UPI (PhonePe, GPay, etc)</RNText>
-                                        <RNText style={styles.methodSubtitleNew}>Instant and Secure</RNText>
-                                    </View>
-                                    <View style={[styles.radioOuter, (selectedGateway === 'razorpay' && selectedSubMethod === 'upi') && styles.radioOuterActive]}>
-                                        {(selectedGateway === 'razorpay' && selectedSubMethod === 'upi') && <View style={[styles.radioInner, { backgroundColor: '#01e669' }]} />}
-                                    </View>
-                                </TouchableOpacity>
+                                {!isGroundOwnerOrAdmin && (
+                                    <>
+                                        {/* UPI */}
+                                        <TouchableOpacity
+                                            style={[styles.methodItemNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'upi') && { backgroundColor: '#F8FAFC' }]}
+                                            onPress={() => { setSelectedGateway('razorpay'); setSelectedSubMethod('upi'); }}
+                                        >
+                                            <View style={styles.methodIconBoxNew}><Smartphone size={20} color={(selectedGateway === 'razorpay' && selectedSubMethod === 'upi') ? '#01e669' : '#64748B'} /></View>
+                                            <View style={{ flex: 1 }}>
+                                                <RNText style={[styles.methodLabelNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'upi') && styles.methodLabelActiveNew]}>UPI (PhonePe, GPay, etc)</RNText>
+                                                <RNText style={styles.methodSubtitleNew}>Instant and Secure</RNText>
+                                            </View>
+                                            <View style={[styles.radioOuter, (selectedGateway === 'razorpay' && selectedSubMethod === 'upi') && styles.radioOuterActive]}>
+                                                {(selectedGateway === 'razorpay' && selectedSubMethod === 'upi') && <View style={[styles.radioInner, { backgroundColor: '#01e669' }]} />}
+                                            </View>
+                                        </TouchableOpacity>
 
-                                {/* Cards */}
-                                <TouchableOpacity
-                                    style={[styles.methodItemNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'card') && { backgroundColor: '#F8FAFC' }]}
-                                    onPress={() => { setSelectedGateway('razorpay'); setSelectedSubMethod('card'); }}
-                                >
-                                    <View style={styles.methodIconBoxNew}><CreditCard size={20} color={(selectedGateway === 'razorpay' && selectedSubMethod === 'card') ? '#01e669' : '#64748B'} /></View>
-                                    <View style={{ flex: 1 }}>
-                                        <RNText style={[styles.methodLabelNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'card') && styles.methodLabelActiveNew]}>Cards (Credit/Debit)</RNText>
-                                        <RNText style={styles.methodSubtitleNew}>Visa, Mastercard, RuPay</RNText>
-                                    </View>
-                                    <View style={[styles.radioOuter, (selectedGateway === 'razorpay' && selectedSubMethod === 'card') && styles.radioOuterActive]}>
-                                        {(selectedGateway === 'razorpay' && selectedSubMethod === 'card') && <View style={styles.radioInner} />}
-                                    </View>
-                                </TouchableOpacity>
-                                {/* Net Banking */}
-                                <TouchableOpacity
-                                    style={[styles.methodItemNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') && { backgroundColor: '#F8FAFC' }, !isGroundOwnerOrAdmin && { borderBottomWidth: 0 }]}
-                                    onPress={() => { setSelectedGateway('razorpay'); setSelectedSubMethod('netbanking'); }}
-                                >
-                                    <View style={styles.methodIconBoxNew}><Globe size={20} color={(selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') ? '#01e669' : '#64748B'} /></View>
-                                    <View style={{ flex: 1 }}>
-                                        <RNText style={[styles.methodLabelNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') && styles.methodLabelActiveNew]}>Net Banking</RNText>
-                                        <RNText style={styles.methodSubtitleNew}>All major Indian banks</RNText>
-                                    </View>
-                                    <View style={[styles.radioOuter, (selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') && styles.radioOuterActive]}>
-                                        {(selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') && <View style={styles.radioInner} />}
-                                    </View>
-                                </TouchableOpacity>
+                                        {/* Cards */}
+                                        <TouchableOpacity
+                                            style={[styles.methodItemNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'card') && { backgroundColor: '#F8FAFC' }]}
+                                            onPress={() => { setSelectedGateway('razorpay'); setSelectedSubMethod('card'); }}
+                                        >
+                                            <View style={styles.methodIconBoxNew}><CreditCard size={20} color={(selectedGateway === 'razorpay' && selectedSubMethod === 'card') ? '#01e669' : '#64748B'} /></View>
+                                            <View style={{ flex: 1 }}>
+                                                <RNText style={[styles.methodLabelNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'card') && styles.methodLabelActiveNew]}>Cards (Credit/Debit)</RNText>
+                                                <RNText style={styles.methodSubtitleNew}>Visa, Mastercard, RuPay</RNText>
+                                            </View>
+                                            <View style={[styles.radioOuter, (selectedGateway === 'razorpay' && selectedSubMethod === 'card') && styles.radioOuterActive]}>
+                                                {(selectedGateway === 'razorpay' && selectedSubMethod === 'card') && <View style={styles.radioInner} />}
+                                            </View>
+                                        </TouchableOpacity>
+
+                                        {/* Net Banking */}
+                                        <TouchableOpacity
+                                            style={[styles.methodItemNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') && { backgroundColor: '#F8FAFC' }]}
+                                            onPress={() => { setSelectedGateway('razorpay'); setSelectedSubMethod('netbanking'); }}
+                                        >
+                                            <View style={styles.methodIconBoxNew}><Globe size={20} color={(selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') ? '#01e669' : '#64748B'} /></View>
+                                            <View style={{ flex: 1 }}>
+                                                <RNText style={[styles.methodLabelNew, (selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') && styles.methodLabelActiveNew]}>Net Banking</RNText>
+                                                <RNText style={styles.methodSubtitleNew}>All major Indian banks</RNText>
+                                            </View>
+                                            <View style={[styles.radioOuter, (selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') && styles.radioOuterActive]}>
+                                                {(selectedGateway === 'razorpay' && selectedSubMethod === 'netbanking') && <View style={styles.radioInner} />}
+                                            </View>
+                                        </TouchableOpacity>
+                                    </>
+                                )}
                                 {isGroundOwnerOrAdmin && (
                                     <TouchableOpacity
                                         style={[styles.methodItemNew, selectedGateway === 'cash' && { backgroundColor: '#F8FAFC' }, { borderBottomWidth: 0 }]}
@@ -1733,7 +1821,7 @@ export default function CheckoutScreen() {
                             style={{ backgroundColor: '#059669', paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 16 }}
                             onPress={() => setIsSlotsModalVisible(false)}
                         >
-                            <RNText style={{ color: '#FFF', fontWeight: '700' }}>Close</RNText>
+                            <RNText style={{ color: '#FFF', fontWeight: '600', fontFamily: 'Inter' }}>Close</RNText>
                         </TouchableOpacity>
                     </View>
                 </Pressable>
@@ -1751,7 +1839,7 @@ export default function CheckoutScreen() {
                 >
                     <View style={{ backgroundColor: '#FFF', borderRadius: 16, padding: 24, width: '90%', maxWidth: 500 }}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                            <RNText style={{ fontSize: 18, fontWeight: '700', color: '#333' }}>Cancellation Policy</RNText>
+                            <RNText style={{ fontSize: 18, fontWeight: '600', color: '#0F172A', fontFamily: 'Inter' }}>Cancellation Policy</RNText>
                         </View>
 
                         <ScrollView style={{ maxHeight: 300 }}>
@@ -1773,7 +1861,7 @@ export default function CheckoutScreen() {
                             style={{ backgroundColor: '#059669', paddingVertical: 12, borderRadius: 8, alignItems: 'center', marginTop: 16 }}
                             onPress={() => setIsPolicyModalVisible(false)}
                         >
-                            <RNText style={{ color: '#FFF', fontWeight: '700' }}>Close</RNText>
+                            <RNText style={{ color: '#FFF', fontWeight: '600', fontFamily: 'Inter' }}>Close</RNText>
                         </TouchableOpacity>
                     </View>
                 </Pressable>
@@ -1970,16 +2058,16 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     summaryCard: {
-        padding: 20,
-        borderRadius: 0,
-        backgroundColor: 'transparent',
-        borderWidth: 0,
-        borderColor: 'transparent',
-        shadowColor: 'transparent',
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0,
-        shadowRadius: 0,
-        elevation: 0,
+        padding: 24,
+        borderRadius: 24,
+        backgroundColor: '#FFFFFF',
+        borderWidth: 1,
+        borderColor: '#F1F5F9',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.04,
+        shadowRadius: 12,
+        elevation: 3,
     },
     summaryHeaderRow: {
         flexDirection: 'row',
@@ -2121,7 +2209,7 @@ const styles = StyleSheet.create({
     },
     totalLabelNew: {
         fontSize: 14,
-        fontWeight: '500',
+        fontWeight: '600',
         color: '#0F172A',
         fontFamily: 'Inter',
     },
@@ -2133,7 +2221,7 @@ const styles = StyleSheet.create({
     totalValueNew: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#06392e',
+        color: '#0F172A',
         fontFamily: 'Inter',
     },
     paymentSectionNew: {
@@ -2273,11 +2361,11 @@ const styles = StyleSheet.create({
         fontWeight: '500',
     },
     contactInfoCard: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 16,
-        padding: 16,
-        borderWidth: 1,
-        borderColor: '#E2E8F0',
+        backgroundColor: 'transparent',
+        borderRadius: 0,
+        padding: 0,
+        borderWidth: 0,
+        borderColor: 'transparent',
     },
     contactInputRow: {
         flexDirection: 'row',
@@ -2909,7 +2997,7 @@ const styles = StyleSheet.create({
     policyLink: {
         fontSize: 13,
         fontWeight: '500',
-        color: '#01e669',
+        color: '#475569',
         fontFamily: 'Inter',
         marginTop: 8,
     },
@@ -3037,7 +3125,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         marginTop: 40,
-        backgroundColor: '#F8FAFC',
+        backgroundColor: '#FFFFFF',
         paddingVertical: 24,
         paddingHorizontal: 12,
         borderRadius: 20,
